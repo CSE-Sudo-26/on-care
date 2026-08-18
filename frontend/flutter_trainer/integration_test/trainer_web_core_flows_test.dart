@@ -35,7 +35,7 @@ final String _chatLocation = AppRoutes.messagesFor(_clientId);
 /// 열린 스레드를 가리키는 finder. `ChatView` 타입으로 찾으면 고객 상세에도 같은
 /// 위젯이 있던 시절 기준이라, 스레드가 실제로 **메시지 화면**에 떴는지 못 가린다.
 final Finder _chatThread = find.byKey(
-  ValueKey<String>('messages-thread-$_clientId'),
+  const ValueKey<String>('messages-thread-$_clientId'),
 );
 
 /// 초안이 빠져나간 입력창 — 전송이 서버까지 갔다는 신호다.
@@ -212,7 +212,6 @@ String _ymd(DateTime value) =>
 /// 픽스처 전용 클라이언트. 앱이 쓰는 Dio 와 별개다.
 final Dio _fixtureApi = Dio(
   BaseOptions(
-    baseUrl: _apiBaseUrl,
     connectTimeout: _fixtureApiTimeout,
     sendTimeout: _fixtureApiTimeout,
     receiveTimeout: _fixtureApiTimeout,

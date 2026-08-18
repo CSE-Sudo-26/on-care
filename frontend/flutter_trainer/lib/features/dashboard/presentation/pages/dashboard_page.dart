@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -14,12 +13,12 @@ import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summar
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_timeline_card.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 대시보드 — the console's home: what needs doing today.
 ///
@@ -57,7 +56,7 @@ class DashboardPage extends ConsumerWidget {
           child: Center(child: CircularProgressIndicator()),
         ),
         error: (e, _) => Padding(
-          padding: EdgeInsets.only(top: AppSpacing.xxxl),
+          padding: const EdgeInsets.only(top: AppSpacing.xxxl),
           child: EmptyHint(
             message: l.dashLoadFailed,
             icon: Icons.error_outline,
@@ -92,7 +91,6 @@ class DashboardPage extends ConsumerWidget {
                       Expanded(
                         child: AttentionCard(
                           entries: summary.attention,
-                          maxRows: 5,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.lg),

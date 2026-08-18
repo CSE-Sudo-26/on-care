@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
@@ -10,20 +9,20 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
-import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 스케줄 tab — the trainer's calendar, in two views.
 ///
@@ -406,7 +405,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             error: (e, _) => Center(
               child: Text(
                 l.schedLoadFailed,
-                style: TextStyle(color: AppColors.mutedForeground),
+                style: const TextStyle(color: AppColors.mutedForeground),
               ),
             ),
             data: (sessions) {
@@ -591,11 +590,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           ],
           error: (e, _) => <Widget>[
             Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
               child: Center(
                 child: Text(
                   l.schedLoadFailed,
-                  style: TextStyle(color: AppColors.mutedForeground),
+                  style: const TextStyle(color: AppColors.mutedForeground),
                 ),
               ),
             ),
@@ -633,7 +632,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           child: Text(
             l.schedEmptyDay,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
@@ -1043,7 +1042,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                   maxLines: 4,
                   decoration: InputDecoration(
                     hintText: l.schedNoteHint,
-                    hintStyle: TextStyle(color: AppColors.mutedForeground),
+                    hintStyle: const TextStyle(color: AppColors.mutedForeground),
                     isDense: true,
                   ),
                 ),
@@ -1233,7 +1232,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
         children: <Widget>[
           Text(
             l.progEditTitle,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
@@ -1256,7 +1255,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
           const SizedBox(height: AppSpacing.md),
           Text(
             l.schedNote,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           TextField(
@@ -1266,8 +1265,8 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
             maxLines: 4,
             decoration: InputDecoration(
               hintText: l.progNoteHint,
-              hintStyle: TextStyle(color: AppColors.mutedForeground),
-              border: OutlineInputBorder(),
+              hintStyle: const TextStyle(color: AppColors.mutedForeground),
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
           ),
@@ -1600,7 +1599,7 @@ class _DayColumn extends StatelessWidget {
                 ? Center(
                     child: Text(
                       l.schedEmptySlotShort,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: AppColors.subtleForeground,
@@ -1954,7 +1953,7 @@ class _GapSlot extends StatelessWidget {
       ),
       child: Text(
         l.dashEmptySlot,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
           color: AppColors.subtleForeground,
@@ -2275,16 +2274,16 @@ class _NoPlanBox extends StatelessWidget {
         children: <Widget>[
           Text(
             l.progEmpty,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.mutedForeground,
             ),
           ),
-          SizedBox(height: 2),
+          const SizedBox(height: 2),
           Text(
             l.progEmptyHint,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w500,
               color: AppColors.subtleForeground,
@@ -2439,7 +2438,7 @@ class _NoteBox extends StatelessWidget {
         children: <Widget>[
           Text(
             l.schedNote,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               // 메모지 표시다. 주의가 아니므로 빨강으로 올리지 않는다(#690).

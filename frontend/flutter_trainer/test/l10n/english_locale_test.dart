@@ -75,7 +75,7 @@ void main() {
   });
 
   testWidgets('한국어 로케일은 그대로 한국어로 그려진다', (WidgetTester tester) async {
-    await pumpTrainerApp(tester, locale: const Locale('ko'));
+    await pumpTrainerApp(tester);
 
     // 반대 방향도 확인한다 — 영어만 보다가 한국어 키를 비워 두는 실수를 잡는다.
     expect(_renderedText(tester).any(_hangul.hasMatch), isTrue);

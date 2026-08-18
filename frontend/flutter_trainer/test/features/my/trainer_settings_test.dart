@@ -1,11 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -87,7 +86,6 @@ void main() {
       await repo.save(
         const TrainerSettings(
           newMessageAlerts: false,
-          sessionReminders: true,
           reminderLeadMinutes: 60,
         ),
       );
