@@ -2898,7 +2898,7 @@ class _SessionCard extends ConsumerWidget {
 
 /// 취소·노쇼로 마무리된 세션의 기록 — 언제, 누가, (있으면) 왜. (#871)
 ///
-/// 데모(`USE_MOCK_API=true`)에는 주체·시각을 둘 칸이 없어 상태 문구만 남는다.
+/// 데모와 실 API 가 같은 값을 저장하므로 두 경로가 같은 줄을 보여 준다(#906).
 class _EndedBox extends StatelessWidget {
   const _EndedBox({required this.session});
 
