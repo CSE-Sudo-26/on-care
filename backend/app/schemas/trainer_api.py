@@ -536,10 +536,15 @@ RoutineIntensityLabel = Literal["낮음", "보통", "높음"]
 
 
 class RoutineOptionsRequest(BaseModel):
-    """회원 데이터 기반 맞춤 루틴 후보 생성 조건."""
+    """회원 데이터 기반 맞춤 루틴 후보 생성 조건.
 
-    available_minutes: int = Field(ge=10, le=180)
-    intensity_preference: RoutineIntensityPreference = "moderate"
+    두 필드 모두 비워 둘 수 있다(#776) — 운동 기록이 쌓인 회원은 서버가 최근
+    패턴에서 값을 채우고, 기록이 없으면 기본값을 쓴다. 트레이너가 값을 보내면
+    그 값이 항상 우선한다.
+    """
+
+    available_minutes: int | None = Field(default=None, ge=10, le=180)
+    intensity_preference: RoutineIntensityPreference | None = None
     trainer_note: str = Field(default="", max_length=500)
 
 
@@ -547,6 +552,14 @@ class RoutineOptionsRequest(BaseModel):
 #: 따로 두면 서비스 쪽만 올렸을 때 여기서 ValidationError 가 나는데, 그 생성은
 #: LLM 폴백 try 블록 밖이라 500 이 된다.
 ROUTINE_CHAT_MAX_MESSAGES = 10
+
+
+#: 고객의 운동 데이터 축적도에 따른 추천 방식(#776).
+#:
+#: * template — 개인 패턴을 판단하기엔 기록이 부족해 목표 기반 기본값을 씀.
+#: * learning — 최근 운동은 있지만 반복 패턴이라 부르기엔 아직 이르다.
+#: * personalized — 여러 주에 걸쳐 반복된 운동·세션 패턴이 확인된다.
+RecommendationStatus = Literal["template", "learning", "personalized"]
 
 
 class RoutineOptionAnalysisOut(BaseModel):
@@ -570,6 +583,19 @@ class RoutineOptionAnalysisOut(BaseModel):
     recent_messages: list[str] = Field(
         default_factory=list, max_length=ROUTINE_CHAT_MAX_MESSAGES
     )
+    #: 이 분석이 어느 추천 단계에 해당하는지(#776). 프론트가 화면 문구를
+    #: 정하는 유일한 기준이다 — 프론트가 자체 기준으로 다시 판단하지 않는다.
+    recommendation_status: RecommendationStatus = "template"
+    #: 분석에 사용한 기간 안의 완료 기록 수.
+    history_session_count: int = Field(default=0, ge=0)
+    #: 분석에 사용한 최근 기간(일).
+    analysis_period_days: int = Field(default=0, ge=0)
+    #: 최근 기록에서 반복 확인된 운동 이름(최대 3개, 빈도 높은 순).
+    frequent_exercises: list[str] = Field(default_factory=list, max_length=3)
+    #: 최근 기록 기반으로 제안하는 운동 가능 시간. 기록이 부족하면 비운다.
+    suggested_available_minutes: int | None = Field(default=None, ge=10, le=180)
+    #: 최근 기록 기반으로 제안하는 강도. 기록이 부족하면 비운다.
+    suggested_intensity: RoutineIntensityPreference | None = None
 
 
 class RoutineOptionExerciseOut(BaseModel):

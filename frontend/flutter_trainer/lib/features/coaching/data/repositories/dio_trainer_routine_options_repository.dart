@@ -27,8 +27,8 @@ class DioTrainerRoutineOptionsRepository
   @override
   Future<RoutineOptions> generate(
     String memberId, {
-    required int availableMinutes,
-    required String intensityPreference,
+    required int? availableMinutes,
+    required String? intensityPreference,
     required String trainerNote,
   }) async {
     final encodedId = Uri.encodeComponent(memberId);

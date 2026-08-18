@@ -54,6 +54,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   String _newExerciseType = '근력';
   int _newExerciseMinutes = 30;
 
+  /// Whether the trainer has touched the minutes/intensity fields directly
+  /// (#776). Until then, [_minutes]/[_intensity] only hold pre-fill display
+  /// values and generation sends no explicit condition — the server derives
+  /// one from the member's history (or a fixed default) instead. Once
+  /// touched, whatever the trainer set always wins.
+  bool _conditionsTouched = false;
+
   bool _generating = false;
   bool _sending = false;
   bool _showAddExercise = false;
@@ -131,11 +138,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           .read(trainerRoutineOptionsRepositoryProvider)
           .generate(
             widget.client.id,
-            availableMinutes: _minutes,
-            intensityPreference: _intensity,
+            availableMinutes: _conditionsTouched ? _minutes : null,
+            intensityPreference: _conditionsTouched ? _intensity : null,
             trainerNote: _trainerMemo.text.trim(),
           );
       if (!mounted) return;
+      final analysis = options.analysis;
       setState(() {
         _options = options;
         _selectedKey = 'A';
@@ -143,6 +151,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         _showAddExercise = false;
         _stage = 1;
         _maxReachedStage = 1;
+        // 트레이너가 아직 조건을 직접 건드리지 않았으면, 서버가 실제로 쓴
+        // 값(또는 기본값)을 화면에 반영한다 — 다시 생성할 때 그 값이 그대로
+        // 보이고, 여전히 자유롭게 고칠 수 있다(#776).
+        if (!_conditionsTouched) {
+          _minutes = analysis.suggestedAvailableMinutes ?? _minutes;
+          _intensity = analysis.suggestedIntensity ?? _intensity;
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -336,7 +351,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: AppSpacing.lg),
         _primaryButton(
           key: const ValueKey<String>('generate-routine-options'),
-          label: _generating ? l.aiAnalysing : l.aiGenerateCandidates,
+          label: _generating ? l.aiAnalysing : _generateButtonLabel(l),
           icon: Icons.auto_awesome,
           busy: _generating,
           onTap: _generate,
@@ -437,21 +452,41 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(l.aiGenerateConditions, style: _sectionTitleStyle),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l.aiConditionsAutoHint,
+            style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+          ),
           const SizedBox(height: AppSpacing.md),
           RoutineMinutesSlider(
             key: const ValueKey<String>('generation-minutes'),
             minutes: _minutes,
             label: l.routineFieldTotalMinutes,
-            onChanged: (minutes) => setState(() => _minutes = minutes),
+            onChanged: (minutes) => setState(() {
+              _minutes = minutes;
+              _conditionsTouched = true;
+            }),
           ),
           const SizedBox(height: AppSpacing.lg),
           RoutineIntensityChips(
             value: _intensity,
-            onChanged: (intensity) => setState(() => _intensity = intensity),
+            onChanged: (intensity) => setState(() {
+              _intensity = intensity;
+              _conditionsTouched = true;
+            }),
           ),
         ],
       ),
     );
+  }
+
+  /// Only known after the first generation — before that we haven't seen
+  /// the member's analysis yet, so the button stays generic (#776).
+  String _generateButtonLabel(AppLocalizations l) {
+    final status = _options?.analysis.recommendationStatus;
+    return status == RecommendationStatus.template
+        ? l.aiGenerateGoalBased
+        : l.aiGenerateCandidates;
   }
 
   Widget _generatedOptions() {
@@ -461,7 +496,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _AssistantLabel(text: l.aiCompareCandidates),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
+        _RecommendationStatusBanner(analysis: options.analysis),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           l.aiBasisGoalCompletion(
                 options.analysis.goal,
@@ -1305,6 +1342,69 @@ class _ChatEvidence extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// States how much this generation actually reflects the member's own
+/// history (#776) — so a thin-history member never reads as "personalized"
+/// when the AI had nothing personal to go on, and a settled member sees
+/// what pattern the candidates are grounded in.
+class _RecommendationStatusBanner extends StatelessWidget {
+  const _RecommendationStatusBanner({required this.analysis});
+
+  final MemberAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final (String title, String body) = switch (analysis.recommendationStatus) {
+      RecommendationStatus.template => (
+        l.aiStatusTemplateTitle,
+        l.aiStatusTemplateBody,
+      ),
+      RecommendationStatus.learning => (
+        l.aiStatusLearningTitle,
+        l.aiStatusLearningBody,
+      ),
+      RecommendationStatus.personalized => (
+        l.aiStatusPersonalizedTitle,
+        l.aiStatusPersonalizedBody(
+          analysis.historySessionCount,
+          analysis.analysisPeriodDays,
+        ),
+      ),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: _labelStyle),
+          const SizedBox(height: 2),
+          Text(
+            body,
+            style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
+          ),
+          if (analysis.frequentExercises.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '${l.aiFrequentExercisesLabel}: '
+              '${analysis.frequentExercises.join(', ')}',
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.foreground,
+              ),
+            ),
+          ],
         ],
       ),
     );

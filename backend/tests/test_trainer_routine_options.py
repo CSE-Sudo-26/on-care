@@ -1,10 +1,13 @@
 """Trainer routine-options endpoint and LLM fallback contract."""
 from __future__ import annotations
 
+import json
 import threading
 import time
 from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
+from datetime import timedelta
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -14,7 +17,10 @@ from app.schemas.trainer_api import (
     RoutineOptionExerciseOut,
     RoutineOptionsRequest,
 )
-from app.core import metrics
+from app.core import clock, metrics
+from app.db.seed_trainer import TRAINER_ID
+from app.db.session import SessionLocal
+from app.models.models import RoutineHistory, TrainerClient, TrainerRoutine
 from app.services import trainer_routine_options_service
 from app.services.coach.llm import DEFAULT_THINKING_BUDGET
 
@@ -65,6 +71,95 @@ def _first_client_id(client, token: str) -> str:
     response = client.get("/v1/trainer/clients", headers=_headers(token))
     assert response.status_code == 200, response.text
     return response.json()[0]["id"]
+
+
+def _register_and_link_member(client, *, goal: str = "체중 감량") -> str:
+    """개인화 분석 테스트 전용 회원 — 다른 테스트의 시드 데이터와 섞이지 않게
+    매번 새로 등록하고 트레이너(#776 분석 대상)에 직접 연결한다."""
+    email = f"routine-options-776-{uuid4().hex[:8]}@oncare.com"
+    response = client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": "pw!", "name": "분석 테스트 회원"},
+    )
+    assert response.status_code == 200, response.text
+    member_id = response.json()["id"]
+
+    db = SessionLocal()
+    try:
+        db.add(
+            TrainerClient(
+                id=f"link-{member_id}", trainer_id=TRAINER_ID, member_id=member_id,
+                goal=goal,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+    return member_id
+
+
+def _seed_routine_history(member_id: str, sessions: list[list[str]]) -> None:
+    """`sessions[i]` 는 (오늘 - 7*i)일에 완료 처리된 운동 이름 목록."""
+    db = SessionLocal()
+    try:
+        for index, exercises in enumerate(sessions):
+            day = clock.today() - timedelta(days=7 * index)
+            db.add(
+                RoutineHistory(
+                    id=f"hist-{member_id}-{index}",
+                    member_id=member_id,
+                    trainer_id=TRAINER_ID,
+                    date=day.isoformat(),
+                    completion_rate=80,
+                    exercises_json=json.dumps(exercises, ensure_ascii=False),
+                )
+            )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _seed_latest_assigned_routine(member_id: str, *, minutes: int, type_: str) -> None:
+    db = SessionLocal()
+    try:
+        db.add(
+            TrainerRoutine(
+                id=f"assigned-{member_id}",
+                trainer_id=TRAINER_ID,
+                member_id=member_id,
+                name="이전 배정 루틴",
+                minutes=minutes,
+                type=type_,
+                reason="",
+                source="trainer",
+                status="approved",
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _six_weeks_of_squats_with_a_varying_extra() -> list[list[str]]:
+    """스쿼트만 매주 반복하고 나머지 한 종목은 매번 바꾼다 — "스쿼트"만 반복
+    이름으로 잡혀야 한다(#776 personalized 판정에 반복 운동 근거로 쓴다)."""
+    fillers = ["플랭크", "런지", "버피", "힙쓰러스트", "마운틴클라이머", "사이드 플랭크"]
+    return [[f"스쿼트 3세트", f"{name} 2세트"] for name in fillers]
+
+
+def _cleanup_member(member_id: str) -> None:
+    db = SessionLocal()
+    try:
+        db.query(RoutineHistory).filter(
+            RoutineHistory.member_id == member_id
+        ).delete()
+        db.query(TrainerRoutine).filter(
+            TrainerRoutine.member_id == member_id
+        ).delete()
+        db.query(TrainerClient).filter(TrainerClient.member_id == member_id).delete()
+        db.commit()
+    finally:
+        db.close()
 
 
 @dataclass
@@ -494,3 +589,170 @@ def test_slot_is_returned_when_scheduling_fails(monkeypatch):
         trainer_routine_options_service._call_llm("prompt")
 
     assert slots.acquire(blocking=False), "스케줄링 실패로 자리가 누수됐다"
+
+
+# ---- 데이터 축적도에 따른 추천 상태 분기 (#776) ----
+#
+# 세 테스트 모두 LLM 을 계약 위반으로 강제 폴백시킨다 — 여기서 보는 것은
+# `recommendation_status` 등 분석 필드지 LLM 문장 자체가 아니고, 실제 LLM을
+# 부르면 네트워크/키 여부에 테스트 결과가 흔들린다.
+
+
+def _force_rule_fallback(monkeypatch) -> None:
+    monkeypatch.setattr(
+        trainer_routine_options_service,
+        "get_coach_llm",
+        lambda: _FakeLlm('{"plan_a": {"key": "A"}}'),
+    )
+
+
+def test_recommendation_status_is_template_without_history(client, monkeypatch):
+    """기록이 거의 없는 신규 고객은 목표 기반 기본 추천으로 표시된다."""
+    _force_rule_fallback(monkeypatch)
+    token = _trainer_token(client)
+    member_id = _register_and_link_member(client)
+    try:
+        response = client.post(
+            f"/v1/trainer/clients/{member_id}/routine-options",
+            headers=_headers(token),
+            json={},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        analysis = body["analysis"]
+        assert analysis["recommendation_status"] == "template"
+        assert analysis["frequent_exercises"] == []
+        assert analysis["suggested_available_minutes"] is None
+        assert analysis["suggested_intensity"] is None
+        # 조건을 비웠으니 서버 기본값(30분)으로 생성돼야 한다.
+        assert body["plan_b"]["total_minutes"] == (
+            trainer_routine_options_service.DEFAULT_AVAILABLE_MINUTES
+        )
+    finally:
+        _cleanup_member(member_id)
+
+
+def test_recommendation_status_is_learning_with_a_few_recent_sessions(
+    client, monkeypatch,
+):
+    """최근 운동은 있지만 반복 패턴이라 부르기엔 이른 고객은 학습 중으로 표시된다."""
+    _force_rule_fallback(monkeypatch)
+    token = _trainer_token(client)
+    member_id = _register_and_link_member(client)
+    # 서로 다른 운동 3회 — 세션은 있지만 반복은 없다.
+    _seed_routine_history(
+        member_id,
+        [["레그프레스 3세트"], ["플랭크 2세트"], ["실내 자전거 20분"]],
+    )
+    try:
+        response = client.post(
+            f"/v1/trainer/clients/{member_id}/routine-options",
+            headers=_headers(token),
+            json={},
+        )
+        assert response.status_code == 200, response.text
+        analysis = response.json()["analysis"]
+        assert analysis["recommendation_status"] == "learning"
+        assert analysis["history_session_count"] == 3
+    finally:
+        _cleanup_member(member_id)
+
+
+def test_recommendation_status_is_personalized_with_repeated_weekly_pattern(
+    client, monkeypatch,
+):
+    """여러 주에 걸쳐 반복된 운동이 있으면 개인화 추천으로 표시되고, 규칙 폴백도
+    반복 운동을 유지형/강화형 A·B 로 구성한다."""
+    _force_rule_fallback(monkeypatch)
+    token = _trainer_token(client)
+    member_id = _register_and_link_member(client)
+    _seed_latest_assigned_routine(member_id, minutes=45, type_="근력")
+    # 6주 연속, 매번 스쿼트를 반복하고 나머지 한 종목만 바꾼다.
+    _seed_routine_history(member_id, _six_weeks_of_squats_with_a_varying_extra())
+    try:
+        response = client.post(
+            f"/v1/trainer/clients/{member_id}/routine-options",
+            headers=_headers(token),
+            json={},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        analysis = body["analysis"]
+        assert analysis["recommendation_status"] == "personalized"
+        assert analysis["history_session_count"] == 6
+        assert "스쿼트" in analysis["frequent_exercises"]
+        # 이전 배정 루틴(45분/근력)에서 조건을 자동으로 채운다.
+        assert analysis["suggested_available_minutes"] == 45
+        assert analysis["suggested_intensity"] == "high"
+
+        assert body["plan_a"]["label"] == "기존 패턴 유지형"
+        assert body["plan_b"]["label"] == "점진적 강화형"
+        assert any("스쿼트" in e["name"] for e in body["plan_a"]["exercises"])
+        assert body["plan_a"]["total_minutes"] == 45
+        assert body["plan_b"]["total_minutes"] == 45
+    finally:
+        _cleanup_member(member_id)
+
+
+def test_trainer_supplied_conditions_always_win_over_suggestions(client, monkeypatch):
+    """트레이너가 조건을 직접 넣으면 분석이 제안한 값을 덮어써도 그 값을 쓴다."""
+    _force_rule_fallback(monkeypatch)
+    token = _trainer_token(client)
+    member_id = _register_and_link_member(client)
+    _seed_latest_assigned_routine(member_id, minutes=45, type_="근력")
+    _seed_routine_history(member_id, _six_weeks_of_squats_with_a_varying_extra())
+    try:
+        response = client.post(
+            f"/v1/trainer/clients/{member_id}/routine-options",
+            headers=_headers(token),
+            json={"available_minutes": 20, "intensity_preference": "low"},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["plan_b"]["total_minutes"] == 20
+    finally:
+        _cleanup_member(member_id)
+
+
+def test_exercise_name_strips_the_free_text_set_count():
+    fn = trainer_routine_options_service._exercise_name
+    assert fn("레그프레스 3세트") == "레그프레스"
+    assert fn("실내 자전거 20분") == "실내 자전거"
+    assert fn({"name": "플랭크", "type": "근력"}) == "플랭크"
+    assert fn(123) == ""
+
+
+def test_guess_intensity_maps_exercise_type_to_a_preference():
+    fn = trainer_routine_options_service._guess_intensity
+    assert fn("근력") == "high"
+    assert fn("스트레칭") == "low"
+    assert fn("요가") == "low"
+    assert fn("유산소") == "moderate"
+
+
+def test_resolve_conditions_fills_blanks_from_analysis_then_defaults():
+    """`_resolve_conditions` 단독 계약 — 분석값 우선, 없으면 기본값, 트레이너
+    입력이 있으면 항상 그 값을 유지한다."""
+    resolve = trainer_routine_options_service._resolve_conditions
+
+    analysis_with_suggestion = _analysis().model_copy(
+        update={"suggested_available_minutes": 50, "suggested_intensity": "low"}
+    )
+    resolved = resolve(analysis_with_suggestion, RoutineOptionsRequest())
+    assert resolved.available_minutes == 50
+    assert resolved.intensity_preference == "low"
+
+    resolved_default = resolve(_analysis(), RoutineOptionsRequest())
+    assert (
+        resolved_default.available_minutes
+        == trainer_routine_options_service.DEFAULT_AVAILABLE_MINUTES
+    )
+    assert (
+        resolved_default.intensity_preference
+        == trainer_routine_options_service.DEFAULT_INTENSITY
+    )
+
+    explicit = RoutineOptionsRequest(available_minutes=15, intensity_preference="high")
+    resolved_explicit = resolve(analysis_with_suggestion, explicit)
+    assert resolved_explicit.available_minutes == 15
+    assert resolved_explicit.intensity_preference == "high"

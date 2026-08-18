@@ -7,10 +7,13 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 # `time` 은 stdlib 모듈로 두고(경과 시간 측정), 자정 시각은 별칭으로 받는다.
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from datetime import time as time_of_day
 
@@ -29,6 +32,8 @@ from app.models.models import (
 )
 from app.schemas.trainer_api import (
     ROUTINE_CHAT_MAX_MESSAGES,
+    RecommendationStatus,
+    RoutineIntensityPreference,
     RoutineOptionAnalysisOut,
     RoutineOptionPlanOut,
     RoutineOptionsOut,
@@ -39,6 +44,38 @@ from app.services.coach import prompt_safety
 from app.services.coach.llm import DEFAULT_THINKING_BUDGET, get_coach_llm
 
 logger = logging.getLogger(__name__)
+
+
+#: 개인화 분석에 쓰는 최근 기간(일) — 약 6주. 이보다 넓히면 오래된 루틴이
+#: 지금의 습관인 것처럼 잡히고, 좁히면 격주 세션 패턴을 놓친다(#776).
+HISTORY_LOOKBACK_DAYS = 42
+
+#: 이 미만이면 판단할 개인 패턴이 없다 — 목표 기반 기본값을 쓴다.
+MIN_SESSIONS_FOR_LEARNING = 2
+#: 이 이상 + 서로 다른 주에 걸쳐 있고 + 반복된 운동이 있어야 "패턴이 있다"고 본다.
+MIN_SESSIONS_FOR_PERSONALIZED = 6
+MIN_DISTINCT_WEEKS_FOR_PERSONALIZED = 3
+MIN_REPEAT_FOR_PERSONALIZED = 3
+
+#: 기록이 없을 때 쓰는 기본 조건. 회원 앱 최초 추천 문구와 맞춰 30분/보통으로 둔다.
+DEFAULT_AVAILABLE_MINUTES = 30
+DEFAULT_INTENSITY: RoutineIntensityPreference = "moderate"
+
+#: `exercises_json` 한 줄에서 운동 이름을 뽑는다 — 완료 기록은
+#: `"레그프레스 3세트"` 처럼 이름 뒤에 세트/횟수가 자유 텍스트로 붙는다(모델
+#: docstring 참고). 숫자가 시작되는 지점 앞까지만 이름으로 본다.
+_TRAILING_COUNT_RE = re.compile(r"\s*\d.*$")
+
+
+@dataclass
+class _HistoryAnalysis:
+    """회원의 최근 운동 기록에서 뽑은 개인화 판단 재료(#776)."""
+
+    status: RecommendationStatus = "template"
+    session_count: int = 0
+    frequent_exercises: list[str] = field(default_factory=list)
+    suggested_available_minutes: int | None = None
+    suggested_intensity: RoutineIntensityPreference | None = None
 
 
 class LLMBusyError(RuntimeError):
@@ -108,6 +145,17 @@ _SYSTEM_PROMPT = (
 의학적 진단이나 치료를 단정하지 말고, 통증·부상 메모가 있으면 저충격 대안을 우선하세요.
 recent_messages 에 통증·불편 언급이 있으면 해당 부위에 부담이 가는 운동을 피하고,
 왜 그렇게 구성했는지 rationale 에 그 발화를 근거로 적으세요.
+
+member_analysis.recommendation_status 에 따라 두 계획의 성격을 다르게 하세요.
+- "template": 개인 데이터를 분석한 것처럼 표현하지 마세요. member_goal/goal
+  기준의 일반적인 추천이며, rationale 에 그 사실을 명시하세요.
+- "learning": frequent_exercises 가 있으면 최대한 유지하고 부족한 부분만 보완하세요.
+  아직 반복 패턴이라 부르기엔 이르다는 점을 rationale 에 남기세요.
+- "personalized": frequent_exercises 를 근거로 plan_a 는 "기존 패턴 유지형"
+  (이름 그대로 두거나 유사한 라벨)으로 그 운동들을 최대한 유지하고, plan_b 는
+  "점진적 강화형"으로 같은 핵심 운동을 유지하되 운동량/강도만 소폭 높이세요.
+  rationale 에 history_session_count·analysis_period_days·반복된 운동 이름을
+  구체적으로 인용하세요.
 """
     + prompt_safety.UNTRUSTED_QUOTE_GUARD
     + "\n"
@@ -142,6 +190,102 @@ recent_messages 에 통증·불편 언급이 있으면 해당 부위에 부담�
 각 plan의 total_minutes는 exercises의 minutes 합과 정확히 같아야 합니다.
 """
 )
+
+
+def _exercise_name(item: object) -> str:
+    """완료 기록 한 줄에서 세트/횟수를 뗀 운동 이름만 남긴다.
+
+    `RoutineHistory.exercises_json` 은 `"레그프레스 3세트"` 처럼 이름 뒤에 자유
+    텍스트가 붙는다. 숫자가 시작되는 지점부터는 이름이 아니라고 본다.
+    """
+    if isinstance(item, dict):
+        text = str(item.get("name", ""))
+    elif isinstance(item, str):
+        text = item
+    else:
+        return ""
+    return _TRAILING_COUNT_RE.sub("", text).strip()
+
+
+def _guess_intensity(exercise_type: str) -> RoutineIntensityPreference:
+    """마지막으로 배정한 루틴의 운동 타입으로 강도 선호를 대강 짐작한다."""
+    if exercise_type == "근력":
+        return "high"
+    if exercise_type in ("스트레칭", "요가"):
+        return "low"
+    return "moderate"
+
+
+def _analyze_routine_history(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    today_date: date,
+    latest: TrainerRoutine | None,
+) -> _HistoryAnalysis:
+    """최근 완료 기록에서 개인화 가능 여부·반복 운동·기본 조건을 뽑는다(#776).
+
+    임계값은 명시적 규칙이다 — "패턴이 있다"를 AI 가 판단하지 않는다(이슈의
+    요구사항). 세션 수·주 분산·반복 횟수 셋을 모두 만족해야 personalized 다 —
+    하나만 봐서는 우연히 몰아 한 3일과 몇 주에 걸친 습관을 구분할 수 없다.
+    """
+    since = (today_date - timedelta(days=HISTORY_LOOKBACK_DAYS - 1)).isoformat()
+    rows = db.execute(
+        select(RoutineHistory.date, RoutineHistory.exercises_json).where(
+            RoutineHistory.member_id == member_id,
+            RoutineHistory.date >= since,
+            or_(
+                RoutineHistory.trainer_id.is_(None),
+                RoutineHistory.trainer_id == trainer_id,
+            ),
+        )
+    ).all()
+
+    session_count = len(rows)
+    distinct_weeks = {
+        date.fromisoformat(history_date).isocalendar()[:2]
+        for history_date, _exercises in rows
+    }
+
+    name_counts: Counter[str] = Counter()
+    for _history_date, exercises_json in rows:
+        try:
+            items = json.loads(exercises_json or "[]")
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            name = _exercise_name(item)
+            if name:
+                name_counts[name] += 1
+
+    frequent = [name for name, count in name_counts.most_common() if count >= 2][:3]
+
+    if (
+        session_count >= MIN_SESSIONS_FOR_PERSONALIZED
+        and len(distinct_weeks) >= MIN_DISTINCT_WEEKS_FOR_PERSONALIZED
+        and max(name_counts.values(), default=0) >= MIN_REPEAT_FOR_PERSONALIZED
+    ):
+        status: RecommendationStatus = "personalized"
+    elif session_count >= MIN_SESSIONS_FOR_LEARNING:
+        status = "learning"
+    else:
+        status = "template"
+
+    suggested_minutes = None
+    suggested_intensity = None
+    if status != "template" and latest is not None and latest.minutes > 0:
+        suggested_minutes = min(180, max(10, latest.minutes))
+        suggested_intensity = _guess_intensity(latest.type)
+
+    return _HistoryAnalysis(
+        status=status,
+        session_count=session_count,
+        frequent_exercises=frequent,
+        suggested_available_minutes=suggested_minutes,
+        suggested_intensity=suggested_intensity,
+    )
 
 
 def build_member_analysis(
@@ -204,6 +348,8 @@ def build_member_analysis(
         else 2000
     )
 
+    history = _analyze_routine_history(db, trainer_id, member_id, today_date, latest)
+
     return RoutineOptionAnalysisOut(
         goal=link.goal,
         member_goal=profile.goals if profile is not None else "",
@@ -224,6 +370,12 @@ def build_member_analysis(
         latest_routine=latest.name if latest is not None else "-",
         note=request.trainer_note.strip(),
         recent_messages=_recent_chat_lines(db, trainer_id, member_id, today_date),
+        recommendation_status=history.status,
+        history_session_count=history.session_count,
+        analysis_period_days=HISTORY_LOOKBACK_DAYS,
+        frequent_exercises=history.frequent_exercises,
+        suggested_available_minutes=history.suggested_available_minutes,
+        suggested_intensity=history.suggested_intensity,
     )
 
 
@@ -281,6 +433,7 @@ def build_rule_options(
         available_minutes=request.available_minutes,
         intensity_preference=request.intensity_preference,
         trainer_note=analysis.note,
+        frequent_exercises=analysis.frequent_exercises,
     )
     return RoutineOptionsOut(
         analysis=analysis,
@@ -384,6 +537,27 @@ def _generate_with_llm(
     return options
 
 
+def _resolve_conditions(
+    analysis: RoutineOptionAnalysisOut, request: RoutineOptionsRequest,
+) -> RoutineOptionsRequest:
+    """트레이너가 조건을 비워 두면 분석값(또는 기본값)으로 채운다(#776).
+
+    트레이너가 값을 보냈으면 그 값이 항상 이긴다 — 자동 설정은 빈 입력을
+    채울 뿐, 트레이너의 명시적 선택을 덮어쓰지 않는다.
+    """
+    minutes = request.available_minutes
+    if minutes is None:
+        minutes = analysis.suggested_available_minutes or DEFAULT_AVAILABLE_MINUTES
+    intensity = request.intensity_preference
+    if intensity is None:
+        intensity = analysis.suggested_intensity or DEFAULT_INTENSITY
+    if minutes == request.available_minutes and intensity == request.intensity_preference:
+        return request
+    return request.model_copy(
+        update={"available_minutes": minutes, "intensity_preference": intensity}
+    )
+
+
 def generate_routine_options(
     db: Session,
     trainer_id: str,
@@ -391,6 +565,7 @@ def generate_routine_options(
     request: RoutineOptionsRequest,
 ) -> RoutineOptionsOut:
     analysis = build_member_analysis(db, trainer_id, member_id, request)
+    request = _resolve_conditions(analysis, request)
     fallback = build_rule_options(analysis, request)
     started = time.monotonic()
     had_chat = bool(analysis.recent_messages)

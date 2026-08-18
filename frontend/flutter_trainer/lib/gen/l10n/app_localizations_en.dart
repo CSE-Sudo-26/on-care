@@ -1787,6 +1787,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiCompareCandidates => 'Compare the candidates';
 
   @override
+  String get aiConditionsAutoHint =>
+      'Leave blank to auto-fill from recent history or goals.';
+
+  @override
+  String get aiConditionsEditToggle => 'Edit recommended conditions';
+
+  @override
+  String get aiGenerateGoalBased => 'Generate goal-based routine';
+
+  @override
+  String get aiStatusTemplateTitle => 'Goal-based starter routine';
+
+  @override
+  String get aiStatusTemplateBody =>
+      'Not enough workout history yet to personalize — this starts from a goal-based default.';
+
+  @override
+  String get aiStatusLearningTitle => 'Personalizing (learning)';
+
+  @override
+  String get aiStatusLearningBody =>
+      'Recent workouts were used, but there isn\'t a clear repeated pattern yet.';
+
+  @override
+  String get aiStatusPersonalizedTitle => 'Personalized from recent patterns';
+
+  @override
+  String aiStatusPersonalizedBody(int count, int days) {
+    return 'Based on $count sessions over the last $days days.';
+  }
+
+  @override
+  String get aiFrequentExercisesLabel => 'Frequently done';
+
+  @override
   String get goalWeightLoss => 'Weight loss';
 
   @override

@@ -3200,6 +3200,66 @@ abstract class AppLocalizations {
   /// **'Compare the candidates'**
   String get aiCompareCandidates;
 
+  /// No description provided for @aiConditionsAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank to auto-fill from recent history or goals.'**
+  String get aiConditionsAutoHint;
+
+  /// No description provided for @aiConditionsEditToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit recommended conditions'**
+  String get aiConditionsEditToggle;
+
+  /// No description provided for @aiGenerateGoalBased.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate goal-based routine'**
+  String get aiGenerateGoalBased;
+
+  /// No description provided for @aiStatusTemplateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal-based starter routine'**
+  String get aiStatusTemplateTitle;
+
+  /// No description provided for @aiStatusTemplateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough workout history yet to personalize — this starts from a goal-based default.'**
+  String get aiStatusTemplateBody;
+
+  /// No description provided for @aiStatusLearningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalizing (learning)'**
+  String get aiStatusLearningTitle;
+
+  /// No description provided for @aiStatusLearningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent workouts were used, but there isn\'t a clear repeated pattern yet.'**
+  String get aiStatusLearningBody;
+
+  /// No description provided for @aiStatusPersonalizedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalized from recent patterns'**
+  String get aiStatusPersonalizedTitle;
+
+  /// No description provided for @aiStatusPersonalizedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on {count} sessions over the last {days} days.'**
+  String aiStatusPersonalizedBody(int count, int days);
+
+  /// No description provided for @aiFrequentExercisesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently done'**
+  String get aiFrequentExercisesLabel;
+
   /// No description provided for @goalWeightLoss.
   ///
   /// In en, this message translates to:

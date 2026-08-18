@@ -14,10 +14,14 @@ import 'package:oncare_trainer/features/coaching/domain/entities/routine_options
 ///  * [MockTrainerRoutineOptionsRepository] — demo (deterministic A/B);
 ///  * [DioTrainerRoutineOptionsRepository] — the real FastAPI backend.
 abstract interface class TrainerRoutineOptionsRepository {
+  /// [availableMinutes]/[intensityPreference] are null when the trainer
+  /// hasn't touched those fields (#776) — the server then derives them from
+  /// the member's recent history, or a fixed default when history is thin.
+  /// A non-null value always wins over whatever the server would suggest.
   Future<RoutineOptions> generate(
     String memberId, {
-    required int availableMinutes,
-    required String intensityPreference,
+    required int? availableMinutes,
+    required String? intensityPreference,
     required String trainerNote,
   });
 }
@@ -29,11 +33,16 @@ class MockTrainerRoutineOptionsRepository
     implements TrainerRoutineOptionsRepository {
   const MockTrainerRoutineOptionsRepository();
 
+  /// Matches the backend default used when the trainer leaves conditions
+  /// blank (`trainer_routine_options_service.DEFAULT_AVAILABLE_MINUTES`).
+  static const int _defaultMinutes = 30;
+  static const String _defaultIntensity = 'moderate';
+
   @override
   Future<RoutineOptions> generate(
     String memberId, {
-    required int availableMinutes,
-    required String intensityPreference,
+    required int? availableMinutes,
+    required String? intensityPreference,
     required String trainerNote,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -42,13 +51,15 @@ class MockTrainerRoutineOptionsRepository
     const goal = '혈압 관리 · 체중 감량';
     final note = trainerNote.trim();
     final noteSuffix = note.isEmpty ? '' : ' 트레이너 메모 반영: $note.';
+    final minutes = availableMinutes ?? _defaultMinutes;
+    final intensityPref = intensityPreference ?? _defaultIntensity;
 
-    final totalA = (availableMinutes * 0.7).round().clamp(10, availableMinutes);
+    final totalA = (minutes * 0.7).round().clamp(10, minutes);
     // Keep the demo contract aligned with the backend: neither option may
     // exceed the time the trainer entered. The old lower bound
     // (`totalA + 5`) produced a 15-minute plan for a 10-minute request and
     // even threw when availableMinutes was 180 (lower clamp bound > 180).
-    final totalB = availableMinutes;
+    final totalB = minutes;
 
     return RoutineOptions(
       analysis: MemberAnalysis(
@@ -58,6 +69,8 @@ class MockTrainerRoutineOptionsRepository
         avgCompletionRate: completion,
         latestRoutine: '저강도 유산소 (걷기)',
         note: note,
+        // 데모 회원은 실제 축적 이력이 없다 — #776 의 "데이터 부족" 상태를
+        // 그대로 보여 준다(개인화한 것처럼 보이지 않아야 한다는 요구와도 맞다).
       ),
       planA: RoutinePlan(
         key: 'A',
@@ -85,7 +98,7 @@ class MockTrainerRoutineOptionsRepository
         key: 'B',
         label: '강도·운동량 중심',
         totalMinutes: totalB,
-        intensity: intensityPreference == 'low' ? '보통' : '높음',
+        intensity: intensityPref == 'low' ? '보통' : '높음',
         exercises: <RoutineExercise>[
           RoutineExercise(
             name: '인터벌 러닝',
