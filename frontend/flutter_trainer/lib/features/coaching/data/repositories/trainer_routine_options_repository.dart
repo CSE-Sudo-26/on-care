@@ -54,12 +54,25 @@ class MockTrainerRoutineOptionsRepository
     final minutes = availableMinutes ?? _defaultMinutes;
     final intensityPref = intensityPreference ?? _defaultIntensity;
 
-    final totalA = (minutes * 0.7).round().clamp(10, minutes);
+    // 하한은 슬라이더의 실제 최소값(5분)과 맞춘다 — 10으로 두면 5분 요청에서
+    // `clamp(10, 5)`가 하한>상한이 되어 데모 생성이 그대로 예외로 죽는다.
+    final totalA = (minutes * 0.7).round().clamp(5, minutes);
     // Keep the demo contract aligned with the backend: neither option may
     // exceed the time the trainer entered. The old lower bound
     // (`totalA + 5`) produced a 15-minute plan for a 10-minute request and
     // even threw when availableMinutes was 180 (lower clamp bound > 180).
     final totalB = minutes;
+
+    // B안 세 운동의 시간 배분. 셋을 각자 독립적으로 반올림·clamp 하면(예전
+    // 코드) 합이 totalB 를 벗어날 수 있다 — 5분처럼 작은 값에서 실제로 6분이
+    // 나왔다. 앞 두 개만 반올림해서 정하고, 세 번째는 항상 나머지로 채워
+    // 합이 totalB 와 정확히 같게 한다. 앞 두 개의 상한도 "남은 운동에 최소
+    // 1분씩은 남긴다"는 조건으로 둔다.
+    final intervalMinutes = (totalB * 0.5).round().clamp(1, totalB - 2);
+    final squatMinutes = (totalB * 0.3)
+        .round()
+        .clamp(1, totalB - intervalMinutes - 1);
+    final plankMinutes = totalB - intervalMinutes - squatMinutes;
 
     return RoutineOptions(
       analysis: MemberAnalysis(
@@ -102,20 +115,11 @@ class MockTrainerRoutineOptionsRepository
         exercises: <RoutineExercise>[
           RoutineExercise(
             name: '인터벌 러닝',
-            minutes: (totalB * 0.5).round().clamp(1, totalB),
+            minutes: intervalMinutes,
             type: '유산소',
           ),
-          RoutineExercise(
-            name: '스쿼트',
-            minutes: (totalB * 0.3).round().clamp(1, totalB),
-            type: '근력',
-          ),
-          RoutineExercise(
-            name: '플랭크',
-            minutes: (totalB - (totalB * 0.5).round() - (totalB * 0.3).round())
-                .clamp(1, totalB),
-            type: '근력',
-          ),
+          RoutineExercise(name: '스쿼트', minutes: squatMinutes, type: '근력'),
+          RoutineExercise(name: '플랭크', minutes: plankMinutes, type: '근력'),
         ],
         reason: '운동량과 강도를 높인 루틴',
         rationale:

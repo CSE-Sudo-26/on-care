@@ -119,22 +119,31 @@ def _seed_routine_history(member_id: str, sessions: list[list[str]]) -> None:
         db.close()
 
 
-def _seed_latest_assigned_routine(member_id: str, *, minutes: int, type_: str) -> None:
+def _seed_latest_assigned_routine(
+    member_id: str,
+    *,
+    minutes: int,
+    type_: str,
+    status: str = "approved",
+    id_suffix: str = "",
+    created_at: object = None,
+) -> None:
     db = SessionLocal()
     try:
-        db.add(
-            TrainerRoutine(
-                id=f"assigned-{member_id}",
-                trainer_id=TRAINER_ID,
-                member_id=member_id,
-                name="이전 배정 루틴",
-                minutes=minutes,
-                type=type_,
-                reason="",
-                source="trainer",
-                status="approved",
-            )
+        row = TrainerRoutine(
+            id=f"assigned-{member_id}{id_suffix}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            name="이전 배정 루틴",
+            minutes=minutes,
+            type=type_,
+            reason="",
+            source="trainer",
+            status=status,
         )
+        if created_at is not None:
+            row.created_at = created_at
+        db.add(row)
         db.commit()
     finally:
         db.close()
@@ -692,6 +701,40 @@ def test_recommendation_status_is_personalized_with_repeated_weekly_pattern(
         # 확대가 시간상으로도 구분돼야 한다는 계약은 데이터 부족 경로와 같다.
         assert body["plan_a"]["total_minutes"] < body["plan_b"]["total_minutes"]
         assert body["plan_b"]["total_minutes"] == 45
+    finally:
+        _cleanup_member(member_id)
+
+
+def test_pending_or_dismissed_routines_do_not_leak_into_suggested_conditions(
+    client, monkeypatch,
+):
+    """검토 대기중이거나 반려된 AI 후보는 아직 회원에게 나가지 않았다 — 그
+    시간·강도가 다음 생성의 자동 조건에 새면 안 된다."""
+    _force_rule_fallback(monkeypatch)
+    token = _trainer_token(client)
+    member_id = _register_and_link_member(client)
+    _seed_latest_assigned_routine(member_id, minutes=45, type_="근력")
+    # 승인된 루틴보다 더 최근에, 아직 검토 대기중인 후보가 생겼다.
+    _seed_latest_assigned_routine(
+        member_id,
+        minutes=15,
+        type_="스트레칭",
+        status="pending",
+        id_suffix="-pending",
+        created_at=clock.now() + timedelta(minutes=1),
+    )
+    _seed_routine_history(member_id, _six_weeks_of_squats_with_a_varying_extra())
+    try:
+        response = client.post(
+            f"/v1/trainer/clients/{member_id}/routine-options",
+            headers=_headers(token),
+            json={},
+        )
+        assert response.status_code == 200, response.text
+        analysis = response.json()["analysis"]
+        # pending 후보(15분/스트레칭)가 아니라 승인된 루틴(45분/근력)을 근거로 삼는다.
+        assert analysis["suggested_available_minutes"] == 45
+        assert analysis["suggested_intensity"] == "high"
     finally:
         _cleanup_member(member_id)
 

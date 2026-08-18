@@ -221,13 +221,17 @@ def _analyze_routine_history(
     trainer_id: str,
     member_id: str,
     today_date: date,
-    latest: TrainerRoutine | None,
+    latest_approved: TrainerRoutine | None,
 ) -> _HistoryAnalysis:
     """최근 완료 기록에서 개인화 가능 여부·반복 운동·기본 조건을 뽑는다(#776).
 
     임계값은 명시적 규칙이다 — "패턴이 있다"를 AI 가 판단하지 않는다(이슈의
     요구사항). 세션 수·주 분산·반복 횟수 셋을 모두 만족해야 personalized 다 —
     하나만 봐서는 우연히 몰아 한 3일과 몇 주에 걸친 습관을 구분할 수 없다.
+
+    `latest_approved` 는 반드시 승인된(회원에게 실제로 나간) 루틴이어야 한다 —
+    검토 대기중이거나 반려된 후보의 시간·강도가 다음 생성의 기본값으로 새면
+    안 된다.
     """
     since = (today_date - timedelta(days=HISTORY_LOOKBACK_DAYS - 1)).isoformat()
     rows = db.execute(
@@ -275,9 +279,13 @@ def _analyze_routine_history(
 
     suggested_minutes = None
     suggested_intensity = None
-    if status != "template" and latest is not None and latest.minutes > 0:
-        suggested_minutes = min(180, max(10, latest.minutes))
-        suggested_intensity = _guess_intensity(latest.type)
+    if (
+        status != "template"
+        and latest_approved is not None
+        and latest_approved.minutes > 0
+    ):
+        suggested_minutes = min(180, max(10, latest_approved.minutes))
+        suggested_intensity = _guess_intensity(latest_approved.type)
 
     return _HistoryAnalysis(
         status=status,
@@ -339,6 +347,21 @@ def build_member_analysis(
         .order_by(TrainerRoutine.created_at.desc(), TrainerRoutine.id.desc())
         .limit(1)
     )
+    # `latest`(위)는 표시용 latest_routine 라벨이라 상태를 안 가린다 — 이력엔
+    # "이런 걸 준 적 있다"는 사실 자체가 의미 있다. 반면 조건 자동 설정은
+    # 회원에게 실제로 나간 값이어야 한다. approved 가 아니면(검토 대기중인
+    # AI 후보, 반려된 제안) 아직 아무 근거도 아니다 — 그 시간·강도가 조건에
+    # 새면 트레이너가 승인도 안 한 후보가 다음 생성을 조종하게 된다.
+    latest_approved = db.scalar(
+        select(TrainerRoutine)
+        .where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+            TrainerRoutine.status == "approved",
+        )
+        .order_by(TrainerRoutine.created_at.desc(), TrainerRoutine.id.desc())
+        .limit(1)
+    )
     profile = db.scalar(
         select(HealthProfile).where(HealthProfile.user_id == member_id)
     )
@@ -348,7 +371,9 @@ def build_member_analysis(
         else 2000
     )
 
-    history = _analyze_routine_history(db, trainer_id, member_id, today_date, latest)
+    history = _analyze_routine_history(
+        db, trainer_id, member_id, today_date, latest_approved
+    )
 
     return RoutineOptionAnalysisOut(
         goal=link.goal,

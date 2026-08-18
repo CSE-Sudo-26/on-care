@@ -182,7 +182,9 @@ void main() {
     test('mock generator respects the requested time at both limits', () async {
       const repo = MockTrainerRoutineOptionsRepository();
 
-      for (final minutes in <int>[10, 180]) {
+      // 5 는 RoutineMinutesSlider 의 실제 최소값이다 — 예전엔 A안 하한이 10 이라
+      // `clamp(10, 5)`로 죽었다.
+      for (final minutes in <int>[5, 10, 180]) {
         final options = await repo.generate(
           'm1',
           availableMinutes: minutes,
@@ -331,7 +333,53 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(repo.lastAvailableMinutes, 60);
-        expect(repo.lastIntensityPreference, 'moderate');
+        // 시간만 건드렸다 — 강도는 여전히 서버가 이력에서 계산하도록 비워
+        // 보낸다. 한쪽을 고쳤다고 다른 쪽까지 트레이너 입력값으로 굳으면 안
+        // 된다.
+        expect(repo.lastIntensityPreference, isNull);
+      },
+    );
+
+    testWidgets(
+      'touching only intensity leaves minutes for the server to derive',
+      (tester) async {
+        tester.view.physicalSize = const Size(1000, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final repo = _CapturingOptionsRepository(_personalizedOptions());
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: <Override>[
+              appConfigProvider.overrideWithValue(_mockConfig),
+              trainerRoutineOptionsRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AiRoutineOptionsFlow(client: _client),
+            ),
+          ),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('routine-intensity-high')),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('generate-routine-options')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
+
+        // 강도만 건드렸다 — 시간은 여전히 서버가 이력에서 계산하도록 비워
+        // 보낸다.
+        expect(repo.lastAvailableMinutes, isNull);
+        expect(repo.lastIntensityPreference, 'high');
       },
     );
   });

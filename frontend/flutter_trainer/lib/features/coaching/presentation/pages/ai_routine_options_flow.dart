@@ -54,12 +54,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   String _newExerciseType = '근력';
   int _newExerciseMinutes = 30;
 
-  /// Whether the trainer has touched the minutes/intensity fields directly
-  /// (#776). Until then, [_minutes]/[_intensity] only hold pre-fill display
-  /// values and generation sends no explicit condition — the server derives
-  /// one from the member's history (or a fixed default) instead. Once
-  /// touched, whatever the trainer set always wins.
-  bool _conditionsTouched = false;
+  /// Whether the trainer has touched minutes/intensity directly (#776),
+  /// tracked separately — touching one must not silently pin the other to
+  /// its stale display value. Until touched, [_minutes]/[_intensity] only
+  /// hold pre-fill display values and generation sends no explicit condition
+  /// for that field — the server derives it from history (or a fixed
+  /// default) instead. Once touched, whatever the trainer set always wins.
+  bool _minutesTouched = false;
+  bool _intensityTouched = false;
 
   bool _generating = false;
   bool _sending = false;
@@ -138,8 +140,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           .read(trainerRoutineOptionsRepositoryProvider)
           .generate(
             widget.client.id,
-            availableMinutes: _conditionsTouched ? _minutes : null,
-            intensityPreference: _conditionsTouched ? _intensity : null,
+            availableMinutes: _minutesTouched ? _minutes : null,
+            intensityPreference: _intensityTouched ? _intensity : null,
             trainerNote: _trainerMemo.text.trim(),
           );
       if (!mounted) return;
@@ -151,11 +153,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         _showAddExercise = false;
         _stage = 1;
         _maxReachedStage = 1;
-        // 트레이너가 아직 조건을 직접 건드리지 않았으면, 서버가 실제로 쓴
-        // 값(또는 기본값)을 화면에 반영한다 — 다시 생성할 때 그 값이 그대로
-        // 보이고, 여전히 자유롭게 고칠 수 있다(#776).
-        if (!_conditionsTouched) {
+        // 트레이너가 아직 건드리지 않은 조건만 서버가 실제로 쓴 값(또는
+        // 기본값)으로 채운다 — 트레이너가 시간만 고쳤다면 강도는 그대로
+        // 서버가 계산하도록 둬야 하고, 그 반대도 마찬가지다(#776).
+        if (!_minutesTouched) {
           _minutes = analysis.suggestedAvailableMinutes ?? _minutes;
+        }
+        if (!_intensityTouched) {
           _intensity = analysis.suggestedIntensity ?? _intensity;
         }
       });
@@ -464,7 +468,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             label: l.routineFieldTotalMinutes,
             onChanged: (minutes) => setState(() {
               _minutes = minutes;
-              _conditionsTouched = true;
+              _minutesTouched = true;
             }),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -472,7 +476,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             value: _intensity,
             onChanged: (intensity) => setState(() {
               _intensity = intensity;
-              _conditionsTouched = true;
+              _intensityTouched = true;
             }),
           ),
         ],
