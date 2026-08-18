@@ -426,6 +426,35 @@ void main() {
       expect(find.text('예정'), findsWidgets);
     });
 
+    // 좁은 화면에서도 누르면 세부 프로그램이 떠야 한다. 예전에는 패널을
+    // 통째로 버려, 탭이 선택만 바꾸고 화면은 그대로였다(#881).
+    testWidgets('좁은 화면 주 보기에서도 세부 프로그램이 뜬다', (tester) async {
+      tester.view.physicalSize = const Size(900, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.scheduleView('week', date: ymd(todayKst())),
+      );
+
+      // 넓은 화면에서 쓰는 패널과 같은 위젯이 그리드 아래에 쌓인다.
+      expect(find.byKey(const Key('week-detail')), findsOneWidget);
+
+      // 세션을 고르면 그 세션의 프로그램이 패널에 실린다.
+      await tester.tap(find.text('김민수').first);
+      await settle(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('레그프레스'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('week detail follows the URL date after selecting a session', (
       tester,
     ) async {
