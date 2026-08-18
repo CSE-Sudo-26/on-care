@@ -121,6 +121,8 @@
 | POST | `/trainer/clients/{member_id}/memos` | 메모 작성 (`insight_id?` 로 채팅 인사이트 중복 방지) |
 | PUT | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 본문 수정 |
 | DELETE | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 삭제 |
+| POST | `/trainer/schedule/recurring/preview` | 반복 설정이 만들 회차와 겹치는 기존 일정 |
+| POST | `/trainer/schedule/recurring` | 주간 반복 회차 일괄 등록(전부 아니면 전무, 409 에 충돌 목록) |
 | POST | `/trainer/schedule/{session_id}/cancel` | 일정 취소 기록(`source`=member\|trainer\|other, `reason?`) |
 | POST | `/trainer/schedule/{session_id}/no-show` | 노쇼 기록 |
 | GET | `/trainer/clients/{member_id}/follow-ups?include_completed=` | 고객 후속 관리 할 일(예정일 순, 기본 미완료) |
@@ -213,6 +215,28 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 `{key}#{index}` 로 나눠 저장하는데, `(trainer, member, client_request_id)` 유니크
 제약이 한 키로 여러 행을 허용하지 않기 때문이다. 재시도는 먼저 배정된 세션들을
 그대로 돌려준다 — 반쯤 겹친 배정이 남지 않는다.
+
+### 반복 PT 일정 (#870)
+
+주 2회 PT 를 하는 고객이 15명이면 매주 같은 일정을 30번 다시 입력해야 했다. 반복을
+표현하지 못하면 그 입력이 매주 되풀이되고, 주차 누락·시간 오입력이 그대로 회원 앱에
+나간다.
+
+- **규칙 표를 두지 않는다.** 회차 행의 `series_id` 하나로 "한 번에 잡힌 것" 만 잇는다.
+  만들고 나면 각 회차는 독립된 약속이라 개별로 옮기고 지우는 것이 실제 운영이고,
+  규칙을 따로 저장하면 규칙과 실제 회차가 조용히 어긋난다. 그래서 시리즈 전체 수정도
+  이번 범위가 아니다 — 개별 회차 수정·삭제가 기존 경로 그대로 동작한다.
+- **전부 만들거나 하나도 만들지 않는다.** 겹치는 회차가 있으면 409 이고 본문에 겹친
+  세션이 실린다. 일부만 만들면 트레이너는 몇 회차가 생겼는지 화면을 세어 봐야 알고,
+  빠진 주는 나중에 발견된다.
+- 겹침 판정은 `(date, time)` 이 같고 상태가 `예정|완료` 인 세션이다. 취소·노쇼 자리는
+  비어 있다(#871).
+- 회차 상한은 `MAX_SERIES_OCCURRENCES=52`. 종료일에 연도를 잘못 적어도 수백 건이
+  조용히 생기지 않는다.
+- 멱등키에서 시리즈 id 를 만든다(`_series_id_for`). 재시도가 이미 만든 시리즈를 다시
+  찾아 같은 결과를 돌려주므로 회원 일정이 두 배가 되지 않는다.
+- 회원 알림은 회차마다가 아니라 한 줄로 묶는다 — 8주치를 한 번에 잡으면 알림함이 같은
+  문구 여덟 줄로 덮인다.
 
 ### 일정의 결말 — 완료·취소·노쇼 (#871)
 

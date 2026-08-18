@@ -1150,6 +1150,16 @@ class TrainerSchedule(Base):
     # 트레이너의 예약 생성 시도 단위 멱등키. 다른 create operation 과는 테이블이
     # 달라 같은 문자열을 써도 충돌하지 않는다. NULL 은 구버전 요청 호환용이다.
     client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # 한 번의 반복 설정으로 함께 만들어진 회차들을 잇는 값(#870). 단일 일정은
+    # NULL 이다.
+    #
+    # 규칙(요일·종료 기준)을 저장하는 별도 표를 두지 않는다. 만들고 나면 각 회차는
+    # **독립된 약속**이라 개별로 옮기고 지우는 것이 실제 운영이고, 규칙을 남겨 두면
+    # 그 규칙과 실제 회차가 조용히 어긋난다. 여기서 필요한 것은 "이 회차들이 한
+    # 번에 잡힌 것" 이라는 사실뿐이다.
+    series_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

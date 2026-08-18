@@ -56,6 +56,7 @@ from app.schemas.trainer_api import (
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCancelRequest, ScheduleCompleteRequest,
     ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
+    ScheduleRecurringPreviewOut, ScheduleRecurringRequest,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
     FollowUpScope,
@@ -1209,6 +1210,81 @@ def trainer_create_session(
         )
     except trainer_service.IdempotencyConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/trainer/schedule/recurring/preview",
+    response_model=ScheduleRecurringPreviewOut,
+)
+def trainer_preview_recurring_sessions(
+    payload: ScheduleRecurringRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleRecurringPreviewOut:
+    """반복 설정이 만들 회차와, 그 자리에 이미 있는 일정. (#870)
+
+    저장 전에 보여 주기 위한 경로다 — 반복은 한 번에 여러 건을 만들고, 요일이나
+    종료일을 잘못 골랐을 때 되돌리는 비용이 한 건씩 지우는 일이다.
+    """
+    if payload.member_id:
+        _require_client(db, trainer.id, payload.member_id)
+    dates, conflicts = trainer_service.preview_recurring_sessions(
+        db,
+        trainer.id,
+        start=payload.date,
+        time=payload.time,
+        weekdays=payload.weekdays,
+        count=payload.count,
+        until=payload.until,
+    )
+    return ScheduleRecurringPreviewOut(dates=dates, conflicts=conflicts)
+
+
+@router.post(
+    "/trainer/schedule/recurring",
+    response_model=list[ScheduleSessionOut],
+    status_code=201,
+)
+def trainer_create_recurring_sessions(
+    payload: ScheduleRecurringRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[ScheduleSessionOut]:
+    """주간 반복으로 PT 회차를 한 번에 등록한다. (#870)
+
+    전부 만들거나 하나도 만들지 않는다 — 겹치는 회차가 있으면 409 로 멈추고, 응답
+    본문에 겹친 세션을 실어 화면이 어느 주가 문제인지 짚어 줄 수 있게 한다.
+    """
+    if payload.member_id:
+        _require_client(db, trainer.id, payload.member_id)
+    try:
+        return trainer_service.create_recurring_sessions(
+            db,
+            trainer.id,
+            start=payload.date,
+            time=payload.time,
+            weekdays=payload.weekdays,
+            client_name=payload.client_name,
+            member_id=payload.member_id,
+            type_=payload.type,
+            duration_minutes=payload.duration_minutes,
+            note=payload.note,
+            count=payload.count,
+            until=payload.until,
+            client_request_id=payload.client_request_id,
+        )
+    except trainer_service.ScheduleSeriesConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": str(exc),
+                "conflicts": [
+                    conflict.model_dump(mode="json") for conflict in exc.conflicts
+                ],
+            },
+        ) from exc
+    except trainer_service.ScheduleError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.put(
