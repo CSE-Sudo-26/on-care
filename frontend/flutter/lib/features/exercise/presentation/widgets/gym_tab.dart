@@ -33,7 +33,6 @@ class GymTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
-    final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
     // 트레이너 소속 헬스장 이름은 제휴 + 카카오를 모두 아는 목록에서 찾아야 한다.
     // 제휴 목록만 보면 카카오 헬스장 소속 트레이너의 헬스장 이름이 빈칸이 된다(#329).
     final AsyncValue<List<Gym>> knownGymsAsync = ref.watch(
@@ -109,7 +108,9 @@ class GymTab extends ConsumerWidget {
           ],
           const SizedBox(height: 28),
           _RecommendedGymSection(
-            gymsAsync: nearbyAsync,
+            // 이미 연결된 헬스장은 빠진 목록이다(#864) — 내 헬스장 카드는 위에
+            // 그대로 있으므로 정보가 사라지지 않는다.
+            gymsAsync: ref.watch(recommendedGymsProvider),
             onMore: () => context.push(AppRoutes.gyms),
             onRetry: () => ref.invalidate(nearbyGymsProvider),
           ),
