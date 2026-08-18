@@ -529,7 +529,27 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
               return LayoutBuilder(
                 builder: (context, constraints) {
-                  if (constraints.maxWidth < 980) return grid;
+                  if (constraints.maxWidth < 980) {
+                    // 좁은 화면에는 오른쪽에 패널을 둘 폭이 없다. 예전에는
+                    // 패널을 통째로 버렸는데, 탭 핸들러는 그대로 살아 있어서
+                    // 누르면 선택만 바뀌고 화면은 그대로였다 — 트레이너에게는
+                    // 버튼이 고장 난 것으로 보인다(#881).
+                    //
+                    // 같은 패널을 그리드 아래로 쌓는다. 표현을 바꾸지 않으므로
+                    // 넓은 화면에서 익힌 것이 좁은 화면에서도 그대로 통한다.
+                    if (selected == null) return grid;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Expanded(flex: 3, child: grid),
+                        const Divider(
+                          height: 1,
+                          color: AppColors.borderStrong,
+                        ),
+                        Expanded(flex: 2, child: _buildWeekDetail(selected)),
+                      ],
+                    );
+                  }
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
@@ -574,6 +594,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final clients = ref.read(clientsProvider).valueOrNull ?? const [];
 
     return ListView(
+      key: const Key('week-detail'),
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: <Widget>[
         Text(
