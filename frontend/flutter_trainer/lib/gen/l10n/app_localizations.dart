@@ -116,6 +116,108 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get scheduleStatusDone;
 
+  /// No description provided for @scheduleStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get scheduleStatusCancelled;
+
+  /// No description provided for @scheduleStatusNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'No-show'**
+  String get scheduleStatusNoShow;
+
+  /// No description provided for @schedCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel session'**
+  String get schedCancel;
+
+  /// No description provided for @schedNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark no-show'**
+  String get schedNoShow;
+
+  /// No description provided for @schedCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this PT?'**
+  String get schedCancelTitle;
+
+  /// No description provided for @schedCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'The {time} session with {name} will be recorded as cancelled. The entry stays.'**
+  String schedCancelConfirm(String time, String name);
+
+  /// No description provided for @schedCancelSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by'**
+  String get schedCancelSource;
+
+  /// No description provided for @schedCancelByMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get schedCancelByMember;
+
+  /// No description provided for @schedCancelByTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer'**
+  String get schedCancelByTrainer;
+
+  /// No description provided for @schedCancelByOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get schedCancelByOther;
+
+  /// No description provided for @schedCancelReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional, only you see it)'**
+  String get schedCancelReasonHint;
+
+  /// No description provided for @schedCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel the session. Please try again.'**
+  String get schedCancelFailed;
+
+  /// No description provided for @schedNoShowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record as a no-show?'**
+  String get schedNoShowTitle;
+
+  /// No description provided for @schedNoShowConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'The {time} session with {name} will be recorded as a no-show.'**
+  String schedNoShowConfirm(String time, String name);
+
+  /// No description provided for @schedNoShowFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record the no-show. Please try again.'**
+  String get schedNoShowFailed;
+
+  /// No description provided for @schedCancelledBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} · {date}'**
+  String schedCancelledBy(String source, String date);
+
+  /// No description provided for @schedDeleteMeansRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.'**
+  String get schedDeleteMeansRemove;
+
   /// Display label for an empty slot in the trainer's day.
   ///
   /// In en, this message translates to:

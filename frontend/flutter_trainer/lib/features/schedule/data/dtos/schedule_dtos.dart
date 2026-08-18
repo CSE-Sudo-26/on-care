@@ -19,6 +19,10 @@ ScheduleSession scheduleSessionFromJson(Map<String, dynamic> json) {
     note: _str(json['note']),
     program: _programFromJson(json['program']),
     programSent: json['program_sent'] == true,
+    cancelledAt: _time(json['cancelled_at']),
+    cancellationSource: _str(json['cancellation_source']),
+    cancellationReason: _str(json['cancellation_reason']),
+    noShowAt: _time(json['no_show_at']),
   );
 }
 
@@ -53,6 +57,10 @@ List<ProgramItem> _programFromJson(Object? raw) {
 }
 
 String _str(Object? v) => v is String ? v : '';
+
+/// 서버 타임스탬프. 값이 없거나 읽을 수 없으면 null — 취소 시각 하나 때문에
+/// 하루 전체가 비지 않게 한다(다른 필드와 같은 방어 규약).
+DateTime? _time(Object? v) => v is String ? DateTime.tryParse(v) : null;
 
 // FastAPI emits JSON numbers that can decode as double on web — normalise
 // through num so `as int` never throws.

@@ -137,7 +137,10 @@ class CoachSession {
   /// Session length.
   final int durationMinutes;
 
-  /// 예정 | 완료 | 공백.
+  /// 예정 | 완료 | 취소 | 노쇼 | 공백.
+  ///
+  /// 취소·노쇼는 트레이너가 "그 PT 는 진행되지 않았다" 고 남긴 기록이다(#871).
+  /// 회원 화면에서는 앞으로의 일정과 섞이지 않는 것이 핵심이다.
   final String status;
 
   /// The trainer's feedback recorded when completing the session.
@@ -146,12 +149,21 @@ class CoachSession {
   /// The workout program attached by the trainer.
   final List<CoachProgramItem> program;
 
-  /// Whether this session is still ahead. 완료된 세션은 '오늘의 일정'에
-  /// 남겨 둘 이유가 없다.
-  bool get isUpcoming => status != '완료';
+  /// Whether this session is still ahead.
+  ///
+  /// **예정인 것만** 앞으로의 일정이다. 예전에는 "완료가 아닌 것" 으로 판정했는데,
+  /// 트레이너가 취소·노쇼로 남긴 세션이 생기면서 그 규칙은 진행되지 않은 PT 를
+  /// 회원의 '오늘의 일정' 에 그대로 세웠다(#871).
+  bool get isUpcoming => status == '예정';
 
   /// Whether the trainer has completed this session.
   bool get isDone => status == '완료';
+
+  /// 트레이너가 취소한 세션.
+  bool get isCancelled => status == '취소';
+
+  /// 회원이 오지 않은 것으로 기록된 세션.
+  bool get isNoShow => status == '노쇼';
 }
 
 /// One exercise in a trainer-authored PT program.
