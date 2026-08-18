@@ -121,6 +121,9 @@ void main() {
 
   testWidgets('주간 스택 막대는 바닥에서 자라 오른다', (WidgetTester tester) async {
     await pumpExercise(tester);
+    // 탭은 `오늘`(도넛)로 열린다(#863). 막대는 `이번 주` 부터다.
+    await tester.tap(find.text('이번 주'));
+    await tester.pump();
 
     const Size size = Size(600, 150);
     final CustomPainter atStart = chartPainter(tester);
@@ -145,6 +148,7 @@ void main() {
 
   testWidgets('이번 주 ↔ 이번 달 전환은 막대 애니메이션을 다시 재생한다', (WidgetTester tester) async {
     await pumpExercise(tester);
+    await tester.tap(find.text('이번 주'));
     await tester.pumpAndSettle();
 
     ChartReveal reveal() =>
