@@ -7,8 +7,9 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 /// Compact page-header action. [primary] fills with the navy brand;
 /// otherwise it's an outlined, quieter sibling.
 ///
-/// One primary per header — when two actions both fill, neither reads as
-/// the main one.
+/// In a row, the two weights alternate — filled, outlined, filled. The rhythm
+/// is what makes the row readable; a run of the same weight is what flattens
+/// it, so keep filled buttons from standing next to each other.
 class ActionButton extends StatelessWidget {
   /// Creates a header action.
   const ActionButton({
