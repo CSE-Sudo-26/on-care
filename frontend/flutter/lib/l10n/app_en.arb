@@ -8,125 +8,35 @@
   "navDiet": "Diet",
   "navExercise": "Exercise",
   "navMyHealth": "MY",
-  "pageDashboardTitle": "Home",
   "pageDietTitle": "Diet",
   "pageExerciseTitle": "Exercise",
-  "pageMyHealthTitle": "My",
   "pageAiCoachTitle": "AI Coach",
   "pageNotificationTitle": "Notifications",
-  "pagePlaceTitle": "Place",
-  "pageSignInTitle": "Sign in",
-  "actionOpenAiCoach": "Open AI Coach",
-  "actionFindPlace": "Find a place",
-  "actionSignInPlaceholder": "Sign in (placeholder)",
   "actionRetry": "Retry",
-  "placeholderDashboard": "Dashboard (placeholder)",
-  "placeholderDiet": "Diet Record (placeholder)",
-  "placeholderExercise": "Exercise (placeholder)",
-  "placeholderMyHealth": "My Health (placeholder)",
-  "placeholderAiCoach": "AI Coach (placeholder, mock responses)",
-  "placeholderNotification": "Notifications (placeholder)",
-  "placeholderPlace": "Place (placeholder, Google Maps in Stage 4)",
-  "placeholderSignIn": "Sign in (placeholder, social SDKs in Stage 4)",
   "errorNetwork": "Network problem",
   "errorUnauthorized": "Sign in required",
   "errorNotFound": "Not found",
   "errorServer": "Server error",
   "errorCancelled": "Cancelled",
   "errorUnknown": "Something went wrong",
-  "dashboardSectionToday": "Today",
   "dashboardMetricCalories": "Calories",
   "dashboardMetricExercise": "Weekly exercise",
-  "dashboardMetricWeight": "Weight",
-  "dashboardChartWeightWeek": "Weekly weight",
-  "dashboardCaloriesProgress": "{pct}% of {goal}",
-  "@dashboardCaloriesProgress": {
-    "placeholders": {
-      "pct": {
-        "type": "int"
-      },
-      "goal": {
-        "type": "int"
-      }
-    }
-  },
-  "dashboardWeightDelta": "{sign}{delta} vs last week",
-  "@dashboardWeightDelta": {
-    "placeholders": {
-      "sign": {
-        "type": "String"
-      },
-      "delta": {
-        "type": "String"
-      }
-    }
-  },
-  "homeGreeting": "{name}, let's ease into the day 👋",
-  "@homeGreeting": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "homeGreetingGeneric": "Let's ease into the day 👋",
   "homeDashboardLoadError": "Could not load the dashboard.",
   "homeDashboardEmpty": "No records yet today. Add a meal or workout to get started.",
-  "homeDietRecordCount": "{count} diet records today",
-  "@homeDietRecordCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "homeScheduleEmpty": "No events scheduled for today.",
-  "homeCoachingPill": "✦ AI Coaching",
-  "homeCoachingTitle": "Today's tailored advice",
-  "homeCoachingBody": "Cut back on sodium at dinner and\ntake about a 20-minute walk",
-  "homeCoachingReady": "AI prepared 3 tailored tips for you today",
-  "homeDietSodiumAlert": "Sodium over limit detected",
   "homeAiAdviceTitle": "Today's combined AI advice",
   "homeAiAdviceBody": "Your breakfast and evening PT were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish well with the shoulder stretches your coach emphasized.",
   "homeSodiumExceededBadge": "Sodium over",
   "homeMacroCarbs": "Carbs",
   "homeMacroProtein": "Protein",
   "homeMacroFat": "Fat",
-  "homeDietRecBadge": "✦ AI dinner recommendation",
   "homeMealChickenSalad": "Chicken breast salad",
-  "homeDietRecRice": "Half bowl of brown rice",
-  "homeDietLogButton": "Log diet →",
-  "homeExerciseRoutineProgress": "AI routine 1/3 done",
-  "homeExerciseBurnGoal": "{unit} burned · Goal {goal}",
-  "@homeExerciseBurnGoal": {
-    "placeholders": {
-      "unit": {
-        "type": "String"
-      },
-      "goal": {
-        "type": "int"
-      }
-    }
-  },
-  "homeExerciseBrisk": "Brisk walking",
-  "homeExerciseLegStretch": "Lower-body stretch",
-  "homeExerciseRecBadge": "✦ AI remaining routine",
-  "homeExerciseRecStretch": "Lower-body stretch 10 min",
-  "homeExerciseRecStrength": "Low-intensity strength 15 min",
-  "homeExerciseLogButton": "Log exercise →",
-  "homeSummaryToday": "Today total",
-  "homeVsGoal": "vs goal",
-  "homeNutritionTitle": "Nutrition status",
   "homeAiAnalysisPill": "✦ AI analysis",
-  "homeNutritionSubtitle": "Weekly trend · vs last week",
   "homeDetails": "Details",
-  "homeThisWeekAvg": "This week avg",
-  "homeLastWeekAvg": "Last week avg",
   "homeGoal": "Goal",
   "homeDietNutritionTitle": "Diet & nutrition",
   "homeCalorieIntake": "Today's calories",
   "homeAchieveRate": "Progress",
-  "homeWeeklyTrend": "Weekly trend",
   "homeWeeklyMetricTrend": "Weekly {metric} trend",
   "@homeWeeklyMetricTrend": {
     "placeholders": {
@@ -156,28 +66,7 @@
   },
   "homeExerciseActiveTime": "Active time",
   "homeExerciseBurned": "Calories",
-  "homeExerciseCount": "Weekly workouts",
   "homeExerciseDays": "Workout days",
-  "homeExerciseBurnProgress": "Weekly burn goal",
-  "unitTimes": "×",
-  "homeVsLastWeek": "vs last week",
-  "homeSodiumInsight": "Sodium intake has been {trend}. Cut back on salt and turn on {alert}?",
-  "@homeSodiumInsight": {
-    "placeholders": {
-      "trend": {
-        "type": "String"
-      },
-      "alert": {
-        "type": "String"
-      }
-    }
-  },
-  "homeSodiumInsightTrend": "rising for 2 weeks",
-  "homeSodiumInsightAlert": "high-sodium meal alerts",
-  "homeAiPill": "✦ AI",
-  "homeLegendThisWeek": "This week",
-  "homeLegendLastWeek": "Last week",
-  "homeLegendToday": "Today",
   "homeMealReasonSodium": "Great for sodium control",
   "homeMealTagLowSodium": "Low sodium",
   "homeMealBrownRiceBox": "Brown rice lunchbox",
@@ -221,8 +110,6 @@
     }
   },
   "homeScheduleTitle": "Today's schedule",
-  "homeScheduleEveningWalk": "Evening walk",
-  "homeScheduleWalkDetail": "Around home · 20 min",
   "unitKcal": "kcal",
   "unitMinutes": "min",
   "unitDays": "days",
@@ -244,7 +131,6 @@
       }
     }
   },
-  "unitKg": "kg",
   "dietTitle": "Diet",
   "dietToday": "Today",
   "dietWeekLabel": "Month {month}, Week {week}",
@@ -275,7 +161,6 @@
   "dietMealLog": "Meal Log",
   "dietAddMeal": "Add Meal",
   "dietEmptyLog": "No meals logged.\nAdd a meal with a photo!",
-  "dietPhotoAnalysis": "Photo Analysis",
   "dietLoadError": "Couldn't load your diet.",
   "dietPeriodAverage": "Daily average",
   "dietPeriodTotal": "Period total",
@@ -300,22 +185,6 @@
     }
   },
   "otherDateEmpty": "No {section} records for the selected date.",
-  "dietTagSodium": "Sodium {mg}mg",
-  "@dietTagSodium": {
-    "placeholders": {
-      "mg": {
-        "type": "int"
-      }
-    }
-  },
-  "dietTagSugar": "Sugar {g}g",
-  "@dietTagSugar": {
-    "placeholders": {
-      "g": {
-        "type": "int"
-      }
-    }
-  },
   "dietMealBreakfast": "Breakfast",
   "dietMealLunch": "Lunch",
   "dietMealDinner": "Dinner",
@@ -387,12 +256,7 @@
   "exTypeStrength": "Strength",
   "exTypeYoga": "Yoga",
   "exTypeStretching": "Stretching",
-  "exTypeOther": "Exercise",
   "exTypeOtherChip": "Other",
-  "exSourceTrainerPt": "Trainer PT",
-  "@exSourceTrainerPt": {
-    "description": "Badge on an exercise record the trainer created by completing a PT session. Read-only for the member."
-  },
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
   "exLevelHigh": "High",
@@ -447,12 +311,9 @@
   "exTodayTotalTime": "Today's total time",
   "exRest": "Rest",
   "exAiRecommendedExercise": "AI recommended exercise",
-  "exAiRoutineToday": "AI Routine · Today",
-  "exStatDays": "Days",
   "exStatTime": "Time",
   "exStatCalories": "Calories",
   "exStatStreak": "Streak",
-  "exUnitCount": "times",
   "exUnitStreakDays": "day streak",
   "exToday": "Today",
   "exLoadError": "Couldn't load your exercise data.",
@@ -460,40 +321,29 @@
   "exCompletedPtTime": "{time} completed",
   "@exCompletedPtTime": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "exCompletedPtNoProgram": "No workout program was recorded.",
   "exCompletedPtFeedback": "{coachName} · Today's feedback",
   "@exCompletedPtFeedback": {
     "placeholders": {
-      "coachName": {"type": "String"}
+      "coachName": {
+        "type": "String"
+      }
     }
   },
   "exProgramSets": "{count, plural, =1{1 set} other{{count} sets}}",
   "@exProgramSets": {
     "placeholders": {
-      "count": {"type": "int"}
-    }
-  },
-  "exEmptyLog": "No workouts logged this week.\nAdd one to start your log!",
-  "exAiFeedback": "AI advice",
-  "exAddExercise": "Add Exercise",
-  "exRoutineBriskTitle": "Brisk walking 30 min",
-  "exRoutineBriskSub": "Cardio · Blood pressure",
-  "exRoutineStretchTitle": "Lower-body stretch",
-  "exRoutineStretchSub": "Stretching · Flexibility",
-  "exRoutineStrengthTitle": "Low-intensity strength",
-  "exRoutineStrengthSub": "Strength · Endurance",
-  "exMissionComplete": "Mission complete!",
-  "exMinutesExercise": "{minutes} min exercise",
-  "@exMinutesExercise": {
-    "placeholders": {
-      "minutes": {
+      "count": {
         "type": "int"
       }
     }
   },
+  "exAddExercise": "Add Exercise",
   "exDurationMinutes": "{minutes} min",
   "@exDurationMinutes": {
     "placeholders": {
@@ -591,8 +441,6 @@
       }
     }
   },
-  "exTrainer": "Trainer",
-  "exMyGym": "My Gym",
   "exTrainerDedicated": "Personal trainer",
   "exAiSlotTitle": "✦ AI recommended times",
   "exTrainerAvailability": "{trainer}'s openings",
@@ -648,9 +496,6 @@
   },
   "exGymInfo": "Gym Info",
   "exConsultButton": "💬 1:1 Consult",
-  "exGymLoadError": "Couldn't load the gym.",
-  "exNoGymTitle": "No gym registered",
-  "exNoGymSub": "Register a nearby gym with Find a Gym",
   "exAddress": "Address",
   "exHours": "Hours",
   "exPhone": "Phone",
@@ -658,14 +503,6 @@
   "exKakaoMapArea": "Kakao Map area",
   "myTabTitle": "MY",
   "myDefaultUserName": "User",
-  "myRank": "Rank {rank}",
-  "@myRank": {
-    "placeholders": {
-      "rank": {
-        "type": "int"
-      }
-    }
-  },
   "mySettingsTitle": "Settings",
   "myProfileTitle": "My Profile",
   "myNotifTitle": "Notification Settings",
@@ -755,14 +592,6 @@
   "myLegalPrivacyBody": "Privacy Policy (Korean original governs).",
   "myLegalEffectiveDate": "Effective Jan 1, 2026",
   "myAppVersion": "On-Care · Version 1.0.0",
-  "myComingSoon": "{label} is coming soon",
-  "@myComingSoon": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      }
-    }
-  },
   "coachHeaderPill": "AI Health Assistant",
   "coachHeaderSubtitle": "Here are today's tailored tips",
   "coachCardDietTag": "Diet",
@@ -772,20 +601,6 @@
   "coachCardExerciseTitle": "Upper-body PT session 12 done",
   "coachCardExerciseBody": "Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.",
   "coachCardWaterTag": "Hydration",
-  "coachCardWaterTitle": "Drink one more glass of water.",
-  "coachCardWaterBody": "You've been quite active today.",
-  "coachProgressLabel": "Today's recommendation progress",
-  "coachProgressDone": "{done}/{total} done",
-  "@coachProgressDone": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "coachChatSubtitle": "Personal trainer · Available",
   "coachChatBack": "Back",
   "coachChatLoadFailed": "Couldn't load the conversation",
@@ -943,5 +758,429 @@
   "onboardConditionHypertension": "Hypertension",
   "onboardConditionDiabetes": "Diabetes",
   "onboardConditionDyslipidemia": "Dyslipidemia",
-  "onboardConditionObesity": "Obesity"
+  "onboardConditionObesity": "Obesity",
+  "aiCoachWelcome": "Hi, I'm Oni, your AI health coach 🙂\nAsk me anything about diet, exercise, blood pressure, or blood sugar.",
+  "@aiCoachWelcome": {
+    "description": "Greeting bubble the app shows when the coach conversation opens."
+  },
+  "aiCoachFailure": "Something went wrong. Please try again in a moment.",
+  "@aiCoachFailure": {
+    "description": "Bubble shown when the coach reply could not be fetched."
+  },
+  "actionCancel": "Cancel",
+  "@actionCancel": {
+    "description": "Generic cancel button in shared dialogs."
+  },
+  "actionDelete": "Delete",
+  "@actionDelete": {
+    "description": "Generic delete button in shared dialogs."
+  },
+  "actionEdit": "Edit",
+  "@actionEdit": {
+    "description": "Generic edit action in shared sheets."
+  },
+  "actionConfirm": "OK",
+  "@actionConfirm": {
+    "description": "Generic acknowledge button in shared dialogs."
+  },
+  "scheduleCategoryHospital": "Hospital",
+  "@scheduleCategoryHospital": {
+    "description": "Schedule category label."
+  },
+  "scheduleCategoryExercise": "Exercise",
+  "@scheduleCategoryExercise": {
+    "description": "Schedule category label."
+  },
+  "scheduleCategoryMeal": "Meal",
+  "@scheduleCategoryMeal": {
+    "description": "Schedule category label."
+  },
+  "scheduleCategoryMedication": "Medication",
+  "@scheduleCategoryMedication": {
+    "description": "Schedule category label."
+  },
+  "scheduleCategoryOther": "Other",
+  "@scheduleCategoryOther": {
+    "description": "Schedule category label."
+  },
+  "eventAddTitle": "Add event",
+  "@eventAddTitle": {
+    "description": "Title of the add-event dialog."
+  },
+  "eventEditTitle": "Edit event",
+  "@eventEditTitle": {
+    "description": "Title of the edit-event dialog."
+  },
+  "eventTitleLabel": "Event title",
+  "@eventTitleLabel": {
+    "description": "Label of the event title field."
+  },
+  "eventTitleHint": "e.g. Regular checkup",
+  "@eventTitleHint": {
+    "description": "Hint of the event title field."
+  },
+  "eventDateLabel": "Date",
+  "@eventDateLabel": {
+    "description": "Label of the event date picker field."
+  },
+  "eventTimeLabel": "Time",
+  "@eventTimeLabel": {
+    "description": "Label of the event time picker field."
+  },
+  "eventTimeNone": "No time",
+  "@eventTimeNone": {
+    "description": "Shown in the time field when no time is set."
+  },
+  "eventTitleRequired": "Please enter an event title",
+  "@eventTitleRequired": {
+    "description": "Validation message when the event title is empty."
+  },
+  "eventAddFailed": "Couldn't add the event. Please try again in a moment",
+  "@eventAddFailed": {
+    "description": "Shown when creating an event fails."
+  },
+  "eventEditFailed": "Couldn't save the event. Please try again in a moment",
+  "@eventEditFailed": {
+    "description": "Shown when updating an event fails."
+  },
+  "eventSaving": "Saving…",
+  "@eventSaving": {
+    "description": "Submit button label while an edit is saving."
+  },
+  "eventAdding": "Adding…",
+  "@eventAdding": {
+    "description": "Submit button label while a new event is saving."
+  },
+  "eventSave": "Save",
+  "@eventSave": {
+    "description": "Submit button label of the edit-event dialog."
+  },
+  "eventAdd": "Add",
+  "@eventAdd": {
+    "description": "Submit button label of the add-event dialog."
+  },
+  "eventClearField": "Clear {label}",
+  "@eventClearField": {
+    "description": "Tooltip of the clear button on a picker field.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "eventDeleteTitle": "Delete event",
+  "@eventDeleteTitle": {
+    "description": "Title of the delete confirmation dialog."
+  },
+  "eventDeleteConfirm": "Delete “{title}”? This can't be undone.",
+  "@eventDeleteConfirm": {
+    "description": "Body of the delete confirmation dialog.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventDeleteFailed": "Couldn't delete the event. Please try again in a moment",
+  "@eventDeleteFailed": {
+    "description": "Shown when deleting an event fails."
+  },
+  "eventDeleted": "Event deleted",
+  "@eventDeleted": {
+    "description": "Shown after an event is deleted."
+  },
+  "eventsEmptyForDay": "No events on this day",
+  "@eventsEmptyForDay": {
+    "description": "Empty state of the day events sheet."
+  },
+  "eventAddForDay": "Add an event on this day",
+  "@eventAddForDay": {
+    "description": "Button that opens the add-event dialog for the selected day."
+  },
+  "eventTimeUnset": "Time TBD",
+  "@eventTimeUnset": {
+    "description": "Shown for an event saved without a time."
+  },
+  "scheduleSheetTitle": "Schedule",
+  "@scheduleSheetTitle": {
+    "description": "Title of the schedule calendar sheet."
+  },
+  "eventsLoadFailed": "Couldn't load events",
+  "@eventsLoadFailed": {
+    "description": "Shown when the calendar fails to load its events."
+  },
+  "coachCardSleepTag": "Sleep",
+  "@coachCardSleepTag": {
+    "description": "Tag of a sleep-related AI suggestion."
+  },
+  "myHealthGoalsTitle": "Health goals",
+  "@myHealthGoalsTitle": {
+    "description": "Title of the health goals sheet."
+  },
+  "myGoalsDietSection": "Daily diet goals",
+  "@myGoalsDietSection": {
+    "description": "Section label in the health goals sheet."
+  },
+  "myGoalsExerciseSection": "Weekly exercise goals",
+  "@myGoalsExerciseSection": {
+    "description": "Section label in the health goals sheet."
+  },
+  "myGoalCalories": "Daily calorie limit (kcal)",
+  "@myGoalCalories": {
+    "description": "Health goal field label."
+  },
+  "myGoalSodium": "Daily sodium limit (mg)",
+  "@myGoalSodium": {
+    "description": "Health goal field label."
+  },
+  "myGoalSugar": "Daily sugar limit (g)",
+  "@myGoalSugar": {
+    "description": "Health goal field label."
+  },
+  "myGoalCarbs": "Daily carbohydrate limit (g)",
+  "@myGoalCarbs": {
+    "description": "Health goal field label."
+  },
+  "myGoalProtein": "Daily protein limit (g)",
+  "@myGoalProtein": {
+    "description": "Health goal field label."
+  },
+  "myGoalFat": "Daily fat limit (g)",
+  "@myGoalFat": {
+    "description": "Health goal field label."
+  },
+  "myGoalWorkoutCount": "Weekly workout count goal",
+  "@myGoalWorkoutCount": {
+    "description": "Health goal field label."
+  },
+  "myGoalWorkoutMinutes": "Weekly workout minutes goal",
+  "@myGoalWorkoutMinutes": {
+    "description": "Health goal field label."
+  },
+  "myGoalWorkoutCalories": "Weekly calories burned goal (kcal)",
+  "@myGoalWorkoutCalories": {
+    "description": "Health goal field label."
+  },
+  "myGoalsSaved": "Health goals saved",
+  "@myGoalsSaved": {
+    "description": "Shown after health goals are saved."
+  },
+  "mySettingsLoadFailed": "Couldn't load your settings",
+  "@mySettingsLoadFailed": {
+    "description": "Title of the banner shown when settings fail to load."
+  },
+  "mySettingsLoadFailedBody": "Editing is locked because saving now could wipe your existing settings.",
+  "@mySettingsLoadFailedBody": {
+    "description": "Body of the banner shown when settings fail to load."
+  },
+  "myNotificationSaveFailed": "Couldn't save notification settings",
+  "@myNotificationSaveFailed": {
+    "description": "Shown when saving notification settings fails."
+  },
+  "myPointsGuideTitle": "How to earn points",
+  "@myPointsGuideTitle": {
+    "description": "Title of the points guide dialog."
+  },
+  "myPointsDietAdd": "Log a meal",
+  "@myPointsDietAdd": {
+    "description": "Point-earning action in the points guide."
+  },
+  "myPointsAiExercise": "Complete an AI-recommended workout",
+  "@myPointsAiExercise": {
+    "description": "Point-earning action in the points guide."
+  },
+  "myPointsExerciseAdd": "Log a workout yourself",
+  "@myPointsExerciseAdd": {
+    "description": "Point-earning action in the points guide."
+  },
+  "coachAssignedTrainer": "My trainer",
+  "@coachAssignedTrainer": {
+    "description": "Header of the assigned trainer card."
+  },
+  "coachAiCoaching": "AI coaching",
+  "@coachAiCoaching": {
+    "description": "Header of the AI coaching card."
+  },
+  "coachPointsTitle": "This week's coaching points",
+  "@coachPointsTitle": {
+    "description": "Section title in the coaching card."
+  },
+  "coachRoutineTitle": "Recommended solo workouts",
+  "@coachRoutineTitle": {
+    "description": "Section title in the coaching card."
+  },
+  "coachRoutineSubtitle": "Workouts to do on your own between PT sessions",
+  "@coachRoutineSubtitle": {
+    "description": "Explains what a solo routine is."
+  },
+  "coachRoutineByTrainer": "Recommended by your trainer",
+  "@coachRoutineByTrainer": {
+    "description": "Origin of a routine."
+  },
+  "coachRoutineAiChecked": "AI suggestion · reviewed by {name}",
+  "@coachRoutineAiChecked": {
+    "description": "Origin of a routine an AI proposed and the trainer approved.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachRoutineAiAuto": "AI suggestion",
+  "@coachRoutineAiAuto": {
+    "description": "Origin of a routine proposed automatically."
+  },
+  "coachRoutineLogged": "Added to your workout log",
+  "@coachRoutineLogged": {
+    "description": "Shown after a routine is marked done."
+  },
+  "coachRoutineGone": "This routine no longer exists. Please refresh the list",
+  "@coachRoutineGone": {
+    "description": "Shown when the routine is missing."
+  },
+  "coachRoutineNetworkError": "Check your connection and try again",
+  "@coachRoutineNetworkError": {
+    "description": "Shown when the network is unavailable."
+  },
+  "coachRoutineLogFailed": "Couldn't record it as done.",
+  "@coachRoutineLogFailed": {
+    "description": "Shown when marking a routine done fails for an unexpected reason."
+  },
+  "coachRoutineDone": "Done",
+  "@coachRoutineDone": {
+    "description": "Marks a routine as completed."
+  },
+  "coachRoutineMyNote": "My note: {note}",
+  "@coachRoutineMyNote": {
+    "description": "The member's own note on a completed routine.",
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "coachRoutineTrainerFeedback": "Trainer feedback: {feedback}",
+  "@coachRoutineTrainerFeedback": {
+    "description": "The trainer's feedback on a completed routine.",
+    "placeholders": {
+      "feedback": {
+        "type": "String"
+      }
+    }
+  },
+  "coachRoutineCompleteTitle": "Mark routine done",
+  "@coachRoutineCompleteTitle": {
+    "description": "Title of the completion dialog."
+  },
+  "coachRoutineMinutesLabel": "Actual minutes",
+  "@coachRoutineMinutesLabel": {
+    "description": "Field label in the completion dialog."
+  },
+  "coachRoutineMinutesError": "Enter a value between 1 and 600 minutes",
+  "@coachRoutineMinutesError": {
+    "description": "Validation message for the minutes field."
+  },
+  "coachRoutineIntensity": "Intensity",
+  "@coachRoutineIntensity": {
+    "description": "Field label in the completion dialog."
+  },
+  "coachIntensityLight": "Light",
+  "@coachIntensityLight": {
+    "description": "Intensity option."
+  },
+  "coachIntensityModerate": "Moderate",
+  "@coachIntensityModerate": {
+    "description": "Intensity option."
+  },
+  "coachIntensityHigh": "High",
+  "@coachIntensityHigh": {
+    "description": "Intensity option."
+  },
+  "coachRoutineNoteLabel": "Note (optional)",
+  "@coachRoutineNoteLabel": {
+    "description": "Field label in the completion dialog."
+  },
+  "coachRoutineNoteHint": "Share how it felt or how your body is doing",
+  "@coachRoutineNoteHint": {
+    "description": "Hint of the note field in the completion dialog."
+  },
+  "coachRoutineSubmit": "Save",
+  "@coachRoutineSubmit": {
+    "description": "Submit button of the completion dialog."
+  },
+  "coachChatWithTrainer": "Chat with trainer",
+  "@coachChatWithTrainer": {
+    "description": "Opens the chat with the assigned trainer."
+  },
+  "coachTrainerLoading": "Loading your trainer…",
+  "@coachTrainerLoading": {
+    "description": "Tooltip while the assigned trainer is being fetched."
+  },
+  "coachTrainerNone": "You don't have a trainer yet. Connect a gym and trainer from the Exercise tab",
+  "@coachTrainerNone": {
+    "description": "Tooltip when no trainer is assigned yet."
+  },
+  "alertCategoryReminder": "Reminder",
+  "@alertCategoryReminder": {
+    "description": "Notification category badge."
+  },
+  "alertCategoryHealth": "Health",
+  "@alertCategoryHealth": {
+    "description": "Notification category badge."
+  },
+  "alertCategoryAchievement": "Achievement",
+  "@alertCategoryAchievement": {
+    "description": "Notification category badge."
+  },
+  "alertCategorySystem": "System",
+  "@alertCategorySystem": {
+    "description": "Notification category badge."
+  },
+  "alertMarkAllRead": "Mark all read",
+  "@alertMarkAllRead": {
+    "description": "Marks every notification as read."
+  },
+  "alertEmpty": "No notifications",
+  "@alertEmpty": {
+    "description": "Empty state of the notification list."
+  },
+  "alertLoadFailed": "Couldn't load the latest notifications",
+  "@alertLoadFailed": {
+    "description": "Shown when the notification list fails to refresh."
+  },
+  "alertSimulatedTitle": "Simulated notification",
+  "@alertSimulatedTitle": {
+    "description": "Title of the demo push the mock build can trigger."
+  },
+  "alertSimulatedBody": "A test push just arrived.",
+  "@alertSimulatedBody": {
+    "description": "Body of the demo push the mock build can trigger."
+  },
+  "alertJustNow": "Just now",
+  "@alertJustNow": {
+    "description": "Relative time for something that just happened."
+  },
+  "exPtLogTitle": "Today's completed PT",
+  "@exPtLogTitle": {
+    "description": "Title of the completed PT session card."
+  },
+  "exPtFeedbackTitle": "Today's feedback",
+  "@exPtFeedbackTitle": {
+    "description": "Label above the trainer's feedback."
+  },
+  "exDatedTitle": "{title} · {month}/{day}",
+  "@exDatedTitle": {
+    "description": "Screen title carrying the selected date.",
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

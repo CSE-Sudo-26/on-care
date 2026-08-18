@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:printing/printing.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/chat_pdf_repository.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/messages/domain/chat_context_insight.dart';
-import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
-import 'package:oncare_trainer/shared/widgets/icon_label.dart';
-import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:printing/printing.dart';
 
 /// The 채팅 sub-tab: an AI-received system banner, the message thread
 /// (trainer right / client left), and an input bar that appends a
@@ -353,7 +352,6 @@ class _ChatInsightBanner extends StatelessWidget {
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
           const SizedBox(width: AppSpacing.sm),
@@ -455,7 +453,7 @@ class _SystemBanner extends StatelessWidget {
             Text(
               l.chatDemoReportSent,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10.5,
                 color: AppColors.mutedForeground,
                 fontWeight: FontWeight.w500,
@@ -501,7 +499,7 @@ class _SentBanner extends StatelessWidget {
             Text(
               l.chatDemoNotified,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10.5,
                 color: AppColors.mutedForeground,
                 fontWeight: FontWeight.w500,

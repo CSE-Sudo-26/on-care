@@ -79,6 +79,13 @@ dev_dependencies:
   build_runner: ^2.4.13
   drift_dev: ^2.20.3
 
+  # --- Lint plugins ---
+  # `flutter analyze` 는 analysis_options.yaml 의 custom_lint 플러그인을 돌리지
+  # 않는다. `dart run custom_lint` 를 따로 돌려야 하고, CI 도 별도 단계로 둔다
+  # (회원 앱과 동일한 구성).
+  custom_lint: ^0.7.6
+  riverpod_lint: ^2.6.3
+
 flutter:
   uses-material-design: true
   generate: true   # l10n.yaml 기반 flutter gen-l10n 활성화 (#501)

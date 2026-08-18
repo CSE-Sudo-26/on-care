@@ -23,7 +23,7 @@ const String _rejectNote = 'E2E 거절 사유 — 이번 주는 일정이 가득
 
 /// 사이드바 → 일정 → 상담 인박스.
 Future<void> _openInbox(WidgetTester tester) async {
-  await tester.tap(find.byKey(ValueKey<String>('sidebar-${AppRoutes.schedule}')));
+  await tester.tap(find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 

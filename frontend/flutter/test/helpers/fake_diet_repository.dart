@@ -1,3 +1,4 @@
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
@@ -222,7 +223,7 @@ class FakeDietRepository implements DietRepository {
 
   @override
   Future<DietDay> fetchByDate(DateTime date) async {
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final DateTime selectedDate = DateTime(date.year, date.month, date.day);
     final DateTime today = DateTime(now.year, now.month, now.day);
     final int daysAgo = today.difference(selectedDate).inDays;
@@ -315,7 +316,7 @@ class FakeDietRepository implements DietRepository {
   }
 
   String _nowLabel() {
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final String hh = now.hour.toString().padLeft(2, '0');
     final String mm = now.minute.toString().padLeft(2, '0');
     return '$hh:$mm';

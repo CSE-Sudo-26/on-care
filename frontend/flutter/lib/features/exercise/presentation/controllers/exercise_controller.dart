@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/data/kakao_gym_demo_profile.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_exercise_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_gym_repository.dart';
@@ -125,7 +125,7 @@ ExerciseWeek applyTodayBonus(
 }) {
   final int n = week.dailyMinutes.length;
   if (bonus.isEmpty || n == 0) return week;
-  final int today = ((now ?? DateTime.now()).weekday - 1).clamp(0, n - 1);
+  final int today = ((now ?? nowKst()).weekday - 1).clamp(0, n - 1);
 
   /// Adds [delta] to today's slot, leaving series the payload omitted
   /// (length mismatch) alone so a partial payload can't be misaligned.

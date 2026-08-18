@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/dio_trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Saves, lists and reopens the trainer's program drafts (#708).
 ///
@@ -113,7 +113,7 @@ class LocalTrainerProgramDraftRepository
   @override
   Future<TrainerProgramDraft> create(Map<String, Object?> payload) async {
     final drafts = _read();
-    final now = DateTime.now();
+    final now = nowKst();
     final stored = <String, Object?>{
       ...payload,
       'id': 'pgm-local-${now.microsecondsSinceEpoch}',
@@ -135,7 +135,7 @@ class LocalTrainerProgramDraftRepository
       ...drafts[index],
       ...payload,
       'id': id,
-      'updated_at': DateTime.now().toIso8601String(),
+      'updated_at': nowKst().toIso8601String(),
     };
     drafts[index] = stored;
     await _write(drafts);

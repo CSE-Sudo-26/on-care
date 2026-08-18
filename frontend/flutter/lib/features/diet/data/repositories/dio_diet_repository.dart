@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-
 import 'package:oncare/core/errors/app_error.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
@@ -151,14 +151,14 @@ class DioDietRepository implements DietRepository {
       fatG: editedMacros?.fatG ?? returned.fatG,
     );
     _entryOverrides[id] = updated;
-    _entryOverrideUpdatedAt[id] = DateTime.now();
+    _entryOverrideUpdatedAt[id] = nowKst();
     return updated;
   }
 
   void _pruneStaleOverrides(DietDay day) {
     if (_entryOverrides.isEmpty) return;
 
-    final now = DateTime.now();
+    final now = nowKst();
     final serverIds = day.entries
         .map((DietEntry entry) => entry.id)
         .whereType<String>()

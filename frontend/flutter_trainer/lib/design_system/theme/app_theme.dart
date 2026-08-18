@@ -16,13 +16,10 @@ class AppTheme {
       brightness: Brightness.light,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
-        onPrimary: AppColors.primaryForeground,
         secondary: AppColors.accent,
         onSecondary: AppColors.accentForeground,
-        surface: AppColors.card,
         onSurface: AppColors.cardForeground,
         error: AppColors.destructive,
-        onError: AppColors.destructiveForeground,
       ),
       scaffoldBackgroundColor: AppColors.background,
     );

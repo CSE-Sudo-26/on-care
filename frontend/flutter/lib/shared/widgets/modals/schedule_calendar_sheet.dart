@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
@@ -10,6 +10,7 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/schedule/domain/entities/schedule_event.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 import 'package:oncare/features/schedule/presentation/schedule_category_color.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/add_event_dialog.dart';
 import 'package:oncare/shared/widgets/modals/day_events_sheet.dart';
 
@@ -42,7 +43,7 @@ Future<void> showScheduleCalendarSheet(
       constraints: const BoxConstraints(
         maxWidth: AppBreakpoints.contentMaxWidth,
       ),
-      child: _CalendarBody(initialDate: initialDate ?? DateTime.now()),
+      child: _CalendarBody(initialDate: initialDate ?? nowKst()),
     ),
   );
 }
@@ -66,14 +67,16 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
   /// 날짜 숫자와 일정 칩 한 줄이 들어가는 최소치다.
   static const double _minRowHeight = 56;
 
-  static const List<String> _weekdays = <String>[
-    '일',
-    '월',
-    '화',
-    '수',
-    '목',
-    '금',
-    '토',
+  /// 그리드의 요일 머리. 일요일부터 시작한다 — 문구는 식단 탭이 쓰는 것과 같은
+  /// 키를 재사용한다(#847).
+  static List<String> _weekdays(AppLocalizations l) => <String>[
+    l.dietWeekdaySun,
+    l.dietWeekdayMon,
+    l.dietWeekdayTue,
+    l.dietWeekdayWed,
+    l.dietWeekdayThu,
+    l.dietWeekdayFri,
+    l.dietWeekdaySat,
   ];
 
   /// 그 날의 일정을 펼친다. 시트에서 무언가 바뀌었으면 달을 다시 읽는다 —
@@ -101,9 +104,10 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     final monthKey = _monthKey(_month);
     final async = ref.watch(scheduleMonthProvider(monthKey));
-    final today = DateTime.now();
+    final today = nowKst();
     final days = _daysInGrid(_month);
 
     return FractionallySizedBox(
@@ -117,7 +121,7 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
               children: <Widget>[
                 Expanded(
                   child: Text(
-                    '일정 관리',
+                    l.scheduleSheetTitle,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -136,7 +140,9 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                   ),
                 ),
                 Text(
-                  '${_month.year}년 ${_month.month}월',
+                  // 연·월 표기는 로케일마다 순서가 다르다. 직접 조립하지 않고
+                  // 플랫폼 형식을 쓴다(#847).
+                  MaterialLocalizations.of(context).formatMonthYear(_month),
                   style: theme.textTheme.titleMedium,
                 ),
                 IconButton(
@@ -158,7 +164,7 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                       borderRadius: BorderRadius.all(AppRadius.md),
                     ),
                   ),
-                  child: const Text('일정 추가'),
+                  child: Text(l.eventAddTitle),
                 ),
               ],
             ),
@@ -167,7 +173,7 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: <Widget>[
-                for (final String w in _weekdays)
+                for (final String w in _weekdays(l))
                   Expanded(
                     child: Container(
                       color: AppColors.accent,
@@ -322,7 +328,7 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (Object e, _) => Center(
                   child: Text(
-                    '일정을 불러오지 못했어요',
+                    l.eventsLoadFailed,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppColors.foreground,
                     ),
@@ -363,6 +369,7 @@ class _CategoryLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     return Wrap(
       spacing: AppSpacing.md,
       runSpacing: 4,
@@ -381,7 +388,7 @@ class _CategoryLegend extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                scheduleCategoryLabel(c),
+                scheduleCategoryLabel(l, c),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),

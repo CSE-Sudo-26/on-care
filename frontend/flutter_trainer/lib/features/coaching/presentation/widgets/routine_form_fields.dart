@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Category order mirrors the member app's exercise-add sheet.
 ///
@@ -35,7 +34,7 @@ class RoutineCategoryChips extends StatelessWidget {
       children: <Widget>[
         Text(
           l.routineFieldType,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,
@@ -89,7 +88,7 @@ class RoutineMinutesSlider extends StatelessWidget {
           children: <Widget>[
             Text(
               label ?? l.routineFieldMinutes,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.subtleForeground,
@@ -147,7 +146,7 @@ class RoutineIntensityChips extends StatelessWidget {
       children: <Widget>[
         Text(
           l.routineFieldIntensity,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,

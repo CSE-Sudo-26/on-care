@@ -3,10 +3,10 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
@@ -111,7 +111,7 @@ void main() {
           .insert(
             TrainerScheduleEntriesCompanion.insert(
               id: 'legacy-row',
-              date: ymd(DateTime.now()),
+              date: ymd(nowKst()),
               time: '21:00',
               status: '예정',
               clientName: const Value('  김민수  '), // 공백까지 섞인 기존 데이터
@@ -144,7 +144,7 @@ void main() {
     test('addSession inserts an 예정 slot sorted into the timeline', () async {
       final repo = DriftScheduleRepository(db);
       await repo.addSession(
-        date: ymd(DateTime.now()),
+        date: ymd(nowKst()),
         clientName: '이지수',
         time: '10:15',
         type: '1:1 PT',
@@ -258,7 +258,7 @@ void main() {
             .insert(
               TrainerScheduleEntriesCompanion.insert(
                 id: 'sched-noted',
-                date: ymd(DateTime.now()),
+                date: ymd(nowKst()),
                 time: '18:00',
                 clientName: const Value('이지수'),
                 type: const Value('1:1 PT'),
@@ -299,7 +299,7 @@ void main() {
 
     test('watchDate separates timelines per calendar day', () async {
       final repo = DriftScheduleRepository(db);
-      final tomorrow = ymd(DateTime.now().add(const Duration(days: 1)));
+      final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
 
       expect(await repo.watchDate(tomorrow).first, isEmpty);
 
@@ -317,14 +317,14 @@ void main() {
       expect((await repo.watchToday().first).length, 6);
       // …and the booked-dates set now covers both days.
       final booked = await repo.watchBookedDates().first;
-      expect(booked, containsAll(<String>[ymd(DateTime.now()), tomorrow]));
+      expect(booked, containsAll(<String>[ymd(nowKst()), tomorrow]));
     });
 
     test('completing a non-today session labels its own date', () async {
       final repo = DriftScheduleRepository(db);
       // A PAST session — completing it retro-logs the class. Future
       // sessions can't be completed (see the next test).
-      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final yesterday = nowKst().subtract(const Duration(days: 1));
       await repo.addSession(
         date: ymd(yesterday),
         clientName: '이지수',
@@ -344,7 +344,7 @@ void main() {
 
     test('completeSession refuses a future-dated session', () async {
       final repo = DriftScheduleRepository(db);
-      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final tomorrow = nowKst().add(const Duration(days: 1));
       await repo.addSession(
         date: ymd(tomorrow),
         clientName: '이지수',
@@ -372,7 +372,7 @@ void main() {
       // report then showed 0 sessions with no error (CodeRabbit #377).
       final repo = DriftScheduleRepository(db);
       await repo.addSession(
-        date: ymd(DateTime.now()),
+        date: ymd(nowKst()),
         clientName: '  김민수  ',
         time: '21:00',
         type: '1:1 PT',
@@ -428,7 +428,7 @@ void main() {
     testWidgets('week detail follows the URL date after selecting a session', (
       tester,
     ) async {
-      final today = DateTime.now();
+      final today = nowKst();
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -912,7 +912,7 @@ void main() {
       await openSchedule(tester);
 
       // Browse to tomorrow and book a session there.
-      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final tomorrow = nowKst().add(const Duration(days: 1));
       await tester.tap(find.text('${tomorrow.day}').first);
       await settle(tester);
       await tester.tap(find.text('새 일정'));
@@ -947,7 +947,7 @@ void main() {
       expect(find.text('오늘'), findsNothing);
 
       // Default window is centred on today (D-3…D+3); tap tomorrow.
-      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final tomorrow = nowKst().add(const Duration(days: 1));
       await tester.tap(find.text('${tomorrow.day}').first);
       await settle(tester);
 

@@ -34,7 +34,10 @@ class DriftAiRoutineRepository implements AiRoutineRepository {
   }) {
     final routines = _db.clientAiRoutines;
     final clients = _db.trainerClients;
-    final query = _db.select(routines).join(<Join>[
+    // 타입 인자를 적지 않는다 — drift 의 `innerJoin` 이 돌려주는
+    // `Join<HasResultSet, dynamic>` 을 추론이 채운다. `<Join>` 이라고 쓰면
+    // raw type 이라 `strict-raw-types` 에 걸린다.
+    final query = _db.select(routines).join([
       innerJoin(
         clients,
         clients.id.equalsExp(routines.clientId),

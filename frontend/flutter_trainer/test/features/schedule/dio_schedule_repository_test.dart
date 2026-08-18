@@ -166,7 +166,7 @@ void main() {
     () async {
       stubGet(<dynamic>[
         _session(id: 'old', date: '2026-08-01'),
-        _session(id: 'new', date: '2026-08-06'),
+        _session(id: 'new'),
       ]);
 
       final slots = await repo.watchClientSessions((

@@ -127,7 +127,11 @@ void main() {
     final container = _container();
     addTearDown(container.dispose);
     final before = container.read(notificationControllerProvider);
-    container.read(notificationControllerProvider.notifier).simulatePush();
+    container.read(notificationControllerProvider.notifier).simulatePush(
+      title: '시뮬레이션 알림',
+      body: '지금 막 가상 푸시가 도착했어요.',
+      timeAgo: '방금',
+    );
     final after = container.read(notificationControllerProvider);
     expect(after.items.length, before.items.length + 1);
     expect(after.items.first.read, isFalse);
@@ -201,7 +205,11 @@ void main() {
     await notifier.refresh();
     final before = container.read(notificationControllerProvider).items.length;
 
-    notifier.simulatePush();
+    notifier.simulatePush(
+      title: '시뮬레이션 알림',
+      body: '지금 막 가상 푸시가 도착했어요.',
+      timeAgo: '방금',
+    );
 
     // 실모드는 서버가 진실원본 — 로컬 팬텀을 주입하지 않는다.
     final after = container.read(notificationControllerProvider).items;

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
@@ -128,7 +128,7 @@ void main() {
     expect(s.macros.carbsG, today.macros.carbsG);
     expect(s.macros.proteinG, today.macros.proteinG);
     expect(s.macros.fatG, today.macros.fatG);
-    final NutritionDay todayTrend = s.nutritionWeek[DateTime.now().weekday - 1];
+    final NutritionDay todayTrend = s.nutritionWeek[nowKst().weekday - 1];
     expect(todayTrend.calories, today.totalCalories);
     expect(todayTrend.sodiumMg, today.totalSodiumMg);
     expect(todayTrend.sugarG, today.totalSugarG);

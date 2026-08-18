@@ -27,7 +27,7 @@ ScheduleSession session({
 );
 
 void main() {
-  final minsu = makeClient(id: 'c1', name: '김민수');
+  final minsu = makeClient(name: '김민수');
   final jisu = makeClient(id: 'c2', name: '이지수');
 
   group('nextSessionsByClient', () {

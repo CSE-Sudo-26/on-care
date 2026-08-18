@@ -1,4 +1,5 @@
 import 'package:oncare/core/demo/demo_ai_advice.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -29,7 +30,7 @@ class MockDashboardRepository implements DashboardRepository {
         profile?.effectiveDailySodiumMg ?? UserProfile.defaultDailySodiumMg;
     final int sugarGoal =
         profile?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG;
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final DateTime monday = DateTime(
       now.year,
       now.month,
