@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays;
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -82,7 +83,34 @@ void main() {
 
     final bar = tester.widget<InlineBarValue>(rowBar('blank'));
     expect(bar.fraction, isNull, reason: '기록 없음이 0% 수행으로 읽힌다');
-    expect(bar.text, '-');
+    // 왜 빈지를 적는다 — `-` 만으로는 값이 0 인지 없는지 알 수 없다.
+    expect(bar.text, '데이터 부족');
+    expect(
+      find.descendant(of: rowBar('blank'), matching: find.text('데이터 부족')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('기록이 없는 줄은 라벨까지 흐려진다', (tester) async {
+    await openCoaching(tester, <TrainerClient>[
+      makeClient(
+        id: 'blank',
+        name: '기록없음',
+        weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0],
+      ),
+    ]);
+
+    Color colorOf(String text) => tester
+        .widget<Text>(
+          find.descendant(of: rowBar('blank'), matching: find.text(text)),
+        )
+        .style!
+        .color!;
+
+    // 값 칸만 흐리면 라벨은 또렷한 채로 남아, 잴 값이 있는데 못 읽은 것처럼
+    // 보인다. 줄 전체가 흐려져야 읽거나 누를 것이 없다는 뜻이 된다.
+    expect(colorOf('데이터 부족'), AppColors.disabledForeground);
+    expect(colorOf('운동 이행률'), AppColors.disabledForeground);
   });
 
   testWidgets('회원 요약 카드에 요일별 이행률 막대그래프가 보인다', (tester) async {

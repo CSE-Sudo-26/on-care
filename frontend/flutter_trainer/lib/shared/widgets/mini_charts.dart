@@ -178,7 +178,11 @@ class InlineBarValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color tone = fraction == null
+    // 값이 없는 줄은 **줄 전체가 흐려진다.** 값 칸만 흐리면 라벨은 또렷한
+    // 채로 남아, 잴 값이 있는데 못 읽은 것처럼 보인다. 흐린 줄은 누를 것도
+    // 읽을 것도 없다는 뜻이다.
+    final bool empty = fraction == null;
+    final Color tone = empty
         ? AppColors.borderStrong
         : warn
         ? AppColors.overTarget
@@ -194,8 +198,10 @@ class InlineBarValue extends StatelessWidget {
               child: Text(
                 label!,
                 maxLines: 1,
-                style: const TextStyle(
-                  color: AppColors.subtleForeground,
+                style: TextStyle(
+                  color: empty
+                      ? AppColors.disabledForeground
+                      : AppColors.subtleForeground,
                   fontSize: 10.5,
                 ),
               ),
@@ -220,15 +226,22 @@ class InlineBarValue extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         SizedBox(
           width: valueWidth,
-          child: Text(
-            text,
-            textAlign: TextAlign.right,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: fraction == null ? AppColors.mutedForeground : tone,
+          // `데이터 부족` 처럼 값 대신 들어가는 안내는 숫자보다 길다. 잘라내면
+          // 무슨 말인지 사라지므로 칸 안에서 줄여 그린다.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              text,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 11,
+                // 값이 없으면 굵기까지 낮춘다 — 흐린 색만으로는 여전히
+                // 읽을 값처럼 보인다.
+                fontWeight: empty ? FontWeight.w600 : FontWeight.w800,
+                color: empty ? AppColors.disabledForeground : tone,
+              ),
             ),
           ),
         ),

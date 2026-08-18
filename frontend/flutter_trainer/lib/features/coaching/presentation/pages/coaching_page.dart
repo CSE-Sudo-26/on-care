@@ -1060,11 +1060,16 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                   return InlineBarValue(
                                     label: l.reportsCompletionAvg,
                                     fraction: mean == null ? null : mean / 100,
+                                    // 기록이 없으면 `-` 가 아니라 왜 빈지를
+                                    // 적는다. 줄 전체가 흐려져 읽거나 누를
+                                    // 것이 없다는 뜻이 함께 전해진다.
                                     text: mean == null
-                                        ? '-'
+                                        ? l.reportsDataInsufficient
                                         : '${mean.round()}%',
                                     // 주의 배지와 같은 기준.
                                     warn: mean != null && mean < 70,
+                                    // `데이터 부족` 이 들어갈 폭.
+                                    valueWidth: mean == null ? 60 : 40,
                                   );
                                 }(),
                               ],
