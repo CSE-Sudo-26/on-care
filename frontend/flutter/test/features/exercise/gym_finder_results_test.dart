@@ -200,8 +200,20 @@ void main() {
         .map((Trainer t) => t.name);
     expect(missing, isEmpty, reason: '추천 사유가 없는 트레이너');
 
-    // 전원이 사유를 가지므로 추천 레일 = 전체 트레이너
-    expect(recommended.length, trainers.length);
+    // 전원이 사유를 가지므로 추천 레일 = 전체 트레이너 **에서 담당 트레이너를 뺀
+    // 만큼**이다(#864). 이미 담당인 사람이 추천에 다시 서지 않는다.
+    final Trainer? assigned = await container.read(myTrainerProvider.future);
+    final int expected = trainers
+        .where((Trainer t) => t.id != assigned?.id)
+        .length;
+    expect(recommended.length, expected);
+    if (assigned != null) {
+      expect(
+        recommended.where((Trainer t) => t.id == assigned.id),
+        isEmpty,
+        reason: '담당 트레이너가 추천에 남아 있다',
+      );
+    }
 
     final reasons = trainers.map((Trainer t) => t.reason!).toList();
     expect(reasons.toSet().length, reasons.length, reason: '추천 사유 문구 중복');
