@@ -112,20 +112,27 @@ CoachMessage coachMessageFromJson(Map<String, Object?> json) {
     body: _requiredString(json, 'body'),
     timeLabel: _requiredString(json, 'time_label'),
     createdAt: _requiredDateTime(json, 'created_at'),
-    attachment: _pdfAttachment(json['attachment']),
+    attachment: _attachment(json['attachment']),
   );
 }
 
-CoachPdfAttachment? _pdfAttachment(Object? value) {
+CoachAttachment? _attachment(Object? value) {
   if (value == null) return null;
-  if (value is! Map<String, Object?> || value['type'] != 'pdf') {
+  if (value is! Map<String, Object?>) {
+    throw const FormatException('Invalid member chat attachment.');
+  }
+  // 모르는 종류는 조용히 지나치지 않는다 — 그릴 방법을 모르는 첨부를 빈 자리로
+  // 두면, 트레이너는 보냈다고 믿고 회원은 아무것도 못 본다.
+  final kind = CoachAttachmentKind.parse(value['type']);
+  if (kind == null) {
     throw const FormatException('Invalid member chat attachment.');
   }
   final size = value['file_size'];
   if (size is! int || size < 0) {
-    throw const FormatException('Invalid PDF attachment size.');
+    throw const FormatException('Invalid chat attachment size.');
   }
-  return CoachPdfAttachment(
+  return CoachAttachment(
+    kind: kind,
     fileName: _requiredString(value, 'file_name'),
     fileId: _requiredString(value, 'file_id'),
     fileSize: size,

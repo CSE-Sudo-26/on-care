@@ -532,10 +532,14 @@ def build_chat_thread(
 
 def chat_message_out(msg: ChatMessage, viewer: str) -> ChatMessageOut:
     attachment = None
-    if msg.attachment_type == "pdf" and msg.attachment_file_id:
+    if msg.attachment_type in ("pdf", "image") and msg.attachment_file_id:
+        # 이름이 없는 첨부도 화면에는 무언가 적혀야 한다 — 종류별 기본값을 준다.
+        fallback = (
+            "weekly-report.pdf" if msg.attachment_type == "pdf" else "사진"
+        )
         attachment = ChatAttachmentOut(
-            type="pdf",
-            file_name=msg.attachment_file_name or "weekly-report.pdf",
+            type=msg.attachment_type,
+            file_name=msg.attachment_file_name or fallback,
             file_id=msg.attachment_file_id,
             file_size=msg.attachment_file_size or 0,
             download_path=f"/chat/attachments/{msg.attachment_file_id}",
@@ -581,6 +585,7 @@ def send_message(
     db: Session, trainer_id: str, member_id: str, sender: str, text: str,
     viewer: str = "trainer", notify: str | None = None,
     client_request_id: str | None = None,
+    attachment_type: str = "pdf",
     attachment_file_name: str | None = None,
     attachment_file_id: str | None = None,
     attachment_file_size: int | None = None,
@@ -590,7 +595,8 @@ def send_message(
 
     [notify] 가 주어지면 그 종류로 회원 알림을 **같은 트랜잭션에** 얹는다(#489).
     종류를 호출자가 정하는 이유: 주간 리포트도 이 함수로 나가므로, 여기서 판단하면
-    일반 메시지와 구분할 수 없다.
+    일반 메시지와 구분할 수 없다. [attachment_type] 도 같은 이유로 호출자가
+    정한다 — 파일만 보고는 리포트인지 코칭 사진인지 알 수 없다(#921).
 
     회원이 보낸 메시지에는 **트레이너 알림**을 남긴다(#503). 사이드바 미읽음 배지는
     지금 보고 있을 때만 눈에 들어오고, 지나가면 다시 볼 자리가 없었다.
@@ -609,7 +615,10 @@ def send_message(
         sender=sender,
         body=text,
         client_request_id=client_request_id,
-        attachment_type="pdf" if attachment_file_id else None,
+        # 첨부가 없으면 종류도 없다. 종류를 호출자가 정하는 이유는 파일만 보고는
+        # 알 수 없기 때문이다 — 리포트 PDF(#778)와 코칭 사진(#921)이 같은 자리로
+        # 들어온다.
+        attachment_type=attachment_type if attachment_file_id else None,
         attachment_file_name=attachment_file_name,
         attachment_file_id=attachment_file_id,
         attachment_file_size=attachment_file_size,
@@ -650,7 +659,9 @@ def send_message(
                 if notify == notification_service.WEEKLY_REPORT
                 else f"{trainer_name or '트레이너'} 트레이너의 메시지"
             ),
-            body=text,
+            # 사진만 보낸 메시지는 본문이 비어 있다(#921). 알림 본문까지 비우면
+            # 목록에 제목만 뜬 빈 줄이 남아, 무엇이 왔는지 알 수 없다.
+            body=text or ("사진을 보냈어요" if attachment_file_id and attachment_type == "image" else text),
             # 리포트도 대화 스레드로 도착한다 — 별도 리포트 함이 없다.
             category=notification_service.MEMBER_COACH_CHAT,
         )
