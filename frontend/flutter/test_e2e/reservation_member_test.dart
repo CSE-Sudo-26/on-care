@@ -56,21 +56,20 @@ void main() {
         await tester.tap(confirm);
 
         // 서버에 예약이 남고 좌석이 하나 줄었는가. 화면 문구가 아니라 서버가 근거다.
-        Map<String, dynamic>? reservation;
-        final DateTime deadline = DateTime.now().add(
-          const Duration(seconds: 20),
+        // 손으로 쓰던 폴링 루프를 하네스의 [pumpUntilServer] 로 옮겼다 — 취소
+        // 단계가 같은 규칙을 쓰지 않아 깜빡였다(#910).
+        final Map<String, dynamic>? reservation = await pumpUntilServer(
+          tester,
+          () => api.reservationForSlot(slotId),
+          isNotNull,
+          step: '예약 UI 가 만든 예약',
         );
-        while (reservation == null && DateTime.now().isBefore(deadline)) {
-          await tester.pump(const Duration(milliseconds: 200));
-          reservation = await api.reservationForSlot(slotId);
-        }
-        expect(reservation, isNotNull, reason: '예약 UI 가 서버에 예약을 만들지 못했습니다.');
 
-        final Map<String, dynamic>? afterReserve = await api.slotById(slotId);
-        expect(
-          afterReserve!['remaining'],
-          capacity - 1,
-          reason: '예약 후 잔여 좌석이 줄지 않았습니다.',
+        await pumpUntilServer(
+          tester,
+          () async => (await api.slotById(slotId))!['remaining'],
+          equals(capacity - 1),
+          step: '예약 후 줄어든 잔여 좌석',
         );
 
         final String reservationId = reservation!['id'] as String;
@@ -126,15 +125,20 @@ void main() {
 
         await pumpUntilAbsent(tester, cancel, step: '취소한 예약이 목록에서 사라짐');
 
-        expect(
-          await api.reservationForSlot(slotId),
+        // 화면에서 사라진 것과 서버가 지운 것은 다른 일이다. 목록이 먼저
+        // 정리되면 DELETE 왕복이 아직 끝나지 않았을 수 있어, 한 번만 조회하면
+        // 취소가 멀쩡한 날에도 예약이 남아 있는 것으로 읽혔다(#910).
+        await pumpUntilServer(
+          tester,
+          () => api.reservationForSlot(slotId),
           isNull,
-          reason: '취소했는데 서버에 예약이 남아 있습니다.',
+          step: '취소한 예약이 서버에서 사라짐',
         );
-        expect(
-          (await api.slotById(slotId))!['remaining'],
-          capacity,
-          reason: '취소 후 좌석이 복구되지 않았습니다.',
+        await pumpUntilServer(
+          tester,
+          () async => (await api.slotById(slotId))!['remaining'],
+          equals(capacity),
+          step: '취소 후 복구된 좌석',
         );
 
         // 좌석이 돌아왔으니 다시 고를 수 있어야 한다 — 취소가 자리를 죽이면 안 된다.

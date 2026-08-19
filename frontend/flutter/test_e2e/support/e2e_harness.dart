@@ -434,6 +434,40 @@ Future<void> pumpUntilAbsent(
   );
 }
 
+/// 서버 상태가 [matcher] 를 만족할 때까지 다시 읽는다. (#910)
+///
+/// **화면이 정리됐다고 서버가 끝난 것은 아니다.** [pumpUntilAbsent] 로 카드가
+/// 사라지기를 기다린 뒤 서버를 한 번만 보면, 요청 왕복이 늦는 날 아직 반영되지
+/// 않은 상태를 읽는다 — 예약 취소 단계가 그렇게 깜빡였다.
+///
+/// 시간이 다하면 **마지막으로 읽은 값**으로 단언한다. 그래야 취소가 정말
+/// 반영되지 않는 회귀도 그대로 잡히고, 실패 메시지에 실제 서버 상태가 남는다.
+///
+/// 화면이 아니라 서버를 기다리는 자리이지만 [tester] 를 받는다 — 앱이 계속
+/// 돌아야 갱신·재조회가 진행되고, 펌프하지 않으면 그저 멈춰 서서 기다린다.
+Future<T> pumpUntilServer<T>(
+  WidgetTester tester,
+  Future<T> Function() read,
+  Matcher matcher, {
+  required String step,
+  Duration timeout = const Duration(seconds: 20),
+  Duration interval = const Duration(milliseconds: 200),
+}) async {
+  final DateTime deadline = DateTime.now().add(timeout);
+  T value = await read();
+  while (!matcher.matches(value, <dynamic, dynamic>{}) &&
+      DateTime.now().isBefore(deadline)) {
+    await tester.pump(interval);
+    value = await read();
+  }
+  expect(
+    value,
+    matcher,
+    reason: '[$e2ePhase] $step 이(가) $timeout 안에 서버에 반영되지 않았습니다.',
+  );
+  return value;
+}
+
 /// 목업으로 통과하는 것을 막는 관문.
 ///
 /// 이슈의 완료 조건이 "mock repository 만으로 테스트가 통과하지 않는다" 라, 설정이
