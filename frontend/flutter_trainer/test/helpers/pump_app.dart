@@ -10,6 +10,9 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Mock-mode config so widget tests resolve the in-memory repositories
@@ -138,3 +141,23 @@ Future<void> settle(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 250));
   }
 }
+
+/// 사이드바 배지를 **멈춘 값**으로 고정하는 override 묶음.
+///
+/// 실 API 모드로 콘솔을 띄우는 위젯 테스트용이다. 배지 세 개(안읽음 메시지·
+/// 알림·상담 요청)는 실 백엔드에서 주기적으로 다시 읽는다(#917). 배지를 보지도
+/// 않는 테스트가 그 타이머를 안고 끝나면 `flutter_test` 가 "A Timer is still
+/// pending" 으로 실패하는데, 그건 그 테스트가 검증하려던 것과 아무 상관이 없다.
+///
+/// **배지 자체를 검증하는 테스트는 이 묶음을 쓰지 않는다** — 멈춰 둔 값을 보고
+/// 통과하면 배지가 살아 있는지 아무것도 증명하지 못한다. 데모(목) 모드 테스트도
+/// 마찬가지로 쓰지 않는다. 그쪽은 폴링이 아니라 drift 스트림이라 타이머가 없다.
+List<Override> stillBadges() => <Override>[
+  unreadCountsProvider.overrideWith(
+    (ref) => Stream<Map<String, int>>.value(const <String, int>{}),
+  ),
+  trainerUnreadNotificationsProvider.overrideWith(
+    (ref) => Stream<int>.value(0),
+  ),
+  consultationPendingCountProvider.overrideWith((ref) => Stream<int>.value(0)),
+];

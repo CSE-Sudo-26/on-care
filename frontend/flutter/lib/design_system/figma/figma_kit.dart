@@ -35,6 +35,16 @@ class FigmaColors {
     0xFFFF953C,
   ); // spark accent(주의 오렌지로 통일)
   static const Color sugarPurple = Color(0xFF9B8FD4); // 당류 chart
+
+  // 식단 기간 그래프의 탄단지 3색. 하루 뷰의 탄단지 진행 바가 이미 파랑
+  // 계열이라 같은 계열을 쓰되, 한 막대 안에서 셋이 갈리도록 명도를 벌린다.
+  //
+  // 운동 탭 `운동 현황` 의 3색(#3EAFDF · #1B6FA8 · #D4EEF8)과는 **다른 계열**
+  // 이다. 그쪽은 청록(cyan) 쪽이고 이쪽은 남색(indigo)~파랑이다 — 같은 화면을
+  // 오가는 회원이 두 그래프의 색을 같은 뜻으로 읽으면 안 된다.
+  static const Color macroCarbs = Color(0xFF1E3A8A); // 탄수화물 — 짙은 남색
+  static const Color macroProtein = Color(0xFF3B82F6); // 단백질 — 파랑
+  static const Color macroFat = Color(0xFF93C5FD); // 지방 — 연한 파랑
   static const Color sleepPurple = Color(0xFF6B7FE0); // 수면 chart
 
   // Dots / status

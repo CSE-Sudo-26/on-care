@@ -82,7 +82,12 @@ Future<_RecordingAuthRepository> _pumpSignUp(
     tester,
     at: AppRoutes.signUp,
     extraOverrides: <Override>[
-      if (!demo) appConfigProvider.overrideWithValue(_realConfig),
+      if (!demo) ...<Override>[
+        appConfigProvider.overrideWithValue(_realConfig),
+        // 가입 흐름을 보는 테스트다. 대시보드에 내려앉은 뒤의 배지 폴링까지
+        // 안고 끝나지 않게 멈춰 둔다.
+        ...stillBadges(),
+      ],
       trainerAuthRepositoryProvider.overrideWithValue(repo),
     ],
   );
@@ -152,9 +157,7 @@ void main() {
     expect(find.text('헬스장에서 받은 초대 코드를 입력해 주세요'), findsOneWidget);
   });
 
-  testWidgets('비밀번호가 다르면 코드가 있어도 보내지 않는다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('비밀번호가 다르면 코드가 있어도 보내지 않는다', (WidgetTester tester) async {
     final repo = await _pumpSignUp(tester);
     await _fill(tester, confirm: 'different-pw', code: 'ONCARE1');
 

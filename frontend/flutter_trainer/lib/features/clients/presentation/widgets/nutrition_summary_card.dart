@@ -18,6 +18,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -65,24 +66,22 @@ class _Item {
   bool get isOverGoal => current > target;
 
   /// 목표까지 남은/넘은 양.
-  String get difference => _number((current - target).abs());
-}
-
-String _number(num v) {
-  if (v != v.roundToDouble()) return v.toStringAsFixed(1);
-  return v.toInt().toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (Match _) => ',',
-  );
+  String get difference => formatNumber((current - target).abs());
 }
 
 /// 오늘 섭취 칼로리 + 탄단지 + 나트륨·당류.
 class NutritionSummaryCard extends StatelessWidget {
   /// Creates the summary for [client].
-  const NutritionSummaryCard({super.key, required this.client});
+  const NutritionSummaryCard({super.key, required this.client, this.trailing});
 
   /// 오늘 합계를 들고 있는 고객.
   final TrainerClient client;
+
+  /// 제목 줄 오른쪽 끝에 얹을 조작 — 지금은 `오늘 / 이번 주 / 이번 달` 토글이
+  /// 온다(#914). 카드 **위에** 한 줄을 더 두지 않는 이유는, 고객 데이터 열이
+  /// 화면 안에 들어와야 한다는 제약이 이미 빠듯하기 때문이다. 이미 있는 제목
+  /// 줄에 얹으면 세로 자리를 한 픽셀도 더 쓰지 않는다.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +89,8 @@ class NutritionSummaryCard extends StatelessWidget {
 
     final _Item calories = _Item(
       label: l.metricCalories,
-      value: _number(client.calories),
-      goal: _number(calorieTargetKcal),
+      value: formatNumber(client.calories),
+      goal: formatNumber(calorieTargetKcal),
       unit: 'kcal',
       current: client.calories,
       target: calorieTargetKcal,
@@ -99,24 +98,24 @@ class NutritionSummaryCard extends StatelessWidget {
     final List<_Item> macros = <_Item>[
       _Item(
         label: l.metricCarbs,
-        value: _number(client.carbsG),
-        goal: _number(carbsTargetG),
+        value: formatNumber(client.carbsG),
+        goal: formatNumber(carbsTargetG),
         unit: 'g',
         current: client.carbsG,
         target: carbsTargetG,
       ),
       _Item(
         label: l.metricProtein,
-        value: _number(client.proteinG),
-        goal: _number(proteinTargetG),
+        value: formatNumber(client.proteinG),
+        goal: formatNumber(proteinTargetG),
         unit: 'g',
         current: client.proteinG,
         target: proteinTargetG,
       ),
       _Item(
         label: l.metricFat,
-        value: _number(client.fatG),
-        goal: _number(fatTargetG),
+        value: formatNumber(client.fatG),
+        goal: formatNumber(fatTargetG),
         unit: 'g',
         current: client.fatG,
         target: fatTargetG,
@@ -138,7 +137,11 @@ class NutritionSummaryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _CalorieRow(calories: calories, label: l.dietTodaySummary),
+              _CalorieRow(
+                calories: calories,
+                label: l.dietTodaySummary,
+                trailing: trailing,
+              ),
               const SizedBox(height: AppSpacing.md),
               const Divider(height: 1, thickness: 1, color: AppColors.border),
               const SizedBox(height: AppSpacing.md),
@@ -174,16 +177,16 @@ class NutritionSummaryCard extends StatelessWidget {
         _StatusCards(
           sodium: _Item(
             label: l.metricSodium,
-            value: _number(client.sodiumMg),
-            goal: _number(sodiumTargetMg),
+            value: formatNumber(client.sodiumMg),
+            goal: formatNumber(sodiumTargetMg),
             unit: 'mg',
             current: client.sodiumMg,
             target: sodiumTargetMg,
           ),
           sugar: _Item(
             label: l.metricSugar,
-            value: _number(client.sugarG),
-            goal: _number(sugarTargetG),
+            value: formatNumber(client.sugarG),
+            goal: formatNumber(sugarTargetG),
             unit: 'g',
             current: client.sugarG,
             target: sugarTargetG,
@@ -195,10 +198,17 @@ class NutritionSummaryCard extends StatelessWidget {
 }
 
 class _CalorieRow extends StatelessWidget {
-  const _CalorieRow({required this.calories, required this.label});
+  const _CalorieRow({
+    required this.calories,
+    required this.label,
+    this.trailing,
+  });
 
   final _Item calories;
   final String label;
+
+  /// 제목 줄 오른쪽 끝의 조작.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -212,13 +222,36 @@ class _CalorieRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                  // 토글은 **줄어들되 잘리지는 않는다.** 그냥 두면 폭 1024px ·
+                  // 영어 · 배율 1.3 에서 줄이 넘쳤고, `Flexible` 만 씌우면 폭
+                  // 360px 인 프로그램 탭 고객 데이터 열에서 `이번…` 처럼 잘렸다.
+                  // `FittedBox` 는 세 칸을 다 보여 준 채 통째로 작게 그린다 —
+                  // 이 카드가 이미 큰 숫자에 쓰는 방식과 같다.
+                  if (trailing case final Widget action) ...<Widget>[
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: action,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 5),
               FittedBox(
