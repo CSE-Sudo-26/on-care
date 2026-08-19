@@ -15,6 +15,7 @@ import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
@@ -173,14 +174,22 @@ class _FixedClientRepository implements ClientRepository {
     Map<String, Object?> values,
   ) => fetchHealthProfile(clientId);
   @override
-  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async =>
-      const ClientExerciseWeek(
-        dayLabels: <String>[],
-        dailyMinutes: <int>[],
-        dailyCalories: <int>[],
-        totalMinutes: 0,
-        totalCalories: 0,
-      );
+  Future<ClientExerciseWeek> fetchExerciseWeek(
+    String clientId, {
+    DateTime? weekStart,
+  }) async => const ClientExerciseWeek(
+    dayLabels: <String>[],
+    dailyMinutes: <int>[],
+    dailyCalories: <int>[],
+    totalMinutes: 0,
+    totalCalories: 0,
+  );
+
+  @override
+  Future<ClientDietPeriod> fetchDietPeriod(
+    String clientId,
+    ClientDateRange range,
+  ) async => ClientDietPeriod(range: range, days: const <ClientDietDay>[]);
 
   @override
   Future<bool> clientNameExists(String name) async => false;
