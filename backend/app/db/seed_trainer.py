@@ -85,6 +85,30 @@ _MEMBERS: list[tuple[str, str, str, str, bool, bool, int]] = [
     ("user-eunchae", "eunchae@oncare.demo", "노은채", "운동 습관 만들기", True, False, 15),
 ]
 
+#: 담당 회원의 성별(male|female). 트레이너 로스터 카드가 이름 옆에 적는 값이다.
+#:
+#: 저장된 값이 없으면 트레이너 앱이 회원 id 로 표시값을 지어내는데, 데모
+#: (`seed-client-8`)와 실 API(`user-sera`)가 서로 다른 id 를 써서 같은 회원이
+#: 모드에 따라 다른 성별로 떴다(#960). 여기 값이 정답이고, 앱의 계산은 성별이
+#: 비어 있는 회원에게만 남는다.
+_MEMBER_GENDERS: dict[str, str] = {
+    "user-demo": "male",            # 김민수
+    "user-jisu": "female",          # 이지수
+    "user-sungho": "male",          # 박성호
+    "user-hayun": "female",         # 정하윤
+    "user-woojin": "male",          # 최우진
+    "user-kangseoyeon": "female",   # 강서연
+    "user-dohyun": "male",          # 임도현
+    "user-sera": "female",          # 오세라
+    "user-junhyuk": "male",         # 배준혁
+    "user-yuna": "female",          # 신유나
+    "user-jiho": "male",            # 한지호
+    "user-gayoung": "female",       # 문가영
+    "user-taekyung": "female",      # 류태경
+    "user-seojin": "male",          # 백서진
+    "user-eunchae": "female",       # 노은채
+}
+
 _CERTIFICATIONS = ["생활스포츠지도사 2급", "퍼스널트레이닝 CPT", "스포츠 영양사"]
 
 
@@ -206,6 +230,43 @@ def _seed_member_accounts(db: Session) -> None:
             role="member",
         ))
     _safe_commit(db, "회원 데모 계정 시드 충돌")
+
+
+def seed_member_genders() -> None:
+    """담당 회원의 성별을 건강 프로필에 채운다(멱등).
+
+    호출은 `seed_member_health_data` 의 마지막 단계다 — 성별이 담기는 자리가
+    건강 프로필 행이라, 이 시드가 먼저 돌면 성별만 든 행이 생기고 위험도·영양
+    목표를 넣는 쪽이 "이미 행이 있다"며 통째로 건너뛴다. 같은 이유로 계정 시드
+    (`seed_trainer_domain`)가 아니라 건강 데이터 시드에 붙어 있어야, 그 시드를
+    다시 돌리는 경로(계정 복구 등)에서 성별도 함께 돌아온다.
+    """
+    db: Session = SessionLocal()
+    try:
+        _seed_member_genders(db)
+    finally:
+        db.close()
+
+
+def _seed_member_genders(db: Session) -> None:
+    """[seed_member_genders] 본문. 이미 값이 있으면 건드리지 않는다 — 트레이너나
+    회원이 입력한 값이 시드로 덮이면, 화면에서 고친 것이 재기동마다 되돌아온다."""
+    changed = False
+    for user_id, gender in _MEMBER_GENDERS.items():
+        member = db.scalar(select(models.User).where(models.User.id == user_id))
+        if member is None or member.role != "member":
+            continue  # 계정 시드가 건너뛴 회원(이메일 충돌 등)
+        profile = db.scalar(
+            select(models.HealthProfile).where(models.HealthProfile.user_id == user_id)
+        )
+        if profile is None:
+            db.add(models.HealthProfile(user_id=user_id, gender=gender))
+            changed = True
+        elif not profile.gender:
+            profile.gender = gender
+            changed = True
+    if changed:
+        _safe_commit(db, "회원 성별 시드 충돌")
 
 
 def _seed_client_links(db: Session) -> None:

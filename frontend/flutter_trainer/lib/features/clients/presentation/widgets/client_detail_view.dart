@@ -378,6 +378,9 @@ class _Header extends ConsumerWidget {
                   context,
                   memberId: client.id,
                   repository: ref.read(clientRepositoryProvider),
+                  // 서버에 성별이 없으면 로스터가 보여 주는 값으로 연다 —
+                  // 헤더와 대화상자가 다른 말을 하지 않도록(#960).
+                  fallbackGender: client.rosterGender,
                 ),
               ),
               // 메모 바로 앞이다 — 끝의 두 자리는 둘 다 내가 이 고객에 대해 남기는
