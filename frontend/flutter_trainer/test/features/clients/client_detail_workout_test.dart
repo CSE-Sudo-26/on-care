@@ -296,11 +296,11 @@ void main() {
       // 한 번 더 세던 자리는 걷어냈다.
       expect(find.text('배정된 루틴'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('이번 주 운동 추이'),
+        find.text('운동 추이'),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('이번 주 운동 추이'), findsOneWidget);
+      expect(find.text('운동 추이'), findsOneWidget);
       expect(find.text('이번 주 완료율'), findsNothing);
 
       // History entries with feedback + note boxes. Lower list items are
@@ -354,11 +354,11 @@ void main() {
       expect(find.text('배정된 루틴'), findsOneWidget);
       expect(find.text('PT 프로그램 이력'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('이번 주 운동 추이'),
+        find.text('운동 추이'),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('이번 주 운동 추이'), findsOneWidget);
+      expect(find.text('운동 추이'), findsOneWidget);
       // The failure is reported in place, where the history would be.
       await tester.scrollUntilVisible(
         find.text('운동 기록을 불러오지 못했어요'),
@@ -454,12 +454,17 @@ void main() {
         scrollable: scrollable,
       );
       expect(find.textContaining('복구 PT'), findsOneWidget);
+      // 운동 추이 카드는 PT 일정 **위**에 있다. 복구 PT 까지 내려온 뒤에는
+      // 위로 되짚어야 나온다 — 기간 토글이 카드 제목 줄로 들어가면서(#914)
+      // 카드가 짧아져, 내려온 자리에서 그대로 보이지는 않는다.
+      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+      await tester.pump();
       await tester.scrollUntilVisible(
-        find.text('이번 주 운동 추이'),
+        find.text('운동 추이'),
         200,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('이번 주 운동 추이'), findsOneWidget);
+      expect(find.text('운동 추이'), findsOneWidget);
     });
   });
 }

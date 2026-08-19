@@ -6,11 +6,13 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
     show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -57,7 +59,26 @@ abstract interface class ClientRepository {
     String clientId,
     Map<String, Object?> values,
   );
-  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId);
+
+  /// [clientId] 의 한 주 운동 집계. [weekStart] 를 주지 않으면 이번 주다.
+  ///
+  /// 주를 인자로 받는 이유는 `이번 달` 때문이다 — 서버도 데모도 운동 이력을
+  /// 주 단위로 들고 있어, 한 달을 그리려면 그 달에 걸친 주를 각각 읽어 이어
+  /// 붙인다(#914).
+  Future<ClientExerciseWeek> fetchExerciseWeek(
+    String clientId, {
+    DateTime? weekStart,
+  });
+
+  /// [range] 가 덮는 날들의 일별 식단 집계.
+  ///
+  /// 회원 앱 식단 탭의 기간 뷰와 같은 것을 트레이너에게도 준다. 두 구현 모두
+  /// **주 단위 이력**에서 만든다 — 데모는 drift 의 일별 지표에서, 실서버는
+  /// 리포트 응답(`calories_week` · `sodium_week` · `sugar_week`)에서.
+  Future<ClientDietPeriod> fetchDietPeriod(
+    String clientId,
+    ClientDateRange range,
+  );
 
   /// Demo-only roster additions — the backend roster comes from
   /// trainer↔member links, so these are unsupported against the real API.
@@ -284,16 +305,22 @@ class DriftClientRepository implements ClientRepository {
     return fetchHealthProfile(clientId);
   }
 
+  /// 데모의 이행률 → 운동 시간 환산. 100% 를 30분으로 본다.
+  ///
+  /// 지난 주를 읽을 때도 **같은 규칙**을 쓴다 — 주마다 환산이 다르면 한 달
+  /// 그래프에서 주 경계마다 값이 튄다.
+  static int _minutesFromCompletion(int rate) =>
+      rate == 0 ? 0 : (30 * rate / 100).round();
+
   @override
-  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async {
-    final row = await (_db.select(
-      _db.trainerClients,
-    )..where((table) => table.id.equals(clientId))).getSingle();
-    final completion = (jsonDecode(row.weekCompletionJson) as List<Object?>)
-        .map((value) => (value as num).toInt())
-        .toList(growable: false);
+  Future<ClientExerciseWeek> fetchExerciseWeek(
+    String clientId, {
+    DateTime? weekStart,
+  }) async {
+    final monday = clientMondayOf(weekStart ?? nowKst());
+    final completion = await _weekCompletion(clientId, monday);
     final minutes = completion
-        .map((rate) => rate == 0 ? 0 : (30 * rate / 100).round())
+        .map(_minutesFromCompletion)
         .toList(growable: false);
     final calories = minutes.map((value) => value * 6).toList(growable: false);
     return ClientExerciseWeek(
@@ -302,6 +329,75 @@ class DriftClientRepository implements ClientRepository {
       dailyCalories: calories,
       totalMinutes: minutes.fold(0, (sum, value) => sum + value),
       totalCalories: calories.fold(0, (sum, value) => sum + value),
+    );
+  }
+
+  /// [monday] 주의 요일별 이행률(월→일, 길이 7).
+  ///
+  /// 일별 지표(`clientDailyMetrics`)를 먼저 본다 — 시드가 12주치를 쌓아 두므로
+  /// 지난 주도 그 주의 값으로 읽힌다. 행이 하나도 없는 주는, 그 주가 이번
+  /// 주라면 로스터의 계열로 떨어진다(시드 이전 상태에서도 이번 주는 그려야
+  /// 한다). 그 밖에는 전부 0 — 기록이 없는 주다.
+  Future<List<int>> _weekCompletion(String clientId, DateTime monday) async {
+    final sunday = DateTime(monday.year, monday.month, monday.day + 6);
+    final rows =
+        await (_db.select(_db.clientDailyMetrics)..where(
+              (t) =>
+                  t.clientId.equals(clientId) &
+                  t.date.isBiggerOrEqualValue(ymd(monday)) &
+                  t.date.isSmallerOrEqualValue(ymd(sunday)),
+            ))
+            .get();
+    if (rows.isEmpty) {
+      if (monday != clientMondayOf(nowKst())) {
+        return List<int>.filled(7, 0);
+      }
+      final row = await (_db.select(
+        _db.trainerClients,
+      )..where((table) => table.id.equals(clientId))).getSingle();
+      final week = (jsonDecode(row.weekCompletionJson) as List<Object?>)
+          .map((value) => (value as num).toInt())
+          .toList(growable: false);
+      return <int>[for (var d = 0; d < 7; d++) d < week.length ? week[d] : 0];
+    }
+    final byDate = <String, ClientDailyMetricRow>{
+      for (final row in rows) row.date: row,
+    };
+    return <int>[
+      for (var d = 0; d < 7; d++)
+        byDate[ymd(DateTime(monday.year, monday.month, monday.day + d))]
+                ?.completion ??
+            0,
+    ];
+  }
+
+  @override
+  Future<ClientDietPeriod> fetchDietPeriod(
+    String clientId,
+    ClientDateRange range,
+  ) async {
+    final rows =
+        await (_db.select(_db.clientDailyMetrics)..where(
+              (t) =>
+                  t.clientId.equals(clientId) &
+                  t.date.isBiggerOrEqualValue(ymd(range.from)) &
+                  t.date.isSmallerOrEqualValue(ymd(range.to)),
+            ))
+            .get();
+    final byDate = <String, ClientDailyMetricRow>{
+      for (final row in rows) row.date: row,
+    };
+    return ClientDietPeriod(
+      range: range,
+      days: <ClientDietDay>[
+        for (final date in clientRangeDates(range))
+          ClientDietDay(
+            date: date,
+            calories: byDate[ymd(date)]?.calories ?? 0,
+            sodiumMg: byDate[ymd(date)]?.sodiumMg ?? 0,
+            sugarG: byDate[ymd(date)]?.sugarG ?? 0,
+          ),
+      ],
     );
   }
 
@@ -456,12 +552,14 @@ final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
 /// there is no honest number to show, and `valueOrNull` is null — the UI
 /// hides the badge instead of claiming "0명 예약", which would be wrong.
 final todayReservationCountProvider = Provider<AsyncValue<int>>((ref) {
-  return ref.watch(todayScheduleProvider).whenData(
-    // 취소된 약속은 빠진다(#871) — 이 숫자는 "오늘 몇 건이 잡혀 있나" 이고,
-    // 취소는 그 예약이 거두어졌다는 뜻이다. 노쇼는 센다: 자리는 그대로 잡혀
-    // 있었고 회원이 오지 않았을 뿐이다.
-    (sessions) => sessions.where((s) => !s.isGap && !s.isCancelled).length,
-  );
+  return ref
+      .watch(todayScheduleProvider)
+      .whenData(
+        // 취소된 약속은 빠진다(#871) — 이 숫자는 "오늘 몇 건이 잡혀 있나" 이고,
+        // 취소는 그 예약이 거두어졌다는 뜻이다. 노쇼는 센다: 자리는 그대로 잡혀
+        // 있었고 회원이 오지 않았을 뿐이다.
+        (sessions) => sessions.where((s) => !s.isGap && !s.isCancelled).length,
+      );
 });
 
 /// 사이드바 스케줄 배지가 읽는 **아직 처리하지 않은** 오늘 세션 수. (#860)
@@ -499,4 +597,68 @@ final clientHistoryProvider =
 final clientExerciseWeekProvider =
     FutureProvider.family<ClientExerciseWeek, String>((ref, clientId) {
       return ref.watch(clientRepositoryProvider).fetchExerciseWeek(clientId);
+    });
+
+/// 고객 기간 조회의 조회 키 — 누구의, 어느 기간을, **어느 날 기준으로**.
+///
+/// [day] 가 키에 들어 있는 이유는 자정 때문이다. 범위를 provider 안에서
+/// `nowKst()` 로 잡으면, 콘솔을 켜 둔 채 KST 자정을 넘겨도 같은 키의 캐시가
+/// 어제 범위를 그대로 들고 있다 — 트레이너는 날이 바뀐 줄 모르고 어제의
+/// `오늘` 을 본다. 날짜가 키의 일부면 다음 rebuild 에서 자연히 새 범위를 묻는다.
+typedef ClientPeriodKey = ({
+  String clientId,
+  ClientPeriod period,
+  DateTime day,
+});
+
+/// 지금(KST) 기준의 조회 키. 화면은 이 함수로 키를 만든다.
+ClientPeriodKey clientPeriodKeyNow(String clientId, ClientPeriod period) =>
+    (clientId: clientId, period: period, day: todayKst());
+
+/// [ClientPeriodKey] 의 일별 식단 집계. (#914)
+///
+/// `autoDispose` 다 — 날이 바뀌면 어제 키는 아무도 보지 않게 되므로, 캐시가
+/// 계속 쌓이지 않고 스스로 정리된다.
+final clientDietPeriodProvider = FutureProvider.autoDispose
+    .family<ClientDietPeriod, ClientPeriodKey>((ref, key) {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchDietPeriod(key.clientId, clientRangeFor(key.period, key.day));
+    });
+
+/// [ClientPeriodKey] 의 일별 운동 집계. (#914)
+///
+/// 범위가 걸친 주를 각각 읽어 이어 붙인다 — 서버도 데모도 운동 이력을 주
+/// 단위로 들고 있다. 한 주만 보는 경우에는 요청도 한 번이다.
+final clientExercisePeriodProvider = FutureProvider.autoDispose
+    .family<ClientExercisePeriod, ClientPeriodKey>((ref, key) async {
+      final repository = ref.watch(clientRepositoryProvider);
+      final ClientDateRange range = clientRangeFor(key.period, key.day);
+      final Map<String, ClientExerciseDay> byDate =
+          <String, ClientExerciseDay>{};
+      for (final DateTime monday in clientRangeWeekStarts(range)) {
+        final ClientExerciseWeek week = await repository.fetchExerciseWeek(
+          key.clientId,
+          weekStart: monday,
+        );
+        for (var d = 0; d < 7; d++) {
+          final DateTime date = DateTime(
+            monday.year,
+            monday.month,
+            monday.day + d,
+          );
+          byDate[ymd(date)] = ClientExerciseDay(
+            date: date,
+            minutes: d < week.dailyMinutes.length ? week.dailyMinutes[d] : 0,
+            calories: d < week.dailyCalories.length ? week.dailyCalories[d] : 0,
+          );
+        }
+      }
+      return ClientExercisePeriod(
+        range: range,
+        days: <ClientExerciseDay>[
+          for (final DateTime date in clientRangeDates(range))
+            byDate[ymd(date)] ?? ClientExerciseDay(date: date),
+        ],
+      );
     });
