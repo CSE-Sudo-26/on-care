@@ -1175,3 +1175,51 @@ class MemberClientInviteOut(BaseModel):
     message: str | None = None
     status: Literal["pending", "accepted", "rejected", "cancelled"]
     created_at: _datetime
+
+
+# ---------------------------------------------------------------------------
+# 프로그램 템플릿 — 어느 회원에게든 끼워 넣는 블록 (#920)
+# ---------------------------------------------------------------------------
+
+#: 한 템플릿에 담을 수 있는 운동 수. 블록이지 프로그램이 아니라 짧다.
+_TEMPLATE_MAX_EXERCISES = 20
+
+
+class ProgramTemplateExercise(BaseModel):
+    """템플릿 안의 운동 한 줄."""
+
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(ge=1, le=300)
+    type: RoutineType = "근력"
+
+
+class TrainerProgramTemplateOut(BaseModel):
+    id: str
+    name: str
+    goal: str
+    exercises: list[ProgramTemplateExercise]
+    updated_at: _datetime
+
+
+class TrainerProgramTemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    goal: str = Field(default="", max_length=200)
+    #: 운동이 하나도 없는 템플릿은 끼워 넣어도 아무 일이 없다 — 초안과 달리
+    #: 빈 상태에 의미가 없으므로 최소 하나를 요구한다.
+    exercises: list[ProgramTemplateExercise] = Field(
+        min_length=1, max_length=_TEMPLATE_MAX_EXERCISES
+    )
+
+
+class TrainerProgramTemplateUpdate(PartialUpdate):
+    """부분 수정. 보낸 필드만 반영한다.
+
+    `exercises` 는 통째로 교체한다 — 편집 화면이 항목 단위 diff 가 아니라 현재
+    구성 전체를 들고 있다(초안과 같은 규약).
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    goal: str | None = Field(default=None, max_length=200)
+    exercises: list[ProgramTemplateExercise] | None = Field(
+        default=None, min_length=1, max_length=_TEMPLATE_MAX_EXERCISES
+    )

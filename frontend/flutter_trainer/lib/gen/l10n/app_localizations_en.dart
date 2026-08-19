@@ -652,6 +652,62 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t withdraw the request. Please try again';
 
   @override
+  String get coachTemplateNew => 'New template';
+
+  @override
+  String get coachTemplateEdit => 'Edit template';
+
+  @override
+  String get coachTemplateSaveAsMine => 'Save as my template';
+
+  @override
+  String get coachTemplateDelete => 'Delete';
+
+  @override
+  String get coachTemplateNameLabel => 'Template name';
+
+  @override
+  String get coachTemplateGoalLabel => 'Goal (e.g. blood pressure · beginner)';
+
+  @override
+  String get coachTemplateExerciseName => 'Exercise';
+
+  @override
+  String get coachTemplateExerciseMinutes => 'min';
+
+  @override
+  String get coachTemplateAddExercise => 'Add exercise';
+
+  @override
+  String get coachTemplateSave => 'Save';
+
+  @override
+  String get coachTemplateNameRequired => 'Enter a template name';
+
+  @override
+  String get coachTemplateExerciseRequired => 'Add at least one exercise';
+
+  @override
+  String get coachTemplateSaveFailed =>
+      'Couldn\'t save the template. Please try again';
+
+  @override
+  String get coachTemplateDeleteFailed =>
+      'Couldn\'t delete the template. Please try again';
+
+  @override
+  String coachTemplateDeleteConfirm(String name) {
+    return 'Delete the $name template?';
+  }
+
+  @override
+  String get coachTemplateLoadFailed => 'Couldn\'t load templates';
+
+  @override
+  String get coachTemplateStarterHint =>
+      'A starter block. Editing saves it as your own';
+
+  @override
   String get clientTabDiet => 'Meals';
 
   @override
