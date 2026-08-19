@@ -1058,6 +1058,15 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                 // 글로 두었을 때 영어의 `Workout completion
                                 // 72%` 가 배율 1.3 에서 접혀 고정 행 높이를
                                 // 넘긴 적이 있다(#849).
+                                //
+                                // 이행률이 낮아도 **빨강으로 칠하지 않는다**
+                                // (#913). 이 앱에서 빨강은 `목표 초과` 다 —
+                                // 나트륨·당류가 기준을 넘었다는 뜻으로 회원
+                                // 앱과 색을 맞춰 둔 상태다(#690). 이행률이
+                                // 낮은 것은 초과가 아니라 아직 덜 한 것이고,
+                                // 그 사실은 막대 길이와 값이 이미 말한다.
+                                // 같은 카드의 `요일별 운동 이행률` 도 남색
+                                // 계열로만 그린다.
                                 () {
                                   final mean = recordedCompletionMean(client);
                                   return InlineBarValue(
@@ -1069,8 +1078,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                     text: mean == null
                                         ? l.reportsDataInsufficient
                                         : '${mean.round()}%',
-                                    // 주의 배지와 같은 기준.
-                                    warn: mean != null && mean < 70,
                                     // `데이터 부족` 이 들어갈 폭.
                                     valueWidth: mean == null ? 60 : 40,
                                   );

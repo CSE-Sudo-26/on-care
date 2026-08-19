@@ -185,7 +185,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final DietPeriodTab period = ref.watch(dietPeriodTabProvider);
+    final DietPeriodTab selectedPeriod = ref.watch(dietPeriodTabProvider);
     final DateTime today = _today;
     // Window is always centred on today (+ whole-week shifts): 3 days before,
     // today in the middle, 3 days after.
@@ -195,6 +195,14 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
       (int i) => center.add(Duration(days: i - 3)),
     );
     final bool atToday = _weekShift == 0 && _selected == today;
+    // 날짜를 옮기면 기간 토글이 사라진다 — 운동 탭이 오늘이 아닌 날에
+    // `운동 현황` 을 그날 기록으로 갈아 끼우는 것과 같은 규칙이다. 12일을 고른
+    // 채 `이번 달` 을 누르면 위 스트립은 하루를, 아래 그래프는 한 달을 가리켜
+    // 한 화면이 서로 다른 두 기간을 말했다. 기간 기록은 따로 뗄 예정이다.
+    //
+    // 고른 기간(`dietPeriodTabProvider`)은 **건드리지 않는다.** `오늘` 로
+    // 돌아오면 보던 기간이 그대로 살아나야 한다.
+    final DietPeriodTab period = atToday ? selectedPeriod : DietPeriodTab.day;
     final AsyncValue<DietDay> diet = atToday
         ? ref.watch(dietTodayProvider)
         : ref.watch(dietByDateProvider(_selected));
@@ -246,6 +254,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                 // 통째로 사라지고 토글마저 없어져 되돌아갈 수도 없었다(#684 리뷰).
                 _NutritionSectionHeader(
                   period: period,
+                  showToggle: atToday,
                   onChanged: (DietPeriodTab t) =>
                       ref.read(dietPeriodTabProvider.notifier).state = t,
                 ),
@@ -381,10 +390,15 @@ class _NutritionSectionHeader extends StatelessWidget {
   const _NutritionSectionHeader({
     required this.period,
     required this.onChanged,
+    this.showToggle = true,
   });
 
   final DietPeriodTab period;
   final ValueChanged<DietPeriodTab> onChanged;
+
+  /// 기간 토글을 그릴지. 오늘이 아닌 날짜를 보고 있으면 끈다 — 제목 줄 자체는
+  /// 남아, 아래 영양 요약이 무엇에 대한 것인지는 계속 읽힌다.
+  final bool showToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -427,9 +441,10 @@ class _NutritionSectionHeader extends StatelessWidget {
           ),
           // 토글은 카드 오른쪽 끝 — 운동 탭 '운동 현황' 과 같은 자리라 두 탭을
           // 오가며 같은 곳에서 기간을 바꾼다.
-          Flexible(
-            child: _PeriodToggle(active: period, onChanged: onChanged),
-          ),
+          if (showToggle)
+            Flexible(
+              child: _PeriodToggle(active: period, onChanged: onChanged),
+            ),
         ],
       ),
     );
@@ -490,6 +505,10 @@ class _DateStrip extends StatelessWidget {
                 ),
                 if (showTodayButton)
                   GestureDetector(
+                    // 기간 토글이 오늘이 아닌 날에는 사라지므로, 되돌아오는
+                    // 길은 이 버튼 하나다 — 테스트가 그 길을 지목할 수 있어야
+                    // 한다(#912).
+                    key: const ValueKey<String>('diet-today-button'),
                     onTap: onToday,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
