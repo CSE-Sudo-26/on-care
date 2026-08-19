@@ -58,6 +58,8 @@ from app.schemas.trainer_api import (
     ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleRecurringPreviewOut, ScheduleRecurringRequest,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
+    MemberLookupOut,
+    TrainerClientInviteCreate, TrainerClientInviteOut,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
     FollowUpScope,
     TrainerFollowUpTaskCreateRequest, TrainerFollowUpTaskOut,
@@ -71,6 +73,7 @@ from app.schemas.trainer_api import (
 )
 from app.services import (
     consultation_service,
+    trainer_client_invite_service,
     diet_photo_service,
     notification_service,
     trainer_dashboard_coaching_service,
@@ -1758,6 +1761,88 @@ async def trainer_send_report_pdf(
             if persisted is None:
                 report_pdf_storage.delete(file_id)
         raise
+
+
+# ---------------------------------------------------------------------------
+# 담당 요청 — 관계가 성립하는 **반대 방향**. (#919)
+#
+# 지금까지 담당이 생기는 경로는 회원이 상담을 요청하고 트레이너가 수락하는 하나
+# 뿐이라, 센터에서 먼저 등록·결제를 마친 회원을 트레이너가 콘솔에서 잡을 수
+# 없었다. 여기서 트레이너가 보내는 것은 **요청**이고, 담당 링크를 만드는 것은
+# 회원의 수락(`POST /me/coach/invites/{id}/accept`)뿐이다 — 담당은 상대의
+# 식단·건강 기록을 여는 권한이라 한쪽이 일방적으로 만들 수 없어야 한다.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/trainer/member-lookup", response_model=MemberLookupOut)
+def trainer_member_lookup(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    email: str = Query(min_length=3, max_length=254),
+) -> MemberLookupOut:
+    """이메일 **완전 일치**로 회원을 찾는다.
+
+    부분 일치·이름 검색을 두지 않는 것은 의도다 — 트레이너가 이름 몇 글자로
+    회원 명부를 훑을 수 있으면 담당도 아닌 사람들의 존재가 드러난다.
+    """
+    try:
+        return trainer_client_invite_service.lookup_member(db, trainer.id, email)
+    except trainer_client_invite_service.MemberNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_client_invite_service.NotAMember as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/trainer/client-invites", response_model=list[TrainerClientInviteOut])
+def trainer_client_invites(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    status: str = Query("pending", pattern="^(pending|all)$"),
+) -> list[TrainerClientInviteOut]:
+    """내가 보낸 담당 요청."""
+    return trainer_client_invite_service.list_sent(db, trainer.id, status=status)
+
+
+@router.post(
+    "/trainer/client-invites",
+    response_model=TrainerClientInviteOut,
+    status_code=201,
+)
+def create_trainer_client_invite(
+    payload: TrainerClientInviteCreate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerClientInviteOut:
+    """담당 요청을 보낸다. 명단에는 아직 아무것도 생기지 않는다."""
+    try:
+        return trainer_client_invite_service.invite(
+            db, trainer.id, payload.member_id, payload.message
+        )
+    except trainer_client_invite_service.MemberNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_client_invite_service.NotAMember as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (
+        trainer_client_invite_service.MemberAlreadyCoached,
+        trainer_client_invite_service.DuplicatePendingInvite,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete("/trainer/client-invites/{invite_id}", status_code=200)
+def cancel_trainer_client_invite(
+    invite_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """보낸 요청을 거둬들인다."""
+    try:
+        trainer_client_invite_service.cancel(db, trainer.id, invite_id)
+    except trainer_client_invite_service.InviteNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_client_invite_service.InviteAlreadyDecided as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"status": "cancelled"}
 
 
 # ---------------------------------------------------------------------------

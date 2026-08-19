@@ -1124,6 +1124,114 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get clientsAddAction;
 
+  /// No description provided for @clientInviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a member'**
+  String get clientInviteTitle;
+
+  /// No description provided for @clientInviteIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a member by email and send a coaching request. They appear in your client list once they accept in the app.'**
+  String get clientInviteIntro;
+
+  /// No description provided for @clientInviteEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Member email'**
+  String get clientInviteEmailLabel;
+
+  /// No description provided for @clientInviteLookupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Find'**
+  String get clientInviteLookupAction;
+
+  /// No description provided for @clientInviteMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (optional)'**
+  String get clientInviteMessageLabel;
+
+  /// No description provided for @clientInviteSendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get clientInviteSendAction;
+
+  /// No description provided for @clientInviteSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent a coaching request to {name}'**
+  String clientInviteSent(String name);
+
+  /// No description provided for @clientInviteNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No member uses that email'**
+  String get clientInviteNotFound;
+
+  /// No description provided for @clientInviteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the request. Please try again'**
+  String get clientInviteFailed;
+
+  /// No description provided for @clientInviteEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an email'**
+  String get clientInviteEmailRequired;
+
+  /// No description provided for @clientInviteAlreadyCoached.
+  ///
+  /// In en, this message translates to:
+  /// **'You already coach this member'**
+  String get clientInviteAlreadyCoached;
+
+  /// No description provided for @clientInviteHasTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Another trainer already coaches this member'**
+  String get clientInviteHasTrainer;
+
+  /// No description provided for @clientInvitePendingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A request you sent is still waiting for an answer'**
+  String get clientInvitePendingHint;
+
+  /// No description provided for @clientInvitePendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for an answer'**
+  String get clientInvitePendingTitle;
+
+  /// No description provided for @clientInvitePendingEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests are waiting'**
+  String get clientInvitePendingEmpty;
+
+  /// No description provided for @clientInviteCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get clientInviteCancelAction;
+
+  /// No description provided for @clientInviteCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request withdrawn'**
+  String get clientInviteCancelled;
+
+  /// No description provided for @clientInviteCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t withdraw the request. Please try again'**
+  String get clientInviteCancelFailed;
+
   /// No description provided for @clientTabDiet.
   ///
   /// In en, this message translates to:
