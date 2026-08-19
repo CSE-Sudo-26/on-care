@@ -149,3 +149,12 @@ DateTime _requiredDateTime(Map<String, Object?> json, String key) {
   }
   throw FormatException('Invalid member chat $key.');
 }
+
+/// `MemberClientInviteOut` → [CoachInvite]. (#919)
+CoachInvite coachInviteFromJson(Map<String, Object?> json) => CoachInvite(
+  id: json['id']! as String,
+  trainerId: json['trainer_id'] as String? ?? '',
+  trainerName: json['trainer_name'] as String? ?? '',
+  gymName: json['gym_name'] as String?,
+  message: json['message'] as String?,
+);

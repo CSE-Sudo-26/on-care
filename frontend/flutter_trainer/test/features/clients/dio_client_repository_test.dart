@@ -122,6 +122,77 @@ void main() {
     },
   );
 
+  test('the roster re-reads itself so a change made elsewhere lands without a '
+      'manual refresh (#918)', () async {
+    var calls = 0;
+    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer((
+      _,
+    ) async {
+      calls += 1;
+      return _okList(<dynamic>[
+        <String, Object?>{'id': 'm$calls', 'name': '김민수'},
+      ], '/trainer/clients');
+    });
+
+    final emissions = await DioClientRepository(
+      dio,
+      pollInterval: const Duration(milliseconds: 5),
+    ).watchClients().take(2).toList().timeout(const Duration(seconds: 1));
+
+    expect(emissions.map((rows) => rows.single.id).toList(), <String>[
+      'm1',
+      'm2',
+    ]);
+  });
+
+  test('a client\'s diet re-reads itself — a meal logged in the member app '
+      'appears without the trainer pressing anything (#918)', () async {
+    var calls = 0;
+    when(() => dio.get<List<dynamic>>('/trainer/clients/m1/diet')).thenAnswer((
+      _,
+    ) async {
+      calls += 1;
+      return _okList(<dynamic>[
+        for (var i = 0; i < calls; i++)
+          <String, Object?>{
+            'id': 'meal-$i',
+            'meal': '아침',
+            'name': '오트밀',
+            'kcal': 320,
+            'time_label': '08:0$i',
+          },
+      ], '/trainer/clients/m1/diet');
+    });
+
+    final emissions = await DioClientRepository(
+      dio,
+      pollInterval: const Duration(milliseconds: 5),
+    ).watchDiet('m1').take(2).toList().timeout(const Duration(seconds: 1));
+
+    expect(emissions.map((rows) => rows.length).toList(), <int>[1, 2]);
+  });
+
+  test('the roster stops re-reading once nothing listens', () async {
+    var calls = 0;
+    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer((
+      _,
+    ) async {
+      calls += 1;
+      return _okList(const <dynamic>[], '/trainer/clients');
+    });
+
+    final subscription = DioClientRepository(
+      dio,
+      pollInterval: const Duration(milliseconds: 5),
+    ).watchClients().listen((_) {});
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    await subscription.cancel();
+    final int afterCancel = calls;
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(calls, afterCancel);
+  });
+
   test('a refresh failure keeps the last successful client data', () async {
     const String path = '/trainer/clients/m1/diet';
     var calls = 0;

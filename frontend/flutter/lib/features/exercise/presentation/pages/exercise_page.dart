@@ -19,6 +19,7 @@ import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_invite_card.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -358,6 +359,9 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
             ),
             const SizedBox(height: 20),
             // 5) 담당 트레이너 — 관계와 소통만. 추천 운동은 AI 코칭에 모였다.
+            //    받은 담당 요청은 그 바로 위에 둔다 — "내 담당은 누구인가" 와
+            //    "담당이 되겠다는 사람이 있다" 는 같은 질문의 앞뒤다. (#919)
+            const CoachInviteCard(),
             const CoachCard(),
           ],
         ],

@@ -255,3 +255,28 @@ class CoachRoutineExercise {
     if (rest.isNotEmpty) '휴식 $rest초',
   ].join(' · ');
 }
+
+/// 트레이너가 나에게 보낸 담당 요청. (#919)
+///
+/// 상담 요청(내가 트레이너에게 보내는 쪽)의 반대 방향이다. 담당 관계는 내
+/// 식단·건강 기록을 트레이너에게 여는 일이라, 트레이너가 명단에 넣는 것이
+/// 아니라 **내가 수락해야** 성립한다. 화면도 그 순서로 보여 준다.
+class CoachInvite {
+  const CoachInvite({
+    required this.id,
+    required this.trainerId,
+    required this.trainerName,
+    this.gymName,
+    this.message,
+  });
+
+  final String id;
+  final String trainerId;
+  final String trainerName;
+
+  /// 트레이너의 소속 헬스장. 누구인지 알아보는 데 이름만으로는 부족할 때가 있다.
+  final String? gymName;
+
+  /// 트레이너가 함께 보낸 한마디.
+  final String? message;
+}

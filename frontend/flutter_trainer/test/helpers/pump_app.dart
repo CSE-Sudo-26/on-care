@@ -10,9 +10,16 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Mock-mode config so widget tests resolve the in-memory repositories
@@ -161,3 +168,78 @@ List<Override> stillBadges() => <Override>[
   ),
   consultationPendingCountProvider.overrideWith((ref) => Stream<int>.value(0)),
 ];
+
+/// 고객 명단·식단·운동 기록을 **멈춘 빈 값**으로 고정하는 override.
+///
+/// 실 API 의 명단은 주기적으로 다시 읽는다(#918). 명단을 쓰지 않는 화면을
+/// 검증하는 테스트(가입 흐름처럼 대시보드에 잠깐 내려앉을 뿐인 경우)는 그
+/// 타이머까지 안고 끝날 이유가 없다. 자기 명단을 직접 넣는 테스트는 이걸
+/// 쓰지 말고 그 저장소를 그대로 주입한다 — 여기서 덮으면 넣어 준 고객이
+/// 사라진다.
+Override stillRoster() =>
+    clientRepositoryProvider.overrideWithValue(const _StillClientRepository());
+
+/// 아무것도 돌려주지 않고 아무 타이머도 걸지 않는 명단 저장소.
+class _StillClientRepository implements ClientRepository {
+  const _StillClientRepository();
+
+  @override
+  bool get supportsRosterMutations => false;
+
+  @override
+  Stream<List<TrainerClient>> watchClients() =>
+      Stream<List<TrainerClient>>.value(const <TrainerClient>[]);
+
+  @override
+  Stream<Map<String, DateTime>> watchLastChatAt() =>
+      Stream<Map<String, DateTime>>.value(const <String, DateTime>{});
+
+  @override
+  Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
+      Stream<List<ClientDietEntry>>.value(const <ClientDietEntry>[]);
+
+  @override
+  Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
+      Stream<List<RoutineHistoryEntry>>.value(const <RoutineHistoryEntry>[]);
+
+  @override
+  Future<RoutineHistoryEntry> updateHistoryFeedback(
+    String clientId,
+    String historyId,
+    String feedback,
+  ) => throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId) =>
+      throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> values,
+  ) => throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<ClientExerciseWeek> fetchExerciseWeek(
+    String clientId, {
+    DateTime? weekStart,
+  }) => throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<ClientDietPeriod> fetchDietPeriod(
+    String clientId,
+    ClientDateRange range,
+  ) => throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<bool> clientNameExists(String name) =>
+      throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<bool> addClient({required String name, required String goal}) =>
+      throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<void> setClientActive(String id, bool active) =>
+      throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+}
