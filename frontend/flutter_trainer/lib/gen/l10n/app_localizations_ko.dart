@@ -569,6 +569,116 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsAddAction => '등록하기';
 
   @override
+  String get clientInviteTitle => '회원에게 담당 요청';
+
+  @override
+  String get clientInviteIntro =>
+      '회원의 이메일로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
+
+  @override
+  String get clientInviteEmailLabel => '회원 이메일';
+
+  @override
+  String get clientInviteLookupAction => '찾기';
+
+  @override
+  String get clientInviteMessageLabel => '함께 보낼 메시지 (선택)';
+
+  @override
+  String get clientInviteSendAction => '담당 요청 보내기';
+
+  @override
+  String clientInviteSent(String name) {
+    return '$name님에게 담당 요청을 보냈어요';
+  }
+
+  @override
+  String get clientInviteNotFound => '그 이메일을 쓰는 회원을 찾지 못했어요';
+
+  @override
+  String get clientInviteFailed => '요청을 보내지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientInviteEmailRequired => '이메일을 입력해 주세요';
+
+  @override
+  String get clientInviteAlreadyCoached => '이미 담당하고 있는 회원이에요';
+
+  @override
+  String get clientInviteHasTrainer => '이미 다른 트레이너가 담당 중인 회원이에요';
+
+  @override
+  String get clientInvitePendingHint => '이미 보낸 요청이 회원의 답을 기다리고 있어요';
+
+  @override
+  String get clientInvitePendingTitle => '답을 기다리는 요청';
+
+  @override
+  String get clientInvitePendingEmpty => '기다리는 요청이 없어요';
+
+  @override
+  String get clientInviteCancelAction => '요청 거두기';
+
+  @override
+  String get clientInviteCancelled => '요청을 거뒀어요';
+
+  @override
+  String get clientInviteCancelFailed => '요청을 거두지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachTemplateNew => '새 템플릿';
+
+  @override
+  String get coachTemplateEdit => '템플릿 편집';
+
+  @override
+  String get coachTemplateSaveAsMine => '내 템플릿으로 저장';
+
+  @override
+  String get coachTemplateDelete => '삭제';
+
+  @override
+  String get coachTemplateNameLabel => '템플릿 이름';
+
+  @override
+  String get coachTemplateGoalLabel => '목표 (예: 혈압 관리 · 초급)';
+
+  @override
+  String get coachTemplateExerciseName => '운동 이름';
+
+  @override
+  String get coachTemplateExerciseMinutes => '분';
+
+  @override
+  String get coachTemplateAddExercise => '운동 추가';
+
+  @override
+  String get coachTemplateSave => '저장';
+
+  @override
+  String get coachTemplateNameRequired => '템플릿 이름을 입력해 주세요';
+
+  @override
+  String get coachTemplateExerciseRequired => '운동을 하나 이상 넣어 주세요';
+
+  @override
+  String get coachTemplateSaveFailed => '템플릿을 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachTemplateDeleteFailed => '템플릿을 지우지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String coachTemplateDeleteConfirm(String name) {
+    return '$name 템플릿을 지울까요?';
+  }
+
+  @override
+  String get coachTemplateLoadFailed => '템플릿을 불러오지 못했어요';
+
+  @override
+  String get coachTemplateStarterHint => '기본 구성이에요. 고치면 내 템플릿으로 저장돼요';
+
+  @override
   String get clientTabDiet => '식단';
 
   @override
@@ -940,13 +1050,47 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitMinutes => '분';
 
   @override
+  String clientTrendWorkoutDaysValue(int days) {
+    return '$days일';
+  }
+
+  @override
+  String get clientPeriodToday => '오늘';
+
+  @override
+  String get clientPeriodWeek => '이번 주';
+
+  @override
+  String get clientPeriodMonth => '이번 달';
+
+  @override
+  String get clientPeriodAverage => '하루 평균';
+
+  @override
+  String clientPeriodLoggedDays(int days) {
+    return '$days일 기록';
+  }
+
+  @override
+  String get clientPeriodEmpty => '이 기간에 기록이 없어요';
+
+  @override
+  String get clientDietTrendTitle => '영양 추이';
+
+  @override
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => '이번 주 운동 추이';
+  String get clientTrendTitle => '운동 추이';
 
   @override
-  String get clientTrendLoadFailed => '주간 운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
+  String get clientTrendLoadFailed => '운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientTrendTodayEmpty => '오늘 기록된 운동이 없어요';
+
+  @override
+  String get clientTrendWorkoutDays => '운동한 날';
 
   @override
   String get clientTrendWorkoutCount => '운동 횟수';
@@ -2432,7 +2576,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String suggestionReviewIntro(String name) {
-    return '최근 PT 피드백과 운동 기록을 바탕으로 $name님에게 도움이 될 개인운동을 준비했어요. 추천한 것만 회원에게 보여요.';
+    return '최근 PT 피드백과 운동 기록을 바탕으로 $name님에게 도움이 될 개인운동을 준비했어요. 추천한 것만 고객에게 보여요.';
   }
 
   @override
@@ -2442,7 +2586,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get suggestionReviewLoadFailed => 'AI 개인운동 제안을 불러오지 못했어요';
 
   @override
-  String get suggestionApprove => '회원에게 추천';
+  String get suggestionApprove => '고객에게 추천';
 
   @override
   String get suggestionDismiss => '추천 안 함';
@@ -2473,7 +2617,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get suggestionEditName => '운동';
 
   @override
-  String get suggestionEditMemo => '회원에게 전달할 메모';
+  String get suggestionEditMemo => '고객에게 전달할 메모';
 
   @override
   String get suggestionEditMemoHint => '오른쪽 어깨에 통증이 생기면 중단하세요';

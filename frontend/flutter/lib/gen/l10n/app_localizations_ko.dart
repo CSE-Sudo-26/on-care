@@ -1102,6 +1102,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachCardWaterTag => '수분';
 
   @override
+  String get coachInviteTitle => '담당 요청이 왔어요';
+
+  @override
+  String coachInviteFrom(String name) {
+    return '$name 트레이너';
+  }
+
+  @override
+  String coachInviteGym(String gym) {
+    return '$gym 소속';
+  }
+
+  @override
+  String get coachInviteExplain => '수락하면 내 식단·운동 기록을 이 트레이너가 볼 수 있어요.';
+
+  @override
+  String get coachInviteAccept => '수락';
+
+  @override
+  String get coachInviteReject => '거절';
+
+  @override
+  String coachInviteAccepted(String name) {
+    return '$name 트레이너가 담당으로 연결됐어요';
+  }
+
+  @override
+  String get coachInviteRejected => '요청을 거절했어요';
+
+  @override
+  String get coachInviteFailed => '처리하지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get coachChatSubtitle => '담당 트레이너 · 상담 가능';
 
   @override

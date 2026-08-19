@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
@@ -21,9 +23,22 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 /// they throw [UnsupportedError] — the demo-only add/activate UI is hidden
 /// in real-API mode.
 class DioClientRepository implements ClientRepository, ClientDataRefresher {
-  DioClientRepository(this._dio);
+  DioClientRepository(
+    this._dio, {
+    this.pollInterval = const Duration(seconds: 30),
+  });
 
   final Dio _dio;
+
+  /// 명단과 그 회원의 기록을 다시 읽는 주기.
+  ///
+  /// 회원이 식단 사진을 올리거나 운동을 마치는 것은 트레이너가 누르는 일이
+  /// 아니라, 여기서 따라잡지 않으면 옆에 띄워 둔 화면이 낡은 값을 계속
+  /// 보여 준다 — 코칭은 그 값을 보면서 하는 일이라 값이 낡으면 판단이
+  /// 낡는다(#918). 채팅(3초)만큼 잦을 이유는 없다. 기록은 초 단위가 아니라
+  /// 분 단위로 쌓인다.
+  final Duration pollInterval;
+
   final StreamController<String?> _refreshes =
       StreamController<String?>.broadcast(sync: true);
 
@@ -34,7 +49,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<TrainerClient>> watchClients() =>
       activePollingStream<List<TrainerClient>>(
         load: _fetchClients,
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(null),
       );
 
@@ -49,7 +64,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
       activePollingStream<List<ClientDietEntry>>(
         load: () => _fetchDiet(clientId),
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(clientId),
       );
 
@@ -57,7 +72,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
       activePollingStream<List<RoutineHistoryEntry>>(
         load: () => _fetchHistory(clientId),
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(clientId),
       );
 
@@ -75,12 +90,81 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   void refreshClientData(String clientId) => _refreshes.add(clientId);
 
   @override
-  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async {
+  Future<ClientExerciseWeek> fetchExerciseWeek(
+    String clientId, {
+    DateTime? weekStart,
+  }) async {
     final path =
         '/trainer/clients/${Uri.encodeComponent(clientId)}/exercise-week';
     try {
-      final response = await _dio.get<Map<String, Object?>>(path);
+      final response = await _dio.get<Map<String, Object?>>(
+        path,
+        queryParameters: weekStart == null
+            ? null
+            : <String, String>{'week_start': ymd(clientMondayOf(weekStart))},
+      );
       return ClientExerciseWeek.fromJson(response.data!);
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
+
+  /// 일별 식단 집계를 **리포트 응답**에서 만든다.
+  ///
+  /// 끼니 목록(`/diet?date=`)을 날마다 부르면 한 달에 서른 번 넘게 오간다.
+  /// 리포트는 한 주의 일별 칼로리·나트륨·당류를 한 번에 주므로, 한 달이라도
+  /// 요청은 다섯 번 남짓이다. 두 경로 모두 같은 `diet_entries` 를 읽는다.
+  @override
+  Future<ClientDietPeriod> fetchDietPeriod(
+    String clientId,
+    ClientDateRange range,
+  ) async {
+    final Map<String, ClientDietDay> byDate = <String, ClientDietDay>{};
+    for (final DateTime monday in clientRangeWeekStarts(range)) {
+      final Map<String, Object?> week = await _fetchReportWeek(
+        clientId,
+        monday,
+      );
+      List<num> series(String key) =>
+          ((week[key] as List<Object?>?) ?? const <Object?>[])
+              .whereType<num>()
+              .toList(growable: false);
+      final List<num> calories = series('calories_week');
+      final List<num> sodium = series('sodium_week');
+      final List<num> sugar = series('sugar_week');
+      for (var d = 0; d < 7; d++) {
+        final DateTime date = DateTime(
+          monday.year,
+          monday.month,
+          monday.day + d,
+        );
+        byDate[ymd(date)] = ClientDietDay(
+          date: date,
+          calories: d < calories.length ? calories[d].toInt() : 0,
+          sodiumMg: d < sodium.length ? sodium[d].toInt() : 0,
+          sugarG: d < sugar.length ? sugar[d].toDouble() : 0,
+        );
+      }
+    }
+    return ClientDietPeriod(
+      range: range,
+      days: <ClientDietDay>[
+        for (final DateTime date in clientRangeDates(range))
+          byDate[ymd(date)] ?? ClientDietDay(date: date),
+      ],
+    );
+  }
+
+  Future<Map<String, Object?>> _fetchReportWeek(
+    String clientId,
+    DateTime monday,
+  ) async {
+    try {
+      final response = await _dio.get<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/report',
+        queryParameters: <String, String>{'week_start': ymd(monday)},
+      );
+      return response.data ?? const <String, Object?>{};
     } on DioException catch (error) {
       throw AppError.fromDio(error);
     }
