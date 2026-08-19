@@ -940,6 +940,39 @@ class TrainerProgramDraft(Base):
     )
 
 
+class TrainerProgramTemplate(Base):
+    """트레이너가 반복해 쓰는 운동 블록. (#920)
+
+    초안(`trainer_program_drafts`)과 답하는 질문이 다르다 — 초안은 "이 회원에게
+    짜 둔 프로그램", 템플릿은 "어느 회원에게든 끼워 넣는 블록"이다. 그래서 세션
+    개념이 없고 운동 목록 하나만 갖는다. 적용하면 AI 제안 **위에 덧붙는다.**
+
+    지금까지 이 목록은 앱 소스의 `const` 였다. 트레이너마다 다른 것이 템플릿의
+    존재 이유인데 모두가 같은 셋을 봤고, 내용도 한국어로 고정돼 영어 화면에
+    그대로 남았다.
+
+    `exercises_json` 은 `[{name, minutes, type}]` 을 순서 그대로 담는다. 배열
+    순서가 곧 표시 순서다 — 별도 정렬 컬럼은 배열과 어긋날 여지만 만든다
+    (`trainer_program_drafts.sessions_json` 과 같은 규약).
+    """
+
+    __tablename__ = "trainer_program_templates"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), default="")
+    goal: Mapped[str] = mapped_column(String(200), default="")
+    exercises_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class TrainerReportFeedback(Base):
     """주간 리포트에 트레이너가 **작성 중인** 피드백 초안. (#821)
 

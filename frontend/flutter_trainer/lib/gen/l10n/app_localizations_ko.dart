@@ -626,6 +626,59 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientInviteCancelFailed => '요청을 거두지 못했어요. 다시 시도해 주세요';
 
   @override
+  String get coachTemplateNew => '새 템플릿';
+
+  @override
+  String get coachTemplateEdit => '템플릿 편집';
+
+  @override
+  String get coachTemplateSaveAsMine => '내 템플릿으로 저장';
+
+  @override
+  String get coachTemplateDelete => '삭제';
+
+  @override
+  String get coachTemplateNameLabel => '템플릿 이름';
+
+  @override
+  String get coachTemplateGoalLabel => '목표 (예: 혈압 관리 · 초급)';
+
+  @override
+  String get coachTemplateExerciseName => '운동 이름';
+
+  @override
+  String get coachTemplateExerciseMinutes => '분';
+
+  @override
+  String get coachTemplateAddExercise => '운동 추가';
+
+  @override
+  String get coachTemplateSave => '저장';
+
+  @override
+  String get coachTemplateNameRequired => '템플릿 이름을 입력해 주세요';
+
+  @override
+  String get coachTemplateExerciseRequired => '운동을 하나 이상 넣어 주세요';
+
+  @override
+  String get coachTemplateSaveFailed => '템플릿을 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachTemplateDeleteFailed => '템플릿을 지우지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String coachTemplateDeleteConfirm(String name) {
+    return '$name 템플릿을 지울까요?';
+  }
+
+  @override
+  String get coachTemplateLoadFailed => '템플릿을 불러오지 못했어요';
+
+  @override
+  String get coachTemplateStarterHint => '기본 구성이에요. 고치면 내 템플릿으로 저장돼요';
+
+  @override
   String get clientTabDiet => '식단';
 
   @override

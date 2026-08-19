@@ -68,12 +68,15 @@ from app.schemas.trainer_api import (
     TrainerMemoCreateRequest, TrainerMemoOut, TrainerMemoUpdateRequest,
     TrainerProgramDraftCreate, TrainerProgramDraftOut,
     TrainerProgramDraftSummary, TrainerProgramDraftUpdate,
+    TrainerProgramTemplateCreate, TrainerProgramTemplateOut,
+    TrainerProgramTemplateUpdate,
     TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import (
     consultation_service,
     trainer_client_invite_service,
+    trainer_program_template_service,
     diet_photo_service,
     notification_service,
     trainer_dashboard_coaching_service,
@@ -1740,6 +1743,82 @@ async def trainer_send_report_pdf(
             if persisted is None:
                 report_pdf_storage.delete(file_id)
         raise
+
+
+# ---------------------------------------------------------------------------
+# 프로그램 템플릿 — 어느 회원에게든 끼워 넣는 블록. (#920)
+#
+# 초안(`/trainer/programs`)과 답하는 질문이 다르다. 초안은 "이 회원에게 짜 둔
+# 프로그램", 템플릿은 "내가 반복해 쓰는 구성"이다. 저장된 것이 없는 트레이너에게는
+# 서버가 읽기 전용 시작 구성을 돌려준다 — 빈 화면으로 시작하면 이 기능이 무엇인지
+# 알 수 없다. 시작 구성은 고치는 순간 그 트레이너의 첫 템플릿으로 새로 저장된다.
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/trainer/program-templates", response_model=list[TrainerProgramTemplateOut]
+)
+def trainer_program_templates(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TrainerProgramTemplateOut]:
+    """내 템플릿(최근 수정 먼저). 하나도 없으면 시작 구성."""
+    return trainer_program_template_service.list_templates(db, trainer.id)
+
+
+@router.post(
+    "/trainer/program-templates",
+    response_model=TrainerProgramTemplateOut,
+    status_code=201,
+)
+def create_trainer_program_template(
+    payload: TrainerProgramTemplateCreate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerProgramTemplateOut:
+    try:
+        return trainer_program_template_service.create_template(
+            db,
+            trainer.id,
+            name=payload.name,
+            goal=payload.goal,
+            exercises=payload.exercises,
+        )
+    except trainer_program_template_service.TemplateLimitReached as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.put(
+    "/trainer/program-templates/{template_id}",
+    response_model=TrainerProgramTemplateOut,
+)
+def update_trainer_program_template(
+    template_id: str,
+    payload: TrainerProgramTemplateUpdate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerProgramTemplateOut:
+    try:
+        return trainer_program_template_service.update_template(
+            db, trainer.id, template_id, payload.model_dump(exclude_unset=True)
+        )
+    except trainer_program_template_service.TemplateNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/trainer/program-templates/{template_id}", status_code=200)
+def delete_trainer_program_template(
+    template_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    try:
+        trainer_program_template_service.delete_template(
+            db, trainer.id, template_id
+        )
+    except trainer_program_template_service.TemplateNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
 
 
 # ---------------------------------------------------------------------------
