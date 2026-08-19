@@ -39,6 +39,9 @@ dependencies:
   dio: ^5.7.0
   http_parser: ^4.0.2
 
+  # 채팅에 붙일 사진을 고른다(#921). 웹에서는 파일 선택 창으로 동작한다.
+  image_picker: ^1.2.3
+
   # WeeklyReport 데이터를 A4 PDF binary로 만들고, 브라우저 인쇄를 연다(#778).
   pdf: ^3.11.3
   printing: ^5.14.2

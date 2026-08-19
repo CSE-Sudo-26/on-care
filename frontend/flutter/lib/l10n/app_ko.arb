@@ -426,6 +426,7 @@
   "@coachInviteAccepted": {"placeholders": {"name": {"type": "String"}}},
   "coachInviteRejected": "요청을 거절했어요",
   "coachInviteFailed": "처리하지 못했어요. 다시 시도해 주세요",
+  "coachImageUnavailable": "사진을 불러오지 못했어요",
   "coachChatSubtitle": "담당 트레이너 · 상담 가능",
   "coachChatBack": "뒤로가기",
   "coachChatLoadFailed": "대화를 불러오지 못했어요",

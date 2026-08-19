@@ -200,18 +200,40 @@ class CoachMessage {
   final String body;
   final String timeLabel;
   final DateTime createdAt;
-  final CoachPdfAttachment? attachment;
+  final CoachAttachment? attachment;
 
   bool get fromMe => sender == CoachSender.me;
 }
 
-class CoachPdfAttachment {
-  const CoachPdfAttachment({
+/// 첨부의 종류. 화면이 그릴 방법을 이 값으로 정한다.
+///
+/// 주간 리포트 PDF(#778)로 시작해 트레이너가 보내는 사진(#921)이 더해졌다.
+enum CoachAttachmentKind {
+  /// 내려받는다.
+  pdf,
+
+  /// 대화 안에서 그린다.
+  image;
+
+  static CoachAttachmentKind? parse(Object? value) => switch (value) {
+    'pdf' => CoachAttachmentKind.pdf,
+    'image' => CoachAttachmentKind.image,
+    _ => null,
+  };
+}
+
+class CoachAttachment {
+  const CoachAttachment({
+    required this.kind,
     required this.fileName,
     required this.fileId,
     required this.fileSize,
     required this.downloadPath,
   });
+
+  final CoachAttachmentKind kind;
+
+  bool get isImage => kind == CoachAttachmentKind.image;
 
   final String fileName;
   final String fileId;

@@ -1127,6 +1127,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachInviteFailed => '처리하지 못했어요. 다시 시도해 주세요';
 
   @override
+  String get coachImageUnavailable => '사진을 불러오지 못했어요';
+
+  @override
   String get coachChatSubtitle => '담당 트레이너 · 상담 가능';
 
   @override

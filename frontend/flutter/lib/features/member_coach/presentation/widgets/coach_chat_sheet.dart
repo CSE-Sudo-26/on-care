@@ -7,6 +7,7 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/member_coach/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:printing/printing.dart';
 
@@ -455,10 +456,16 @@ class _Bubble extends ConsumerWidget {
                       if (message.attachment
                           case final attachment?) ...<Widget>[
                         const SizedBox(height: 8),
-                        _PdfCard(
-                          attachment: attachment,
-                          onOpen: () => _openPdf(context, ref, attachment),
-                        ),
+                        // 사진은 대화 안에서 그리고, 리포트 PDF 는 내려받는
+                        // 카드로 둔다. 사진을 카드로 두면 볼 때마다 파일을
+                        // 열어야 한다. (#921)
+                        if (attachment.isImage)
+                          CoachImageAttachment(attachment: attachment)
+                        else
+                          _PdfCard(
+                            attachment: attachment,
+                            onOpen: () => _openPdf(context, ref, attachment),
+                          ),
                       ],
                     ],
                   ),
@@ -487,7 +494,7 @@ class _Bubble extends ConsumerWidget {
   Future<void> _openPdf(
     BuildContext context,
     WidgetRef ref,
-    CoachPdfAttachment attachment,
+    CoachAttachment attachment,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -519,7 +526,7 @@ class _Bubble extends ConsumerWidget {
 class _PdfCard extends StatelessWidget {
   const _PdfCard({required this.attachment, required this.onOpen});
 
-  final CoachPdfAttachment attachment;
+  final CoachAttachment attachment;
   final VoidCallback onOpen;
 
   @override
