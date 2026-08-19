@@ -2054,6 +2054,12 @@ abstract class AppLocalizations {
   /// **'Daily average'**
   String get clientPeriodAverage;
 
+  /// No description provided for @clientPeriodGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get clientPeriodGoal;
+
   /// No description provided for @clientPeriodLoggedDays.
   ///
   /// In en, this message translates to:
@@ -2081,7 +2087,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientTrendTitle.
   ///
   /// In en, this message translates to:
-  /// **'Workout trend'**
+  /// **'Activity'**
   String get clientTrendTitle;
 
   /// No description provided for @clientTrendLoadFailed.

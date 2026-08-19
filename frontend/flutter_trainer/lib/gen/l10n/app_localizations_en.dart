@@ -1126,6 +1126,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientPeriodAverage => 'Daily average';
 
   @override
+  String get clientPeriodGoal => 'Goal';
+
+  @override
   String clientPeriodLoggedDays(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,
@@ -1146,7 +1149,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => 'Workout trend';
+  String get clientTrendTitle => 'Activity';
 
   @override
   String get clientTrendLoadFailed =>

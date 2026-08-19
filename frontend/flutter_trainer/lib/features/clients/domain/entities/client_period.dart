@@ -100,6 +100,9 @@ class ClientDietDay {
     this.calories = 0,
     this.sodiumMg = 0,
     this.sugarG = 0,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
   });
 
   final DateTime date;
@@ -107,9 +110,26 @@ class ClientDietDay {
   final int sodiumMg;
   final double sugarG;
 
+  /// 그날의 탄·단·지(g). `이번 달` 칼로리 막대를 3색으로 쌓는 재료다(#944).
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
+
   /// 그날 기록이 있었는가. 셋 다 0 이면 **적지 않은 날**이다 — 0kcal 을 먹은
   /// 날과 같은 말로 그리면 평균이 실제보다 낮아진다.
   bool get logged => calories > 0 || sodiumMg > 0 || sugarG > 0;
+
+  /// 탄단지가 실제로 있는가. 영양을 주지 않은 날은 쌓지 않고 한 색으로 그린다 —
+  /// 억지로 쌓으면 0 짜리 칸이 생겨 막대가 빈 것처럼 보인다.
+  bool get hasMacros => carbsG > 0 || proteinG > 0 || fatG > 0;
+
+  /// 탄단지가 내는 칼로리 — 탄·단 4kcal/g, 지 9kcal/g.
+  ///
+  /// 막대를 쌓을 때 쓰는 값이다. 그램으로 쌓으면 지방 1g 이 탄수화물 1g 과 같은
+  /// 높이를 차지해, 칼로리 막대인데 칼로리와 다른 이야기를 하게 된다.
+  double get carbsKcal => carbsG * 4;
+  double get proteinKcal => proteinG * 4;
+  double get fatKcal => fatG * 9;
 }
 
 /// 한 기간의 식단 집계.

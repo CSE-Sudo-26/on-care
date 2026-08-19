@@ -149,12 +149,10 @@ class TrainerScheduleEntries extends Table {
 
   /// ''(해당 없음)|member|trainer|other. 트레이너 사정의 취소를 회원의
   /// 미이행으로 읽지 않으려면 주체가 남아야 한다.
-  TextColumn get cancellationSource =>
-      text().withDefault(const Constant(''))();
+  TextColumn get cancellationSource => text().withDefault(const Constant(''))();
 
   /// 트레이너만 보는 짧은 사유. 회원 알림에는 싣지 않는다.
-  TextColumn get cancellationReason =>
-      text().withDefault(const Constant(''))();
+  TextColumn get cancellationReason => text().withDefault(const Constant(''))();
 
   DateTimeColumn get noShowAt => dateTime().nullable()();
 
@@ -165,8 +163,7 @@ class TrainerScheduleEntries extends Table {
   /// 완료한 세션의 프로그램을 회원에게 보냈는가. 데모에는 받을 회원 백엔드가
   /// 없어 전송은 이 표시로 끝나지만, 화면이 '전송됨' 을 사실대로 말하고 같은
   /// 세션을 두 번 보내지 않게 하려면 어딘가에 남아야 한다(#822).
-  BoolColumn get programSent =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get programSent => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -183,10 +180,19 @@ class TrainerScheduleEntries extends Table {
 class ClientDailyMetrics extends Table {
   TextColumn get clientId => text()();
   TextColumn get date => text()(); // YYYY-MM-DD
-  IntColumn get completion => integer().withDefault(const Constant(0))(); // 0..100
+  IntColumn get completion =>
+      integer().withDefault(const Constant(0))(); // 0..100
   IntColumn get calories => integer().withDefault(const Constant(0))();
   IntColumn get sodiumMg => integer().withDefault(const Constant(0))();
   RealColumn get sugarG => real().withDefault(const Constant(0))();
+
+  /// 그날의 탄·단·지(g). 트레이너 화면의 `이번 달` 칼로리 막대를 탄단지로 쌓는
+  /// 재료다(#944). 실서버는 리포트 응답의 같은 이름 계열에서 온다.
+  ///
+  /// 당류와 같이 소수를 유지한다 — 반올림하면 회원 앱 식단 탭 수치와 어긋난다.
+  RealColumn get carbsG => real().withDefault(const Constant(0))();
+  RealColumn get proteinG => real().withDefault(const Constant(0))();
+  RealColumn get fatG => real().withDefault(const Constant(0))();
 
   /// 그날 배정된 운동 이름 JSON. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장
   /// 규칙이며, 리포트의 요일별 상세가 이 값을 읽어 몇 개 중 몇 개인지 보여
@@ -252,7 +258,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -347,6 +353,17 @@ class AppDatabase extends _$AppDatabase {
           trainerScheduleEntries,
           trainerScheduleEntries.noShowAt,
         );
+      }
+      // v13: 일별 탄·단·지(#944). 기본값이 0 이라 기존 행도 그대로 읽히고,
+      // 다음 재시딩이 실제 값을 채운다. `hasMacros` 가 false 인 날은 화면이
+      // 쌓지 않고 한 색으로 그리므로, 재시딩 전에도 그림이 깨지지 않는다.
+      //
+      // v7 을 갓 지난 DB 에는 표가 **현재 정의**로 만들어져 이 컬럼이 이미
+      // 있다. `createTable` 뒤에 다시 붙이면 duplicate column 으로 죽는다.
+      if (from >= 7 && from < 13) {
+        await m.addColumn(clientDailyMetrics, clientDailyMetrics.carbsG);
+        await m.addColumn(clientDailyMetrics, clientDailyMetrics.proteinG);
+        await m.addColumn(clientDailyMetrics, clientDailyMetrics.fatG);
       }
     },
   );

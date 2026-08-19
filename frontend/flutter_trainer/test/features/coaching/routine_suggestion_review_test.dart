@@ -163,7 +163,17 @@ void main() {
         isA<OutlinedButton>(),
         reason: '테두리가 없으면 누를 수 있는 것으로 읽히지 않는다',
       );
-      expect(find.byType(TextButton), findsNothing);
+      // 카드 안만 본다. 프로그램 탭 전체를 뒤지면 다른 영역에 `TextButton`
+      // 하나만 생겨도, 이 카드의 거절 버튼이 멀쩡한데 테스트가 깨진다.
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey<String>('routine-suggestion-review-card'),
+          ),
+          matching: find.byType(TextButton),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('버튼 어디에도 검은 윤곽선이 없다', (tester) async {

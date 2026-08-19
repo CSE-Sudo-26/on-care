@@ -578,6 +578,7 @@
   "clientPeriodWeek": "This week",
   "clientPeriodMonth": "This month",
   "clientPeriodAverage": "Daily average",
+  "clientPeriodGoal": "Goal",
   "clientPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
   "@clientPeriodLoggedDays": {
     "placeholders": {
@@ -589,7 +590,7 @@
   "clientPeriodEmpty": "Nothing was logged in this period",
   "clientDietTrendTitle": "Nutrition trend",
   "unitKcal": "kcal",
-  "clientTrendTitle": "Workout trend",
+  "clientTrendTitle": "Activity",
   "clientTrendLoadFailed": "Couldn't load the workout trend. Please try again",
   "clientTrendTodayEmpty": "No workout logged today",
   "clientTrendTodayTotal": "Today's total",

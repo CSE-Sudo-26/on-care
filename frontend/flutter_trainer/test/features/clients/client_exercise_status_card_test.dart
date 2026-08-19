@@ -59,6 +59,7 @@ class _HostState extends State<_Host> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: ClientPeriodSection(
+          icon: Icons.monitor_heart_outlined,
           title: '운동 현황',
           period: _period,
           onChanged: (ClientPeriod p) => setState(() => _period = p),
