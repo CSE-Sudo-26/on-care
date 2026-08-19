@@ -453,6 +453,7 @@
   "dietLoadFailed": "Couldn't load meals",
   "dietEmpty": "No meals logged yet",
   "dietTodaySummary": "Today's nutrition",
+  "clientNutritionSummary": "Nutrition summary",
   "dietAchieveRate": "Progress",
   "dietAmountOver": "{amount} over the goal",
   "@dietAmountOver": {
@@ -591,6 +592,7 @@
   "clientTrendTitle": "Workout trend",
   "clientTrendLoadFailed": "Couldn't load the workout trend. Please try again",
   "clientTrendTodayEmpty": "No workout logged today",
+  "clientTrendTodayTotal": "Today's total",
   "clientTrendWorkoutDays": "Active days",
   "clientTrendWorkoutCount": "Workouts",
   "clientTrendWorkoutMinutes": "Exercise time",

@@ -18,8 +18,8 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
@@ -674,7 +674,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NutritionSummaryCard), findsNothing);
-      expect(find.byType(WeeklyExerciseTrendCard), findsOneWidget);
+      expect(find.byType(ClientExerciseStatusCard), findsOneWidget);
       final workout = find.byKey(
         const ValueKey<String>('program-workout-seed-client-1'),
       );

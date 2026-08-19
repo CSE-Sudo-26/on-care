@@ -151,13 +151,26 @@ class ClientExerciseDay {
     required this.date,
     this.minutes = 0,
     this.calories = 0,
+    this.cardioMinutes = 0,
+    this.strengthMinutes = 0,
+    this.stretchingMinutes = 0,
   });
 
   final DateTime date;
   final int minutes;
   final int calories;
 
+  /// 그날의 유형별 분. 회원 앱과 같은 3색 누적 막대를 그리는 재료다(#943).
+  final int cardioMinutes;
+  final int strengthMinutes;
+  final int stretchingMinutes;
+
   bool get logged => minutes > 0 || calories > 0;
+
+  /// 유형 분해가 있는가. 없으면 막대를 쌓지 않고 전부 유산소로 본다 —
+  /// 임의로 나누면 없는 근력 시간을 지어내는 셈이다.
+  bool get hasTypeSplit =>
+      cardioMinutes > 0 || strengthMinutes > 0 || stretchingMinutes > 0;
 }
 
 /// 한 기간의 운동 집계.
@@ -173,6 +186,17 @@ class ClientExercisePeriod {
 
   int get totalCalories =>
       days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.calories);
+
+  int get totalCardioMinutes =>
+      days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.cardioMinutes);
+
+  int get totalStrengthMinutes =>
+      days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.strengthMinutes);
+
+  int get totalStretchingMinutes => days.fold<int>(
+    0,
+    (int a, ClientExerciseDay d) => a + d.stretchingMinutes,
+  );
 
   /// 운동한 날 수 — 기간이 길어져도 "몇 번 했나" 의 뜻이 흔들리지 않는다.
   int get workoutDays => days.where((ClientExerciseDay d) => d.logged).length;
