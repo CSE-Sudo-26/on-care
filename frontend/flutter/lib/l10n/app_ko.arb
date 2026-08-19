@@ -119,6 +119,7 @@
   "dietPeriodEmpty": "이 기간에 기록된 식단이 없어요.",
   "dietPeriodRange": "{start} ~ {end}",
   "dietPeriodNoRecord": "기록 없음",
+  "dietPeriodNotYet": "아직 오지 않은 날",
   "dietPeriodOverGoal": "목표 초과 +{amount} {unit}",
   "otherDateEmpty": "선택한 날짜에 기록된 {section}이 없어요.",
   "dietMealBreakfast": "아침",
