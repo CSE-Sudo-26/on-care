@@ -1124,6 +1124,234 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get clientsAddAction;
 
+  /// No description provided for @clientInviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a member'**
+  String get clientInviteTitle;
+
+  /// No description provided for @clientInviteIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a member by email and send a coaching request. They appear in your client list once they accept in the app.'**
+  String get clientInviteIntro;
+
+  /// No description provided for @clientInviteEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Member email'**
+  String get clientInviteEmailLabel;
+
+  /// No description provided for @clientInviteLookupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Find'**
+  String get clientInviteLookupAction;
+
+  /// No description provided for @clientInviteMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (optional)'**
+  String get clientInviteMessageLabel;
+
+  /// No description provided for @clientInviteSendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get clientInviteSendAction;
+
+  /// No description provided for @clientInviteSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent a coaching request to {name}'**
+  String clientInviteSent(String name);
+
+  /// No description provided for @clientInviteNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No member uses that email'**
+  String get clientInviteNotFound;
+
+  /// No description provided for @clientInviteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the request. Please try again'**
+  String get clientInviteFailed;
+
+  /// No description provided for @clientInviteEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an email'**
+  String get clientInviteEmailRequired;
+
+  /// No description provided for @clientInviteAlreadyCoached.
+  ///
+  /// In en, this message translates to:
+  /// **'You already coach this member'**
+  String get clientInviteAlreadyCoached;
+
+  /// No description provided for @clientInviteHasTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Another trainer already coaches this member'**
+  String get clientInviteHasTrainer;
+
+  /// No description provided for @clientInvitePendingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A request you sent is still waiting for an answer'**
+  String get clientInvitePendingHint;
+
+  /// No description provided for @clientInvitePendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for an answer'**
+  String get clientInvitePendingTitle;
+
+  /// No description provided for @clientInvitePendingEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests are waiting'**
+  String get clientInvitePendingEmpty;
+
+  /// No description provided for @clientInviteCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get clientInviteCancelAction;
+
+  /// No description provided for @clientInviteCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request withdrawn'**
+  String get clientInviteCancelled;
+
+  /// No description provided for @clientInviteCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t withdraw the request. Please try again'**
+  String get clientInviteCancelFailed;
+
+  /// No description provided for @coachTemplateNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New template'**
+  String get coachTemplateNew;
+
+  /// No description provided for @coachTemplateEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit template'**
+  String get coachTemplateEdit;
+
+  /// No description provided for @coachTemplateSaveAsMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as my template'**
+  String get coachTemplateSaveAsMine;
+
+  /// No description provided for @coachTemplateDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get coachTemplateDelete;
+
+  /// No description provided for @coachTemplateNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Template name'**
+  String get coachTemplateNameLabel;
+
+  /// No description provided for @coachTemplateGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal (e.g. blood pressure · beginner)'**
+  String get coachTemplateGoalLabel;
+
+  /// No description provided for @coachTemplateExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get coachTemplateExerciseName;
+
+  /// No description provided for @coachTemplateExerciseMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get coachTemplateExerciseMinutes;
+
+  /// No description provided for @coachTemplateAddExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Add exercise'**
+  String get coachTemplateAddExercise;
+
+  /// No description provided for @coachTemplateSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get coachTemplateSave;
+
+  /// No description provided for @coachTemplateNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a template name'**
+  String get coachTemplateNameRequired;
+
+  /// No description provided for @coachTemplateExerciseRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one exercise'**
+  String get coachTemplateExerciseRequired;
+
+  /// No description provided for @coachTemplateSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the template. Please try again'**
+  String get coachTemplateSaveFailed;
+
+  /// No description provided for @coachTemplateDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the template. Please try again'**
+  String get coachTemplateDeleteFailed;
+
+  /// No description provided for @coachTemplateDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the {name} template?'**
+  String coachTemplateDeleteConfirm(String name);
+
+  /// No description provided for @coachTemplateLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load templates'**
+  String get coachTemplateLoadFailed;
+
+  /// No description provided for @coachTemplateStarterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A starter block. Editing saves it as your own'**
+  String get coachTemplateStarterHint;
+
+  /// No description provided for @chatAttachImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a photo'**
+  String get chatAttachImage;
+
+  /// No description provided for @chatImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the photo'**
+  String get chatImageUnavailable;
+
+  /// No description provided for @chatImageSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the photo. Please try again'**
+  String get chatImageSendFailed;
+
   /// No description provided for @clientTabDiet.
   ///
   /// In en, this message translates to:
@@ -1628,6 +1856,12 @@ abstract class AppLocalizations {
   /// **'Today\'s nutrition'**
   String get dietTodaySummary;
 
+  /// No description provided for @clientNutritionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition summary'**
+  String get clientNutritionSummary;
+
   /// No description provided for @dietAchieveRate.
   ///
   /// In en, this message translates to:
@@ -1820,6 +2054,12 @@ abstract class AppLocalizations {
   /// **'Daily average'**
   String get clientPeriodAverage;
 
+  /// No description provided for @clientPeriodGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get clientPeriodGoal;
+
   /// No description provided for @clientPeriodLoggedDays.
   ///
   /// In en, this message translates to:
@@ -1847,7 +2087,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientTrendTitle.
   ///
   /// In en, this message translates to:
-  /// **'Workout trend'**
+  /// **'Activity'**
   String get clientTrendTitle;
 
   /// No description provided for @clientTrendLoadFailed.
@@ -1861,6 +2101,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No workout logged today'**
   String get clientTrendTodayEmpty;
+
+  /// No description provided for @clientTrendTodayTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s total'**
+  String get clientTrendTodayTotal;
 
   /// No description provided for @clientTrendWorkoutDays.
   ///
@@ -2983,12 +3229,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create, assign, and manage exercise programs for each member'**
   String get coachSubtitle;
-
-  /// No description provided for @coachMemberPrograms.
-  ///
-  /// In en, this message translates to:
-  /// **'Programs by member'**
-  String get coachMemberPrograms;
 
   /// No description provided for @coachMemberSummary.
   ///

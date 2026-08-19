@@ -373,11 +373,14 @@ def _notify(db: Session, *, user_id: str, title: str, body: str) -> None:
     )
 
 
-def _link_member_gym(db: Session, member_id: str, gym_id: str | None) -> None:
+def link_member_gym(db: Session, member_id: str, gym_id: str | None) -> None:
     """담당이 생긴 회원을 트레이너의 헬스장에 연결한다(커밋 없음).
 
     이미 다른 헬스장에 연결돼 있으면 **건드리지 않는다** — 회원이 직접 고른 '내
     헬스장'을 승인이 말없이 옮기면 MY 탭이 이유 없이 바뀐다.
+
+    담당이 생기는 경로가 둘이라(상담 수락, 트레이너의 담당 요청 수락 #919) 공개
+    함수다. 규칙을 복사하면 한쪽만 고쳐지는 날이 온다.
     """
     if gym_id is None:
         return
@@ -386,6 +389,44 @@ def _link_member_gym(db: Session, member_id: str, gym_id: str | None) -> None:
     if db.scalar(select(Place.id).where(Place.id == gym_id)) is None:
         return
     db.add(MemberGym(member_id=member_id, gym_id=gym_id))
+
+
+def attach_member_to_trainer(
+    db: Session, trainer_id: str, member_id: str, *, goal: str = ""
+) -> None:
+    """담당 링크를 만든다(커밋 없음). 활성 담당이 없는 회원에게만 부른다.
+
+    과거에 담당했다가 휴면으로 내려간 링크가 있으면 **되살린다** — 새 행을 넣으면
+    (trainer, member) 유일 제약에 걸리고, 지난 루틴·채팅 이력도 갈라진다.
+
+    담당이 생기는 경로가 둘이라(상담 수락, 트레이너의 담당 요청 수락 #919) 공개
+    함수다. 되살리기 규칙을 양쪽이 각자 들고 있으면 한쪽만 고쳐진다.
+    """
+    dormant = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.trainer_id == trainer_id,
+            TrainerClient.member_id == member_id,
+        )
+    )
+    if dormant is not None:
+        dormant.active = True
+        return
+
+    last_order = db.scalar(
+        select(func.max(TrainerClient.sort_order)).where(
+            TrainerClient.trainer_id == trainer_id
+        )
+    )
+    db.add(
+        TrainerClient(
+            id=f"tc-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            goal=goal,
+            active=True,
+            sort_order=(last_order or 0) + 1,
+        )
+    )
 
 
 def accept(
@@ -422,36 +463,16 @@ def accept(
         raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중인 회원입니다.")
 
     if existing is None:
-        # 과거에 담당했다가 휴면으로 내려간 링크가 있으면 되살린다 — 새 행을 넣으면
-        # (trainer, member) 유일 제약에 걸리고, 지난 루틴·채팅 이력도 갈라진다.
-        dormant = db.scalar(
-            select(TrainerClient).where(
-                TrainerClient.trainer_id == trainer_id,
-                TrainerClient.member_id == row.member_id,
-            )
+        attach_member_to_trainer(
+            db,
+            trainer_id,
+            row.member_id,
+            goal=_GOAL_LABELS.get(row.exercise_goal, ""),
         )
-        if dormant is not None:
-            dormant.active = True
-        else:
-            last_order = db.scalar(
-                select(func.max(TrainerClient.sort_order)).where(
-                    TrainerClient.trainer_id == trainer_id
-                )
-            )
-            db.add(
-                TrainerClient(
-                    id=f"tc-{uuid.uuid4().hex[:12]}",
-                    trainer_id=trainer_id,
-                    member_id=row.member_id,
-                    goal=_GOAL_LABELS.get(row.exercise_goal, ""),
-                    active=True,
-                    sort_order=(last_order or 0) + 1,
-                )
-            )
     # 링크 생성 여부와는 별개 조건이다 — 이미 이 트레이너의 담당인 회원이 상담을
     # 새로 넣고 승인받는 경우에도 헬스장 연결은 이뤄져야 한다(리뷰).
     # 이미 연결된 회원에게는 no-op 이라 중복 호출이 무해하다.
-    _link_member_gym(db, row.member_id, trainer_gym_id(db, trainer_id))
+    link_member_gym(db, row.member_id, trainer_gym_id(db, trainer_id))
 
     row.status = "accepted"
     row.decided_by = trainer_id

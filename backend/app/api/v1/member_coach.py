@@ -20,9 +20,10 @@ from app.api.deps import CurrentUser, RequireMember
 from app.db.session import get_db
 from app.schemas.exercise_api import AssignedRoutineCompleteRequest
 from app.schemas.trainer_api import (
-    ChatMessageOut, ChatSendRequest, MemberCoachOut, RoutineOut, ScheduleSessionOut,
+    ChatMessageOut, ChatSendRequest, MemberClientInviteOut, MemberCoachOut, RoutineOut,
+    ScheduleSessionOut,
 )
-from app.services import trainer_service
+from app.services import trainer_client_invite_service, trainer_service
 
 router = APIRouter(tags=["member-coach"])
 
@@ -191,3 +192,57 @@ def mark_coach_chat_read(
     trainer_id = _my_trainer_or_404(db, member.id)
     n = trainer_service.mark_thread_read(db, trainer_id, member.id, "member")
     return {"marked_read": n}
+
+
+# ---------------------------------------------------------------------------
+# 트레이너가 보낸 담당 요청 — 회원이 수락해야 담당이 생긴다. (#919)
+#
+# 상담 요청(회원 → 트레이너)의 반대 방향이다. 담당 관계는 내 식단·건강 기록을
+# 여는 권한이라, 트레이너가 명단에 밀어 넣는 것이 아니라 내가 수락한다.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/me/coach/invites", response_model=list[MemberClientInviteOut])
+def my_coach_invites(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[MemberClientInviteOut]:
+    """나에게 온 대기 중인 담당 요청."""
+    return trainer_client_invite_service.list_for_member(db, current_user.id)
+
+
+@router.post(
+    "/me/coach/invites/{invite_id}/accept", response_model=MemberClientInviteOut
+)
+def accept_coach_invite(
+    invite_id: str,
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> MemberClientInviteOut:
+    """수락한다 — 담당 링크가 여기서 생긴다."""
+    try:
+        return trainer_client_invite_service.accept(db, member.id, invite_id)
+    except trainer_client_invite_service.InviteNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (
+        trainer_client_invite_service.InviteAlreadyDecided,
+        trainer_client_invite_service.MemberAlreadyCoached,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/me/coach/invites/{invite_id}/reject", response_model=MemberClientInviteOut
+)
+def reject_coach_invite(
+    invite_id: str,
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> MemberClientInviteOut:
+    """거절한다. 담당 링크는 만들지 않는다."""
+    try:
+        return trainer_client_invite_service.reject(db, member.id, invite_id)
+    except trainer_client_invite_service.InviteNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_client_invite_service.InviteAlreadyDecided as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

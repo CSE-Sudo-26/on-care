@@ -2,6 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+/// 배지 숫자(안읽음 메시지·알림·상담 요청)를 다시 읽는 주기.
+///
+/// 한 자리에 모아 두는 이유는 세 배지가 같은 사이드바에 나란히 서 있어서다 —
+/// 주기가 제각각이면 같은 순간에 본 세 숫자의 기준 시각이 달라진다. 열려 있는
+/// 채팅 스레드(3초)·스케줄(5초)보다 느슨한 것은 의도다. 배지는 지금 보고 있는
+/// 내용이 아니라 **다른 곳에서 일어난 변화**를 알리는 자리라, 몇 초의 지연보다
+/// 콘솔을 종일 띄워 두는 트레이너에게 걸리는 요청 수가 더 중요하다. (#917)
+const Duration badgePollInterval = Duration(seconds: 20);
+
 /// Polls [load] while the stream has a listener and the application is in
 /// the foreground.
 ///

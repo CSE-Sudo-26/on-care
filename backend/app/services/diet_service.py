@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -123,6 +124,61 @@ def build_day(db: Session, user_id: str, date: str) -> DietTodayResponse:
 def build_today(db: Session, user_id: str) -> DietTodayResponse:
     """오늘 식단 집계. 기존 today 엔드포인트의 동작을 유지한다."""
     return build_day(db, user_id, today_str())
+
+
+@dataclass(frozen=True)
+class DietPeriodStats:
+    """구간 내 일별 합계를 모은 값 — AI 코칭이 하루 스냅샷 대신 참고한다(#933).
+
+    회원 앱 `dietRangeForTab` 이 화면에 보여주는 기간(이번 주=월~일, 이번 달=1일~말일)과
+    같은 경계를 호출부가 맞춰 넘긴다고 가정한다. 여기서는 받은 구간을 그대로 집계한다.
+    """
+
+    days_logged: int
+    days_over_sodium: int
+    avg_sodium_mg: int
+    avg_sugar_g: float
+    avg_calories: int
+
+    @property
+    def empty(self) -> bool:
+        return self.days_logged == 0
+
+
+def period_stats(db: Session, user_id: str, start: str, end: str) -> DietPeriodStats:
+    """[start, end](양끝 포함, `YYYY-MM-DD`) 구간의 일별 나트륨·당류·칼로리 평균.
+
+    기록이 없는 날은 평균·초과일수 계산에서 빠진다 — 기록을 안 한 날까지 0으로
+    넣으면 "며칠 기록했는지"와 "평균이 얼마인지"가 뒤섞여 실제보다 낮게 보인다.
+    """
+    rows = db.scalars(
+        select(DietEntry)
+        .where(DietEntry.user_id == user_id)
+        .where(DietEntry.date >= start)
+        .where(DietEntry.date <= end)
+    ).all()
+
+    daily: dict[str, dict[str, float]] = {}
+    for r in rows:
+        day = daily.setdefault(r.date, {"calories": 0, "sodium": 0, "sugar": 0.0})
+        day["calories"] += r.total_calories
+        day["sodium"] += r.sodium_mg
+        day["sugar"] += r.sugar_g
+
+    days_logged = len(daily)
+    if days_logged == 0:
+        return DietPeriodStats(0, 0, 0, 0.0, 0)
+
+    days_over_sodium = sum(
+        1 for d in daily.values() if d["sodium"] > DASH_SODIUM_LIMIT_MG
+    )
+    return DietPeriodStats(
+        days_logged=days_logged,
+        days_over_sodium=days_over_sodium,
+        avg_sodium_mg=round(sum(d["sodium"] for d in daily.values()) / days_logged),
+        avg_sugar_g=round(sum(d["sugar"] for d in daily.values()) / days_logged, 1),
+        avg_calories=round(sum(d["calories"] for d in daily.values()) / days_logged),
+    )
 
 
 def find_by_idempotency(db: Session, user_id: str, key: str) -> DietEntry | None:

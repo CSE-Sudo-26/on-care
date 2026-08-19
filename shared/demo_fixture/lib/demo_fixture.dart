@@ -181,6 +181,18 @@ class FixtureDay {
     meals.fold<double>(0, (double sum, FixtureMeal m) => sum + m.sugarG),
   );
 
+  /// 그날의 탄·단·지(g). 끼니에서 그대로 합친다 — 트레이너 화면의 `이번 달`
+  /// 칼로리 막대를 탄단지로 쌓는 재료다(#944). 당류와 같이 소수를 유지한다.
+  double get carbsG => _round1(
+    meals.fold<double>(0, (double sum, FixtureMeal m) => sum + m.carbsG),
+  );
+  double get proteinG => _round1(
+    meals.fold<double>(0, (double sum, FixtureMeal m) => sum + m.proteinG),
+  );
+  double get fatG => _round1(
+    meals.fold<double>(0, (double sum, FixtureMeal m) => sum + m.fatG),
+  );
+
   /// 이행률(%) — 저장된 값이 아니라 `done` 개수에서 나온다. 루틴이 없는 날(휴식)은
   /// 0 이다.
   int get completion {

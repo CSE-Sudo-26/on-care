@@ -2102,6 +2102,66 @@ abstract class AppLocalizations {
   /// **'Hydration'**
   String get coachCardWaterTag;
 
+  /// No description provided for @coachInviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A trainer wants to coach you'**
+  String get coachInviteTitle;
+
+  /// No description provided for @coachInviteFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer {name}'**
+  String coachInviteFrom(String name);
+
+  /// No description provided for @coachInviteGym.
+  ///
+  /// In en, this message translates to:
+  /// **'at {gym}'**
+  String coachInviteGym(String gym);
+
+  /// No description provided for @coachInviteExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepting lets this trainer see your meal and workout records.'**
+  String get coachInviteExplain;
+
+  /// No description provided for @coachInviteAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get coachInviteAccept;
+
+  /// No description provided for @coachInviteReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get coachInviteReject;
+
+  /// No description provided for @coachInviteAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is now your coach'**
+  String coachInviteAccepted(String name);
+
+  /// No description provided for @coachInviteRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Request declined'**
+  String get coachInviteRejected;
+
+  /// No description provided for @coachInviteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t complete that. Please try again'**
+  String get coachInviteFailed;
+
+  /// No description provided for @coachImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the photo'**
+  String get coachImageUnavailable;
+
   /// No description provided for @coachChatSubtitle.
   ///
   /// In en, this message translates to:
@@ -2305,6 +2365,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assigned Trainer'**
   String get exAssignedTrainer;
+
+  /// No description provided for @exConsultDataSharingNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.'**
+  String get exConsultDataSharingNotice;
 
   /// No description provided for @exExerciseGoal.
   ///

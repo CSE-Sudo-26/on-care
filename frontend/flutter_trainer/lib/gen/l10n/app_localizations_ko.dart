@@ -569,6 +569,125 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsAddAction => '등록하기';
 
   @override
+  String get clientInviteTitle => '회원에게 담당 요청';
+
+  @override
+  String get clientInviteIntro =>
+      '회원의 이메일로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
+
+  @override
+  String get clientInviteEmailLabel => '회원 이메일';
+
+  @override
+  String get clientInviteLookupAction => '찾기';
+
+  @override
+  String get clientInviteMessageLabel => '함께 보낼 메시지 (선택)';
+
+  @override
+  String get clientInviteSendAction => '담당 요청 보내기';
+
+  @override
+  String clientInviteSent(String name) {
+    return '$name님에게 담당 요청을 보냈어요';
+  }
+
+  @override
+  String get clientInviteNotFound => '그 이메일을 쓰는 회원을 찾지 못했어요';
+
+  @override
+  String get clientInviteFailed => '요청을 보내지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientInviteEmailRequired => '이메일을 입력해 주세요';
+
+  @override
+  String get clientInviteAlreadyCoached => '이미 담당하고 있는 회원이에요';
+
+  @override
+  String get clientInviteHasTrainer => '이미 다른 트레이너가 담당 중인 회원이에요';
+
+  @override
+  String get clientInvitePendingHint => '이미 보낸 요청이 회원의 답을 기다리고 있어요';
+
+  @override
+  String get clientInvitePendingTitle => '답을 기다리는 요청';
+
+  @override
+  String get clientInvitePendingEmpty => '기다리는 요청이 없어요';
+
+  @override
+  String get clientInviteCancelAction => '요청 거두기';
+
+  @override
+  String get clientInviteCancelled => '요청을 거뒀어요';
+
+  @override
+  String get clientInviteCancelFailed => '요청을 거두지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachTemplateNew => '새 템플릿';
+
+  @override
+  String get coachTemplateEdit => '템플릿 편집';
+
+  @override
+  String get coachTemplateSaveAsMine => '내 템플릿으로 저장';
+
+  @override
+  String get coachTemplateDelete => '삭제';
+
+  @override
+  String get coachTemplateNameLabel => '템플릿 이름';
+
+  @override
+  String get coachTemplateGoalLabel => '목표 (예: 혈압 관리 · 초급)';
+
+  @override
+  String get coachTemplateExerciseName => '운동 이름';
+
+  @override
+  String get coachTemplateExerciseMinutes => '분';
+
+  @override
+  String get coachTemplateAddExercise => '운동 추가';
+
+  @override
+  String get coachTemplateSave => '저장';
+
+  @override
+  String get coachTemplateNameRequired => '템플릿 이름을 입력해 주세요';
+
+  @override
+  String get coachTemplateExerciseRequired => '운동을 하나 이상 넣어 주세요';
+
+  @override
+  String get coachTemplateSaveFailed => '템플릿을 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachTemplateDeleteFailed => '템플릿을 지우지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String coachTemplateDeleteConfirm(String name) {
+    return '$name 템플릿을 지울까요?';
+  }
+
+  @override
+  String get coachTemplateLoadFailed => '템플릿을 불러오지 못했어요';
+
+  @override
+  String get coachTemplateStarterHint => '기본 구성이에요. 고치면 내 템플릿으로 저장돼요';
+
+  @override
+  String get chatAttachImage => '사진 첨부';
+
+  @override
+  String get chatImageUnavailable => '사진을 불러오지 못했어요';
+
+  @override
+  String get chatImageSendFailed => '사진을 보내지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get clientTabDiet => '식단';
 
   @override
@@ -839,6 +958,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietTodaySummary => '오늘 영양 요약';
 
   @override
+  String get clientNutritionSummary => '영양 요약';
+
+  @override
   String get dietAchieveRate => '달성률';
 
   @override
@@ -957,6 +1079,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientPeriodAverage => '하루 평균';
 
   @override
+  String get clientPeriodGoal => '목표';
+
+  @override
   String clientPeriodLoggedDays(int days) {
     return '$days일 기록';
   }
@@ -971,13 +1096,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => '운동 추이';
+  String get clientTrendTitle => '운동 현황';
 
   @override
   String get clientTrendLoadFailed => '운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
 
   @override
   String get clientTrendTodayEmpty => '오늘 기록된 운동이 없어요';
+
+  @override
+  String get clientTrendTodayTotal => '오늘 총 운동 시간';
 
   @override
   String get clientTrendWorkoutDays => '운동한 날';
@@ -1608,9 +1736,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachSubtitle => '고객별 운동 프로그램을 만들고 배정·관리하세요';
-
-  @override
-  String get coachMemberPrograms => '고객별 프로그램';
 
   @override
   String get coachMemberSummary => '고객 요약';
