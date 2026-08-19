@@ -772,6 +772,12 @@ class _Bar extends StatelessWidget {
         // 위에서부터 지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
         // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
         child: Column(
+          // **stretch 여야 한다.** 기본값(center)이면 자식이 가로로 느슨하게
+          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 세 구간이
+          // 통째로 사라진다(#947). 한 색 막대가 멀쩡했던 이유는 그쪽이
+          // `Container` 라서다 — 자식도 크기도 없는 Container 는 들어온 제약만큼
+          // 커지려고 하므로 폭을 다 채운다.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Expanded(
               flex: (d.fatKcal / total * 1000).round(),
