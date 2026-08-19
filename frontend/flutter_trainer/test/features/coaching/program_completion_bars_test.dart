@@ -44,6 +44,21 @@ void main() {
     matching: find.byType(InlineBarValue),
   );
 
+  /// 이행률 막대가 실제로 칠해진 색. 채워진 쪽(`FractionallySizedBox` 안의
+  /// `Container`)만 본다 — 트랙은 늘 회색이다.
+  Color barFill(WidgetTester tester, String id) => (tester
+              .widget<Container>(
+                find.descendant(
+                  of: find.descendant(
+                    of: rowBar(id),
+                    matching: find.byType(FractionallySizedBox),
+                  ),
+                  matching: find.byType(Container),
+                ),
+              )
+              .color) ??
+      const Color(0x00000000);
+
   testWidgets('회원 목록 행의 이행률이 막대와 값으로 함께 보인다', (tester) async {
     await openCoaching(tester, <TrainerClient>[
       makeClient(
@@ -56,11 +71,10 @@ void main() {
     final bar = tester.widget<InlineBarValue>(rowBar('steady'));
     expect(bar.fraction, closeTo(0.9, 0.001));
     expect(bar.text, '90%');
-    // 이행률이 기준 위면 주의 색을 쓰지 않는다.
-    expect(bar.warn, isFalse);
+    expect(barFill(tester, 'steady'), AppColors.primary);
   });
 
-  testWidgets('이행률이 낮은 회원은 막대가 주의 색을 쓴다', (tester) async {
+  testWidgets('이행률이 낮아도 막대는 남색이다 (#913)', (tester) async {
     await openCoaching(tester, <TrainerClient>[
       makeClient(
         id: 'slipping',
@@ -69,7 +83,18 @@ void main() {
       ),
     ]);
 
-    expect(tester.widget<InlineBarValue>(rowBar('slipping')).warn, isTrue);
+    // 빨강은 이 앱에서 `목표 초과` 다(#690). 이행률이 낮은 것은 초과가
+    // 아니라 아직 덜 한 것이고, 그 사실은 길이와 값이 이미 말한다.
+    expect(barFill(tester, 'slipping'), AppColors.primary);
+    expect(barFill(tester, 'slipping'), isNot(AppColors.overTarget));
+
+    final Color valueColor = tester
+        .widget<Text>(
+          find.descendant(of: rowBar('slipping'), matching: find.text('40%')),
+        )
+        .style!
+        .color!;
+    expect(valueColor, AppColors.primary);
   });
 
   testWidgets('기록이 없는 회원은 막대를 그리지 않는다', (tester) async {

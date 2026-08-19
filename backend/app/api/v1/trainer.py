@@ -83,7 +83,9 @@ from app.services import (
     trainer_service,
 )
 from app.services.coach import conversation
-from app.services.exercise_service import build_current_week, monday_of_this_week_str
+from app.services.exercise_service import (
+    build_current_week, monday_of_str, monday_of_this_week_str,
+)
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
@@ -462,13 +464,32 @@ def trainer_client_exercise_week(
     member_id: str,
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
+    week_start: Annotated[
+        str | None, Query(description="조회할 주의 월요일 YYYY-MM-DD (기본: 이번 주)")
+    ] = None,
 ) -> ExerciseWeekResponse:
-    """Return the member's current-week exercise totals and daily trends."""
+    """담당 고객의 한 주 운동 집계. `week_start` 없이 부르면 이번 주다.
+
+    회원 API(`/exercise/weeks/current`)와 **같은 규칙**이다 — 트레이너 화면이
+    `이번 달` 처럼 한 주를 넘는 기간을 그리려면 지난 주도 같은 모양으로 읽을 수
+    있어야 하는데, 여기만 이번 주로 고정돼 있었다. 월요일이 아닌 날짜를 주면
+    그 날이 속한 주의 월요일로 맞춘다.
+    """
     _require_client(db, trainer.id, member_id)
+    if week_start is None:
+        week_start = monday_of_this_week_str()
+    else:
+        # 형식이 틀리면 조용히 이번 주로 흘려보내지 않는다 — 화면이 엉뚱한 주를
+        # 그리고도 맞다고 믿게 된다(회원 API 와 같은 422).
+        if not _is_ymd(week_start):
+            raise HTTPException(
+                status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다."
+            )
+        week_start = monday_of_str(week_start)
     rows = db.scalars(
         select(ExerciseSession).where(
             ExerciseSession.user_id == member_id,
-            ExerciseSession.week_start == monday_of_this_week_str(),
+            ExerciseSession.week_start == week_start,
         )
     ).all()
     data = build_current_week(list(rows))

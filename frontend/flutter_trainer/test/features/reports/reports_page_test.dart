@@ -402,6 +402,32 @@ void main() {
     expect(currentWeek, findsNothing);
   });
 
+  testWidgets('`이번 주로` 는 날짜 버튼 왼쪽에 나타나고 날짜 버튼을 밀지 않는다', (tester) async {
+    await openReports(tester);
+
+    // 지난 주로 옮기기 전의 자리를 재 둔다.
+    final Rect dateBefore = tester.getRect(prevWeek);
+
+    await tester.tap(prevWeek);
+    await settle(tester);
+
+    final Finder goThisWeek = find.byKey(
+      const ValueKey<String>('reports-go-this-week'),
+    );
+    expect(goThisWeek, findsOneWidget);
+
+    // 날짜 버튼 왼쪽이다. 헤더 동작은 오른쪽 정렬이라, 오른쪽 끝에 끼우면
+    // 나타나는 순간 날짜 버튼이 통째로 왼쪽으로 밀려 방금까지 누르던 자리가
+    // 움직인다.
+    expect(
+      tester.getRect(goThisWeek).right,
+      lessThanOrEqualTo(tester.getRect(prevWeek).left + 0.5),
+    );
+    // 날짜 버튼의 **오른쪽 모서리**가 그대로다. 왼쪽 모서리는 주가 바뀌며
+    // 라벨 길이가 달라져 함께 움직인다 — 자리를 지키는 것은 오른쪽이다.
+    expect(tester.getRect(prevWeek).right, closeTo(dateBefore.right, 0.5));
+  });
+
   testWidgets('좁은 화면에서 고객 선택 시 목록 대신 상세를 바로 연다', (tester) async {
     await openReports(
       tester,

@@ -145,6 +145,10 @@ class BarSeriesChart extends StatelessWidget {
 ///
 /// 값이 없으면([fraction] 이 null) 막대를 그리지 않는다 — 빈 트랙에 0 을
 /// 채우면 `기록 없음` 이 `0% 수행` 으로 읽힌다.
+///
+/// 값이 있는 줄은 **언제나 남색**이다(#913). 기준 미달을 빨강으로 칠하던
+/// 분기가 있었는데, 이 앱에서 빨강은 `목표 초과` 라는 다른 뜻으로 이미
+/// 쓰이고 있었다(#690). 낮다는 사실은 막대 길이와 값이 말한다.
 class InlineBarValue extends StatelessWidget {
   /// Creates an inline bar with [text] to its right.
   const InlineBarValue({
@@ -153,7 +157,6 @@ class InlineBarValue extends StatelessWidget {
     required this.text,
     this.label,
     this.labelWidth = 56,
-    this.warn = false,
     this.valueWidth = 40,
   });
 
@@ -170,9 +173,6 @@ class InlineBarValue extends StatelessWidget {
   /// 막대 오른쪽에 찍을 값. 값이 없으면 부르는 쪽이 안내 문구를 준다.
   final String text;
 
-  /// 기준을 벗어난 값. 색으로 드러낸다.
-  final bool warn;
-
   /// 값 칸 너비. 단위가 붙으면 넓혀 준다.
   final double valueWidth;
 
@@ -182,11 +182,7 @@ class InlineBarValue extends StatelessWidget {
     // 채로 남아, 잴 값이 있는데 못 읽은 것처럼 보인다. 흐린 줄은 누를 것도
     // 읽을 것도 없다는 뜻이다.
     final bool empty = fraction == null;
-    final Color tone = empty
-        ? AppColors.borderStrong
-        : warn
-        ? AppColors.overTarget
-        : AppColors.primary;
+    final Color tone = empty ? AppColors.borderStrong : AppColors.primary;
     return Row(
       children: <Widget>[
         if (label != null) ...<Widget>[

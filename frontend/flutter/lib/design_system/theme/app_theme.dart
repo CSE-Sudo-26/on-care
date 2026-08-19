@@ -20,6 +20,21 @@ class AppTheme {
     constraints: BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
   );
 
+  /// 대화상자 배경을 **카드와 같은 흰색**으로 고정한다. (#925)
+  ///
+  /// Material 3 의 `AlertDialog` 는 배경을 `ColorScheme.surfaceContainerHigh`
+  /// 에서 가져오는데, 이 앱은 그 자리에 `AppColors.accent`(연한 파랑)를 두었다.
+  /// accent 는 **카드 안에서 한 덩이를 구분하려고** 쓰는 색이라, 창 전체를 그
+  /// 색으로 칠하면 대화상자가 카드 위에 뜬 또 하나의 알약처럼 보이고 그 안에
+  /// 다시 흰 요소를 얹을 수 없다. 대화상자는 카드와 같은 층위의 표면이므로 같은
+  /// 색이 맞다.
+  ///
+  /// `surfaceContainerHigh` 자체는 건드리지 않는다 — 목록 행·알약처럼 그 색을
+  /// 의도해서 쓰는 자리까지 함께 바뀐다.
+  static const DialogThemeData _dialogTheme = DialogThemeData(
+    backgroundColor: AppColors.card,
+  );
+
   static ThemeData light() {
     const ColorScheme scheme = ColorScheme(
       brightness: Brightness.light,
@@ -66,6 +81,7 @@ class AppTheme {
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.primary,
       ),
+      dialogTheme: _dialogTheme,
       bottomSheetTheme: _bottomSheetTheme,
     );
   }

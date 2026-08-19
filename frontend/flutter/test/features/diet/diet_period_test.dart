@@ -178,11 +178,7 @@ void main() {
         ),
         matching: range,
       );
-      expect(
-        rangeInRow,
-        findsWidgets,
-        reason: '날짜 범위가 지표 버튼과 다른 줄에 있습니다.',
-      );
+      expect(rangeInRow, findsWidgets, reason: '날짜 범위가 지표 버튼과 다른 줄에 있습니다.');
     });
   });
 
@@ -233,7 +229,9 @@ void main() {
       final DateTime other = today.subtract(const Duration(days: 2));
       await tester.tap(
         find.byKey(
-          ValueKey<String>('diet-day-${other.year}-${other.month}-${other.day}'),
+          ValueKey<String>(
+            'diet-day-${other.year}-${other.month}-${other.day}',
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -306,7 +304,10 @@ void main() {
         expect(addRect.right, lessThanOrEqualTo(headerRect.right + 0.5));
 
         // 날짜와 추가 버튼이 겹치지 않는다. 겹치면 화면상 글자가 버튼을 파고든다.
-        expect(tester.getRect(date).right, lessThanOrEqualTo(addRect.left + 0.5));
+        expect(
+          tester.getRect(date).right,
+          lessThanOrEqualTo(addRect.left + 0.5),
+        );
 
         // 화면 어디에서도 넘치지 않는다. 화면 전체가 좁은 폭을 견디게 된 뒤로
         // (#739) 이 단언을 이 자리에서 그대로 쓸 수 있다.
@@ -435,8 +436,10 @@ void main() {
     expect(period.avgSugarG, closeTo(9, 0.001));
   });
 
-  group('기간 뷰는 선택한 날짜 요청에 좌우되지 않는다 (#684 리뷰)', () {
-    testWidgets('기록이 빈 날을 골라도 그래프와 토글이 남는다', (WidgetTester tester) async {
+  group('지난 날짜에서는 기간 토글이 사라진다 (#912)', () {
+    testWidgets('지난 날짜를 고르면 토글이 사라지고, 오늘로 돌아오면 고르던 기간이 살아난다', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(500, 1600);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -460,25 +463,38 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
 
-      final DateTime yesterday = nowKst().subtract(
-        const Duration(days: 1),
-      );
+      final DateTime yesterday = nowKst().subtract(const Duration(days: 1));
       await tester.tap(find.text('${yesterday.day}').first);
       await tester.pumpAndSettle();
 
+      // 운동 탭과 같은 규칙 — 오늘이 아닌 날은 그날 하루만 말한다.
+      expect(
+        find.byKey(const ValueKey<String>('diet-period-toggle')),
+        findsNothing,
+        reason: '스트립은 하루를, 그래프는 한 주를 가리키는 화면이 되면 안 된다',
+      );
+      expect(find.byKey(const Key('diet-period-card')), findsNothing);
+      // 되돌아오는 길은 스트립의 `오늘` 버튼이다.
+      expect(
+        find.byKey(const ValueKey<String>('diet-today-button')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey<String>('diet-today-button')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey<String>('diet-period-toggle')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const Key('diet-period-card')),
         findsOneWidget,
-        reason: '하루 기록이 비었다고 기간 그래프가 사라지면 안 된다',
-      );
-      expect(
-        find.byKey(const Key('diet-period-tab-day')),
-        findsOneWidget,
-        reason: '토글이 사라지면 오늘로 돌아갈 방법이 없다',
+        reason: '고르던 기간(이번 주)은 상태에 남아 있어야 한다',
       );
     });
 
-    testWidgets('하루 조회가 실패해도 토글이 남는다', (WidgetTester tester) async {
+    testWidgets('하루 조회가 실패해도 오늘로 돌아올 길이 남는다', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(500, 1600);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -498,13 +514,96 @@ void main() {
       await tester.tap(find.byKey(const Key('diet-period-tab-week')));
       await tester.pumpAndSettle();
 
-      final DateTime yesterday = nowKst().subtract(
-        const Duration(days: 1),
-      );
+      final DateTime yesterday = nowKst().subtract(const Duration(days: 1));
       await tester.tap(find.text('${yesterday.day}').first);
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('diet-period-tab-day')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('diet-today-button')),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('이번 달 막대는 정확한 수치를 툴팁으로 말한다 (#912)', () {
+    testWidgets('막대마다 날짜·지표·값을 담은 툴팁이 붙는다', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('diet-period-tab-month')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('diet-period-bar-0')), findsOneWidget);
+
+      // 막대 하나마다 hover 영역이 하나. 개수가 어긋나면 칸과 툴팁이 밀린다.
+      final int tipCount = tester
+          .widgetList<Tooltip>(
+            find.byWidgetPredicate(
+              (Widget w) =>
+                  w is Tooltip && '${w.key}'.contains('diet-period-bar-tip-'),
+            ),
+          )
+          .length;
+      expect(
+        tipCount,
+        dietRangeDates(dietRangeForTab(DietPeriodTab.month, nowKst())).length,
+      );
+
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietRecordPage)),
+      );
+      // 대역은 오늘·어제·그저께에만 기록을 둔다.
+      final Tooltip todayTip = tester.widget<Tooltip>(
+        find.byKey(Key('diet-period-bar-tip-${nowKst().day - 1}')),
+      );
+      final String text = todayTip.richMessage!.toPlainText();
+      // 지표 이름과 단위가 카드 머리 숫자와 같은 말로 적혀야 한다.
+      expect(text, contains(l.dietCalories));
+      expect(text, contains(l.unitKcal));
+      expect(text, isNot(contains(l.dietPeriodNoRecord)));
+    });
+
+    testWidgets('기록이 없는 날의 툴팁은 기록 없음이다', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            // 홀수 날에는 기록이 없다 — 어느 달이든 1일은 늘 비어 있다.
+            dietRepositoryProvider.overrideWithValue(_SparseDietRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('diet-period-tab-month')));
+      await tester.pumpAndSettle();
+
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietRecordPage)),
+      );
+      final Tooltip first = tester.widget<Tooltip>(
+        find.byKey(const Key('diet-period-bar-tip-0')),
+      );
+      expect(first.richMessage!.toPlainText(), contains(l.dietPeriodNoRecord));
     });
   });
 }

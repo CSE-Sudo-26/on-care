@@ -18,7 +18,8 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// 정규 프로그램 편집기 **위**에 두고 시각적으로 갈라 둔다. 둘의 목적이 다르기
 /// 때문이다 — 정규 프로그램은 일정 기간의 전체 계획이고, 개인운동은 PT 와 다음
 /// PT 사이에 하는 짧은 보완·회복 운동이다. 그래서 편집기 안에 섞지 않고 여기서
-/// `판단`만 한다: 그대로 추천 / 수정 후 추천 / 추천 안 함.
+/// `판단`만 한다: 그대로 추천 / 추천 안 함. 내용을 손보는 것은 판단이 아니라
+/// 보조 동작이라, 카드 오른쪽 위의 연필로 뺐다(#939).
 ///
 /// 승인은 새 배정을 만드는 것이 아니라 **이 제안을 배정으로 바꾸는 것**이다.
 /// 회원 알림도 그 시점에 서버가 보낸다. 승인 전 후보는 회원에게 보이지 않는다.
@@ -303,6 +304,29 @@ class _SuggestionCard extends StatelessWidget {
                   color: AppColors.accent,
                 ),
               ),
+              // `수정` 은 판단이 아니라 **보조 동작**이다(#939). 아래 줄에 같은
+              // 크기로 세워 두면 `추천 안 함`·`추천` 과 함께 셋 중 하나를 고르는
+              // 것처럼 읽혔다. 손볼 대상(운동 이름·시간) 옆에 연필로 둔다.
+              const SizedBox(width: AppSpacing.xs),
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  key: ValueKey<String>(
+                    'routine-suggestion-edit-${suggestion.id}',
+                  ),
+                  onPressed: busy ? null : onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  color: AppColors.primary,
+                  tooltip: l.actionEdit,
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 2),
@@ -340,31 +364,39 @@ class _SuggestionCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          // 세 동작의 라벨은 로케일을 크게 탄다 — 한국어 `추천 안 함`·`회원에게
-          // 추천` 은 한 줄에 들어가지만 영어 `Don't recommend`·`Recommend to
-          // client` 는 배율 1.3 에서 카드를 크게 넘겼다(#849). `Row` + `Spacer`
-          // 대신 `OverflowBar` 를 쓰면 넓을 때는 지금과 같은 좌우 배치를 그대로
-          // 두고, 좁아지면 세로로 흘려 준다.
+          // 아래 줄에는 **결정 둘만** 남는다 — 이 제안을 고객에게 줄 것인가.
+          //
+          // 라벨은 로케일을 크게 탄다. 한국어 `추천 안 함`·`고객에게 추천` 은 한
+          // 줄에 들어가지만 영어 `Don't recommend`·`Recommend to client` 는 배율
+          // 1.3 에서 카드를 크게 넘겼다(#849). `Row` + `Spacer` 대신
+          // `OverflowBar` 를 쓰면 넓을 때는 좌우 배치를 그대로 두고, 좁아지면
+          // 세로로 흘려 준다.
           OverflowBar(
             alignment: MainAxisAlignment.spaceBetween,
             overflowAlignment: OverflowBarAlignment.end,
             spacing: AppSpacing.sm,
             overflowSpacing: AppSpacing.xs,
             children: <Widget>[
-              TextButton(
+              // 테두리 있는 버튼이다. 예전에는 흐린 글자만 있는 `TextButton`
+              // 이라 카드 안의 설명 문구와 구별되지 않아, 누를 수 있는 것인지
+              // 알 수 없었다(#939).
+              OutlinedButton(
                 key: ValueKey<String>(
                   'routine-suggestion-dismiss-${suggestion.id}',
                 ),
                 onPressed: busy ? null : onDismiss,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.mutedForeground,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  // 윤곽선을 브랜드 남색으로 지정한다. 테마에 버튼 스타일이
+                  // 없어 기본값(`colorScheme.outline`)을 쓰면 이 버튼만 검은
+                  // 윤곽선으로 나온다.
+                  side: BorderSide(
+                    color: AppColors.primary.withValues(alpha: 0.45),
                   ),
                 ),
                 child: Text(l.suggestionDismiss),
               ),
-              // 진행 표시와 두 동작은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
+              // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
               // 않아야 "무엇이 도는 중인지" 가 읽힌다.
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -377,14 +409,6 @@ class _SuggestionCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                   ],
-                  OutlinedButton(
-                    key: ValueKey<String>(
-                      'routine-suggestion-edit-${suggestion.id}',
-                    ),
-                    onPressed: busy ? null : onEdit,
-                    child: Text(l.actionEdit),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
                   FilledButton(
                     key: ValueKey<String>(
                       'routine-suggestion-approve-${suggestion.id}',

@@ -199,4 +199,38 @@ extension DietDayTotals on DietDay {
     );
     return sum > 0 ? sum : totalSugarG;
   }
+
+  /// 탄단지도 같은 규칙으로 접는다 — 음식 → 끼니 → 하루 합계 순으로 내려간다.
+  ///
+  /// 하루 요약 카드는 `macros` 를 그대로 읽는데, 기간 뷰가 음식만 보고 계산하면
+  /// 실서버 응답(음식에 영양이 없는 경우)에서 같은 날이 두 화면에서 다르게
+  /// 나온다. 세 단계 모두를 거치는 이유다.
+  double get effectiveCarbsG =>
+      _macro((FoodItem f) => f.carbsG, (DietEntry e) => e.carbsG, macros.carbsG);
+
+  double get effectiveProteinG => _macro(
+    (FoodItem f) => f.proteinG,
+    (DietEntry e) => e.proteinG,
+    macros.proteinG,
+  );
+
+  double get effectiveFatG =>
+      _macro((FoodItem f) => f.fatG, (DietEntry e) => e.fatG, macros.fatG);
+
+  double _macro(
+    double Function(FoodItem) fromFood,
+    double Function(DietEntry) fromEntry,
+    double dayTotal,
+  ) {
+    final double foods = _allFoods.fold<double>(
+      0,
+      (double a, FoodItem f) => a + fromFood(f),
+    );
+    if (foods > 0) return foods;
+    final double meals = entries.fold<double>(
+      0,
+      (double a, DietEntry e) => a + fromEntry(e),
+    );
+    return meals > 0 ? meals : dayTotal;
+  }
 }
