@@ -6,11 +6,60 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 
 void main() {
   test(
-    'v3 to v13 adds macro·주간 계열·취소 기록 columns and preserves rows',
+    'v12 to v13 adds the daily macro columns and preserves existing rows',
     () async {
+      // v3~v5 에서 올라오는 경로는 v7 의 `createTable` 이 **현재 정의**로 표를
+      // 만들어 버려, `from >= 7 && from < 13` 갈래를 지나가지 않는다. 이미
+      // v12 인 DB 를 직접 세워야 그 갈래가 검증된다(리뷰 #952).
       final executor = NativeDatabase.memory(
         setup: (database) {
           database.execute('''
+          CREATE TABLE client_daily_metrics (
+            client_id TEXT NOT NULL,
+            date TEXT NOT NULL,
+            completion INTEGER NOT NULL DEFAULT 0,
+            calories INTEGER NOT NULL DEFAULT 0,
+            sodium_mg INTEGER NOT NULL DEFAULT 0,
+            sugar_g REAL NOT NULL DEFAULT 0,
+            exercises_json TEXT NOT NULL DEFAULT '[]',
+            PRIMARY KEY (client_id, date)
+          )
+        ''');
+          database.execute('''
+          INSERT INTO client_daily_metrics
+            (client_id, date, completion, calories, sodium_mg, sugar_g,
+             exercises_json)
+          VALUES ('seed-client-1', '2026-08-18', 80, 1800, 2100, 17.8, '["걷기"]')
+        ''');
+          database.execute('PRAGMA user_version = 12');
+        },
+      );
+      final db = AppDatabase.forTesting(executor);
+      addTearDown(db.close);
+
+      final row = await db.select(db.clientDailyMetrics).getSingle();
+      final version = await db.customSelect('PRAGMA user_version').getSingle();
+
+      expect(version.read<int>('user_version'), 13);
+      // 있던 값은 그대로 남는다.
+      expect(row.clientId, 'seed-client-1');
+      expect(row.date, '2026-08-18');
+      expect(row.calories, 1800);
+      expect(row.sodiumMg, 2100);
+      expect(row.sugarG, 17.8);
+      expect(row.exercisesJson, '["걷기"]');
+      // 새 컬럼은 기본값 0 — 다음 재시딩이 실제 값을 채운다. 0 이면 화면이
+      // 쌓지 않고 한 색으로 그리므로 재시딩 전에도 그림이 깨지지 않는다.
+      expect(row.carbsG, 0);
+      expect(row.proteinG, 0);
+      expect(row.fatG, 0);
+    },
+  );
+
+  test('v3 to v13 adds macro·주간 계열·취소 기록 columns and preserves rows', () async {
+    final executor = NativeDatabase.memory(
+      setup: (database) {
+        database.execute('''
           CREATE TABLE trainer_clients (
             id TEXT NOT NULL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -28,7 +77,7 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-          database.execute('''
+        database.execute('''
           CREATE TABLE client_diet_entries (
             id TEXT NOT NULL PRIMARY KEY,
             client_id TEXT NOT NULL,
@@ -39,7 +88,7 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-          database.execute('''
+        database.execute('''
           INSERT INTO trainer_clients (
             id, name, avatar, goal, last_message, last_time, active,
             calories_today, sodium_mg, sugar_g, last_routine,
@@ -49,16 +98,16 @@ void main() {
             500, 700, 12, '어제', '[100,0,0,0,0,0,0]', '[700]', 1
           )
         ''');
-          database.execute('''
+        database.execute('''
           INSERT INTO client_diet_entries (
             id, client_id, meal, items, calories, sodium_mg, sort_order
           ) VALUES (
             'existing-meal', 'existing-client', '아침', '기존 식단', 500, 700, 0
           )
         ''');
-          // 이 테이블은 v1 부터 있었다. 스냅샷이 빼먹으면 그 위에서 도는
-          // 마이그레이션이 실제 DB 와 다른 것을 보게 된다(#822).
-          database.execute('''
+        // 이 테이블은 v1 부터 있었다. 스냅샷이 빼먹으면 그 위에서 도는
+        // 마이그레이션이 실제 DB 와 다른 것을 보게 된다(#822).
+        database.execute('''
           CREATE TABLE trainer_schedule_entries (
             id TEXT NOT NULL PRIMARY KEY,
             date TEXT NOT NULL,
@@ -73,59 +122,58 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-          database.execute('PRAGMA user_version = 3');
-        },
-      );
-      final db = AppDatabase.forTesting(executor);
-      addTearDown(db.close);
+        database.execute('PRAGMA user_version = 3');
+      },
+    );
+    final db = AppDatabase.forTesting(executor);
+    addTearDown(db.close);
 
-      final client = await db.select(db.trainerClients).getSingle();
-      final meal = await db.select(db.clientDietEntries).getSingle();
-      final version = await db.customSelect('PRAGMA user_version').getSingle();
+    final client = await db.select(db.trainerClients).getSingle();
+    final meal = await db.select(db.clientDietEntries).getSingle();
+    final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 13);
-      expect(client.id, 'existing-client');
-      expect(client.caloriesToday, 500);
-      expect(client.sugarG, 12.0);
-      expect(client.carbsG, 0);
-      // 새 주간 계열은 기본값으로 들어와 다음 재시딩이 실제 값을 채운다(#746).
-      expect(client.caloriesWeekJson, '[]');
-      expect(client.sugarWeekJson, '[]');
-      expect(client.proteinG, 0);
-      expect(client.fatG, 0);
-      expect(meal.id, 'existing-meal');
-      expect(meal.items, '기존 식단');
-      expect(meal.carbsG, 0);
-      expect(meal.proteinG, 0);
-      expect(meal.fatG, 0);
-      // v11 은 리포트 피드백 초안 표를 새로 만든다(#821). 예전 DB 에는 없던
-      // 표라, 만들어지지 않으면 초안 저장이 첫 조회에서 죽는다.
-      expect(await db.select(db.reportFeedbackDrafts).get(), isEmpty);
-      // v12 는 일정에 취소·노쇼 기록 칸을 붙인다(#906). 붙지 않으면 취소를
-      // 누르는 순간 없는 컬럼에 쓰다가 죽는다. 예전 행은 값이 없는 것이 정상이고,
-      // 그 자체가 "취소가 아님" 이라는 뜻이다.
-      final schedule = await db.select(db.trainerScheduleEntries).get();
-      expect(schedule, isEmpty);
-      await db
-          .into(db.trainerScheduleEntries)
-          .insert(
-            TrainerScheduleEntriesCompanion.insert(
-              id: 'migrated-session',
-              date: '2026-08-19',
-              time: '10:00',
-              status: '취소',
-              cancelledAt: Value(DateTime(2026, 8, 19, 9)),
-              cancellationSource: const Value('member'),
-              cancellationReason: const Value('고객 사정'),
-            ),
-          );
-      final stored = await db.select(db.trainerScheduleEntries).getSingle();
-      expect(stored.cancellationSource, 'member');
-      expect(stored.cancellationReason, '고객 사정');
-      expect(stored.cancelledAt, isNotNull);
-      expect(stored.noShowAt, isNull);
-    },
-  );
+    expect(version.read<int>('user_version'), 13);
+    expect(client.id, 'existing-client');
+    expect(client.caloriesToday, 500);
+    expect(client.sugarG, 12.0);
+    expect(client.carbsG, 0);
+    // 새 주간 계열은 기본값으로 들어와 다음 재시딩이 실제 값을 채운다(#746).
+    expect(client.caloriesWeekJson, '[]');
+    expect(client.sugarWeekJson, '[]');
+    expect(client.proteinG, 0);
+    expect(client.fatG, 0);
+    expect(meal.id, 'existing-meal');
+    expect(meal.items, '기존 식단');
+    expect(meal.carbsG, 0);
+    expect(meal.proteinG, 0);
+    expect(meal.fatG, 0);
+    // v11 은 리포트 피드백 초안 표를 새로 만든다(#821). 예전 DB 에는 없던
+    // 표라, 만들어지지 않으면 초안 저장이 첫 조회에서 죽는다.
+    expect(await db.select(db.reportFeedbackDrafts).get(), isEmpty);
+    // v12 는 일정에 취소·노쇼 기록 칸을 붙인다(#906). 붙지 않으면 취소를
+    // 누르는 순간 없는 컬럼에 쓰다가 죽는다. 예전 행은 값이 없는 것이 정상이고,
+    // 그 자체가 "취소가 아님" 이라는 뜻이다.
+    final schedule = await db.select(db.trainerScheduleEntries).get();
+    expect(schedule, isEmpty);
+    await db
+        .into(db.trainerScheduleEntries)
+        .insert(
+          TrainerScheduleEntriesCompanion.insert(
+            id: 'migrated-session',
+            date: '2026-08-19',
+            time: '10:00',
+            status: '취소',
+            cancelledAt: Value(DateTime(2026, 8, 19, 9)),
+            cancellationSource: const Value('member'),
+            cancellationReason: const Value('고객 사정'),
+          ),
+        );
+    final stored = await db.select(db.trainerScheduleEntries).getSingle();
+    expect(stored.cancellationSource, 'member');
+    expect(stored.cancellationReason, '고객 사정');
+    expect(stored.cancelledAt, isNotNull);
+    expect(stored.noShowAt, isNull);
+  });
 
   test('v4 to v13 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
