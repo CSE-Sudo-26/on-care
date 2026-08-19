@@ -205,19 +205,30 @@ void main() {
       ]);
     });
 
-    testWidgets('세 색은 운동 탭 그래프의 3색과 겹치지 않는다', (WidgetTester tester) async {
-      // 같은 회원이 두 탭을 오가며 색을 같은 뜻으로 읽으면 안 된다.
-      const List<Color> exercise = <Color>[
-        FigmaColors.primary,
-        Color(0xFF1B6FA8),
-        Color(0xFFD4EEF8),
-      ];
+    testWidgets('세 색은 브랜드 색의 농담이다 (#953)', (WidgetTester tester) async {
+      // `오늘` 뷰가 칼로리 링도 탄단지 진행 바도 브랜드 색 하나로 그린다.
+      // 기간 뷰만 다른 색상환을 쓰면 토글로 두 뷰를 오갈 때 색이 튄다.
+      expect(FigmaColors.macroCarbs, FigmaColors.primary);
+
+      // 위로 갈수록 옅어진다 — 한 칼로리를 나눈 것이라 색상보다 농담으로
+      // 가르는 편이 뜻에 맞는다.
+      double lum(Color c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+      expect(
+        lum(FigmaColors.macroProtein),
+        greaterThan(lum(FigmaColors.macroCarbs)),
+      );
+      expect(
+        lum(FigmaColors.macroFat),
+        greaterThan(lum(FigmaColors.macroProtein)),
+      );
+
+      // 목표선 위에 겹쳐 그리므로 반투명이면 선이 비친다.
       for (final Color macro in <Color>[
         FigmaColors.macroCarbs,
         FigmaColors.macroProtein,
         FigmaColors.macroFat,
       ]) {
-        expect(exercise.contains(macro), isFalse, reason: '$macro');
+        expect(macro.a, 1.0, reason: '$macro');
       }
     });
 
