@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from app.core import clock
 from app.models.models import (
-    ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
+    ChatMessage, DietEntry, ExerciseSession, GymProfile, HealthProfile, Place, RoutineHistory,
     TrainerClient, TrainerClientMemo, TrainerProfile, TrainerProgramDraft,
     TrainerFollowUpTask, TrainerReportFeedback,
     TrainerReservation, TrainerReservationSlot, TrainerRoutine, TrainerSchedule,
@@ -318,6 +318,17 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
     members = {
         m.id: m for m in db.scalars(select(User).where(User.id.in_(member_ids))).all()
     }
+    # 성별은 로스터 카드가 이름 옆에 적는 값이다. 내려 주지 않던 시절에는 앱이
+    # 회원 id 로 값을 지어내 화면마다·모드마다 다른 성별이 떴다(#960). 한 번의
+    # 배치 조회로 읽고, 저장된 적이 없는 회원은 빈 문자열로 둔다.
+    gender_by_member = {
+        member_id: gender
+        for member_id, gender in db.execute(
+            select(HealthProfile.user_id, HealthProfile.gender).where(
+                HealthProfile.user_id.in_(member_ids)
+            )
+        ).all()
+    }
 
     out: list[TrainerClientOut] = []
     for link in links:
@@ -335,6 +346,7 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
             id=link.member_id,
             name=member.name,
             avatar=member.name[:1] if member.name else "?",
+            gender=gender_by_member.get(link.member_id, ""),
             goal=link.goal,
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",

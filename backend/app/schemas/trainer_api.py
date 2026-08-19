@@ -62,6 +62,9 @@ class TrainerClientOut(BaseModel):
     id: str                      # member_id — /trainer/clients/{id}/... 키
     name: str
     avatar: str
+    #: 카드가 이름 옆에 적는 성별(male|female|other). 저장된 적이 없으면 빈 값이고,
+    #: 그때는 앱이 스스로 표시값을 정한다(#960).
+    gender: str = ""
     goal: str
     last_message: str
     last_time: str

@@ -10,20 +10,32 @@ Future<void> showMemberHealthProfileDialog(
   BuildContext context, {
   required String memberId,
   required ClientRepository repository,
+  String fallbackGender = '',
 }) => showDialog<void>(
   context: context,
-  builder: (_) =>
-      _MemberHealthProfileDialog(memberId: memberId, repository: repository),
+  builder: (_) => _MemberHealthProfileDialog(
+    memberId: memberId,
+    repository: repository,
+    fallbackGender: fallbackGender,
+  ),
 );
 
 class _MemberHealthProfileDialog extends StatefulWidget {
   const _MemberHealthProfileDialog({
     required this.memberId,
     required this.repository,
+    this.fallbackGender = '',
   });
 
   final String memberId;
   final ClientRepository repository;
+
+  /// 저장된 성별이 없을 때 열어 둘 값 — 로스터가 이미 말하고 있는 성별이다.
+  ///
+  /// 헤더가 '여성'이라고 적어 둔 회원의 대화상자가 빈 칸으로 열리면 화면 두
+  /// 곳이 서로 다른 말을 한다. 데모 저장소는 이미 같은 값을 채워 주는데, 실
+  /// API 는 서버에 성별이 없으면 빈 문자열을 내려 이 자리만 비어 있었다(#960).
+  final String fallbackGender;
 
   @override
   State<_MemberHealthProfileDialog> createState() =>
@@ -76,7 +88,7 @@ class _MemberHealthProfileDialogState
   void _initialize(MemberHealthProfile profile) {
     if (_initialized) return;
     _initialized = true;
-    _gender = profile.gender;
+    _gender = profile.gender.isEmpty ? widget.fallbackGender : profile.gender;
     _height.text = _displayNumber(profile.heightCm);
     _weight.text = _displayNumber(profile.weightKg);
     _conditions.text = profile.conditions;
