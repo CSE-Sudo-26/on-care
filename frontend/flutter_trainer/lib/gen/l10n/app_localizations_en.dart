@@ -1807,9 +1807,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create, assign, and manage exercise programs for each member';
 
   @override
-  String get coachMemberPrograms => 'Programs by member';
-
-  @override
   String get coachMemberSummary => 'Member summary';
 
   @override

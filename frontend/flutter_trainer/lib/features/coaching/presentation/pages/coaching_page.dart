@@ -457,117 +457,150 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   ],
                 );
               }
-              return ListView(
-                key: const ValueKey<String>('coaching-program-page-scroll'),
-                padding: const EdgeInsets.fromLTRB(
-                  AppLayout.pagePadding,
-                  AppLayout.pagePadding,
-                  AppLayout.pagePadding,
-                  AppLayout.pagePadding,
-                ),
-                children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 260,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            _MemberProgramList(
-                              clients: clients,
-                              selectedId: selected.id,
-                              onSelect: _selectClient,
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            _TemplateCard(
+              // 넓은 화면은 왼쪽 열(고객 · 프로그램 템플릿)을 고정하고
+              // 오른쪽 카드들만 스크롤한다 — 편집기를 아래로 읽는 동안
+              // 다른 고객으로 넘어가거나 템플릿을 집으려면 왼쪽이 늘 보여야
+              // 한다. 리포트 탭이 이미 같은 구조다. (#958)
+              return Padding(
+                padding: const EdgeInsets.all(AppLayout.pagePadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 260,
+                            // 고객 목록(5줄 고정)에 템플릿 카드가 더해지면
+                            // 짧은 창에서는 열이 화면보다 길어진다. 이 열
+                            // 안에서만 스크롤하게 두어 오른쪽과 따로 움직인다.
+                            child: SingleChildScrollView(
                               key: const ValueKey<String>(
-                                'program-template-sidebar',
+                                'coaching-sidebar-scroll',
                               ),
-                              onApply: _applyTemplate,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
-                          key: const ValueKey<String>(
-                            'coaching-wide-main-column',
-                          ),
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            if (!_showOptionsFlow) ...<Widget>[
-                              _AiAssistantPrompt(
-                                key: const ValueKey<String>(
-                                  'coaching-wide-ai-prompt',
-                                ),
-                                clientName: selected.name,
-                                onTap: () =>
-                                    setState(() => _showOptionsFlow = true),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                            ],
-                            if (!fullWidth) ...<Widget>[
-                              Row(
-                                key: const ValueKey<String>(
-                                  'coaching-wide-client-overview',
-                                ),
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
-                                  SizedBox(
-                                    width: 300,
-                                    child: _ProgramMemberSummary(
-                                      key: const ValueKey<String>(
-                                        'program-client-summary',
-                                      ),
-                                      client: selected,
-                                    ),
+                                  _MemberProgramList(
+                                    clients: clients,
+                                    selectedId: selected.id,
+                                    onSelect: _selectClient,
                                   ),
-                                  const SizedBox(width: AppSpacing.lg),
-                                  Expanded(
-                                    child: _ClientDataSwitcher(
-                                      client: selected,
+                                  const SizedBox(height: AppSpacing.lg),
+                                  _TemplateCard(
+                                    key: const ValueKey<String>(
+                                      'program-template-sidebar',
                                     ),
+                                    onApply: _applyTemplate,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: AppSpacing.lg),
-                            ],
-                            ..._suggestionChildren(selected),
-                            ..._editorChildren(selected, showAssistant: false),
-                            // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
-                            ...?_savedProgramsCard(),
-                            const SizedBox(height: AppSpacing.lg),
-                            _SendHistoryCard(client: selected),
-                          ],
-                        ),
-                      ),
-                      if (fullWidth) ...<Widget>[
-                        const SizedBox(width: AppSpacing.lg),
-                        SizedBox(
-                          key: const ValueKey<String>(
-                            'coaching-wide-client-overview',
+                            ),
                           ),
-                          width: 360,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              _ProgramMemberSummary(
-                                key: const ValueKey<String>(
-                                  'program-client-summary',
-                                ),
-                                client: selected,
+                          const SizedBox(width: AppSpacing.lg),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              key: const ValueKey<String>(
+                                'coaching-program-page-scroll',
                               ),
-                              const SizedBox(height: AppSpacing.lg),
-                              _ClientDataSwitcher(client: selected),
-                            ],
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Column(
+                                      key: const ValueKey<String>(
+                                        'coaching-wide-main-column',
+                                      ),
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        if (!_showOptionsFlow) ...<Widget>[
+                                          _AiAssistantPrompt(
+                                            key: const ValueKey<String>(
+                                              'coaching-wide-ai-prompt',
+                                            ),
+                                            clientName: selected.name,
+                                            onTap: () => setState(
+                                              () => _showOptionsFlow = true,
+                                            ),
+                                          ),
+                                          const SizedBox(height: AppSpacing.lg),
+                                        ],
+                                        if (!fullWidth) ...<Widget>[
+                                          Row(
+                                            key: const ValueKey<String>(
+                                              'coaching-wide-client-overview',
+                                            ),
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: <Widget>[
+                                              SizedBox(
+                                                width: 300,
+                                                child: _ProgramMemberSummary(
+                                                  key: const ValueKey<String>(
+                                                    'program-client-summary',
+                                                  ),
+                                                  client: selected,
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.lg,
+                                              ),
+                                              Expanded(
+                                                child: _ClientDataSwitcher(
+                                                  client: selected,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: AppSpacing.lg),
+                                        ],
+                                        ..._suggestionChildren(selected),
+                                        ..._editorChildren(
+                                          selected,
+                                          showAssistant: false,
+                                        ),
+                                        // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
+                                        ...?_savedProgramsCard(),
+                                        const SizedBox(height: AppSpacing.lg),
+                                        _SendHistoryCard(client: selected),
+                                      ],
+                                    ),
+                                  ),
+                                  if (fullWidth) ...<Widget>[
+                                    const SizedBox(width: AppSpacing.lg),
+                                    SizedBox(
+                                      key: const ValueKey<String>(
+                                        'coaching-wide-client-overview',
+                                      ),
+                                      width: 360,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          _ProgramMemberSummary(
+                                            key: const ValueKey<String>(
+                                              'program-client-summary',
+                                            ),
+                                            client: selected,
+                                          ),
+                                          const SizedBox(height: AppSpacing.lg),
+                                          _ClientDataSwitcher(client: selected),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );
@@ -937,7 +970,10 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   /// 한 줄 높이. 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
   /// 목표가 `lastRoutine` 과 자리를 다투지 않고 늘 보이게 되면서(#898)
   /// 한 줄만큼 높아졌다.
-  static const double _baseRowHeight = 100;
+  ///
+  /// 웹에서는 이 값이 100 일 때 줄 안의 글이 1px 넘쳐 줄무늬가 떴다 — 브라우저
+  /// 기본 글꼴의 줄 높이가 테스트 글꼴보다 살짝 크다. 넘치는 만큼만 올린다.
+  static const double _baseRowHeight = 104;
   static const int _visibleRows = 5;
 
   final ScrollController _scroll = ScrollController();
@@ -988,7 +1024,11 @@ class _MemberProgramListState extends State<_MemberProgramList> {
     final l = AppLocalizations.of(context);
     final rowHeight = _rowHeight(context);
     return SectionCard(
-      title: l.coachMemberPrograms,
+      // 리포트 탭 좌측 고객 카드와 같은 제목·아이콘을 쓴다 — 두 탭이 같은
+      // `왼쪽 고객 열 + 오른쪽 작업 영역` 구조라, 카드가 서로 다른 이름을
+      // 달고 있으면 같은 목록인지 매번 다시 읽어야 한다. (#958)
+      title: l.navClients,
+      icon: Icons.people_outline,
       dense: true,
       child: SizedBox(
         height: rowHeight * _visibleRows,

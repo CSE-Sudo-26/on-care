@@ -928,7 +928,6 @@
   "intensityHigh": "High",
   "coachTitle": "Programs",
   "coachSubtitle": "Create, assign, and manage exercise programs for each member",
-  "coachMemberPrograms": "Programs by member",
   "coachMemberSummary": "Member summary",
   "reportsDataInsufficient": "Insufficient data",
   "reportsThisWeek": "This week",
