@@ -194,7 +194,8 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Dialog(
-      backgroundColor: AppColors.background,
+      // 배경은 테마가 정한다(#925) — 예전에는 여기만 손으로 흰색을 되찾아 둬,
+      // 같은 앱의 대화상자가 어떤 것은 파랗고 어떤 것은 흰 상태였다.
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(AppRadius.card),
       ),
