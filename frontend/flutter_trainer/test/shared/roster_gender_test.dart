@@ -29,7 +29,7 @@ void main() {
     }
 
     test('API 가 성별을 주면 그 값이 이긴다', () {
-      final client = TrainerClient(
+      const client = TrainerClient(
         id: 'user-sera',
         name: '오세라',
         avatar: '오',
@@ -42,8 +42,8 @@ void main() {
         sodiumMg: 0,
         sugarG: 0,
         lastRoutine: '',
-        weekCompletion: const <int>[],
-        sodiumWeek: const <int>[],
+        weekCompletion: <int>[],
+        sodiumWeek: <int>[],
       );
 
       expect(client.rosterGender, 'male');
