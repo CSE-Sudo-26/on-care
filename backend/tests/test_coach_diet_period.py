@@ -235,6 +235,80 @@ def test_diet_coach_carries_the_period_summary_into_the_llm_prompt(
     assert "초과 3일" in captured["prompt"]
 
 
+def test_diet_coach_shares_one_week_query_between_fallback_and_period_summary(
+    db_session, frozen_thursday, monkeypatch,
+):
+    """이번 주 집계를 폴백과 기간 요약이 같은 값을 나눠 쓴다 — 같은 구간을 두 번 쿼리하지 않는다."""
+    user_id = _make_user(db_session)
+    _add_entry(db_session, user_id, "2026-03-12", calories=1900, sodium=800, sugar=20.0)
+
+    calls: list[tuple[str, str]] = []
+    original = diet_service.period_stats
+
+    def _counting_period_stats(db, uid, start, end):
+        calls.append((start, end))
+        return original(db, uid, start, end)
+
+    monkeypatch.setattr(diet_service, "period_stats", _counting_period_stats)
+    monkeypatch.setattr(domain_coaches, "retrieve_context", lambda *a, **k: "")
+
+    class _StubLLM:
+        def generate(self, system_prompt, user_prompt):
+            return LLMResult(text="괜찮은 하루였어요.", model="stub")
+
+    monkeypatch.setattr(domain_coaches, "get_coach_llm", lambda: _StubLLM())
+
+    domain_coaches.diet_coach(db_session, user_id)
+
+    # 이번 주(2026-03-09~03-12) 구간은 한 번만, 이번 달 구간은 한 번만 쿼리된다.
+    week_calls = [c for c in calls if c == ("2026-03-09", "2026-03-12")]
+    assert len(week_calls) == 1, f"이번 주 구간이 {len(week_calls)}번 쿼리됨: {calls}"
+
+
+def test_rag_suggestion_falls_back_when_extra_context_itself_raises(monkeypatch):
+    """extra_context 콜러블이 실패해도(예: 기간 요약 DB 조회 오류) 규칙 폴백으로 빠져야 한다."""
+    fallback = _dummy_suggestion()
+    monkeypatch.setattr(domain_coaches, "retrieve_context", lambda *a, **k: "")
+    monkeypatch.setattr(
+        domain_coaches, "get_coach_llm",
+        lambda: pytest.fail("extra_context 실패 시 LLM 을 부르면 안 된다"),
+    )
+
+    def _boom() -> str:
+        raise RuntimeError("기간 집계 쿼리 실패")
+
+    result = domain_coaches._rag_suggestion(
+        None, "user-x", domain="diet", system_prompt="sys",
+        query="q", tag="diet", title="t", fallback=fallback, extra_context=_boom,
+    )
+
+    assert result is fallback
+
+
+def test_diet_coach_falls_back_when_period_summary_query_fails(
+    db_session, frozen_thursday, monkeypatch,
+):
+    """diet_period_context 내부 쿼리가 죽어도 전체 코칭 카드가 500 으로 죽지 않는다."""
+    user_id = _make_user(db_session)
+    _add_entry(db_session, user_id, "2026-03-12", calories=1900, sodium=800, sugar=20.0)
+
+    monkeypatch.setattr(domain_coaches, "retrieve_context", lambda *a, **k: "")
+
+    def _boom(db, uid, *, week=None):
+        raise RuntimeError("DB 연결 끊김")
+
+    monkeypatch.setattr(domain_coaches, "diet_period_context", _boom)
+    monkeypatch.setattr(
+        domain_coaches, "get_coach_llm",
+        lambda: pytest.fail("기간 요약 조회가 실패하면 LLM 을 부르면 안 된다"),
+    )
+
+    suggestion = domain_coaches.diet_coach(db_session, user_id)
+
+    # 오늘 기록만 있고 초과가 아니므로 규칙 기반 폴백은 '식단 균형이 좋아요'.
+    assert suggestion.title == "식단 균형이 좋아요"
+
+
 # ---- coach/chat.py: 챗봇도 같은 요약을 쓴다 ----
 
 def test_chat_answer_carries_the_period_summary_into_the_llm_prompt(

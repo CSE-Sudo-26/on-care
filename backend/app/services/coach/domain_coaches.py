@@ -12,6 +12,8 @@ STEP 8 챗봇은 retrieve_context + get_coach_llm 을 직접 재사용.
 """
 from __future__ import annotations
 import logging
+from collections.abc import Callable
+
 from sqlalchemy.orm import Session
 
 from app.schemas.misc_api import CoachSuggestion
@@ -20,7 +22,7 @@ from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
 from app.services.coach_service import (
-    _diet_suggestion, _exercise_suggestion, diet_period_context,
+    _diet_suggestion, _exercise_suggestion, _week_stats, diet_period_context,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,14 +52,18 @@ _EXERCISE_SYSTEM = (
 def _rag_suggestion(
     db: Session, user_id: str, *, domain: str, system_prompt: str,
     query: str, tag: str, title: str, fallback: CoachSuggestion,
-    extra_context: str = "",
+    extra_context: str | Callable[[], str] = "",
 ) -> CoachSuggestion:
     try:
         context = retrieve_context(db, query, user_id=user_id, domain=domain)
         # extra_context(#933)는 계산된 요약(예: 이번 주 나트륨 평균)이라, 검색 문서가
         # 하나도 안 걸려도 그것만으로 코칭을 만들 수 있다 — 그래서 context 가 비어도
-        # extra_context 가 있으면 폴백으로 빠지지 않는다.
-        combined = "\n\n".join(part for part in (context, extra_context) if part)
+        # extra_context 가 있으면 폴백으로 빠지지 않는다. 콜러블로도 받는 이유는
+        # 그 계산(추가 DB 조회)도 이 try 안에서 실패해야 규칙 폴백으로 빠진다는
+        # 보장이 서기 때문이다 — 호출부에서 미리 계산해 인자로 넘기면 그 실패가
+        # 이 함수 밖에서 터져 폴백을 건너뛴다.
+        extra = extra_context() if callable(extra_context) else extra_context
+        combined = "\n\n".join(part for part in (context, extra) if part)
         if not combined:
             return fallback  # 검색 자료도 기간 요약도 전혀 없으면 규칙 기반
         llm = get_coach_llm()
@@ -74,12 +80,15 @@ def _rag_suggestion(
         return fallback
 
 def diet_coach(db: Session, user_id: str) -> CoachSuggestion:
-    fallback = _diet_suggestion(db, user_id)
+    # 이번 주 집계를 한 번만 조회해 폴백과 기간 요약이 같은 값을 나눠 쓴다
+    # (기간 요약의 이번 달 조회는 그대로 _rag_suggestion 의 try 안에서 이뤄진다).
+    week = _week_stats(db, user_id)
+    fallback = _diet_suggestion(db, user_id, week=week)
     return _rag_suggestion(
         db, user_id, domain="diet", system_prompt=_DIET_SYSTEM,
         query="최근 식단의 나트륨·당류 관리와 개선점",
         tag="diet", title="오늘의 식단 코칭", fallback=fallback,
-        extra_context=diet_period_context(db, user_id),
+        extra_context=lambda: diet_period_context(db, user_id, week=week),
     )
 
 

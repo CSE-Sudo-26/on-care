@@ -26,7 +26,9 @@ from app.services import diet_service
 from app.services.exercise_service import monday_of_this_week_str
 
 #: 이번 주에 나트륨 초과일이 이만큼 쌓이면 "계속 높았다" 패턴으로 본다. 하루이틀은
-#: 우연일 수 있지만, 기록한 날의 절반 이상이면 오늘 하루가 괜찮아도 짚어줄 근거가 된다.
+#: 우연일 수 있어 제외하고, 사흘부터는 오늘 하루가 괜찮아도 짚어줄 근거로 본다.
+#: 기록일 대비 비율이 아니라 **절대 일수**다 — 이 주가 처음 기록을 시작한 주라도
+#: (기록일이 적어도) 사흘 다 초과였다면 이미 패턴이다.
 _SODIUM_PATTERN_MIN_DAYS = 3
 
 
@@ -43,17 +45,32 @@ def _month_bounds() -> tuple[str, str]:
     return today.replace(day=1).isoformat(), today.isoformat()
 
 
-def diet_period_context(db: Session, user_id: str) -> str:
+def _week_stats(db: Session, user_id: str) -> diet_service.DietPeriodStats:
+    week_from, week_to = _week_bounds()
+    return diet_service.period_stats(db, user_id, week_from, week_to)
+
+
+def _month_stats(db: Session, user_id: str) -> diet_service.DietPeriodStats:
+    month_from, month_to = _month_bounds()
+    return diet_service.period_stats(db, user_id, month_from, month_to)
+
+
+def diet_period_context(
+    db: Session, user_id: str,
+    *, week: diet_service.DietPeriodStats | None = None,
+) -> str:
     """이번 주·이번 달 식단 누적 요약 — AI 코칭이 하루 스냅샷 대신 참고할 문장(#933).
 
     회원 앱 식단 탭의 `오늘/이번 주/이번 달` 과 같은 기간 개념을 코칭 경로에도
     준다. 벡터 검색(`coach/rag.py`)은 의미상 가까운 개별 기록 몇 건만 뽑아오므로
     "이번 주 평균 나트륨" 같은 계산된 값은 만들지 못한다 — 그 값을 이 함수가 낸다.
+
+    `week`: `_diet_suggestion` 이 이미 같은 주를 조회했다면 그 결과를 넘겨받아
+    같은 구간을 두 번 쿼리하지 않는다(`domain_coaches.diet_coach`).
     """
-    week_from, week_to = _week_bounds()
-    month_from, month_to = _month_bounds()
-    week = diet_service.period_stats(db, user_id, week_from, week_to)
-    month = diet_service.period_stats(db, user_id, month_from, month_to)
+    if week is None:
+        week = _week_stats(db, user_id)
+    month = _month_stats(db, user_id)
 
     lines: list[str] = []
     if not week.empty:
@@ -72,7 +89,10 @@ def diet_period_context(db: Session, user_id: str) -> str:
     return "[이번 주·이번 달 식단 요약]\n" + "\n".join(lines)
 
 
-def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
+def _diet_suggestion(
+    db: Session, user_id: str,
+    *, week: diet_service.DietPeriodStats | None = None,
+) -> CoachSuggestion:
     """식단 도메인 코치 (STEP 7에서 RAG+LLM 으로 교체)."""
     today = clock.today_iso()
     rows = db.scalars(
@@ -94,12 +114,11 @@ def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
     # 오늘은 괜찮아도 이번 주 내내 나트륨이 높았다면 짚어준다(#933) — 하루만 보면
     # "오늘 안정적" 문구가 매번 반복되어, 거의 매일 초과하던 회원도 오늘 하루
     # 낮았다는 이유만으로 계속 잘하고 있다는 인상을 준다.
-    week_from, week_to = _week_bounds()
-    week = diet_service.period_stats(db, user_id, week_from, week_to)
-    if (
-        week.days_logged >= _SODIUM_PATTERN_MIN_DAYS
-        and week.days_over_sodium >= _SODIUM_PATTERN_MIN_DAYS
-    ):
+    if week is None:
+        week = _week_stats(db, user_id)
+    # days_over_sodium 은 days_logged 를 넘을 수 없으니 기록일수 조건은 따로 안
+    # 둔다 — 초과일이 기준을 채우면 기록일수는 이미 그만큼 채워진 것이다.
+    if week.days_over_sodium >= _SODIUM_PATTERN_MIN_DAYS:
         return CoachSuggestion(
             tag="diet", title="이번 주 나트륨이 계속 높았어요",
             body=f"이번 주 기록한 {week.days_logged}일 중 {week.days_over_sodium}일 "
