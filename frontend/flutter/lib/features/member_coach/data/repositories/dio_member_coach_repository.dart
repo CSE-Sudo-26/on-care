@@ -138,6 +138,28 @@ class DioMemberCoachRepository implements MemberCoachRepository {
     }
   }
 
+  @override
+  Future<List<CoachInvite>> fetchInvites() =>
+      _getList('/me/coach/invites', coachInviteFromJson);
+
+  @override
+  Future<void> acceptInvite(String inviteId) =>
+      _decideInvite(inviteId, 'accept');
+
+  @override
+  Future<void> rejectInvite(String inviteId) =>
+      _decideInvite(inviteId, 'reject');
+
+  Future<void> _decideInvite(String inviteId, String action) async {
+    try {
+      await _dio.post<Map<String, Object?>>(
+        '/me/coach/invites/${Uri.encodeComponent(inviteId)}/$action',
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
   Future<List<T>> _getList<T>(
     String path,
     T Function(Map<String, Object?>) fromJson,

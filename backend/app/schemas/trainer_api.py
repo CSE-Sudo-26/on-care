@@ -207,8 +207,16 @@ ChatSender = Literal["trainer", "client", "me"]
 
 
 class ChatAttachmentOut(BaseModel):
-    """#778 전용 PDF attachment. 다른 파일 형식은 계약에 포함하지 않는다."""
-    type: Literal["pdf"]
+    """채팅 메시지에 딸린 파일.
+
+    #778 의 주간 리포트 PDF 로 시작해 #921 에서 이미지가 더해졌다. **두 종류
+    뿐이다** — 임의 파일 공유는 이 대화의 목적이 아니고, 받는 쪽이 그릴 수 없는
+    형식이 오면 화면은 아이콘 하나만 남긴다.
+
+    `type` 으로 화면이 그릴 방법을 정한다: `pdf` 는 내려받기, `image` 는 대화
+    안에서 그린다.
+    """
+    type: Literal["pdf", "image"]
     file_name: str
     file_id: str
     file_size: int
@@ -1117,3 +1125,109 @@ class TrainerNotificationSettingsUpdate(PartialUpdate):
             if getattr(self, field) is None:
                 raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
         return self
+
+
+# ---------------------------------------------------------------------------
+# 트레이너 → 회원 담당 요청 (#919)
+# ---------------------------------------------------------------------------
+
+
+class MemberLookupOut(BaseModel):
+    """이메일 완전 일치로 찾은 회원 한 명.
+
+    요청을 보낼지 판단할 만큼만 담는다. 누가 담당인지·어떤 기록이 있는지는
+    담당이 아닌 트레이너가 알 이유가 없다.
+    """
+
+    member_id: str
+    name: str
+    email: str
+    #: 이미 활성 담당 트레이너가 있는가. 누구인지는 밝히지 않는다.
+    has_trainer: bool
+    #: 그 담당이 나인가 — 명단에 이미 있는 회원을 다시 찾은 경우.
+    coached_by_me: bool
+    #: 내가 보낸 요청이 대기 중인가.
+    invite_pending: bool
+
+
+class TrainerClientInviteCreate(BaseModel):
+    member_id: str = Field(min_length=1, max_length=64)
+    #: 회원에게 함께 보이는 한마디. 비워도 된다.
+    message: str | None = Field(default=None, max_length=500)
+
+
+class TrainerClientInviteOut(BaseModel):
+    """트레이너가 보고 있는 '보낸 요청' 카드."""
+
+    id: str
+    member_id: str
+    member_name: str
+    member_email: str
+    message: str | None = None
+    status: Literal["pending", "accepted", "rejected", "cancelled"]
+    created_at: _datetime
+    decided_at: _datetime | None = None
+
+
+class MemberClientInviteOut(BaseModel):
+    """회원이 보고 있는 '받은 요청' 카드.
+
+    트레이너 응답과 스키마를 나누는 이유는 상담 요청과 같다 — 회원에게는 자기
+    이메일이 필요 없고, 트레이너 이름·소속은 반드시 필요하다.
+    """
+
+    id: str
+    trainer_id: str
+    trainer_name: str
+    gym_name: str | None = None
+    message: str | None = None
+    status: Literal["pending", "accepted", "rejected", "cancelled"]
+    created_at: _datetime
+
+
+# ---------------------------------------------------------------------------
+# 프로그램 템플릿 — 어느 회원에게든 끼워 넣는 블록 (#920)
+# ---------------------------------------------------------------------------
+
+#: 한 템플릿에 담을 수 있는 운동 수. 블록이지 프로그램이 아니라 짧다.
+_TEMPLATE_MAX_EXERCISES = 20
+
+
+class ProgramTemplateExercise(BaseModel):
+    """템플릿 안의 운동 한 줄."""
+
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(ge=1, le=300)
+    type: RoutineType = "근력"
+
+
+class TrainerProgramTemplateOut(BaseModel):
+    id: str
+    name: str
+    goal: str
+    exercises: list[ProgramTemplateExercise]
+    updated_at: _datetime
+
+
+class TrainerProgramTemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    goal: str = Field(default="", max_length=200)
+    #: 운동이 하나도 없는 템플릿은 끼워 넣어도 아무 일이 없다 — 초안과 달리
+    #: 빈 상태에 의미가 없으므로 최소 하나를 요구한다.
+    exercises: list[ProgramTemplateExercise] = Field(
+        min_length=1, max_length=_TEMPLATE_MAX_EXERCISES
+    )
+
+
+class TrainerProgramTemplateUpdate(PartialUpdate):
+    """부분 수정. 보낸 필드만 반영한다.
+
+    `exercises` 는 통째로 교체한다 — 편집 화면이 항목 단위 diff 가 아니라 현재
+    구성 전체를 들고 있다(초안과 같은 규약).
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    goal: str | None = Field(default=None, max_length=200)
+    exercises: list[ProgramTemplateExercise] | None = Field(
+        default=None, min_length=1, max_length=_TEMPLATE_MAX_EXERCISES
+    )

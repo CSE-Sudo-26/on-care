@@ -170,7 +170,9 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 /// Streams per-client unread message counts for the 고객 list badges.
-final unreadCountsProvider = StreamProvider<Map<String, int>>((ref) {
+final unreadCountsProvider = StreamProvider.autoDispose<Map<String, int>>((
+  ref,
+) {
   return ref.watch(chatRepositoryProvider).watchUnreadCounts();
 });
 

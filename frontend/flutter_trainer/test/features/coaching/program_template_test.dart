@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 
 import '../../helpers/pump_app.dart';
 
+/// 데모가 보여 주는 시작 구성. 저장할 백엔드가 없는 빌드라 읽기 전용이고,
+/// 실 API 가 '저장한 것이 없는 트레이너' 에게 주는 것과 같은 셋이다. (#920)
+const List<ProgramTemplate> starterTemplates =
+    MockTrainerProgramTemplateRepository.starters;
+
 void main() {
-  group('programTemplates', () {
+  group('시작 구성', () {
     test('every template is usable: named, attributed, and non-empty', () {
-      expect(programTemplates, isNotEmpty);
-      for (final template in programTemplates) {
+      expect(starterTemplates, isNotEmpty);
+      for (final template in starterTemplates) {
         expect(template.name, isNotEmpty);
         expect(template.goal, isNotEmpty, reason: '${template.name}에 대상이 없어요');
         expect(
@@ -22,15 +28,18 @@ void main() {
     });
 
     test('ids are unique so a list key cannot collide', () {
-      final ids = programTemplates.map((t) => t.id).toSet();
-      expect(ids.length, programTemplates.length);
+      final ids = starterTemplates.map((ProgramTemplate t) => t.id).toSet();
+      expect(ids.length, starterTemplates.length);
     });
 
     test('totalMinutes sums the block', () {
-      final template = programTemplates.first;
+      final template = starterTemplates.first;
       expect(
         template.totalMinutes,
-        template.exercises.fold<int>(0, (sum, e) => sum + e.minutes),
+        template.exercises.fold<int>(
+          0,
+          (int sum, TemplateExercise e) => sum + e.minutes,
+        ),
       );
     });
   });
@@ -63,13 +72,13 @@ void main() {
       );
     }
 
-    testWidgets('the library lists the built-in templates', (tester) async {
+    testWidgets('the library lists the starter templates', (tester) async {
       await openCoaching(tester);
 
-      await revealTemplate(tester, programTemplates.first.name);
+      await revealTemplate(tester, starterTemplates.first.name);
 
       expect(find.text('프로그램 템플릿'), findsOneWidget);
-      expect(find.text(programTemplates.first.name), findsOneWidget);
+      expect(find.text(starterTemplates.first.name), findsOneWidget);
     });
 
     testWidgets('applying a template ADDS to the AI suggestions rather '
@@ -79,7 +88,7 @@ void main() {
       // A seeded AI suggestion for 김민수 that must survive the apply.
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
 
-      final template = programTemplates.first;
+      final template = starterTemplates.first;
       await revealTemplate(tester, template.name);
       await tester.drag(
         find.byKey(const ValueKey<String>('coaching-program-page-scroll')),

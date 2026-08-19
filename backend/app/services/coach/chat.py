@@ -14,6 +14,7 @@ from app.models.models import HealthProfile
 from app.services.coach import grounding, prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve
+from app.services.coach_service import diet_period_context
 
 _SYSTEM = (
     "당신은 온케어의 AI 건강 코치 '온이'입니다. 고혈압·당뇨 위험군 사용자를 돕습니다. "
@@ -101,9 +102,16 @@ def answer(
 
     try:
         llm = get_coach_llm()
+        # 이번 주·이번 달 식단 요약(#933)도 함께 준다 — retrieve 는 의미상 가까운
+        # 개별 기록 몇 건만 뽑아오므로 "이번 주 평균 나트륨" 같은 질문에는
+        # 계산된 값이 따로 필요하다.
         context = "\n\n".join(
             part
-            for part in (_profile_context(db, user_id), _format_context(hits))
+            for part in (
+                _profile_context(db, user_id),
+                diet_period_context(db, user_id),
+                _format_context(hits),
+            )
             if part
         )
         prompt = _build_user_prompt(context, history, message)
