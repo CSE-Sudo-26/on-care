@@ -1877,7 +1877,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientTrendTodayTotal.
   ///
   /// In en, this message translates to:
-  /// **'Today total'**
+  /// **'Today\'s total'**
   String get clientTrendTodayTotal;
 
   /// No description provided for @clientTrendWorkoutDays.

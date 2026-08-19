@@ -670,14 +670,17 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
             monday.month,
             monday.day + d,
           );
-          final bool split = week.hasTypeSplit;
+          // 유형 배열도 분·칼로리와 **같이 인덱스를 확인한다.** hasTypeSplit 은
+          // 셋의 길이가 서로 같은지만 보는데, 이 루프는 언제나 7일을 돈다 —
+          // 길이 2짜리 응답은 분해로 인정되면서 d == 2 에서 범위를 넘는다.
+          int at(List<int> xs) => d < xs.length ? xs[d] : 0;
           byDate[ymd(date)] = ClientExerciseDay(
             date: date,
-            minutes: d < week.dailyMinutes.length ? week.dailyMinutes[d] : 0,
-            calories: d < week.dailyCalories.length ? week.dailyCalories[d] : 0,
-            cardioMinutes: split ? week.cardioMinutes[d] : 0,
-            strengthMinutes: split ? week.strengthMinutes[d] : 0,
-            stretchingMinutes: split ? week.stretchingMinutes[d] : 0,
+            minutes: at(week.dailyMinutes),
+            calories: at(week.dailyCalories),
+            cardioMinutes: at(week.cardioMinutes),
+            strengthMinutes: at(week.strengthMinutes),
+            stretchingMinutes: at(week.stretchingMinutes),
           );
         }
       }
