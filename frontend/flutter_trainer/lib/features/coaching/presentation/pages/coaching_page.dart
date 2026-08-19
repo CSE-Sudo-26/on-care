@@ -11,6 +11,9 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_diet_period_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_toggle.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
@@ -1259,12 +1262,14 @@ class _ClientDataSwitcher extends ConsumerStatefulWidget {
 class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
   _ClientDataView _view = _ClientDataView.diet;
 
+  /// 프로그램 탭에서도 `오늘 / 이번 주 / 이번 달` 을 고를 수 있다(#914).
+  /// 다음 주 프로그램을 짜는 화면인데 오늘 하루만 보이면, 무엇을 근거로 짜야
+  /// 하는지가 화면 밖에 있다.
+  ClientPeriod _period = ClientPeriod.today;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final exerciseWeek = ref.watch(
-      clientExerciseWeekProvider(widget.client.id),
-    );
     return Column(
       key: const ValueKey<String>('program-client-data-switcher'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1309,24 +1314,45 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // 토글은 카드 제목 줄에 얹는다 — 고객 데이터 열은 화면 안에 들어와야
+        // 하고, 카드 위에 한 줄을 더 두면 아래 카드가 밖으로 밀린다.
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: _view == _ClientDataView.diet
-              ? NutritionSummaryCard(
-                  key: ValueKey<String>('program-diet-${widget.client.id}'),
-                  client: widget.client,
-                )
+              ? _period == ClientPeriod.today
+                    ? NutritionSummaryCard(
+                        key: ValueKey<String>(
+                          'program-diet-${widget.client.id}',
+                        ),
+                        client: widget.client,
+                        trailing: _periodToggle(),
+                      )
+                    : ClientDietPeriodCard(
+                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길 때마다
+                        // 카드가 새로 만들어져, 나트륨을 보다 기간만 넓힌
+                        // 트레이너가 지표를 다시 골라야 했다. 전환 애니메이션은
+                        // 위젯 타입이 달라지는 것만으로 `AnimatedSwitcher` 가
+                        // 이미 해 준다.
+                        key: ValueKey<String>(
+                          'program-diet-period-${widget.client.id}',
+                        ),
+                        clientId: widget.client.id,
+                        period: _period,
+                        trailing: _periodToggle(),
+                      )
               : WeeklyExerciseTrendCard(
                   key: ValueKey<String>('program-workout-${widget.client.id}'),
-                  week: exerciseWeek,
-                  onRetry: () => ref.invalidate(
-                    clientExerciseWeekProvider(widget.client.id),
-                  ),
+                  clientId: widget.client.id,
                 ),
         ),
       ],
     );
   }
+
+  Widget _periodToggle() => ClientPeriodToggle(
+    active: _period,
+    onChanged: (ClientPeriod p) => setState(() => _period = p),
+  );
 }
 
 class _ClientDataTab extends StatelessWidget {

@@ -1,0 +1,185 @@
+import 'package:oncare_trainer/core/utils/clock.dart';
+
+/// 트레이너가 고객 기록을 보는 기간 — 회원 앱 식단·운동 탭의 토글과 **같은
+/// 뜻·같은 순서**다(#914).
+///
+/// 회원은 자기 앱에서 `오늘 / 이번 주 / 이번 달` 을 골라 보는데, 정작 코칭하는
+/// 트레이너 화면은 식단이 오늘 하루, 운동이 이번 주로 고정이었다. 회원이
+/// "이번 주는 좀 과했어요" 라고 말해도 견줄 화면이 없었다.
+enum ClientPeriod {
+  /// 오늘 하루.
+  today,
+
+  /// 이번 주(월~일).
+  week,
+
+  /// 이번 달(1일~말일).
+  month,
+}
+
+/// 기간이 덮는 날짜 범위. 시작·끝 모두 **포함**이다.
+typedef ClientDateRange = ({DateTime from, DateTime to});
+
+/// [period] 가 [today] 기준으로 덮는 날짜 범위.
+///
+/// 날짜를 `Duration` 이 아니라 성분으로 옮긴다 — 로컬 시간에 Duration 을 더하면
+/// 서머타임이 있는 지역에서 주 전체가 하루씩 밀린다. `DateTime(y, m + 1, 0)` 은
+/// 12월이면 다음 해 1월 0일 = 12월 31일로 알아서 넘어간다. 회원 앱
+/// `dietRangeForTab` 과 같은 규칙이다.
+ClientDateRange clientRangeFor(ClientPeriod period, DateTime today) {
+  final DateTime day = DateTime(today.year, today.month, today.day);
+  switch (period) {
+    case ClientPeriod.today:
+      return (from: day, to: day);
+    case ClientPeriod.week:
+      final DateTime monday = DateTime(
+        day.year,
+        day.month,
+        day.day - (day.weekday - 1),
+      );
+      return (
+        from: monday,
+        to: DateTime(monday.year, monday.month, monday.day + 6),
+      );
+    case ClientPeriod.month:
+      return (
+        from: DateTime(day.year, day.month),
+        to: DateTime(day.year, day.month + 1, 0),
+      );
+  }
+}
+
+/// [day] 가 속한 주의 월요일(시각은 0시).
+///
+/// 서버도 데모도 운동·리포트 이력을 주 단위로 들고 있고, 그 키가 언제나
+/// 월요일이다. 읽는 쪽과 쓰는 쪽이 같은 함수를 써야 주가 어긋나지 않는다.
+DateTime clientMondayOf(DateTime day) =>
+    DateTime(day.year, day.month, day.day - (day.weekday - 1));
+
+/// 범위가 덮는 모든 날짜(시작·끝 포함).
+List<DateTime> clientRangeDates(ClientDateRange range) {
+  final List<DateTime> out = <DateTime>[];
+  DateTime cursor = DateTime(range.from.year, range.from.month, range.from.day);
+  final DateTime last = DateTime(range.to.year, range.to.month, range.to.day);
+  while (!cursor.isAfter(last)) {
+    out.add(cursor);
+    cursor = DateTime(cursor.year, cursor.month, cursor.day + 1);
+  }
+  return out;
+}
+
+/// 범위가 걸치는 모든 주의 월요일(오래된 → 최근).
+///
+/// 서버도 데모도 운동·식단 이력을 **주 단위**로 읽는다. 한 달을 그리려면 그
+/// 달에 걸친 4~6개의 주를 각각 읽어 이어 붙인다.
+List<DateTime> clientRangeWeekStarts(ClientDateRange range) {
+  final DateTime first = DateTime(
+    range.from.year,
+    range.from.month,
+    range.from.day - (range.from.weekday - 1),
+  );
+  final DateTime last = DateTime(
+    range.to.year,
+    range.to.month,
+    range.to.day - (range.to.weekday - 1),
+  );
+  final List<DateTime> out = <DateTime>[];
+  DateTime cursor = first;
+  while (!cursor.isAfter(last)) {
+    out.add(cursor);
+    cursor = DateTime(cursor.year, cursor.month, cursor.day + 7);
+  }
+  return out;
+}
+
+/// 하루치 식단 집계.
+class ClientDietDay {
+  /// Creates one day's totals.
+  const ClientDietDay({
+    required this.date,
+    this.calories = 0,
+    this.sodiumMg = 0,
+    this.sugarG = 0,
+  });
+
+  final DateTime date;
+  final int calories;
+  final int sodiumMg;
+  final double sugarG;
+
+  /// 그날 기록이 있었는가. 셋 다 0 이면 **적지 않은 날**이다 — 0kcal 을 먹은
+  /// 날과 같은 말로 그리면 평균이 실제보다 낮아진다.
+  bool get logged => calories > 0 || sodiumMg > 0 || sugarG > 0;
+}
+
+/// 한 기간의 식단 집계.
+class ClientDietPeriod {
+  /// Creates a period from its per-day rows (오래된 → 최근).
+  const ClientDietPeriod({required this.range, required this.days});
+
+  final ClientDateRange range;
+  final List<ClientDietDay> days;
+
+  /// 기록이 있는 날 수.
+  int get loggedDays => days.where((ClientDietDay d) => d.logged).length;
+
+  bool get isEmpty => loggedDays == 0;
+
+  /// 하루 평균은 **기록이 있는 날만으로** 나눈다. 아직 오지 않은 날까지 나누면
+  /// 달 초에는 평균이 실제보다 늘 낮게 나온다.
+  double get avgCalories => _avg((ClientDietDay d) => d.calories.toDouble());
+  double get avgSodiumMg => _avg((ClientDietDay d) => d.sodiumMg.toDouble());
+  double get avgSugarG => _avg((ClientDietDay d) => d.sugarG);
+
+  double _avg(double Function(ClientDietDay) pick) {
+    final Iterable<ClientDietDay> recorded = days.where(
+      (ClientDietDay d) => d.logged,
+    );
+    if (recorded.isEmpty) return 0;
+    return recorded.fold<double>(
+          0,
+          (double a, ClientDietDay d) => a + pick(d),
+        ) /
+        recorded.length;
+  }
+}
+
+/// 하루치 운동 집계.
+class ClientExerciseDay {
+  /// Creates one day's totals.
+  const ClientExerciseDay({
+    required this.date,
+    this.minutes = 0,
+    this.calories = 0,
+  });
+
+  final DateTime date;
+  final int minutes;
+  final int calories;
+
+  bool get logged => minutes > 0 || calories > 0;
+}
+
+/// 한 기간의 운동 집계.
+class ClientExercisePeriod {
+  /// Creates a period from its per-day rows (오래된 → 최근).
+  const ClientExercisePeriod({required this.range, required this.days});
+
+  final ClientDateRange range;
+  final List<ClientExerciseDay> days;
+
+  int get totalMinutes =>
+      days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.minutes);
+
+  int get totalCalories =>
+      days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.calories);
+
+  /// 운동한 날 수 — 기간이 길어져도 "몇 번 했나" 의 뜻이 흔들리지 않는다.
+  int get workoutDays => days.where((ClientExerciseDay d) => d.logged).length;
+
+  bool get isEmpty => workoutDays == 0;
+}
+
+/// 오늘(KST) 기준 [period] 범위.
+ClientDateRange clientRangeNow(ClientPeriod period) =>
+    clientRangeFor(period, nowKst());
