@@ -320,6 +320,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get dietPeriodNoRecord => '기록 없음';
+
+  @override
+  String dietPeriodOverGoal(String amount, String unit) {
+    return '목표 초과 +$amount $unit';
+  }
+
+  @override
   String otherDateEmpty(Object section) {
     return '선택한 날짜에 기록된 $section이 없어요.';
   }

@@ -401,7 +401,8 @@ class _PeriodBody extends StatelessWidget {
               // 보고 있으면) 마지막 칸까지 전부 그린다.
               todayIndex: _todayIndexIn(dates),
               replayKey: replayKey,
-              goalLabel: '${AppLocalizations.of(context).homeGoal}\n${format(goal)}',
+              goalLabel:
+                  '${AppLocalizations.of(context).homeGoal}\n${format(goal)}',
               formatTick: (double v) => format(v),
             )
           else
@@ -411,6 +412,11 @@ class _PeriodBody extends StatelessWidget {
               goal: goal,
               color: color,
               replayKey: replayKey,
+              // 막대 툴팁이 "무슨 값을 얼마나" 라고 말하려면 지표 이름·단위와
+              // 숫자 서식이 카드 머리 숫자와 같아야 한다.
+              metricLabel: metricLabel,
+              unit: unit,
+              format: format,
             ),
         ],
       ),
@@ -427,6 +433,9 @@ class _PeriodBars extends StatelessWidget {
     required this.goal,
     required this.color,
     required this.replayKey,
+    required this.metricLabel,
+    required this.unit,
+    required this.format,
   });
 
   final List<double> values;
@@ -435,8 +444,69 @@ class _PeriodBars extends StatelessWidget {
   final Color color;
   final Object replayKey;
 
+  /// 툴팁이 부를 지표 이름(칼로리·나트륨·당류)과 단위, 그리고 카드 머리 숫자와
+  /// 같은 숫자 서식.
+  final String metricLabel;
+  final String unit;
+  final String Function(num) format;
+
+  /// 한 막대의 툴팁 내용 — 운동 탭 `운동 현황` 툴팁과 같은 구조다.
+  /// `[색 사각형] 지표  값 단위` 한 줄, 목표를 넘긴 날은 초과분을 한 줄 더.
+  List<InlineSpan> _tipSpans(
+    AppLocalizations l,
+    DateFormat dayFormat,
+    int i,
+    bool hasGoal,
+  ) {
+    final double value = values[i];
+    final bool over = hasGoal && value > goal;
+    final List<InlineSpan> spans = <InlineSpan>[
+      TextSpan(
+        text: '${dayFormat.format(dates[i])}\n',
+        style: const TextStyle(color: AppColors.mutedForeground),
+      ),
+    ];
+    // 기록이 없는 날은 0 이 아니라 '기록 없음' 이다. 0 으로 적으면 굶은 날과
+    // 적지 않은 날이 같은 말이 된다.
+    if (value <= 0) {
+      spans.add(TextSpan(text: l.dietPeriodNoRecord));
+      return spans;
+    }
+    spans.add(
+      WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Container(
+          width: 9,
+          height: 9,
+          margin: const EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(
+            color: over ? FigmaColors.dangerRed : color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+    );
+    spans.add(TextSpan(text: '$metricLabel   ${format(value)} $unit'));
+    // 막대가 왜 빨간지를 색이 아니라 글로도 말한다.
+    if (over) {
+      spans.add(
+        TextSpan(
+          text: '\n${l.dietPeriodOverGoal(format(value - goal), unit)}',
+          style: const TextStyle(color: FigmaColors.dangerRed),
+        ),
+      );
+    }
+    return spans;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    // `8월 12일 (화)` / `Tue, Aug 12` — 어느 막대가 며칠인지 x축 라벨만으로는
+    // 짚을 수 없다(달은 6칸에 하나만 적는다).
+    final DateFormat dayFormat = DateFormat.MMMEd(
+      Localizations.localeOf(context).toString(),
+    );
     const double chartHeight = 120;
     // 축 위쪽에 여유를 둔다. 목표를 넘은 날이 없으면 목표가 곧 최댓값이 되어
     // 목표선이 차트 맨 위(=바깥)에 놓여 잘려 보이지 않았다.
@@ -499,6 +569,41 @@ class _PeriodBars extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // 막대 위에 겹치는 투명한 hover 영역. 운동 탭 `운동 현황` 이
+              // 쓰는 것과 **같은 툴팁 규격**이라, 두 탭에서 같은 조작이 같은
+              // 모양으로 답한다.
+              Positioned.fill(
+                child: Row(
+                  children: <Widget>[
+                    for (int i = 0; i < values.length; i++)
+                      Expanded(
+                        child: Tooltip(
+                          key: Key('diet-period-bar-tip-$i'),
+                          richMessage: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: FigmaColors.ink,
+                              height: 1.3,
+                            ),
+                            children: _tipSpans(l, dayFormat, i, hasGoal),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F3F5),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: FigmaColors.hairline),
+                            boxShadow: kCardShadow,
+                          ),
+                          child: const SizedBox.expand(),
                         ),
                       ),
                   ],
