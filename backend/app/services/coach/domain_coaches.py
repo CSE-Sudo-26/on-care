@@ -22,7 +22,7 @@ from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
 from app.services.coach_service import (
-    _diet_suggestion, _exercise_suggestion, _week_stats, diet_period_context,
+    _diet_suggestion, _diet_today_priority, _exercise_suggestion, diet_period_context,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,15 +80,18 @@ def _rag_suggestion(
         return fallback
 
 def diet_coach(db: Session, user_id: str) -> CoachSuggestion:
-    # 이번 주 집계를 한 번만 조회해 폴백과 기간 요약이 같은 값을 나눠 쓴다
-    # (기간 요약의 이번 달 조회는 그대로 _rag_suggestion 의 try 안에서 이뤄진다).
-    week = _week_stats(db, user_id)
-    fallback = _diet_suggestion(db, user_id, week=week)
+    # 오늘 기록이 없거나 오늘 자체가 초과면 그 사실이 코칭의 핵심이라, RAG 가
+    # 다른 문구로 덮지 못하도록 아예 건너뛰고 바로 돌려준다(#933 CodeRabbit
+    # 리뷰 반영). 그 외의 경우에만 검색·기간 요약을 근거로 LLM 코칭을 시도한다.
+    priority = _diet_today_priority(db, user_id)
+    if priority is not None:
+        return priority
+    fallback = _diet_suggestion(db, user_id)
     return _rag_suggestion(
         db, user_id, domain="diet", system_prompt=_DIET_SYSTEM,
         query="최근 식단의 나트륨·당류 관리와 개선점",
         tag="diet", title="오늘의 식단 코칭", fallback=fallback,
-        extra_context=lambda: diet_period_context(db, user_id, week=week),
+        extra_context=lambda: diet_period_context(db, user_id),
     )
 
 

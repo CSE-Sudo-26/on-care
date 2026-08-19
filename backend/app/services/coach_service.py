@@ -55,21 +55,14 @@ def _month_stats(db: Session, user_id: str) -> diet_service.DietPeriodStats:
     return diet_service.period_stats(db, user_id, month_from, month_to)
 
 
-def diet_period_context(
-    db: Session, user_id: str,
-    *, week: diet_service.DietPeriodStats | None = None,
-) -> str:
+def diet_period_context(db: Session, user_id: str) -> str:
     """이번 주·이번 달 식단 누적 요약 — AI 코칭이 하루 스냅샷 대신 참고할 문장(#933).
 
     회원 앱 식단 탭의 `오늘/이번 주/이번 달` 과 같은 기간 개념을 코칭 경로에도
     준다. 벡터 검색(`coach/rag.py`)은 의미상 가까운 개별 기록 몇 건만 뽑아오므로
     "이번 주 평균 나트륨" 같은 계산된 값은 만들지 못한다 — 그 값을 이 함수가 낸다.
-
-    `week`: `_diet_suggestion` 이 이미 같은 주를 조회했다면 그 결과를 넘겨받아
-    같은 구간을 두 번 쿼리하지 않는다(`domain_coaches.diet_coach`).
     """
-    if week is None:
-        week = _week_stats(db, user_id)
+    week = _week_stats(db, user_id)
     month = _month_stats(db, user_id)
 
     lines: list[str] = []
@@ -89,11 +82,17 @@ def diet_period_context(
     return "[이번 주·이번 달 식단 요약]\n" + "\n".join(lines)
 
 
-def _diet_suggestion(
-    db: Session, user_id: str,
-    *, week: diet_service.DietPeriodStats | None = None,
-) -> CoachSuggestion:
-    """식단 도메인 코치 (STEP 7에서 RAG+LLM 으로 교체)."""
+def _diet_today_priority(db: Session, user_id: str) -> CoachSuggestion | None:
+    """오늘 기록이 없거나 오늘 자체가 초과인 "일일 우선" 메시지.
+
+    이 둘은 RAG/LLM 근거가 있어도 절대 다른 문구로 덮이면 안 된다(#933) —
+    "오늘 기록이 없다" 는 사실 자체가 코칭의 핵심인데, AI 가 일반론으로 갈아
+    치우면 그 사실이 사용자에게 전달되지 않는다. `domain_coaches.diet_coach`
+    가 이 값이 있으면 RAG 를 아예 건너뛰고 그대로 반환한다.
+
+    None 이면 "일일 우선" 대상이 아니라는 뜻 — 주간 패턴 판단은 호출부
+    (`_diet_suggestion`)가 이어서 한다.
+    """
     today = clock.today_iso()
     rows = db.scalars(
         select(DietEntry).where(DietEntry.user_id == user_id).where(DietEntry.date == today)
@@ -111,11 +110,18 @@ def _diet_suggestion(
             body=f"오늘 나트륨이 약 {total_na}mg 으로 권장량을 넘었어요. "
                  "저녁은 국물을 남기고 채소를 늘려 DASH 식단에 가깝게 맞춰봐요.",
         )
+    return None
+
+
+def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
+    """식단 도메인 코치 (STEP 7에서 RAG+LLM 으로 교체)."""
+    priority = _diet_today_priority(db, user_id)
+    if priority is not None:
+        return priority
     # 오늘은 괜찮아도 이번 주 내내 나트륨이 높았다면 짚어준다(#933) — 하루만 보면
     # "오늘 안정적" 문구가 매번 반복되어, 거의 매일 초과하던 회원도 오늘 하루
     # 낮았다는 이유만으로 계속 잘하고 있다는 인상을 준다.
-    if week is None:
-        week = _week_stats(db, user_id)
+    week = _week_stats(db, user_id)
     # days_over_sodium 은 days_logged 를 넘을 수 없으니 기록일수 조건은 따로 안
     # 둔다 — 초과일이 기준을 채우면 기록일수는 이미 그만큼 채워진 것이다.
     if week.days_over_sodium >= _SODIUM_PATTERN_MIN_DAYS:

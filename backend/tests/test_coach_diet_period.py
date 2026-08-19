@@ -235,34 +235,48 @@ def test_diet_coach_carries_the_period_summary_into_the_llm_prompt(
     assert "초과 3일" in captured["prompt"]
 
 
-def test_diet_coach_shares_one_week_query_between_fallback_and_period_summary(
+def test_diet_coach_never_lets_ai_override_when_today_has_no_records(
     db_session, frozen_thursday, monkeypatch,
 ):
-    """이번 주 집계를 폴백과 기간 요약이 같은 값을 나눠 쓴다 — 같은 구간을 두 번 쿼리하지 않는다."""
+    """오늘 기록이 없으면 RAG/LLM 경로를 아예 타지 않는다 — 일반론으로 덮이면 안 된다(#933)."""
     user_id = _make_user(db_session)
-    _add_entry(db_session, user_id, "2026-03-12", calories=1900, sodium=800, sugar=20.0)
+    # 이번 주 기록이 있어도(기간 요약이 비어 있지 않아도) 오늘 기록이 없으면
+    # 우선순위가 그대로 이겨야 한다.
+    _add_entry(db_session, user_id, "2026-03-09", calories=1800, sodium=2500, sugar=40.0)
 
-    calls: list[tuple[str, str]] = []
-    original = diet_service.period_stats
+    monkeypatch.setattr(
+        domain_coaches, "retrieve_context",
+        lambda *a, **k: pytest.fail("일일 우선 상황에서는 검색조차 하면 안 된다"),
+    )
+    monkeypatch.setattr(
+        domain_coaches, "get_coach_llm",
+        lambda: pytest.fail("일일 우선 상황에서는 LLM 을 부르면 안 된다"),
+    )
 
-    def _counting_period_stats(db, uid, start, end):
-        calls.append((start, end))
-        return original(db, uid, start, end)
+    suggestion = domain_coaches.diet_coach(db_session, user_id)
 
-    monkeypatch.setattr(diet_service, "period_stats", _counting_period_stats)
-    monkeypatch.setattr(domain_coaches, "retrieve_context", lambda *a, **k: "")
+    assert suggestion.title == "오늘 식단을 기록해 보세요"
 
-    class _StubLLM:
-        def generate(self, system_prompt, user_prompt):
-            return LLMResult(text="괜찮은 하루였어요.", model="stub")
 
-    monkeypatch.setattr(domain_coaches, "get_coach_llm", lambda: _StubLLM())
+def test_diet_coach_never_lets_ai_override_when_today_sodium_exceeds(
+    db_session, frozen_thursday, monkeypatch,
+):
+    """오늘 나트륨이 초과면 RAG/LLM 경로를 아예 타지 않는다(#933)."""
+    user_id = _make_user(db_session)
+    _add_entry(db_session, user_id, "2026-03-12", calories=2000, sodium=2600, sugar=50.0)
 
-    domain_coaches.diet_coach(db_session, user_id)
+    monkeypatch.setattr(
+        domain_coaches, "retrieve_context",
+        lambda *a, **k: pytest.fail("일일 우선 상황에서는 검색조차 하면 안 된다"),
+    )
+    monkeypatch.setattr(
+        domain_coaches, "get_coach_llm",
+        lambda: pytest.fail("일일 우선 상황에서는 LLM 을 부르면 안 된다"),
+    )
 
-    # 이번 주(2026-03-09~03-12) 구간은 한 번만, 이번 달 구간은 한 번만 쿼리된다.
-    week_calls = [c for c in calls if c == ("2026-03-09", "2026-03-12")]
-    assert len(week_calls) == 1, f"이번 주 구간이 {len(week_calls)}번 쿼리됨: {calls}"
+    suggestion = domain_coaches.diet_coach(db_session, user_id)
+
+    assert suggestion.title == "나트륨 섭취가 많아요"
 
 
 def test_rag_suggestion_falls_back_when_extra_context_itself_raises(monkeypatch):
@@ -294,7 +308,7 @@ def test_diet_coach_falls_back_when_period_summary_query_fails(
 
     monkeypatch.setattr(domain_coaches, "retrieve_context", lambda *a, **k: "")
 
-    def _boom(db, uid, *, week=None):
+    def _boom(db, uid):
         raise RuntimeError("DB 연결 끊김")
 
     monkeypatch.setattr(domain_coaches, "diet_period_context", _boom)
