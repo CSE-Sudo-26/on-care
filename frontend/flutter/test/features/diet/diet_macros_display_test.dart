@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -74,12 +75,12 @@ void main() {
     final MockAccountRepository repository = MockAccountRepository();
 
     await repository.updateHealthGoals(
-      dailyCalories: 1800,
-      dailySodiumMg: 1500,
-      dailySugarG: 35,
-      dailyCarbsG: 220,
-      dailyProteinG: 120,
-      dailyFatG: 50,
+      dailyCalories: const GoalUpdate(1800),
+      dailySodiumMg: const GoalUpdate(1500),
+      dailySugarG: const GoalUpdate(35),
+      dailyCarbsG: const GoalUpdate(220),
+      dailyProteinG: const GoalUpdate(120),
+      dailyFatG: const GoalUpdate(50),
     );
 
     final UserProfile profile = await repository.fetchProfile();
@@ -478,9 +479,7 @@ void main() {
     expect(barColor(l.dietSodium), FigmaColors.greenText);
   });
 
-  testWidgets('목표를 넘기면 달성률이 100% 를 넘어 적힌다 (#846)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('목표를 넘기면 달성률이 100% 를 넘어 적힌다 (#846)', (WidgetTester tester) async {
     // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다 — 여기가 100% 로 적히면
     // 같은 카드의 "목표보다 500 kcal 많아요" 와 어긋난다.
     const DietDay day = DietDay(
@@ -524,11 +523,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('125%'), findsOneWidget);
-    expect(
-      find.text('100%'),
-      findsNothing,
-      reason: '초과인데 100% 로 멈추면 안 된다',
-    );
+    expect(find.text('100%'), findsNothing, reason: '초과인데 100% 로 멈추면 안 된다');
 
     // 링은 1.0 을 넘으면 눈금이 깨진다. 라벨과 달리 잘린 값을 받아야 한다.
     final CircularProgressIndicator ring = tester
@@ -538,9 +533,7 @@ void main() {
     expect(ring.value, 1.0);
   });
 
-  testWidgets('목표 안쪽이면 달성률이 실제 비율 그대로 적힌다 (#846)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('목표 안쪽이면 달성률이 실제 비율 그대로 적힌다 (#846)', (WidgetTester tester) async {
     const DietDay day = DietDay(
       entries: <DietEntry>[
         DietEntry(

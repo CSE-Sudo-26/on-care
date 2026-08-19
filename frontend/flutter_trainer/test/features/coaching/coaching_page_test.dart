@@ -34,6 +34,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
+import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -508,17 +509,20 @@ void main() {
           const ValueKey<String>('program-client-seed-client-1'),
         );
         expect(programCard, findsOneWidget);
+        // 이행률은 [라벨][막대][값] 한 줄로 그린다(#899) — 값이 라벨과 같은
+        // Text 에 붙어 있지 않다.
         expect(
           find.descendant(of: programCard, matching: find.text('운동 이행률')),
-          findsNothing,
-        );
-        expect(
-          find.descendant(
-            of: programCard,
-            matching: find.textContaining('운동 이행률 '),
-          ),
           findsOneWidget,
         );
+        final completionBar = tester.widget<InlineBarValue>(
+          find.descendant(
+            of: programCard,
+            matching: find.byType(InlineBarValue),
+          ),
+        );
+        expect(completionBar.fraction, isNotNull);
+        expect(completionBar.text, endsWith('%'));
         final avatar = tester.widget<ClientAvatar>(
           find.descendant(of: programCard, matching: find.byType(ClientAvatar)),
         );
@@ -706,7 +710,9 @@ void main() {
         const ValueKey<String>('program-client-list-scroll'),
       );
       expect(listFinder, findsOneWidget);
-      expect(tester.getSize(listFinder).height, 84 * 5);
+      // 한 줄에 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
+      // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐다(#898).
+      expect(tester.getSize(listFinder).height, 100 * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);
       expect(list.controller!.position.maxScrollExtent, greaterThan(0));

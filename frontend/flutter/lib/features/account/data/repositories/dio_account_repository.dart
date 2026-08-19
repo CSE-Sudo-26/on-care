@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/domain/repositories/account_repository.dart';
 
@@ -72,28 +73,32 @@ class DioAccountRepository implements AccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
-    int? dailyCalories,
-    int? dailySodiumMg,
-    int? dailySugarG,
-    int? dailyCarbsG,
-    int? dailyProteinG,
-    int? dailyFatG,
-    int? weeklyWorkoutGoal,
-    int? weeklyExerciseMinutesGoal,
-    int? weeklyBurnGoal,
+    GoalUpdate? dailyCalories,
+    GoalUpdate? dailySodiumMg,
+    GoalUpdate? dailySugarG,
+    GoalUpdate? dailyCarbsG,
+    GoalUpdate? dailyProteinG,
+    GoalUpdate? dailyFatG,
+    GoalUpdate? weeklyWorkoutGoal,
+    GoalUpdate? weeklyExerciseMinutesGoal,
+    GoalUpdate? weeklyBurnGoal,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/users/me/health-goals',
+      // 키를 **넣되 값이 null** 이면 서버가 목표를 해제한다. `?value` 로
+      // 통째로 빼면 해제가 '손대지 않음'이 되어 지운 목표가 되살아난다.
       data: <String, Object?>{
-        'daily_calories': ?dailyCalories,
-        'daily_sodium_mg': ?dailySodiumMg,
-        'daily_sugar_g': ?dailySugarG,
-        'daily_carbs_g': ?dailyCarbsG,
-        'daily_protein_g': ?dailyProteinG,
-        'daily_fat_g': ?dailyFatG,
-        'weekly_workout_goal': ?weeklyWorkoutGoal,
-        'weekly_exercise_minutes_goal': ?weeklyExerciseMinutesGoal,
-        'weekly_burn_goal': ?weeklyBurnGoal,
+        if (dailyCalories != null) 'daily_calories': dailyCalories.value,
+        if (dailySodiumMg != null) 'daily_sodium_mg': dailySodiumMg.value,
+        if (dailySugarG != null) 'daily_sugar_g': dailySugarG.value,
+        if (dailyCarbsG != null) 'daily_carbs_g': dailyCarbsG.value,
+        if (dailyProteinG != null) 'daily_protein_g': dailyProteinG.value,
+        if (dailyFatG != null) 'daily_fat_g': dailyFatG.value,
+        if (weeklyWorkoutGoal != null)
+          'weekly_workout_goal': weeklyWorkoutGoal.value,
+        if (weeklyExerciseMinutesGoal != null)
+          'weekly_exercise_minutes_goal': weeklyExerciseMinutesGoal.value,
+        if (weeklyBurnGoal != null) 'weekly_burn_goal': weeklyBurnGoal.value,
       },
     );
     return UserProfile.fromJson(res.data!);

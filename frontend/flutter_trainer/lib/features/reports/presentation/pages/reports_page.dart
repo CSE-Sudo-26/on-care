@@ -190,6 +190,42 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     });
   }
 
+  /// `8월 3일 – 8월 9일`.
+  ///
+  /// 헤더의 주 이동 버튼은 **그 버튼이 데려갈 주**를 적는다. `이전` 만으로는
+  /// 어디로 가는지 알 수 없고, 여러 번 눌러 과거로 가면 지금 보고 있는 주가
+  /// 무엇인지도 헤더에서 사라졌다.
+  ///
+  /// `이전 주` 라고 쓰지 않는 이유는 그대로다 — 비교 카드의 `지난 주` 열과
+  /// 같은 말이 되어 어느 주를 보고 있는지 오히려 헷갈린다. 날짜 범위는 그
+  /// 셋(이번 주·지난 주·선택 주) 중 어느 것과도 겹치지 않는다.
+  static String _weekRangeLabel(AppLocalizations l, DateTime weekStart) {
+    final DateTime weekEnd = weekStart.add(const Duration(days: 6));
+    return l.dateRange(
+      l.dateMonthDay(weekStart.month, weekStart.day),
+      l.dateMonthDay(weekEnd.month, weekEnd.day),
+    );
+  }
+
+  /// 요약을 피드백 입력창으로 옮긴다.
+  ///
+  /// 요약 카드는 넓은 화면에서 왼쪽 열로, 좁은 화면에서는 리포트 흐름 안으로
+  /// 자리를 옮겨 다녀 부르는 곳이 둘이다 — 옮기는 규칙은 한 곳에 둔다.
+  void _useSummaryAsDraft(
+    AppLocalizations l,
+    WeeklyReport report,
+    ReportFeedbackDraft? savedDraft,
+    String draft,
+  ) {
+    setState(() {
+      _feedbackDraft = draft;
+      _feedbackFor = _feedbackKey(report);
+      _feedbackBlank = draft.trim().isEmpty;
+      _feedbackDiffers = draft != _baseFor(l, report, savedDraft);
+      _draftEpoch++;
+    });
+  }
+
   void _goToCurrentWeek() {
     final currentWeek = weekStartOf(nowKst());
     if (_weekStart == currentWeek) return;
@@ -355,7 +391,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
         ActionButton(
-          label: l.reportsPrevWeek,
+          key: const ValueKey<String>('reports-prev-week'),
+          label: _weekRangeLabel(
+            l,
+            _weekStart.subtract(const Duration(days: 7)),
+          ),
           icon: Icons.chevron_left,
           onPressed: () => _shiftWeek(-1),
         ),
@@ -420,22 +460,32 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   builder: (context, constraints) {
                     final wide =
                         constraints.maxWidth >= AppLayout.splitBreakpoint;
-                    // 좌측 열: 고객 목록 + 이번 주 먼저 볼 고객. 넓은 화면에서는
-                    // 이 열이 고정이고 오른쪽 리포트만 스크롤한다 — 리포트를 아래로
-                    // 읽는 동안 다른 고객으로 넘어가려면 목록이 늘 보여야 한다.
-                    final leftColumn = Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _ClientPicker(
-                          clients: clients,
-                          selectedId: selected.id,
-                          onSelect: _selectClient,
-                        ),
-                      ],
+                    // 좌측 열: 고객 목록. 넓은 화면에서는 이 열이 고정이고
+                    // 오른쪽 리포트만 스크롤한다 — 리포트를 아래로 읽는 동안
+                    // 다른 고객으로 넘어가려면 목록이 늘 보여야 한다.
+                    final clientPicker = _ClientPicker(
+                      clients: clients,
+                      selectedId: selected.id,
+                      onSelect: _selectClient,
                     );
+                    // 좁은 화면에서 아직 아무도 고르지 않았을 때 — 여기가
+                    // 유일하게 **고객이 정말 안 눌린** 상태다. 목록만 두면
+                    // 고르면 무엇을 얻는지 알 수 없어, 그 자리에 무엇이 뜨는지
+                    // 한 줄 적어 준다. 넓은 화면은 첫 고객이 자동으로 골라져
+                    // 있어 이 상태가 없다.
                     if (!wide && _clientId == null) {
-                      return SingleChildScrollView(child: leftColumn);
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            clientPicker,
+                            const SizedBox(height: AppSpacing.lg),
+                            _ReportSummaryHint(
+                              message: l.reportsSummaryEmptyClient,
+                            ),
+                          ],
+                        ),
+                      );
                     }
                     // The report itself comes from the repository: local
                     // in demo, server-aggregated against the real API
@@ -479,6 +529,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       ),
                       data: (data) => _ClientReport(
                         report: data,
+                        // 넓은 화면에서는 요약 카드가 왼쪽 열로 내려간다 —
+                        // 고객을 고르는 자리와 그 고객의 요약이 같은 시선
+                        // 안에 들어오고, 비어 있던 목록 아래를 쓴다.
+                        showSummary: !wide,
                         draftEpoch: _draftEpoch,
                         initialFeedback: _messageFor(l, data, savedDraft),
                         savingFeedback: _savingFeedback,
@@ -499,14 +553,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           _feedbackDiffers = false;
                           _draftEpoch++;
                         }),
-                        onUseSummaryAsDraft: (draft) => setState(() {
-                          _feedbackDraft = draft;
-                          _feedbackFor = _feedbackKey(data);
-                          _feedbackBlank = draft.trim().isEmpty;
-                          _feedbackDiffers =
-                              draft != _baseFor(l, data, savedDraft);
-                          _draftEpoch++;
-                        }),
+                        onUseSummaryAsDraft: (draft) =>
+                            _useSummaryAsDraft(l, data, savedDraft, draft),
                         onFeedbackChanged: (text) {
                           _feedbackDraft = text;
                           _feedbackFor = _feedbackKey(data);
@@ -515,8 +563,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           // 가르는 값이다. 그 외에는 화면이 달라질 것이 없어
                           // 글자마다 다시 그리지 않는다.
                           final blank = text.trim().isEmpty;
-                          final differs =
-                              text != _baseFor(l, data, savedDraft);
+                          final differs = text != _baseFor(l, data, savedDraft);
                           if (blank != _feedbackBlank ||
                               differs != _feedbackDiffers) {
                             setState(() {
@@ -550,10 +597,41 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                         ),
                       );
                     }
+                    // 요약 카드가 놓일 자리. 리포트를 아직 못 읽었으면 그 자리에
+                    // 무엇이 뜨는지만 적는다 — 빈 칸으로 두면 왼쪽 열이 목록
+                    // 아래에서 그냥 잘린 것처럼 보인다.
+                    final Widget summarySlot = reportAsync.when(
+                      loading: () =>
+                          _ReportSummaryHint(message: l.reportsAiLoading),
+                      error: (_, _) =>
+                          _ReportSummaryHint(message: l.reportsAiUnavailable),
+                      data: (data) => _ReportAiCard(
+                        report: data,
+                        onUseAsDraft: (draft) =>
+                            _useSummaryAsDraft(l, data, savedDraft, draft),
+                      ),
+                    );
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        SizedBox(width: 292, child: leftColumn),
+                        SizedBox(
+                          width: 292,
+                          // 목록(5줄 고정)에 요약 카드가 더해지면 짧은 창에서는
+                          // 열이 화면보다 길어진다. 이 열 안에서만 스크롤하게
+                          // 두어 오른쪽 리포트와는 여전히 따로 움직인다.
+                          child: SingleChildScrollView(
+                            key: const ValueKey<String>('reports-left-scroll'),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                clientPicker,
+                                const SizedBox(height: AppSpacing.lg),
+                                summarySlot,
+                              ],
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: AppSpacing.lg),
                         // 스크롤은 이 열 안에서만 일어난다. 페이지 전체가 스크롤
                         // 되면 왼쪽 목록이 함께 밀려 올라가 버린다.
@@ -606,8 +684,9 @@ class _ClientPicker extends StatefulWidget {
 }
 
 class _ClientPickerState extends State<_ClientPicker> {
-  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이다.
-  static const double _rowHeight = 56;
+  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이었고, 목표 한 줄이
+  /// 붙으면서(#898) 그만큼 높아졌다.
+  static const double _rowHeight = 70;
 
   /// 한 번에 보여 줄 줄 수. 나머지는 스크롤한다.
   static const int _visibleRows = 5;
@@ -665,15 +744,24 @@ class _ClientPickerState extends State<_ClientPicker> {
                           ClientAvatar(label: client.avatar, size: 38),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
-                            child: ClientIdentity(
-                              client: client,
-                              nameStyle: TextStyle(
-                                fontSize: 15,
-                                fontWeight: selected
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                                color: AppColors.foreground,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                ClientIdentity(
+                                  client: client,
+                                  nameStyle: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: selected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: AppColors.foreground,
+                                  ),
+                                ),
+                                // 어느 고객의 리포트를 열지 고르는 자리다 —
+                                // 이름만으로는 고를 근거가 되지 않는다(#898).
+                                ClientGoalLabel(client: client, fontSize: 11),
+                              ],
                             ),
                           ),
                         ],
@@ -694,6 +782,7 @@ class _ClientPickerState extends State<_ClientPicker> {
 class _ClientReport extends StatelessWidget {
   const _ClientReport({
     required this.report,
+    required this.showSummary,
     required this.draftEpoch,
     required this.canRestoreDraft,
     required this.onRestoreDraft,
@@ -705,6 +794,10 @@ class _ClientReport extends StatelessWidget {
   });
 
   final WeeklyReport report;
+
+  /// 요약 카드를 이 흐름 안에 그릴 것인가. 넓은 화면에서는 왼쪽 고객 열이
+  /// 가져가므로 `false` 다.
+  final bool showSummary;
 
   /// 입력창에 채워 둘 문구. 트레이너가 고치던 중이면 그 내용이다.
   /// 바뀌면 입력창을 새 문구로 다시 만든다.
@@ -772,8 +865,10 @@ class _ClientReport extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        _ReportAiCard(report: report, onUseAsDraft: onUseSummaryAsDraft),
+        if (showSummary) ...<Widget>[
+          const SizedBox(height: AppSpacing.lg),
+          _ReportAiCard(report: report, onUseAsDraft: onUseSummaryAsDraft),
+        ],
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
           title: l.reportsFeedbackTitle,
@@ -1658,6 +1753,63 @@ class _ReportAiCard extends ConsumerWidget {
   }
 }
 
+/// 요약 자리에 아직 내용이 없을 때 — 그 자리에 **무엇이 뜨는지**만 적는다.
+///
+/// 빈 칸으로 두면 왼쪽 열이 목록 아래로 그냥 잘린 것처럼 보이고, 고객을 고르면
+/// 무엇을 얻는지도 알 수 없다. 카드 껍데기는 [_ReportAiCard] 와 같게 두어,
+/// 내용이 채워질 때 자리가 흔들리지 않는다.
+class _ReportSummaryHint extends StatelessWidget {
+  const _ReportSummaryHint({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      key: const ValueKey<String>('reports-summary-hint'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.aiCardGradientStart,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.aiCardGradientEnd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 19),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  l.reportsAiTitle,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: AppColors.mutedForeground,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SummaryBody extends StatelessWidget {
   const _SummaryBody({
     required this.summary,
@@ -1696,14 +1848,17 @@ class _SummaryBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppSpacing.xs),
-        Row(
+        // 카드가 292px 왼쪽 열로 내려오면서(#897) 두 동작이 한 줄에 들어가지
+        // 않는 조합이 생겼다 — 영어 · 배율 1.3 이 그렇다. 줄을 접어 받는다.
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xs,
           children: <Widget>[
             _SummaryAction(
               label: l.reportsAiUseAsDraft,
               icon: Icons.edit_note,
               onTap: onUseAsDraft,
             ),
-            const SizedBox(width: AppSpacing.md),
             _SummaryAction(
               label: l.reportsAiRegenerate,
               icon: Icons.refresh,
@@ -1738,12 +1893,15 @@ class _SummaryAction extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 14, color: AppColors.primary),
           const SizedBox(width: 3),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
+          // 한 동작만으로도 열 폭을 넘는 조합이 있다 — 잘라내지 않고 접는다.
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
