@@ -2466,7 +2466,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String suggestionReviewIntro(String name) {
-    return '최근 PT 피드백과 운동 기록을 바탕으로 $name님에게 도움이 될 개인운동을 준비했어요. 추천한 것만 회원에게 보여요.';
+    return '최근 PT 피드백과 운동 기록을 바탕으로 $name님에게 도움이 될 개인운동을 준비했어요. 추천한 것만 고객에게 보여요.';
   }
 
   @override
@@ -2476,7 +2476,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get suggestionReviewLoadFailed => 'AI 개인운동 제안을 불러오지 못했어요';
 
   @override
-  String get suggestionApprove => '회원에게 추천';
+  String get suggestionApprove => '고객에게 추천';
 
   @override
   String get suggestionDismiss => '추천 안 함';
@@ -2507,7 +2507,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get suggestionEditName => '운동';
 
   @override
-  String get suggestionEditMemo => '회원에게 전달할 메모';
+  String get suggestionEditMemo => '고객에게 전달할 메모';
 
   @override
   String get suggestionEditMemoHint => '오른쪽 어깨에 통증이 생기면 중단하세요';
