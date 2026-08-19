@@ -960,6 +960,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientPeriodAverage => '하루 평균';
 
   @override
+  String get clientPeriodGoal => '목표';
+
+  @override
   String clientPeriodLoggedDays(int days) {
     return '$days일 기록';
   }
@@ -974,7 +977,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => '운동 추이';
+  String get clientTrendTitle => '운동 현황';
 
   @override
   String get clientTrendLoadFailed => '운동 추이를 불러오지 못했어요. 다시 시도해 주세요';

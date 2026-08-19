@@ -50,6 +50,20 @@ class AppColors {
   /// 뜻을 가진 것처럼 보이는데, 셋은 **같은 운동 시간을 나눈 것**이다.
   /// 순서는 언제나 유산소 → 근력 → 스트레칭이라 색을 외우지 않아도 자리로
   /// 읽힌다.
+  /// 탄단지 3색 — 회원 앱 식단 탭 `이번 달` 막대와 같은 램프다(#944).
+  ///
+  /// **한 색의 농담**이다. `오늘` 뷰가 칼로리 링과 탄단지 진행 바를 모두 브랜드
+  /// 색 하나로 그리므로, 기간 뷰만 다른 색상환을 쓰면 같은 카드를 오갈 때 색이
+  /// 튄다. 셋은 서로 다른 지표가 아니라 **한 칼로리를 나눈 것**이라, 색상보다
+  /// 농담으로 가르는 편이 뜻에도 맞는다.
+  ///
+  /// 값은 브랜드 색을 흰 배경 위에 100% / 65% / 35% 로 얹은 결과다. 알파 대신
+  /// 불투명 값으로 박아 두는 이유는 막대가 목표선 위에 겹쳐 그려지기 때문이다 —
+  /// 반투명이면 선이 비쳐 층 경계가 흐려진다.
+  static const Color macroCarbs = Color(0xFF2E7DAB);
+  static const Color macroProtein = Color(0xFF79AECC);
+  static const Color macroFat = Color(0xFFB7D6E7);
+
   static const Color chartCardio = Color(0xFF2E7DAB);
   static const Color chartStrength = Color(0xFF17435F);
   static const Color chartStretching = Color(0xFFD6E7F3);

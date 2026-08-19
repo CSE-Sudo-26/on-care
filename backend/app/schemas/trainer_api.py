@@ -1000,6 +1000,12 @@ class WeeklyReportOut(BaseModel):
     sodium_week: list[int] = Field(default_factory=list)
     calories_week: list[int] = Field(default_factory=list)
     sugar_week: list[float] = Field(default_factory=list)
+    #: 그 주의 일별 탄·단·지(g). 트레이너 화면의 `이번 달` 칼로리 막대를 탄단지로
+    #: 쌓는 재료다(#944). 끼니 목록을 날마다 부르면 한 달에 서른 번 넘게 오가므로,
+    #: 칼로리·나트륨·당류와 **같은 응답**에 실어 보낸다.
+    carbs_week: list[float] = Field(default_factory=list)
+    protein_week: list[float] = Field(default_factory=list)
+    fat_week: list[float] = Field(default_factory=list)
     #: 월→일 7칸. 이행률과 함께 그날의 운동 내역을 담는다(#754).
     days: list[WeeklyReportDayOut] = Field(default_factory=list)
     message: str                 # 회원에게 전송될 본문(미리보기와 동일)

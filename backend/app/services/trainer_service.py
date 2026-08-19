@@ -163,6 +163,17 @@ def _sugar_week(diet_rows: list[DietEntry], monday: date) -> list[float]:
     return [round(v, 1) for v in _daily_week(diet_rows, monday, lambda e: e.sugar_g)]
 
 
+def _macro_week(
+    diet_rows: list[DietEntry], monday: date, value: Callable[[DietEntry], float]
+) -> list[float]:
+    """이번 주(월→일) 일별 탄·단·지 합. 당류와 같이 소수를 유지한다.
+
+    트레이너 화면의 `이번 달` 칼로리 막대를 탄단지로 쌓는 재료다(#944). 칼로리와
+    같은 창·같은 규칙이라 x 축이 어긋나지 않는다.
+    """
+    return [round(v, 1) for v in _daily_week(diet_rows, monday, value)]
+
+
 def _daily_week(
     diet_rows: list[DietEntry], monday: date, value: Callable[[DietEntry], float]
 ) -> list[float]:
@@ -3506,6 +3517,9 @@ def build_weekly_report(
         sodium_week=sodium_week,
         calories_week=_calories_week(diet_rows, monday),
         sugar_week=_sugar_week(diet_rows, monday),
+        carbs_week=_macro_week(diet_rows, monday, lambda e: e.carbs_g),
+        protein_week=_macro_week(diet_rows, monday, lambda e: e.protein_g),
+        fat_week=_macro_week(diet_rows, monday, lambda e: e.fat_g),
         message="",
     )
     return report.model_copy(update={"message": report_message(report)})

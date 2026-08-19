@@ -77,6 +77,7 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
       ),
       const SizedBox(height: AppSpacing.md),
       ClientPeriodSection(
+        icon: Icons.monitor_heart_outlined,
         title: l.clientTrendTitle,
         period: _period,
         onChanged: (ClientPeriod p) => setState(() => _period = p),

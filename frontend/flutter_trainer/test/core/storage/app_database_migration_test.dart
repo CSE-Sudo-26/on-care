@@ -6,7 +6,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 
 void main() {
   test(
-    'v3 to v12 adds macro·주간 계열·취소 기록 columns and preserves rows',
+    'v3 to v13 adds macro·주간 계열·취소 기록 columns and preserves rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -83,7 +83,7 @@ void main() {
       final meal = await db.select(db.clientDietEntries).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 12);
+      expect(version.read<int>('user_version'), 13);
       expect(client.id, 'existing-client');
       expect(client.caloriesToday, 500);
       expect(client.sugarG, 12.0);
@@ -127,7 +127,7 @@ void main() {
     },
   );
 
-  test('v4 to v12 preserves integer sugar and all client rows', () async {
+  test('v4 to v13 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
       setup: (database) {
         database.execute('''
@@ -202,7 +202,7 @@ void main() {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 12);
+    expect(version.read<int>('user_version'), 13);
     expect(clients, hasLength(2));
     expect(clients[0].name, '기존 회원 A');
     expect(clients[0].sugarG, 12.0);
@@ -216,7 +216,7 @@ void main() {
   });
 
   test(
-    'v5 to v11 adds the weekly calorie·sugar series to existing rows',
+    'v5 to v13 adds the weekly calorie·sugar series to existing rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -290,7 +290,7 @@ void main() {
       final client = await db.select(db.trainerClients).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 12);
+      expect(version.read<int>('user_version'), 13);
       // 기존 값은 그대로 두고, 새 계열만 기본값으로 붙는다.
       expect(client.sugarG, 17.8);
       expect(client.sodiumWeekJson, '[700,800]');

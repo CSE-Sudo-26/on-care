@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -13,6 +14,8 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
+import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 고객의 기간 영양 추이 — 회원 앱 식단 탭 기간 뷰와 **같은 것**을 트레이너에게.
@@ -27,17 +30,12 @@ class ClientDietPeriodCard extends ConsumerStatefulWidget {
     super.key,
     required this.clientId,
     required this.period,
-    this.trailing,
   });
 
   final String clientId;
 
   /// `오늘` 은 이 카드가 아니라 영양 요약 카드가 맡는다.
   final ClientPeriod period;
-
-  /// 카드 제목 줄에 얹을 기간 토글. 영양 요약 카드와 **같은 자리**라, 기간을
-  /// 바꿔도 조작이 화면에서 움직이지 않는다.
-  final Widget? trailing;
 
   @override
   ConsumerState<ClientDietPeriodCard> createState() =>
@@ -82,6 +80,14 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
     _Metric.sugar => sugarTargetG.toDouble(),
   };
 
+  /// 꺾은선의 세로 눈금. **회원 앱과 같은 값**이라 회원이 보는 그래프와
+  /// 트레이너가 보는 그래프의 눈금이 어긋나지 않는다.
+  List<double> _ticks(_Metric m) => switch (m) {
+    _Metric.calories => const <double>[0, 1500, 2500],
+    _Metric.sodium => const <double>[0, 1750, 3500],
+    _Metric.sugar => const <double>[0, 25, 50],
+  };
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -93,12 +99,9 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
     final AsyncValue<ClientDietPeriod> async = ref.watch(
       clientDietPeriodProvider(key),
     );
-    return SectionCard(
-      key: const ValueKey<String>('client-diet-period-card'),
-      title: l.clientDietTrendTitle,
-      icon: Icons.insights_outlined,
-      dense: true,
-      trailing: widget.trailing,
+    // 제목·아이콘은 바깥 `ClientPeriodSection` 이 든다(#944). 카드가 자기
+    // 제목을 들고 있으면 기간을 바꿀 때마다 제목이 나타났다 사라진다.
+    return _Card(
       child: async.when(
         loading: () => const SizedBox(
           height: 160,
@@ -136,6 +139,11 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
                 dates: <DateTime>[
                   for (final ClientDietDay d in period.days) d.date,
                 ],
+                // 칼로리 막대만 탄단지로 쌓는다. 나트륨·당류에는 쌓을 성분이
+                // 없다.
+                days: _metric == _Metric.calories ? period.days : null,
+                weekly: widget.period == ClientPeriod.week,
+                ticks: _ticks(_metric),
                 // 영양 요약 카드와 **같은 서식**을 쓴다. 두 카드가 같은
                 // 화면에 나란히 놓이므로 표기가 갈리면 바로 드러난다.
                 format: formatNumber,
@@ -144,6 +152,27 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
       ),
     );
   }
+}
+
+/// 제목 없는 흰 판 — 영양 요약 카드·운동 카드와 같은 모양이다.
+class _Card extends StatelessWidget {
+  const _Card({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey<String>('client-diet-period-card'),
+    width: double.infinity,
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: AppColors.card,
+      borderRadius: const BorderRadius.all(AppRadius.card),
+      boxShadow: kCardShadow,
+      border: Border.all(color: AppColors.border),
+    ),
+    child: child,
+  );
 }
 
 class _Body extends StatelessWidget {
@@ -160,6 +189,9 @@ class _Body extends StatelessWidget {
     required this.dates,
     required this.format,
     required this.metricLabel,
+    required this.weekly,
+    required this.ticks,
+    this.days,
   });
 
   final ClientDietPeriod period;
@@ -174,6 +206,17 @@ class _Body extends StatelessWidget {
   final List<DateTime> dates;
   final String Function(num) format;
   final String Function(AppLocalizations, _Metric) metricLabel;
+
+  /// 칼로리를 볼 때의 원본. 탄단지가 있는 날은 막대를 셋으로 쌓는다.
+  final List<ClientDietDay>? days;
+
+  /// 이번 주인가. 회원 앱과 같이 **주는 꺾은선, 달은 막대**다 — 30칸을
+  /// 꺾은선으로 그리면 점과 값이 서로 겹친다.
+  final bool weekly;
+
+  /// 꺾은선의 세로 눈금. 회원 앱 홈·식단 탭과 같은 값이라 두 화면의 눈금이
+  /// 어긋나지 않는다.
+  final List<double> ticks;
 
   @override
   Widget build(BuildContext context) {
@@ -255,18 +298,78 @@ class _Body extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        _PeriodBars(
-          values: values,
-          logged: logged,
-          dates: dates,
-          goal: goal,
-          unit: unit,
-          label: label,
-          format: format,
-        ),
+        if (weekly)
+          MetricTrendChart(
+            values: values,
+            dayLabels: <String>[
+              for (final DateTime d in dates) _weekdayLabel(l, d),
+            ],
+            goal: goal,
+            ticks: ticks,
+            // 선은 오늘까지만 잇는다. 아직 오지 않은 요일의 0 이 급락처럼
+            // 보이면 안 된다.
+            todayIndex: _todayIndexIn(dates),
+            replayKey: label,
+            goalLabel: '${l.clientPeriodGoal}\n${format(goal)}',
+            formatTick: (double v) => format(v),
+          )
+        else ...<Widget>[
+          _PeriodBars(
+            values: values,
+            logged: logged,
+            dates: dates,
+            goal: goal,
+            unit: unit,
+            label: label,
+            format: format,
+            days: days,
+          ),
+          // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
+          if (days != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                ActivityLegend(
+                  color: AppColors.macroCarbs,
+                  label: l.metricCarbs,
+                ),
+                ActivityLegend(
+                  color: AppColors.macroProtein,
+                  label: l.metricProtein,
+                ),
+                ActivityLegend(color: AppColors.macroFat, label: l.metricFat),
+              ],
+            ),
+          ],
+        ],
       ],
     );
   }
+}
+
+/// 요일 라벨(월…일).
+String _weekdayLabel(AppLocalizations l, DateTime d) => <String>[
+  l.weekdayMon,
+  l.weekdayTue,
+  l.weekdayWed,
+  l.weekdayThu,
+  l.weekdayFri,
+  l.weekdaySat,
+  l.weekdaySun,
+][d.weekday - 1];
+
+/// 오늘이 이 범위의 몇 번째 칸인가. 범위 밖이면 마지막 칸 — 지난 주를 보고
+/// 있을 때 선이 중간에서 끊기지 않게 한다.
+int _todayIndexIn(List<DateTime> dates) {
+  final DateTime today = todayKst();
+  for (int i = 0; i < dates.length; i++) {
+    final DateTime d = dates[i];
+    if (DateTime(d.year, d.month, d.day) == today) return i;
+  }
+  return dates.length - 1;
 }
 
 /// 일별 막대. 목표선을 얇게 얹고, 목표를 넘긴 날만 경고색으로 칠한다 —
@@ -280,6 +383,7 @@ class _PeriodBars extends StatelessWidget {
     required this.unit,
     required this.label,
     required this.format,
+    this.days,
   });
 
   final List<double> values;
@@ -289,6 +393,16 @@ class _PeriodBars extends StatelessWidget {
   final String unit;
   final String label;
   final String Function(num) format;
+
+  /// 칼로리를 볼 때의 원본. 탄단지가 있는 날은 막대를 셋으로 쌓는다.
+  final List<ClientDietDay>? days;
+
+  /// [i] 번째 칸의 원본. 칼로리를 보고 있지 않으면 null 이다.
+  ClientDietDay? _dayAt(int i) {
+    final List<ClientDietDay>? source = days;
+    if (source == null || i >= source.length) return null;
+    return source[i];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -333,23 +447,17 @@ class _PeriodBars extends StatelessWidget {
                         child: Tooltip(
                           key: Key('client-diet-bar-$i'),
                           message: _tip(l, i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
+                          child: _MacroBar(
                             height:
                                 chartHeight *
                                 (values[i] / maxValue).clamp(0.0, 1.0),
-                            decoration: BoxDecoration(
-                              color: !logged[i]
-                                  // 기록이 없는 날은 색이 없다 — 0 으로 칠하면
-                                  // '적지 않은 날' 이 '0kcal 먹은 날' 이 된다.
-                                  ? AppColors.border
-                                  : hasGoal && values[i] > goal
-                                  ? AppColors.overTarget.withValues(alpha: 0.85)
-                                  : AppColors.primary.withValues(alpha: 0.85),
-                              borderRadius: const BorderRadius.vertical(
-                                top: AppRadius.xs,
-                              ),
-                            ),
+                            day: _dayAt(i),
+                            logged: logged[i],
+                            // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
+                            // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
+                            // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
+                            // 초과는 목표선과 툴팁이 말한다.
+                            over: hasGoal && values[i] > goal,
                           ),
                         ),
                       ),
@@ -383,10 +491,94 @@ class _PeriodBars extends StatelessWidget {
 
   /// 막대 하나의 툴팁 — 어느 막대가 며칠인지는 x축 라벨만으로 짚을 수 없다.
   String _tip(AppLocalizations l, int i) {
-    final DateTime d = dates[i];
-    final String date = '${d.month}/${d.day}';
+    final DateTime at = dates[i];
+    final String date = '${at.month}/${at.day}';
     if (!logged[i]) return '$date · ${l.chartNoRecord}';
-    return '$date · $label ${format(values[i])} $unit';
+    final String head = '$date · $label ${format(values[i])} $unit';
+    // 칼로리 뒤에는 그 칼로리가 어디서 왔는지를 적는다 — 숫자 하나만 보고는
+    // 같은 2,000kcal 이 밥에서 왔는지 기름에서 왔는지 알 수 없다.
+    final ClientDietDay? d = _dayAt(i);
+    if (d == null || !d.hasMacros) return head;
+    return '$head'
+        '\n${l.metricCarbs} ${format(d.carbsG)}g'
+        '  ${l.metricProtein} ${format(d.proteinG)}g'
+        '  ${l.metricFat} ${format(d.fatG)}g';
+  }
+}
+
+/// 한 칸의 막대. 탄단지가 있으면 아래에서부터 탄·단·지 순으로 쌓는다.
+///
+/// 쌓는 기준은 **칼로리**다(탄·단 4kcal/g, 지 9kcal/g). 그램으로 쌓으면 지방
+/// 1g 이 탄수화물 1g 과 같은 높이를 차지해, 칼로리 막대인데 칼로리와 다른
+/// 이야기를 하게 된다.
+class _MacroBar extends StatelessWidget {
+  const _MacroBar({
+    required this.height,
+    required this.day,
+    required this.logged,
+    required this.over,
+  });
+
+  final double height;
+  final ClientDietDay? day;
+
+  /// 그날 기록이 있었는가. 없으면 색 없는 그루터기다.
+  final bool logged;
+
+  /// 목표를 넘긴 날인가. 쌓을 성분이 없을 때만 색으로 말한다.
+  final bool over;
+
+  @override
+  Widget build(BuildContext context) {
+    const BorderRadius radius = BorderRadius.vertical(top: AppRadius.xs);
+    final ClientDietDay? d = day;
+    final double total = d == null
+        ? 0
+        : d.carbsKcal + d.proteinKcal + d.fatKcal;
+    if (d == null || !d.hasMacros || total <= 0) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: height,
+        decoration: BoxDecoration(
+          color: !logged
+              // 기록이 없는 날은 색이 없다 — 0 으로 칠하면 '적지 않은 날' 이
+              // '0kcal 먹은 날' 이 된다.
+              ? AppColors.border
+              : over
+              ? AppColors.overTarget.withValues(alpha: 0.85)
+              : AppColors.primary.withValues(alpha: 0.85),
+          borderRadius: radius,
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: radius,
+      child: SizedBox(
+        height: height,
+        // 위에서부터 지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
+        // 읽는 순서가 범례 순서(탄·단·지)와 같아진다.
+        child: Column(
+          // **stretch 여야 한다.** 기본값(center)이면 자식이 가로로 느슨하게
+          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 세 구간이
+          // 통째로 사라진다(회원 앱 #947 에서 밟은 함정).
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(
+              flex: (d.fatKcal / total * 1000).round(),
+              child: const ColoredBox(color: AppColors.macroFat),
+            ),
+            Expanded(
+              flex: (d.proteinKcal / total * 1000).round(),
+              child: const ColoredBox(color: AppColors.macroProtein),
+            ),
+            Expanded(
+              flex: (d.carbsKcal / total * 1000).round(),
+              child: const ColoredBox(color: AppColors.macroCarbs),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

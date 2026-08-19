@@ -119,6 +119,11 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
       final List<num> calories = series('calories_week');
       final List<num> sodium = series('sodium_week');
       final List<num> sugar = series('sugar_week');
+      // 탄단지도 같은 응답에 실려 온다(#944). 끼니 목록을 날마다 부르면 한 달에
+      // 서른 번 넘게 오간다.
+      final List<num> carbs = series('carbs_week');
+      final List<num> protein = series('protein_week');
+      final List<num> fat = series('fat_week');
       for (var d = 0; d < 7; d++) {
         final DateTime date = DateTime(
           monday.year,
@@ -130,6 +135,9 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
           calories: d < calories.length ? calories[d].toInt() : 0,
           sodiumMg: d < sodium.length ? sodium[d].toInt() : 0,
           sugarG: d < sugar.length ? sugar[d].toDouble() : 0,
+          carbsG: d < carbs.length ? carbs[d].toDouble() : 0,
+          proteinG: d < protein.length ? protein[d].toDouble() : 0,
+          fatG: d < fat.length ? fat[d].toDouble() : 0,
         );
       }
     }

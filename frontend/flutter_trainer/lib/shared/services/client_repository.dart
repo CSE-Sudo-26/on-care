@@ -416,6 +416,9 @@ class DriftClientRepository implements ClientRepository {
             calories: byDate[ymd(date)]?.calories ?? 0,
             sodiumMg: byDate[ymd(date)]?.sodiumMg ?? 0,
             sugarG: byDate[ymd(date)]?.sugarG ?? 0,
+            carbsG: byDate[ymd(date)]?.carbsG ?? 0,
+            proteinG: byDate[ymd(date)]?.proteinG ?? 0,
+            fatG: byDate[ymd(date)]?.fatG ?? 0,
           ),
       ],
     );
