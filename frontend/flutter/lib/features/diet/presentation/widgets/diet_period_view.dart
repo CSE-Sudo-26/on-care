@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
@@ -432,7 +434,11 @@ class _PeriodBody extends StatelessWidget {
               days: days,
             ),
           // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
-          if (!weekly && days != null) ...<Widget>[
+          // 칼로리 지표에서는 `days` 가 언제나 넘어온다. 실서버가 영양을 주지
+          // 않아 모든 날이 한 색 막대인데도 3색 범례를 붙이면, 범례가 막대 색의
+          // 뜻을 잘못 설명한다(#956).
+          if (!weekly &&
+              (days?.any((DietPeriodDay d) => d.hasMacros) ?? false)) ...<Widget>[
             const SizedBox(height: 10),
             Wrap(
               alignment: WrapAlignment.center,
@@ -801,32 +807,51 @@ class _Bar extends StatelessWidget {
         ),
       );
     }
+    // 막대 **높이**는 칼로리를 따른다(목표선과 견주려면 그래야 한다). 그런데
+    // 구간 비율만 탄단지 합계로 잡으면, 둘이 어긋나는 날에 세 색이 막대를 꽉
+    // 채워 **없는 기여분을 지어내는 셈**이 된다 — 1,800kcal 인 날의 탄단지가
+    // 1,200kcal 어치뿐이어도 "이 1,800kcal 이 전부 탄·단·지에서 왔다" 고
+    // 말하게 된다. 실서버 값은 음식 DB 에서 오므로 딱 맞지 않는 날이 흔하다.
+    //
+    // 그래서 분모를 **둘 중 큰 값**으로 둔다. 탄단지가 칼로리에 못 미치면 남는
+    // 만큼이 `나머지` 로 위에 남고, 넘치면 탄단지 합계에 맞춰 꽉 찬다(#956).
+    final double basis = math.max(d.calories.toDouble(), total);
+    final double rest = basis - total;
+    // 값이 있는 구간만 만든다. `flex: 0` 이 터지지는 않지만(확인함), 셋이 모두
+    // 0 으로 반올림되면 높이만 있고 아무것도 그려지지 않은 막대가 남는다 —
+    // #947 과 같은 종류의 사라짐이다. 그래서 남는 구간에는 **최소 1** 을 준다:
+    // 아주 적게 먹은 영양소는 실오라기로라도 보이는 편이 없는 것보다 낫다.
+    //
+    // 위에서부터 나머지·지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
+    // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
+    final List<({Color color, double kcal})> parts =
+        <({Color color, double kcal})>[
+          // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
+          // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
+          if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
+          if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
+          if (d.proteinKcal > 0)
+            (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
+          if (d.carbsKcal > 0)
+            (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
+        ];
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
         height: height,
-        // 위에서부터 지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
-        // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
         child: Column(
           // **stretch 여야 한다.** 기본값(center)이면 자식이 가로로 느슨하게
-          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 세 구간이
+          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 구간이
           // 통째로 사라진다(#947). 한 색 막대가 멀쩡했던 이유는 그쪽이
           // `Container` 라서다 — 자식도 크기도 없는 Container 는 들어온 제약만큼
           // 커지려고 하므로 폭을 다 채운다.
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Expanded(
-              flex: (d.fatKcal / total * 1000).round(),
-              child: const ColoredBox(color: FigmaColors.macroFat),
-            ),
-            Expanded(
-              flex: (d.proteinKcal / total * 1000).round(),
-              child: const ColoredBox(color: FigmaColors.macroProtein),
-            ),
-            Expanded(
-              flex: (d.carbsKcal / total * 1000).round(),
-              child: const ColoredBox(color: FigmaColors.macroCarbs),
-            ),
+            for (final ({Color color, double kcal}) part in parts)
+              Expanded(
+                flex: math.max(1, (part.kcal / basis * 1000).round()),
+                child: ColoredBox(color: part.color),
+              ),
           ],
         ),
       ),
