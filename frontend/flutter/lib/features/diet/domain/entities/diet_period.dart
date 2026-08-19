@@ -7,6 +7,9 @@ class DietPeriodDay {
     required this.calories,
     required this.sodiumMg,
     required this.sugarG,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
   });
 
   /// 그날의 [DietDay] 를 접어 만든다. 합산 규칙은 하루 요약과 공유한다
@@ -16,12 +19,33 @@ class DietPeriodDay {
     calories: day.effectiveCalories,
     sodiumMg: day.effectiveSodiumMg,
     sugarG: day.effectiveSugarG,
+    carbsG: day.effectiveCarbsG,
+    proteinG: day.effectiveProteinG,
+    fatG: day.effectiveFatG,
   );
 
   final DateTime date;
   final int calories;
   final int sodiumMg;
   final double sugarG;
+
+  /// 그날의 탄단지(g). 이번 달 칼로리 막대를 셋으로 쌓아 그리고, 툴팁이 각
+  /// 수치를 적는다(#7 요청).
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
+
+  /// 탄단지가 내는 칼로리 — 탄·단 4kcal/g, 지 9kcal/g.
+  ///
+  /// 막대를 쌓을 때 쓰는 값이다. 그램으로 쌓으면 지방 1g 이 탄수화물 1g 과 같은
+  /// 높이를 차지해, 칼로리 막대인데 칼로리와 다른 이야기를 하게 된다.
+  double get carbsKcal => carbsG * 4;
+  double get proteinKcal => proteinG * 4;
+  double get fatKcal => fatG * 9;
+
+  /// 탄단지 합이 실제로 있는가. 실서버가 영양을 주지 않은 날은 0 이라, 그런
+  /// 날은 쌓지 않고 한 색으로 그린다.
+  bool get hasMacros => carbsG > 0 || proteinG > 0 || fatG > 0;
 
   /// 기록이 있었던 날인가. 칼로리를 기준으로 본다 — 물만 마신 날은 없다고
   /// 보는 편이 평균을 사실에 가깝게 만든다.
