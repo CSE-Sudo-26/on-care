@@ -1029,7 +1029,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientTrendTodayEmpty => 'No workout logged today';
 
   @override
-  String get clientTrendTodayTotal => 'Today total';
+  String get clientTrendTodayTotal => 'Today\'s total';
 
   @override
   String get clientTrendWorkoutDays => 'Active days';

@@ -122,6 +122,31 @@ ProviderContainer _containerFor({
   return container;
 }
 
+/// 길이가 **서로 같지만 7보다 짧은** 유형 배열을 돌려주는 저장소.
+///
+/// `ClientExerciseWeek.hasTypeSplit` 은 셋의 길이가 서로 같은지만 본다. 기간
+/// provider 의 루프는 언제나 7일을 도므로, 이런 응답을 분해로 인정해 버리면
+/// `d == 2` 에서 범위를 넘어 화면이 통째로 죽는다(리뷰 #946).
+class _ShortSplitRepository extends _StreamingClientRepository {
+  _ShortSplitRepository()
+    : super(StreamController<List<TrainerClient>>.broadcast());
+
+  @override
+  Future<ClientExerciseWeek> fetchExerciseWeek(
+    String clientId, {
+    DateTime? weekStart,
+  }) async => const ClientExerciseWeek(
+    dayLabels: <String>['월', '화'],
+    dailyMinutes: <int>[30, 20],
+    dailyCalories: <int>[180, 120],
+    cardioMinutes: <int>[20, 10],
+    strengthMinutes: <int>[10, 5],
+    stretchingMinutes: <int>[0, 5],
+    totalMinutes: 50,
+    totalCalories: 300,
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -274,5 +299,30 @@ void main() {
       <String>['a'],
       <String>['over', 'a'], // proves the second emission was reflected
     ]);
+  });
+
+  test('길이가 짧은 유형 배열이 와도 기간 집계가 죽지 않는다 (리뷰 #946)', () async {
+    final container = ProviderContainer(
+      overrides: <Override>[
+        clientRepositoryProvider.overrideWithValue(_ShortSplitRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final ClientExercisePeriod period = await container.read(
+      clientExercisePeriodProvider((
+        clientId: 'c1',
+        period: ClientPeriod.week,
+        day: DateTime(2026, 8, 19),
+      )).future,
+    );
+
+    // 실려 온 두 칸만 값이 있고, 나머지는 0 이다 — 지어내지 않는다.
+    expect(period.days, hasLength(7));
+    expect(period.days[0].cardioMinutes, 20);
+    expect(period.days[1].strengthMinutes, 5);
+    expect(period.days[2].minutes, 0);
+    expect(period.days[2].cardioMinutes, 0);
+    expect(period.totalMinutes, 50);
   });
 }

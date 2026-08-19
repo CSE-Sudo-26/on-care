@@ -208,6 +208,80 @@ void main() {
     expect(text, isNot(contains('스트레칭')));
   });
 
+  testWidgets('폭 1024 · 영어 · 배율 1.3 에서도 토글이 제자리고 넘치지 않는다', (tester) async {
+    // #849 가 지키는 가장 좁은 지원 조합. 기간을 바꿔도 헤더가 흔들리지 않아야
+    // 하고, 카드가 화면 밖으로 나가면 안 된다.
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 900);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: withSplit(),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (BuildContext context, Widget? child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          ),
+          home: const _Host(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Rect toggleRect() => tester.getRect(
+      find.byKey(const ValueKey<String>('client-period-toggle')),
+    );
+    final Rect atToday = toggleRect();
+
+    for (final String period in <String>['week', 'month']) {
+      await tester.tap(find.byKey(Key('client-period-$period')));
+      await tester.pumpAndSettle();
+      expect(toggleRect(), atToday, reason: period);
+      expect(tester.takeException(), isNull, reason: period);
+      // 카드가 가로로 넘치지 않는다.
+      final Rect card = tester.getRect(
+        find.byKey(const ValueKey<String>('client-exercise-status-card')),
+      );
+      expect(card.right, lessThanOrEqualTo(1024.0 + 0.5), reason: period);
+    }
+  });
+
+  testWidgets('길이가 짧은 유형 배열이 와도 죽지 않는다 (리뷰 #946)', (tester) async {
+    // `hasTypeSplit` 은 셋의 길이가 서로 같은지만 본다. 기간 provider 의 루프는
+    // 언제나 7일을 도는데, 길이 2짜리 응답이 분해로 인정되면 d == 2 에서 범위를
+    // 넘어 화면이 통째로 죽는다.
+    await pump(tester, <Override>[
+      clientExercisePeriodProvider.overrideWith((ref, key) async {
+        final List<DateTime> dates = clientRangeDates(
+          clientRangeFor(key.period, key.day),
+        );
+        return ClientExercisePeriod(
+          range: clientRangeFor(key.period, key.day),
+          days: <ClientExerciseDay>[
+            for (int i = 0; i < dates.length; i++)
+              ClientExerciseDay(
+                date: dates[i],
+                minutes: i < 2 ? 30 : 0,
+                calories: i < 2 ? 180 : 0,
+                cardioMinutes: i < 2 ? 30 : 0,
+              ),
+          ],
+        );
+      }),
+    ]);
+
+    await tester.tap(find.byKey(const Key('client-period-week')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(ActivityBarChart), findsOneWidget);
+  });
+
   test('유형 분해는 길이가 맞을 때만 쓴다', () {
     // 반쪽만 실려 온 응답으로 쌓으면 막대가 실제보다 낮아 보인다.
     const ClientExerciseWeek short = ClientExerciseWeek(

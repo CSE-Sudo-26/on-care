@@ -552,7 +552,7 @@
   "clientTrendTitle": "Workout trend",
   "clientTrendLoadFailed": "Couldn't load the workout trend. Please try again",
   "clientTrendTodayEmpty": "No workout logged today",
-  "clientTrendTodayTotal": "Today total",
+  "clientTrendTodayTotal": "Today's total",
   "clientTrendWorkoutDays": "Active days",
   "clientTrendWorkoutCount": "Workouts",
   "clientTrendWorkoutMinutes": "Exercise time",
