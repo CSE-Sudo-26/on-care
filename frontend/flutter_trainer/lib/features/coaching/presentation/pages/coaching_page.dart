@@ -926,7 +926,10 @@ class _MemberProgramList extends StatefulWidget {
 }
 
 class _MemberProgramListState extends State<_MemberProgramList> {
-  static const double _baseRowHeight = 84;
+  /// 한 줄 높이. 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
+  /// 목표가 `lastRoutine` 과 자리를 다투지 않고 늘 보이게 되면서(#898)
+  /// 한 줄만큼 높아졌다.
+  static const double _baseRowHeight = 100;
   static const int _visibleRows = 5;
 
   final ScrollController _scroll = ScrollController();
@@ -1023,11 +1026,14 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                     color: AppColors.foreground,
                                   ),
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 2),
+                                // 목표는 늘 보인다. 전에는 `lastRoutine` 이
+                                // 비었을 때만 그 자리를 빌려 써서, 루틴을 한
+                                // 번이라도 보낸 고객은 목표가 사라졌다(#898).
+                                ClientGoalLabel(client: client),
+                                const SizedBox(height: 2),
                                 Text(
-                                  client.lastRoutine == '-'
-                                      ? client.goal
-                                      : client.lastRoutine,
+                                  client.lastRoutine,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
