@@ -9,6 +9,20 @@ const int calorieTargetKcal = 2000;
 /// Daily sugar target (g). Over this, the diet summary 당류 tile warns.
 const int sugarTargetG = 50;
 
+/// 이름과 어울리지 않게 떨어지던 로스터 회원의 성별.
+///
+/// 데모 로스터도 실 API 시드도 성별을 저장하지 않아, 표시용 값은 회원 id 의
+/// 코드 포인트 합으로 만들어진다([TrainerClient.rosterGender]). 그 값이 이름과
+/// 어긋난 회원만 여기 적어 둔다 — 나머지는 지금 보이는 대로 둔다(#960).
+const Map<String, String> _rosterGenderByName = <String, String>{
+  '한지호': 'male',
+  '신유나': 'female',
+  '문가영': 'female',
+  // 오세라는 지금 보이는 여성 그대로다. 이름을 적어 두는 이유는 id 로 만든
+  // 값이 데모에서는 여성, 실 API(`user-sera`)에서는 남성으로 갈리기 때문이다.
+  '오세라': 'female',
+};
+
 /// A trainer's client, as shown on the 고객 관리 list and detail screens.
 /// Decoded from the drift `TrainerClients` row (the `weekCompletionJson`
 /// column becomes a `List<int>` here).
@@ -104,10 +118,18 @@ class TrainerClient {
   /// The demo roster is presentation fixture data. Keeping the fallback on
   /// the stable client id means same-name members still receive distinct,
   /// repeatable identity details without changing the persisted Drift schema.
+  ///
+  /// id 로 만든 값이라 이름과는 무관하게 정해지고, 그래서 몇몇 회원은 이름과
+  /// 어울리지 않는 성별로 떴다(#960). 그런 이름만 [_rosterGenderByName] 에
+  /// 적어 둔다 — 로스터가 데모 fixture 라 이름이 곧 그 회원이고, id 는 데모
+  /// (`seed-client-8`)와 실 API(`user-sera`)가 서로 달라 한쪽만 고치면 두 모드가
+  /// 갈린다.
   String get rosterGender {
     if (gender == 'male' || gender == 'female' || gender == 'other') {
       return gender;
     }
+    final fixed = _rosterGenderByName[name];
+    if (fixed != null) return fixed;
     return _demographicSeed.isEven ? 'female' : 'male';
   }
 
