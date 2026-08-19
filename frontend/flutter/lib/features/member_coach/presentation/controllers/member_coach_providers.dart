@@ -43,3 +43,8 @@ final coachChatProvider = StreamProvider.autoDispose<List<CoachMessage>>((ref) {
 final coachUnreadProvider = FutureProvider<int>((ref) {
   return ref.watch(memberCoachRepositoryProvider).unreadCount();
 });
+
+/// 트레이너가 나에게 보낸 담당 요청. 수락·거절 뒤에는 invalidate 한다. (#919)
+final coachInvitesProvider = FutureProvider<List<CoachInvite>>((ref) {
+  return ref.watch(memberCoachRepositoryProvider).fetchInvites();
+}, name: 'coachInvites');

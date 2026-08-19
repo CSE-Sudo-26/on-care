@@ -569,6 +569,63 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsAddAction => '등록하기';
 
   @override
+  String get clientInviteTitle => '회원에게 담당 요청';
+
+  @override
+  String get clientInviteIntro =>
+      '회원의 이메일로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
+
+  @override
+  String get clientInviteEmailLabel => '회원 이메일';
+
+  @override
+  String get clientInviteLookupAction => '찾기';
+
+  @override
+  String get clientInviteMessageLabel => '함께 보낼 메시지 (선택)';
+
+  @override
+  String get clientInviteSendAction => '담당 요청 보내기';
+
+  @override
+  String clientInviteSent(String name) {
+    return '$name님에게 담당 요청을 보냈어요';
+  }
+
+  @override
+  String get clientInviteNotFound => '그 이메일을 쓰는 회원을 찾지 못했어요';
+
+  @override
+  String get clientInviteFailed => '요청을 보내지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientInviteEmailRequired => '이메일을 입력해 주세요';
+
+  @override
+  String get clientInviteAlreadyCoached => '이미 담당하고 있는 회원이에요';
+
+  @override
+  String get clientInviteHasTrainer => '이미 다른 트레이너가 담당 중인 회원이에요';
+
+  @override
+  String get clientInvitePendingHint => '이미 보낸 요청이 회원의 답을 기다리고 있어요';
+
+  @override
+  String get clientInvitePendingTitle => '답을 기다리는 요청';
+
+  @override
+  String get clientInvitePendingEmpty => '기다리는 요청이 없어요';
+
+  @override
+  String get clientInviteCancelAction => '요청 거두기';
+
+  @override
+  String get clientInviteCancelled => '요청을 거뒀어요';
+
+  @override
+  String get clientInviteCancelFailed => '요청을 거두지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get clientTabDiet => '식단';
 
   @override
