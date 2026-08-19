@@ -12,6 +12,8 @@ STEP 8 챗봇은 retrieve_context + get_coach_llm 을 직접 재사용.
 """
 from __future__ import annotations
 import logging
+from collections.abc import Callable
+
 from sqlalchemy.orm import Session
 
 from app.schemas.misc_api import CoachSuggestion
@@ -19,7 +21,10 @@ from app.services.coach import grounding, prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
-from app.services.coach_service import _diet_suggestion, _exercise_suggestion
+from app.services.coach_service import (
+    _diet_today_priority, _diet_weekly_or_default, _exercise_suggestion,
+    diet_period_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +53,22 @@ _EXERCISE_SYSTEM = (
 def _rag_suggestion(
     db: Session, user_id: str, *, domain: str, system_prompt: str,
     query: str, tag: str, title: str, fallback: CoachSuggestion,
+    extra_context: str | Callable[[], str] = "",
 ) -> CoachSuggestion:
     try:
         context = retrieve_context(db, query, user_id=user_id, domain=domain)
-        if not context:
-            return fallback  # 검색 자료가 전혀 없으면 규칙 기반
+        # extra_context(#933)는 계산된 요약(예: 이번 주 나트륨 평균)이라, 검색 문서가
+        # 하나도 안 걸려도 그것만으로 코칭을 만들 수 있다 — 그래서 context 가 비어도
+        # extra_context 가 있으면 폴백으로 빠지지 않는다. 콜러블로도 받는 이유는
+        # 그 계산(추가 DB 조회)도 이 try 안에서 실패해야 규칙 폴백으로 빠진다는
+        # 보장이 서기 때문이다 — 호출부에서 미리 계산해 인자로 넘기면 그 실패가
+        # 이 함수 밖에서 터져 폴백을 건너뛴다.
+        extra = extra_context() if callable(extra_context) else extra_context
+        combined = "\n\n".join(part for part in (context, extra) if part)
+        if not combined:
+            return fallback  # 검색 자료도 기간 요약도 전혀 없으면 규칙 기반
         llm = get_coach_llm()
-        user_prompt = f"{context}\n\n위 정보를 바탕으로 조언해 주세요."
+        user_prompt = f"{combined}\n\n위 정보를 바탕으로 조언해 주세요."
         result = llm.generate(system_prompt, user_prompt)
         if not result.text.strip():
             return fallback
@@ -67,11 +81,28 @@ def _rag_suggestion(
         return fallback
 
 def diet_coach(db: Session, user_id: str) -> CoachSuggestion:
-    fallback = _diet_suggestion(db, user_id)
+    # 오늘 기록이 없거나 오늘 자체가 초과면 그 사실이 코칭의 핵심이라, RAG 가
+    # 다른 문구로 덮지 못하도록 아예 건너뛰고 바로 돌려준다(#933 CodeRabbit
+    # 리뷰 반영). 그 외의 경우에만 검색·기간 요약을 근거로 LLM 코칭을 시도한다.
+    #
+    # 오늘 우선 여부는 여기서 **한 번만** 확인한다. 이 판단과 아래 폴백 계산이
+    # 각자 따로 오늘 기록을 조회하면, 그 사이 새 기록이 들어와 두 조회가 다른
+    # 결과를 낼 수 있다(TOCTOU) — 이 함수는 이미 None(우선순위 아님)을 확인했
+    # 으므로, 그 판단을 다시 하는 `_diet_suggestion` 대신 `_diet_weekly_or_default`
+    # 를 바로 쓴다(코드 리뷰 지적).
+    priority = _diet_today_priority(db, user_id)
+    if priority is not None:
+        return priority
+    fallback = _diet_weekly_or_default(db, user_id)
     return _rag_suggestion(
         db, user_id, domain="diet", system_prompt=_DIET_SYSTEM,
         query="최근 식단의 나트륨·당류 관리와 개선점",
         tag="diet", title="오늘의 식단 코칭", fallback=fallback,
+        # 이번 주 집계는 위 fallback 계산과 별개로 여기서 한 번 더 조회된다.
+        # try 밖(폴백)과 try 안(extra_context)이 같은 값을 나눠 쓰면, 그 조회의
+        # 실패가 try 밖으로 새어 나가 이 함수 전체를 죽인다 — 같은 구간을 두 번
+        # 쿼리하는 비용보다 장애 시 규칙 폴백 보장이 우선이다(#933 코드 리뷰).
+        extra_context=lambda: diet_period_context(db, user_id),
     )
 
 

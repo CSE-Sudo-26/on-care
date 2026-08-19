@@ -1130,6 +1130,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachCardWaterTag => 'Hydration';
 
   @override
+  String get coachInviteTitle => 'A trainer wants to coach you';
+
+  @override
+  String coachInviteFrom(String name) {
+    return 'Trainer $name';
+  }
+
+  @override
+  String coachInviteGym(String gym) {
+    return 'at $gym';
+  }
+
+  @override
+  String get coachInviteExplain =>
+      'Accepting lets this trainer see your meal and workout records.';
+
+  @override
+  String get coachInviteAccept => 'Accept';
+
+  @override
+  String get coachInviteReject => 'Decline';
+
+  @override
+  String coachInviteAccepted(String name) {
+    return '$name is now your coach';
+  }
+
+  @override
+  String get coachInviteRejected => 'Request declined';
+
+  @override
+  String get coachInviteFailed => 'Couldn\'t complete that. Please try again';
+
+  @override
+  String get coachImageUnavailable => 'Couldn\'t load the photo';
+
+  @override
   String get coachChatSubtitle => 'Personal trainer · Available';
 
   @override
@@ -1236,6 +1273,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exAssignedTrainer => 'Assigned Trainer';
+
+  @override
+  String get exConsultDataSharingNotice =>
+      'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
 
   @override
   String get exExerciseGoal => 'Exercise Goal';

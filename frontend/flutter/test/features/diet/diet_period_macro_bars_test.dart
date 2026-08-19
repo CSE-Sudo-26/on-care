@@ -137,6 +137,63 @@ void main() {
         .map((ColoredBox b) => b.color)
         .toList();
 
+    /// 구간의 **그려진 사각형**. 색만 확인하면 폭 0 을 그대로 통과시킨다 —
+    /// 실제로 #947 이 그렇게 새어 나갔다.
+    List<Rect> segmentRectsOf(WidgetTester tester, int index) => <Rect>[
+      // `find.byWidget` 은 쓸 수 없다 — 세 구간이 const 라 서른한 칸의 같은
+      // 색 구간이 전부 같은 위젯으로 잡힌다. Element 의 RenderBox 에서 직접
+      // 잰다.
+      for (final Element e
+          in find
+              .descendant(
+                of: find.byKey(Key('diet-period-bar-$index')),
+                matching: find.byType(ColoredBox),
+              )
+              .evaluate())
+        (e.renderObject! as RenderBox).localToGlobal(Offset.zero) &
+            (e.renderObject! as RenderBox).size,
+    ];
+
+    testWidgets('쌓은 구간이 막대 폭을 채운다 (#947)', (WidgetTester tester) async {
+      await openMonth(tester);
+
+      final Rect bar = tester.getRect(
+        find.byKey(const Key('diet-period-bar-0')),
+      );
+      final List<Rect> segments = segmentRectsOf(tester, 0);
+      expect(segments, hasLength(3));
+
+      for (final Rect seg in segments) {
+        // Column 의 기본 정렬(center)이면 자식 없는 ColoredBox 가 폭 0 으로
+        // 그려져 막대가 통째로 사라진다.
+        expect(seg.width, greaterThan(0));
+        expect(seg.width, closeTo(bar.width, 0.5));
+      }
+
+      // 세 구간을 합치면 막대 높이가 된다 — 한 조각이 빠지면 여기서 드러난다.
+      final double stacked = segments.fold<double>(
+        0,
+        (double a, Rect r) => a + r.height,
+      );
+      expect(stacked, closeTo(bar.height, 0.5));
+      expect(bar.height, greaterThan(0));
+    });
+
+    testWidgets('구간 높이가 칼로리 기여분을 따른다 (#947)', (WidgetTester tester) async {
+      await openMonth(tester);
+
+      // 탄 200g(800kcal) · 단 100g(400kcal) · 지 40g(360kcal) = 1,560kcal.
+      // 위에서부터 지방 · 단백질 · 탄수화물 순으로 쌓인다.
+      final List<Rect> segments = segmentRectsOf(tester, 0);
+      final double total = segments.fold<double>(
+        0,
+        (double a, Rect r) => a + r.height,
+      );
+      expect(segments[0].height / total, closeTo(360 / 1560, 0.02));
+      expect(segments[1].height / total, closeTo(400 / 1560, 0.02));
+      expect(segments[2].height / total, closeTo(800 / 1560, 0.02));
+    });
+
     testWidgets('막대가 탄단지 3색으로 쌓인다', (WidgetTester tester) async {
       await openMonth(tester);
 

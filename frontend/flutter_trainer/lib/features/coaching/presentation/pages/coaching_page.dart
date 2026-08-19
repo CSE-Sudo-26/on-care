@@ -19,6 +19,7 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_s
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
@@ -28,6 +29,7 @@ import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dar
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_template_dialog.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays, weekdayCount, weekdayLabels;
@@ -1637,18 +1639,89 @@ String _dateChipLabel(AppLocalizations l, int offset) {
 }
 
 /// One selectable register-day chip.
-class _TemplateCard extends StatelessWidget {
+class _TemplateCard extends ConsumerWidget {
   const _TemplateCard({super.key, required this.onApply});
 
   final ValueChanged<ProgramTemplate> onApply;
 
-  @override
-  Widget build(BuildContext context) {
+  /// 만들기·편집 다이얼로그. 시작 구성을 열면 저장이 '새로 만들기' 가 된다.
+  Future<void> _edit(BuildContext context, {ProgramTemplate? template}) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => ProgramTemplateDialog(template: template),
+    );
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    ProgramTemplate template,
+  ) async {
     final AppLocalizations l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text(l.coachTemplateDeleteConfirm(template.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.coachTemplateDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref
+          .read(trainerProgramTemplateRepositoryProvider)
+          .delete(template.id);
+      ref.invalidate(programTemplatesProvider);
+    } on AppError {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.coachTemplateDeleteFailed)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final templatesAsync = ref.watch(programTemplatesProvider);
+    // 데모는 읽기 전용이다 — 저장할 백엔드가 없어, 만든 것이 새로고침 한 번에
+    // 사라지면 만들 수 있다고 말한 화면이 거짓이 된다. (#920)
+    final canEdit = ref.watch(programTemplateEditingEnabledProvider);
+    final templates = templatesAsync.valueOrNull ?? const <ProgramTemplate>[];
+    if (templatesAsync.hasError && templates.isEmpty) {
+      return SectionCard(
+        title: l.coachTemplates,
+        icon: Icons.dashboard_customize_outlined,
+        dense: true,
+        child: Text(
+          l.coachTemplateLoadFailed,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.mutedForeground,
+          ),
+        ),
+      );
+    }
     return SectionCard(
       title: l.coachTemplates,
       icon: Icons.dashboard_customize_outlined,
       dense: true,
+      trailing: canEdit
+          ? TextButton.icon(
+              key: const ValueKey<String>('template-new'),
+              onPressed: () => _edit(context),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l.coachTemplateNew),
+            )
+          : null,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final columns = constraints.maxWidth >= 680 ? 3 : 1;
@@ -1658,7 +1731,7 @@ class _TemplateCard extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: <Widget>[
-              for (final template in programTemplates)
+              for (final template in templates)
                 SizedBox(
                   width: width,
                   child: Material(
@@ -1686,11 +1759,21 @@ class _TemplateCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                const Icon(
-                                  Icons.add_circle_outline,
-                                  size: 17,
-                                  color: AppColors.primary,
-                                ),
+                                if (canEdit)
+                                  _TemplateMenu(
+                                    template: template,
+                                    onEdit: () =>
+                                        _edit(context, template: template),
+                                    onDelete: template.isStarter
+                                        ? null
+                                        : () => _delete(context, ref, template),
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.add_circle_outline,
+                                    size: 17,
+                                    color: AppColors.primary,
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 3),
@@ -1719,6 +1802,50 @@ class _TemplateCard extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// 템플릿 한 장의 편집·삭제 메뉴.
+///
+/// 시작 구성에는 삭제가 없다 — 저장된 행이 아니라 지울 것이 없고, 지운 것처럼
+/// 보였다가 다음 조회에서 되돌아오면 화면이 거짓말을 한 것이 된다. (#920)
+class _TemplateMenu extends StatelessWidget {
+  const _TemplateMenu({
+    required this.template,
+    required this.onEdit,
+    this.onDelete,
+  });
+
+  final ProgramTemplate template;
+  final VoidCallback onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return PopupMenuButton<String>(
+      key: ValueKey<String>('template-menu-${template.id}'),
+      tooltip: '',
+      padding: EdgeInsets.zero,
+      iconSize: 17,
+      icon: const Icon(Icons.more_horiz, color: AppColors.subtleForeground),
+      onSelected: (value) => value == 'edit' ? onEdit() : onDelete?.call(),
+      itemBuilder: (context) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Text(
+            template.isStarter
+                ? l.coachTemplateSaveAsMine
+                : l.coachTemplateEdit,
+          ),
+        ),
+        if (onDelete != null)
+          PopupMenuItem<String>(
+            value: 'delete',
+            child: Text(l.coachTemplateDelete),
+          ),
+      ],
     );
   }
 }

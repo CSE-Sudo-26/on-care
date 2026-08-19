@@ -83,6 +83,15 @@ class _FakeCoachRepository implements MemberCoachRepository {
   Future<List<CoachSession>> fetchSessions() async => const <CoachSession>[];
 
   @override
+  Future<List<CoachInvite>> fetchInvites() async => const <CoachInvite>[];
+
+  @override
+  Future<void> acceptInvite(String inviteId) async {}
+
+  @override
+  Future<void> rejectInvite(String inviteId) async {}
+
+  @override
   Future<CoachRoutine> completeRoutine(
     String routineId, {
     required int minutes,

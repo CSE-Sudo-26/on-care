@@ -41,4 +41,13 @@ abstract interface class MemberCoachRepository {
 
   /// Unread coach-sent message count for the entry badge.
   Future<int> unreadCount();
+
+  /// 트레이너가 나에게 보낸, 아직 답하지 않은 담당 요청. (#919)
+  Future<List<CoachInvite>> fetchInvites();
+
+  /// 요청을 수락한다 — 담당 관계는 이 호출로 생긴다.
+  Future<void> acceptInvite(String inviteId);
+
+  /// 요청을 거절한다. 담당은 생기지 않는다.
+  Future<void> rejectInvite(String inviteId);
 }

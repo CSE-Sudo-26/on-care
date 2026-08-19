@@ -56,7 +56,14 @@ class _FakeConsultationRepository implements ConsultationRepository {
   }
 
   @override
+  Stream<List<ConsultationRequest>> watch({String status = 'pending'}) =>
+      Stream<List<ConsultationRequest>>.fromFuture(fetch(status: status));
+
+  @override
   Future<int> pendingCount() async => requests.where((r) => r.isPending).length;
+
+  @override
+  Stream<int> watchPendingCount() => Stream<int>.fromFuture(pendingCount());
 
   @override
   Future<void> accept(String id, {ConsultationSchedule? schedule}) async {

@@ -20,7 +20,8 @@ class _PdfChatRepository implements ChatRepository {
           body: '이번 주 리포트입니다.',
           timeLabel: '18:20',
           createdAt: DateTime(2026, 8, 16, 18, 20),
-          attachment: const ChatPdfAttachment(
+          attachment: const ChatAttachment(
+            kind: ChatAttachmentKind.pdf,
             fileName: '김고객_2026-08-10_주간리포트.pdf',
             fileId: 'trainer-pdf-file',
             fileSize: 2048,

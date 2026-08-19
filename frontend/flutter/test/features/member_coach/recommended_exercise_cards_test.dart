@@ -97,7 +97,8 @@ class _PdfMemberCoachRepository extends MockMemberCoachRepository {
       body: '이번 주 리포트입니다.',
       timeLabel: '18:20',
       createdAt: DateTime(2026, 8, 16, 18, 20),
-      attachment: const CoachPdfAttachment(
+      attachment: const CoachAttachment(
+        kind: CoachAttachmentKind.pdf,
         fileName: '김고객_2026-08-10_주간리포트.pdf',
         fileId: 'pdf-file',
         fileSize: 2048,
@@ -195,9 +196,7 @@ void main() {
     );
   });
 
-  testWidgets('추천 운동이 같은 화면에 두 번 나오지 않는다 (#782)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('추천 운동이 같은 화면에 두 번 나오지 않는다 (#782)', (WidgetTester tester) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[
       _trainerRoutine,
       _aiRoutine,
@@ -260,9 +259,7 @@ void main() {
     expect(find.textContaining('확인'), findsNothing);
   });
 
-  testWidgets('추천 운동이 없으면 코칭 포인트만 보여 준다 (#782)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('추천 운동이 없으면 코칭 포인트만 보여 준다 (#782)', (WidgetTester tester) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[]);
 
     expect(find.text('이번 코칭 포인트'), findsOneWidget);
@@ -272,9 +269,7 @@ void main() {
     expect(find.text('현재 추천할 수 있는 AI 맞춤 운동이 없어요'), findsNothing);
   });
 
-  testWidgets('담당 트레이너 카드는 관계와 소통만 남긴다 (#782)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('담당 트레이너 카드는 관계와 소통만 남긴다 (#782)', (WidgetTester tester) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[
       _trainerRoutine,
     ]);
@@ -347,10 +342,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(
-        of: trainerCard,
-        matching: find.text('인터벌 러닝 · 20분'),
-      ),
+      find.descendant(of: trainerCard, matching: find.text('인터벌 러닝 · 20분')),
       findsOneWidget,
     );
   });
@@ -364,7 +356,10 @@ void main() {
 
     final Finder coaching = find.byType(AiCoachingCard);
     expect(
-      find.descendant(of: coaching, matching: find.byIcon(Icons.list_alt_outlined)),
+      find.descendant(
+        of: coaching,
+        matching: find.byIcon(Icons.list_alt_outlined),
+      ),
       findsNothing,
     );
     expect(
@@ -385,9 +380,7 @@ void main() {
           locale: Locale('ko'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: AiCoachingCard(coachingPoint: _coachingPoint),
-          ),
+          home: Scaffold(body: AiCoachingCard(coachingPoint: _coachingPoint)),
         ),
       ),
     );
