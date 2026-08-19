@@ -79,10 +79,16 @@ String _number(num v) {
 /// 오늘 섭취 칼로리 + 탄단지 + 나트륨·당류.
 class NutritionSummaryCard extends StatelessWidget {
   /// Creates the summary for [client].
-  const NutritionSummaryCard({super.key, required this.client});
+  const NutritionSummaryCard({super.key, required this.client, this.trailing});
 
   /// 오늘 합계를 들고 있는 고객.
   final TrainerClient client;
+
+  /// 제목 줄 오른쪽 끝에 얹을 조작 — 지금은 `오늘 / 이번 주 / 이번 달` 토글이
+  /// 온다(#914). 카드 **위에** 한 줄을 더 두지 않는 이유는, 고객 데이터 열이
+  /// 화면 안에 들어와야 한다는 제약이 이미 빠듯하기 때문이다. 이미 있는 제목
+  /// 줄에 얹으면 세로 자리를 한 픽셀도 더 쓰지 않는다.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +144,11 @@ class NutritionSummaryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _CalorieRow(calories: calories, label: l.dietTodaySummary),
+              _CalorieRow(
+                calories: calories,
+                label: l.dietTodaySummary,
+                trailing: trailing,
+              ),
               const SizedBox(height: AppSpacing.md),
               const Divider(height: 1, thickness: 1, color: AppColors.border),
               const SizedBox(height: AppSpacing.md),
@@ -195,10 +205,17 @@ class NutritionSummaryCard extends StatelessWidget {
 }
 
 class _CalorieRow extends StatelessWidget {
-  const _CalorieRow({required this.calories, required this.label});
+  const _CalorieRow({
+    required this.calories,
+    required this.label,
+    this.trailing,
+  });
 
   final _Item calories;
   final String label;
+
+  /// 제목 줄 오른쪽 끝의 조작.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -212,13 +229,25 @@ class _CalorieRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                  if (trailing case final Widget action) ...<Widget>[
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(child: action),
+                  ],
+                ],
               ),
               const SizedBox(height: 5),
               FittedBox(

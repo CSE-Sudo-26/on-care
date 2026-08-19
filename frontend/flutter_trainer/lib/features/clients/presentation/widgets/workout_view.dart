@@ -51,7 +51,6 @@ class WorkoutView extends ConsumerWidget {
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
     final sessionKey = (id: client.id, name: client.name);
     final sessions = ref.watch(clientSessionsProvider(sessionKey));
-    final exerciseWeek = ref.watch(clientExerciseWeekProvider(client.id));
 
     // Each section owns its own async state. Gating the whole list on
     // the history provider would mean a failing /history takes the
@@ -65,10 +64,7 @@ class WorkoutView extends ConsumerWidget {
         onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
       ),
       const SizedBox(height: AppSpacing.md),
-      WeeklyExerciseTrendCard(
-        week: exerciseWeek,
-        onRetry: () => ref.invalidate(clientExerciseWeekProvider(client.id)),
-      ),
+      WeeklyExerciseTrendCard(clientId: client.id),
       const SizedBox(height: AppSpacing.lg),
       Text(
         l.workoutRecords,

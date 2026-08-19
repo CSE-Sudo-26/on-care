@@ -940,13 +940,45 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitMinutes => '분';
 
   @override
+  String get unitDays => '일';
+
+  @override
+  String get clientPeriodToday => '오늘';
+
+  @override
+  String get clientPeriodWeek => '이번 주';
+
+  @override
+  String get clientPeriodMonth => '이번 달';
+
+  @override
+  String get clientPeriodAverage => '하루 평균';
+
+  @override
+  String clientPeriodLoggedDays(int days) {
+    return '$days일 기록';
+  }
+
+  @override
+  String get clientPeriodEmpty => '이 기간에 기록이 없어요';
+
+  @override
+  String get clientDietTrendTitle => '영양 추이';
+
+  @override
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => '이번 주 운동 추이';
+  String get clientTrendTitle => '운동 추이';
 
   @override
-  String get clientTrendLoadFailed => '주간 운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
+  String get clientTrendLoadFailed => '운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientTrendTodayEmpty => '오늘 기록된 운동이 없어요';
+
+  @override
+  String get clientTrendWorkoutDays => '운동한 날';
 
   @override
   String get clientTrendWorkoutCount => '운동 횟수';

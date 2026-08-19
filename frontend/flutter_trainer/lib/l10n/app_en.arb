@@ -525,9 +525,26 @@
   "reportsScheduleWarning": "This week's schedule didn't load, so session counts may be missing",
   "unitTimes": "",
   "unitMinutes": "min",
+  "unitDays": "days",
+  "clientPeriodToday": "Today",
+  "clientPeriodWeek": "This week",
+  "clientPeriodMonth": "This month",
+  "clientPeriodAverage": "Daily average",
+  "clientPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
+  "@clientPeriodLoggedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "clientPeriodEmpty": "Nothing was logged in this period",
+  "clientDietTrendTitle": "Nutrition trend",
   "unitKcal": "kcal",
-  "clientTrendTitle": "This week's exercise trend",
-  "clientTrendLoadFailed": "Couldn't load the weekly exercise trend. Please try again",
+  "clientTrendTitle": "Workout trend",
+  "clientTrendLoadFailed": "Couldn't load the workout trend. Please try again",
+  "clientTrendTodayEmpty": "No workout logged today",
+  "clientTrendWorkoutDays": "Active days",
   "clientTrendWorkoutCount": "Workouts",
   "clientTrendWorkoutMinutes": "Exercise time",
   "clientTrendCaloriesBurned": "Calories burned",
