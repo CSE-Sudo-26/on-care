@@ -41,6 +41,68 @@ void main() {
       expect(stored.isFinished, isTrue);
     });
 
+    test('취소가 주체·시각·사유를 함께 남긴다 (#906)', () async {
+      final repo = DriftScheduleRepository(db);
+      final session = await upcoming(repo);
+
+      await repo.cancelSession(
+        session.id,
+        source: CancellationSource.member,
+        reason: '고객 출장',
+      );
+
+      final stored = (await repo.watchToday().first).firstWhere(
+        (item) => item.id == session.id,
+      );
+      // 데모도 실서버와 같은 것을 저장한다 — 취소한 쪽을 고르고도 카드에 남지
+      // 않으면 취소가 삭제와 어떻게 다른지 화면에서 전달되지 않는다.
+      expect(stored.cancellationSource, CancellationSource.member);
+      expect(stored.cancellationReason, '고객 출장');
+      expect(stored.cancelledAt, isNotNull);
+      expect(stored.noShowAt, isNull);
+    });
+
+    test('노쇼는 시각만 남기고 취소 주체는 비어 있다 (#906)', () async {
+      final repo = DriftScheduleRepository(db);
+      final session = await upcoming(repo);
+
+      await repo.markNoShow(session.id);
+
+      final stored = (await repo.watchToday().first).firstWhere(
+        (item) => item.id == session.id,
+      );
+      expect(stored.noShowAt, isNotNull);
+      expect(stored.cancelledAt, isNull);
+      // 노쇼에는 주체가 없다 — 약속은 그대로였고 회원이 오지 않았다.
+      expect(stored.cancellationSource, isEmpty);
+    });
+
+    test('마무리된 세션의 기록은 뒤이은 요청에 덮이지 않는다 (#906)', () async {
+      final repo = DriftScheduleRepository(db);
+      final session = await upcoming(repo);
+
+      await repo.cancelSession(
+        session.id,
+        source: CancellationSource.member,
+        reason: '고객 출장',
+      );
+      final first = (await repo.watchToday().first).firstWhere(
+        (item) => item.id == session.id,
+      );
+      await repo.cancelSession(
+        session.id,
+        source: CancellationSource.trainer,
+        reason: '덮어쓰기 시도',
+      );
+
+      final stored = (await repo.watchToday().first).firstWhere(
+        (item) => item.id == session.id,
+      );
+      expect(stored.cancellationSource, first.cancellationSource);
+      expect(stored.cancellationReason, first.cancellationReason);
+      expect(stored.cancelledAt, first.cancelledAt);
+    });
+
     test('노쇼도 행을 남기고 취소와 구분된다', () async {
       final repo = DriftScheduleRepository(db);
       final session = await upcoming(repo);
@@ -139,6 +201,9 @@ void main() {
       // 삭제가 아니다 — 그 자리에 남아 취소로 보인다.
       expect(find.text('박성호'), findsOneWidget);
       expect(find.text('취소'), findsWidgets);
+      // 데모도 주체·시각을 저장하므로 기록 줄이 그대로 뜬다(#906).
+      expect(find.textContaining('고객 취소'), findsOneWidget);
+      expect(find.text('고객 출장'), findsOneWidget);
       // 마무리된 세션에는 완료·취소·노쇼 동작이 더 이상 나오지 않는다.
       expect(
         find.byKey(const ValueKey<String>('session-cancel-chip')),

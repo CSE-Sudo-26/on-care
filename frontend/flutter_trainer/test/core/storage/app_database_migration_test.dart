@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -5,7 +6,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 
 void main() {
   test(
-    'v3 to v11 adds macro·주간 계열 columns and preserves existing rows',
+    'v3 to v12 adds macro·주간 계열·취소 기록 columns and preserves rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -82,7 +83,7 @@ void main() {
       final meal = await db.select(db.clientDietEntries).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 11);
+      expect(version.read<int>('user_version'), 12);
       expect(client.id, 'existing-client');
       expect(client.caloriesToday, 500);
       expect(client.sugarG, 12.0);
@@ -100,10 +101,33 @@ void main() {
       // v11 은 리포트 피드백 초안 표를 새로 만든다(#821). 예전 DB 에는 없던
       // 표라, 만들어지지 않으면 초안 저장이 첫 조회에서 죽는다.
       expect(await db.select(db.reportFeedbackDrafts).get(), isEmpty);
+      // v12 는 일정에 취소·노쇼 기록 칸을 붙인다(#906). 붙지 않으면 취소를
+      // 누르는 순간 없는 컬럼에 쓰다가 죽는다. 예전 행은 값이 없는 것이 정상이고,
+      // 그 자체가 "취소가 아님" 이라는 뜻이다.
+      final schedule = await db.select(db.trainerScheduleEntries).get();
+      expect(schedule, isEmpty);
+      await db
+          .into(db.trainerScheduleEntries)
+          .insert(
+            TrainerScheduleEntriesCompanion.insert(
+              id: 'migrated-session',
+              date: '2026-08-19',
+              time: '10:00',
+              status: '취소',
+              cancelledAt: Value(DateTime(2026, 8, 19, 9)),
+              cancellationSource: const Value('member'),
+              cancellationReason: const Value('고객 사정'),
+            ),
+          );
+      final stored = await db.select(db.trainerScheduleEntries).getSingle();
+      expect(stored.cancellationSource, 'member');
+      expect(stored.cancellationReason, '고객 사정');
+      expect(stored.cancelledAt, isNotNull);
+      expect(stored.noShowAt, isNull);
     },
   );
 
-  test('v4 to v11 preserves integer sugar and all client rows', () async {
+  test('v4 to v12 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
       setup: (database) {
         database.execute('''
@@ -178,7 +202,7 @@ void main() {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 11);
+    expect(version.read<int>('user_version'), 12);
     expect(clients, hasLength(2));
     expect(clients[0].name, '기존 회원 A');
     expect(clients[0].sugarG, 12.0);
@@ -266,7 +290,7 @@ void main() {
       final client = await db.select(db.trainerClients).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 11);
+      expect(version.read<int>('user_version'), 12);
       // 기존 값은 그대로 두고, 새 계열만 기본값으로 붙는다.
       expect(client.sugarG, 17.8);
       expect(client.sodiumWeekJson, '[700,800]');
