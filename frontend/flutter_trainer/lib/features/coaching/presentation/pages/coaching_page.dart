@@ -13,9 +13,9 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_diet_period_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_toggle.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
@@ -457,117 +457,150 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   ],
                 );
               }
-              return ListView(
-                key: const ValueKey<String>('coaching-program-page-scroll'),
-                padding: const EdgeInsets.fromLTRB(
-                  AppLayout.pagePadding,
-                  AppLayout.pagePadding,
-                  AppLayout.pagePadding,
-                  AppLayout.pagePadding,
-                ),
-                children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 260,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            _MemberProgramList(
-                              clients: clients,
-                              selectedId: selected.id,
-                              onSelect: _selectClient,
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            _TemplateCard(
+              // 넓은 화면은 왼쪽 열(고객 · 프로그램 템플릿)을 고정하고
+              // 오른쪽 카드들만 스크롤한다 — 편집기를 아래로 읽는 동안
+              // 다른 고객으로 넘어가거나 템플릿을 집으려면 왼쪽이 늘 보여야
+              // 한다. 리포트 탭이 이미 같은 구조다. (#958)
+              return Padding(
+                padding: const EdgeInsets.all(AppLayout.pagePadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 260,
+                            // 고객 목록(5줄 고정)에 템플릿 카드가 더해지면
+                            // 짧은 창에서는 열이 화면보다 길어진다. 이 열
+                            // 안에서만 스크롤하게 두어 오른쪽과 따로 움직인다.
+                            child: SingleChildScrollView(
                               key: const ValueKey<String>(
-                                'program-template-sidebar',
+                                'coaching-sidebar-scroll',
                               ),
-                              onApply: _applyTemplate,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
-                          key: const ValueKey<String>(
-                            'coaching-wide-main-column',
-                          ),
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            if (!_showOptionsFlow) ...<Widget>[
-                              _AiAssistantPrompt(
-                                key: const ValueKey<String>(
-                                  'coaching-wide-ai-prompt',
-                                ),
-                                clientName: selected.name,
-                                onTap: () =>
-                                    setState(() => _showOptionsFlow = true),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                            ],
-                            if (!fullWidth) ...<Widget>[
-                              Row(
-                                key: const ValueKey<String>(
-                                  'coaching-wide-client-overview',
-                                ),
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
-                                  SizedBox(
-                                    width: 300,
-                                    child: _ProgramMemberSummary(
-                                      key: const ValueKey<String>(
-                                        'program-client-summary',
-                                      ),
-                                      client: selected,
-                                    ),
+                                  _MemberProgramList(
+                                    clients: clients,
+                                    selectedId: selected.id,
+                                    onSelect: _selectClient,
                                   ),
-                                  const SizedBox(width: AppSpacing.lg),
-                                  Expanded(
-                                    child: _ClientDataSwitcher(
-                                      client: selected,
+                                  const SizedBox(height: AppSpacing.lg),
+                                  _TemplateCard(
+                                    key: const ValueKey<String>(
+                                      'program-template-sidebar',
                                     ),
+                                    onApply: _applyTemplate,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: AppSpacing.lg),
-                            ],
-                            ..._suggestionChildren(selected),
-                            ..._editorChildren(selected, showAssistant: false),
-                            // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
-                            ...?_savedProgramsCard(),
-                            const SizedBox(height: AppSpacing.lg),
-                            _SendHistoryCard(client: selected),
-                          ],
-                        ),
-                      ),
-                      if (fullWidth) ...<Widget>[
-                        const SizedBox(width: AppSpacing.lg),
-                        SizedBox(
-                          key: const ValueKey<String>(
-                            'coaching-wide-client-overview',
+                            ),
                           ),
-                          width: 360,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              _ProgramMemberSummary(
-                                key: const ValueKey<String>(
-                                  'program-client-summary',
-                                ),
-                                client: selected,
+                          const SizedBox(width: AppSpacing.lg),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              key: const ValueKey<String>(
+                                'coaching-program-page-scroll',
                               ),
-                              const SizedBox(height: AppSpacing.lg),
-                              _ClientDataSwitcher(client: selected),
-                            ],
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Column(
+                                      key: const ValueKey<String>(
+                                        'coaching-wide-main-column',
+                                      ),
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        if (!_showOptionsFlow) ...<Widget>[
+                                          _AiAssistantPrompt(
+                                            key: const ValueKey<String>(
+                                              'coaching-wide-ai-prompt',
+                                            ),
+                                            clientName: selected.name,
+                                            onTap: () => setState(
+                                              () => _showOptionsFlow = true,
+                                            ),
+                                          ),
+                                          const SizedBox(height: AppSpacing.lg),
+                                        ],
+                                        if (!fullWidth) ...<Widget>[
+                                          Row(
+                                            key: const ValueKey<String>(
+                                              'coaching-wide-client-overview',
+                                            ),
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: <Widget>[
+                                              SizedBox(
+                                                width: 300,
+                                                child: _ProgramMemberSummary(
+                                                  key: const ValueKey<String>(
+                                                    'program-client-summary',
+                                                  ),
+                                                  client: selected,
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.lg,
+                                              ),
+                                              Expanded(
+                                                child: _ClientDataSwitcher(
+                                                  client: selected,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: AppSpacing.lg),
+                                        ],
+                                        ..._suggestionChildren(selected),
+                                        ..._editorChildren(
+                                          selected,
+                                          showAssistant: false,
+                                        ),
+                                        // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
+                                        ...?_savedProgramsCard(),
+                                        const SizedBox(height: AppSpacing.lg),
+                                        _SendHistoryCard(client: selected),
+                                      ],
+                                    ),
+                                  ),
+                                  if (fullWidth) ...<Widget>[
+                                    const SizedBox(width: AppSpacing.lg),
+                                    SizedBox(
+                                      key: const ValueKey<String>(
+                                        'coaching-wide-client-overview',
+                                      ),
+                                      width: 360,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          _ProgramMemberSummary(
+                                            key: const ValueKey<String>(
+                                              'program-client-summary',
+                                            ),
+                                            client: selected,
+                                          ),
+                                          const SizedBox(height: AppSpacing.lg),
+                                          _ClientDataSwitcher(client: selected),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );
@@ -937,7 +970,10 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   /// 한 줄 높이. 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
   /// 목표가 `lastRoutine` 과 자리를 다투지 않고 늘 보이게 되면서(#898)
   /// 한 줄만큼 높아졌다.
-  static const double _baseRowHeight = 100;
+  ///
+  /// 웹에서는 이 값이 100 일 때 줄 안의 글이 1px 넘쳐 줄무늬가 떴다 — 브라우저
+  /// 기본 글꼴의 줄 높이가 테스트 글꼴보다 살짝 크다. 넘치는 만큼만 올린다.
+  static const double _baseRowHeight = 104;
   static const int _visibleRows = 5;
 
   final ScrollController _scroll = ScrollController();
@@ -988,7 +1024,11 @@ class _MemberProgramListState extends State<_MemberProgramList> {
     final l = AppLocalizations.of(context);
     final rowHeight = _rowHeight(context);
     return SectionCard(
-      title: l.coachMemberPrograms,
+      // 리포트 탭 좌측 고객 카드와 같은 제목·아이콘을 쓴다 — 두 탭이 같은
+      // `왼쪽 고객 열 + 오른쪽 작업 영역` 구조라, 카드가 서로 다른 이름을
+      // 달고 있으면 같은 목록인지 매번 다시 읽어야 한다. (#958)
+      title: l.navClients,
+      icon: Icons.people_outline,
       dense: true,
       child: SizedBox(
         height: rowHeight * _visibleRows,
@@ -1276,48 +1316,33 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
       key: const ValueKey<String>('program-client-data-switcher'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Container(
-          key: const ValueKey<String>('program-client-data-tabs'),
-          height: 44,
-          padding: EdgeInsets.zero,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: const BorderRadius.all(AppRadius.pill),
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(AppRadius.pill),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                child: _ClientDataTab(
-                  label: l.clientTabDiet,
-                  icon: Icons.restaurant_outlined,
-                  selected: _view == _ClientDataView.diet,
-                  onTap: () => setState(() {
-                    _view = _ClientDataView.diet;
-                  }),
+        // 기간 토글은 전환 스트립과 **한 줄**에 둔다(#943).
+        //
+        // 회원 앱처럼 카드 위에 `제목 + 토글` 한 줄을 따로 두면 고객 데이터 열이
+        // 그만큼 길어져, 폭 1552px·높이 900px 에서 당류 카드가 화면 밖으로 7.8px
+        // 밀렸다. 스트립이 이미 `식단`/`운동` 이라는 제목 노릇을 하고 있으므로
+        // 그 줄의 오른쪽 끝을 빌려 쓴다 — 세로 자리를 한 픽셀도 더 쓰지 않고,
+        // 기간을 바꿔도 토글이 움직이지 않는다.
+        Row(
+          children: <Widget>[
+            Expanded(child: _dataTabs(l)),
+            const SizedBox(width: AppSpacing.sm),
+            // 토글은 줄어들되 잘리지는 않는다. 영어 `Today / This week /
+            // This month` 는 배율 1.3 · 폭 1024 에서 줄을 115px 넘겼다 —
+            // FittedBox 가 세 칸을 다 보여 준 채 통째로 작게 그린다.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: ClientPeriodToggle(
+                  active: _period,
+                  onChanged: (ClientPeriod p) => setState(() => _period = p),
                 ),
               ),
-              Expanded(
-                child: _ClientDataTab(
-                  label: l.clientTabWorkout,
-                  icon: Icons.fitness_center_outlined,
-                  selected: _view == _ClientDataView.workout,
-                  onTap: () => setState(() {
-                    _view = _ClientDataView.workout;
-                  }),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        // 토글은 카드 제목 줄에 얹는다 — 고객 데이터 열은 화면 안에 들어와야
-        // 하고, 카드 위에 한 줄을 더 두면 아래 카드가 밖으로 밀린다.
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: _view == _ClientDataView.diet
@@ -1327,33 +1352,66 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
                           'program-diet-${widget.client.id}',
                         ),
                         client: widget.client,
-                        trailing: _periodToggle(),
                       )
                     : ClientDietPeriodCard(
-                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길 때마다
-                        // 카드가 새로 만들어져, 나트륨을 보다 기간만 넓힌
-                        // 트레이너가 지표를 다시 골라야 했다. 전환 애니메이션은
-                        // 위젯 타입이 달라지는 것만으로 `AnimatedSwitcher` 가
-                        // 이미 해 준다.
+                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길
+                        // 때마다 카드가 새로 만들어져, 나트륨을 보다 기간만
+                        // 넓힌 트레이너가 지표를 다시 골라야 했다.
                         key: ValueKey<String>(
                           'program-diet-period-${widget.client.id}',
                         ),
                         clientId: widget.client.id,
                         period: _period,
-                        trailing: _periodToggle(),
                       )
-              : WeeklyExerciseTrendCard(
+              : ClientExerciseStatusCard(
                   key: ValueKey<String>('program-workout-${widget.client.id}'),
                   clientId: widget.client.id,
+                  period: _period,
                 ),
         ),
       ],
     );
   }
 
-  Widget _periodToggle() => ClientPeriodToggle(
-    active: _period,
-    onChanged: (ClientPeriod p) => setState(() => _period = p),
+  /// 식단 ↔ 운동 전환 스트립.
+  Widget _dataTabs(AppLocalizations l) => Container(
+    key: const ValueKey<String>('program-client-data-tabs'),
+    height: 44,
+    padding: EdgeInsets.zero,
+    decoration: BoxDecoration(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+    ),
+    foregroundDecoration: BoxDecoration(
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Expanded(
+          child: _ClientDataTab(
+            label: l.clientTabDiet,
+            icon: Icons.restaurant_outlined,
+            selected: _view == _ClientDataView.diet,
+            onTap: () => setState(() {
+              _view = _ClientDataView.diet;
+            }),
+          ),
+        ),
+        Expanded(
+          child: _ClientDataTab(
+            label: l.clientTabWorkout,
+            icon: Icons.fitness_center_outlined,
+            selected: _view == _ClientDataView.workout,
+            onTap: () => setState(() {
+              _view = _ClientDataView.workout;
+            }),
+          ),
+        ),
+      ],
+    ),
   );
 }
 

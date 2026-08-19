@@ -8,7 +8,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entr
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_diet_period_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_meal_photo.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_toggle.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -43,23 +43,24 @@ class _DietViewState extends ConsumerState<DietView> {
   @override
   Widget build(BuildContext context) {
     final TrainerClient client = widget.client;
-    // 토글은 카드의 **제목 줄**에 얹는다. 카드 위에 한 줄을 더 두면 고객 데이터
-    // 열이 그만큼 길어져 화면 밖으로 밀린다.
-    final Widget toggle = ClientPeriodToggle(
-      active: _period,
-      onChanged: (ClientPeriod p) => setState(() => _period = p),
-    );
+    final AppLocalizations l = AppLocalizations.of(context);
+    // 이름과 토글은 카드 밖 섹션 헤더가 든다 — 운동 탭과 같은 모양이다(#944).
+    Widget section(Widget child) => _wrap(<Widget>[
+      ClientPeriodSection(
+        icon: Icons.restaurant_outlined,
+        title: l.clientNutritionSummary,
+        period: _period,
+        onChanged: (ClientPeriod p) => setState(() => _period = p),
+        child: child,
+      ),
+    ]);
 
     if (_period != ClientPeriod.today) {
-      return _wrap(<Widget>[
-        ClientDietPeriodCard(
-          clientId: client.id,
-          period: _period,
-          trailing: toggle,
-        ),
-      ]);
+      return section(
+        ClientDietPeriodCard(clientId: client.id, period: _period),
+      );
     }
-    return _TodayDiet(client: client, toggle: toggle, wrap: _wrap);
+    return _TodayDiet(client: client, section: section);
   }
 
   Widget _wrap(List<Widget> children) {
@@ -78,32 +79,29 @@ class _DietViewState extends ConsumerState<DietView> {
 
 /// 오늘 하루: 영양 요약 + 끼니 기록 + AI 코멘트.
 class _TodayDiet extends ConsumerWidget {
-  const _TodayDiet({
-    required this.client,
-    required this.toggle,
-    required this.wrap,
-  });
+  const _TodayDiet({required this.client, required this.section});
 
   final TrainerClient client;
-  final Widget toggle;
-  final Widget Function(List<Widget>) wrap;
+
+  /// 섹션 헤더로 감싸 페이지에 얹는 함수. 헤더는 기간·로딩·실패와 무관하게 늘
+  /// 같은 자리에 있어야 한다.
+  final Widget Function(Widget) section;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final diet = ref.watch(clientDietProvider(client.id));
 
+    // 로딩·실패에도 헤더는 같은 자리에 있다. 탭에 처음 들어올 때 조작이
+    // 사라졌다가 다시 나타나면, 트레이너가 누르려던 자리를 매번 다시 찾게 된다.
     return diet.when(
-      // 로딩에도 토글을 같은 자리에 둔다. 탭에 처음 들어올 때 조작이 사라졌다가
-      // 다시 나타나면, 트레이너가 누르려던 자리를 매번 다시 찾게 된다.
-      loading: () => wrap(<Widget>[
-        Align(alignment: Alignment.centerRight, child: toggle),
-        const SizedBox(height: AppSpacing.xxl),
-        const Center(child: CircularProgressIndicator()),
-      ]),
-      error: (e, _) => wrap(<Widget>[
-        Align(alignment: Alignment.centerRight, child: toggle),
-        const SizedBox(height: AppSpacing.sm),
+      loading: () => section(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (e, _) => section(
         EmptyHint(
           message: l.dietLoadFailed,
           icon: Icons.error_outline,
@@ -115,25 +113,30 @@ class _TodayDiet extends ConsumerWidget {
                 : () => ref.invalidate(clientDietProvider(client.id)),
           ),
         ),
-      ]),
-      data: (meals) => wrap(<Widget>[
-        NutritionSummaryCard(client: client, trailing: toggle),
-        const SizedBox(height: AppSpacing.md),
-        // Nothing logged yet: say so, and withhold the verdict. The
-        // summary tiles read 0 either way, and `_AiComment` would call
-        // a blank day "균형이 잘 맞아요" — praise for a member who has
-        // not recorded a single meal.
-        if (meals.isEmpty)
-          EmptyHint(message: l.dietEmpty, icon: Icons.restaurant_outlined)
-        else ...<Widget>[
-          for (final meal in meals) ...<Widget>[
-            _MealCard(entry: meal),
-            const SizedBox(height: AppSpacing.sm),
+      ),
+      data: (meals) => section(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            NutritionSummaryCard(client: client),
+            const SizedBox(height: AppSpacing.md),
+            // Nothing logged yet: say so, and withhold the verdict. The
+            // summary tiles read 0 either way, and `_AiComment` would call
+            // a blank day "균형이 잘 맞아요" — praise for a member who has
+            // not recorded a single meal.
+            if (meals.isEmpty)
+              EmptyHint(message: l.dietEmpty, icon: Icons.restaurant_outlined)
+            else ...<Widget>[
+              for (final meal in meals) ...<Widget>[
+                _MealCard(entry: meal),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              _AiComment(client: client),
+            ],
           ],
-          const SizedBox(height: AppSpacing.xs),
-          _AiComment(client: client),
-        ],
-      ]),
+        ),
+      ),
     );
   }
 }

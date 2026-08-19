@@ -43,19 +43,30 @@ class AppColors {
   static const Color aiCardGradientStart = Color(0xFFDCEAF4);
   static const Color aiCardGradientEnd = Color(0xFF9DC3E0);
 
-  /// 그래프의 **두 번째 계열** — 고객 운동 추이의 소모 칼로리가 쓴다.
+  /// 운동 유형 3색 — 회원 앱 `운동 현황` 과 **같은 그림**을 트레이너 토큰으로
+  /// 옮긴 것이다(#943). 도넛·누적 막대·범례가 모두 이 셋을 쓴다.
   ///
-  /// 예전에는 브랜드 주황이었다. 트레이너 앱은 남색 브랜드에 주황을 작은
-  /// 강조로만 쓰기로 한 팔레트인데 그래프 전체가 주황으로 칠해져 이 계열만
-  /// 튀었고, 주황은 옆 화면에서 '주의' 로 읽히던 색이라 많이 탄 좋은 날이
-  /// 경고처럼 보였다(#914).
+  /// 명도로 갈라 둔 한 계열이다. 유형마다 다른 색상환을 쓰면 세 값이 서로 다른
+  /// 뜻을 가진 것처럼 보이는데, 셋은 **같은 운동 시간을 나눈 것**이다.
+  /// 순서는 언제나 유산소 → 근력 → 스트레칭이라 색을 외우지 않아도 자리로
+  /// 읽힌다.
+  /// 탄단지 3색 — 회원 앱 식단 탭 `이번 달` 막대와 같은 램프다(#944).
   ///
-  /// [primary] 보다 밝은 같은 계열이라 한 카드가 한 색 이야기로 읽히면서도 두
-  /// 지표가 구분된다. AI 카드 그라디언트(`aiCardGradientEnd`)를 빌려 쓰지
-  /// 않는다 — 그 토큰이 바뀌면 상관없는 그래프 색이 함께 움직이고, 그 값은
-  /// 값이 없는 막대([borderStrong])와의 대비가 1.3:1 이라 빈 날과 기록한 날이
-  /// 눈으로 갈리지 않았다.
-  static const Color chartCaloriesSeries = Color(0xFF4A86BE);
+  /// **한 색의 농담**이다. `오늘` 뷰가 칼로리 링과 탄단지 진행 바를 모두 브랜드
+  /// 색 하나로 그리므로, 기간 뷰만 다른 색상환을 쓰면 같은 카드를 오갈 때 색이
+  /// 튄다. 셋은 서로 다른 지표가 아니라 **한 칼로리를 나눈 것**이라, 색상보다
+  /// 농담으로 가르는 편이 뜻에도 맞는다.
+  ///
+  /// 값은 브랜드 색을 흰 배경 위에 100% / 65% / 35% 로 얹은 결과다. 알파 대신
+  /// 불투명 값으로 박아 두는 이유는 막대가 목표선 위에 겹쳐 그려지기 때문이다 —
+  /// 반투명이면 선이 비쳐 층 경계가 흐려진다.
+  static const Color macroCarbs = Color(0xFF2E7DAB);
+  static const Color macroProtein = Color(0xFF79AECC);
+  static const Color macroFat = Color(0xFFB7D6E7);
+
+  static const Color chartCardio = Color(0xFF2E7DAB);
+  static const Color chartStrength = Color(0xFF17435F);
+  static const Color chartStretching = Color(0xFFD6E7F3);
 
   /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 남색). MY 탭
   /// "이번 달 통계" 카드도 이 남색 톤을 쓴다.

@@ -995,6 +995,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietTodaySummary => 'Today\'s nutrition';
 
   @override
+  String get clientNutritionSummary => 'Nutrition summary';
+
+  @override
   String get dietAchieveRate => 'Progress';
 
   @override
@@ -1123,6 +1126,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientPeriodAverage => 'Daily average';
 
   @override
+  String get clientPeriodGoal => 'Goal';
+
+  @override
   String clientPeriodLoggedDays(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,
@@ -1143,7 +1149,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => 'Workout trend';
+  String get clientTrendTitle => 'Activity';
 
   @override
   String get clientTrendLoadFailed =>
@@ -1151,6 +1157,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientTrendTodayEmpty => 'No workout logged today';
+
+  @override
+  String get clientTrendTodayTotal => 'Today\'s total';
 
   @override
   String get clientTrendWorkoutDays => 'Active days';
@@ -1796,9 +1805,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get coachSubtitle =>
       'Create, assign, and manage exercise programs for each member';
-
-  @override
-  String get coachMemberPrograms => 'Programs by member';
 
   @override
   String get coachMemberSummary => 'Member summary';

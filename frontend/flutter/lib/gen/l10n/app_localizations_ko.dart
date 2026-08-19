@@ -1243,6 +1243,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exAssignedTrainer => '담당 트레이너';
 
   @override
+  String get exConsultDataSharingNotice =>
+      '요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.';
+
+  @override
   String get exExerciseGoal => '운동 목표';
 
   @override

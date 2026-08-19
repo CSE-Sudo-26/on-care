@@ -18,8 +18,8 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
@@ -674,7 +674,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NutritionSummaryCard), findsNothing);
-      expect(find.byType(WeeklyExerciseTrendCard), findsOneWidget);
+      expect(find.byType(ClientExerciseStatusCard), findsOneWidget);
       final workout = find.byKey(
         const ValueKey<String>('program-workout-seed-client-1'),
       );
@@ -720,8 +720,9 @@ void main() {
       );
       expect(listFinder, findsOneWidget);
       // 한 줄에 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
-      // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐다(#898).
-      expect(tester.getSize(listFinder).height, 100 * 5);
+      // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐고(#898), 브라우저 글꼴에서
+      // 마지막 줄이 1px 넘쳐 104 가 됐다(#958).
+      expect(tester.getSize(listFinder).height, 104 * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);
       expect(list.controller!.position.maxScrollExtent, greaterThan(0));

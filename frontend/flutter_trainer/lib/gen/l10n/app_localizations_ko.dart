@@ -958,6 +958,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietTodaySummary => '오늘 영양 요약';
 
   @override
+  String get clientNutritionSummary => '영양 요약';
+
+  @override
   String get dietAchieveRate => '달성률';
 
   @override
@@ -1076,6 +1079,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientPeriodAverage => '하루 평균';
 
   @override
+  String get clientPeriodGoal => '목표';
+
+  @override
   String clientPeriodLoggedDays(int days) {
     return '$days일 기록';
   }
@@ -1090,13 +1096,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => '운동 추이';
+  String get clientTrendTitle => '운동 현황';
 
   @override
   String get clientTrendLoadFailed => '운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
 
   @override
   String get clientTrendTodayEmpty => '오늘 기록된 운동이 없어요';
+
+  @override
+  String get clientTrendTodayTotal => '오늘 총 운동 시간';
 
   @override
   String get clientTrendWorkoutDays => '운동한 날';
@@ -1727,9 +1736,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachSubtitle => '고객별 운동 프로그램을 만들고 배정·관리하세요';
-
-  @override
-  String get coachMemberPrograms => '고객별 프로그램';
 
   @override
   String get coachMemberSummary => '고객 요약';
