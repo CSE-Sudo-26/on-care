@@ -868,6 +868,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietTodaySummary => 'Today\'s nutrition';
 
   @override
+  String get clientNutritionSummary => 'Nutrition summary';
+
+  @override
   String get dietAchieveRate => 'Progress';
 
   @override
@@ -1024,6 +1027,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientTrendTodayEmpty => 'No workout logged today';
+
+  @override
+  String get clientTrendTodayTotal => 'Today total';
 
   @override
   String get clientTrendWorkoutDays => 'Active days';

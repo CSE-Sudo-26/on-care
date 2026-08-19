@@ -1628,6 +1628,12 @@ abstract class AppLocalizations {
   /// **'Today\'s nutrition'**
   String get dietTodaySummary;
 
+  /// No description provided for @clientNutritionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition summary'**
+  String get clientNutritionSummary;
+
   /// No description provided for @dietAchieveRate.
   ///
   /// In en, this message translates to:
@@ -1861,6 +1867,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No workout logged today'**
   String get clientTrendTodayEmpty;
+
+  /// No description provided for @clientTrendTodayTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Today total'**
+  String get clientTrendTodayTotal;
 
   /// No description provided for @clientTrendWorkoutDays.
   ///

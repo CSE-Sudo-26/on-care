@@ -839,6 +839,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietTodaySummary => '오늘 영양 요약';
 
   @override
+  String get clientNutritionSummary => '영양 요약';
+
+  @override
   String get dietAchieveRate => '달성률';
 
   @override
@@ -978,6 +981,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientTrendTodayEmpty => '오늘 기록된 운동이 없어요';
+
+  @override
+  String get clientTrendTodayTotal => '오늘 총 운동 시간';
 
   @override
   String get clientTrendWorkoutDays => '운동한 날';

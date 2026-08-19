@@ -312,6 +312,20 @@ class DriftClientRepository implements ClientRepository {
   static int _minutesFromCompletion(int rate) =>
       rate == 0 ? 0 : (30 * rate / 100).round();
 
+  /// 데모의 유형 분해. 실서버는 세션이 유형을 들고 오지만 데모에는 이행률뿐이라,
+  /// **날짜로 정해지는 고정 비율**로 나눈다(#943).
+  ///
+  /// 무작위가 아니라 요일에서 나온다 — 화면을 다시 열 때마다 근력과 유산소가
+  /// 자리를 바꾸면 데모를 보는 사람이 그래프를 믿지 않는다. 남은 분은 유산소가
+  /// 흡수해 셋의 합이 언제나 그날 총 분과 같다.
+  static List<int> _typeSplit(int minutes, int weekdayIndex) {
+    if (minutes <= 0) return const <int>[0, 0, 0];
+    final int strength = (minutes * (weekdayIndex.isEven ? 0.40 : 0.25))
+        .round();
+    final int stretching = (minutes * 0.15).round();
+    return <int>[minutes - strength - stretching, strength, stretching];
+  }
+
   @override
   Future<ClientExerciseWeek> fetchExerciseWeek(
     String clientId, {
@@ -323,10 +337,16 @@ class DriftClientRepository implements ClientRepository {
         .map(_minutesFromCompletion)
         .toList(growable: false);
     final calories = minutes.map((value) => value * 6).toList(growable: false);
+    final splits = <List<int>>[
+      for (var d = 0; d < minutes.length; d++) _typeSplit(minutes[d], d),
+    ];
     return ClientExerciseWeek(
       dayLabels: const ['월', '화', '수', '목', '금', '토', '일'],
       dailyMinutes: minutes,
       dailyCalories: calories,
+      cardioMinutes: <int>[for (final s in splits) s[0]],
+      strengthMinutes: <int>[for (final s in splits) s[1]],
+      stretchingMinutes: <int>[for (final s in splits) s[2]],
       totalMinutes: minutes.fold(0, (sum, value) => sum + value),
       totalCalories: calories.fold(0, (sum, value) => sum + value),
     );
@@ -647,10 +667,14 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
             monday.month,
             monday.day + d,
           );
+          final bool split = week.hasTypeSplit;
           byDate[ymd(date)] = ClientExerciseDay(
             date: date,
             minutes: d < week.dailyMinutes.length ? week.dailyMinutes[d] : 0,
             calories: d < week.dailyCalories.length ? week.dailyCalories[d] : 0,
+            cardioMinutes: split ? week.cardioMinutes[d] : 0,
+            strengthMinutes: split ? week.strengthMinutes[d] : 0,
+            stretchingMinutes: split ? week.stretchingMinutes[d] : 0,
           );
         }
       }
