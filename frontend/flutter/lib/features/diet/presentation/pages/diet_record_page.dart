@@ -111,6 +111,20 @@ String _formatInt(int v) => v.toString().replaceAllMapped(
 /// 식단 탭이 보여주는 기간. 운동 탭의 `운동 현황` 토글과 같은 뜻·같은 순서다.
 enum DietPeriodTab { day, week, month }
 
+/// 영양 요약의 `오늘/이번 주/이번 달` 토글 — 탭을 벗어났다가 식단 탭에 다시
+/// 들어오면 기본값(`오늘`)으로 되돌아가야 하는 임시 UI 상태라 Riverpod 에
+/// 둔다(#861). 실제 식단 기록(`dietTodayProvider` 등)과는 분리된 값이다.
+final dietPeriodTabProvider = StateProvider<DietPeriodTab>(
+  (ref) => DietPeriodTab.day,
+  name: 'dietPeriodTab',
+);
+
+/// 식단 탭 재진입 시 초기화할 임시 UI 상태. 날짜 선택·주차 이동은 그대로
+/// 두고(현재 UX 상 유지가 자연스럽다), 기간 토글만 기본값으로 되돌린다(#861).
+void resetDietTransientUiState(WidgetRef ref) {
+  ref.read(dietPeriodTabProvider.notifier).state = DietPeriodTab.day;
+}
+
 /// 기간 뷰가 집계할 날짜 범위. 이번 주는 월~일, 이번 달은 1일~말일이다.
 /// 아직 오지 않은 날도 범위에 넣는다 — 빈 칸이 남아야 한 주·한 달의 모양이
 /// 그대로 읽힌다(평균은 기록이 있는 날만으로 낸다).
@@ -139,7 +153,6 @@ DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
 class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   int _weekShift = 0; // whole-week steps away from today
   late DateTime _selected;
-  DietPeriodTab _period = DietPeriodTab.day;
 
   DateTime get _today {
     final DateTime n = nowKst();
@@ -172,6 +185,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final DietPeriodTab period = ref.watch(dietPeriodTabProvider);
     final DateTime today = _today;
     // Window is always centred on today (+ whole-week shifts): 3 days before,
     // today in the middle, 3 days after.
@@ -231,17 +245,18 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                 // 무관하게** 늘 그린다 — 기록이 빈 날을 누르면 주간 그래프까지
                 // 통째로 사라지고 토글마저 없어져 되돌아갈 수도 없었다(#684 리뷰).
                 _NutritionSectionHeader(
-                  period: _period,
-                  onChanged: (DietPeriodTab t) => setState(() => _period = t),
+                  period: period,
+                  onChanged: (DietPeriodTab t) =>
+                      ref.read(dietPeriodTabProvider.notifier).state = t,
                 ),
-                if (_period != DietPeriodTab.day)
+                if (period != DietPeriodTab.day)
                   // 범위는 스트립이 보여주는 주(center)를 따른다. today 로 잡으면
                   // 주를 뒤로 넘겼을 때 스트립과 그래프가 다른 주를 가리킨다.
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: DietPeriodView(
-                      range: _rangeFor(_period, center),
-                      weekly: _period == DietPeriodTab.week,
+                      range: _rangeFor(period, center),
+                      weekly: period == DietPeriodTab.week,
                       profile: profile,
                     ),
                   )
@@ -806,11 +821,17 @@ class _NutritionSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color macroProgressColor = FigmaColors.primaryA(0.65);
+    // 넘긴 항목은 빨강. 바는 목표 지점에서 멈추므로(`gaugeValue` 가 1.0 으로
+    // 잘린다) 색까지 그대로면 꽉 찬 것과 넘긴 것이 같은 그림이 된다. 같은
+    // 카드의 칼로리와 아래의 나트륨·당류는 이미 이렇게 갈린다 — 탄단지 바만
+    // 예외였다(#890). 세 항목이 각자 판단하므로 지방만 넘긴 날은 지방 바만
+    // 빨개진다.
+    Color macroColor(_NutritionSummaryItem item) =>
+        item.isOverGoal ? FigmaColors.dangerRed : FigmaColors.primaryA(0.65);
     final List<_MacroProgressData> macros = <_MacroProgressData>[
-      _MacroProgressData(item: carbs, color: macroProgressColor),
-      _MacroProgressData(item: protein, color: macroProgressColor),
-      _MacroProgressData(item: fat, color: macroProgressColor),
+      _MacroProgressData(item: carbs, color: macroColor(carbs)),
+      _MacroProgressData(item: protein, color: macroColor(protein)),
+      _MacroProgressData(item: fat, color: macroColor(fat)),
     ];
     final AppLocalizations l = AppLocalizations.of(context);
     final Color calorieColor = calories.isOverGoal

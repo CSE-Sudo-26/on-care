@@ -1,3 +1,4 @@
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/domain/repositories/account_repository.dart';
 
@@ -109,15 +110,15 @@ class MockAccountRepository implements AccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
-    int? dailyCalories,
-    int? dailySodiumMg,
-    int? dailySugarG,
-    int? dailyCarbsG,
-    int? dailyProteinG,
-    int? dailyFatG,
-    int? weeklyWorkoutGoal,
-    int? weeklyExerciseMinutesGoal,
-    int? weeklyBurnGoal,
+    GoalUpdate? dailyCalories,
+    GoalUpdate? dailySodiumMg,
+    GoalUpdate? dailySugarG,
+    GoalUpdate? dailyCarbsG,
+    GoalUpdate? dailyProteinG,
+    GoalUpdate? dailyFatG,
+    GoalUpdate? weeklyWorkoutGoal,
+    GoalUpdate? weeklyExerciseMinutesGoal,
+    GoalUpdate? weeklyBurnGoal,
   }) async {
     _profile = UserProfile(
       id: _profile.id,
@@ -129,16 +130,31 @@ class MockAccountRepository implements AccountRepository {
       heightCm: _profile.heightCm,
       weightKg: _profile.weightKg,
       goals: _profile.goals,
-      dailyCalories: dailyCalories ?? _profile.dailyCalories,
-      dailySodiumMg: dailySodiumMg ?? _profile.dailySodiumMg,
-      dailySugarG: dailySugarG ?? _profile.dailySugarG,
-      dailyCarbsG: dailyCarbsG ?? _profile.dailyCarbsG,
-      dailyProteinG: dailyProteinG ?? _profile.dailyProteinG,
-      dailyFatG: dailyFatG ?? _profile.dailyFatG,
-      weeklyWorkoutGoal: weeklyWorkoutGoal ?? _profile.weeklyWorkoutGoal,
-      weeklyExerciseMinutesGoal:
-          weeklyExerciseMinutesGoal ?? _profile.weeklyExerciseMinutesGoal,
-      weeklyBurnGoal: weeklyBurnGoal ?? _profile.weeklyBurnGoal,
+      dailyCalories: dailyCalories == null
+          ? _profile.dailyCalories
+          : dailyCalories.value,
+      dailySodiumMg: dailySodiumMg == null
+          ? _profile.dailySodiumMg
+          : dailySodiumMg.value,
+      dailySugarG: dailySugarG == null
+          ? _profile.dailySugarG
+          : dailySugarG.value,
+      dailyCarbsG: dailyCarbsG == null
+          ? _profile.dailyCarbsG
+          : dailyCarbsG.value,
+      dailyProteinG: dailyProteinG == null
+          ? _profile.dailyProteinG
+          : dailyProteinG.value,
+      dailyFatG: dailyFatG == null ? _profile.dailyFatG : dailyFatG.value,
+      weeklyWorkoutGoal: weeklyWorkoutGoal == null
+          ? _profile.weeklyWorkoutGoal
+          : weeklyWorkoutGoal.value,
+      weeklyExerciseMinutesGoal: weeklyExerciseMinutesGoal == null
+          ? _profile.weeklyExerciseMinutesGoal
+          : weeklyExerciseMinutesGoal.value,
+      weeklyBurnGoal: weeklyBurnGoal == null
+          ? _profile.weeklyBurnGoal
+          : weeklyBurnGoal.value,
     );
     return _profile;
   }

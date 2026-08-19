@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
@@ -11,15 +12,15 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 class _FailingAccountRepository extends MockAccountRepository {
   @override
   Future<UserProfile> updateHealthGoals({
-    int? dailyCalories,
-    int? dailySodiumMg,
-    int? dailySugarG,
-    int? dailyCarbsG,
-    int? dailyProteinG,
-    int? dailyFatG,
-    int? weeklyWorkoutGoal,
-    int? weeklyExerciseMinutesGoal,
-    int? weeklyBurnGoal,
+    GoalUpdate? dailyCalories,
+    GoalUpdate? dailySodiumMg,
+    GoalUpdate? dailySugarG,
+    GoalUpdate? dailyCarbsG,
+    GoalUpdate? dailyProteinG,
+    GoalUpdate? dailyFatG,
+    GoalUpdate? weeklyWorkoutGoal,
+    GoalUpdate? weeklyExerciseMinutesGoal,
+    GoalUpdate? weeklyBurnGoal,
   }) async {
     throw StateError('save failed');
   }

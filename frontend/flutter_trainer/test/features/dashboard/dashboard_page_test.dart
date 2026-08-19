@@ -44,6 +44,41 @@ void main() {
     return GoRouter.of(ctx).routerDelegate.currentConfiguration.uri.toString();
   }
 
+  /// 주의 고객 검증이 쓰는 고정 로스터. (#907)
+  ///
+  /// 건강 신호 여덟(나트륨 5 · 당류 1 · 이행률 2)과 답장 대기 둘. 기대값을
+  /// 데이터 바로 옆에 두어, 숫자가 어디서 왔는지 읽는 사람이 세어 볼 수 있게 한다.
+  ///
+  /// 이행률 경고는 `weekCompletion` 을 직접 준다 — 시드처럼 오늘 요일에 따라
+  /// 잘리는 값을 쓰면 판정이 요일을 탄다.
+  List<Override> attentionRosterOverrides() {
+    const List<int> lowWeek = <int>[40, 40, 0, 0, 0, 0, 0];
+    final List<TrainerClient> roster = <TrainerClient>[
+      for (var i = 0; i < 5; i++)
+        makeClient(id: 'sodium-$i', name: '나트륨 고객 $i', sodiumMg: 2500),
+      makeClient(id: 'sugar-0', name: '당류 고객', sugarG: 80),
+      for (var i = 0; i < 2; i++)
+        makeClient(
+          id: 'completion-$i',
+          name: '이행률 고객 $i',
+          weekCompletion: lowWeek,
+        ),
+      makeClient(id: 'reply-0', name: '답장 고객 0'),
+      makeClient(id: 'reply-1', name: '답장 고객 1'),
+    ];
+    return <Override>[
+      clientsProvider.overrideWith(
+        (ref) => Stream<List<TrainerClient>>.value(roster),
+      ),
+      unreadCountsProvider.overrideWith(
+        (ref) => Stream<Map<String, int>>.value(const <String, int>{
+          'reply-0': 1,
+          'reply-1': 2,
+        }),
+      ),
+    ];
+  }
+
   testWidgets('is the landing page after a restored session', (tester) async {
     await openDashboard(tester);
     expect(find.text('대시보드'), findsWidgets);
@@ -107,14 +142,16 @@ void main() {
   testWidgets('주의 고객 counts health signals, not the reply backlog', (
     tester,
   ) async {
-    await openDashboard(tester);
+    // 로스터를 이 테스트가 직접 만든다(#907). 데모 시드는 주간 이행률을 **오늘
+    // 요일까지만** 채우므로(`_upToToday`), 기록이 있는 날의 평균으로 판정하는
+    // 이행률 경고가 요일마다 붙었다 떨어졌다 한다 — 시드에 기대면 이 숫자가
+    // 수요일에 하나 늘고 화요일에 하나 줄어, 어느 요일에 CI 가 도느냐로
+    // 통과·실패가 갈렸다.
+    await openDashboard(tester, extraOverrides: attentionRosterOverrides());
 
-    // 답장을 기다리는 스레드가 여섯이지만 주의는 건강 신호만 센다 — 나트륨 5 ·
+    // 답장을 기다리는 스레드가 둘이지만 주의는 건강 신호만 센다 — 나트륨 5 ·
     // 당류 1 · 이행률 2 로 여덟이다. 답장 대기는 목록에는 남되 주의가 아니다.
     // 둘이 다시 합쳐지면 이 카드가 더 큰 수를 말하며 뜻을 잃는다.
-    //
-    // 류태경(벌크업)은 칼로리가 3,120kcal 로 높지만 여기 없다 — 칼로리는 신호가
-    // 아니고, 그의 식단 수치는 목표 안이다(#767·#768).
     final attention = tester.widget<StatCard>(
       find.ancestor(of: find.text('주의 고객'), matching: find.byType(StatCard)),
     );
@@ -143,14 +180,12 @@ void main() {
 
   testWidgets('주의 고객 rows carry the reason and open the section that '
       'fixes it', (tester) async {
-    await openDashboard(tester);
+    await openDashboard(tester, extraOverrides: attentionRosterOverrides());
 
     expect(find.text('확인 필요 고객'), findsOneWidget);
-    // Ten clients carry an alert of some kind — note this list is wider
-    // than the 주의 고객 count above it, which is health signals only and
-    // reads 9. The card shows five, so the overflow link into the
-    // filtered roster is finally reachable; with the old three-client
-    // roster it could never appear.
+    // 신호를 가진 회원은 열이다 — 건강 신호 여덟에 답장 대기 둘. 위의 `주의 고객`
+    // 수(여덟)보다 이 목록이 넓은 것이 정상이다. 카드는 다섯 줄까지만 세우고
+    // 나머지는 링크로 넘긴다.
     expect(find.text('+5명'), findsOneWidget);
 
     // The badge is a client's FIRST alert, and health reasons sort ahead
