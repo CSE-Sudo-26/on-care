@@ -223,9 +223,13 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
                   dates: <DateTime>[
                     for (final DietPeriodDay d in period.days) d.date,
                   ],
+                  // 칼로리 막대는 탄단지로 쌓아 그린다. 나트륨·당류는 쌓을
+                  // 성분이 없으므로 지금처럼 한 색이다.
+                  days: _metric == _Metric.calories ? period.days : null,
                   format: _number,
                   // 지표를 바꾸면 그래프가 처음부터 다시 그려진다.
                   replayKey: _metric,
+                  metric: _metric,
                   weekly: widget.weekly,
                   ticks: _ticks(_metric),
                 ),
@@ -250,6 +254,8 @@ class _PeriodBody extends StatelessWidget {
     required this.replayKey,
     required this.weekly,
     required this.ticks,
+    required this.metric,
+    this.days,
   });
 
   final DietPeriod period;
@@ -263,6 +269,12 @@ class _PeriodBody extends StatelessWidget {
   final List<DateTime> dates;
   final String Function(num) format;
   final Object replayKey;
+
+  /// 칼로리 막대를 탄단지로 쌓기 위한 원본. 나트륨·당류를 볼 때는 null 이다.
+  final List<DietPeriodDay>? days;
+
+  /// 지금 고른 지표. 툴팁이 탄단지를 덧붙일지 판단한다.
+  final _Metric metric;
 
   /// 이번 주면 꺾은선, 이번 달이면 막대.
   final bool weekly;
@@ -401,7 +413,8 @@ class _PeriodBody extends StatelessWidget {
               // 보고 있으면) 마지막 칸까지 전부 그린다.
               todayIndex: _todayIndexIn(dates),
               replayKey: replayKey,
-              goalLabel: '${AppLocalizations.of(context).homeGoal}\n${format(goal)}',
+              goalLabel:
+                  '${AppLocalizations.of(context).homeGoal}\n${format(goal)}',
               formatTick: (double v) => format(v),
             )
           else
@@ -411,7 +424,36 @@ class _PeriodBody extends StatelessWidget {
               goal: goal,
               color: color,
               replayKey: replayKey,
+              // 막대 툴팁이 "무슨 값을 얼마나" 라고 말하려면 지표 이름·단위와
+              // 숫자 서식이 카드 머리 숫자와 같아야 한다.
+              metricLabel: metricLabel,
+              unit: unit,
+              format: format,
+              days: days,
             ),
+          // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
+          if (!weekly && days != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 6,
+              children: <Widget>[
+                _MacroLegend(
+                  color: FigmaColors.macroCarbs,
+                  label: l.homeMacroCarbs,
+                ),
+                _MacroLegend(
+                  color: FigmaColors.macroProtein,
+                  label: l.homeMacroProtein,
+                ),
+                _MacroLegend(
+                  color: FigmaColors.macroFat,
+                  label: l.homeMacroFat,
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -427,6 +469,10 @@ class _PeriodBars extends StatelessWidget {
     required this.goal,
     required this.color,
     required this.replayKey,
+    required this.metricLabel,
+    required this.unit,
+    required this.format,
+    this.days,
   });
 
   final List<double> values;
@@ -435,8 +481,121 @@ class _PeriodBars extends StatelessWidget {
   final Color color;
   final Object replayKey;
 
+  /// 칼로리를 볼 때의 원본. 탄단지가 있는 날은 막대를 셋으로 쌓는다.
+  final List<DietPeriodDay>? days;
+
+  /// 툴팁이 부를 지표 이름(칼로리·나트륨·당류)과 단위, 그리고 카드 머리 숫자와
+  /// 같은 숫자 서식.
+  final String metricLabel;
+  final String unit;
+  final String Function(num) format;
+
+  /// [i] 번째 칸의 원본. 칼로리를 보고 있지 않으면 null 이다.
+  DietPeriodDay? _dayAt(int i) {
+    final List<DietPeriodDay>? source = days;
+    if (source == null || i >= source.length) return null;
+    return source[i];
+  }
+
+  /// 한 막대의 툴팁 내용 — 운동 탭 `운동 현황` 툴팁과 같은 구조다.
+  /// `[색 사각형] 지표  값 단위` 한 줄, 목표를 넘긴 날은 초과분을 한 줄 더.
+  List<InlineSpan> _tipSpans(
+    AppLocalizations l,
+    DateFormat dayFormat,
+    int i,
+    bool hasGoal,
+  ) {
+    final double value = values[i];
+    final bool over = hasGoal && value > goal;
+    final List<InlineSpan> spans = <InlineSpan>[
+      TextSpan(
+        text: '${dayFormat.format(dates[i])}\n',
+        style: const TextStyle(color: AppColors.mutedForeground),
+      ),
+    ];
+    // 기록이 없는 날은 0 이 아니라 '기록 없음' 이다. 0 으로 적으면 굶은 날과
+    // 적지 않은 날이 같은 말이 된다.
+    if (value <= 0) {
+      spans.add(TextSpan(text: l.dietPeriodNoRecord));
+      return spans;
+    }
+    spans.add(
+      WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Container(
+          width: 9,
+          height: 9,
+          margin: const EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(
+            color: over ? FigmaColors.dangerRed : color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+    );
+    spans.add(TextSpan(text: '$metricLabel   ${format(value)} $unit'));
+    // 칼로리 뒤에는 그 칼로리가 어디서 왔는지를 적는다 — 숫자 하나만 보고는
+    // 같은 2,000kcal 이 밥에서 왔는지 기름에서 왔는지 알 수 없다.
+    final DietPeriodDay? day = _dayAt(i);
+    if (day != null && day.hasMacros) {
+      for (final ({Color color, String label, double grams}) m
+          in <({Color color, String label, double grams})>[
+            (
+              color: FigmaColors.macroCarbs,
+              label: l.homeMacroCarbs,
+              grams: day.carbsG,
+            ),
+            (
+              color: FigmaColors.macroProtein,
+              label: l.homeMacroProtein,
+              grams: day.proteinG,
+            ),
+            (
+              color: FigmaColors.macroFat,
+              label: l.homeMacroFat,
+              grams: day.fatG,
+            ),
+          ]) {
+        spans.add(const TextSpan(text: '\n'));
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              width: 9,
+              height: 9,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: m.color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        );
+        spans.add(
+          TextSpan(text: '${m.label}   ${format(m.grams)} ${l.dietUnitG}'),
+        );
+      }
+    }
+    // 막대가 왜 빨간지를 색이 아니라 글로도 말한다.
+    if (over) {
+      spans.add(
+        TextSpan(
+          text: '\n${l.dietPeriodOverGoal(format(value - goal), unit)}',
+          style: const TextStyle(color: FigmaColors.dangerRed),
+        ),
+      );
+    }
+    return spans;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    // `8월 12일 (화)` / `Tue, Aug 12` — 어느 막대가 며칠인지 x축 라벨만으로는
+    // 짚을 수 없다(달은 6칸에 하나만 적는다).
+    final DateFormat dayFormat = DateFormat.MMMEd(
+      Localizations.localeOf(context).toString(),
+    );
     const double chartHeight = 120;
     // 축 위쪽에 여유를 둔다. 목표를 넘은 날이 없으면 목표가 곧 최댓값이 되어
     // 목표선이 차트 맨 위(=바깥)에 놓여 잘려 보이지 않았다.
@@ -482,23 +641,55 @@ class _PeriodBars extends StatelessWidget {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                          child: Container(
+                          child: _Bar(
                             key: Key('diet-period-bar-$i'),
                             height:
                                 chartHeight *
                                 (values[i] / maxValue).clamp(0.0, 1.0) *
                                 chartStagger(t, i, values.length),
-                            decoration: BoxDecoration(
-                              color: hasGoal && values[i] > goal
-                                  ? FigmaColors.dangerRed.withValues(
-                                      alpha: 0.85,
-                                    )
-                                  : color.withValues(alpha: 0.85),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(3),
-                              ),
-                            ),
+                            day: _dayAt(i),
+                            // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
+                            // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
+                            // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
+                            // 초과는 목표선과 툴팁이 말한다.
+                            over: hasGoal && values[i] > goal,
+                            color: color,
                           ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // 막대 위에 겹치는 투명한 hover 영역. 운동 탭 `운동 현황` 이
+              // 쓰는 것과 **같은 툴팁 규격**이라, 두 탭에서 같은 조작이 같은
+              // 모양으로 답한다.
+              Positioned.fill(
+                child: Row(
+                  children: <Widget>[
+                    for (int i = 0; i < values.length; i++)
+                      Expanded(
+                        child: Tooltip(
+                          key: Key('diet-period-bar-tip-$i'),
+                          richMessage: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: FigmaColors.ink,
+                              height: 1.3,
+                            ),
+                            children: _tipSpans(l, dayFormat, i, hasGoal),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F3F5),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: FigmaColors.hairline),
+                            boxShadow: kCardShadow,
+                          ),
+                          child: const SizedBox.expand(),
                         ),
                       ),
                   ],
@@ -528,6 +719,115 @@ class _PeriodBars extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 한 칸의 막대. 탄단지가 있으면 아래에서부터 탄·단·지 순으로 쌓는다.
+///
+/// 쌓는 기준은 **칼로리**다(탄·단 4kcal/g, 지 9kcal/g). 그램으로 쌓으면 지방
+/// 1g 이 탄수화물 1g 과 같은 높이를 차지해, 칼로리 막대인데 칼로리와 다른
+/// 이야기를 하게 된다.
+class _Bar extends StatelessWidget {
+  const _Bar({
+    super.key,
+    required this.height,
+    required this.day,
+    required this.over,
+    required this.color,
+  });
+
+  final double height;
+  final DietPeriodDay? day;
+
+  /// 목표를 넘긴 날인가. 쌓을 성분이 없을 때만 색으로 말한다.
+  final bool over;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final DietPeriodDay? d = day;
+    const BorderRadius radius = BorderRadius.vertical(top: Radius.circular(3));
+    if (d == null || !d.hasMacros) {
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: (over ? FigmaColors.dangerRed : color).withValues(alpha: 0.85),
+          borderRadius: radius,
+        ),
+      );
+    }
+    final double total = d.carbsKcal + d.proteinKcal + d.fatKcal;
+    if (total <= 0) {
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.85),
+          borderRadius: radius,
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: radius,
+      child: SizedBox(
+        height: height,
+        // 위에서부터 지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
+        // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
+        child: Column(
+          // **stretch 여야 한다.** 기본값(center)이면 자식이 가로로 느슨하게
+          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 세 구간이
+          // 통째로 사라진다(#947). 한 색 막대가 멀쩡했던 이유는 그쪽이
+          // `Container` 라서다 — 자식도 크기도 없는 Container 는 들어온 제약만큼
+          // 커지려고 하므로 폭을 다 채운다.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(
+              flex: (d.fatKcal / total * 1000).round(),
+              child: const ColoredBox(color: FigmaColors.macroFat),
+            ),
+            Expanded(
+              flex: (d.proteinKcal / total * 1000).round(),
+              child: const ColoredBox(color: FigmaColors.macroProtein),
+            ),
+            Expanded(
+              flex: (d.carbsKcal / total * 1000).round(),
+              child: const ColoredBox(color: FigmaColors.macroCarbs),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 탄단지 범례 한 칸.
+class _MacroLegend extends StatelessWidget {
+  const _MacroLegend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      Container(
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.mutedForeground,
+        ),
+      ),
+    ],
+  );
 }
 
 class _MetricPill extends StatelessWidget {
