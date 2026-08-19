@@ -151,6 +151,12 @@ void main() {
         widget.decoration?.hintText == '고객에게 전달할 코칭 피드백을 작성하세요.',
   );
 
+  /// 이전 주 이동 버튼. 라벨이 그 버튼이 데려갈 주의 날짜 범위라(#897)
+  /// 고정된 글자로는 집을 수 없다.
+  final Finder prevWeek = find.byKey(
+    const ValueKey<String>('reports-prev-week'),
+  );
+
   Future<ProviderContainer> openReports(
     WidgetTester tester, {
     String? clientId,
@@ -308,13 +314,80 @@ void main() {
     );
   });
 
+  // ---- 요약 카드 자리와 주 이동 라벨 (#897) ----
+
+  testWidgets('넓은 화면에서 요약 카드는 고객 목록 바로 아래에 놓인다 (#897)', (tester) async {
+    await openReports(tester);
+
+    final Finder leftColumn = find.byKey(
+      const ValueKey<String>('reports-left-scroll'),
+    );
+    final Finder summaryTitle = find.text('AI 코칭 보조 · 리포트 요약');
+    expect(summaryTitle, findsOneWidget);
+    // 왼쪽 열 안에 있고, 고객 목록보다 아래다.
+    expect(
+      find.descendant(of: leftColumn, matching: summaryTitle),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(summaryTitle).dy,
+      greaterThan(
+        tester
+            .getTopLeft(
+              find.descendant(of: leftColumn, matching: find.text('고객')),
+            )
+            .dy,
+      ),
+    );
+    // 오른쪽 리포트 열에는 더 이상 같은 카드가 없다.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('reports-report-scroll')),
+        matching: summaryTitle,
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('좁은 화면 목록에서는 요약 자리에 무엇이 뜨는지 알린다 (#897)', (tester) async {
+    await openReports(tester, size: const Size(700, 1000));
+
+    expect(find.text('고객을 선택하면 그 주의 리포트 요약과 코칭 제안이 여기에 표시돼요'), findsOneWidget);
+    // 아직 고른 고객이 없으니 요약을 만들지 않는다.
+    expect(find.text('피드백으로 가져오기'), findsNothing);
+  });
+
+  testWidgets('주 이동 버튼은 그 버튼이 데려갈 주의 날짜 범위를 적는다 (#897)', (tester) async {
+    await openReports(tester);
+
+    final DateTime target = weekStartOf(
+      nowKst(),
+    ).subtract(const Duration(days: 7));
+    final DateTime end = target.add(const Duration(days: 6));
+    expect(
+      tester.widget<ActionButton>(prevWeek).label,
+      '${target.month}월 ${target.day}일 – ${end.month}월 ${end.day}일',
+    );
+
+    await tester.tap(prevWeek);
+    await settle(tester);
+
+    // 한 주 더 뒤로 가면 라벨도 한 주 앞선 범위를 가리킨다.
+    final DateTime next = target.subtract(const Duration(days: 7));
+    final DateTime nextEnd = next.add(const Duration(days: 6));
+    expect(
+      tester.widget<ActionButton>(prevWeek).label,
+      '${next.month}월 ${next.day}일 – ${nextEnd.month}월 ${nextEnd.day}일',
+    );
+  });
+
   testWidgets('과거 주차에서는 미래 이동 없이 이번 주로 복귀할 수 있다', (tester) async {
     await openReports(tester);
 
     expect(find.text('다음 주'), findsNothing);
     expect(find.widgetWithText(ActionButton, '이번 주로'), findsNothing);
 
-    await tester.tap(find.text('이전'));
+    await tester.tap(prevWeek);
     await settle(tester);
 
     final currentWeek = find.widgetWithText(ActionButton, '이번 주로');
@@ -413,7 +486,7 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('이전'));
+    await tester.tap(prevWeek);
     await settle(tester);
     await tester.tap(
       find.byKey(const ValueKey<String>('reports-weekly-retry')),
@@ -596,7 +669,7 @@ void main() {
     final thisWeek = drawnValues();
     expect(thisWeek, hasLength(7));
 
-    await tester.tap(find.text('이전'));
+    await tester.tap(prevWeek);
     await settle(tester);
 
     // 과거 주도 그래프가 그려진다 — 예전에는 이 자리가 통째로 비어 있었다.
@@ -618,12 +691,14 @@ void main() {
   testWidgets('주를 가리키는 말은 이번 주·지난 주·선택 주 셋뿐이다', (tester) async {
     await openReports(tester);
 
-    // 헤더 버튼은 동작이라 주 이름을 쓰지 않는다 — '이전 주' 버튼과 비교 카드의
-    // '이전 주' 열이 같은 말이라 어느 주를 보고 있는지 헷갈렸다.
-    expect(find.text('이전'), findsOneWidget);
+    // 헤더 버튼은 주 이름 대신 **그 버튼이 데려갈 주의 날짜 범위**를 적는다
+    // (#897). '이전 주' 라고 쓰면 비교 카드의 '지난 주' 열과 같은 말이 되어
+    // 어느 주를 보고 있는지 헷갈린다.
+    expect(prevWeek, findsOneWidget);
+    expect(tester.widget<ActionButton>(prevWeek).label, contains(' – '));
     expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
 
-    await tester.tap(find.text('이전'));
+    await tester.tap(prevWeek);
     await settle(tester);
 
     // 과거 주에서는 제목도 보고 있는 주를 따라간다.

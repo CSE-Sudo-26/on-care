@@ -2596,6 +2596,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsGoThisWeek => '이번 주로';
 
   @override
+  String get reportsSummaryEmptyClient =>
+      '고객을 선택하면 그 주의 리포트 요약과 코칭 제안이 여기에 표시돼요';
+
+  @override
   String get reportsLastWeek => '지난 주';
 
   @override
