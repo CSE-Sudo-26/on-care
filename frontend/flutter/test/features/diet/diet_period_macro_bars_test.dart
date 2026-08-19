@@ -1,0 +1,198 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/diet_period.dart';
+import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/fake_diet_repository.dart';
+
+/// 이번 달 칼로리 막대는 **탄단지로 쌓아** 그린다.
+///
+/// 같은 2,000kcal 이라도 밥에서 온 것과 기름에서 온 것은 다른 하루다. 숫자
+/// 하나만으로는 그 차이가 화면에 없었다.
+class _MacroRepository extends FakeDietRepository {
+  @override
+  Future<DietDay> fetchByDate(DateTime date) async => _day;
+
+  @override
+  Future<DietDay> fetchToday() async => _day;
+
+  /// 탄 200g(800kcal) · 단 100g(400kcal) · 지 40g(360kcal).
+  static const DietDay _day = DietDay(
+    entries: <DietEntry>[
+      DietEntry(
+        id: 'e',
+        mealType: MealType.lunch,
+        timeLabel: '12:00',
+        foods: <FoodItem>[
+          FoodItem(
+            name: '한 끼',
+            calories: 1560,
+            sodiumMg: 1200,
+            sugarG: 12,
+            carbsG: 200,
+            proteinG: 100,
+            fatG: 40,
+          ),
+        ],
+        totalCalories: 1560,
+        sodiumMg: 1200,
+        sugarG: 12,
+        carbsG: 200,
+        proteinG: 100,
+        fatG: 40,
+      ),
+    ],
+    totalCalories: 1560,
+    totalSodiumMg: 1200,
+    totalSugarG: 12,
+    macros: DietMacros(
+      carbsPct: 51,
+      proteinPct: 26,
+      fatPct: 23,
+      carbsG: 200,
+      proteinG: 100,
+      fatG: 40,
+    ),
+    aiCoachMessage: '',
+  );
+}
+
+Widget _app({required List<Override> overrides}) => ProviderScope(
+  overrides: overrides,
+  child: const MaterialApp(
+    locale: Locale('ko'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: DietRecordPage(),
+  ),
+);
+
+void main() {
+  group('DietPeriodDay 탄단지', () {
+    test('탄·단은 4kcal/g, 지방은 9kcal/g 로 환산한다', () {
+      final DietPeriodDay day = DietPeriodDay(
+        date: _anyDate,
+        calories: 1560,
+        sodiumMg: 1200,
+        sugarG: 12,
+        carbsG: 200,
+        proteinG: 100,
+        fatG: 40,
+      );
+
+      expect(day.carbsKcal, 800);
+      expect(day.proteinKcal, 400);
+      expect(day.fatKcal, 360);
+      expect(day.hasMacros, isTrue);
+    });
+
+    test('영양이 없는 날은 쌓지 않는다', () {
+      final DietPeriodDay day = DietPeriodDay(
+        date: _anyDate,
+        calories: 1200,
+        sodiumMg: 900,
+        sugarG: 8,
+      );
+
+      expect(day.hasMacros, isFalse);
+    });
+  });
+
+  group('이번 달 칼로리 막대 (#7)', () {
+    Future<void> openMonth(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(_MacroRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('diet-period-tab-month')));
+      await tester.pumpAndSettle();
+    }
+
+    List<Color> segmentColorsOf(WidgetTester tester, int index) => tester
+        .widgetList<ColoredBox>(
+          find.descendant(
+            of: find.byKey(Key('diet-period-bar-$index')),
+            matching: find.byType(ColoredBox),
+          ),
+        )
+        .map((ColoredBox b) => b.color)
+        .toList();
+
+    testWidgets('막대가 탄단지 3색으로 쌓인다', (WidgetTester tester) async {
+      await openMonth(tester);
+
+      // 위에서부터 지방 · 단백질 · 탄수화물 — 바닥부터 읽으면 라벨 순서와 같다.
+      expect(segmentColorsOf(tester, 0), <Color>[
+        FigmaColors.macroFat,
+        FigmaColors.macroProtein,
+        FigmaColors.macroCarbs,
+      ]);
+    });
+
+    testWidgets('세 색은 운동 탭 그래프의 3색과 겹치지 않는다', (WidgetTester tester) async {
+      // 같은 회원이 두 탭을 오가며 색을 같은 뜻으로 읽으면 안 된다.
+      const List<Color> exercise = <Color>[
+        FigmaColors.primary,
+        Color(0xFF1B6FA8),
+        Color(0xFFD4EEF8),
+      ];
+      for (final Color macro in <Color>[
+        FigmaColors.macroCarbs,
+        FigmaColors.macroProtein,
+        FigmaColors.macroFat,
+      ]) {
+        expect(exercise.contains(macro), isFalse, reason: '$macro');
+      }
+    });
+
+    testWidgets('툴팁이 탄단지 수치를 함께 적는다', (WidgetTester tester) async {
+      await openMonth(tester);
+
+      final Tooltip tip = tester.widget<Tooltip>(
+        find.byKey(Key('diet-period-bar-tip-${nowKst().day - 1}')),
+      );
+      final String text = tip.richMessage!.toPlainText();
+
+      expect(text, contains('탄수화물'));
+      expect(text, contains('200'));
+      expect(text, contains('단백질'));
+      expect(text, contains('100'));
+      expect(text, contains('지방'));
+      expect(text, contains('40'));
+    });
+
+    testWidgets('나트륨으로 바꾸면 쌓지 않는다', (WidgetTester tester) async {
+      await openMonth(tester);
+
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietRecordPage)),
+      );
+      await tester.tap(find.text(l.dietSodium));
+      await tester.pumpAndSettle();
+
+      // 나트륨에는 쌓을 성분이 없다 — 한 색 막대로 돌아간다.
+      expect(segmentColorsOf(tester, 0), isEmpty);
+    });
+  });
+}
+
+final DateTime _anyDate = DateTime(2026, 8, 19);
