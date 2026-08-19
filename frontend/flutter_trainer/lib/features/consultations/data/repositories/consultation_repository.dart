@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
@@ -28,8 +29,16 @@ abstract interface class ConsultationRepository {
   /// Pending requests, newest first. `status` may be `pending` or `all`.
   Future<List<ConsultationRequest>> fetch({String status = 'pending'});
 
+  /// Subscribes to the inbox for [status] — the open screen keeps up with
+  /// requests that arrive while the trainer is looking at it. (#917)
+  Stream<List<ConsultationRequest>> watch({String status = 'pending'});
+
   /// Number of undecided requests — the sidebar badge.
   Future<int> pendingCount();
+
+  /// Subscribes to the badge count. Without this the badge stays at the
+  /// number it was first given until the trainer opens the inbox. (#917)
+  Stream<int> watchPendingCount();
 
   /// Accepts [id], creating the trainer↔member link server-side.
   Future<void> accept(String id, {ConsultationSchedule? schedule});
@@ -86,9 +95,18 @@ class DemoConsultationRepository implements ConsultationRepository {
       ? List<ConsultationRequest>.unmodifiable(_requests)
       : _requests.where((request) => request.status == status).toList();
 
+  /// 데모의 인박스는 메모리에 있다. 폴링해도 같은 값을 다시 세는 것뿐이라
+  /// 한 번 내고 끝내고, 수락·거절 뒤의 갱신은 지금처럼 invalidate 가 맡는다.
+  @override
+  Stream<List<ConsultationRequest>> watch({String status = 'pending'}) =>
+      Stream<List<ConsultationRequest>>.fromFuture(fetch(status: status));
+
   @override
   Future<int> pendingCount() async =>
       _requests.where((request) => request.isPending).length;
+
+  @override
+  Stream<int> watchPendingCount() => Stream<int>.fromFuture(pendingCount());
 
   @override
   Future<void> accept(String id, {ConsultationSchedule? schedule}) async {
@@ -129,9 +147,16 @@ class DemoConsultationRepository implements ConsultationRepository {
 /// Real backend: `/trainer/consultations`.
 class DioConsultationRepository implements ConsultationRepository {
   /// Creates the API-backed repository.
-  const DioConsultationRepository(this._dio);
+  const DioConsultationRepository(
+    this._dio, {
+    this.pollInterval = badgePollInterval,
+  });
 
   final Dio _dio;
+
+  /// 인박스와 그 배지를 다시 읽는 주기. 같은 값을 쓰는 이유는 알림함과 같다 —
+  /// 목록을 열어 둔 채 배지만 올라가면 두 숫자가 어긋나 보인다.
+  final Duration pollInterval;
 
   @override
   bool get supportsInbox => true;
@@ -151,6 +176,17 @@ class DioConsultationRepository implements ConsultationRepository {
       throw AppError.fromDio(e);
     }
   }
+
+  @override
+  Stream<List<ConsultationRequest>> watch({String status = 'pending'}) =>
+      activePollingStream<List<ConsultationRequest>>(
+        load: () => fetch(status: status),
+        interval: pollInterval,
+      );
+
+  @override
+  Stream<int> watchPendingCount() =>
+      activePollingStream<int>(load: pendingCount, interval: pollInterval);
 
   @override
   Future<int> pendingCount() async {
@@ -234,21 +270,22 @@ final consultationFilterProvider = StateProvider<String>(
 );
 
 /// The inbox list for the active filter.
-final consultationsProvider = FutureProvider<List<ConsultationRequest>>((
-  ref,
-) async {
-  final status = ref.watch(consultationFilterProvider);
-  return ref.watch(consultationRepositoryProvider).fetch(status: status);
-}, name: 'consultations');
+final consultationsProvider =
+    StreamProvider.autoDispose<List<ConsultationRequest>>((ref) {
+      final status = ref.watch(consultationFilterProvider);
+      return ref.watch(consultationRepositoryProvider).watch(status: status);
+    }, name: 'consultations');
 
 /// Pending count for the sidebar badge.
 ///
 /// Its own request rather than `consultationsProvider.length`: the badge
 /// must stay correct while the trainer is looking at the `all` filter, and
 /// it is read from the sidebar on every page.
-final consultationPendingCountProvider = FutureProvider<int>((ref) async {
-  if (!ref.watch(consultationInboxEnabledProvider)) return 0;
-  return ref.watch(consultationRepositoryProvider).pendingCount();
+final consultationPendingCountProvider = StreamProvider.autoDispose<int>((ref) {
+  if (!ref.watch(consultationInboxEnabledProvider)) {
+    return Stream<int>.value(0);
+  }
+  return ref.watch(consultationRepositoryProvider).watchPendingCount();
 }, name: 'consultationPendingCount');
 
 /// Accepts a request and refreshes everything it changed.

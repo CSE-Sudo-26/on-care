@@ -18,11 +18,17 @@ class DioChatRepository implements ChatRepository {
   DioChatRepository(
     this._dio, {
     this.pollInterval = const Duration(seconds: 3),
+    this.unreadPollInterval = badgePollInterval,
     this.requestIdFactory = newClientRequestId,
   });
 
   final Dio _dio;
   final Duration pollInterval;
+
+  /// 안읽음 배지를 다시 세는 주기. 열려 있는 스레드보다 느슨하다 — 배지는
+  /// '몇 초 안에' 가 아니라 '놓치지 않게' 가 목적이고, 한 번 읽을 때마다
+  /// 담당 회원 전체를 세는 요청이다.
+  final Duration unreadPollInterval;
   final String Function() requestIdFactory;
   final Map<({String clientId, String text}), String> _pendingRequestIds =
       <({String clientId, String text}), String>{};
@@ -82,9 +88,19 @@ class DioChatRepository implements ChatRepository {
     }
   }
 
+  /// 안읽음 수를 주기적으로 다시 센다.
+  ///
+  /// 한 번만 읽고 끝내면 트레이너가 채팅을 열기 전까지 배지가 처음 센 숫자에
+  /// 멈춰, 회원이 보낸 새 메시지가 사이드바에도 대시보드 '답장 필요' 에도
+  /// 나타나지 않는다 — 콘솔을 하루 종일 띄워 두는 화면에서 놓치는 경로가
+  /// 된다(#917). 쓰기 직후의 즉시 반영은 지금처럼 provider invalidate 가
+  /// 맡고, 여기서는 회원 쪽에서 일어난 변화를 따라잡는다.
   @override
   Stream<Map<String, int>> watchUnreadCounts() =>
-      Stream<Map<String, int>>.fromFuture(_fetchUnread());
+      activePollingStream<Map<String, int>>(
+        load: _fetchUnread,
+        interval: unreadPollInterval,
+      );
 
   Future<Map<String, int>> _fetchUnread() async {
     try {

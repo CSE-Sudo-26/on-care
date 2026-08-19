@@ -40,6 +40,8 @@ const AppConfig _realConfig = AppConfig(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _MockDio dio;
   late DioConsultationRepository repo;
 
@@ -294,6 +296,69 @@ void main() {
       addTearDown(container.dispose);
 
       expect(await container.read(consultationPendingCountProvider.future), 1);
+    });
+
+    test('the pending badge keeps counting so a request that arrives while the '
+        'trainer works elsewhere shows up (#917)', () async {
+      var calls = 0;
+      when(
+        () => dio.get<Map<String, Object?>>(
+          '/trainer/consultations/pending-count',
+        ),
+      ).thenAnswer((_) async {
+        calls += 1;
+        return _ok<Map<String, Object?>>(<String, Object?>{
+          'count': calls,
+        }, '/trainer/consultations/pending-count');
+      });
+
+      final emissions =
+          await DioConsultationRepository(
+                dio,
+                pollInterval: const Duration(milliseconds: 5),
+              )
+              .watchPendingCount()
+              .take(2)
+              .toList()
+              .timeout(const Duration(seconds: 1));
+
+      expect(emissions, <int>[1, 2]);
+    });
+
+    test('the open inbox re-reads its own filter', () async {
+      var calls = 0;
+      when(
+        () => dio.get<List<dynamic>>(
+          '/trainer/consultations',
+          queryParameters: <String, Object?>{'status': 'pending'},
+        ),
+      ).thenAnswer((_) async {
+        calls += 1;
+        return _ok<List<dynamic>>(<dynamic>[
+          <String, Object?>{
+            'id': 'consult-$calls',
+            'member_id': 'm1',
+            'member_name': '김하늘',
+            'goal': 'fitness',
+            'purpose': 'general',
+            'preferred_date': '2026-08-20',
+            'preferred_time': 'evening',
+            'status': 'pending',
+            'message': null,
+            'created_at': '2026-08-19T09:00:00Z',
+          },
+        ], '/trainer/consultations');
+      });
+
+      final emissions = await DioConsultationRepository(
+        dio,
+        pollInterval: const Duration(milliseconds: 5),
+      ).watch().take(2).toList().timeout(const Duration(seconds: 1));
+
+      expect(emissions.map((rows) => rows.single.id).toList(), <String>[
+        'consult-1',
+        'consult-2',
+      ]);
     });
 
     test('the demo source removes decided requests from pending', () async {

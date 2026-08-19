@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/features/notifications/domain/entities/trainer_notification.dart';
 
 /// 트레이너 알림함을 읽고 읽음 처리한다. (#503)
@@ -25,8 +26,14 @@ abstract interface class TrainerNotificationRepository {
   /// 받은 알림(최신순).
   Future<List<TrainerNotification>> fetch();
 
+  /// 받은 알림을 구독한다 — 화면이 열려 있는 동안 새 알림을 따라잡는다.
+  Stream<List<TrainerNotification>> watch();
+
   /// 사이드바 배지가 읽는 미읽음 수.
   Future<int> unreadCount();
+
+  /// 미읽음 수를 구독한다. 배지가 처음 센 숫자에 멈추지 않게 하는 쪽. (#917)
+  Stream<int> watchUnreadCount();
 
   /// 한 건 읽음 처리.
   Future<void> markRead(String id);
@@ -47,8 +54,17 @@ class DemoNotificationRepository implements TrainerNotificationRepository {
   Future<List<TrainerNotification>> fetch() async =>
       const <TrainerNotification>[];
 
+  /// 데모에는 알림을 만드는 회원 백엔드가 없다. 폴링해 봐야 같은 빈 목록을
+  /// 다시 세는 요청이라, 한 번 내고 끝낸다.
+  @override
+  Stream<List<TrainerNotification>> watch() =>
+      Stream<List<TrainerNotification>>.value(const <TrainerNotification>[]);
+
   @override
   Future<int> unreadCount() async => 0;
+
+  @override
+  Stream<int> watchUnreadCount() => Stream<int>.value(0);
 
   @override
   Future<void> markRead(String id) async {}
@@ -59,9 +75,16 @@ class DemoNotificationRepository implements TrainerNotificationRepository {
 
 /// 실 백엔드 구현.
 class DioNotificationRepository implements TrainerNotificationRepository {
-  const DioNotificationRepository(this._dio);
+  const DioNotificationRepository(
+    this._dio, {
+    this.pollInterval = badgePollInterval,
+  });
 
   final Dio _dio;
+
+  /// 알림함과 그 배지를 다시 읽는 주기. 두 값이 같은 주기를 쓰는 이유는
+  /// 알림함을 열어 둔 채로 배지만 올라가면 목록과 숫자가 어긋나 보여서다.
+  final Duration pollInterval;
 
   @override
   bool get supportsInbox => true;
@@ -78,6 +101,17 @@ class DioNotificationRepository implements TrainerNotificationRepository {
       throw AppError.fromDio(e);
     }
   }
+
+  @override
+  Stream<List<TrainerNotification>> watch() =>
+      activePollingStream<List<TrainerNotification>>(
+        load: fetch,
+        interval: pollInterval,
+      );
+
+  @override
+  Stream<int> watchUnreadCount() =>
+      activePollingStream<int>(load: unreadCount, interval: pollInterval);
 
   @override
   Future<int> unreadCount() async {
@@ -131,13 +165,18 @@ final notificationInboxEnabledProvider = Provider<bool>(
 );
 
 /// 받은 알림 목록.
-final trainerNotificationsProvider = FutureProvider<List<TrainerNotification>>((
+///
+/// 스트림인 이유는 배지와 짝을 맞추기 위해서다 — 알림함을 열어 둔 채 배지만
+/// 올라가면 목록에 없는 알림이 숫자로만 존재하게 된다. (#917)
+final trainerNotificationsProvider = StreamProvider<List<TrainerNotification>>((
   ref,
 ) {
-  return ref.watch(trainerNotificationRepositoryProvider).fetch();
+  return ref.watch(trainerNotificationRepositoryProvider).watch();
 }, name: 'trainerNotifications');
 
 /// 미읽음 수 — 사이드바 배지.
-final trainerUnreadNotificationsProvider = FutureProvider<int>((ref) {
-  return ref.watch(trainerNotificationRepositoryProvider).unreadCount();
+final trainerUnreadNotificationsProvider = StreamProvider.autoDispose<int>((
+  ref,
+) {
+  return ref.watch(trainerNotificationRepositoryProvider).watchUnreadCount();
 }, name: 'trainerUnreadNotifications');

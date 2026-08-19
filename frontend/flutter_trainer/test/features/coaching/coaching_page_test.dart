@@ -1418,6 +1418,9 @@ void main() {
         token: 'demo-trainer-token',
         extraOverrides: <Override>[
           appConfigProvider.overrideWithValue(realConfig),
+          // AI 코칭 탭을 보는 테스트다 — 사이드바 배지의 폴링은 여기서
+          // 검증할 것이 아니라 멈춰 둔다.
+          ...stillBadges(),
           clientRepositoryProvider.overrideWithValue(
             const _FixedClientRepository(<TrainerClient>[realClient]),
           ),

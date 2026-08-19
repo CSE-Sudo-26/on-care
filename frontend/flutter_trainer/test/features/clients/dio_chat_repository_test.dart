@@ -306,6 +306,54 @@ void main() {
     expect(unread['m2'], 0);
   });
 
+  test('watchUnreadCounts keeps counting so a message that arrives while the '
+      'trainer is elsewhere reaches the badge (#917)', () async {
+    var calls = 0;
+    when(
+      () => dio.get<Map<String, Object?>>('/trainer/chat/unread'),
+    ).thenAnswer((_) async {
+      calls += 1;
+      return _ok<Map<String, Object?>>(<String, Object?>{
+        'm1': calls,
+      }, '/trainer/chat/unread');
+    });
+
+    final emissions = await DioChatRepository(
+      dio,
+      unreadPollInterval: const Duration(milliseconds: 5),
+    ).watchUnreadCounts().take(2).toList().timeout(const Duration(seconds: 1));
+
+    expect(
+      emissions.map((counts) => counts['m1']).toList(),
+      <int>[1, 2],
+      reason: '한 번 세고 끝나면 배지가 처음 숫자에 멈춘다',
+    );
+  });
+
+  test('watchUnreadCounts stops counting once nothing listens', () async {
+    var calls = 0;
+    when(
+      () => dio.get<Map<String, Object?>>('/trainer/chat/unread'),
+    ).thenAnswer((_) async {
+      calls += 1;
+      return _ok<Map<String, Object?>>(
+        const <String, Object?>{},
+        '/trainer/chat/unread',
+      );
+    });
+
+    final subscription = DioChatRepository(
+      dio,
+      unreadPollInterval: const Duration(milliseconds: 5),
+    ).watchUnreadCounts().listen((_) {});
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    await subscription.cancel();
+    final int afterCancel = calls;
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(calls, afterCancel);
+  });
+
   test('markThreadRead POSTs to the read endpoint', () async {
     when(
       () => dio.post<Map<String, Object?>>('/trainer/clients/m1/chat/read'),
