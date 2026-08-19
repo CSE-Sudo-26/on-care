@@ -26,6 +26,8 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
@@ -38,6 +40,7 @@ import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
+import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -926,7 +929,10 @@ class _MemberProgramList extends StatefulWidget {
 }
 
 class _MemberProgramListState extends State<_MemberProgramList> {
-  static const double _baseRowHeight = 84;
+  /// 한 줄 높이. 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
+  /// 목표가 `lastRoutine` 과 자리를 다투지 않고 늘 보이게 되면서(#898)
+  /// 한 줄만큼 높아졌다.
+  static const double _baseRowHeight = 100;
   static const int _visibleRows = 5;
 
   final ScrollController _scroll = ScrollController();
@@ -1023,11 +1029,14 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                     color: AppColors.foreground,
                                   ),
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 2),
+                                // 목표는 늘 보인다. 전에는 `lastRoutine` 이
+                                // 비었을 때만 그 자리를 빌려 써서, 루틴을 한
+                                // 번이라도 보낸 고객은 목표가 사라졌다(#898).
+                                ClientGoalLabel(client: client),
+                                const SizedBox(height: 2),
                                 Text(
-                                  client.lastRoutine == '-'
-                                      ? client.goal
-                                      : client.lastRoutine,
+                                  client.lastRoutine,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -1035,27 +1044,34 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                     fontSize: 11.5,
                                   ),
                                 ),
-                                const SizedBox(height: 3),
-                                // 행 높이는 `_rowHeight` 로 고정이라 이 줄이 두
-                                // 줄로 접히면 그대로 넘친다. 영어의
-                                // `Workout completion 72%` 는 배율 1.3 에서
-                                // 접혔다(#849). 잘라내지 않고 줄여서 그린다 —
-                                // 말줄임하면 정작 필요한 이행률 숫자가 사라진다.
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    recordedCompletionMean(client) == null
+                                const SizedBox(height: 4),
+                                // 이행률은 막대로 그린다 — 숫자만 적혀 있으면
+                                // 목록을 훑으며 누가 처지는지 견주려고 다섯
+                                // 개를 눈으로 비교해야 했다(#899). `고객 관리`
+                                // 탭 카드가 이미 쓰던 [라벨][막대][값] 모양을
+                                // 그대로 가져온다.
+                                //
+                                // 라벨은 고정 폭 안에서 줄여 그린다. 한 줄
+                                // 글로 두었을 때 영어의 `Workout completion
+                                // 72%` 가 배율 1.3 에서 접혀 고정 행 높이를
+                                // 넘긴 적이 있다(#849).
+                                () {
+                                  final mean = recordedCompletionMean(client);
+                                  return InlineBarValue(
+                                    label: l.reportsCompletionAvg,
+                                    fraction: mean == null ? null : mean / 100,
+                                    // 기록이 없으면 `-` 가 아니라 왜 빈지를
+                                    // 적는다. 줄 전체가 흐려져 읽거나 누를
+                                    // 것이 없다는 뜻이 함께 전해진다.
+                                    text: mean == null
                                         ? l.reportsDataInsufficient
-                                        : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
-                                    maxLines: 1,
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
+                                        : '${mean.round()}%',
+                                    // 주의 배지와 같은 기준.
+                                    warn: mean != null && mean < 70,
+                                    // `데이터 부족` 이 들어갈 폭.
+                                    valueWidth: mean == null ? 60 : 40,
+                                  );
+                                }(),
                               ],
                             ),
                           ),
@@ -1161,8 +1177,62 @@ class _ProgramMemberSummary extends ConsumerWidget {
                 ? '-'
                 : l.minutesShort(minutes),
           ),
+          const SizedBox(height: AppSpacing.md),
+          _WeekCompletionBars(client: client),
         ],
       ),
+    );
+  }
+}
+
+/// 요일별 운동 이행률(월→일). (#899)
+///
+/// 프로그램을 짜는 화면인데 이 회원의 한 주가 어떻게 흘렀는지가 없었다 —
+/// 어느 요일이 비었는지가 다음 주 프로그램을 정하는 자료다.
+///
+/// 리포트 탭이 쓰는 [BarSeriesChart] 를 그대로 쓴다. 두 탭이 같은 그림으로
+/// 말해야 트레이너가 같은 값을 두 번 읽지 않는다.
+class _WeekCompletionBars extends StatelessWidget {
+  const _WeekCompletionBars({required this.client});
+
+  final TrainerClient client;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final week = client.weekCompletion;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          l.reportsCompletionByDay,
+          style: const TextStyle(
+            color: AppColors.subtleForeground,
+            fontSize: 10.5,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        if (week.length != weekdayCount)
+          EmptyHint(message: l.reportsNoWorkoutsThisWeek)
+        else
+          BarSeriesChart(
+            key: const ValueKey<String>('program-week-completion-chart'),
+            values: week,
+            labels: weekdayLabels(l),
+            maxValue: 100,
+            height: 72,
+            showValues: true,
+            valueSuffix: '%',
+            // 로스터의 계열은 늘 이번 주다 — 아직 오지 않은 요일을 0% 로
+            // 그리면 `0% 수행` 이라는 다른 뜻이 된다.
+            pendingFromIndex: elapsedWeekdays(nowKst()),
+            // 지난 날인데 기록이 없는 요일도 0% 가 아니다.
+            missingIndices: <int>{
+              for (var i = 0; i < elapsedWeekdays(nowKst()); i++)
+                if (i < week.length && week[i] == 0) i,
+            },
+          ),
+      ],
     );
   }
 }

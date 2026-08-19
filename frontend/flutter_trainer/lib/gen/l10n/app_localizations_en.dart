@@ -2692,6 +2692,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsGoThisWeek => 'Go to this week';
 
   @override
+  String get reportsSummaryEmptyClient =>
+      'Select a client to see their weekly summary and coaching suggestions here';
+
+  @override
   String get reportsLastWeek => 'Last week';
 
   @override

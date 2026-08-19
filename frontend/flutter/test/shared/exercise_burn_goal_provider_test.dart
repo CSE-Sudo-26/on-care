@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
@@ -106,9 +107,9 @@ void main() {
     ));
 
     final UserProfile updatedProfile = await repository.updateHealthGoals(
-      weeklyWorkoutGoal: 5,
-      weeklyExerciseMinutesGoal: 240,
-      weeklyBurnGoal: 900,
+      weeklyWorkoutGoal: const GoalUpdate(5),
+      weeklyExerciseMinutesGoal: const GoalUpdate(240),
+      weeklyBurnGoal: const GoalUpdate(900),
     );
     container
         .read(profileProvider.notifier)

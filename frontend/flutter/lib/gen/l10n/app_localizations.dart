@@ -3158,6 +3158,24 @@ abstract class AppLocalizations {
   /// **'Daily fat limit (g)'**
   String get myGoalFat;
 
+  /// Helper under the calorie goal field when it was derived from the macro fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated from your carb, protein and fat goals'**
+  String get myGoalCaloriesFromMacros;
+
+  /// Explains the placeholder grams shown in the macro fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested split for {kcal} kcal: 50% carbs · 30% protein · 20% fat'**
+  String myGoalMacroSuggestionNote(int kcal);
+
+  /// Button that fills the macro fields with the suggested grams.
+  ///
+  /// In en, this message translates to:
+  /// **'Use suggested split'**
+  String get myGoalMacroApplySuggestion;
+
   /// Health goal field label.
   ///
   /// In en, this message translates to:

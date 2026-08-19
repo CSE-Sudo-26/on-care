@@ -346,6 +346,10 @@ class _ConversationTile extends StatelessWidget {
                           ),
                         ],
                       ),
+                      // 오른쪽 대화 패널 머리에는 목표가 있는데 정작 고객을
+                      // 고르는 목록에는 없었다(#898).
+                      const SizedBox(height: 2),
+                      ClientGoalLabel(client: client),
                       const SizedBox(height: 3),
                       Row(
                         children: <Widget>[
