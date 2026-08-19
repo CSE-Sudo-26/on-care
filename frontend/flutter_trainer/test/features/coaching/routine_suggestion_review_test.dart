@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_suggestion_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_suggestion.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
@@ -11,8 +12,7 @@ import '../../helpers/pump_app.dart';
 
 /// 검토 호출을 기록하는 가짜 저장소. 지연을 둘 수 있어 '처리 중 두 번 클릭'을
 /// 재현한다.
-class _FakeSuggestionRepository
-    implements TrainerRoutineSuggestionRepository {
+class _FakeSuggestionRepository implements TrainerRoutineSuggestionRepository {
   _FakeSuggestionRepository({
     required this.byMember,
     this.delay = Duration.zero,
@@ -135,6 +135,86 @@ void main() {
   Finder editButton(RoutineSuggestion s) =>
       find.byKey(ValueKey<String>('routine-suggestion-edit-${s.id}'));
 
+  group('동작 버튼의 생김새와 자리 (#939)', () {
+    testWidgets('수정은 이름 줄 오른쪽 끝의 연필 아이콘 버튼이다', (tester) async {
+      await openProgramTab(tester);
+
+      // 판단이 아니라 보조 동작이다. 아래 줄에 같은 크기로 세워 두면
+      // `추천 안 함`·`추천` 과 함께 셋 중 하나를 고르는 것처럼 읽힌다.
+      final IconButton edit = tester.widget<IconButton>(editButton(_shoulder));
+      expect((edit.icon as Icon).icon, Icons.edit_outlined);
+      expect(edit.color, AppColors.primary);
+
+      // 손볼 대상(운동 이름·시간) 옆에 있다 — 아래 판단 줄이 아니다.
+      final Rect editRect = tester.getRect(editButton(_shoulder));
+      final Rect nameRect = tester.getRect(find.text(_shoulder.name));
+      final Rect approveRect = tester.getRect(approveButton(_shoulder));
+      expect(editRect.left, greaterThan(nameRect.right));
+      expect(editRect.center.dy, lessThan(approveRect.top));
+    });
+
+    testWidgets('추천 안 함도 테두리를 가진 버튼이다', (tester) async {
+      await openProgramTab(tester);
+
+      // 예전에는 흐린 글자만 있는 TextButton 이라 카드 안의 설명 문구와
+      // 구별되지 않아, 누를 수 있는 것인지 알 수 없었다.
+      expect(
+        tester.widget(dismissButton(_shoulder)),
+        isA<OutlinedButton>(),
+        reason: '테두리가 없으면 누를 수 있는 것으로 읽히지 않는다',
+      );
+      expect(find.byType(TextButton), findsNothing);
+    });
+
+    testWidgets('버튼 어디에도 검은 윤곽선이 없다', (tester) async {
+      await openProgramTab(tester);
+
+      // 테마에 버튼 스타일이 없어 기본값(colorScheme.outline)을 쓰면 이 버튼만
+      // 검은 윤곽선으로 나온다.
+      final OutlinedButton dismiss = tester.widget<OutlinedButton>(
+        dismissButton(_shoulder),
+      );
+      final BorderSide? side = dismiss.style!.side!.resolve(<WidgetState>{});
+      expect(side, isNotNull);
+      expect(side!.color, AppColors.primary.withValues(alpha: 0.45));
+      expect(
+        dismiss.style!.foregroundColor!.resolve(<WidgetState>{}),
+        AppColors.primary,
+      );
+    });
+
+    testWidgets('아래 줄에는 판단 둘만 남는다', (tester) async {
+      await openProgramTab(tester);
+
+      // 카드 하나에 결정 둘 — 추천 안 함 · 고객에게 추천.
+      expect(find.text('추천 안 함'), findsNWidgets(2));
+      expect(find.text('고객에게 추천'), findsNWidgets(2));
+      // `회원` 은 이 화면의 다른 문구(`고객 관리` 등)와 어긋난다.
+      expect(find.text('회원에게 추천'), findsNothing);
+    });
+
+    testWidgets('검토 중에는 세 동작이 모두 잠긴다', (tester) async {
+      await openProgramTab(tester, delay: const Duration(milliseconds: 300));
+
+      await tester.tap(approveButton(_shoulder));
+      await tester.pump();
+
+      expect(
+        tester.widget<IconButton>(editButton(_shoulder)).onPressed,
+        isNull,
+      );
+      expect(
+        tester.widget<OutlinedButton>(dismissButton(_shoulder)).onPressed,
+        isNull,
+      );
+      expect(
+        tester.widget<FilledButton>(approveButton(_shoulder)).onPressed,
+        isNull,
+      );
+      await tester.pumpAndSettle();
+    });
+  });
+
   testWidgets('pending suggestions show what they are and why', (tester) async {
     await openProgramTab(tester);
 
@@ -170,10 +250,7 @@ void main() {
 
     expect(repo.approvals, <String>[_shoulder.id]);
     // 그대로 승인이므로 고친 값은 없다.
-    expect(
-      repo.approvalEdits.single.values.every((v) => v == null),
-      isTrue,
-    );
+    expect(repo.approvalEdits.single.values.every((v) => v == null), isTrue);
     expect(find.text(_shoulder.name), findsNothing);
     expect(find.textContaining('추천했어요'), findsOneWidget);
     expect(find.text('검토 필요 1'), findsOneWidget);
