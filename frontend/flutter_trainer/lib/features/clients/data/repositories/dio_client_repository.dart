@@ -21,9 +21,22 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 /// they throw [UnsupportedError] — the demo-only add/activate UI is hidden
 /// in real-API mode.
 class DioClientRepository implements ClientRepository, ClientDataRefresher {
-  DioClientRepository(this._dio);
+  DioClientRepository(
+    this._dio, {
+    this.pollInterval = const Duration(seconds: 30),
+  });
 
   final Dio _dio;
+
+  /// 명단과 그 회원의 기록을 다시 읽는 주기.
+  ///
+  /// 회원이 식단 사진을 올리거나 운동을 마치는 것은 트레이너가 누르는 일이
+  /// 아니라, 여기서 따라잡지 않으면 옆에 띄워 둔 화면이 낡은 값을 계속
+  /// 보여 준다 — 코칭은 그 값을 보면서 하는 일이라 값이 낡으면 판단이
+  /// 낡는다(#918). 채팅(3초)만큼 잦을 이유는 없다. 기록은 초 단위가 아니라
+  /// 분 단위로 쌓인다.
+  final Duration pollInterval;
+
   final StreamController<String?> _refreshes =
       StreamController<String?>.broadcast(sync: true);
 
@@ -34,7 +47,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<TrainerClient>> watchClients() =>
       activePollingStream<List<TrainerClient>>(
         load: _fetchClients,
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(null),
       );
 
@@ -49,7 +62,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
       activePollingStream<List<ClientDietEntry>>(
         load: () => _fetchDiet(clientId),
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(clientId),
       );
 
@@ -57,7 +70,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
       activePollingStream<List<RoutineHistoryEntry>>(
         load: () => _fetchHistory(clientId),
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(clientId),
       );
 

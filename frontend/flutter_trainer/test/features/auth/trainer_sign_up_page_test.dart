@@ -87,6 +87,9 @@ Future<_RecordingAuthRepository> _pumpSignUp(
         // 가입 흐름을 보는 테스트다. 대시보드에 내려앉은 뒤의 배지 폴링까지
         // 안고 끝나지 않게 멈춰 둔다.
         ...stillBadges(),
+        // 명단도 실 API 에서는 스스로 다시 읽는다(#918). 이 테스트가 보는
+        // 것은 가입 요청의 인자다.
+        stillRoster(),
       ],
       trainerAuthRepositoryProvider.overrideWithValue(repo),
     ],
