@@ -185,6 +185,7 @@
     }
   },
   "dietPeriodNoRecord": "No record",
+  "dietPeriodNotYet": "Not yet",
   "dietPeriodOverGoal": "{amount} {unit} over goal",
   "@dietPeriodOverGoal": {
     "placeholders": {

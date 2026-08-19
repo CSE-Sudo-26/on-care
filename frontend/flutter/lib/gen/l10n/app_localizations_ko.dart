@@ -323,6 +323,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietPeriodNoRecord => '기록 없음';
 
   @override
+  String get dietPeriodNotYet => '아직 오지 않은 날';
+
+  @override
   String dietPeriodOverGoal(String amount, String unit) {
     return '목표 초과 +$amount $unit';
   }

@@ -668,6 +668,12 @@ abstract class AppLocalizations {
   /// **'No record'**
   String get dietPeriodNoRecord;
 
+  /// No description provided for @dietPeriodNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get dietPeriodNotYet;
+
   /// No description provided for @dietPeriodOverGoal.
   ///
   /// In en, this message translates to:

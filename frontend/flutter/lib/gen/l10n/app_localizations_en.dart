@@ -330,6 +330,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietPeriodNoRecord => 'No record';
 
   @override
+  String get dietPeriodNotYet => 'Not yet';
+
+  @override
   String dietPeriodOverGoal(String amount, String unit) {
     return '$amount $unit over goal';
   }

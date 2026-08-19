@@ -497,6 +497,17 @@ class _PeriodBars extends StatelessWidget {
     return source[i];
   }
 
+  /// 아직 오지 않은 날인가. (#950)
+  ///
+  /// 기록하지 않은 것이 아니라 **기록할 수 없는** 날이다. 둘을 같은 말로 그리면
+  /// 한 달을 훑으며 "며칠을 빠뜨렸나" 를 셀 때 미래의 빈 칸까지 빠뜨린 날처럼
+  /// 읽힌다 — 달 초에는 그 수가 스무 날이 넘는다.
+  ///
+  /// 운동 쪽은 트레이너 리포트의 `BarSeriesChart` 가 `pendingFromIndex` 로 이미
+  /// 같은 구분을 한다(#754). 같은 규칙을 여기에도 둔다.
+  bool _isPending(int i) =>
+      DateUtils.dateOnly(dates[i]).isAfter(DateUtils.dateOnly(nowKst()));
+
   /// 한 막대의 툴팁 내용 — 운동 탭 `운동 현황` 툴팁과 같은 구조다.
   /// `[색 사각형] 지표  값 단위` 한 줄, 목표를 넘긴 날은 초과분을 한 줄 더.
   List<InlineSpan> _tipSpans(
@@ -513,6 +524,13 @@ class _PeriodBars extends StatelessWidget {
         style: const TextStyle(color: AppColors.mutedForeground),
       ),
     ];
+    // 아직 오지 않은 날과 지나갔는데 비운 날은 다른 말이다(#950). 하루 평균이
+    // 이미 **기록이 있는 날만으로** 나누므로, 계산은 둘을 구분하는데 화면만
+    // 구분하지 않는 셈이었다.
+    if (_isPending(i)) {
+      spans.add(TextSpan(text: l.dietPeriodNotYet));
+      return spans;
+    }
     // 기록이 없는 날은 0 이 아니라 '기록 없음' 이다. 0 으로 적으면 굶은 날과
     // 적지 않은 날이 같은 말이 된다.
     if (value <= 0) {
@@ -647,6 +665,7 @@ class _PeriodBars extends StatelessWidget {
                                 chartHeight *
                                 (values[i] / maxValue).clamp(0.0, 1.0) *
                                 chartStagger(t, i, values.length),
+                            pending: _isPending(i),
                             day: _dayAt(i),
                             // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
                             // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
@@ -733,9 +752,15 @@ class _Bar extends StatelessWidget {
     required this.day,
     required this.over,
     required this.color,
+    this.pending = false,
   });
 
   final double height;
+
+  /// 아직 오지 않은 날인가. 지나간 빈 날의 그루터기보다 **더 옅게** 그린다 —
+  /// 트레이너 리포트가 `pendingFromIndex` 에 쓰는 규칙과 같다(#754, #950).
+  final bool pending;
+
   final DietPeriodDay? day;
 
   /// 목표를 넘긴 날인가. 쌓을 성분이 없을 때만 색으로 말한다.
@@ -746,6 +771,17 @@ class _Bar extends StatelessWidget {
   Widget build(BuildContext context) {
     final DietPeriodDay? d = day;
     const BorderRadius radius = BorderRadius.vertical(top: Radius.circular(3));
+    if (pending) {
+      // 아직 오지 않은 날은 **빈 트랙**이다. 지나간 빈 날과 같은 그루터기를
+      // 그리면 둘이 구분되지 않는다.
+      return Container(
+        height: 2,
+        decoration: const BoxDecoration(
+          color: FigmaColors.hairline,
+          borderRadius: radius,
+        ),
+      );
+    }
     if (d == null || !d.hasMacros) {
       return Container(
         height: height,
