@@ -129,7 +129,9 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
     if (_statusSaving) return;
     setState(() => _statusSaving = true);
     try {
-      await ref.read(clientRepositoryProvider).setClientActive(clientId, active);
+      await ref
+          .read(clientRepositoryProvider)
+          .setClientActive(clientId, active);
       if (!mounted) return;
       setState(() => _statusSaving = false);
     } on AppError catch (error) {
@@ -335,17 +337,13 @@ class _Header extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // 주의사항 배지는 프로필 줄로 올라갔다(#926) — 활성/휴면 배지와 같이
+          // **이 사람이 어떤 상태인가**를 말하는 값이라, 혼자 한 줄을 쓸 이유가
+          // 없었다. 배지가 하나뿐인 경우가 대부분이라 그 줄은 거의 언제나
+          // 배지 한 개와 빈 여백이었고, 그만큼 아래 식단·운동이 밀렸다. 경고가
+          // 없는 회원은 줄이 통째로 사라져 회원을 옮길 때마다 빠른 버튼 줄의
+          // 세로 위치까지 달라졌다.
           _identityRow(context),
-          if (alerts.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: <Widget>[
-                for (final alert in alerts) AlertBadge(alert: alert),
-              ],
-            ),
-          ],
           const SizedBox(height: AppSpacing.md),
           Wrap(
             key: const ValueKey<String>('client-detail-quick-actions'),
@@ -415,6 +413,9 @@ class _Header extends ConsumerWidget {
   Widget _identityRow(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Row(
+      // 주의사항 줄이 사라졌는지를 테스트가 재려면 프로필 줄의 끝을 지목할 수
+      // 있어야 한다(#926).
+      key: const ValueKey<String>('client-detail-identity'),
       children: <Widget>[
         if (showBack)
           IconButton(
@@ -431,53 +432,75 @@ class _Header extends ConsumerWidget {
             children: <Widget>[
               // Status sits with the name — it describes the person, so
               // it belongs to their identity line rather than to the
-              // corner the actions live in.
-              Row(
-                children: <Widget>[
-                  Flexible(
-                    child: ClientIdentity(
-                      client: client,
-                      nameStyle: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.foreground,
+              // corner the actions live in. 주의사항 배지도 같은 이유로 이
+              // 줄에 있다(#926).
+              //
+              // `Row` 가 아니라 `Wrap` 이다. 셋을 한 줄에 억지로 세우면 영어 ·
+              // 배율 1.3 · 폭 1024 에서 줄이 넘쳤다 — 알약과 배지는 글자 길이만큼
+              // 자리를 요구할 뿐 줄어들 수 없기 때문이다. `Wrap` 은 자리가
+              // 모자라면 다음 줄로 내린다.
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints c) => Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  runSpacing: 4,
+                  children: <Widget>[
+                    // 이름만은 줄 폭 안에서 말줄임한다 — `Wrap` 의 자식은 폭이
+                    // 무제한이라 기대는 곳이 없으면 긴 이름이 그대로 뻗는다.
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: c.maxWidth),
+                      child: ClientIdentity(
+                        client: client,
+                        nameStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.foreground,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  // The backend roster has no status mutation endpoint
-                  // yet. Keep the status visible in real mode, but only
-                  // make it interactive when the selected repository
-                  // supports roster mutations.
-                  Material(
-                    color:
-                        (client.active
-                                ? AppColors.success
-                                : AppColors.disabledForeground)
-                            .withValues(alpha: 0.12),
-                    borderRadius: const BorderRadius.all(AppRadius.pill),
-                    child: InkWell(
-                      key: const ValueKey<String>('client-status-toggle'),
-                      onTap: onToggleActive,
+                    // The backend roster has no status mutation endpoint
+                    // yet. Keep the status visible in real mode, but only
+                    // make it interactive when the selected repository
+                    // supports roster mutations.
+                    Material(
+                      color:
+                          (client.active
+                                  ? AppColors.success
+                                  : AppColors.disabledForeground)
+                              .withValues(alpha: 0.12),
                       borderRadius: const BorderRadius.all(AppRadius.pill),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: 3,
-                        ),
-                        child: StatusDotLabel(
-                          label: client.active
-                              ? l.clientActive
-                              : l.clientDormant,
-                          filled: client.active,
-                          color: client.active
-                              ? AppColors.success
-                              : AppColors.disabledForeground,
+                      child: InkWell(
+                        key: const ValueKey<String>('client-status-toggle'),
+                        onTap: onToggleActive,
+                        borderRadius: const BorderRadius.all(AppRadius.pill),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: 3,
+                          ),
+                          child: StatusDotLabel(
+                            label: client.active
+                                ? l.clientActive
+                                : l.clientDormant,
+                            filled: client.active,
+                            color: client.active
+                                ? AppColors.success
+                                : AppColors.disabledForeground,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    // 배지는 하나씩 `Wrap` 의 자식이다. 묶어서 넣으면 그 묶음이
+                    // 통째로 다음 줄로 내려가고, 묶음 안에서는 다시 접히지 않는다.
+                    for (final alert in alerts)
+                      KeyedSubtree(
+                        key: ValueKey<String>(
+                          'client-detail-alert-${alert.name}',
+                        ),
+                        child: AlertBadge(alert: alert),
+                      ),
+                  ],
+                ),
               ),
               Text(
                 client.goal,
