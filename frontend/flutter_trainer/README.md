@@ -108,6 +108,30 @@ flutter analyze
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+#### drift codegen 이 `Failed to compile build script` 로 죽을 때 (#902)
+
+```
+Error: Error when reading '.../build_runner-x.y.z/lib/src/build_plan/builder_factories.dart':
+No such file or directory
+Error: Undefined name 'ChildProcess'.
+E Failed to compile build script.
+```
+
+`pub` 이 `.dart_tool/pub/bin/` 에 캐시해 둔 **build_runner 스냅샷이 지금 해석된 버전과
+어긋날 때** 나온다. 스냅샷이 만들어 내는 진입점(`.dart_tool/build/entrypoint/build.dart`)이
+다른 버전의 내부 구조를 가리키기 때문에, 진입점만 지우면 같은 스냅샷이 같은 파일을 다시
+만들어 증상이 반복된다. 둘을 함께 지워야 풀린다.
+
+```bash
+rm -rf .dart_tool/pub/bin .dart_tool/build
+dart run build_runner build --delete-conflicting-outputs
+```
+
+`pubspec.yaml` 의 버전 제약 문제가 아니다 — 실제로 이 증상 때문에 제약을 조정해 본
+적이 있는데(#902), 잠긴 버전을 그대로 두고 위 두 캐시만 지워도 생성이 정상으로 돌아왔고
+생성 결과도 커밋된 산출물과 같았다. `.dart_tool` 은 git 이 추적하지 않으므로 지워도
+안전하다.
+
 로그인: 비어있지 않은 아무 이메일/비밀번호 → 시드 트레이너(김트레이너)로 로그인.
 "로그인 없이 데모 둘러보기"로 바로 진입할 수도 있습니다.
 
