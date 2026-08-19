@@ -4760,6 +4760,12 @@ abstract class AppLocalizations {
   /// **'Go to this week'**
   String get reportsGoThisWeek;
 
+  /// Placeholder in the report summary slot before a client is picked.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a client to see their weekly summary and coaching suggestions here'**
+  String get reportsSummaryEmptyClient;
+
   /// No description provided for @reportsLastWeek.
   ///
   /// In en, this message translates to:

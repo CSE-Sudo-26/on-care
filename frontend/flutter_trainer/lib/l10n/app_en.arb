@@ -1458,6 +1458,10 @@
   "reportsComparisonTitle": "{week} vs last week",
   "@reportsComparisonTitle": {"placeholders": {"week": {"type": "String"}}},
   "reportsGoThisWeek": "Go to this week",
+  "reportsSummaryEmptyClient": "Select a client to see their weekly summary and coaching suggestions here",
+  "@reportsSummaryEmptyClient": {
+    "description": "Placeholder in the report summary slot before a client is picked."
+  },
   "reportsLastWeek": "Last week",
   "reportsSelectedWeek": "Selected week",
   "reportsBackToList": "Client list",

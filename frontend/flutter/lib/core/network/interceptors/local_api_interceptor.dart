@@ -973,7 +973,9 @@ class LocalApiInterceptor extends Interceptor {
     final date = DateTime(monday.year, monday.month, monday.day + dayIdx);
     final now = nowKst();
     final today = DateTime(now.year, now.month, now.day);
-    final delta = today.difference(DateTime(date.year, date.month, date.day)).inDays;
+    final delta = today
+        .difference(DateTime(date.year, date.month, date.day))
+        .inDays;
     if (delta == 0) return '오늘';
     if (delta == 1) return '어제';
     return '${date.month}월 ${date.day}일';
@@ -1489,7 +1491,9 @@ class LocalApiInterceptor extends Interceptor {
       'weekly_exercise_minutes_goal',
       'weekly_burn_goal',
     ]) {
-      if (body[k] != null) patch[k] = body[k];
+      // 값이 아니라 **키가 있는지**를 본다. 명시적 null 은 목표 해제라
+      // 오버레이에도 null 로 남아야 한다 — 건너뛰면 지운 목표가 되살아난다.
+      if (body.containsKey(k)) patch[k] = body[k];
     }
     await _mergeProfileOverlay(patch);
     return _ok(options, await _mergedProfile());
