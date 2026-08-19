@@ -1117,3 +1117,61 @@ class TrainerNotificationSettingsUpdate(PartialUpdate):
             if getattr(self, field) is None:
                 raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
         return self
+
+
+# ---------------------------------------------------------------------------
+# 트레이너 → 회원 담당 요청 (#919)
+# ---------------------------------------------------------------------------
+
+
+class MemberLookupOut(BaseModel):
+    """이메일 완전 일치로 찾은 회원 한 명.
+
+    요청을 보낼지 판단할 만큼만 담는다. 누가 담당인지·어떤 기록이 있는지는
+    담당이 아닌 트레이너가 알 이유가 없다.
+    """
+
+    member_id: str
+    name: str
+    email: str
+    #: 이미 활성 담당 트레이너가 있는가. 누구인지는 밝히지 않는다.
+    has_trainer: bool
+    #: 그 담당이 나인가 — 명단에 이미 있는 회원을 다시 찾은 경우.
+    coached_by_me: bool
+    #: 내가 보낸 요청이 대기 중인가.
+    invite_pending: bool
+
+
+class TrainerClientInviteCreate(BaseModel):
+    member_id: str = Field(min_length=1, max_length=64)
+    #: 회원에게 함께 보이는 한마디. 비워도 된다.
+    message: str | None = Field(default=None, max_length=500)
+
+
+class TrainerClientInviteOut(BaseModel):
+    """트레이너가 보고 있는 '보낸 요청' 카드."""
+
+    id: str
+    member_id: str
+    member_name: str
+    member_email: str
+    message: str | None = None
+    status: Literal["pending", "accepted", "rejected", "cancelled"]
+    created_at: _datetime
+    decided_at: _datetime | None = None
+
+
+class MemberClientInviteOut(BaseModel):
+    """회원이 보고 있는 '받은 요청' 카드.
+
+    트레이너 응답과 스키마를 나누는 이유는 상담 요청과 같다 — 회원에게는 자기
+    이메일이 필요 없고, 트레이너 이름·소속은 반드시 필요하다.
+    """
+
+    id: str
+    trainer_id: str
+    trainer_name: str
+    gym_name: str | None = None
+    message: str | None = None
+    status: Literal["pending", "accepted", "rejected", "cancelled"]
+    created_at: _datetime

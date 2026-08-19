@@ -591,6 +591,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsAddAction => 'Add';
 
   @override
+  String get clientInviteTitle => 'Invite a member';
+
+  @override
+  String get clientInviteIntro =>
+      'Find a member by email and send a coaching request. They appear in your client list once they accept in the app.';
+
+  @override
+  String get clientInviteEmailLabel => 'Member email';
+
+  @override
+  String get clientInviteLookupAction => 'Find';
+
+  @override
+  String get clientInviteMessageLabel => 'Message (optional)';
+
+  @override
+  String get clientInviteSendAction => 'Send request';
+
+  @override
+  String clientInviteSent(String name) {
+    return 'Sent a coaching request to $name';
+  }
+
+  @override
+  String get clientInviteNotFound => 'No member uses that email';
+
+  @override
+  String get clientInviteFailed =>
+      'Couldn\'t send the request. Please try again';
+
+  @override
+  String get clientInviteEmailRequired => 'Enter an email';
+
+  @override
+  String get clientInviteAlreadyCoached => 'You already coach this member';
+
+  @override
+  String get clientInviteHasTrainer =>
+      'Another trainer already coaches this member';
+
+  @override
+  String get clientInvitePendingHint =>
+      'A request you sent is still waiting for an answer';
+
+  @override
+  String get clientInvitePendingTitle => 'Waiting for an answer';
+
+  @override
+  String get clientInvitePendingEmpty => 'No requests are waiting';
+
+  @override
+  String get clientInviteCancelAction => 'Withdraw';
+
+  @override
+  String get clientInviteCancelled => 'Request withdrawn';
+
+  @override
+  String get clientInviteCancelFailed =>
+      'Couldn\'t withdraw the request. Please try again';
+
+  @override
   String get clientTabDiet => 'Meals';
 
   @override

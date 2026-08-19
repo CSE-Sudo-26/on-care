@@ -6,11 +6,13 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/client_filter.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_invite_sheet.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
@@ -52,7 +54,18 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     context.go(AppRoutes.clients);
   }
 
-  Future<void> _openAddClientSheet(BuildContext context) {
+  Future<void> _openAddClientSheet(BuildContext context) =>
+      _openSheet(context, const _AddClientSheet());
+
+  /// 실 API 에서 고객이 생기는 길 — 회원에게 담당 요청을 보낸다. (#919)
+  ///
+  /// 데모의 '신규 고객 등록' 과 버튼은 같은 자리지만 하는 일이 다르다. 데모는
+  /// 로컬 명단에 바로 넣고, 실 API 는 회원의 수락을 기다린다 — 담당 관계는
+  /// 상대의 기록을 여는 권한이라 트레이너 혼자 만들 수 없다.
+  Future<void> _openInviteSheet(BuildContext context) =>
+      _openSheet(context, const ClientInviteSheet());
+
+  Future<void> _openSheet(BuildContext context, Widget sheet) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -60,7 +73,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: AppRadius.card),
       ),
-      builder: (context) => const _AddClientSheet(),
+      builder: (context) => sheet,
     );
   }
 
@@ -80,6 +93,9 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     final canManageRoster = ref
         .watch(clientRepositoryProvider)
         .supportsRosterMutations;
+    // 실 API 에는 명단에 직접 넣는 경로가 없는 대신 담당 요청이 있다. 둘 다
+    // 없는 빌드에서는 진입점 자체를 그리지 않는다. (#919)
+    final canInvite = ref.watch(clientInvitesEnabledProvider);
     final activeFilter = clientFilterFrom(widget.filter);
 
     final Widget page = clientsAsync.when(
@@ -141,12 +157,14 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
             all.where((c) => c.active).length,
           ),
           actions: <Widget>[
-            if (canManageRoster)
+            if (canManageRoster || canInvite)
               ActionButton(
                 label: l.clientsNew,
                 icon: Icons.person_add_alt,
                 primary: true,
-                onPressed: () => _openAddClientSheet(context),
+                onPressed: () => canManageRoster
+                    ? _openAddClientSheet(context)
+                    : _openInviteSheet(context),
               ),
           ],
           child: LayoutBuilder(
