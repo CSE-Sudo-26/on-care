@@ -517,30 +517,48 @@ class DriftScheduleRepository implements ScheduleRepository {
     });
   }
 
-  /// 예정 → 취소. 데모에는 취소 시각·주체를 둘 칸(drift 컬럼)이 없어 **상태만**
-  /// 남긴다(#871). 데모가 보여 주려는 것은 "취소가 삭제와 다르다" 이고, 그 사실은
-  /// 행이 남아 `취소` 로 보이는 것으로 전달된다.
+  /// 예정 → 취소. 상태만이 아니라 **언제·누가·왜** 를 함께 남긴다(#906).
   ///
-  /// 실서버 구현과 같은 상태 규칙을 지킨다 — 예정인 세션만 전이하고, 이미
-  /// 마무리된 세션은 조용히 아무것도 하지 않는다(화면은 그 동작을 내놓지 않는다).
+  /// 데모도 실서버와 같은 것을 저장하는 이유는, 데모가 이 기능을 실제로 눌러 보는
+  /// 자리이기 때문이다 — 취소한 쪽을 고르고도 카드에 그 사실이 남지 않으면 취소가
+  /// 삭제와 어떻게 다른지가 화면에서 전달되지 않는다.
+  ///
+  /// 상태 규칙도 실서버와 같다 — 예정인 세션만 전이하고, 이미 마무리된 세션은
+  /// 조용히 아무것도 하지 않는다(화면은 그 동작을 내놓지 않는다).
   @override
   Future<void> cancelSession(
     String id, {
     required String source,
     String reason = '',
-  }) => _finishSession(id, ScheduleStatus.cancelled);
+  }) => _finishSession(
+    id,
+    TrainerScheduleEntriesCompanion(
+      status: const Value(ScheduleStatus.cancelled),
+      cancelledAt: Value(nowKst()),
+      cancellationSource: Value(source),
+      cancellationReason: Value(reason),
+    ),
+  );
 
-  /// 예정 → 노쇼. 데모 저장 범위는 [cancelSession] 과 같다.
+  /// 예정 → 노쇼. 취소와 달리 주체가 없다 — 약속은 그대로였고 회원이 오지 않았다.
   @override
-  Future<void> markNoShow(String id) =>
-      _finishSession(id, ScheduleStatus.noShow);
+  Future<void> markNoShow(String id) => _finishSession(
+    id,
+    TrainerScheduleEntriesCompanion(
+      status: const Value(ScheduleStatus.noShow),
+      noShowAt: Value(nowKst()),
+    ),
+  );
 
-  Future<void> _finishSession(String id, String status) async {
+  Future<void> _finishSession(
+    String id,
+    TrainerScheduleEntriesCompanion values,
+  ) async {
     final table = _db.trainerScheduleEntries;
     await (_db.update(table)..where(
           (t) => t.id.equals(id) & t.status.equals(ScheduleStatus.upcoming),
         ))
-        .write(TrainerScheduleEntriesCompanion(status: Value(status)));
+        .write(values);
   }
 
   @override
@@ -639,6 +657,10 @@ class DriftScheduleRepository implements ScheduleRepository {
       note: row.note,
       program: program,
       programSent: row.programSent,
+      cancelledAt: row.cancelledAt,
+      cancellationSource: row.cancellationSource,
+      cancellationReason: row.cancellationReason,
+      noShowAt: row.noShowAt,
     );
   }
 }

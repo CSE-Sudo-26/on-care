@@ -2790,7 +2790,7 @@ class _SessionCard extends ConsumerWidget {
                               color: AppColors.foreground,
                             ),
                           )
-                        else
+                        else ...<Widget>[
                           ClientIdentity(
                             client: client,
                             nameStyle: const TextStyle(
@@ -2799,6 +2799,10 @@ class _SessionCard extends ConsumerWidget {
                               color: AppColors.foreground,
                             ),
                           ),
+                          // 오늘 만날 회원이 무엇을 목표로 하는 사람인지는
+                          // 세션 종류·소요 시간만큼 자리에서 필요하다(#898).
+                          ClientGoalLabel(client: client),
+                        ],
                         Text(
                           l.sessionTypeAndDuration(
                             sessionTypeLabel(l, s.type),
@@ -2898,7 +2902,7 @@ class _SessionCard extends ConsumerWidget {
 
 /// 취소·노쇼로 마무리된 세션의 기록 — 언제, 누가, (있으면) 왜. (#871)
 ///
-/// 데모(`USE_MOCK_API=true`)에는 주체·시각을 둘 칸이 없어 상태 문구만 남는다.
+/// 데모와 실 API 가 같은 값을 저장하므로 두 경로가 같은 줄을 보여 준다(#906).
 class _EndedBox extends StatelessWidget {
   const _EndedBox({required this.session});
 

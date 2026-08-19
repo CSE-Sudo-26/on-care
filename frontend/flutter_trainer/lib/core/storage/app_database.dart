@@ -140,7 +140,24 @@ class TrainerScheduleEntries extends Table {
   TextColumn get clientName => text().withDefault(const Constant(''))();
   TextColumn get type => text().withDefault(const Constant(''))();
   IntColumn get durationMinutes => integer().withDefault(const Constant(0))();
-  TextColumn get status => text()(); // 완료|예정|공백
+  TextColumn get status => text()(); // 완료|예정|취소|노쇼|공백
+
+  /// 취소·노쇼로 마무리된 세션의 기록(#871, #906). 삭제와 달리 **행을 남기는**
+  /// 것이 이 상태의 목적이라, 언제·누가·왜가 함께 있어야 나중에 "그 시간에 무슨
+  /// 일이 있었나" 를 읽을 수 있다. 예정·완료 행은 전부 비어 있다.
+  DateTimeColumn get cancelledAt => dateTime().nullable()();
+
+  /// ''(해당 없음)|member|trainer|other. 트레이너 사정의 취소를 회원의
+  /// 미이행으로 읽지 않으려면 주체가 남아야 한다.
+  TextColumn get cancellationSource =>
+      text().withDefault(const Constant(''))();
+
+  /// 트레이너만 보는 짧은 사유. 회원 알림에는 싣지 않는다.
+  TextColumn get cancellationReason =>
+      text().withDefault(const Constant(''))();
+
+  DateTimeColumn get noShowAt => dateTime().nullable()();
+
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get programJson =>
       text().withDefault(const Constant('[]'))(); // [{name,sets,reps,weight}]
@@ -235,7 +252,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -309,6 +326,27 @@ class AppDatabase extends _$AppDatabase {
       // 초안이 없는 고객·주는 그대로 자동 생성 문구를 쓴다.
       if (from < 11) {
         await m.createTable(reportFeedbackDrafts);
+      }
+      // v12: 일정이 취소·노쇼로 마무리될 수 있다(#871). 기존 행은 예정·완료·
+      // 공백뿐이라 채울 값이 없다 — 새 칸은 비어 있고, 그 자체가 "취소가 아님"
+      // 이라는 뜻이다.
+      if (from < 12) {
+        await m.addColumn(
+          trainerScheduleEntries,
+          trainerScheduleEntries.cancelledAt,
+        );
+        await m.addColumn(
+          trainerScheduleEntries,
+          trainerScheduleEntries.cancellationSource,
+        );
+        await m.addColumn(
+          trainerScheduleEntries,
+          trainerScheduleEntries.cancellationReason,
+        );
+        await m.addColumn(
+          trainerScheduleEntries,
+          trainerScheduleEntries.noShowAt,
+        );
       }
     },
   );

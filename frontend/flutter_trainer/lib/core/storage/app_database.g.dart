@@ -3436,6 +3436,52 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _cancelledAtMeta = const VerificationMeta(
+    'cancelledAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cancelledAt = GeneratedColumn<DateTime>(
+    'cancelled_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cancellationSourceMeta =
+      const VerificationMeta('cancellationSource');
+  @override
+  late final GeneratedColumn<String> cancellationSource =
+      GeneratedColumn<String>(
+        'cancellation_source',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  static const VerificationMeta _cancellationReasonMeta =
+      const VerificationMeta('cancellationReason');
+  @override
+  late final GeneratedColumn<String> cancellationReason =
+      GeneratedColumn<String>(
+        'cancellation_reason',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  static const VerificationMeta _noShowAtMeta = const VerificationMeta(
+    'noShowAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> noShowAt = GeneratedColumn<DateTime>(
+    'no_show_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -3495,6 +3541,10 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     type,
     durationMinutes,
     status,
+    cancelledAt,
+    cancellationSource,
+    cancellationReason,
+    noShowAt,
     note,
     programJson,
     programSent,
@@ -3568,6 +3618,39 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     } else if (isInserting) {
       context.missing(_statusMeta);
     }
+    if (data.containsKey('cancelled_at')) {
+      context.handle(
+        _cancelledAtMeta,
+        cancelledAt.isAcceptableOrUnknown(
+          data['cancelled_at']!,
+          _cancelledAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cancellation_source')) {
+      context.handle(
+        _cancellationSourceMeta,
+        cancellationSource.isAcceptableOrUnknown(
+          data['cancellation_source']!,
+          _cancellationSourceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cancellation_reason')) {
+      context.handle(
+        _cancellationReasonMeta,
+        cancellationReason.isAcceptableOrUnknown(
+          data['cancellation_reason']!,
+          _cancellationReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('no_show_at')) {
+      context.handle(
+        _noShowAtMeta,
+        noShowAt.isAcceptableOrUnknown(data['no_show_at']!, _noShowAtMeta),
+      );
+    }
     if (data.containsKey('note')) {
       context.handle(
         _noteMeta,
@@ -3639,6 +3722,22 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      cancelledAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cancelled_at'],
+      ),
+      cancellationSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cancellation_source'],
+      )!,
+      cancellationReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cancellation_reason'],
+      )!,
+      noShowAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}no_show_at'],
+      ),
       note: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}note'],
@@ -3682,6 +3781,19 @@ class TrainerScheduleRow extends DataClass
   final String type;
   final int durationMinutes;
   final String status;
+
+  /// 취소·노쇼로 마무리된 세션의 기록(#871, #906). 삭제와 달리 **행을 남기는**
+  /// 것이 이 상태의 목적이라, 언제·누가·왜가 함께 있어야 나중에 "그 시간에 무슨
+  /// 일이 있었나" 를 읽을 수 있다. 예정·완료 행은 전부 비어 있다.
+  final DateTime? cancelledAt;
+
+  /// ''(해당 없음)|member|trainer|other. 트레이너 사정의 취소를 회원의
+  /// 미이행으로 읽지 않으려면 주체가 남아야 한다.
+  final String cancellationSource;
+
+  /// 트레이너만 보는 짧은 사유. 회원 알림에는 싣지 않는다.
+  final String cancellationReason;
+  final DateTime? noShowAt;
   final String note;
   final String programJson;
 
@@ -3699,6 +3811,10 @@ class TrainerScheduleRow extends DataClass
     required this.type,
     required this.durationMinutes,
     required this.status,
+    this.cancelledAt,
+    required this.cancellationSource,
+    required this.cancellationReason,
+    this.noShowAt,
     required this.note,
     required this.programJson,
     required this.programSent,
@@ -3717,6 +3833,14 @@ class TrainerScheduleRow extends DataClass
     map['type'] = Variable<String>(type);
     map['duration_minutes'] = Variable<int>(durationMinutes);
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || cancelledAt != null) {
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt);
+    }
+    map['cancellation_source'] = Variable<String>(cancellationSource);
+    map['cancellation_reason'] = Variable<String>(cancellationReason);
+    if (!nullToAbsent || noShowAt != null) {
+      map['no_show_at'] = Variable<DateTime>(noShowAt);
+    }
     map['note'] = Variable<String>(note);
     map['program_json'] = Variable<String>(programJson);
     map['program_sent'] = Variable<bool>(programSent);
@@ -3736,6 +3860,14 @@ class TrainerScheduleRow extends DataClass
       type: Value(type),
       durationMinutes: Value(durationMinutes),
       status: Value(status),
+      cancelledAt: cancelledAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cancelledAt),
+      cancellationSource: Value(cancellationSource),
+      cancellationReason: Value(cancellationReason),
+      noShowAt: noShowAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(noShowAt),
       note: Value(note),
       programJson: Value(programJson),
       programSent: Value(programSent),
@@ -3757,6 +3889,14 @@ class TrainerScheduleRow extends DataClass
       type: serializer.fromJson<String>(json['type']),
       durationMinutes: serializer.fromJson<int>(json['durationMinutes']),
       status: serializer.fromJson<String>(json['status']),
+      cancelledAt: serializer.fromJson<DateTime?>(json['cancelledAt']),
+      cancellationSource: serializer.fromJson<String>(
+        json['cancellationSource'],
+      ),
+      cancellationReason: serializer.fromJson<String>(
+        json['cancellationReason'],
+      ),
+      noShowAt: serializer.fromJson<DateTime?>(json['noShowAt']),
       note: serializer.fromJson<String>(json['note']),
       programJson: serializer.fromJson<String>(json['programJson']),
       programSent: serializer.fromJson<bool>(json['programSent']),
@@ -3775,6 +3915,10 @@ class TrainerScheduleRow extends DataClass
       'type': serializer.toJson<String>(type),
       'durationMinutes': serializer.toJson<int>(durationMinutes),
       'status': serializer.toJson<String>(status),
+      'cancelledAt': serializer.toJson<DateTime?>(cancelledAt),
+      'cancellationSource': serializer.toJson<String>(cancellationSource),
+      'cancellationReason': serializer.toJson<String>(cancellationReason),
+      'noShowAt': serializer.toJson<DateTime?>(noShowAt),
       'note': serializer.toJson<String>(note),
       'programJson': serializer.toJson<String>(programJson),
       'programSent': serializer.toJson<bool>(programSent),
@@ -3791,6 +3935,10 @@ class TrainerScheduleRow extends DataClass
     String? type,
     int? durationMinutes,
     String? status,
+    Value<DateTime?> cancelledAt = const Value.absent(),
+    String? cancellationSource,
+    String? cancellationReason,
+    Value<DateTime?> noShowAt = const Value.absent(),
     String? note,
     String? programJson,
     bool? programSent,
@@ -3804,6 +3952,10 @@ class TrainerScheduleRow extends DataClass
     type: type ?? this.type,
     durationMinutes: durationMinutes ?? this.durationMinutes,
     status: status ?? this.status,
+    cancelledAt: cancelledAt.present ? cancelledAt.value : this.cancelledAt,
+    cancellationSource: cancellationSource ?? this.cancellationSource,
+    cancellationReason: cancellationReason ?? this.cancellationReason,
+    noShowAt: noShowAt.present ? noShowAt.value : this.noShowAt,
     note: note ?? this.note,
     programJson: programJson ?? this.programJson,
     programSent: programSent ?? this.programSent,
@@ -3823,6 +3975,16 @@ class TrainerScheduleRow extends DataClass
           ? data.durationMinutes.value
           : this.durationMinutes,
       status: data.status.present ? data.status.value : this.status,
+      cancelledAt: data.cancelledAt.present
+          ? data.cancelledAt.value
+          : this.cancelledAt,
+      cancellationSource: data.cancellationSource.present
+          ? data.cancellationSource.value
+          : this.cancellationSource,
+      cancellationReason: data.cancellationReason.present
+          ? data.cancellationReason.value
+          : this.cancellationReason,
+      noShowAt: data.noShowAt.present ? data.noShowAt.value : this.noShowAt,
       note: data.note.present ? data.note.value : this.note,
       programJson: data.programJson.present
           ? data.programJson.value
@@ -3845,6 +4007,10 @@ class TrainerScheduleRow extends DataClass
           ..write('type: $type, ')
           ..write('durationMinutes: $durationMinutes, ')
           ..write('status: $status, ')
+          ..write('cancelledAt: $cancelledAt, ')
+          ..write('cancellationSource: $cancellationSource, ')
+          ..write('cancellationReason: $cancellationReason, ')
+          ..write('noShowAt: $noShowAt, ')
           ..write('note: $note, ')
           ..write('programJson: $programJson, ')
           ..write('programSent: $programSent, ')
@@ -3863,6 +4029,10 @@ class TrainerScheduleRow extends DataClass
     type,
     durationMinutes,
     status,
+    cancelledAt,
+    cancellationSource,
+    cancellationReason,
+    noShowAt,
     note,
     programJson,
     programSent,
@@ -3880,6 +4050,10 @@ class TrainerScheduleRow extends DataClass
           other.type == this.type &&
           other.durationMinutes == this.durationMinutes &&
           other.status == this.status &&
+          other.cancelledAt == this.cancelledAt &&
+          other.cancellationSource == this.cancellationSource &&
+          other.cancellationReason == this.cancellationReason &&
+          other.noShowAt == this.noShowAt &&
           other.note == this.note &&
           other.programJson == this.programJson &&
           other.programSent == this.programSent &&
@@ -3896,6 +4070,10 @@ class TrainerScheduleEntriesCompanion
   final Value<String> type;
   final Value<int> durationMinutes;
   final Value<String> status;
+  final Value<DateTime?> cancelledAt;
+  final Value<String> cancellationSource;
+  final Value<String> cancellationReason;
+  final Value<DateTime?> noShowAt;
   final Value<String> note;
   final Value<String> programJson;
   final Value<bool> programSent;
@@ -3910,6 +4088,10 @@ class TrainerScheduleEntriesCompanion
     this.type = const Value.absent(),
     this.durationMinutes = const Value.absent(),
     this.status = const Value.absent(),
+    this.cancelledAt = const Value.absent(),
+    this.cancellationSource = const Value.absent(),
+    this.cancellationReason = const Value.absent(),
+    this.noShowAt = const Value.absent(),
     this.note = const Value.absent(),
     this.programJson = const Value.absent(),
     this.programSent = const Value.absent(),
@@ -3925,6 +4107,10 @@ class TrainerScheduleEntriesCompanion
     this.type = const Value.absent(),
     this.durationMinutes = const Value.absent(),
     required String status,
+    this.cancelledAt = const Value.absent(),
+    this.cancellationSource = const Value.absent(),
+    this.cancellationReason = const Value.absent(),
+    this.noShowAt = const Value.absent(),
     this.note = const Value.absent(),
     this.programJson = const Value.absent(),
     this.programSent = const Value.absent(),
@@ -3943,6 +4129,10 @@ class TrainerScheduleEntriesCompanion
     Expression<String>? type,
     Expression<int>? durationMinutes,
     Expression<String>? status,
+    Expression<DateTime>? cancelledAt,
+    Expression<String>? cancellationSource,
+    Expression<String>? cancellationReason,
+    Expression<DateTime>? noShowAt,
     Expression<String>? note,
     Expression<String>? programJson,
     Expression<bool>? programSent,
@@ -3958,6 +4148,10 @@ class TrainerScheduleEntriesCompanion
       if (type != null) 'type': type,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,
       if (status != null) 'status': status,
+      if (cancelledAt != null) 'cancelled_at': cancelledAt,
+      if (cancellationSource != null) 'cancellation_source': cancellationSource,
+      if (cancellationReason != null) 'cancellation_reason': cancellationReason,
+      if (noShowAt != null) 'no_show_at': noShowAt,
       if (note != null) 'note': note,
       if (programJson != null) 'program_json': programJson,
       if (programSent != null) 'program_sent': programSent,
@@ -3975,6 +4169,10 @@ class TrainerScheduleEntriesCompanion
     Value<String>? type,
     Value<int>? durationMinutes,
     Value<String>? status,
+    Value<DateTime?>? cancelledAt,
+    Value<String>? cancellationSource,
+    Value<String>? cancellationReason,
+    Value<DateTime?>? noShowAt,
     Value<String>? note,
     Value<String>? programJson,
     Value<bool>? programSent,
@@ -3990,6 +4188,10 @@ class TrainerScheduleEntriesCompanion
       type: type ?? this.type,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       status: status ?? this.status,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
+      cancellationSource: cancellationSource ?? this.cancellationSource,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
+      noShowAt: noShowAt ?? this.noShowAt,
       note: note ?? this.note,
       programJson: programJson ?? this.programJson,
       programSent: programSent ?? this.programSent,
@@ -4025,6 +4227,18 @@ class TrainerScheduleEntriesCompanion
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (cancelledAt.present) {
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt.value);
+    }
+    if (cancellationSource.present) {
+      map['cancellation_source'] = Variable<String>(cancellationSource.value);
+    }
+    if (cancellationReason.present) {
+      map['cancellation_reason'] = Variable<String>(cancellationReason.value);
+    }
+    if (noShowAt.present) {
+      map['no_show_at'] = Variable<DateTime>(noShowAt.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
@@ -4054,6 +4268,10 @@ class TrainerScheduleEntriesCompanion
           ..write('type: $type, ')
           ..write('durationMinutes: $durationMinutes, ')
           ..write('status: $status, ')
+          ..write('cancelledAt: $cancelledAt, ')
+          ..write('cancellationSource: $cancellationSource, ')
+          ..write('cancellationReason: $cancellationReason, ')
+          ..write('noShowAt: $noShowAt, ')
           ..write('note: $note, ')
           ..write('programJson: $programJson, ')
           ..write('programSent: $programSent, ')
@@ -6626,6 +6844,10 @@ typedef $$TrainerScheduleEntriesTableCreateCompanionBuilder =
       Value<String> type,
       Value<int> durationMinutes,
       required String status,
+      Value<DateTime?> cancelledAt,
+      Value<String> cancellationSource,
+      Value<String> cancellationReason,
+      Value<DateTime?> noShowAt,
       Value<String> note,
       Value<String> programJson,
       Value<bool> programSent,
@@ -6642,6 +6864,10 @@ typedef $$TrainerScheduleEntriesTableUpdateCompanionBuilder =
       Value<String> type,
       Value<int> durationMinutes,
       Value<String> status,
+      Value<DateTime?> cancelledAt,
+      Value<String> cancellationSource,
+      Value<String> cancellationReason,
+      Value<DateTime?> noShowAt,
       Value<String> note,
       Value<String> programJson,
       Value<bool> programSent,
@@ -6695,6 +6921,26 @@ class $$TrainerScheduleEntriesTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cancelledAt => $composableBuilder(
+    column: $table.cancelledAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cancellationSource => $composableBuilder(
+    column: $table.cancellationSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cancellationReason => $composableBuilder(
+    column: $table.cancellationReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get noShowAt => $composableBuilder(
+    column: $table.noShowAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6768,6 +7014,26 @@ class $$TrainerScheduleEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get cancelledAt => $composableBuilder(
+    column: $table.cancelledAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cancellationSource => $composableBuilder(
+    column: $table.cancellationSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cancellationReason => $composableBuilder(
+    column: $table.cancellationReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get noShowAt => $composableBuilder(
+    column: $table.noShowAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get note => $composableBuilder(
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
@@ -6825,6 +7091,24 @@ class $$TrainerScheduleEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cancelledAt => $composableBuilder(
+    column: $table.cancelledAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cancellationSource => $composableBuilder(
+    column: $table.cancellationSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cancellationReason => $composableBuilder(
+    column: $table.cancellationReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get noShowAt =>
+      $composableBuilder(column: $table.noShowAt, builder: (column) => column);
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
@@ -6897,6 +7181,10 @@ class $$TrainerScheduleEntriesTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> durationMinutes = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<DateTime?> cancelledAt = const Value.absent(),
+                Value<String> cancellationSource = const Value.absent(),
+                Value<String> cancellationReason = const Value.absent(),
+                Value<DateTime?> noShowAt = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String> programJson = const Value.absent(),
                 Value<bool> programSent = const Value.absent(),
@@ -6911,6 +7199,10 @@ class $$TrainerScheduleEntriesTableTableManager
                 type: type,
                 durationMinutes: durationMinutes,
                 status: status,
+                cancelledAt: cancelledAt,
+                cancellationSource: cancellationSource,
+                cancellationReason: cancellationReason,
+                noShowAt: noShowAt,
                 note: note,
                 programJson: programJson,
                 programSent: programSent,
@@ -6927,6 +7219,10 @@ class $$TrainerScheduleEntriesTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> durationMinutes = const Value.absent(),
                 required String status,
+                Value<DateTime?> cancelledAt = const Value.absent(),
+                Value<String> cancellationSource = const Value.absent(),
+                Value<String> cancellationReason = const Value.absent(),
+                Value<DateTime?> noShowAt = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String> programJson = const Value.absent(),
                 Value<bool> programSent = const Value.absent(),
@@ -6941,6 +7237,10 @@ class $$TrainerScheduleEntriesTableTableManager
                 type: type,
                 durationMinutes: durationMinutes,
                 status: status,
+                cancelledAt: cancelledAt,
+                cancellationSource: cancellationSource,
+                cancellationReason: cancellationReason,
+                noShowAt: noShowAt,
                 note: note,
                 programJson: programJson,
                 programSent: programSent,
