@@ -184,6 +184,18 @@
       }
     }
   },
+  "dietPeriodNoRecord": "No record",
+  "dietPeriodOverGoal": "{amount} {unit} over goal",
+  "@dietPeriodOverGoal": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "otherDateEmpty": "No {section} records for the selected date.",
   "dietMealBreakfast": "Breakfast",
   "dietMealLunch": "Lunch",
