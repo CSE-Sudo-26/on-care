@@ -19,7 +19,9 @@ from app.services.coach import grounding, prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
-from app.services.coach_service import _diet_suggestion, _exercise_suggestion
+from app.services.coach_service import (
+    _diet_suggestion, _exercise_suggestion, diet_period_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +50,18 @@ _EXERCISE_SYSTEM = (
 def _rag_suggestion(
     db: Session, user_id: str, *, domain: str, system_prompt: str,
     query: str, tag: str, title: str, fallback: CoachSuggestion,
+    extra_context: str = "",
 ) -> CoachSuggestion:
     try:
         context = retrieve_context(db, query, user_id=user_id, domain=domain)
-        if not context:
-            return fallback  # 검색 자료가 전혀 없으면 규칙 기반
+        # extra_context(#933)는 계산된 요약(예: 이번 주 나트륨 평균)이라, 검색 문서가
+        # 하나도 안 걸려도 그것만으로 코칭을 만들 수 있다 — 그래서 context 가 비어도
+        # extra_context 가 있으면 폴백으로 빠지지 않는다.
+        combined = "\n\n".join(part for part in (context, extra_context) if part)
+        if not combined:
+            return fallback  # 검색 자료도 기간 요약도 전혀 없으면 규칙 기반
         llm = get_coach_llm()
-        user_prompt = f"{context}\n\n위 정보를 바탕으로 조언해 주세요."
+        user_prompt = f"{combined}\n\n위 정보를 바탕으로 조언해 주세요."
         result = llm.generate(system_prompt, user_prompt)
         if not result.text.strip():
             return fallback
@@ -72,6 +79,7 @@ def diet_coach(db: Session, user_id: str) -> CoachSuggestion:
         db, user_id, domain="diet", system_prompt=_DIET_SYSTEM,
         query="최근 식단의 나트륨·당류 관리와 개선점",
         tag="diet", title="오늘의 식단 코칭", fallback=fallback,
+        extra_context=diet_period_context(db, user_id),
     )
 
 
