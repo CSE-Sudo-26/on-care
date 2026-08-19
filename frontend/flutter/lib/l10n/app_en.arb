@@ -949,6 +949,23 @@
   "@myGoalFat": {
     "description": "Health goal field label."
   },
+  "myGoalCaloriesFromMacros": "Calculated from your carb, protein and fat goals",
+  "@myGoalCaloriesFromMacros": {
+    "description": "Helper under the calorie goal field when it was derived from the macro fields."
+  },
+  "myGoalMacroSuggestionNote": "Suggested split for {kcal} kcal: 50% carbs · 30% protein · 20% fat",
+  "@myGoalMacroSuggestionNote": {
+    "description": "Explains the placeholder grams shown in the macro fields.",
+    "placeholders": {
+      "kcal": {
+        "type": "int"
+      }
+    }
+  },
+  "myGoalMacroApplySuggestion": "Use suggested split",
+  "@myGoalMacroApplySuggestion": {
+    "description": "Button that fills the macro fields with the suggested grams."
+  },
   "myGoalWorkoutCount": "Weekly workout count goal",
   "@myGoalWorkoutCount": {
     "description": "Health goal field label."
