@@ -207,8 +207,16 @@ ChatSender = Literal["trainer", "client", "me"]
 
 
 class ChatAttachmentOut(BaseModel):
-    """#778 전용 PDF attachment. 다른 파일 형식은 계약에 포함하지 않는다."""
-    type: Literal["pdf"]
+    """채팅 메시지에 딸린 파일.
+
+    #778 의 주간 리포트 PDF 로 시작해 #921 에서 이미지가 더해졌다. **두 종류
+    뿐이다** — 임의 파일 공유는 이 대화의 목적이 아니고, 받는 쪽이 그릴 수 없는
+    형식이 오면 화면은 아이콘 하나만 남긴다.
+
+    `type` 으로 화면이 그릴 방법을 정한다: `pdf` 는 내려받기, `image` 는 대화
+    안에서 그린다.
+    """
+    type: Literal["pdf", "image"]
     file_name: str
     file_id: str
     file_size: int

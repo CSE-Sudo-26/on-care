@@ -2150,6 +2150,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t complete that. Please try again'**
   String get coachInviteFailed;
 
+  /// No description provided for @coachImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the photo'**
+  String get coachImageUnavailable;
+
   /// No description provided for @coachChatSubtitle.
   ///
   /// In en, this message translates to:

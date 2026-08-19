@@ -625,6 +625,7 @@
   "@coachInviteAccepted": {"placeholders": {"name": {"type": "String"}}},
   "coachInviteRejected": "Request declined",
   "coachInviteFailed": "Couldn't complete that. Please try again",
+  "coachImageUnavailable": "Couldn't load the photo",
   "coachChatSubtitle": "Personal trainer · Available",
   "coachChatBack": "Back",
   "coachChatLoadFailed": "Couldn't load the conversation",

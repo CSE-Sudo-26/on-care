@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/chat_image_attachment.dart';
 import 'package:oncare_trainer/features/messages/domain/chat_context_insight.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -67,6 +71,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
   static const ChatContextInsightDetector _insightDetector =
       ChatContextInsightDetector();
 
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void dispose() {
     _input.dispose();
@@ -117,6 +123,66 @@ class _ChatViewState extends ConsumerState<ChatView> {
       ref.invalidate(chatThreadProvider(widget.clientId));
       ref.invalidate(unreadCountsProvider);
     }
+  }
+
+  /// 사진 한 장을 고르고 그대로 보낸다. (#921)
+  ///
+  /// 고른 뒤 미리보기를 한 번 더 거치지 않는 이유는, 자세 사진은 대화 흐름
+  /// 안에서 즉시 오가는 것이라서다 — 확인 단계를 넣으면 말 한마디 붙이는 것보다
+  /// 사진 한 장 보내는 쪽이 번거로워진다. 잘못 보낸 사진은 대화에서 바로 보인다.
+  ///
+  /// 데모에는 사진을 받을 백엔드가 없어 진입점 자체를 그리지 않는다.
+  Future<void> _sendImage() async {
+    if (_sending) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      // 원본 그대로는 상한(6MiB)에 쉽게 닿는다. 자세를 보는 데 필요한 해상도는
+      // 남기면서 전송이 실패하지 않을 정도로 줄인다.
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    // 함께 붙이는 한마디도 본문과 같은 상한을 지킨다 — 서버가 422 로 거절하면
+    // 사진까지 다시 골라야 한다.
+    final caption = _input.text.trim();
+    if (caption.length > _maxMessageLength) {
+      messenger.showSnackBar(SnackBar(content: Text(l.chatTooLong)));
+      return;
+    }
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() => _sending = true);
+    try {
+      await ref
+          .read(trainerChatImageRepositoryProvider)
+          .send(
+            clientId: widget.clientId,
+            bytes: bytes,
+            fileName: picked.name,
+            message: caption,
+          );
+    } on AppError catch (error) {
+      if (!mounted) return;
+      // 용량·형식 거절은 서버가 이유를 문장으로 준다. 그 문장이 트레이너가
+      // 다음에 할 일(줄여서 다시 보낼지)을 정한다.
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            serverDetailOr(l, error.message, l.chatImageSendFailed),
+          ),
+        ),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+    if (!mounted) return;
+    _input.clear();
+    ref.invalidate(chatThreadProvider(widget.clientId));
+    ref.invalidate(unreadCountsProvider);
   }
 
   /// 데모 안내 배너를 **하루 단위로** 끼워 넣은 목록을 만든다.
@@ -308,7 +374,15 @@ class _ChatViewState extends ConsumerState<ChatView> {
             },
           ),
         ),
-        _InputBar(controller: _input, sending: _sending, onSend: _send),
+        _InputBar(
+          controller: _input,
+          sending: _sending,
+          onSend: _send,
+          // 데모에는 사진을 받을 백엔드가 없다 — 진입점을 그리지 않는다. (#921)
+          onAttachImage: ref.watch(appConfigProvider).useMockApi
+              ? null
+              : _sendImage,
+        ),
       ],
     );
   }
@@ -559,10 +633,16 @@ class _Bubble extends ConsumerWidget {
               ),
               if (message.attachment case final attachment?) ...<Widget>[
                 const SizedBox(height: AppSpacing.sm),
-                _ChatPdfCard(
-                  attachment: attachment,
-                  onOpen: () => _openPdf(context, ref, attachment),
-                ),
+                // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
+                // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
+                // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
+                if (attachment.isImage)
+                  ChatImageAttachment(attachment: attachment)
+                else
+                  _ChatPdfCard(
+                    attachment: attachment,
+                    onOpen: () => _openPdf(context, ref, attachment),
+                  ),
               ],
             ],
           ),
@@ -596,7 +676,7 @@ class _Bubble extends ConsumerWidget {
   Future<void> _openPdf(
     BuildContext context,
     WidgetRef ref,
-    ChatPdfAttachment attachment,
+    ChatAttachment attachment,
   ) async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -628,7 +708,7 @@ class _Bubble extends ConsumerWidget {
 class _ChatPdfCard extends StatelessWidget {
   const _ChatPdfCard({required this.attachment, required this.onOpen});
 
-  final ChatPdfAttachment attachment;
+  final ChatAttachment attachment;
   final VoidCallback onOpen;
 
   @override
@@ -673,6 +753,7 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.sending,
     required this.onSend,
+    this.onAttachImage,
   });
 
   final TextEditingController controller;
@@ -681,6 +762,10 @@ class _InputBar extends StatelessWidget {
   final bool sending;
 
   final Future<void> Function() onSend;
+
+  /// 사진 첨부. 데모처럼 받을 백엔드가 없는 빌드에서는 null 이라 버튼 자체가
+  /// 그려지지 않는다 — 눌러도 아무 데도 닿지 않는 버튼을 두지 않는다. (#921)
+  final Future<void> Function()? onAttachImage;
 
   @override
   Widget build(BuildContext context) {
@@ -698,6 +783,16 @@ class _InputBar extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
+          if (onAttachImage != null) ...<Widget>[
+            IconButton(
+              key: const ValueKey<String>('client-chat-attach-image'),
+              onPressed: sending ? null : onAttachImage,
+              icon: const Icon(Icons.image_outlined),
+              color: AppColors.mutedForeground,
+              tooltip: l.chatAttachImage,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
           Expanded(
             child: TextField(
               // The console header carries a 고객 검색 field too, so the

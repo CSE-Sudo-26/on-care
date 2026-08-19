@@ -1164,6 +1164,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachInviteFailed => 'Couldn\'t complete that. Please try again';
 
   @override
+  String get coachImageUnavailable => 'Couldn\'t load the photo';
+
+  @override
   String get coachChatSubtitle => 'Personal trainer · Available';
 
   @override
