@@ -58,8 +58,15 @@ class _FakeNotificationRepository implements TrainerNotificationRepository {
   }
 
   @override
+  Stream<List<TrainerNotification>> watch() =>
+      Stream<List<TrainerNotification>>.fromFuture(fetch());
+
+  @override
   Future<int> unreadCount() async =>
       _rows.where((TrainerNotification r) => !r.read).length;
+
+  @override
+  Stream<int> watchUnreadCount() => Stream<int>.fromFuture(unreadCount());
 
   @override
   Future<void> markRead(String id) async {
