@@ -3212,12 +3212,6 @@ abstract class AppLocalizations {
   /// **'Create, assign, and manage exercise programs for each member'**
   String get coachSubtitle;
 
-  /// No description provided for @coachMemberPrograms.
-  ///
-  /// In en, this message translates to:
-  /// **'Programs by member'**
-  String get coachMemberPrograms;
-
   /// No description provided for @coachMemberSummary.
   ///
   /// In en, this message translates to:

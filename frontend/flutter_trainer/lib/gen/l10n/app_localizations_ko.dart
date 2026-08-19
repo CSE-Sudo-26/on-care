@@ -1729,9 +1729,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachSubtitle => '고객별 운동 프로그램을 만들고 배정·관리하세요';
 
   @override
-  String get coachMemberPrograms => '고객별 프로그램';
-
-  @override
   String get coachMemberSummary => '고객 요약';
 
   @override

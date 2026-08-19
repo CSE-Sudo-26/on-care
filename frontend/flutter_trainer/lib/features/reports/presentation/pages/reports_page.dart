@@ -621,7 +621,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         SizedBox(
-                          width: 292,
+                          // 프로그램 탭의 왼쪽 고객 열과 같은 폭이다 — 두 탭이
+                          // 같은 자리에 같은 목록을 놓는데 카드 폭만 달라
+                          // 탭을 오갈 때 열이 흔들려 보였다. 줄어든 만큼은
+                          // 오른쪽 리포트 카드들이 가져간다. (#958)
+                          width: 260,
                           // 목록(5줄 고정)에 요약 카드가 더해지면 짧은 창에서는
                           // 열이 화면보다 길어진다. 이 열 안에서만 스크롤하게
                           // 두어 오른쪽 리포트와는 여전히 따로 움직인다.
