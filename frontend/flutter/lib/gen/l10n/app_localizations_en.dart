@@ -327,6 +327,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get dietPeriodNoRecord => 'No record';
+
+  @override
+  String dietPeriodOverGoal(String amount, String unit) {
+    return '$amount $unit over goal';
+  }
+
+  @override
   String otherDateEmpty(Object section) {
     return 'No $section records for the selected date.';
   }

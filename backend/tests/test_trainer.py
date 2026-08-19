@@ -637,6 +637,70 @@ def test_trainer_client_exercise_week_uses_member_sessions(client, db_session):
         db_session.commit()
 
 
+def test_trainer_client_exercise_week_accepts_week_start(client, db_session):
+    """지난 주도 같은 모양으로 읽힌다. (#914)
+
+    트레이너 화면이 `이번 달` 을 그리려면 그 달에 걸친 주를 각각 읽어야 하는데,
+    이 엔드포인트가 이번 주로 고정돼 있어 지난 주를 물을 방법이 없었다.
+    """
+    from datetime import date, timedelta
+
+    from app.models.models import ExerciseSession
+    from app.services.exercise_service import WEEKDAY_LABELS, monday_of_this_week_str
+
+    token = _trainer_token(client)
+    url = "/v1/trainer/clients/user-jisu/exercise-week"
+    last_monday = (
+        date.fromisoformat(monday_of_this_week_str()) - timedelta(days=7)
+    ).isoformat()
+
+    row = ExerciseSession(
+        id=f"test-exercise-week-{uuid4().hex[:10]}",
+        user_id="user-jisu",
+        week_start=last_monday,
+        day_label=WEEKDAY_LABELS[0],
+        type="cardio",
+        minutes=33,
+        calories=222,
+    )
+    db_session.add(row)
+    db_session.commit()
+    try:
+        response = client.get(
+            url, headers=_auth(token), params={"week_start": last_monday}
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["daily_minutes"][0] == 33
+        assert body["daily_calories"][0] == 222
+
+        # 월요일이 아닌 날을 줘도 그 주로 맞춘다.
+        midweek = (date.fromisoformat(last_monday) + timedelta(days=3)).isoformat()
+        same = client.get(url, headers=_auth(token), params={"week_start": midweek})
+        assert same.status_code == 200, same.text
+        assert same.json()["daily_minutes"][0] == 33
+
+        # 이번 주에는 그 기록이 없다 — 인자를 빼면 예전 동작 그대로다.
+        current = client.get(url, headers=_auth(token))
+        assert current.status_code == 200, current.text
+        assert current.json()["daily_minutes"][0] != 33
+    finally:
+        db_session.delete(row)
+        db_session.commit()
+
+
+def test_trainer_client_exercise_week_rejects_bad_week_start(client):
+    """형식이 틀리면 조용히 이번 주로 흘려보내지 않는다 — 화면이 엉뚱한 주를
+    그리고도 맞다고 믿게 된다(회원 API 와 같은 422)."""
+    token = _trainer_token(client)
+    response = client.get(
+        "/v1/trainer/clients/user-jisu/exercise-week",
+        headers=_auth(token),
+        params={"week_start": "2026/08/17"},
+    )
+    assert response.status_code == 422, response.text
+
+
 def test_trainer_cannot_read_unassigned_member_exercise_week(client):
     token = _trainer_token(client)
     response = client.get(

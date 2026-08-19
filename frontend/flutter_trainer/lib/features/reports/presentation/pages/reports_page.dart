@@ -390,6 +390,18 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       scrollable: false,
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
+        // `이번 주` 는 지난 주를 볼 때만 나타난다. 날짜 버튼 **왼쪽**에 둔다 —
+        // 헤더 동작은 오른쪽 정렬이라, 오른쪽 끝에 끼우면 나타나는 순간 날짜
+        // 버튼과 공유 메뉴가 통째로 왼쪽으로 밀린다. 방금까지 누르던 자리가
+        // 움직이는 셈이라, 주를 몇 번 옮기다 보면 매번 눈으로 다시 찾게 된다.
+        // 왼쪽 끝에 두면 나타나고 사라지는 동안에도 나머지가 제자리를 지킨다.
+        if (_weekStart != weekStartOf(nowKst()))
+          ActionButton(
+            key: const ValueKey<String>('reports-go-this-week'),
+            label: l.reportsGoThisWeek,
+            icon: Icons.today_outlined,
+            onPressed: _goToCurrentWeek,
+          ),
         ActionButton(
           key: const ValueKey<String>('reports-prev-week'),
           label: _weekRangeLabel(
@@ -399,12 +411,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           icon: Icons.chevron_left,
           onPressed: () => _shiftWeek(-1),
         ),
-        if (_weekStart != weekStartOf(nowKst()))
-          ActionButton(
-            label: l.reportsGoThisWeek,
-            icon: Icons.today_outlined,
-            onPressed: _goToCurrentWeek,
-          ),
         _ShareMenu(
           client: shareTarget,
           weekStart: _weekStart,

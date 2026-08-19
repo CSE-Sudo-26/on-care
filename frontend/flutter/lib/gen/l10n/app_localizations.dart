@@ -662,6 +662,18 @@ abstract class AppLocalizations {
   /// **'{start} - {end}'**
   String dietPeriodRange(String start, String end);
 
+  /// No description provided for @dietPeriodNoRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'No record'**
+  String get dietPeriodNoRecord;
+
+  /// No description provided for @dietPeriodOverGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} {unit} over goal'**
+  String dietPeriodOverGoal(String amount, String unit);
+
   /// No description provided for @otherDateEmpty.
   ///
   /// In en, this message translates to:

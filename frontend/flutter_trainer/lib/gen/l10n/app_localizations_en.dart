@@ -1100,14 +1100,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitMinutes => 'min';
 
   @override
+  String clientTrendWorkoutDaysValue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clientPeriodToday => 'Today';
+
+  @override
+  String get clientPeriodWeek => 'This week';
+
+  @override
+  String get clientPeriodMonth => 'This month';
+
+  @override
+  String get clientPeriodAverage => 'Daily average';
+
+  @override
+  String clientPeriodLoggedDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days logged',
+      one: '1 day logged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clientPeriodEmpty => 'Nothing was logged in this period';
+
+  @override
+  String get clientDietTrendTitle => 'Nutrition trend';
+
+  @override
   String get unitKcal => 'kcal';
 
   @override
-  String get clientTrendTitle => 'This week\'s exercise trend';
+  String get clientTrendTitle => 'Workout trend';
 
   @override
   String get clientTrendLoadFailed =>
-      'Couldn\'t load the weekly exercise trend. Please try again';
+      'Couldn\'t load the workout trend. Please try again';
+
+  @override
+  String get clientTrendTodayEmpty => 'No workout logged today';
+
+  @override
+  String get clientTrendWorkoutDays => 'Active days';
 
   @override
   String get clientTrendWorkoutCount => 'Workouts';
