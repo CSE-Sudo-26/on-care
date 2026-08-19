@@ -654,6 +654,7 @@
   "exConsultTarget": "Consultation Target",
   "exTrainerConsultType": "Trainer Consultation",
   "exAssignedTrainer": "Assigned Trainer",
+  "exConsultDataSharingNotice": "Once this trainer accepts your request, they'll be able to see your diet log, exercise log, and body info and health goals.",
   "exExerciseGoal": "Exercise Goal",
   "exGoalWeightLoss": "Weight Loss",
   "exGoalStrength": "Build Strength",
