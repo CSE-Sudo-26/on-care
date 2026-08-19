@@ -1328,8 +1328,13 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
                         trailing: _periodToggle(),
                       )
                     : ClientDietPeriodCard(
+                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길 때마다
+                        // 카드가 새로 만들어져, 나트륨을 보다 기간만 넓힌
+                        // 트레이너가 지표를 다시 골라야 했다. 전환 애니메이션은
+                        // 위젯 타입이 달라지는 것만으로 `AnimatedSwitcher` 가
+                        // 이미 해 준다.
                         key: ValueKey<String>(
-                          'program-diet-${widget.client.id}-${_period.name}',
+                          'program-diet-period-${widget.client.id}',
                         ),
                         clientId: widget.client.id,
                         period: _period,

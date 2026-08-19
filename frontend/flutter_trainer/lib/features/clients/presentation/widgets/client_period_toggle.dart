@@ -50,35 +50,44 @@ class ClientPeriodToggle extends StatelessWidget {
         children: <Widget>[
           for (final ClientPeriod period in ClientPeriod.values)
             Flexible(
+              // `GestureDetector` 가 아니라 `InkWell` 이다. 트레이너 앱은
+              // 웹·데스크톱에서도 쓰이는데, 탭만 받는 위젯은 Tab 포커스와 Enter 를
+              // 받지 못해 마우스 없이는 기간을 바꿀 수 없었다. 같은 화면의
+              // `_ClientDataTab` 이 이미 쓰는 방식이다.
               child: Semantics(
                 button: true,
                 selected: active == period,
-                child: GestureDetector(
-                  key: Key('client-period-${period.name}'),
-                  onTap: () => onChanged(period),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active == period
-                          ? AppColors.primary
-                          : const Color(0x00000000),
-                      borderRadius: const BorderRadius.all(AppRadius.pill),
-                    ),
-                    child: Text(
-                      labelOf(l, period),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: active == period
-                            ? AppColors.primaryForeground
-                            : AppColors.mutedForeground,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  decoration: BoxDecoration(
+                    color: active == period
+                        ? AppColors.primary
+                        : const Color(0x00000000),
+                    borderRadius: const BorderRadius.all(AppRadius.pill),
+                  ),
+                  child: Material(
+                    color: const Color(0x00000000),
+                    child: InkWell(
+                      key: Key('client-period-${period.name}'),
+                      onTap: () => onChanged(period),
+                      customBorder: const StadiumBorder(),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          labelOf(l, period),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: active == period
+                                ? AppColors.primaryForeground
+                                : AppColors.mutedForeground,
+                          ),
+                        ),
                       ),
                     ),
                   ),

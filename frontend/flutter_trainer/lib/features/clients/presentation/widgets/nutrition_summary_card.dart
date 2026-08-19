@@ -18,6 +18,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -65,15 +66,7 @@ class _Item {
   bool get isOverGoal => current > target;
 
   /// 목표까지 남은/넘은 양.
-  String get difference => _number((current - target).abs());
-}
-
-String _number(num v) {
-  if (v != v.roundToDouble()) return v.toStringAsFixed(1);
-  return v.toInt().toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (Match _) => ',',
-  );
+  String get difference => formatNumber((current - target).abs());
 }
 
 /// 오늘 섭취 칼로리 + 탄단지 + 나트륨·당류.
@@ -96,8 +89,8 @@ class NutritionSummaryCard extends StatelessWidget {
 
     final _Item calories = _Item(
       label: l.metricCalories,
-      value: _number(client.calories),
-      goal: _number(calorieTargetKcal),
+      value: formatNumber(client.calories),
+      goal: formatNumber(calorieTargetKcal),
       unit: 'kcal',
       current: client.calories,
       target: calorieTargetKcal,
@@ -105,24 +98,24 @@ class NutritionSummaryCard extends StatelessWidget {
     final List<_Item> macros = <_Item>[
       _Item(
         label: l.metricCarbs,
-        value: _number(client.carbsG),
-        goal: _number(carbsTargetG),
+        value: formatNumber(client.carbsG),
+        goal: formatNumber(carbsTargetG),
         unit: 'g',
         current: client.carbsG,
         target: carbsTargetG,
       ),
       _Item(
         label: l.metricProtein,
-        value: _number(client.proteinG),
-        goal: _number(proteinTargetG),
+        value: formatNumber(client.proteinG),
+        goal: formatNumber(proteinTargetG),
         unit: 'g',
         current: client.proteinG,
         target: proteinTargetG,
       ),
       _Item(
         label: l.metricFat,
-        value: _number(client.fatG),
-        goal: _number(fatTargetG),
+        value: formatNumber(client.fatG),
+        goal: formatNumber(fatTargetG),
         unit: 'g',
         current: client.fatG,
         target: fatTargetG,
@@ -184,16 +177,16 @@ class NutritionSummaryCard extends StatelessWidget {
         _StatusCards(
           sodium: _Item(
             label: l.metricSodium,
-            value: _number(client.sodiumMg),
-            goal: _number(sodiumTargetMg),
+            value: formatNumber(client.sodiumMg),
+            goal: formatNumber(sodiumTargetMg),
             unit: 'mg',
             current: client.sodiumMg,
             target: sodiumTargetMg,
           ),
           sugar: _Item(
             label: l.metricSugar,
-            value: _number(client.sugarG),
-            goal: _number(sugarTargetG),
+            value: formatNumber(client.sugarG),
+            goal: formatNumber(sugarTargetG),
             unit: 'g',
             current: client.sugarG,
             target: sugarTargetG,
@@ -243,9 +236,20 @@ class _CalorieRow extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // 토글은 **줄어들되 잘리지는 않는다.** 그냥 두면 폭 1024px ·
+                  // 영어 · 배율 1.3 에서 줄이 넘쳤고, `Flexible` 만 씌우면 폭
+                  // 360px 인 프로그램 탭 고객 데이터 열에서 `이번…` 처럼 잘렸다.
+                  // `FittedBox` 는 세 칸을 다 보여 준 채 통째로 작게 그린다 —
+                  // 이 카드가 이미 큰 숫자에 쓰는 방식과 같다.
                   if (trailing case final Widget action) ...<Widget>[
                     const SizedBox(width: AppSpacing.sm),
-                    Flexible(child: action),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: action,
+                      ),
+                    ),
                   ],
                 ],
               ),

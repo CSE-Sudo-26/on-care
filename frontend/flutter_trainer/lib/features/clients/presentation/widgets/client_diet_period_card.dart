@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -81,22 +82,13 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
     _Metric.sugar => sugarTargetG.toDouble(),
   };
 
-  /// 소수 첫째 자리까지만 남기고 정수는 콤마만 붙인다 — 당류 17.8 이 18 로
-  /// 반올림돼 하루 뷰와 어긋나지 않도록.
-  String _number(num v) {
-    if (v != v.roundToDouble()) return v.toStringAsFixed(1);
-    return v.toInt().toString().replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (Match _) => ',',
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final ClientPeriodKey key = (
-      clientId: widget.clientId,
-      period: widget.period,
+    // 키에 오늘 날짜가 들어간다 — 자정을 넘기면 다음 rebuild 가 새 범위를 묻는다.
+    final ClientPeriodKey key = clientPeriodKeyNow(
+      widget.clientId,
+      widget.period,
     );
     final AsyncValue<ClientDietPeriod> async = ref.watch(
       clientDietPeriodProvider(key),
@@ -144,7 +136,9 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
                 dates: <DateTime>[
                   for (final ClientDietDay d in period.days) d.date,
                 ],
-                format: _number,
+                // 영양 요약 카드와 **같은 서식**을 쓴다. 두 카드가 같은
+                // 화면에 나란히 놓이므로 표기가 갈리면 바로 드러난다.
+                format: formatNumber,
                 metricLabel: _label,
               ),
       ),
@@ -409,35 +403,43 @@ class _MetricPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `GestureDetector` 가 아니라 `InkWell` 이다. 트레이너 앱은 웹·데스크톱에서도
+    // 쓰이는데, 탭만 받는 위젯은 Tab 포커스와 Enter 를 받지 못해 마우스 없이는
+    // 지표를 바꿀 수 없었다. 같은 화면의 `_ClientDataTab` 이 이미 쓰는 방식이다.
     return Semantics(
       button: true,
       selected: active,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: 4,
-          ),
-          decoration: BoxDecoration(
+      child: Container(
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.inputBackground,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          border: Border.all(
             color: active
-                ? AppColors.primary.withValues(alpha: 0.12)
-                : AppColors.inputBackground,
-            borderRadius: const BorderRadius.all(AppRadius.pill),
-            border: Border.all(
-              color: active
-                  ? AppColors.primary.withValues(alpha: 0.35)
-                  : const Color(0x00000000),
-            ),
-            boxShadow: active ? kCardShadow : null,
+                ? AppColors.primary.withValues(alpha: 0.35)
+                : const Color(0x00000000),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: active ? AppColors.primary : AppColors.mutedForeground,
+          boxShadow: active ? kCardShadow : null,
+        ),
+        child: Material(
+          color: const Color(0x00000000),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 4,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: active ? AppColors.primary : AppColors.mutedForeground,
+                ),
+              ),
             ),
           ),
         ),

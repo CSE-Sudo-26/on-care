@@ -37,7 +37,8 @@ class _WeeklyExerciseTrendCardState
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final ClientPeriodKey key = (clientId: widget.clientId, period: _period);
+    // 키에 오늘 날짜가 들어간다 — 자정을 넘기면 다음 rebuild 가 새 범위를 묻는다.
+    final ClientPeriodKey key = clientPeriodKeyNow(widget.clientId, _period);
     final AsyncValue<ClientExercisePeriod> async = ref.watch(
       clientExercisePeriodProvider(key),
     );
@@ -72,8 +73,9 @@ class _WeeklyExerciseTrendCardState
                   Expanded(
                     child: _SummaryMetric(
                       label: l.clientTrendWorkoutDays,
-                      value: '${period.workoutDays}',
-                      unit: l.unitDays,
+                      // 값과 단위를 손으로 이어 붙이면 영어에서 `1 days` 가
+                      // 나온다. 수와 단위를 함께 아는 것은 문구 쪽이다.
+                      value: l.clientTrendWorkoutDaysValue(period.workoutDays),
                     ),
                   ),
                 Expanded(
@@ -92,16 +94,14 @@ class _WeeklyExerciseTrendCardState
                 ),
               ],
             ),
-            if (_period == ClientPeriod.today)
-              if (period.isEmpty) ...<Widget>[
-                const SizedBox(height: AppSpacing.md),
-                EmptyHint(
-                  message: l.clientTrendTodayEmpty,
-                  icon: Icons.fitness_center_outlined,
-                ),
-              ] else
-                const SizedBox.shrink()
-            else ...<Widget>[
+            // 오늘은 두 값만 말한다 — 하루짜리 막대는 그릴 것이 없다.
+            if (_period == ClientPeriod.today && period.isEmpty) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              EmptyHint(
+                message: l.clientTrendTodayEmpty,
+                icon: Icons.fitness_center_outlined,
+              ),
+            ] else if (_period != ClientPeriod.today) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerRight,
@@ -140,13 +140,10 @@ class _WeeklyExerciseTrendCardState
                     _showCalories ? d.calories : d.minutes,
                 ],
                 unit: _showCalories ? l.unitKcal : l.unitMinutes,
-                // 칼로리 계열은 **주황이 아니라 연한 남색**이다(#914). 트레이너
-                // 앱은 남색 브랜드에 주황을 작은 강조로만 쓰기로 한 팔레트인데
-                // 그래프 전체가 주황으로 칠해져 카드에서 이 계열만 튀었고,
-                // 주황은 옆 화면에서 '주의' 로 읽히던 색이라 많이 탄 좋은 날이
-                // 경고처럼 보였다. 같은 계열 안에서 명도로 갈라 둔다.
+                // 칼로리 계열은 **주황이 아니라 남색 계열**이다(#914).
+                // 자세한 배경은 `AppColors.chartCaloriesSeries` 문서에 있다.
                 color: _showCalories
-                    ? AppColors.aiCardGradientEnd
+                    ? AppColors.chartCaloriesSeries
                     : AppColors.primary,
                 // 달(30칸)은 값 라벨을 다 적으면 서로 겹친다.
                 showValues: period.days.length <= 10,
@@ -160,15 +157,15 @@ class _WeeklyExerciseTrendCardState
 }
 
 class _SummaryMetric extends StatelessWidget {
-  const _SummaryMetric({
-    required this.label,
-    required this.value,
-    required this.unit,
-  });
+  const _SummaryMetric({required this.label, required this.value, this.unit});
 
   final String label;
+
+  /// 큰 글씨로 적는 값. 단위가 값과 한 문구로 묶여 오는 경우도 있다.
   final String value;
-  final String unit;
+
+  /// 값 뒤에 작게 붙일 단위. 값에 이미 단위가 들어 있으면 비운다.
+  final String? unit;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -193,14 +190,15 @@ class _SummaryMetric extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
           children: <InlineSpan>[
-            TextSpan(
-              text: ' $unit',
-              style: const TextStyle(
-                color: AppColors.mutedForeground,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+            if (unit case final String suffix)
+              TextSpan(
+                text: ' $suffix',
+                style: const TextStyle(
+                  color: AppColors.mutedForeground,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
           ],
         ),
       ),

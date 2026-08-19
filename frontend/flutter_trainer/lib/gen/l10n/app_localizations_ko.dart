@@ -940,7 +940,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitMinutes => '분';
 
   @override
-  String get unitDays => '일';
+  String clientTrendWorkoutDaysValue(int days) {
+    return '$days일';
+  }
 
   @override
   String get clientPeriodToday => '오늘';

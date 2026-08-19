@@ -1790,11 +1790,11 @@ abstract class AppLocalizations {
   /// **'min'**
   String get unitMinutes;
 
-  /// No description provided for @unitDays.
+  /// No description provided for @clientTrendWorkoutDaysValue.
   ///
   /// In en, this message translates to:
-  /// **'days'**
-  String get unitDays;
+  /// **'{days, plural, =1{1 day} other{{days} days}}'**
+  String clientTrendWorkoutDaysValue(int days);
 
   /// No description provided for @clientPeriodToday.
   ///

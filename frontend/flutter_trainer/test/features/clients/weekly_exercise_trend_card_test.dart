@@ -12,12 +12,15 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 /// 고정된 기간 데이터. 요청한 기간의 날짜 수만큼 [minutes]·[calories] 를
 /// 앞에서부터 채운다 — 남는 날은 기록이 없는 날이다.
+///
+/// 범위는 **키가 들고 있는 날짜**로 만든다. provider 가 그렇게 계산하므로,
+/// 대역도 같은 규칙을 써야 자정을 넘겨도 두 쪽이 어긋나지 않는다.
 ClientExercisePeriod _period(
-  ClientPeriod period, {
+  ClientPeriodKey key, {
   required List<int> minutes,
   required List<int> calories,
 }) {
-  final ClientDateRange range = clientRangeNow(period);
+  final ClientDateRange range = clientRangeFor(key.period, key.day);
   final List<DateTime> dates = clientRangeDates(range);
   return ClientExercisePeriod(
     range: range,
@@ -75,7 +78,7 @@ void main() {
         overrides: <Override>[
           clientExercisePeriodProvider.overrideWith(
             (ref, key) async => _period(
-              key.period,
+              key,
               minutes: key.period == ClientPeriod.today
                   ? const <int>[40]
                   : const <int>[30, 0, 45, 0, 60, 0, 0],
@@ -124,7 +127,7 @@ void main() {
         overrides: <Override>[
           clientExercisePeriodProvider.overrideWith(
             (ref, key) async => _period(
-              key.period,
+              key,
               minutes: const <int>[30, 0, 45],
               calories: const <int>[180, 0, 270],
             ),
@@ -144,7 +147,7 @@ void main() {
     expect(find.byKey(Key('client-exercise-bar-$days')), findsNothing);
   });
 
-  testWidgets('칼로리 계열은 주황이 아니라 연한 남색이다 (#914)', (tester) async {
+  testWidgets('칼로리 계열은 주황이 아니라 남색 계열이다 (#914)', (tester) async {
     tester.view.physicalSize = const Size(900, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -154,7 +157,7 @@ void main() {
         overrides: <Override>[
           clientExercisePeriodProvider.overrideWith(
             (ref, key) async => _period(
-              key.period,
+              key,
               minutes: const <int>[30, 0, 45, 0, 60, 0, 0],
               calories: const <int>[180, 0, 270, 0, 360, 0, 0],
             ),
@@ -186,8 +189,16 @@ void main() {
 
     // 트레이너 앱은 남색 브랜드에 주황을 작은 강조로만 쓴다. 그래프 전체가
     // 주황이면 이 계열만 튀고, 많이 탄 좋은 날이 경고처럼 보인다.
-    expect(fillOf(0), AppColors.aiCardGradientEnd.withValues(alpha: 0.82));
+    expect(fillOf(0), AppColors.chartCaloriesSeries.withValues(alpha: 0.82));
     expect(fillOf(0), isNot(AppColors.brandOrange.withValues(alpha: 0.82)));
+    // AI 카드 그라디언트를 빌려 쓰지 않는다 — 그 토큰이 바뀌면 상관없는 그래프
+    // 색이 함께 움직인다.
+    expect(
+      fillOf(0),
+      isNot(AppColors.aiCardGradientEnd.withValues(alpha: 0.82)),
+    );
+    // 값이 없는 막대와 눈으로 갈려야 한다.
+    expect(fillOf(1), AppColors.borderStrong);
     expect(find.text('180kcal'), findsOneWidget);
     expect(find.text('360kcal'), findsOneWidget);
   });
@@ -212,6 +223,30 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(loads, 2);
+  });
+
+  test('조회 키에 날짜가 들어가, 자정을 넘기면 다른 키가 된다 (#914 리뷰)', () {
+    // 키에 날짜가 없으면 콘솔을 켜 둔 채 KST 자정을 넘겨도 같은 캐시가 어제
+    // 범위를 그대로 들고 있다 — 트레이너는 날이 바뀐 줄 모르고 어제의 `오늘`
+    // 을 본다.
+    final ClientPeriodKey yesterday = (
+      clientId: 'c1',
+      period: ClientPeriod.today,
+      day: _aug18,
+    );
+    final ClientPeriodKey today = (
+      clientId: 'c1',
+      period: ClientPeriod.today,
+      day: _aug19,
+    );
+    expect(yesterday == today, isFalse);
+    expect(
+      clientRangeFor(yesterday.period, yesterday.day).from,
+      isNot(clientRangeFor(today.period, today.day).from),
+    );
+
+    // 지금 기준 키는 KST 오늘을 담는다 — 기기 타임존을 섞으면 하루가 밀린다.
+    expect(clientPeriodKeyNow('c1', ClientPeriod.today).day, todayKst());
   });
 
   test('기간 범위는 오늘·이번 주·이번 달을 각각 덮는다', () {
@@ -243,9 +278,9 @@ void main() {
       ],
     );
     // 오늘 기준 범위는 KST 를 쓴다 — 기기 타임존을 섞으면 하루가 밀린다.
-    expect(
-      clientRangeNow(ClientPeriod.today).from,
-      DateTime(nowKst().year, nowKst().month, nowKst().day),
-    );
+    expect(clientRangeNow(ClientPeriod.today).from, todayKst());
   });
 }
+
+final DateTime _aug18 = DateTime(2026, 8, 18);
+final DateTime _aug19 = DateTime(2026, 8, 19);

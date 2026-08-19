@@ -599,28 +599,41 @@ final clientExerciseWeekProvider =
       return ref.watch(clientRepositoryProvider).fetchExerciseWeek(clientId);
     });
 
-/// 고객 기간 조회의 조회 키 — 누구의, 어느 기간인가.
-typedef ClientPeriodKey = ({String clientId, ClientPeriod period});
+/// 고객 기간 조회의 조회 키 — 누구의, 어느 기간을, **어느 날 기준으로**.
+///
+/// [day] 가 키에 들어 있는 이유는 자정 때문이다. 범위를 provider 안에서
+/// `nowKst()` 로 잡으면, 콘솔을 켜 둔 채 KST 자정을 넘겨도 같은 키의 캐시가
+/// 어제 범위를 그대로 들고 있다 — 트레이너는 날이 바뀐 줄 모르고 어제의
+/// `오늘` 을 본다. 날짜가 키의 일부면 다음 rebuild 에서 자연히 새 범위를 묻는다.
+typedef ClientPeriodKey = ({
+  String clientId,
+  ClientPeriod period,
+  DateTime day,
+});
+
+/// 지금(KST) 기준의 조회 키. 화면은 이 함수로 키를 만든다.
+ClientPeriodKey clientPeriodKeyNow(String clientId, ClientPeriod period) =>
+    (clientId: clientId, period: period, day: todayKst());
 
 /// [ClientPeriodKey] 의 일별 식단 집계. (#914)
-final clientDietPeriodProvider =
-    FutureProvider.family<ClientDietPeriod, ClientPeriodKey>((ref, key) {
+///
+/// `autoDispose` 다 — 날이 바뀌면 어제 키는 아무도 보지 않게 되므로, 캐시가
+/// 계속 쌓이지 않고 스스로 정리된다.
+final clientDietPeriodProvider = FutureProvider.autoDispose
+    .family<ClientDietPeriod, ClientPeriodKey>((ref, key) {
       return ref
           .watch(clientRepositoryProvider)
-          .fetchDietPeriod(key.clientId, clientRangeNow(key.period));
+          .fetchDietPeriod(key.clientId, clientRangeFor(key.period, key.day));
     });
 
 /// [ClientPeriodKey] 의 일별 운동 집계. (#914)
 ///
 /// 범위가 걸친 주를 각각 읽어 이어 붙인다 — 서버도 데모도 운동 이력을 주
 /// 단위로 들고 있다. 한 주만 보는 경우에는 요청도 한 번이다.
-final clientExercisePeriodProvider =
-    FutureProvider.family<ClientExercisePeriod, ClientPeriodKey>((
-      ref,
-      key,
-    ) async {
+final clientExercisePeriodProvider = FutureProvider.autoDispose
+    .family<ClientExercisePeriod, ClientPeriodKey>((ref, key) async {
       final repository = ref.watch(clientRepositoryProvider);
-      final ClientDateRange range = clientRangeNow(key.period);
+      final ClientDateRange range = clientRangeFor(key.period, key.day);
       final Map<String, ClientExerciseDay> byDate =
           <String, ClientExerciseDay>{};
       for (final DateTime monday in clientRangeWeekStarts(range)) {

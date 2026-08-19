@@ -973,7 +973,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitMinutes => 'min';
 
   @override
-  String get unitDays => 'days';
+  String clientTrendWorkoutDaysValue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get clientPeriodToday => 'Today';

@@ -94,7 +94,13 @@ class _TodayDiet extends ConsumerWidget {
     final diet = ref.watch(clientDietProvider(client.id));
 
     return diet.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      // 로딩에도 토글을 같은 자리에 둔다. 탭에 처음 들어올 때 조작이 사라졌다가
+      // 다시 나타나면, 트레이너가 누르려던 자리를 매번 다시 찾게 된다.
+      loading: () => wrap(<Widget>[
+        Align(alignment: Alignment.centerRight, child: toggle),
+        const SizedBox(height: AppSpacing.xxl),
+        const Center(child: CircularProgressIndicator()),
+      ]),
       error: (e, _) => wrap(<Widget>[
         Align(alignment: Alignment.centerRight, child: toggle),
         const SizedBox(height: AppSpacing.sm),
