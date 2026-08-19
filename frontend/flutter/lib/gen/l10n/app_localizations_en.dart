@@ -1164,6 +1164,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachInviteFailed => 'Couldn\'t complete that. Please try again';
 
   @override
+  String get coachImageUnavailable => 'Couldn\'t load the photo';
+
+  @override
   String get coachChatSubtitle => 'Personal trainer · Available';
 
   @override
@@ -1270,6 +1273,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exAssignedTrainer => 'Assigned Trainer';
+
+  @override
+  String get exConsultDataSharingNotice =>
+      'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
 
   @override
   String get exExerciseGoal => 'Exercise Goal';

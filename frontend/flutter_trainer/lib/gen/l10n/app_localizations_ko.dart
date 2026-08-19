@@ -679,6 +679,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTemplateStarterHint => '기본 구성이에요. 고치면 내 템플릿으로 저장돼요';
 
   @override
+  String get chatAttachImage => '사진 첨부';
+
+  @override
+  String get chatImageUnavailable => '사진을 불러오지 못했어요';
+
+  @override
+  String get chatImageSendFailed => '사진을 보내지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get clientTabDiet => '식단';
 
   @override

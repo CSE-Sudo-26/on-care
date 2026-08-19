@@ -1334,6 +1334,24 @@ abstract class AppLocalizations {
   /// **'A starter block. Editing saves it as your own'**
   String get coachTemplateStarterHint;
 
+  /// No description provided for @chatAttachImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a photo'**
+  String get chatAttachImage;
+
+  /// No description provided for @chatImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the photo'**
+  String get chatImageUnavailable;
+
+  /// No description provided for @chatImageSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the photo. Please try again'**
+  String get chatImageSendFailed;
+
   /// No description provided for @clientTabDiet.
   ///
   /// In en, this message translates to:

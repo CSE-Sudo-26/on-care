@@ -2150,6 +2150,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t complete that. Please try again'**
   String get coachInviteFailed;
 
+  /// No description provided for @coachImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the photo'**
+  String get coachImageUnavailable;
+
   /// No description provided for @coachChatSubtitle.
   ///
   /// In en, this message translates to:
@@ -2353,6 +2359,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assigned Trainer'**
   String get exAssignedTrainer;
+
+  /// No description provided for @exConsultDataSharingNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.'**
+  String get exConsultDataSharingNotice;
 
   /// No description provided for @exExerciseGoal.
   ///

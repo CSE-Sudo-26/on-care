@@ -708,6 +708,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'A starter block. Editing saves it as your own';
 
   @override
+  String get chatAttachImage => 'Attach a photo';
+
+  @override
+  String get chatImageUnavailable => 'Couldn\'t load the photo';
+
+  @override
+  String get chatImageSendFailed =>
+      'Couldn\'t send the photo. Please try again';
+
+  @override
   String get clientTabDiet => 'Meals';
 
   @override

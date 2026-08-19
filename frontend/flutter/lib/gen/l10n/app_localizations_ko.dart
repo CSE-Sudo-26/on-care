@@ -1135,6 +1135,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachInviteFailed => '처리하지 못했어요. 다시 시도해 주세요';
 
   @override
+  String get coachImageUnavailable => '사진을 불러오지 못했어요';
+
+  @override
   String get coachChatSubtitle => '담당 트레이너 · 상담 가능';
 
   @override
@@ -1238,6 +1241,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exAssignedTrainer => '담당 트레이너';
+
+  @override
+  String get exConsultDataSharingNotice =>
+      '요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.';
 
   @override
   String get exExerciseGoal => '운동 목표';
