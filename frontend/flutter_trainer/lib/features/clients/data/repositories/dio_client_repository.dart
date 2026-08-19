@@ -23,9 +23,22 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 /// they throw [UnsupportedError] — the demo-only add/activate UI is hidden
 /// in real-API mode.
 class DioClientRepository implements ClientRepository, ClientDataRefresher {
-  DioClientRepository(this._dio);
+  DioClientRepository(
+    this._dio, {
+    this.pollInterval = const Duration(seconds: 30),
+  });
 
   final Dio _dio;
+
+  /// 명단과 그 회원의 기록을 다시 읽는 주기.
+  ///
+  /// 회원이 식단 사진을 올리거나 운동을 마치는 것은 트레이너가 누르는 일이
+  /// 아니라, 여기서 따라잡지 않으면 옆에 띄워 둔 화면이 낡은 값을 계속
+  /// 보여 준다 — 코칭은 그 값을 보면서 하는 일이라 값이 낡으면 판단이
+  /// 낡는다(#918). 채팅(3초)만큼 잦을 이유는 없다. 기록은 초 단위가 아니라
+  /// 분 단위로 쌓인다.
+  final Duration pollInterval;
+
   final StreamController<String?> _refreshes =
       StreamController<String?>.broadcast(sync: true);
 
@@ -36,7 +49,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<TrainerClient>> watchClients() =>
       activePollingStream<List<TrainerClient>>(
         load: _fetchClients,
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(null),
       );
 
@@ -51,7 +64,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
       activePollingStream<List<ClientDietEntry>>(
         load: () => _fetchDiet(clientId),
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(clientId),
       );
 
@@ -59,7 +72,7 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
       activePollingStream<List<RoutineHistoryEntry>>(
         load: () => _fetchHistory(clientId),
-        interval: null,
+        interval: pollInterval,
         refreshes: _refreshesFor(clientId),
       );
 
@@ -119,6 +132,11 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
       final List<num> calories = series('calories_week');
       final List<num> sodium = series('sodium_week');
       final List<num> sugar = series('sugar_week');
+      // 탄단지도 같은 응답에 실려 온다(#944). 끼니 목록을 날마다 부르면 한 달에
+      // 서른 번 넘게 오간다.
+      final List<num> carbs = series('carbs_week');
+      final List<num> protein = series('protein_week');
+      final List<num> fat = series('fat_week');
       for (var d = 0; d < 7; d++) {
         final DateTime date = DateTime(
           monday.year,
@@ -130,6 +148,9 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
           calories: d < calories.length ? calories[d].toInt() : 0,
           sodiumMg: d < sodium.length ? sodium[d].toInt() : 0,
           sugarG: d < sugar.length ? sugar[d].toDouble() : 0,
+          carbsG: d < carbs.length ? carbs[d].toDouble() : 0,
+          proteinG: d < protein.length ? protein[d].toDouble() : 0,
+          fatG: d < fat.length ? fat[d].toDouble() : 0,
         );
       }
     }

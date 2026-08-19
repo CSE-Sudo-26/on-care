@@ -709,6 +709,61 @@ class TrainerClient(Base):
     )
 
 
+class TrainerClientInvite(Base):
+    """트레이너가 회원에게 보내는 담당 요청. 수락하면 [TrainerClient] 가 생긴다.
+
+    상담 요청(`consultation_requests`)의 **반대 방향**이다. 한 표에 방향 컬럼을
+    더해 겸하지 않는 이유는 회원이 채우는 값(운동 목표·건강 목적·희망 일시)이
+    트레이너가 보내는 요청에는 존재하지 않기 때문이다. 한 표에 두면 그 컬럼들이
+    한쪽 방향에서만 채워지는 반쪽 행이 되고, 두 인박스가 같은 제약을 공유하게
+    된다. (#919)
+
+    **담당 관계는 회원이 수락해야 생긴다.** 트레이너가 명단에 곧바로 밀어 넣지
+    않는 것은 담당이 상대의 식단·건강 기록을 여는 권한이라서다 — 한쪽이
+    일방적으로 만들 수 있으면 그 권한이 동의 없이 열린다.
+
+    (trainer, member) 부분 유니크(대기 중일 때만) — 같은 회원에게 대기 중인
+    요청이 둘일 수 없다. 거절당한 뒤 다시 보내는 것은 허용한다.
+    """
+
+    __tablename__ = "trainer_client_invites"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    #: 트레이너가 회원에게 함께 보내는 한마디. 회원이 누구의 요청인지 알아볼
+    #: 근거라, 비어 있어도 화면은 트레이너 이름·소속으로 채운다.
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default="pending", server_default="pending"
+    )
+    #: 회원이 결정한 시각. 트레이너가 거둬들이면(cancelled) 그 시각도 여기 남는다.
+    decided_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_trainer_client_invite_pending",
+            "trainer_id",
+            "member_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+        # 회원 앱이 읽는 질의 그대로 — 나에게 온 대기 중인 요청.
+        Index(
+            "ix_trainer_client_invites_member_status", "member_id", "status"
+        ),
+    )
+
+
 class TrainerClientMemo(Base):
     """트레이너가 담당 회원에 대해 남긴 메모. 회원에게는 보이지 않는다.
 
@@ -877,6 +932,39 @@ class TrainerProgramDraft(Base):
     period: Mapped[str] = mapped_column(String(100), default="")
     memo: Mapped[str] = mapped_column(Text, default="")
     sessions_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class TrainerProgramTemplate(Base):
+    """트레이너가 반복해 쓰는 운동 블록. (#920)
+
+    초안(`trainer_program_drafts`)과 답하는 질문이 다르다 — 초안은 "이 회원에게
+    짜 둔 프로그램", 템플릿은 "어느 회원에게든 끼워 넣는 블록"이다. 그래서 세션
+    개념이 없고 운동 목록 하나만 갖는다. 적용하면 AI 제안 **위에 덧붙는다.**
+
+    지금까지 이 목록은 앱 소스의 `const` 였다. 트레이너마다 다른 것이 템플릿의
+    존재 이유인데 모두가 같은 셋을 봤고, 내용도 한국어로 고정돼 영어 화면에
+    그대로 남았다.
+
+    `exercises_json` 은 `[{name, minutes, type}]` 을 순서 그대로 담는다. 배열
+    순서가 곧 표시 순서다 — 별도 정렬 컬럼은 배열과 어긋날 여지만 만든다
+    (`trainer_program_drafts.sessions_json` 과 같은 규약).
+    """
+
+    __tablename__ = "trainer_program_templates"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), default="")
+    goal: Mapped[str] = mapped_column(String(200), default="")
+    exercises_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -256,4 +256,15 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     );
     return _chat.skip(lastMine + 1).length;
   }
+
+  /// 데모에는 요청을 보낼 트레이너 백엔드가 없다. 빈 목록이라 카드 자체가
+  /// 그려지지 않고, 데모 화면은 지금 그대로다.
+  @override
+  Future<List<CoachInvite>> fetchInvites() async => const <CoachInvite>[];
+
+  @override
+  Future<void> acceptInvite(String inviteId) async {}
+
+  @override
+  Future<void> rejectInvite(String inviteId) async {}
 }

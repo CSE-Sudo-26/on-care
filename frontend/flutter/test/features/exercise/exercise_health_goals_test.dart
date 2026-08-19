@@ -93,6 +93,15 @@ class _SessionMemberCoachRepository implements MemberCoachRepository {
   Future<void> markRead() async {}
   @override
   Future<int> unreadCount() async => 0;
+
+  @override
+  Future<List<CoachInvite>> fetchInvites() async => const <CoachInvite>[];
+
+  @override
+  Future<void> acceptInvite(String inviteId) async {}
+
+  @override
+  Future<void> rejectInvite(String inviteId) async {}
 }
 
 void main() {

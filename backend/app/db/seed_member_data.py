@@ -316,6 +316,12 @@ def seed_member_health_data() -> None:
         _seed_schedule(db, valid)
     finally:
         db.close()
+    # 성별은 건강 프로필 행에 담기므로 **여기가 끝난 뒤** 채운다(#960). 먼저
+    # 돌면 성별만 든 행이 생겨, 위쪽 `_seed_health_profile` 이 "이미 행이 있다"며
+    # 위험도·영양 목표를 통째로 건너뛴다.
+    from app.db.seed_trainer import seed_member_genders
+
+    seed_member_genders()
 
 
 def ingest_seeded_documents() -> None:

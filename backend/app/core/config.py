@@ -73,6 +73,14 @@ class Settings(BaseSettings):
     report_pdf_storage_dir: str = "data/report-pdfs"
     max_report_pdf_bytes: int = 8 * 1024 * 1024
 
+    #: 채팅 이미지 첨부(#921). PDF 와 다른 자리에 두는 이유는 지우는 주기가
+    #: 다르기 때문이다 — 리포트 PDF 는 그 주의 산출물이고, 코칭 사진은 대화의
+    #: 일부로 남는다.
+    chat_image_storage_dir: str = "data/chat-images"
+    #: 사진 한 장의 상한. 휴대폰 카메라 원본을 그대로 올려도 걸리지 않을
+    #: 정도이되, 대화 스레드가 파일 서버가 되지는 않을 정도.
+    max_chat_image_bytes: int = 6 * 1024 * 1024
+
     # --- AI 엔진 ---
     recognizer: str = "gemini"        # gemini | claude(litellm) | yolo
     # 인식 후 공공 식품영양성분 DB 로 영양 수치 보강(정확도↑). 순수 LLM 비교실험 시 false.

@@ -4354,6 +4354,38 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _carbsGMeta = const VerificationMeta('carbsG');
+  @override
+  late final GeneratedColumn<double> carbsG = GeneratedColumn<double>(
+    'carbs_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _proteinGMeta = const VerificationMeta(
+    'proteinG',
+  );
+  @override
+  late final GeneratedColumn<double> proteinG = GeneratedColumn<double>(
+    'protein_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _fatGMeta = const VerificationMeta('fatG');
+  @override
+  late final GeneratedColumn<double> fatG = GeneratedColumn<double>(
+    'fat_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _exercisesJsonMeta = const VerificationMeta(
     'exercisesJson',
   );
@@ -4374,6 +4406,9 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
     calories,
     sodiumMg,
     sugarG,
+    carbsG,
+    proteinG,
+    fatG,
     exercisesJson,
   ];
   @override
@@ -4428,6 +4463,24 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
         sugarG.isAcceptableOrUnknown(data['sugar_g']!, _sugarGMeta),
       );
     }
+    if (data.containsKey('carbs_g')) {
+      context.handle(
+        _carbsGMeta,
+        carbsG.isAcceptableOrUnknown(data['carbs_g']!, _carbsGMeta),
+      );
+    }
+    if (data.containsKey('protein_g')) {
+      context.handle(
+        _proteinGMeta,
+        proteinG.isAcceptableOrUnknown(data['protein_g']!, _proteinGMeta),
+      );
+    }
+    if (data.containsKey('fat_g')) {
+      context.handle(
+        _fatGMeta,
+        fatG.isAcceptableOrUnknown(data['fat_g']!, _fatGMeta),
+      );
+    }
     if (data.containsKey('exercises_json')) {
       context.handle(
         _exercisesJsonMeta,
@@ -4470,6 +4523,18 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
         DriftSqlType.double,
         data['${effectivePrefix}sugar_g'],
       )!,
+      carbsG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carbs_g'],
+      )!,
+      proteinG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}protein_g'],
+      )!,
+      fatG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fat_g'],
+      )!,
       exercisesJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}exercises_json'],
@@ -4492,6 +4557,14 @@ class ClientDailyMetricRow extends DataClass
   final int sodiumMg;
   final double sugarG;
 
+  /// 그날의 탄·단·지(g). 트레이너 화면의 `이번 달` 칼로리 막대를 탄단지로 쌓는
+  /// 재료다(#944). 실서버는 리포트 응답의 같은 이름 계열에서 온다.
+  ///
+  /// 당류와 같이 소수를 유지한다 — 반올림하면 회원 앱 식단 탭 수치와 어긋난다.
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
+
   /// 그날 배정된 운동 이름 JSON. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장
   /// 규칙이며, 리포트의 요일별 상세가 이 값을 읽어 몇 개 중 몇 개인지 보여
   /// 준다 — 이행률만으로는 67% 의 분모를 알 수 없다(#754).
@@ -4503,6 +4576,9 @@ class ClientDailyMetricRow extends DataClass
     required this.calories,
     required this.sodiumMg,
     required this.sugarG,
+    required this.carbsG,
+    required this.proteinG,
+    required this.fatG,
     required this.exercisesJson,
   });
   @override
@@ -4514,6 +4590,9 @@ class ClientDailyMetricRow extends DataClass
     map['calories'] = Variable<int>(calories);
     map['sodium_mg'] = Variable<int>(sodiumMg);
     map['sugar_g'] = Variable<double>(sugarG);
+    map['carbs_g'] = Variable<double>(carbsG);
+    map['protein_g'] = Variable<double>(proteinG);
+    map['fat_g'] = Variable<double>(fatG);
     map['exercises_json'] = Variable<String>(exercisesJson);
     return map;
   }
@@ -4526,6 +4605,9 @@ class ClientDailyMetricRow extends DataClass
       calories: Value(calories),
       sodiumMg: Value(sodiumMg),
       sugarG: Value(sugarG),
+      carbsG: Value(carbsG),
+      proteinG: Value(proteinG),
+      fatG: Value(fatG),
       exercisesJson: Value(exercisesJson),
     );
   }
@@ -4542,6 +4624,9 @@ class ClientDailyMetricRow extends DataClass
       calories: serializer.fromJson<int>(json['calories']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
       sugarG: serializer.fromJson<double>(json['sugarG']),
+      carbsG: serializer.fromJson<double>(json['carbsG']),
+      proteinG: serializer.fromJson<double>(json['proteinG']),
+      fatG: serializer.fromJson<double>(json['fatG']),
       exercisesJson: serializer.fromJson<String>(json['exercisesJson']),
     );
   }
@@ -4555,6 +4640,9 @@ class ClientDailyMetricRow extends DataClass
       'calories': serializer.toJson<int>(calories),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
       'sugarG': serializer.toJson<double>(sugarG),
+      'carbsG': serializer.toJson<double>(carbsG),
+      'proteinG': serializer.toJson<double>(proteinG),
+      'fatG': serializer.toJson<double>(fatG),
       'exercisesJson': serializer.toJson<String>(exercisesJson),
     };
   }
@@ -4566,6 +4654,9 @@ class ClientDailyMetricRow extends DataClass
     int? calories,
     int? sodiumMg,
     double? sugarG,
+    double? carbsG,
+    double? proteinG,
+    double? fatG,
     String? exercisesJson,
   }) => ClientDailyMetricRow(
     clientId: clientId ?? this.clientId,
@@ -4574,6 +4665,9 @@ class ClientDailyMetricRow extends DataClass
     calories: calories ?? this.calories,
     sodiumMg: sodiumMg ?? this.sodiumMg,
     sugarG: sugarG ?? this.sugarG,
+    carbsG: carbsG ?? this.carbsG,
+    proteinG: proteinG ?? this.proteinG,
+    fatG: fatG ?? this.fatG,
     exercisesJson: exercisesJson ?? this.exercisesJson,
   );
   ClientDailyMetricRow copyWithCompanion(ClientDailyMetricsCompanion data) {
@@ -4586,6 +4680,9 @@ class ClientDailyMetricRow extends DataClass
       calories: data.calories.present ? data.calories.value : this.calories,
       sodiumMg: data.sodiumMg.present ? data.sodiumMg.value : this.sodiumMg,
       sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      carbsG: data.carbsG.present ? data.carbsG.value : this.carbsG,
+      proteinG: data.proteinG.present ? data.proteinG.value : this.proteinG,
+      fatG: data.fatG.present ? data.fatG.value : this.fatG,
       exercisesJson: data.exercisesJson.present
           ? data.exercisesJson.value
           : this.exercisesJson,
@@ -4601,6 +4698,9 @@ class ClientDailyMetricRow extends DataClass
           ..write('calories: $calories, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('carbsG: $carbsG, ')
+          ..write('proteinG: $proteinG, ')
+          ..write('fatG: $fatG, ')
           ..write('exercisesJson: $exercisesJson')
           ..write(')'))
         .toString();
@@ -4614,6 +4714,9 @@ class ClientDailyMetricRow extends DataClass
     calories,
     sodiumMg,
     sugarG,
+    carbsG,
+    proteinG,
+    fatG,
     exercisesJson,
   );
   @override
@@ -4626,6 +4729,9 @@ class ClientDailyMetricRow extends DataClass
           other.calories == this.calories &&
           other.sodiumMg == this.sodiumMg &&
           other.sugarG == this.sugarG &&
+          other.carbsG == this.carbsG &&
+          other.proteinG == this.proteinG &&
+          other.fatG == this.fatG &&
           other.exercisesJson == this.exercisesJson);
 }
 
@@ -4637,6 +4743,9 @@ class ClientDailyMetricsCompanion
   final Value<int> calories;
   final Value<int> sodiumMg;
   final Value<double> sugarG;
+  final Value<double> carbsG;
+  final Value<double> proteinG;
+  final Value<double> fatG;
   final Value<String> exercisesJson;
   final Value<int> rowid;
   const ClientDailyMetricsCompanion({
@@ -4646,6 +4755,9 @@ class ClientDailyMetricsCompanion
     this.calories = const Value.absent(),
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.carbsG = const Value.absent(),
+    this.proteinG = const Value.absent(),
+    this.fatG = const Value.absent(),
     this.exercisesJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -4656,6 +4768,9 @@ class ClientDailyMetricsCompanion
     this.calories = const Value.absent(),
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.carbsG = const Value.absent(),
+    this.proteinG = const Value.absent(),
+    this.fatG = const Value.absent(),
     this.exercisesJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
@@ -4667,6 +4782,9 @@ class ClientDailyMetricsCompanion
     Expression<int>? calories,
     Expression<int>? sodiumMg,
     Expression<double>? sugarG,
+    Expression<double>? carbsG,
+    Expression<double>? proteinG,
+    Expression<double>? fatG,
     Expression<String>? exercisesJson,
     Expression<int>? rowid,
   }) {
@@ -4677,6 +4795,9 @@ class ClientDailyMetricsCompanion
       if (calories != null) 'calories': calories,
       if (sodiumMg != null) 'sodium_mg': sodiumMg,
       if (sugarG != null) 'sugar_g': sugarG,
+      if (carbsG != null) 'carbs_g': carbsG,
+      if (proteinG != null) 'protein_g': proteinG,
+      if (fatG != null) 'fat_g': fatG,
       if (exercisesJson != null) 'exercises_json': exercisesJson,
       if (rowid != null) 'rowid': rowid,
     });
@@ -4689,6 +4810,9 @@ class ClientDailyMetricsCompanion
     Value<int>? calories,
     Value<int>? sodiumMg,
     Value<double>? sugarG,
+    Value<double>? carbsG,
+    Value<double>? proteinG,
+    Value<double>? fatG,
     Value<String>? exercisesJson,
     Value<int>? rowid,
   }) {
@@ -4699,6 +4823,9 @@ class ClientDailyMetricsCompanion
       calories: calories ?? this.calories,
       sodiumMg: sodiumMg ?? this.sodiumMg,
       sugarG: sugarG ?? this.sugarG,
+      carbsG: carbsG ?? this.carbsG,
+      proteinG: proteinG ?? this.proteinG,
+      fatG: fatG ?? this.fatG,
       exercisesJson: exercisesJson ?? this.exercisesJson,
       rowid: rowid ?? this.rowid,
     );
@@ -4725,6 +4852,15 @@ class ClientDailyMetricsCompanion
     if (sugarG.present) {
       map['sugar_g'] = Variable<double>(sugarG.value);
     }
+    if (carbsG.present) {
+      map['carbs_g'] = Variable<double>(carbsG.value);
+    }
+    if (proteinG.present) {
+      map['protein_g'] = Variable<double>(proteinG.value);
+    }
+    if (fatG.present) {
+      map['fat_g'] = Variable<double>(fatG.value);
+    }
     if (exercisesJson.present) {
       map['exercises_json'] = Variable<String>(exercisesJson.value);
     }
@@ -4743,6 +4879,9 @@ class ClientDailyMetricsCompanion
           ..write('calories: $calories, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('carbsG: $carbsG, ')
+          ..write('proteinG: $proteinG, ')
+          ..write('fatG: $fatG, ')
           ..write('exercisesJson: $exercisesJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -7284,6 +7423,9 @@ typedef $$ClientDailyMetricsTableCreateCompanionBuilder =
       Value<int> calories,
       Value<int> sodiumMg,
       Value<double> sugarG,
+      Value<double> carbsG,
+      Value<double> proteinG,
+      Value<double> fatG,
       Value<String> exercisesJson,
       Value<int> rowid,
     });
@@ -7295,6 +7437,9 @@ typedef $$ClientDailyMetricsTableUpdateCompanionBuilder =
       Value<int> calories,
       Value<int> sodiumMg,
       Value<double> sugarG,
+      Value<double> carbsG,
+      Value<double> proteinG,
+      Value<double> fatG,
       Value<String> exercisesJson,
       Value<int> rowid,
     });
@@ -7335,6 +7480,21 @@ class $$ClientDailyMetricsTableFilterComposer
 
   ColumnFilters<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carbsG => $composableBuilder(
+    column: $table.carbsG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteinG => $composableBuilder(
+    column: $table.proteinG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fatG => $composableBuilder(
+    column: $table.fatG,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7383,6 +7543,21 @@ class $$ClientDailyMetricsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get carbsG => $composableBuilder(
+    column: $table.carbsG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteinG => $composableBuilder(
+    column: $table.proteinG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get fatG => $composableBuilder(
+    column: $table.fatG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get exercisesJson => $composableBuilder(
     column: $table.exercisesJson,
     builder: (column) => ColumnOrderings(column),
@@ -7417,6 +7592,15 @@ class $$ClientDailyMetricsTableAnnotationComposer
 
   GeneratedColumn<double> get sugarG =>
       $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<double> get carbsG =>
+      $composableBuilder(column: $table.carbsG, builder: (column) => column);
+
+  GeneratedColumn<double> get proteinG =>
+      $composableBuilder(column: $table.proteinG, builder: (column) => column);
+
+  GeneratedColumn<double> get fatG =>
+      $composableBuilder(column: $table.fatG, builder: (column) => column);
 
   GeneratedColumn<String> get exercisesJson => $composableBuilder(
     column: $table.exercisesJson,
@@ -7470,6 +7654,9 @@ class $$ClientDailyMetricsTableTableManager
                 Value<int> calories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
+                Value<double> carbsG = const Value.absent(),
+                Value<double> proteinG = const Value.absent(),
+                Value<double> fatG = const Value.absent(),
                 Value<String> exercisesJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDailyMetricsCompanion(
@@ -7479,6 +7666,9 @@ class $$ClientDailyMetricsTableTableManager
                 calories: calories,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                carbsG: carbsG,
+                proteinG: proteinG,
+                fatG: fatG,
                 exercisesJson: exercisesJson,
                 rowid: rowid,
               ),
@@ -7490,6 +7680,9 @@ class $$ClientDailyMetricsTableTableManager
                 Value<int> calories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
+                Value<double> carbsG = const Value.absent(),
+                Value<double> proteinG = const Value.absent(),
+                Value<double> fatG = const Value.absent(),
                 Value<String> exercisesJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDailyMetricsCompanion.insert(
@@ -7499,6 +7692,9 @@ class $$ClientDailyMetricsTableTableManager
                 calories: calories,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                carbsG: carbsG,
+                proteinG: proteinG,
+                fatG: fatG,
                 exercisesJson: exercisesJson,
                 rowid: rowid,
               ),

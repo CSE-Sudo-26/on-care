@@ -297,6 +297,8 @@ class _ConsultationRequestPageState
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: <Widget>[
             _TargetCard(gym: gym, trainer: trainer),
+            const SizedBox(height: 12),
+            const _DataSharingNotice(),
             const SizedBox(height: 20),
             _ChoiceField<_ExerciseGoal>(
               chipKeyPrefix: 'consult-goal',
@@ -509,6 +511,54 @@ class _TargetCard extends StatelessWidget {
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: AppColors.foreground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 이 요청이 수락되면 트레이너가 조회할 수 있게 되는 정보 범위 안내(#935).
+///
+/// 상담 요청 → 승인으로 `TrainerClient` 링크가 생기면(#467) 트레이너 웹은 담당
+/// 회원의 식단·운동 기록과 신체 정보·목표를 그 즉시 조회할 수 있다(#316, #646,
+/// #914). 지금까지는 이 화면 어디에도 그 사실이 적혀 있지 않아, 회원이 무엇에
+/// 동의하는지 모른 채 요청을 보냈다. 문구는 실제 조회 범위와 일치시킨다 —
+/// 여기 없는 항목(예: 혈압·혈당)은 애초에 수집하지 않으므로 트레이너도 볼 수
+/// 없다.
+class _DataSharingNotice extends StatelessWidget {
+  const _DataSharingNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      key: const Key('consult-data-sharing-notice'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: FigmaColors.hairline),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(
+            Icons.info_outline,
+            size: 16,
+            color: FigmaColors.textSub,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l.exConsultDataSharingNotice,
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
+                color: FigmaColors.textBody,
+              ),
             ),
           ),
         ],
