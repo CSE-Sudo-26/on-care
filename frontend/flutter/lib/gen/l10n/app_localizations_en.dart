@@ -1275,6 +1275,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exAssignedTrainer => 'Assigned Trainer';
 
   @override
+  String get exConsultDataSharingNotice =>
+      'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
+
+  @override
   String get exExerciseGoal => 'Exercise Goal';
 
   @override

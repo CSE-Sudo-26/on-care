@@ -47,7 +47,7 @@ ConsultationRequest _request({String trainerId = 'trainer-consult'}) {
     trainerRole: _trainer.role,
     exerciseGoal: ExerciseGoal.weightLoss,
     healthPurposeType: HealthPurposeType.chronic,
-  healthPurposeDetail: null,
+    healthPurposeDetail: null,
     preferredDate: DateTime(2026, 7, 28),
     preferredTimeSlot: PreferredTimeSlot.afternoon,
     message: null,
@@ -64,6 +64,41 @@ Future<void> _scrollTo(WidgetTester tester, Finder target, double delta) {
       )
       .last;
   return tester.scrollUntilVisible(target, delta, scrollable: pageScroll);
+}
+
+/// 상담 요청 폼 안에서 대상을 화면(뷰포트) 안까지 스크롤해 실제로 탭 가능한
+/// 상태로 만든다.
+///
+/// `_scrollTo` 가 잡는 "마지막 `Scrollable`" 은 이 화면에 있는 `문의 내용`
+/// `TextField` 가 내부적으로 쓰는 편집 스크롤(`restorationId: "editable"`,
+/// 스크롤 범위 항상 0)을 집어버려 아무 것도 스크롤하지 못한다 — 상담 폼은
+/// `consult-form` 키로 직접 잡아야 한다는 것을 그 위젯 코멘트(#640)가 이미
+/// 말하고 있다. `.first` 로 폼 자신의 `Scrollable` 을 고른다(`.last` 를 쓰면
+/// 트리 순회가 더 깊이 들어간 `TextField` 내부 스크롤을 집는다).
+///
+/// 두 단계로 나뉜다: `scrollUntilVisible` 은 대상이 위젯 트리에 **지어지는**
+/// 순간(= cacheExtent 안)에 멈추므로, 화면 안까지 마저 스크롤하는
+/// `Scrollable.ensureVisible` 을 이어서 부른다. 정렬은 가운데(0.5)로 둔다 —
+/// 기본 정렬(0.0, 위쪽 끝맞춤)은 대상을 AppBar 바로 아래 경계에 딱 붙여,
+/// 반올림 오차로 몇 픽셀만 가려져도 탭이 빗나간다. 마지막 `pump` 가 없으면
+/// `ensureVisible` 의 스크롤이 다음 프레임에야 반영되어 같은 문제가 난다.
+///
+/// 상단 데이터 공유 안내(#935)로 폼이 길어지기 전까지는 대부분의 항목이 초기
+/// 뷰포트+cacheExtent 안에 있어 이 구분이 드러나지 않았을 뿐이다.
+Future<void> _revealInForm(
+  WidgetTester tester,
+  Finder target,
+  double delta,
+) async {
+  final Finder formScrollable = find
+      .descendant(
+        of: find.byKey(const Key('consult-form')),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  await tester.scrollUntilVisible(target, delta, scrollable: formScrollable);
+  await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
+  await tester.pump();
 }
 
 AppLocalizations _localizations(WidgetTester tester) {
@@ -117,28 +152,27 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  test('controller blocks a duplicate trainer but not a different one', () async {
-    final ConsultationRequestController controller =
-        newTestConsultationController();
+  test(
+    'controller blocks a duplicate trainer but not a different one',
+    () async {
+      final ConsultationRequestController controller =
+          newTestConsultationController();
 
-    expect(await seedPending(controller, _request()), isTrue);
-    expect(await seedPending(controller, _request()), isFalse);
-    // 답이 없는 트레이너 한 명이 회원을 묶어 두면 안 된다.
-    expect(
-      await seedPending(controller, _request(trainerId: 'trainer-other')),
-      isTrue,
-    );
-    expect(controller.state, hasLength(2));
-  });
+      expect(await seedPending(controller, _request()), isTrue);
+      expect(await seedPending(controller, _request()), isFalse);
+      // 답이 없는 트레이너 한 명이 회원을 묶어 두면 안 된다.
+      expect(
+        await seedPending(controller, _request(trainerId: 'trainer-other')),
+        isTrue,
+      );
+      expect(controller.state, hasLength(2));
+    },
+  );
 
   testWidgets('gym CTA picks a trainer before opening the form', (
     WidgetTester tester,
   ) async {
-    await pumpRoute(
-      tester,
-      AppRoutes.gymDetailPath(_gym.id),
-      hasMyGym: false,
-    );
+    await pumpRoute(tester, AppRoutes.gymDetailPath(_gym.id), hasMyGym: false);
     final AppLocalizations l = _localizations(tester);
     await _scrollTo(tester, find.text(l.exGymConsultRequest), 250);
     await tester.tap(find.text(l.exGymConsultRequest));
@@ -180,22 +214,41 @@ void main() {
     expect(find.textContaining(_gym.name), findsOneWidget);
   });
 
+  testWidgets(
+    'shows what gets shared with the trainer once the request is accepted (#935)',
+    (WidgetTester tester) async {
+      await pumpRoute(
+        tester,
+        AppRoutes.consultationRequestPath(
+          gymId: _gym.id,
+          trainerId: _trainer.id,
+        ),
+      );
+      final AppLocalizations l = _localizations(tester);
+
+      expect(
+        find.byKey(const Key('consult-data-sharing-notice')),
+        findsOneWidget,
+      );
+      expect(find.text(l.exConsultDataSharingNotice), findsOneWidget);
+    },
+  );
+
   testWidgets('validation includes required choices and other-purpose input', (
     WidgetTester tester,
   ) async {
     await pumpRoute(
       tester,
-      AppRoutes.consultationRequestPath(
-        gymId: _gym.id,
-        trainerId: _trainer.id,
-      ),
+      AppRoutes.consultationRequestPath(gymId: _gym.id, trainerId: _trainer.id),
     );
     final AppLocalizations l = _localizations(tester);
 
-    await _scrollTo(tester, find.text(l.exSendConsultRequest), 250);
+    await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
     await tester.tap(find.text(l.exSendConsultRequest));
     await tester.pump();
-    await _scrollTo(tester, find.text(l.exGoalRequired), -250);
+    // 맨 아래에서 제출한 뒤라 상단의 에러 문구가 캐시 범위 밖으로 빠져 있다 —
+    // 다시 위로 스크롤해야 트리에 지어진다.
+    await _revealInForm(tester, find.text(l.exGoalRequired), -250);
     expect(find.text(l.exGoalRequired), findsOneWidget);
     expect(find.text(l.exHealthPurposeRequired), findsOneWidget);
 
@@ -204,9 +257,12 @@ void main() {
       of: find.byKey(const Key('health-purpose-options')),
       matching: find.text(l.exOptionOther),
     );
-    await _scrollTo(tester, healthPurposeOther, 200);
+    await _revealInForm(tester, healthPurposeOther, 200);
     await tester.tap(healthPurposeOther);
     await tester.pump();
+    // "기타" 선택으로 그 아래 입력란·에러 문구가 새로 생겨 레이아웃이
+    // 밀린다 — 칩까지만 보이던 스크롤 위치에서는 아직 캐시 범위 밖일 수 있다.
+    await _revealInForm(tester, find.text(l.exHealthPurposeInputRequired), 150);
     expect(find.text(l.exHealthPurposeInputRequired), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, '무릎 통증 관리');
@@ -219,17 +275,14 @@ void main() {
   ) async {
     await pumpRoute(
       tester,
-      AppRoutes.consultationRequestPath(
-        gymId: _gym.id,
-        trainerId: _trainer.id,
-      ),
+      AppRoutes.consultationRequestPath(gymId: _gym.id, trainerId: _trainer.id),
     );
     final AppLocalizations l = _localizations(tester);
 
     await tester.tap(find.text(l.exGoalWeightLoss));
-    await _scrollTo(tester, find.text(l.exPurposeNone), 180);
+    await _revealInForm(tester, find.text(l.exPurposeNone), 180);
     await tester.tap(find.text(l.exPurposeNone));
-    await _scrollTo(tester, find.text(l.exSelectDate), 180);
+    await _revealInForm(tester, find.text(l.exSelectDate), 180);
     Finder dateMaterial = find
         .ancestor(
           of: find.byIcon(Icons.calendar_today_outlined),
@@ -255,9 +308,9 @@ void main() {
         )
         .first;
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
-    await _scrollTo(tester, find.text(l.exTimeAfternoon), 180);
+    await _revealInForm(tester, find.text(l.exTimeAfternoon), 180);
     await tester.tap(find.text(l.exTimeAfternoon));
-    await _scrollTo(tester, find.text(l.exSendConsultRequest), 220);
+    await _revealInForm(tester, find.text(l.exSendConsultRequest), 220);
     await tester.tap(find.text(l.exSendConsultRequest));
     await tester.pumpAndSettle();
 
