@@ -279,6 +279,40 @@ def test_diet_coach_never_lets_ai_override_when_today_sodium_exceeds(
     assert suggestion.title == "나트륨 섭취가 많아요"
 
 
+def test_diet_coach_checks_today_priority_only_once(
+    db_session, frozen_thursday, monkeypatch,
+):
+    """오늘 우선 여부는 diet_coach 한 번 호출에서 딱 한 번만 조회한다.
+
+    두 번 조회하면(예: 폴백 계산이 따로 다시 물으면) 그 사이 새 식단 기록이
+    들어와 두 조회가 서로 다른 결과를 낼 수 있다(TOCTOU) — 첫 조회는 "정상"
+    으로 보고 RAG 를 태웠는데 두 번째 조회가 "초과"를 반환하면, 성공한 RAG
+    응답이 그 초과 경고를 조용히 덮는다.
+    """
+    user_id = _make_user(db_session)
+    _add_entry(db_session, user_id, "2026-03-12", calories=1900, sodium=800, sugar=20.0)
+
+    calls: list[str] = []
+    original = coach_service._diet_today_priority
+
+    def _counting(db, uid):
+        calls.append(uid)
+        return original(db, uid)
+
+    monkeypatch.setattr(domain_coaches, "_diet_today_priority", _counting)
+    monkeypatch.setattr(domain_coaches, "retrieve_context", lambda *a, **k: "")
+
+    class _StubLLM:
+        def generate(self, system_prompt, user_prompt):
+            return LLMResult(text="괜찮은 하루였어요.", model="stub")
+
+    monkeypatch.setattr(domain_coaches, "get_coach_llm", lambda: _StubLLM())
+
+    domain_coaches.diet_coach(db_session, user_id)
+
+    assert len(calls) == 1, f"오늘 우선 여부가 {len(calls)}번 조회됨: {calls}"
+
+
 def test_rag_suggestion_falls_back_when_extra_context_itself_raises(monkeypatch):
     """extra_context 콜러블이 실패해도(예: 기간 요약 DB 조회 오류) 규칙 폴백으로 빠져야 한다."""
     fallback = _dummy_suggestion()

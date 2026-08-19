@@ -22,7 +22,8 @@ from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
 from app.services.coach_service import (
-    _diet_suggestion, _diet_today_priority, _exercise_suggestion, diet_period_context,
+    _diet_today_priority, _diet_weekly_or_default, _exercise_suggestion,
+    diet_period_context,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,14 +84,24 @@ def diet_coach(db: Session, user_id: str) -> CoachSuggestion:
     # 오늘 기록이 없거나 오늘 자체가 초과면 그 사실이 코칭의 핵심이라, RAG 가
     # 다른 문구로 덮지 못하도록 아예 건너뛰고 바로 돌려준다(#933 CodeRabbit
     # 리뷰 반영). 그 외의 경우에만 검색·기간 요약을 근거로 LLM 코칭을 시도한다.
+    #
+    # 오늘 우선 여부는 여기서 **한 번만** 확인한다. 이 판단과 아래 폴백 계산이
+    # 각자 따로 오늘 기록을 조회하면, 그 사이 새 기록이 들어와 두 조회가 다른
+    # 결과를 낼 수 있다(TOCTOU) — 이 함수는 이미 None(우선순위 아님)을 확인했
+    # 으므로, 그 판단을 다시 하는 `_diet_suggestion` 대신 `_diet_weekly_or_default`
+    # 를 바로 쓴다(코드 리뷰 지적).
     priority = _diet_today_priority(db, user_id)
     if priority is not None:
         return priority
-    fallback = _diet_suggestion(db, user_id)
+    fallback = _diet_weekly_or_default(db, user_id)
     return _rag_suggestion(
         db, user_id, domain="diet", system_prompt=_DIET_SYSTEM,
         query="최근 식단의 나트륨·당류 관리와 개선점",
         tag="diet", title="오늘의 식단 코칭", fallback=fallback,
+        # 이번 주 집계는 위 fallback 계산과 별개로 여기서 한 번 더 조회된다.
+        # try 밖(폴백)과 try 안(extra_context)이 같은 값을 나눠 쓰면, 그 조회의
+        # 실패가 try 밖으로 새어 나가 이 함수 전체를 죽인다 — 같은 구간을 두 번
+        # 쿼리하는 비용보다 장애 시 규칙 폴백 보장이 우선이다(#933 코드 리뷰).
         extra_context=lambda: diet_period_context(db, user_id),
     )
 

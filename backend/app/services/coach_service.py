@@ -90,8 +90,15 @@ def _diet_today_priority(db: Session, user_id: str) -> CoachSuggestion | None:
     치우면 그 사실이 사용자에게 전달되지 않는다. `domain_coaches.diet_coach`
     가 이 값이 있으면 RAG 를 아예 건너뛰고 그대로 반환한다.
 
-    None 이면 "일일 우선" 대상이 아니라는 뜻 — 주간 패턴 판단은 호출부
-    (`_diet_suggestion`)가 이어서 한다.
+    None 이면 "일일 우선" 대상이 아니라는 뜻 — 주간 패턴 판단은 호출부가
+    이어서 한다.
+
+    호출부는 이 함수를 **한 번만** 불러야 한다. `diet_coach()` 와
+    `_diet_suggestion()` 이 각자 따로 부르면, 그 사이 새 기록이 들어와(예:
+    이 요청과 동시에 들어온 식단 기록 저장) 두 번째 호출이 첫 번째와 다른
+    결과를 낼 수 있다 — RAG 경로는 "오늘 정상"으로 보고 진행했는데 폴백은
+    "오늘 초과"를 반환하면, 성공한 RAG 응답이 그 초과 경고를 조용히 덮는다
+    (코드 리뷰 지적).
     """
     today = clock.today_iso()
     rows = db.scalars(
@@ -113,11 +120,14 @@ def _diet_today_priority(db: Session, user_id: str) -> CoachSuggestion | None:
     return None
 
 
-def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
-    """식단 도메인 코치 (STEP 7에서 RAG+LLM 으로 교체)."""
-    priority = _diet_today_priority(db, user_id)
-    if priority is not None:
-        return priority
+def _diet_weekly_or_default(db: Session, user_id: str) -> CoachSuggestion:
+    """오늘이 "일일 우선" 대상이 아닐 때(정상)의 코칭 — 이번 주 나트륨 패턴 또는
+    기본 문구.
+
+    `_diet_today_priority()` 가 이미 None 을 반환했다고 가정하고 오늘 조회를
+    다시 하지 않는다 — `diet_coach()` 가 오늘 판단을 한 번만 하도록 이 함수를
+    따로 뗐다(위 TOCTOU 코멘트 참고).
+    """
     # 오늘은 괜찮아도 이번 주 내내 나트륨이 높았다면 짚어준다(#933) — 하루만 보면
     # "오늘 안정적" 문구가 매번 반복되어, 거의 매일 초과하던 회원도 오늘 하루
     # 낮았다는 이유만으로 계속 잘하고 있다는 인상을 준다.
@@ -134,6 +144,20 @@ def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
         tag="diet", title="식단 균형이 좋아요",
         body="오늘 나트륨 섭취가 안정적이에요. 이대로 꾸준히 유지해봐요!",
     )
+
+
+def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
+    """식단 도메인 코치 (STEP 7에서 RAG+LLM 으로 교체) — 규칙 기반 폴백 전체.
+
+    오늘 우선 여부와 이번 주 패턴을 한 번에 판단하는 단독 진입점. `diet_coach()`
+    는 오늘 조회를 한 번만 하려고 이 함수 대신 `_diet_today_priority()` +
+    `_diet_weekly_or_default()` 를 직접 나눠 쓴다 — 이 함수는 그 조합과
+    같은 결과를 낸다.
+    """
+    priority = _diet_today_priority(db, user_id)
+    if priority is not None:
+        return priority
+    return _diet_weekly_or_default(db, user_id)
 
 
 def _exercise_suggestion(db: Session, user_id: str) -> CoachSuggestion:
