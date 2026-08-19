@@ -43,6 +43,20 @@ class AppColors {
   static const Color aiCardGradientStart = Color(0xFFDCEAF4);
   static const Color aiCardGradientEnd = Color(0xFF9DC3E0);
 
+  /// 그래프의 **두 번째 계열** — 고객 운동 추이의 소모 칼로리가 쓴다.
+  ///
+  /// 예전에는 브랜드 주황이었다. 트레이너 앱은 남색 브랜드에 주황을 작은
+  /// 강조로만 쓰기로 한 팔레트인데 그래프 전체가 주황으로 칠해져 이 계열만
+  /// 튀었고, 주황은 옆 화면에서 '주의' 로 읽히던 색이라 많이 탄 좋은 날이
+  /// 경고처럼 보였다(#914).
+  ///
+  /// [primary] 보다 밝은 같은 계열이라 한 카드가 한 색 이야기로 읽히면서도 두
+  /// 지표가 구분된다. AI 카드 그라디언트(`aiCardGradientEnd`)를 빌려 쓰지
+  /// 않는다 — 그 토큰이 바뀌면 상관없는 그래프 색이 함께 움직이고, 그 값은
+  /// 값이 없는 막대([borderStrong])와의 대비가 1.3:1 이라 빈 날과 기록한 날이
+  /// 눈으로 갈리지 않았다.
+  static const Color chartCaloriesSeries = Color(0xFF4A86BE);
+
   /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 남색). MY 탭
   /// "이번 달 통계" 카드도 이 남색 톤을 쓴다.
   static const Color bannerStart = Color(0xFFEAF2F9);
