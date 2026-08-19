@@ -384,7 +384,6 @@ class _Chat {
   final int dayIndex;
 }
 
-
 /// 데모가 들고 있는 주 수(이번 주 포함). '최근 4주' 카드는 보고 있는 주에서
 /// 3주를 더 거슬러 읽으므로, 뒤로 이동한 만큼 더 있어야 카드가 꽉 찬다.
 /// 12주면 8주 전까지 뒤로 가도 빈 칸이 없다. 백엔드 시드도 같은 값이다(#752).
@@ -442,6 +441,7 @@ const List<double> _completionFactors = <double>[
   0.97,
   1.11,
 ];
+
 /// 고객의 날짜별 하루 집계. 이번 주는 카드에 보이는 값 그대로, 지난 주들은
 /// **같은 요일 자리에** 같은 기록 습관으로 채운다.
 ///
@@ -459,7 +459,8 @@ const int _fixtureClientId = 1;
 class _FixtureClient {
   _FixtureClient(this.days, this.todayIndex)
     : today = days.last,
-      _thisWeek = days.where((FixtureDay d) => d.weekStart == days.last.weekStart)
+      _thisWeek = days
+          .where((FixtureDay d) => d.weekStart == days.last.weekStart)
           .toList(growable: false);
 
   final List<FixtureDay> days;
@@ -498,9 +499,10 @@ class _FixtureClient {
 
   /// 고객 상세의 최근 운동 이력. 가까운 날부터, 운동이 있던 날만.
   List<_History> get history => <_History>[
-    for (final FixtureDay day in days.reversed.where(
-      (FixtureDay d) => d.exercises.isNotEmpty,
-    ).take(3))
+    for (final FixtureDay day
+        in days.reversed
+            .where((FixtureDay d) => d.exercises.isNotEmpty)
+            .take(3))
       _History(
         dateLabel: _historyLabel(day),
         label: day.routineLabel,
@@ -547,6 +549,11 @@ class _FixtureClient {
         calories: Value(day.calories),
         sodiumMg: Value(day.sodiumMg),
         sugarG: Value(day.sugarG),
+        // 탄단지는 끼니에서 그대로 온다 — 김민수 시연 데이터는 실제 음식이라
+        // 지어낼 필요가 없다(#944).
+        carbsG: Value(day.carbsG),
+        proteinG: Value(day.proteinG),
+        fatG: Value(day.fatG),
         exercisesJson: Value(
           jsonEncode(<String>[
             for (final FixtureExercise e in day.exercises) e.label,
@@ -565,7 +572,10 @@ String _mealLabel(String mealType) => switch (mealType) {
   _ => '간식',
 };
 
-Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now) sync* {
+Iterable<ClientDailyMetricsCompanion> _dailyMetrics(
+  _Client client,
+  DateTime now,
+) sync* {
   final today = DateTime(now.year, now.month, now.day);
   final monday = today.subtract(Duration(days: today.weekday - 1));
   final todayIndex = today.weekday - 1;
@@ -594,6 +604,17 @@ Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now
           ? _scaled(completion[day], doneFactor).clamp(0, 100)
           : 0;
       if (cal == 0 && na == 0 && sg == 0 && done == 0) continue;
+      // 그날 칼로리를 탄단지로 나눈다(#944). 실서버는 회원이 적은 끼니에서
+      // 오지만 데모에는 하루 합계뿐이라, **요일로 정해지는 고정 비율**로
+      // 나눈다 — 무작위면 화면을 다시 열 때마다 막대의 층 비율이 달라져
+      // 데모를 보는 사람이 그래프를 믿지 않는다.
+      //
+      // 탄·단 4kcal/g, 지 9kcal/g. 셋이 내는 칼로리의 합이 그날 칼로리와 같다.
+      final carbShare = day.isEven ? 0.50 : 0.45;
+      const proteinShare = 0.25;
+      final fatShare = 1 - carbShare - proteinShare;
+      double g(double share, double perGram) =>
+          double.parse((cal * share / perGram).toStringAsFixed(1));
       yield ClientDailyMetricsCompanion.insert(
         clientId: 'seed-client-${client.id}',
         date: ymd(date),
@@ -601,6 +622,9 @@ Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now
         calories: Value(cal),
         sodiumMg: Value(na),
         sugarG: Value(double.parse((sg).toStringAsFixed(1))),
+        carbsG: Value(g(carbShare, 4)),
+        proteinG: Value(g(proteinShare, 4)),
+        fatG: Value(g(fatShare, 9)),
         exercisesJson: Value(
           jsonEncode(
             date == today
@@ -635,7 +659,11 @@ const List<List<String>> _routinePool = <List<String>>[
 ///
 /// 오늘만은 고객의 큐레이션된 운동 기록을 그대로 쓴다 — 같은 날을 리포트와
 /// 고객 상세의 운동 기록이 각각 다른 운동으로 보여 주면 안 된다.
-List<String> _exercisesFor(_Client client, int completion, {bool today = false}) {
+List<String> _exercisesFor(
+  _Client client,
+  int completion, {
+  bool today = false,
+}) {
   if (completion <= 0) return const <String>[];
   if (today && client.history.isNotEmpty) {
     var best = client.history.first;

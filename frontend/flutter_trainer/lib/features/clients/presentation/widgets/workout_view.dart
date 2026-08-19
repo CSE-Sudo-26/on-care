@@ -10,8 +10,10 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -34,7 +36,7 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// memory of the first. They are one story, so they are one screen:
 /// what's active now, then this week at a glance, then what actually
 /// happened session by session.
-class WorkoutView extends ConsumerWidget {
+class WorkoutView extends ConsumerStatefulWidget {
   /// Creates the workout view for [client].
   const WorkoutView({super.key, required this.client, this.embedded = false});
 
@@ -45,7 +47,17 @@ class WorkoutView extends ConsumerWidget {
   final bool embedded;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkoutView> createState() => _WorkoutViewState();
+}
+
+class _WorkoutViewState extends ConsumerState<WorkoutView> {
+  /// 기본은 **오늘** — 식단 탭과 첫 화면의 기준을 맞춘다.
+  ClientPeriod _period = ClientPeriod.today;
+
+  @override
+  Widget build(BuildContext context) {
+    final TrainerClient client = widget.client;
+    final bool embedded = widget.embedded;
     final AppLocalizations l = AppLocalizations.of(context);
     final history = ref.watch(clientHistoryProvider(client.id));
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
@@ -64,7 +76,13 @@ class WorkoutView extends ConsumerWidget {
         onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
       ),
       const SizedBox(height: AppSpacing.md),
-      WeeklyExerciseTrendCard(clientId: client.id),
+      ClientPeriodSection(
+        icon: Icons.monitor_heart_outlined,
+        title: l.clientTrendTitle,
+        period: _period,
+        onChanged: (ClientPeriod p) => setState(() => _period = p),
+        child: ClientExerciseStatusCard(clientId: client.id, period: _period),
+      ),
       const SizedBox(height: AppSpacing.lg),
       Text(
         l.workoutRecords,

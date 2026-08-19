@@ -13,9 +13,9 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_diet_period_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_toggle.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
@@ -1316,48 +1316,33 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
       key: const ValueKey<String>('program-client-data-switcher'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Container(
-          key: const ValueKey<String>('program-client-data-tabs'),
-          height: 44,
-          padding: EdgeInsets.zero,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: const BorderRadius.all(AppRadius.pill),
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(AppRadius.pill),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                child: _ClientDataTab(
-                  label: l.clientTabDiet,
-                  icon: Icons.restaurant_outlined,
-                  selected: _view == _ClientDataView.diet,
-                  onTap: () => setState(() {
-                    _view = _ClientDataView.diet;
-                  }),
+        // 기간 토글은 전환 스트립과 **한 줄**에 둔다(#943).
+        //
+        // 회원 앱처럼 카드 위에 `제목 + 토글` 한 줄을 따로 두면 고객 데이터 열이
+        // 그만큼 길어져, 폭 1552px·높이 900px 에서 당류 카드가 화면 밖으로 7.8px
+        // 밀렸다. 스트립이 이미 `식단`/`운동` 이라는 제목 노릇을 하고 있으므로
+        // 그 줄의 오른쪽 끝을 빌려 쓴다 — 세로 자리를 한 픽셀도 더 쓰지 않고,
+        // 기간을 바꿔도 토글이 움직이지 않는다.
+        Row(
+          children: <Widget>[
+            Expanded(child: _dataTabs(l)),
+            const SizedBox(width: AppSpacing.sm),
+            // 토글은 줄어들되 잘리지는 않는다. 영어 `Today / This week /
+            // This month` 는 배율 1.3 · 폭 1024 에서 줄을 115px 넘겼다 —
+            // FittedBox 가 세 칸을 다 보여 준 채 통째로 작게 그린다.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: ClientPeriodToggle(
+                  active: _period,
+                  onChanged: (ClientPeriod p) => setState(() => _period = p),
                 ),
               ),
-              Expanded(
-                child: _ClientDataTab(
-                  label: l.clientTabWorkout,
-                  icon: Icons.fitness_center_outlined,
-                  selected: _view == _ClientDataView.workout,
-                  onTap: () => setState(() {
-                    _view = _ClientDataView.workout;
-                  }),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        // 토글은 카드 제목 줄에 얹는다 — 고객 데이터 열은 화면 안에 들어와야
-        // 하고, 카드 위에 한 줄을 더 두면 아래 카드가 밖으로 밀린다.
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: _view == _ClientDataView.diet
@@ -1367,33 +1352,66 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
                           'program-diet-${widget.client.id}',
                         ),
                         client: widget.client,
-                        trailing: _periodToggle(),
                       )
                     : ClientDietPeriodCard(
-                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길 때마다
-                        // 카드가 새로 만들어져, 나트륨을 보다 기간만 넓힌
-                        // 트레이너가 지표를 다시 골라야 했다. 전환 애니메이션은
-                        // 위젯 타입이 달라지는 것만으로 `AnimatedSwitcher` 가
-                        // 이미 해 준다.
+                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길
+                        // 때마다 카드가 새로 만들어져, 나트륨을 보다 기간만
+                        // 넓힌 트레이너가 지표를 다시 골라야 했다.
                         key: ValueKey<String>(
                           'program-diet-period-${widget.client.id}',
                         ),
                         clientId: widget.client.id,
                         period: _period,
-                        trailing: _periodToggle(),
                       )
-              : WeeklyExerciseTrendCard(
+              : ClientExerciseStatusCard(
                   key: ValueKey<String>('program-workout-${widget.client.id}'),
                   clientId: widget.client.id,
+                  period: _period,
                 ),
         ),
       ],
     );
   }
 
-  Widget _periodToggle() => ClientPeriodToggle(
-    active: _period,
-    onChanged: (ClientPeriod p) => setState(() => _period = p),
+  /// 식단 ↔ 운동 전환 스트립.
+  Widget _dataTabs(AppLocalizations l) => Container(
+    key: const ValueKey<String>('program-client-data-tabs'),
+    height: 44,
+    padding: EdgeInsets.zero,
+    decoration: BoxDecoration(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+    ),
+    foregroundDecoration: BoxDecoration(
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Expanded(
+          child: _ClientDataTab(
+            label: l.clientTabDiet,
+            icon: Icons.restaurant_outlined,
+            selected: _view == _ClientDataView.diet,
+            onTap: () => setState(() {
+              _view = _ClientDataView.diet;
+            }),
+          ),
+        ),
+        Expanded(
+          child: _ClientDataTab(
+            label: l.clientTabWorkout,
+            icon: Icons.fitness_center_outlined,
+            selected: _view == _ClientDataView.workout,
+            onTap: () => setState(() {
+              _view = _ClientDataView.workout;
+            }),
+          ),
+        ),
+      ],
+    ),
   );
 }
 

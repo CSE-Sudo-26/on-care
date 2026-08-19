@@ -1856,6 +1856,12 @@ abstract class AppLocalizations {
   /// **'Today\'s nutrition'**
   String get dietTodaySummary;
 
+  /// No description provided for @clientNutritionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition summary'**
+  String get clientNutritionSummary;
+
   /// No description provided for @dietAchieveRate.
   ///
   /// In en, this message translates to:
@@ -2048,6 +2054,12 @@ abstract class AppLocalizations {
   /// **'Daily average'**
   String get clientPeriodAverage;
 
+  /// No description provided for @clientPeriodGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get clientPeriodGoal;
+
   /// No description provided for @clientPeriodLoggedDays.
   ///
   /// In en, this message translates to:
@@ -2075,7 +2087,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientTrendTitle.
   ///
   /// In en, this message translates to:
-  /// **'Workout trend'**
+  /// **'Activity'**
   String get clientTrendTitle;
 
   /// No description provided for @clientTrendLoadFailed.
@@ -2089,6 +2101,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No workout logged today'**
   String get clientTrendTodayEmpty;
+
+  /// No description provided for @clientTrendTodayTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s total'**
+  String get clientTrendTodayTotal;
 
   /// No description provided for @clientTrendWorkoutDays.
   ///

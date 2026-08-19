@@ -2360,6 +2360,12 @@ abstract class AppLocalizations {
   /// **'Assigned Trainer'**
   String get exAssignedTrainer;
 
+  /// No description provided for @exConsultDataSharingNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.'**
+  String get exConsultDataSharingNotice;
+
   /// No description provided for @exExerciseGoal.
   ///
   /// In en, this message translates to:

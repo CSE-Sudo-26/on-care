@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
+import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -53,6 +58,126 @@ void main() {
       expect(period.isEmpty, isTrue);
       expect(period.loggedDays, 0);
       expect(period.avgCalories, 0);
+    });
+  });
+
+  group('기간 그래프가 회원 앱과 같은 그림이다 (#944)', () {
+    Future<void> openDiet(WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 1600);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'diet'),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('이번 주는 꺾은선, 이번 달은 막대다', (tester) async {
+      await openDiet(tester);
+
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+      // 회원 앱과 같이 주는 꺾은선이다 — 7칸은 점과 값이 겹치지 않는다.
+      expect(find.byType(MetricTrendChart), findsOneWidget);
+      expect(find.byKey(const Key('client-diet-bar-0')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await tester.pumpAndSettle();
+      // 30칸을 꺾은선으로 그리면 점과 값 라벨이 서로 겹친다.
+      expect(find.byType(MetricTrendChart), findsNothing);
+      expect(find.byKey(const Key('client-diet-bar-0')), findsOneWidget);
+    });
+
+    testWidgets('이번 달 칼로리 막대가 탄단지 3색으로 쌓인다', (tester) async {
+      await openDiet(tester);
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await tester.pumpAndSettle();
+
+      // 시드가 채운 날 중 하나를 고른다 — 기록이 없는 날은 쌓지 않는다.
+      final Finder stacked = find.byWidgetPredicate(
+        (Widget w) => w is ColoredBox && w.color == AppColors.macroCarbs,
+      );
+      expect(stacked, findsWidgets);
+
+      // 색만 확인하면 폭 0 을 통과시킨다(회원 앱 #947 에서 밟은 함정).
+      final RenderBox box = stacked.evaluate().first.renderObject! as RenderBox;
+      expect(box.size.width, greaterThan(0));
+      expect(box.size.height, greaterThan(0));
+
+      // 범례 셋이 탄·단·지 순서다.
+      final List<ActivityLegend> legends = tester
+          .widgetList<ActivityLegend>(find.byType(ActivityLegend))
+          .toList();
+      expect(legends.map((ActivityLegend x) => x.color).toList(), <Color>[
+        AppColors.macroCarbs,
+        AppColors.macroProtein,
+        AppColors.macroFat,
+      ]);
+    });
+
+    testWidgets('나트륨으로 바꾸면 쌓지 않는다', (tester) async {
+      await openDiet(tester);
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await tester.pumpAndSettle();
+
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietView)),
+      );
+      await tester.tap(find.text(l.metricSodium));
+      await tester.pumpAndSettle();
+
+      // 나트륨에는 쌓을 성분이 없다 — 한 색 막대로 돌아가고 범례도 사라진다.
+      expect(
+        find.byWidgetPredicate(
+          (Widget w) => w is ColoredBox && w.color == AppColors.macroCarbs,
+        ),
+        findsNothing,
+      );
+      expect(find.byType(ActivityLegend), findsNothing);
+    });
+
+    testWidgets('이름과 아이콘은 섹션 헤더가 들고, 카드는 그림만 그린다', (tester) async {
+      await openDiet(tester);
+
+      final Finder header = find.byKey(
+        const ValueKey<String>('client-period-section-header'),
+      );
+      expect(header, findsOneWidget);
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietView)),
+      );
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.text(l.clientNutritionSummary),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.byIcon(Icons.restaurant_outlined),
+        ),
+        findsOneWidget,
+      );
+
+      // 기간을 바꿔도 제목·아이콘이 나타났다 사라지지 않는다.
+      final Rect atToday = tester.getRect(header);
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(header), atToday);
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.text(l.clientNutritionSummary),
+        ),
+        findsOneWidget,
+      );
     });
   });
 
