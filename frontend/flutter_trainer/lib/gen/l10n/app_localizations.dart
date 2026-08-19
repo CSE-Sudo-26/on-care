@@ -1790,6 +1790,54 @@ abstract class AppLocalizations {
   /// **'min'**
   String get unitMinutes;
 
+  /// No description provided for @clientTrendWorkoutDaysValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day} other{{days} days}}'**
+  String clientTrendWorkoutDaysValue(int days);
+
+  /// No description provided for @clientPeriodToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get clientPeriodToday;
+
+  /// No description provided for @clientPeriodWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get clientPeriodWeek;
+
+  /// No description provided for @clientPeriodMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get clientPeriodMonth;
+
+  /// No description provided for @clientPeriodAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily average'**
+  String get clientPeriodAverage;
+
+  /// No description provided for @clientPeriodLoggedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
+  String clientPeriodLoggedDays(int days);
+
+  /// No description provided for @clientPeriodEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was logged in this period'**
+  String get clientPeriodEmpty;
+
+  /// No description provided for @clientDietTrendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition trend'**
+  String get clientDietTrendTitle;
+
   /// No description provided for @unitKcal.
   ///
   /// In en, this message translates to:
@@ -1799,14 +1847,26 @@ abstract class AppLocalizations {
   /// No description provided for @clientTrendTitle.
   ///
   /// In en, this message translates to:
-  /// **'This week\'s exercise trend'**
+  /// **'Workout trend'**
   String get clientTrendTitle;
 
   /// No description provided for @clientTrendLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t load the weekly exercise trend. Please try again'**
+  /// **'Couldn\'t load the workout trend. Please try again'**
   String get clientTrendLoadFailed;
+
+  /// No description provided for @clientTrendTodayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout logged today'**
+  String get clientTrendTodayEmpty;
+
+  /// No description provided for @clientTrendWorkoutDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Active days'**
+  String get clientTrendWorkoutDays;
 
   /// No description provided for @clientTrendWorkoutCount.
   ///
