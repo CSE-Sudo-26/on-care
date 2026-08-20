@@ -18,6 +18,7 @@ class ConsultationRequest {
     this.message,
     this.purposeDetail,
     this.decisionNote,
+    this.createdAt,
   });
 
   /// Server id — the path segment for accept / reject.
@@ -55,6 +56,12 @@ class ConsultationRequest {
 
   /// Rejection reason, once decided.
   final String? decisionNote;
+
+  /// 요청이 접수된 시각. 인박스가 이어 받을 때 커서로 쓴다(#980).
+  ///
+  /// 목록 정렬키라 서버 응답에는 항상 실려 오지만, 데모 인박스는 메모리 목록이라
+  /// 값이 없다 — 그쪽은 이어 받을 것도 없다.
+  final DateTime? createdAt;
 
   /// Whether this request is still waiting on a decision.
   bool get isPending => status == 'pending';

@@ -876,6 +876,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultShowPending => 'Pending only';
 
   @override
+  String get consultLoadMore => 'Load earlier requests';
+
+  @override
   String get consultLoadFailed => 'Couldn\'t load consultation requests';
 
   @override
