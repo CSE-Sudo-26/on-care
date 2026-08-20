@@ -827,12 +827,15 @@ class _InputBar extends StatelessWidget {
               key: const ValueKey<String>('client-chat-send'),
               customBorder: const CircleBorder(),
               onTap: sending ? null : onSend,
-              child: const Padding(
-                padding: EdgeInsets.all(AppSpacing.sm),
-                child: Icon(
-                  Icons.send,
-                  size: 18,
-                  color: AppColors.accentForeground,
+              child: Tooltip(
+                message: AppLocalizations.of(context).a11ySendMessage,
+                child: const Padding(
+                  padding: EdgeInsets.all(AppSpacing.sm),
+                  child: Icon(
+                    Icons.send,
+                    size: 18,
+                    color: AppColors.accentForeground,
+                  ),
                 ),
               ),
             ),

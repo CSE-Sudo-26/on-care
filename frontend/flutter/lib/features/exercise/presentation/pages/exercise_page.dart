@@ -24,6 +24,7 @@ import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_h
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
+import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// 헬스장 서브탭에서 고른 예약 카드 — 탭을 벗어났다가 운동 탭에 다시 들어오면
@@ -154,45 +155,49 @@ class _SubTabs extends StatelessWidget {
   Widget _tab(int i, IconData icon, String label) {
     final bool on = active == i;
     return Expanded(
-      child: GestureDetector(
-        key: ValueKey<String>('exercise-subtab-$i'),
-        onTap: () => onChanged(i),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: on ? FigmaColors.primary : Colors.transparent,
-                width: 2,
-              ),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(
-                icon,
-                size: 14,
-                color: on ? FigmaColors.primary : FigmaColors.textMuted,
-              ),
-              const SizedBox(width: 6),
-              // 라벨은 남는 폭 안에서 접힌다. 아이콘·라벨 둘 다 고정 폭이면
-              // 320px 에서 탭 두 개가 화면을 넘겼다 — 영어(`Exercise log`)는
-              // 기본 배율에서도 넘친다(#766). 아이콘은 접지 않는다.
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: on ? FigmaColors.ink : AppColors.mutedForeground,
-                  ),
+      child: Semantics(
+        button: true,
+        selected: on,
+        child: GestureDetector(
+          key: ValueKey<String>('exercise-subtab-$i'),
+          onTap: () => onChanged(i),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            padding: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: on ? FigmaColors.primary : Colors.transparent,
+                  width: 2,
                 ),
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(
+                  icon,
+                  size: 14,
+                  color: on ? FigmaColors.primary : FigmaColors.textMuted,
+                ),
+                const SizedBox(width: 6),
+                // 라벨은 남는 폭 안에서 접힌다. 아이콘·라벨 둘 다 고정 폭이면
+                // 320px 에서 탭 두 개가 화면을 넘겼다 — 영어(`Exercise log`)는
+                // 기본 배율에서도 넘친다(#766). 아이콘은 접지 않는다.
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: on ? FigmaColors.ink : AppColors.mutedForeground,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -442,25 +447,28 @@ class _ExerciseWeekStrip extends StatelessWidget {
                   ),
                 ),
                 if (showTodayButton)
-                  GestureDetector(
-                    onTap: onToday,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: FigmaColors.primaryA(0.10),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: FigmaColors.primaryA(0.25)),
-                      ),
-                      child: Text(
-                        l.dietToday,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.primary,
+                  Semantics(
+                    button: true,
+                    child: GestureDetector(
+                      onTap: onToday,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: FigmaColors.primaryA(0.10),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: FigmaColors.primaryA(0.25)),
+                        ),
+                        child: Text(
+                          l.dietToday,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: FigmaColors.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -471,7 +479,11 @@ class _ExerciseWeekStrip extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
-              _Arrow(icon: Icons.chevron_left, onTap: onPrev),
+              _Arrow(
+                icon: Icons.chevron_left,
+                tooltip: l.a11yPrevWeek,
+                onTap: onPrev,
+              ),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -491,7 +503,11 @@ class _ExerciseWeekStrip extends StatelessWidget {
                   ],
                 ),
               ),
-              _Arrow(icon: Icons.chevron_right, onTap: onNext),
+              _Arrow(
+                icon: Icons.chevron_right,
+                tooltip: l.a11yNextWeek,
+                onTap: onNext,
+              ),
             ],
           ),
         ],
@@ -502,8 +518,15 @@ class _ExerciseWeekStrip extends StatelessWidget {
 
 /// Circular week-navigation arrow, dimmed when disabled (onTap == null).
 class _Arrow extends StatelessWidget {
-  const _Arrow({required this.icon, required this.onTap});
+  const _Arrow({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
   final IconData icon;
+
+  /// 화살표 하나뿐이라 어느 쪽으로 가는지 말할 데가 툴팁뿐이다(#972).
+  final String tooltip;
   final VoidCallback? onTap;
 
   @override
@@ -516,10 +539,13 @@ class _Arrow extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: SizedBox(
-            width: 28,
-            height: 28,
-            child: Icon(icon, size: 16, color: FigmaColors.primary),
+          child: Tooltip(
+            message: tooltip,
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Icon(icon, size: 16, color: FigmaColors.primary),
+            ),
           ),
         ),
       ),
@@ -745,50 +771,54 @@ class _WeekDay extends StatelessWidget {
     final Color labelColor = isSelected || isToday
         ? FigmaColors.primary
         : AppColors.mutedForeground;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          // 말줄임이 아니라 축소다. 'Mon' 이 'M…' 이 되면 무슨 요일인지가
-          // 사라진다 — 좁아도 읽을 수 있어야 한다(#766).
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: labelColor,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // 말줄임이 아니라 축소다. 'Mon' 이 'M…' 이 되면 무슨 요일인지가
+            // 사라진다 — 좁아도 읽을 수 있어야 한다(#766).
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Container(
-            width: 30,
-            height: 30,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isSelected ? FigmaColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: isSelected ? kCardShadow : null,
-            ),
-            child: Text(
-              '${day.day}',
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: isSelected
-                    ? Colors.white
-                    : isToday
-                    ? FigmaColors.primary
-                    : AppColors.mutedForeground,
+            const SizedBox(height: 3),
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isSelected ? FigmaColors.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: isSelected ? kCardShadow : null,
+              ),
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected
+                      ? Colors.white
+                      : isToday
+                      ? FigmaColors.primary
+                      : AppColors.mutedForeground,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1159,39 +1189,56 @@ class _TodayDonut extends StatelessWidget {
               SizedBox(
                 width: 116,
                 height: 116,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: <Widget>[
-                    ChartReveal(
-                      builder: (BuildContext context, double t) => CustomPaint(
-                        size: const Size.square(116),
-                        painter: _DonutPainter(segs, progress: t),
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
+                // 도넛은 `CustomPaint` 라 시맨틱 트리에 아무 노드도 남기지
+                // 않고, 가운데 숫자는 `45` 와 `분` 두 조각으로 흩어져 읽힌다.
+                // 한 덩어리로 묶어 무엇의 몇 분인지 한 문장으로 말한다(#972).
+                // 유형별 내역은 오른쪽 범례가 이어서 읽어 준다.
+                child: Semantics(
+                  container: true,
+                  label: chartSemanticsLabel(
+                    l,
+                    title: l.exActivityTitle,
+                    points: total == 0
+                        ? const <String>[]
+                        : <String>[l.unitMinutesValue(total)],
+                  ),
+                  child: ExcludeSemantics(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: <Widget>[
-                        Text(
-                          '$total',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: FigmaColors.ink,
-                            height: 1,
-                            letterSpacing: -0.5,
-                          ),
+                        ChartReveal(
+                          builder: (BuildContext context, double t) =>
+                              CustomPaint(
+                                size: const Size.square(116),
+                                painter: _DonutPainter(segs, progress: t),
+                              ),
                         ),
-                        Text(
-                          l.unitMinutes,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              '$total',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: FigmaColors.ink,
+                                height: 1,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            Text(
+                              l.unitMinutes,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(width: 48),
@@ -1370,31 +1417,35 @@ class _PeriodToggle extends StatelessWidget {
           // 같은 처리다(#739, #766). 보통 폭에서는 최소 폭 그대로라 모양이 같다.
           for (int i = 0; i < labels.length; i++)
             Flexible(
-              child: GestureDetector(
-                onTap: () => onChanged(i),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: active == i
-                        ? FigmaColors.primary
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    labels[i],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
+              child: Semantics(
+                button: true,
+                selected: active == i,
+                child: GestureDetector(
+                  onTap: () => onChanged(i),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
                       color: active == i
-                          ? Colors.white
-                          : AppColors.mutedForeground,
+                          ? FigmaColors.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      labels[i],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: active == i
+                            ? Colors.white
+                            : AppColors.mutedForeground,
+                      ),
                     ),
                   ),
                 ),
@@ -1420,6 +1471,20 @@ class _ActivityChart extends StatelessWidget {
 
   /// 값이 바뀌면 막대 성장 애니메이션을 처음부터 다시 재생하기 위한 키.
   final Object? replayKey;
+
+  /// 툴팁과 **같은 내용**을 시맨틱 라벨로. 색 사각형(`WidgetSpan`)은 빼고
+  /// 줄바꿈은 쉼표로 바꾼다 — 음성 안내는 줄을 나누어 읽지 않는다. 어느 날의
+  /// 막대인지 먼저 말해야 하므로 요일을 앞에 붙인다(#972).
+  String _barSemantics(AppLocalizations l, int i) => chartPointLabel(
+    l,
+    dayLabels[i],
+    TextSpan(children: _tipSpans(l, i))
+        .toPlainText(includePlaceholders: false)
+        .split('\n')
+        .map((String line) => line.trim())
+        .where((String line) => line.isNotEmpty)
+        .join(', '),
+  );
 
   /// Hover tooltip content for a bar — one line per activity type as
   /// [color square] 종류   N분 (see the legend).
@@ -1473,94 +1538,119 @@ class _ActivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      key: bars.length > 10 ? const Key('exerciseMonthlyDailyChart') : null,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: kCardShadow,
-      ),
-      child: Column(
-        children: <Widget>[
-          SizedBox(
-            height: 150,
-            width: double.infinity,
-            child: Stack(
-              children: <Widget>[
-                Positioned.fill(
-                  child: ChartReveal(
-                    replayKey: replayKey,
-                    duration: AppMotion.chartGrow,
-                    // 막대별 stagger 는 painter 안에서 곡선을 적용한다.
-                    curve: Curves.linear,
-                    builder: (BuildContext context, double t) => CustomPaint(
-                      painter: _StackedBarPainter(
-                        bars: bars,
-                        dayLabels: dayLabels,
-                        todayIndex: todayIndex,
-                        todayLabel: l.exToday,
-                        progress: t,
+    // 한 칸도 기록이 없는 기간은 막대마다 `휴식` 을 서른 번 읽히는 대신 비어
+    // 있다고 한 번만 말한다(#972).
+    final bool empty = bars.every((_Bar b) => b.total <= 0);
+    return Semantics(
+      container: true,
+      label: empty
+          ? chartSemanticsLabel(
+              l,
+              title: l.exActivityTitle,
+              points: const <String>[],
+            )
+          : null,
+      child: ExcludeSemantics(
+        excluding: empty,
+        child: Container(
+          key: bars.length > 10 ? const Key('exerciseMonthlyDailyChart') : null,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: kCardShadow,
+          ),
+          child: Column(
+            children: <Widget>[
+              SizedBox(
+                height: 150,
+                width: double.infinity,
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: ChartReveal(
+                        replayKey: replayKey,
+                        duration: AppMotion.chartGrow,
+                        // 막대별 stagger 는 painter 안에서 곡선을 적용한다.
+                        curve: Curves.linear,
+                        builder: (BuildContext context, double t) =>
+                            CustomPaint(
+                              painter: _StackedBarPainter(
+                                bars: bars,
+                                dayLabels: dayLabels,
+                                todayIndex: todayIndex,
+                                todayLabel: l.exToday,
+                                progress: t,
+                              ),
+                            ),
                       ),
                     ),
-                  ),
-                ),
-                // Transparent per-bar hover regions aligned to the painter's
-                // slots (left axis pad = 24, label strip = bottom 24).
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 24, bottom: 24),
-                    child: Row(
-                      children: <Widget>[
-                        for (int i = 0; i < bars.length; i++)
-                          Expanded(
-                            child: Tooltip(
-                              richMessage: TextSpan(
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: FigmaColors.ink,
-                                  height: 1.15,
+                    // Transparent per-bar hover regions aligned to the painter's
+                    // slots (left axis pad = 24, label strip = bottom 24).
+                    Positioned.fill(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 24, bottom: 24),
+                        child: Row(
+                          children: <Widget>[
+                            for (int i = 0; i < bars.length; i++)
+                              Expanded(
+                                child: Semantics(
+                                  label: _barSemantics(l, i),
+                                  child: Tooltip(
+                                    richMessage: TextSpan(
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: FigmaColors.ink,
+                                        height: 1.15,
+                                      ),
+                                      children: _tipSpans(l, i),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F3F5),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: FigmaColors.hairline,
+                                      ),
+                                      boxShadow: kCardShadow,
+                                    ),
+                                    child: const SizedBox.expand(),
+                                  ),
                                 ),
-                                children: _tipSpans(l, i),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F3F5),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: FigmaColors.hairline),
-                                boxShadow: kCardShadow,
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          // 범례 셋은 좁아지면 다음 줄로 넘긴다. 한 줄에 붙여 두면 320px 에서
-          // 넘쳤고, 라벨을 줄이면 무슨 색이 무엇인지가 사라진다(#766).
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 16,
-            runSpacing: 6,
-            children: <Widget>[
-              _Legend(color: FigmaColors.primary, label: l.exTypeCardio),
-              _Legend(color: const Color(0xFF1B6FA8), label: l.exTypeStrength),
-              _Legend(
-                color: const Color(0xFFD4EEF8),
-                label: l.exTypeStretching,
+              ),
+              const SizedBox(height: 6),
+              // 범례 셋은 좁아지면 다음 줄로 넘긴다. 한 줄에 붙여 두면 320px 에서
+              // 넘쳤고, 라벨을 줄이면 무슨 색이 무엇인지가 사라진다(#766).
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 16,
+                runSpacing: 6,
+                children: <Widget>[
+                  _Legend(color: FigmaColors.primary, label: l.exTypeCardio),
+                  _Legend(
+                    color: const Color(0xFF1B6FA8),
+                    label: l.exTypeStrength,
+                  ),
+                  _Legend(
+                    color: const Color(0xFFD4EEF8),
+                    label: l.exTypeStretching,
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1608,6 +1698,8 @@ class _Bar {
   final double cardio;
   final double strength;
   final double stretch;
+
+  double get total => cardio + strength + stretch;
 }
 
 class _StackedBarPainter extends CustomPainter {

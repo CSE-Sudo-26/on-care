@@ -155,6 +155,7 @@ class ClientReportView extends StatelessWidget {
               // 어디든 같은 규칙으로 그린다(#752).
               if (report.weekCompletion.length == weekdayCount)
                 BarSeriesChart(
+                  title: l.reportsCompletionByDay,
                   values: report.weekCompletion,
                   labels: weekdayLabels(AppLocalizations.of(context)),
                   maxValue: 100,

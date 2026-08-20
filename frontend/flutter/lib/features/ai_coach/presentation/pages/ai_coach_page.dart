@@ -148,6 +148,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
         children: <Widget>[
           _circle(
             Icons.chevron_left,
+            MaterialLocalizations.of(context).backButtonTooltip,
             () => context.canPop()
                 ? context.pop()
                 : context.go(AppRoutes.dashboard),
@@ -212,17 +213,21 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
     );
   }
 
-  Widget _circle(IconData icon, VoidCallback onTap) {
+  Widget _circle(IconData icon, String tooltip, VoidCallback onTap) {
     return Material(
       color: FigmaColors.softBlue,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(icon, size: 20, color: FigmaColors.primary),
+        // 아이콘만 있는 버튼이라 무엇을 하는지 말할 데가 툴팁뿐이다(#972).
+        child: Tooltip(
+          message: tooltip,
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(icon, size: 20, color: FigmaColors.primary),
+          ),
         ),
       ),
     );
@@ -449,35 +454,39 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
               ),
             ),
             const SizedBox(width: 8),
-            GestureDetector(
-              onTap: sending ? null : () => _send(),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: FigmaColors.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: kCardShadow,
-                ),
-                child: sending
-                    ? const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+            Semantics(
+              button: true,
+              label: AppLocalizations.of(context).a11ySendMessage,
+              child: GestureDetector(
+                onTap: sending ? null : () => _send(),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: FigmaColors.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: kCardShadow,
+                  ),
+                  child: sending
+                      ? const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
+                        )
+                      : const Icon(
+                          Icons.arrow_upward,
+                          size: 16,
+                          color: Colors.white,
                         ),
-                      )
-                    : const Icon(
-                        Icons.arrow_upward,
-                        size: 16,
-                        color: Colors.white,
-                      ),
+                ),
               ),
             ),
           ],

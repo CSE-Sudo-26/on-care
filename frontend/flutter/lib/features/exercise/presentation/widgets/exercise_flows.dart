@@ -361,24 +361,28 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     VoidCallback onTap, {
     bool center = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        alignment: center ? Alignment.center : null,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: on ? FigmaColors.primaryA(0.10) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: on ? FigmaColors.primary : FigmaColors.hairline,
+    return Semantics(
+      button: true,
+      selected: on,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          alignment: center ? Alignment.center : null,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: on ? FigmaColors.primaryA(0.10) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: on ? FigmaColors.primary : FigmaColors.hairline,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: on ? FigmaColors.primary : AppColors.mutedForeground,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: on ? FigmaColors.primary : AppColors.mutedForeground,
+            ),
           ),
         ),
       ),
@@ -471,13 +475,18 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: () => Navigator.of(context).pop(),
-                    child: const SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: Icon(
-                        Icons.close,
-                        size: 16,
-                        color: FigmaColors.primary,
+                    child: Tooltip(
+                      message: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      child: const SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: FigmaColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -537,18 +546,22 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                         ),
                       ),
                       if (_query.isNotEmpty)
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            _search.clear();
-                            setState(() => _query = '');
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: Icon(
-                              Icons.close,
-                              size: 15,
-                              color: FigmaColors.textMuted,
+                        Semantics(
+                          button: true,
+                          label: l.a11yClearSearch,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              _search.clear();
+                              setState(() => _query = '');
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.close,
+                                size: 15,
+                                color: FigmaColors.textMuted,
+                              ),
                             ),
                           ),
                         ),

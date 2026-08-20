@@ -1871,4 +1871,46 @@ class AppLocalizationsKo extends AppLocalizations {
   String exDatedTitle(int month, int day, String title) {
     return '$month월 $day일 $title';
   }
+
+  @override
+  String a11yChartSummary(String title, String detail) {
+    return '$title. $detail';
+  }
+
+  @override
+  String a11yChartEmpty(String title) {
+    return '$title. 기록이 없어요';
+  }
+
+  @override
+  String a11yChartPoint(String day, String value) {
+    return '$day $value';
+  }
+
+  @override
+  String get a11yShowPassword => '비밀번호 표시';
+
+  @override
+  String get a11yHidePassword => '비밀번호 숨기기';
+
+  @override
+  String get a11yOpenCoaching => '코칭 조언 열기';
+
+  @override
+  String get a11ySendMessage => '메시지 보내기';
+
+  @override
+  String get a11yClearSearch => '검색어 지우기';
+
+  @override
+  String get a11yRemoveFood => '음식 지우기';
+
+  @override
+  String get a11yOpenCalendar => '일정 달력 열기';
+
+  @override
+  String get a11yPrevWeek => '지난 주';
+
+  @override
+  String get a11yNextWeek => '다음 주';
 }

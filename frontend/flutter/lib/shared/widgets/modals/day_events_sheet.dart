@@ -178,10 +178,15 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: () => Navigator.of(context).pop(_changed),
-                    child: const SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: Icon(Icons.close, size: 18),
+                    child: Tooltip(
+                      message: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      child: const SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Icon(Icons.close, size: 18),
+                      ),
                     ),
                   ),
                 ),

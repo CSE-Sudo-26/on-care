@@ -11,6 +11,7 @@ import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/diet/domain/entities/diet_period.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 
 /// 식단 탭의 기간 뷰(이번 주 / 이번 달).
@@ -404,20 +405,38 @@ class _PeriodBody extends StatelessWidget {
           const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
           const SizedBox(height: 14),
           if (weekly)
-            MetricTrendChart(
-              values: values,
-              dayLabels: <String>[
-                for (final DateTime d in dates) labels[d.weekday - 1],
-              ],
-              goal: goal,
-              ticks: ticks,
-              // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면(지난 주를
-              // 보고 있으면) 마지막 칸까지 전부 그린다.
-              todayIndex: _todayIndexIn(dates),
-              replayKey: replayKey,
-              goalLabel:
-                  '${AppLocalizations.of(context).homeGoal}\n${format(goal)}',
-              formatTick: (double v) => format(v),
+            Builder(
+              builder: (BuildContext context) {
+                final AppLocalizations l = AppLocalizations.of(context);
+                final List<String> days = <String>[
+                  for (final DateTime d in dates) labels[d.weekday - 1],
+                ];
+                final int today = _todayIndexIn(dates);
+                return MetricTrendChart(
+                  values: values,
+                  dayLabels: days,
+                  goal: goal,
+                  ticks: ticks,
+                  // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면(지난 주를
+                  // 보고 있으면) 마지막 칸까지 전부 그린다.
+                  todayIndex: today,
+                  replayKey: replayKey,
+                  // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로 시작한다.
+                  semanticsLabel: chartSemanticsLabel(
+                    l,
+                    title: metricLabel,
+                    points: chartSeriesPoints(
+                      l,
+                      values: values,
+                      dayLabels: days,
+                      format: (double v) => '${format(v)} $unit',
+                      upTo: today,
+                    ),
+                  ),
+                  goalLabel: '${l.homeGoal}\n${format(goal)}',
+                  formatTick: (double v) => format(v),
+                );
+              },
             )
           else
             _PeriodBars(
@@ -513,6 +532,20 @@ class _PeriodBars extends StatelessWidget {
   /// 같은 구분을 한다(#754). 같은 규칙을 여기에도 둔다.
   bool _isPending(int i) =>
       DateUtils.dateOnly(dates[i]).isAfter(DateUtils.dateOnly(nowKst()));
+
+  /// 툴팁과 **같은 내용**을 한 줄짜리 시맨틱 라벨로. 색 사각형(`WidgetSpan`)은
+  /// 빼고 줄바꿈은 쉼표로 바꾼다 — 음성 안내는 줄을 나누어 읽지 않는다.
+  String _tipText(
+    AppLocalizations l,
+    DateFormat dayFormat,
+    int i,
+    bool hasGoal,
+  ) => TextSpan(children: _tipSpans(l, dayFormat, i, hasGoal))
+      .toPlainText(includePlaceholders: false)
+      .split('\n')
+      .map((String line) => line.trim())
+      .where((String line) => line.isNotEmpty)
+      .join(', ');
 
   /// 한 막대의 툴팁 내용 — 운동 탭 `운동 현황` 툴팁과 같은 구조다.
   /// `[색 사각형] 지표  값 단위` 한 줄, 목표를 넘긴 날은 초과분을 한 줄 더.
@@ -633,115 +666,137 @@ class _PeriodBars extends StatelessWidget {
     final bool hasGoal = goal > 0;
     // 달(30칸)에서도 라벨이 겹치지 않도록 몇 칸에 하나만 적는다.
     final int labelStep = values.length > 10 ? (values.length / 6).ceil() : 1;
+    // 기록이 하나도 없는 달은 막대마다 `기록 없음` 을 서른 번 읽히는 대신
+    // 비어 있다고 한 번만 말한다(#972).
+    final bool empty = values.every((double v) => v <= 0);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        SizedBox(
-          height: chartHeight,
-          child: Stack(
-            children: <Widget>[
-              if (hasGoal)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-                  child: const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: FigmaColors.hairline,
-                  ),
-                ),
-              // 막대 전체를 하나의 ChartReveal 로 감싸고 순서만 어긋내
-              // (chartStagger) 준다. 막대마다 애니메이션을 두면 한 달치에
-              // 티커가 31개 생긴다.
-              ChartReveal(
-                curve: Curves.linear,
-                replayKey: replayKey,
-                builder: (BuildContext context, double t) => Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: <Widget>[
-                    for (int i = 0; i < values.length; i++)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                          child: _Bar(
-                            key: Key('diet-period-bar-$i'),
-                            height:
-                                chartHeight *
-                                (values[i] / maxValue).clamp(0.0, 1.0) *
-                                chartStagger(t, i, values.length),
-                            pending: _isPending(i),
-                            day: _dayAt(i),
-                            // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
-                            // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
-                            // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
-                            // 초과는 목표선과 툴팁이 말한다.
-                            over: hasGoal && values[i] > goal,
-                            color: color,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              // 막대 위에 겹치는 투명한 hover 영역. 운동 탭 `운동 현황` 이
-              // 쓰는 것과 **같은 툴팁 규격**이라, 두 탭에서 같은 조작이 같은
-              // 모양으로 답한다.
-              Positioned.fill(
-                child: Row(
-                  children: <Widget>[
-                    for (int i = 0; i < values.length; i++)
-                      Expanded(
-                        child: Tooltip(
-                          key: Key('diet-period-bar-tip-$i'),
-                          richMessage: TextSpan(
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: FigmaColors.ink,
-                              height: 1.3,
-                            ),
-                            children: _tipSpans(l, dayFormat, i, hasGoal),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F3F5),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: FigmaColors.hairline),
-                            boxShadow: kCardShadow,
-                          ),
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
+    return Semantics(
+      container: true,
+      label: empty
+          ? chartSemanticsLabel(l, title: metricLabel, points: const <String>[])
+          : null,
+      child: ExcludeSemantics(
+        excluding: empty,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            for (int i = 0; i < dates.length; i++)
-              Expanded(
-                child: Text(
-                  i % labelStep == 0 ? '${dates[i].day}' : '',
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
+            SizedBox(
+              height: chartHeight,
+              child: Stack(
+                children: <Widget>[
+                  if (hasGoal)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
+                      child: const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: FigmaColors.hairline,
+                      ),
+                    ),
+                  // 막대 전체를 하나의 ChartReveal 로 감싸고 순서만 어긋내
+                  // (chartStagger) 준다. 막대마다 애니메이션을 두면 한 달치에
+                  // 티커가 31개 생긴다.
+                  ChartReveal(
+                    curve: Curves.linear,
+                    replayKey: replayKey,
+                    builder: (BuildContext context, double t) => Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        for (int i = 0; i < values.length; i++)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 1.5,
+                              ),
+                              child: _Bar(
+                                key: Key('diet-period-bar-$i'),
+                                height:
+                                    chartHeight *
+                                    (values[i] / maxValue).clamp(0.0, 1.0) *
+                                    chartStagger(t, i, values.length),
+                                pending: _isPending(i),
+                                day: _dayAt(i),
+                                // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
+                                // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
+                                // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
+                                // 초과는 목표선과 툴팁이 말한다.
+                                over: hasGoal && values[i] > goal,
+                                color: color,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
+                  // 막대 위에 겹치는 투명한 hover 영역. 운동 탭 `운동 현황` 이
+                  // 쓰는 것과 **같은 툴팁 규격**이라, 두 탭에서 같은 조작이 같은
+                  // 모양으로 답한다.
+                  Positioned.fill(
+                    child: Row(
+                      children: <Widget>[
+                        for (int i = 0; i < values.length; i++)
+                          Expanded(
+                            // 툴팁은 올려야 보인다. 같은 내용을 시맨틱 라벨로도
+                            // 준다 — 막대 하나가 며칠 얼마인지는 이 노드 말고는
+                            // 음성 안내에 나올 데가 없다(#972).
+                            child: Semantics(
+                              label: _tipText(l, dayFormat, i, hasGoal),
+                              child: Tooltip(
+                                key: Key('diet-period-bar-tip-$i'),
+                                richMessage: TextSpan(
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: FigmaColors.ink,
+                                    height: 1.3,
+                                  ),
+                                  children: _tipSpans(l, dayFormat, i, hasGoal),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F3F5),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: FigmaColors.hairline,
+                                  ),
+                                  boxShadow: kCardShadow,
+                                ),
+                                child: const SizedBox.expand(),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                for (int i = 0; i < dates.length; i++)
+                  Expanded(
+                    child: Text(
+                      i % labelStep == 0 ? '${dates[i].day}' : '',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -906,24 +961,30 @@ class _MetricPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.12) : FigmaColors.statBg,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active ? color.withValues(alpha: 0.35) : Colors.transparent,
+    return Semantics(
+      button: true,
+      selected: active,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? color.withValues(alpha: 0.12) : FigmaColors.statBg,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: active
+                  ? color.withValues(alpha: 0.35)
+                  : Colors.transparent,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: active ? color : AppColors.mutedForeground,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: active ? color : AppColors.mutedForeground,
+            ),
           ),
         ),
       ),

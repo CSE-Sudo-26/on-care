@@ -39,7 +39,11 @@ class ScheduleDateNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final nav = <Widget>[
-      _ChevronButton(icon: Icons.chevron_left, onTap: () => onShift(-1)),
+      _ChevronButton(
+        icon: Icons.chevron_left,
+        tooltip: l.a11yPrevDay,
+        onTap: () => onShift(-1),
+      ),
       const SizedBox(width: AppSpacing.sm),
       Text(
         l.dateRange(
@@ -53,7 +57,11 @@ class ScheduleDateNavBar extends StatelessWidget {
         ),
       ),
       const SizedBox(width: AppSpacing.sm),
-      _ChevronButton(icon: Icons.chevron_right, onTap: () => onShift(1)),
+      _ChevronButton(
+        icon: Icons.chevron_right,
+        tooltip: l.a11yNextDay,
+        onTap: () => onShift(1),
+      ),
     ];
 
     return LayoutBuilder(
@@ -77,7 +85,14 @@ class ScheduleDateNavBar extends StatelessWidget {
 }
 
 class _ChevronButton extends StatelessWidget {
-  const _ChevronButton({required this.icon, required this.onTap});
+  const _ChevronButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  /// 화살표 하나뿐이라 어느 쪽으로 가는지 말할 데가 툴팁뿐이다(#972).
+  final String tooltip;
 
   final IconData icon;
   final VoidCallback onTap;
@@ -93,7 +108,10 @@ class _ChevronButton extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Icon(icon, size: 20, color: AppColors.mutedForeground),
+          child: Tooltip(
+            message: tooltip,
+            child: Icon(icon, size: 20, color: AppColors.mutedForeground),
+          ),
         ),
       ),
     );

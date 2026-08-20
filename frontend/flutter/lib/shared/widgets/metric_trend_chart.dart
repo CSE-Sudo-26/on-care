@@ -80,6 +80,7 @@ class MetricTrendChart extends StatelessWidget {
     required this.ticks,
     required this.todayIndex,
     required this.replayKey,
+    required this.semanticsLabel,
     this.goalLabel,
     required this.formatTick,
     this.height = 68,
@@ -101,6 +102,11 @@ class MetricTrendChart extends StatelessWidget {
   /// 바뀌면 진입 애니메이션을 처음부터 다시 그린다.
   final Object replayKey;
 
+  /// 그래프가 말하는 내용 한 문장. `CustomPaint` 는 시맨틱 트리에 아무 노드도
+  /// 남기지 않아, 이게 없으면 그래프가 음성 안내에서 통째로 사라진다(#972).
+  /// [chartSemanticsLabel] 로 만든다 — 지표 이름과 단위는 부르는 쪽만 안다.
+  final String semanticsLabel;
+
   /// 목표선에 붙는 문구(예: `목표 2,000`). null 이면 선만 그린다. 문구를 밖에서
   /// 받는 것은 두 앱의 로케일 자원이 갈라져 있어서다.
   final String? goalLabel;
@@ -115,96 +121,102 @@ class MetricTrendChart extends StatelessWidget {
       ticks: ticks,
       goal: goal,
     );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        // 목표선의 실제 높이에 맞춰 라벨 하나. 칸은 목표가 없어도 자리를
-        // 지킨다 — 지표를 바꿀 때 그래프 폭이 흔들리지 않는다.
-        //
-        // 폭은 눈금 라벨이 쓰던 38 그대로다. `목표 2,000` 을 한 줄로 두면 이
-        // 칸이 넓어져야 하는데, 그러면 360px 영어 로케일에서 요일 라벨 줄이
-        // 넘친다. 두 줄로 접어 폭을 지킨다.
-        SizedBox(
-          width: 38,
-          height: height,
-          child: Stack(
-            children: <Widget>[
-              if (goalLabel != null && goal > 0 && goal >= lo && goal <= hi)
-                Positioned(
-                  right: 0,
-                  top: (height - ((goal - lo) / (hi - lo)) * height - 13).clamp(
-                    0.0,
-                    height - 26,
-                  ),
-                  child: SizedBox(
-                    height: 26,
-                    child: Center(child: _AxisLabel(goalLabel!)),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            children: <Widget>[
-              SizedBox(
-                height: height,
-                child: ChartReveal(
-                  replayKey: replayKey,
-                  builder: (BuildContext context, double t) => CustomPaint(
-                    size: Size.infinite,
-                    painter: MetricTrendPainter(
-                      cur: values,
-                      goal: goal,
-                      ticks: ticks,
-                      lo: lo,
-                      hi: hi,
-                      todayIndex: todayIndex,
-                      progress: t,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // 눈금·요일 라벨은 낱개로 읽어 봐야 `월` `화` 뿐이라 그래프가 무슨 값을
+    // 말하는지 알 수 없다. 한 덩어리로 묶고 요약 한 문장만 읽힌다.
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      child: ExcludeSemantics(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // 목표선의 실제 높이에 맞춰 라벨 하나. 칸은 목표가 없어도 자리를
+            // 지킨다 — 지표를 바꿀 때 그래프 폭이 흔들리지 않는다.
+            //
+            // 폭은 눈금 라벨이 쓰던 38 그대로다. `목표 2,000` 을 한 줄로 두면 이
+            // 칸이 넓어져야 하는데, 그러면 360px 영어 로케일에서 요일 라벨 줄이
+            // 넘친다. 두 줄로 접어 폭을 지킨다.
+            SizedBox(
+              width: 38,
+              height: height,
+              child: Stack(
                 children: <Widget>[
-                  for (int i = 0; i < dayLabels.length; i++)
-                    if (i == todayIndex)
-                      // 오늘: 브랜드색 원 안에 흰 글씨.
-                      Container(
-                        width: 18,
-                        height: 18,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: FigmaColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          dayLabels[i],
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                    else
-                      Text(
-                        dayLabels[i],
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mutedForeground,
-                        ),
+                  if (goalLabel != null && goal > 0 && goal >= lo && goal <= hi)
+                    Positioned(
+                      right: 0,
+                      top: (height - ((goal - lo) / (hi - lo)) * height - 13)
+                          .clamp(0.0, height - 26),
+                      child: SizedBox(
+                        height: 26,
+                        child: Center(child: _AxisLabel(goalLabel!)),
                       ),
+                    ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                children: <Widget>[
+                  SizedBox(
+                    height: height,
+                    child: ChartReveal(
+                      replayKey: replayKey,
+                      builder: (BuildContext context, double t) => CustomPaint(
+                        size: Size.infinite,
+                        painter: MetricTrendPainter(
+                          cur: values,
+                          goal: goal,
+                          ticks: ticks,
+                          lo: lo,
+                          hi: hi,
+                          todayIndex: todayIndex,
+                          progress: t,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      for (int i = 0; i < dayLabels.length; i++)
+                        if (i == todayIndex)
+                          // 오늘: 브랜드색 원 안에 흰 글씨.
+                          Container(
+                            width: 18,
+                            height: 18,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: FigmaColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              dayLabels[i],
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            dayLabels[i],
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

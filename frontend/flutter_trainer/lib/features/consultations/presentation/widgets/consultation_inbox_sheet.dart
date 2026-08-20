@@ -46,6 +46,9 @@ class ConsultationInboxSheet extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
                   ),

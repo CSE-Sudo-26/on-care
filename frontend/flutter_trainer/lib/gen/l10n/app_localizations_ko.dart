@@ -3021,4 +3021,46 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsPdfNoFeedback => '피드백 없음';
+
+  @override
+  String a11yChartSummary(String title, String detail) {
+    return '$title. $detail';
+  }
+
+  @override
+  String a11yChartEmpty(String title) {
+    return '$title. 기록이 없어요';
+  }
+
+  @override
+  String a11yChartPoint(String day, String value) {
+    return '$day $value';
+  }
+
+  @override
+  String get a11yShowPassword => '비밀번호 표시';
+
+  @override
+  String get a11yHidePassword => '비밀번호 숨기기';
+
+  @override
+  String get unitMg => 'mg';
+
+  @override
+  String get unitGram => 'g';
+
+  @override
+  String get a11yRemoveExercise => '운동 지우기';
+
+  @override
+  String get a11yRemoveCertification => '자격증 지우기';
+
+  @override
+  String get a11yPrevDay => '이전 날';
+
+  @override
+  String get a11yNextDay => '다음 날';
+
+  @override
+  String get a11ySendMessage => '메시지 보내기';
 }

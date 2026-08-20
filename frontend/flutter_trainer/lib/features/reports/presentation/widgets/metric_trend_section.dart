@@ -9,6 +9,7 @@ import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/four_week_metric_trend.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -39,6 +40,14 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
     _TrendMetric.calories => l.metricCalories,
     _TrendMetric.sodium => l.metricSodium,
     _TrendMetric.sugar => l.metricSugar,
+  };
+
+  /// 고른 지표의 단위. 4주 추이 막대와 시맨틱 라벨이 **같은 것**을 써야
+  /// 그래프와 음성 안내가 서로 다른 단위를 말하지 않는다.
+  String _unit(AppLocalizations l) => switch (_metric) {
+    _TrendMetric.calories => l.unitKcal,
+    _TrendMetric.sodium => l.unitMg,
+    _TrendMetric.sugar => l.unitGram,
   };
 
   /// 선택한 지표의 요일별 값. 계열이 7일이 아니면(구버전 응답) 비워 둔다.
@@ -118,6 +127,23 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
             // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
             // 따라가게 한다.
             replayKey: _metric,
+            // 화면 위 제목과 같은 문구로 시작한다 — 음성 안내에서도 이 그래프가
+            // 어느 지표의 것인지가 먼저 들린다(#972).
+            semanticsLabel: chartSemanticsLabel(
+              l,
+              title: l.reportsMetricTrend(_label(l, _metric)),
+              points: chartSeriesPoints(
+                l,
+                values: values,
+                dayLabels: weekdayLabels(l),
+                format: (double v) => '${metricTrendNumber(v)}${_unit(l)}',
+                // 이번 주 선은 오늘까지만 잇는다. 아직 오지 않은 요일을 읽으면
+                // 화면에 없는 값을 말하게 된다.
+                upTo: widget.report.isCurrentWeek
+                    ? elapsedWeekdays(nowKst()) - 1
+                    : weekdayCount - 1,
+              ),
+            ),
             goalLabel: l.chartGoalLabel(metricTrendNumber(_goal)),
             formatTick: metricTrendNumber,
           ),
@@ -131,11 +157,7 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
             _TrendMetric.sugar => r.sugarWeek,
           },
           goal: _goal,
-          unit: switch (_metric) {
-            _TrendMetric.calories => 'kcal',
-            _TrendMetric.sodium => 'mg',
-            _TrendMetric.sugar => 'g',
-          },
+          unit: _unit(l),
         ),
       ],
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// Exact colour tokens lifted from the On-Care Figma (TypeScript) source so the
 /// Flutter screens reproduce the redesign 1:1.
@@ -235,6 +236,7 @@ class FigmaCircleButton extends StatelessWidget {
     this.size = 36,
     this.iconSize = 18,
     this.enabled = true,
+    this.tooltip,
   });
 
   final IconData icon;
@@ -243,6 +245,10 @@ class FigmaCircleButton extends StatelessWidget {
   final Color dotColor;
   final double size;
   final double iconSize;
+
+  /// 아이콘 하나뿐인 버튼이 무엇을 하는지. 부르는 쪽이 바깥에서 `Semantics`
+  /// 로 이름을 붙였으면 비워 둔다 — 같은 말을 두 번 읽게 된다(#972).
+  final String? tooltip;
 
   /// 지금 쓸 수 있는 버튼인지. false 면 흐리게 그린다.
   ///
@@ -268,13 +274,20 @@ class FigmaCircleButton extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
-                child: Center(
-                  child: Icon(
-                    icon,
-                    size: iconSize,
-                    color: usable
-                        ? FigmaColors.primary
-                        : FigmaColors.textFaint,
+                // 아이콘 하나뿐인 버튼이라 무엇을 하는지 말할 데가 툴팁뿐이다.
+                // 부르는 쪽이 밖에서 `Semantics` 로 이름을 붙였으면 여기서는
+                // 아무 말도 하지 않는다 — 같은 말을 두 번 읽게 된다(#972).
+                child: Tooltip(
+                  message: tooltip ?? '',
+                  excludeFromSemantics: tooltip == null,
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      size: iconSize,
+                      color: usable
+                          ? FigmaColors.primary
+                          : FigmaColors.textFaint,
+                    ),
                   ),
                 ),
               ),
@@ -325,6 +338,7 @@ class FigmaTabHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
       child: Row(
@@ -345,12 +359,14 @@ class FigmaTabHeader extends StatelessWidget {
           ),
           FigmaCircleButton(
             icon: Icons.notifications_none_rounded,
+            tooltip: l.pageNotificationTitle,
             showDot: bellHasUnread,
             onTap: onBell,
           ),
           const SizedBox(width: 10),
           FigmaCircleButton(
             icon: Icons.calendar_today_outlined,
+            tooltip: l.a11yOpenCalendar,
             iconSize: 16,
             onTap: onCalendar,
           ),

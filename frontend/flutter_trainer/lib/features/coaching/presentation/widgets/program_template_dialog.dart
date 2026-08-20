@@ -292,6 +292,7 @@ class _ExerciseRow extends StatelessWidget {
                 ),
               ),
               IconButton(
+                tooltip: l.a11yRemoveExercise,
                 onPressed: onRemove,
                 icon: const Icon(Icons.remove_circle_outline),
                 color: AppColors.mutedForeground,

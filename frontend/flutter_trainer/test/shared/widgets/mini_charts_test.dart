@@ -13,6 +13,7 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: BarSeriesChart(
+            title: '주간 이행률',
             values: const <int>[100, 80, 60, 40, 20, 10, 5],
             labels: const <String>['월', '화', '수', '목', '금', '토', '일'],
             maxValue: 100,
@@ -63,6 +64,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: BarSeriesChart(
+              title: '주간 이행률',
               // Fri/Sat/Sun are over the threshold in the source data but
               // haven't happened; painting their track red would report a
               // bad day the member could not have had yet.
@@ -95,6 +97,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: BarSeriesChart(
+              title: '주간 이행률',
               values: const <int>[0, 75],
               labels: const <String>['지난 주', '이번 주'],
               maxValue: 100,

@@ -161,6 +161,7 @@ class _Range extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         ActivityBarChart(
+          title: l.clientTrendTitle,
           bars: <ActivityBar>[
             for (final ClientExerciseDay d in days)
               if (d.hasTypeSplit)

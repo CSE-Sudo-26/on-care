@@ -3142,4 +3142,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsPdfNoFeedback => 'No feedback';
+
+  @override
+  String a11yChartSummary(String title, String detail) {
+    return '$title. $detail';
+  }
+
+  @override
+  String a11yChartEmpty(String title) {
+    return '$title. No records yet';
+  }
+
+  @override
+  String a11yChartPoint(String day, String value) {
+    return '$day $value';
+  }
+
+  @override
+  String get a11yShowPassword => 'Show password';
+
+  @override
+  String get a11yHidePassword => 'Hide password';
+
+  @override
+  String get unitMg => 'mg';
+
+  @override
+  String get unitGram => 'g';
+
+  @override
+  String get a11yRemoveExercise => 'Remove exercise';
+
+  @override
+  String get a11yRemoveCertification => 'Remove certification';
+
+  @override
+  String get a11yPrevDay => 'Previous day';
+
+  @override
+  String get a11yNextDay => 'Next day';
+
+  @override
+  String get a11ySendMessage => 'Send message';
 }

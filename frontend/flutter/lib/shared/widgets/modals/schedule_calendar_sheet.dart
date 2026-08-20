@@ -134,6 +134,10 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
             Row(
               children: <Widget>[
                 IconButton(
+                  // 달 이동은 플랫폼이 이미 제 언어로 부르는 이름이 있다.
+                  tooltip: MaterialLocalizations.of(
+                    context,
+                  ).previousMonthTooltip,
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () => setState(
                     () => _month = DateTime(_month.year, _month.month - 1),
@@ -146,6 +150,7 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                   style: theme.textTheme.titleMedium,
                 ),
                 IconButton(
+                  tooltip: MaterialLocalizations.of(context).nextMonthTooltip,
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () => setState(
                     () => _month = DateTime(_month.year, _month.month + 1),
@@ -411,10 +416,13 @@ class _CircleClose extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: const SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(Icons.close, size: 18),
+        child: Tooltip(
+          message: MaterialLocalizations.of(context).closeButtonTooltip,
+          child: const SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(Icons.close, size: 18),
+          ),
         ),
       ),
     );

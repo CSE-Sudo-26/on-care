@@ -27,6 +27,7 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 
 /// 도넛 한 조각 / 범례 한 줄.
 class ActivitySeg {
@@ -79,37 +80,53 @@ class ActivityDonut extends StatelessWidget {
             SizedBox(
               width: 116,
               height: 116,
-              child: Stack(
-                alignment: Alignment.center,
-                children: <Widget>[
-                  CustomPaint(
-                    size: const Size.square(116),
-                    painter: _DonutPainter(segs),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
+              // 도넛은 `CustomPaint` 라 시맨틱 트리에 아무 노드도 남기지 않고,
+              // 가운데 숫자는 `45` 와 `분` 두 조각으로 흩어져 읽힌다. 한
+              // 덩어리로 묶어 무엇의 몇 분인지 한 문장으로 말한다(#972).
+              // 유형별 내역은 오른쪽 범례가 이어서 읽어 준다.
+              child: Semantics(
+                container: true,
+                label: chartSemanticsLabel(
+                  l,
+                  title: title,
+                  points: total == 0
+                      ? const <String>[]
+                      : <String>[l.minutesShort(total)],
+                ),
+                child: ExcludeSemantics(
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: <Widget>[
-                      Text(
-                        '$total',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.foreground,
-                          height: 1,
-                          letterSpacing: -0.5,
-                        ),
+                      CustomPaint(
+                        size: const Size.square(116),
+                        painter: _DonutPainter(segs),
                       ),
-                      Text(
-                        l.unitMinutes,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mutedForeground,
-                        ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            '$total',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.foreground,
+                              height: 1,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          Text(
+                            l.unitMinutes,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
             const SizedBox(width: 40),
@@ -248,13 +265,32 @@ class ActivityBarChart extends StatelessWidget {
     required this.bars,
     required this.dayLabels,
     required this.todayIndex,
+    required this.title,
   });
 
   final List<ActivityBar> bars;
   final List<String> dayLabels;
 
+  /// 그래프가 무엇을 그린 것인지 — 기록이 하나도 없는 기간에 비어 있다고
+  /// 말할 때 이 이름으로 부른다(#972).
+  final String title;
+
   /// 오늘에 해당하는 칸. 범위 밖이면 -1.
   final int todayIndex;
+
+  /// 툴팁과 **같은 내용**을 시맨틱 라벨로. 색 사각형(`WidgetSpan`)은 빼고
+  /// 줄바꿈은 쉼표로 바꾼다 — 음성 안내는 줄을 나누어 읽지 않는다. 어느 날의
+  /// 막대인지 먼저 말해야 하므로 요일을 앞에 붙인다(#972).
+  String _barSemantics(AppLocalizations l, int i) => chartPointLabel(
+    l,
+    dayLabels[i],
+    TextSpan(children: _tipSpans(l, i))
+        .toPlainText(includePlaceholders: false)
+        .split('\n')
+        .map((String line) => line.trim())
+        .where((String line) => line.isNotEmpty)
+        .join(', '),
+  );
 
   /// 막대 하나의 툴팁 — `[색] 유형   N분` 을 줄마다.
   List<InlineSpan> _tipSpans(AppLocalizations l, int i) {
@@ -294,86 +330,103 @@ class ActivityBarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return Column(
-      children: <Widget>[
-        SizedBox(
-          height: 150,
-          width: double.infinity,
-          child: Stack(
-            children: <Widget>[
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _StackedBarPainter(
-                    bars: bars,
-                    dayLabels: dayLabels,
-                    todayIndex: todayIndex,
-                    todayLabel: l.labelToday,
-                  ),
-                ),
-              ),
-              // 막대 위에 겹치는 투명한 hover 영역. painter 의 칸과 자리를
-              // 맞춘다(왼쪽 눈금 24, 아래 라벨 24).
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 24, bottom: 24),
-                  child: Row(
-                    children: <Widget>[
-                      for (int i = 0; i < bars.length; i++)
-                        Expanded(
-                          child: Tooltip(
-                            key: Key('activity-bar-$i'),
-                            richMessage: TextSpan(
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.foreground,
-                                height: 1.15,
-                              ),
-                              children: _tipSpans(l, i),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.inputBackground,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.borderStrong),
-                              boxShadow: kCardShadow,
-                            ),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        // 범례 셋은 좁아지면 다음 줄로 넘긴다. 한 줄에 붙여 두면 라벨을 줄여야
-        // 하고, 그러면 무슨 색이 무엇인지가 사라진다.
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: AppSpacing.md,
-          runSpacing: AppSpacing.xs,
+    // 한 칸도 기록이 없는 기간은 막대마다 `기록 없음` 을 서른 번 읽히는 대신
+    // 비어 있다고 한 번만 말한다(#972).
+    final bool empty = bars.every((ActivityBar b) => b.total <= 0);
+    return Semantics(
+      container: true,
+      label: empty
+          ? chartSemanticsLabel(l, title: title, points: const <String>[])
+          : null,
+      child: ExcludeSemantics(
+        excluding: empty,
+        child: Column(
           children: <Widget>[
-            ActivityLegend(
-              color: AppColors.chartCardio,
-              label: l.routineTypeCardio,
+            SizedBox(
+              height: 150,
+              width: double.infinity,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _StackedBarPainter(
+                        bars: bars,
+                        dayLabels: dayLabels,
+                        todayIndex: todayIndex,
+                        todayLabel: l.labelToday,
+                      ),
+                    ),
+                  ),
+                  // 막대 위에 겹치는 투명한 hover 영역. painter 의 칸과 자리를
+                  // 맞춘다(왼쪽 눈금 24, 아래 라벨 24).
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 24, bottom: 24),
+                      child: Row(
+                        children: <Widget>[
+                          for (int i = 0; i < bars.length; i++)
+                            Expanded(
+                              child: Semantics(
+                                label: _barSemantics(l, i),
+                                child: Tooltip(
+                                  key: Key('activity-bar-$i'),
+                                  richMessage: TextSpan(
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.foreground,
+                                      height: 1.15,
+                                    ),
+                                    children: _tipSpans(l, i),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.inputBackground,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppColors.borderStrong,
+                                    ),
+                                    boxShadow: kCardShadow,
+                                  ),
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            ActivityLegend(
-              color: AppColors.chartStrength,
-              label: l.routineTypeStrength,
-            ),
-            ActivityLegend(
-              color: AppColors.chartStretching,
-              label: l.routineTypeStretching,
+            const SizedBox(height: AppSpacing.xs),
+            // 범례 셋은 좁아지면 다음 줄로 넘긴다. 한 줄에 붙여 두면 라벨을 줄여야
+            // 하고, 그러면 무슨 색이 무엇인지가 사라진다.
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                ActivityLegend(
+                  color: AppColors.chartCardio,
+                  label: l.routineTypeCardio,
+                ),
+                ActivityLegend(
+                  color: AppColors.chartStrength,
+                  label: l.routineTypeStrength,
+                ),
+                ActivityLegend(
+                  color: AppColors.chartStretching,
+                  label: l.routineTypeStretching,
+                ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }

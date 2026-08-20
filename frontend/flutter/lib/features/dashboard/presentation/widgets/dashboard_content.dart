@@ -24,6 +24,7 @@ import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_h
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
+import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
@@ -434,6 +435,7 @@ class _DietNutritionCard extends ConsumerWidget {
     final List<String> days = weekDayLabels(l);
     final int todayIdx = _todayIndex();
     final NumberFormat nf = NumberFormat('#,###');
+    final String chartTitle = l.homeWeeklyMetricTrend(_nutLabel(l, tab));
 
     return _HomeCard(
       child: Column(
@@ -509,9 +511,7 @@ class _DietNutritionCard extends ConsumerWidget {
                     children: <Widget>[
                       // 목표는 그래프의 목표선 라벨이 말한다 — 카드 위에 또
                       // 적으면 한 화면에서 같은 말이 두 번 나온다(#756).
-                      _ChartLegend(
-                        title: l.homeWeeklyMetricTrend(_nutLabel(l, tab)),
-                      ),
+                      _ChartLegend(title: chartTitle),
                       const SizedBox(height: 6),
                       MetricTrendChart(
                         values: cfg.cur,
@@ -522,6 +522,21 @@ class _DietNutritionCard extends ConsumerWidget {
                         // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을
                         // 눈으로 따라가게 한다.
                         replayKey: tab,
+                        // 화면 위 제목과 같은 문구로 시작한다 — 음성 안내에서도
+                        // 이 그래프가 어느 지표의 것인지가 먼저 들린다.
+                        semanticsLabel: chartSemanticsLabel(
+                          l,
+                          title: chartTitle,
+                          points: chartSeriesPoints(
+                            l,
+                            values: cfg.cur,
+                            dayLabels: days,
+                            format: (double v) => '${nf.format(v)}${cfg.unit}',
+                            // 선은 오늘까지만 잇는다. 아직 오지 않은 요일을
+                            // 읽으면 화면에 없는 값을 말하게 된다.
+                            upTo: todayIdx,
+                          ),
+                        ),
                         goalLabel: '${l.homeGoal}\n${nf.format(cfg.goal)}',
                         formatTick: nf.format,
                       ),
@@ -721,22 +736,31 @@ class _DetailLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            l.homeDetails,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w600,
+    // `GestureDetector` 는 눌러도 버튼으로 인식되지 않는다 — 문구는 읽히지만
+    // 누를 수 있는 자리라는 사실이 빠진다(#972).
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              l.homeDetails,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: FigmaColors.primary,
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              size: 14,
               color: FigmaColors.primary,
             ),
-          ),
-          const Icon(Icons.chevron_right, size: 14, color: FigmaColors.primary),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -921,69 +945,89 @@ class _ExerciseTrend extends StatelessWidget {
     final List<double> week = series(wk.dailyCalories, todayIndex);
     final (double lo, double hi) = _barScale(week);
     final List<String> days = weekDayLabels(l);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        SizedBox(
-          key: const ValueKey<String>('dashboard-exercise-chart'),
-          height: _chartHeight,
-          child: ChartReveal(
-            duration: AppMotion.chartGrow,
-            // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
-            // 마스터 진행도는 선형으로 받는다.
-            curve: Curves.linear,
-            builder: (BuildContext context, double t) => CustomPaint(
-              size: Size.infinite,
-              painter: _ExerciseBarPainter(
-                data: week,
-                lo: lo,
-                hi: hi,
-                todayIndex: todayIndex,
-                color: FigmaColors.primary,
-                progress: t,
-              ),
-            ),
-          ),
+    // 막대와 요일 라벨은 한 덩어리로 읽는다 — 낱개로는 `월` `화` 뿐이라
+    // 얼마나 태웠는지가 음성 안내에서 사라진다(#972).
+    return Semantics(
+      container: true,
+      label: chartSemanticsLabel(
+        l,
+        title: '${l.homeWeeklyExerciseTrend} (${l.unitKcal})',
+        points: chartSeriesPoints(
+          l,
+          values: week,
+          dayLabels: days,
+          format: (double v) => '${v.round()}${l.unitKcal}',
+          // 아직 오지 않은 요일은 0 으로 채워져 있다. 그 자리를 읽으면
+          // 그리지도 않은 막대를 말하게 된다.
+          upTo: todayIndex,
         ),
-        const SizedBox(height: 6),
-        Row(
+      ),
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            for (int i = 0; i < days.length; i++)
-              Expanded(
-                child: Center(
-                  // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
-                  // 원형 안에 흰색 요일 글씨로 표기한다.
-                  child: i == todayIndex
-                      ? Container(
-                          width: 18,
-                          height: 18,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: FigmaColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            days[i],
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          days[i],
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
+            SizedBox(
+              key: const ValueKey<String>('dashboard-exercise-chart'),
+              height: _chartHeight,
+              child: ChartReveal(
+                duration: AppMotion.chartGrow,
+                // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
+                // 마스터 진행도는 선형으로 받는다.
+                curve: Curves.linear,
+                builder: (BuildContext context, double t) => CustomPaint(
+                  size: Size.infinite,
+                  painter: _ExerciseBarPainter(
+                    data: week,
+                    lo: lo,
+                    hi: hi,
+                    todayIndex: todayIndex,
+                    color: FigmaColors.primary,
+                    progress: t,
+                  ),
                 ),
               ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                for (int i = 0; i < days.length; i++)
+                  Expanded(
+                    child: Center(
+                      // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
+                      // 원형 안에 흰색 요일 글씨로 표기한다.
+                      child: i == todayIndex
+                          ? Container(
+                              width: 18,
+                              height: 18,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                color: FigmaColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                days[i],
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              days[i],
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -1774,15 +1818,18 @@ class _ScheduleCard extends ConsumerWidget {
                 ],
               ),
             ),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => showScheduleCalendarSheet(context),
-              child: Text(
-                l.homeViewAll,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.primary,
+            Semantics(
+              button: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => showScheduleCalendarSheet(context),
+                child: Text(
+                  l.homeViewAll,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.primary,
+                  ),
                 ),
               ),
             ),
@@ -1822,55 +1869,62 @@ class _ScheduleItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => showScheduleCalendarSheet(context),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: FigmaColors.softBlue,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: <Widget>[
-            Text(
-              item.time,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: FigmaColors.primary,
-                letterSpacing: -0.3,
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => showScheduleCalendarSheet(context),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: FigmaColors.softBlue,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: <Widget>[
+              Text(
+                item.time,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: FigmaColors.primary,
+                  letterSpacing: -0.3,
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Row(
-                children: <Widget>[
-                  if (item.emoji.isNotEmpty) ...<Widget>[
-                    Text(item.emoji),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.ink,
+              const SizedBox(width: 16),
+              Container(
+                width: 1,
+                height: 34,
+                color: FigmaColors.primaryA(0.35),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Row(
+                  children: <Widget>[
+                    if (item.emoji.isNotEmpty) ...<Widget>[
+                      Text(item.emoji),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.ink,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: FigmaColors.primary,
-            ),
-          ],
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: FigmaColors.primary,
+              ),
+            ],
+          ),
         ),
       ),
     );

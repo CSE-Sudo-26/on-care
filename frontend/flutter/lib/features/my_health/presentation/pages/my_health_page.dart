@@ -211,52 +211,55 @@ class _PointsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('pointsBanner'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _openPointsBenefitsPage(context, points),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: FigmaColors.primary,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: kCardShadow,
-        ),
-        child: Row(
-          children: <Widget>[
-            const Icon(
-              Icons.star_border_rounded,
-              color: Colors.white,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              points != null ? '${points}P' : '—P',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        key: const Key('pointsBanner'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _openPointsBenefitsPage(context, points),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: FigmaColors.primary,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: kCardShadow,
+          ),
+          child: Row(
+            children: <Widget>[
+              const Icon(
+                Icons.star_border_rounded,
                 color: Colors.white,
-                letterSpacing: -0.5,
+                size: 24,
               ),
-            ),
-            const SizedBox(width: 8),
-            const _PointsInfoButton(),
-            const Spacer(),
-            Container(
-              width: 26,
-              height: 26,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
+              const SizedBox(width: 12),
+              Text(
+                points != null ? '${points}P' : '—P',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
               ),
-              child: const Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.white,
-                size: 20,
+              const SizedBox(width: 8),
+              const _PointsInfoButton(),
+              const Spacer(),
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -523,18 +526,22 @@ class _PointsInfoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _show(context),
-      child: Container(
-        width: 24,
-        height: 24,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.22),
-          shape: BoxShape.circle,
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).myPointsGuideTitle,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _show(context),
+        child: Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.22),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.info_outline, size: 15, color: Colors.white),
         ),
-        child: const Icon(Icons.info_outline, size: 15, color: Colors.white),
       ),
     );
   }

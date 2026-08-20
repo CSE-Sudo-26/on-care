@@ -143,6 +143,8 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.xs),
                 child: IconButton(
+                  // 뒤로 가기는 플랫폼이 이미 제 언어로 부르는 이름이 있다.
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   onPressed: _backToSignIn,
                   icon: const Icon(Icons.arrow_back),
                   color: const Color(0xFF64748B),
@@ -195,6 +197,11 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                         icon: Icons.lock_outline,
                         obscure: _obscure,
                         trailing: IconButton(
+                          // 아이콘만 있는 버튼이라 무엇을 켜고 끄는지 말할
+                          // 데가 툴팁뿐이다(#972).
+                          tooltip: _obscure
+                              ? l.a11yShowPassword
+                              : l.a11yHidePassword,
                           icon: Icon(
                             _obscure ? Icons.visibility_off : Icons.visibility,
                             size: 20,

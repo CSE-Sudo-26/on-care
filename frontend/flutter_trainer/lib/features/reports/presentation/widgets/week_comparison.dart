@@ -160,6 +160,7 @@ class _ComparisonMetric extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           BarSeriesChart(
+            title: label,
             values: <int>[previous ?? 0, current ?? 0],
             labels: <String>[previousLabel, currentLabel],
             maxValue: maxValue,
