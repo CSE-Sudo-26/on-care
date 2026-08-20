@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -89,6 +91,19 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
       ),
       on401: AuthFailure.sessionExpired,
     );
+  }
+
+  @override
+  Future<void> logout(String refreshToken) async {
+    if (refreshToken.isEmpty) return;
+    await _dio
+        .post<void>(
+          '/auth/logout',
+          data: <String, Object?>{'refresh_token': refreshToken},
+        )
+        // 기본 타임아웃(연결 10초)을 그대로 기다리면 로그아웃 버튼이 그만큼 멎는다.
+        // 폐기는 성사되면 좋은 일이지 사용자를 붙잡을 일이 아니다.
+        .timeout(const Duration(seconds: 3));
   }
 
   @override

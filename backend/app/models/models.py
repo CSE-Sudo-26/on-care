@@ -1349,6 +1349,33 @@ class AuditLog(Base):
     )
 
 
+class RevokedRefreshToken(Base):
+    """폐기된 refresh 토큰 — 로그아웃과 회전이 여기에 이름을 적는다.
+
+    JWT 는 서버가 상태를 두지 않는 대신 **한 번 발급하면 만료까지 유효**하다.
+    그래서 로그아웃이 로컬 저장소만 지우면, 그 사이 새어 나간 토큰은 남은 수명
+    (기본 30일) 동안 계속 통한다. 이 표에 적힌 `jti` 는 `/auth/refresh` 에서
+    거부되어 세션이 그 자리에서 끊긴다(#966).
+
+    담는 것은 **아직 만료되지 않은 토큰뿐**이다. `expires_at` 이 지난 항목은
+    이미 JWT 검증에서 걸리므로 폐기 여부를 물을 이유가 없고, 새 폐기가 생길 때마다
+    정리한다(`token_revocation.purge_expired`).
+    """
+
+    __tablename__ = "revoked_refresh_tokens"
+
+    #: 토큰의 `jti` 클레임. 토큰 자체가 아니라 이름만 저장한다.
+    jti: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    #: 이 토큰이 스스로 만료되는 시각. 정리 기준.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revoked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class AiConversation(Base):
     """AI 코치(온이)와의 대화 스레드.
 
