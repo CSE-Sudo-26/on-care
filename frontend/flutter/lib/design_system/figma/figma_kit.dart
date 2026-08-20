@@ -72,6 +72,19 @@ class FigmaColors {
   static const Color hairline = Color(0x14000000); // rgba(0,0,0,0.08)
   static const Color sheetScrim = Color(0x8008121C); // rgba(8,18,28,0.5)
 
+  // --- 상태 시맨틱 별칭 (#995) ---
+  //
+  // 사용자앱 화면은 대부분 [FigmaColors] 를 읽으므로, 두 앱 공통 시맨틱 토큰을
+  // 여기서도 같은 이름으로 꺼내 쓴다. 값의 출처는 [AppColors] 한 곳이다.
+  static const Color statusNormal = AppColors.statusNormal;
+  static const Color statusCaution = AppColors.statusCaution;
+  static const Color statusCautionFill = AppColors.statusCautionFill;
+  static const Color statusDanger = AppColors.statusDanger;
+  static const Color statusOver = AppColors.statusOver;
+  static const Color dietChart = AppColors.dietChart;
+  static const Color exerciseChart = AppColors.exerciseChart;
+  static const Color chartGoalLine = AppColors.chartGoalLine;
+
   static Color primaryA(double a) => primary.withValues(alpha: a);
   static Color greenA(double a) => green.withValues(alpha: a);
   static Color orangeA(double a) => orange.withValues(alpha: a);
