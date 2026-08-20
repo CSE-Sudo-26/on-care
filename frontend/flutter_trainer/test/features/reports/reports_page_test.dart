@@ -15,6 +15,7 @@ import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_export_dialog.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -1048,6 +1049,7 @@ class _QueuedPdfGenerator extends ReportPdfGenerator {
 
   @override
   Future<Uint8List> generate({
+    required AppLocalizations l,
     required WeeklyReport report,
     required String feedback,
     WeeklyReport? previousReport,
