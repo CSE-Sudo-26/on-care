@@ -205,6 +205,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
     required Set<String> savedInsightIds,
   }) {
     final List<Widget> out = <Widget>[];
+    // 닫는 배너가 붙을 자리 — **마지막 시드 메시지** 다음이다. 목록 맨 끝에
+    // 무조건 붙이면 방금 보낸 답장이 배너 앞으로 들어가, 화면에서는 "내가
+    // 보낸 말이 루틴 전송보다 먼저 있었던 일" 로 읽힌다. 배너는 그날의
+    // 분석 → 대화 → 루틴 전송이라는 하루의 **끝**을 표시하는 것이다(#543).
+    final int lastSeeded = showDemoBanners
+        ? list.lastIndexWhere((m) => m.id.startsWith('seed-'))
+        : -1;
     for (int i = 0; i < list.length; i++) {
       final ClientChatMessage m = list[i];
       final bool newDay =
@@ -247,10 +254,15 @@ class _ChatViewState extends ConsumerState<ChatView> {
           )
           ..add(const SizedBox(height: AppSpacing.md));
       }
-    }
-    // 대화가 없으면 배너만 남는다 — 분석한 것도 보낸 것도 없으므로 그리지 않는다.
-    if (showDemoBanners && list.isNotEmpty) {
-      out.add(_SentBanner(clientName: widget.clientName));
+      // 시드 대화가 여기서 끝난다. 그 뒤에 오는 메시지(방금 보낸 답장)는
+      // 배너 **아래**에 쌓인다. 시드가 하루짜리인 고객 대부분에게는 이
+      // 자리가 곧 목록의 끝이라, 보내기 전 화면은 예전과 똑같다.
+      if (i == lastSeeded) {
+        out.add(_SentBanner(clientName: widget.clientName));
+        if (i != list.length - 1) {
+          out.add(const SizedBox(height: AppSpacing.md));
+        }
+      }
     }
     return out;
   }
