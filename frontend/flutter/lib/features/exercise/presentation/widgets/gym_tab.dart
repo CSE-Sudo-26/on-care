@@ -577,10 +577,11 @@ class _TrainerChatButton extends StatelessWidget {
             // 배지가 붙으면 라벨과 함께 버튼 폭을 넘는다 — 글씨를 키운 뒤로는
             // 배지가 없어도 빠듯하다. 문구 쪽이 줄어든다. (#995)
             Flexible(
-              child: Text(
-                l.coachChatWithTrainer,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              // 줄임표가 되면 무슨 버튼인지 사라진다 — 좁으면 글씨를 줄인다.
+              // (#1004)
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(l.coachChatWithTrainer, maxLines: 1),
               ),
             ),
             if (unread > 0) ...<Widget>[

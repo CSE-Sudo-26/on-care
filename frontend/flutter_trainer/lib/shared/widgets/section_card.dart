@@ -68,13 +68,19 @@ class SectionCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                 ],
                 Expanded(
-                  child: Text(
-                    title,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.foreground,
+                  // 카드 제목도 줄임표 대신 축소다 — 옆의 버튼 줄이 길어지면
+                  // 제목이 먼저 잘렸다. (#1004)
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.foreground,
+                      ),
                     ),
                   ),
                 ),
