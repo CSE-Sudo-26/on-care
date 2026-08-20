@@ -574,7 +574,15 @@ class _TrainerChatButton extends StatelessWidget {
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(l.coachChatWithTrainer),
+            // 배지가 붙으면 라벨과 함께 버튼 폭을 넘는다 — 글씨를 키운 뒤로는
+            // 배지가 없어도 빠듯하다. 문구 쪽이 줄어든다. (#995)
+            Flexible(
+              child: Text(
+                l.coachChatWithTrainer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (unread > 0) ...<Widget>[
               const SizedBox(width: 8),
               Container(
@@ -731,7 +739,16 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
         (ref.watch(myReservationsProvider).valueOrNull ??
                 const <MyReservation>[])
             .where((MyReservation r) => r.trainerId == widget.trainer.id)
-            .toList();
+            .toList()
+          // 서버는 늦은 예약부터 준다(#980) — 쪽을 나누려면 그 순서여야 한다. 화면은
+          // 다르다: **곧 다가오는 자리가 맨 위**여야 하고, 지난 예약은 최근 것부터
+          // 아래에 남는다. 취소 가능 여부(`cancellable`)가 곧 예정/지난 판단이다.
+          ..sort((MyReservation a, MyReservation b) {
+            if (a.cancellable != b.cancellable) return a.cancellable ? -1 : 1;
+            return a.cancellable
+                ? a.startsAt.compareTo(b.startsAt)
+                : b.startsAt.compareTo(a.startsAt);
+          });
     final bool busy = _reserving != null || _cancelling != null;
     return Container(
       width: double.infinity,

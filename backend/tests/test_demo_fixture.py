@@ -8,6 +8,8 @@ from datetime import date
 from pathlib import Path
 
 from app.db.demo_fixture import FIXTURE_PATH, load_fixture
+from app.services import exercise_types
+from app.services.exercise_service import estimate_calories
 
 #: Flutter 두 앱이 읽는 원본. 백엔드 이미지는 `backend/` 만 담아서 같은 파일을
 #: 한 벌 더 갖고 있다 — 두 파일이 어긋나면 두 앱과 백엔드의 숫자가 갈라진다.
@@ -57,3 +59,24 @@ def test_the_fixture_covers_twelve_weeks_without_gaps():
     assert fixture.history_weeks == 12
     assert len(days) == 84
     assert len({d.iso for d in days}) == 84
+
+
+def test_exercise_calories_match_the_app_estimate():
+    """픽스처의 칼로리는 앱·서버가 쓰는 추정표와 같은 값이어야 한다. (#997)
+
+    예전에는 픽스처만 분당 7.5·5 로 낮았다. 그래서 데모의 30분 유산소는
+    225kcal 인데, 같은 운동을 회원이 직접 기록하면 270kcal 이 나왔다 — 같은
+    사람의 같은 운동이 어느 경로로 들어왔는지에 따라 다른 숫자가 됐다.
+    """
+    for day in load_fixture().days_for(date(2026, 8, 16)):
+        for exercise in day.exercises:
+            assert exercise.calories == estimate_calories(
+                exercise.type, exercise.minutes, "moderate"
+            ), f"{day.iso} {exercise.name}"
+
+
+def test_exercise_types_use_the_standard_vocabulary():
+    """유형은 표준 네 가지로만 적는다 — 옛 이름이 픽스처에 다시 들어오지 않게. (#996)"""
+    for day in load_fixture().days_for(date(2026, 8, 16)):
+        for exercise in day.exercises:
+            assert exercise.type in exercise_types.CANONICAL_TYPES, exercise.type

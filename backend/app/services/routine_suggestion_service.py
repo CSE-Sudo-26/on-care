@@ -44,6 +44,7 @@ from app.models.models import (
     TrainerRoutine,
     TrainerSchedule,
 )
+from app.services import exercise_types
 
 #: 검토 대기 상태. 상수의 출처는 [app.services.trainer_service] 지만 그 모듈이 이
 #: 모듈을 불러오므로 값을 여기서 다시 적는다(순환 import 회피) —
@@ -82,11 +83,10 @@ EV_RECENT_RECORD = "최근 운동 기록 반영"
 #: 본다. 이 신호는 **강도를 내리는 쪽으로만** 쓴다.
 _BLOOD_PRESSURE_TERMS = ("고혈압", "혈압")
 
-#: 근력으로 집계할 운동 종류(`ExerciseSession.type`). 회원 앱이 남기는 값이다.
-_STRENGTH_TYPES = ("strength", "근력")
-
-#: 유산소로 집계할 운동 종류.
-_CARDIO_TYPES = ("cardio", "walking", "유산소", "걷기")
+#: 집계는 표준 어휘로 접어서 한다 (#996) — 옛 값(walking·걷기)도 같은 칸에
+#: 떨어지므로 종류를 나열해 두지 않는다.
+_STRENGTH_TYPES = (exercise_types.STRENGTH,)
+_CARDIO_TYPES = (exercise_types.CARDIO,)
 
 
 @dataclass(frozen=True)
@@ -281,10 +281,14 @@ def _collect_signals(
     }
     total_minutes = sum(minutes_by_type.values())
     strength_minutes = sum(
-        minutes for t, minutes in minutes_by_type.items() if t in _STRENGTH_TYPES
+        minutes
+        for t, minutes in minutes_by_type.items()
+        if exercise_types.normalize(t) in _STRENGTH_TYPES
     )
     cardio_minutes = sum(
-        minutes for t, minutes in minutes_by_type.items() if t in _CARDIO_TYPES
+        minutes
+        for t, minutes in minutes_by_type.items()
+        if exercise_types.normalize(t) in _CARDIO_TYPES
     )
 
     conditions = db.scalar(
@@ -338,7 +342,7 @@ def _candidates_for(signals: _Signals) -> list[_Candidate]:
             _Candidate(
                 name="하체·전신 회복 스트레칭",
                 minutes=10,
-                type="스트레칭",
+                type="유연성",
                 reason=(
                     "최근 수업과 근력 운동 뒤 회복을 돕는 가벼운 스트레칭이에요. "
                     "통증이 느껴지면 멈추세요."
@@ -373,7 +377,7 @@ def _candidates_for(signals: _Signals) -> list[_Candidate]:
             _Candidate(
                 name="목·어깨 스트레칭",
                 minutes=8,
-                type="스트레칭",
+                type="유연성",
                 reason=(
                     "다음 수업을 준비하는 가벼운 스트레칭이에요. "
                     "가동 범위 안에서만 움직이세요."

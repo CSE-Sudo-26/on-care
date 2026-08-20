@@ -14,6 +14,18 @@
 - **인증**: `Authorization: Bearer <token>` (JWT). `auth_interceptor` 가 붙인다. 자세한 것은 아래 "인증" 절.
 - **에러**: `{ "code": "...", "message": "..." }` 형태. 4xx/5xx 는 DioException 으로 처리됨.
 - **사용자 id**: **문자열** (`"user-demo"`). 정수 아님.
+- **목록 페이지네이션**: 계속 자라는 목록은 **한 쪽**만 돌려줍니다. 파라미터 없이 부르면
+  기본 50건이라 기존 클라이언트는 그대로 동작합니다. 커서 모양은 한 가지입니다 —
+  받은 마지막 항목의 `(정렬키, id)` 를 `(before, before_id)` 로 되돌려 줍니다
+  (`limit` 은 1~100, 벗어나면 **422**. `before` 파싱 실패도 422이고, 오프셋 없는 값은
+  UTC 로 읽습니다).
+  적용된 곳: 채팅 스레드(`/me/coach/chat`, `/trainer/clients/{id}/chat`),
+  알림(`/notifications`, #965), 예약(`/reservations/me`), 상담(`/consultations/me`,
+  `/trainer/consultations`), 로스터(`/trainer/clients`) — 뒤의 넷은 #980.
+  **로스터만 커서가 다릅니다**(아래 트레이너 도메인 문서 참고) — 정렬키가 시각이 아니라
+  트레이너가 정한 순서라 마지막 카드의 `after_id` 하나만 넘깁니다.
+  집계 값(`/notifications/unread-count`, `/trainer/consultations/pending-count` 등)은
+  쪽 나눔과 무관하게 **전체 기준**입니다.
 
 ## 프론트에 실제 구현된 엔드포인트 (이번에 완성할 대상)
 
@@ -191,7 +203,7 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 |---|---|---|
 | GET | `/trainers/{trainer_id}/slots` | `[{ id, trainer_id, starts_at, capacity, remaining, is_closed }]` |
 | POST | `/reservations` | 입력 `{ slot_id }` → `{ id, slot_id, schedule_id, status, created_at }` |
-| GET | `/reservations/me` | `[{ id, slot_id, trainer_id, starts_at, cancellable }]` — 내 예약 |
+| GET | `/reservations/me` | `[{ id, slot_id, trainer_id, starts_at, cancellable }]` — 내 예약 (다가오는 것부터, 기본 50건·커서) |
 | DELETE | `/reservations/{id}` | 취소 → `{ status: "cancelled" }` |
 
 - **예약은 트레이너 일정을 만듭니다.** 확정 시 `trainer_schedule` 에 `1:1 PT` 세션이 생기고, 취소하면 그 일정과 좌석이 함께 돌아갑니다. 회원 탈퇴 경로와 **같은 함수**(`reservation_service._release`)를 씁니다. (#502)
@@ -199,6 +211,42 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 - **남의 예약·없는 예약은 404** 로 같습니다. 존재 여부조차 드러내지 않습니다(상담 요청과 같은 규칙).
 - `cancellable` 은 **서버 판단**입니다. 앱이 자기 시계로 다시 계산하면 시각이 어긋난 기기에서 버튼은 눌리는데 서버가 409 를 주는 상태가 됩니다.
 - 취소는 트레이너에게 알림 행을 남깁니다(`notifications`). 트레이너는 `/trainer/notifications` 로 읽습니다(#503).
+
+#### 목록 페이지네이션과 순서 (#980)
+
+`GET /reservations/me` 는 **한 쪽**만 돌려줍니다. 파라미터 없이 부르면 50건입니다.
+
+| 파라미터 | 기본 | 설명 |
+|---|---|---|
+| `limit` | 50 | 1~100. 범위를 벗어나면 **422** |
+| `before` | — | 다음 쪽 커서. 받은 마지막 예약의 `starts_at`(ISO) |
+| `before_id` | — | 복합 커서 tie-break. 받은 마지막 예약의 `id` |
+
+- **순서가 `starts_at` 내림차순으로 바뀌었습니다.** 예약은 취소해도 이력이 남아야 해
+  계정마다 계속 쌓이는데, 예전의 오름차순에 상한만 씌우면 첫 쪽이 **가장 오래된 지난
+  예약**으로 차서 정작 다가오는 예약이 화면에서 사라집니다. 내림차순이면 첫 쪽이 항상
+  예정된 예약이고, 지난 예약은 이어 받는 쪽으로 밀립니다.
+- 지난 예약을 여전히 숨기지 않습니다 — "내가 그 시간에 예약했었나" 를 확인하는
+  자리이기도 합니다. `cancellable` 로 취소 가능 여부만 서버가 갈라 줍니다.
+- 한 트레이너가 같은 시각에 슬롯을 여러 개 열 수 있어 동시각이 실제로 나옵니다.
+  시각만으로 자르면 그 경계에서 예약이 빠지거나 겹쳐 `(starts_at, id)` 복합 커서를 씁니다.
+
+### 상담 요청 (회원 → 트레이너)
+
+| Method | Path | 응답 |
+|---|---|---|
+| POST | `/consultations` | 입력 `{ trainer_id, exercise_goal, health_purpose_type, preferred_date, preferred_time_slot, message? }` |
+| GET | `/consultations/me` | 내가 보낸 요청 (최신순, 기본 50건·커서) |
+| GET | `/consultations/{id}` | 단건(남의 것·없는 것 404) |
+
+- 같은 트레이너에게 **대기 중인 요청은 한 건**입니다(`uq_consultation_requests_pending_trainer`,
+  중복은 409). 그래서 목록이 자라는 쪽은 처리된 지난 요청입니다 — 상태 필터가 없어
+  그대로 함께 쌓이고, 그 때문에 상한이 필요합니다. (#980)
+- 커서는 `(created_at, id)` 로 알림과 같은 모양입니다(`before`·`before_id`).
+- 트레이너 인박스(`GET /trainer/consultations`)도 같은 파라미터를 받습니다. 기본값인
+  `status=pending` 은 처리하는 만큼 줄지만 `status=all` 은 그 트레이너에게 들어온 요청
+  전체입니다. 미처리 배지(`/trainer/consultations/pending-count`)는 **쪽 나눔과 무관하게**
+  전체를 셉니다.
 
 ### 트레이너 알림함
 

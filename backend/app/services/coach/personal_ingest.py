@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.services import exercise_types
 from app.services.coach import prompt_safety
 from app.services.coach.rag import (
     ensure_personal_text,
@@ -133,14 +134,9 @@ def record_chat(
 
 #: 운동 타입/강도의 한국어 라벨. 검색 질의도 답변도 한국어라 저장 코드값(cardio,
 #: light …)을 그대로 넣으면 임베딩이 질의와 겉돈다.
-_EXERCISE_TYPE_KR = {
-    "cardio": "유산소",
-    "walking": "걷기",
-    "strength": "근력",
-    "yoga": "요가",
-    "stretching": "스트레칭",
-    "other": "기타",
-}
+#: 표준 어휘 네 가지로 적는다 (#996). 옛 값으로 저장된 기록도 같은 라벨로
+#: 적재돼야 질의("유연성 운동 얼마나 했지")가 한 덩이로 걸린다.
+_EXERCISE_TYPE_KR = exercise_types.label_for
 _EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높음"}
 
 
@@ -151,7 +147,7 @@ def exercise_text(
     """운동 세션 한 건의 문서 본문. 적재와 갱신이 같은 문구를 쓰게 한 곳에 둔다."""
     return (
         f"{date} 운동 기록: "
-        f"{_EXERCISE_TYPE_KR.get(exercise_type, exercise_type)} {minutes}분, "
+        f"{_EXERCISE_TYPE_KR(exercise_type)} {minutes}분, "
         f"{calories}kcal, 강도 {_EXERCISE_INTENSITY_KR.get(intensity, intensity)}."
     )
 

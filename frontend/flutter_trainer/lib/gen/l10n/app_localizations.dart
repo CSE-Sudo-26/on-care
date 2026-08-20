@@ -1634,6 +1634,12 @@ abstract class AppLocalizations {
   /// **'Pending only'**
   String get consultShowPending;
 
+  /// No description provided for @consultLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load earlier requests'**
+  String get consultLoadMore;
+
   /// No description provided for @consultLoadFailed.
   ///
   /// In en, this message translates to:
@@ -3229,6 +3235,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stretching'**
   String get routineTypeStretching;
+
+  /// No description provided for @routineTypeFlexibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Flexibility'**
+  String get routineTypeFlexibility;
 
   /// No description provided for @routineTypeOther.
   ///

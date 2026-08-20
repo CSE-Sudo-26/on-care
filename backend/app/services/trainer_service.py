@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
 from app.core import clock
+from app.core.pagination import DEFAULT_PAGE
 from app.models.models import (
     ChatMessage, DietEntry, ExerciseSession, GymProfile, HealthProfile, Place, RoutineHistory,
     TrainerClient, TrainerClientMemo, TrainerProfile, TrainerProgramDraft,
@@ -41,6 +42,7 @@ from app.services import (
     auto_routine_service,
     diet_photo_service,
     exercise_service,
+    exercise_types,
     notification_service,
     routine_suggestion_service,
 )
@@ -270,16 +272,46 @@ def _roster_active(link: TrainerClient) -> bool:
     return link.active and not link.dormant
 
 
-def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
-    """트레이너의 담당 고객 로스터. 각 카드의 영양 지표는 회원 실데이터에서 집계.
+class RosterCursorNotFound(Exception):
+    """로스터 커서가 가리키는 회원이 그 트레이너의 명단에 없음 — 라우터가 422 로 옮긴다."""
+
+
+def build_roster(
+    db: Session,
+    trainer_id: str,
+    *,
+    limit: int = DEFAULT_PAGE,
+    after_id: str | None = None,
+) -> list[TrainerClientOut]:
+    """트레이너의 담당 고객 로스터 한 쪽. 각 카드의 영양 지표는 회원 실데이터에서 집계.
 
     쿼리는 고객 수와 무관하게 상수개(배치)로 유지하고, 식단/기록은 필요한 창(최근 7일 /
-    이번 주)만 로드한다(N+1·무제한 이력 로드 방지, 리뷰 PR 250-#3).
+    이번 주)만 로드한다(N+1·무제한 이력 로드 방지, 리뷰 PR 250-#3). 쿼리 수는 상수라도
+    **한 쿼리가 읽는 양**은 인원수만큼 자라므로 한 번에 주는 건수에 상한을 둔다. (#980)
+
+    커서는 트레이너가 정한 순서를 그대로 따라 오름차순이고, 받은 마지막 카드의 **회원
+    id** 하나다(`after_id`) — 정렬키인 `sort_order` 는 카드에 실리지 않으므로 그 자리를
+    여기서 찾는다. 명단에 없는 id 면 [RosterCursorNotFound].
+
+    tie-break 를 `created_at` 이 아니라 회원 id 로 둔다 — `sort_order` 가 같은 링크
+    사이의 순서만 바뀌며, 담당 링크는 만들 때마다 `max(sort_order) + 1` 을 받아 같은
+    값이 겹치는 일 자체가 드물다.
     """
+    query = select(TrainerClient).where(TrainerClient.trainer_id == trainer_id)
+    if after_id is not None:
+        anchor = db.execute(
+            select(TrainerClient.sort_order, TrainerClient.member_id).where(
+                TrainerClient.trainer_id == trainer_id,
+                TrainerClient.member_id == after_id,
+            )
+        ).first()
+        if anchor is None:
+            raise RosterCursorNotFound("이어 받을 자리를 찾을 수 없습니다.")
+        query = query.where(
+            tuple_(TrainerClient.sort_order, TrainerClient.member_id) > tuple(anchor)
+        )
     links = db.scalars(
-        select(TrainerClient)
-        .where(TrainerClient.trainer_id == trainer_id)
-        .order_by(TrainerClient.sort_order, TrainerClient.created_at)
+        query.order_by(TrainerClient.sort_order, TrainerClient.member_id).limit(limit)
     ).all()
     if not links:
         return []
@@ -983,6 +1015,9 @@ def _routine_out(
     """
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
+        # 예상 소모 칼로리. 배정 시점에는 강도를 모르니 보통으로 잡는다 — 회원이
+        # 수행을 마치면 그때의 강도로 계산한 값이 운동 기록에 남는다. (#996)
+        calories=exercise_service.estimate_calories(rt.type, rt.minutes, "moderate"),
         reason=rt.reason, source=rt.source,
         program_name=rt.program_name,
         session_name=rt.session_name,
@@ -1002,14 +1037,8 @@ def _routine_out(
     )
 
 
-_ROUTINE_EXERCISE_TYPES = {
-    "걷기": "walking",
-    "유산소": "cardio",
-    "근력": "strength",
-    "요가": "yoga",
-    "스트레칭": "stretching",
-    "기타": "other",
-}
+#: 루틴의 한글 유형 → 운동 기록의 영문 코드. 옛 값도 함께 접힌다. (#996)
+_ROUTINE_EXERCISE_TYPES = exercise_types.normalize
 
 
 
@@ -1210,7 +1239,7 @@ def complete_assigned_routine(
         return _routine_out(routine, existing)
 
     completed_at = clock.now()
-    exercise_type = _ROUTINE_EXERCISE_TYPES.get(routine.type, "other")
+    exercise_type = _ROUTINE_EXERCISE_TYPES(routine.type)
     row = ExerciseSession(
         id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
         user_id=member_id,

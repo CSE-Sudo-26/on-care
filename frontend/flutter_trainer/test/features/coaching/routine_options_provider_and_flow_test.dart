@@ -510,7 +510,8 @@ void main() {
     tester.widget<Slider>(minutesSlider).onChanged?.call(20);
     await tester.pump();
     expect(find.text('20분'), findsWidgets);
-    for (final category in <String>['걷기', '유산소', '근력', '요가', '스트레칭', '기타']) {
+    // 유형은 네 가지다 (#996).
+    for (final category in <String>['유산소', '근력', '유연성', '기타']) {
       expect(
         find.byKey(ValueKey<String>('routine-category-B-0-$category')),
         findsOneWidget,

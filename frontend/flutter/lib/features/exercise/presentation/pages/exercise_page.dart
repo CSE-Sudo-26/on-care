@@ -1976,25 +1976,32 @@ class _CompletedPtSessionCard extends StatelessWidget {
                 color: FigmaColors.primary,
               ),
               const SizedBox(width: 6),
-              Text(
-                l.exCompletedPtTitle,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
+              Flexible(
+                child: Text(
+                  l.exCompletedPtTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
+          // 칩 두 개가 한 줄에 못 들어가면 다음 줄로 내린다 (#995). Row 로 두면
+          // 글씨가 커지거나 영어 라벨이 오는 순간 카드 밖으로 밀린다.
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: <Widget>[
               _MetaChip(
                 icon: Icons.check_circle,
                 text: l.exCompletedPtTime(session.time),
                 color: FigmaColors.statusGreen,
               ),
-              const SizedBox(width: 6),
               _MetaChip(
                 icon: Icons.timer_outlined,
                 text: l.exDurationMinutes(session.durationMinutes),

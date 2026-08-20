@@ -3,7 +3,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// 상담 요청 인박스로 가는 헤더 액션. (#858, #882)
+/// 상담 요청 인박스로 가는 헤더 액션. (#858, #882, #987)
 ///
 /// 처음에는 화면 폭 전체를 쓰는 남색 그라디언트 카드였다. 면적은 제일 큰데
 /// 정작 몇 건 밀렸는지가 눈에 꽂히지 않았고 — 알림이 아니라 배너로 읽혔다 —
@@ -14,6 +14,13 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 라벨을 함께 두면 영어 로케일·큰 글자 배율에서 줄 전체가 넘친다 — #849
 /// 관문이 폭 1024·en·배율 1.3 에서 그것을 잡았다. 이름은 툴팁과 시맨틱스로
 /// 남는다.
+///
+/// 배지가 감싸는 것은 **아이콘이 아니라 아이콘을 담은 네모**다(#987). 배지는
+/// 자식의 오른쪽 위 모서리에 붙는데, 17px 아이콘을 감싸면 지름 16px 짜리 빨간
+/// 원이 아이콘의 절반 가까이를 덮어 무슨 버튼인지 형태로 알아볼 수 없었다.
+/// 네모를 감싸면 같은 규약(오른쪽 위 모서리)을 지키면서 아이콘이 온전히 남는다.
+/// 모서리 밖으로 나가는 만큼은 바깥 여백으로 미리 자리를 비워 둔다 — 헤더
+/// 액션 줄에서 옆 버튼을 침범하지 않기 위해서다.
 ///
 /// 빨강은 처리할 것이 있을 때만 뜬다: 0건이거나 아직 못 읽었으면([pending] 이
 /// null) 배지 없이 조용한 버튼으로 남는다.
@@ -29,6 +36,11 @@ class ConsultationInboxAction extends StatelessWidget {
 
   final VoidCallback onTap;
 
+  /// 배지가 네모 밖으로 나가는 양. [Padding] 과 [Badge.offset] 이 같은 값을
+  /// 써야 배지가 예약된 자리에 정확히 앉는다.
+  static const double _badgeOverflowTop = 6;
+  static const double _badgeOverflowRight = 5;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -38,36 +50,46 @@ class ConsultationInboxAction extends StatelessWidget {
     return Tooltip(
       message: l.consultTitle,
       child: Semantics(
+        // 키는 액션 전체에 둔다 — 배지가 탭 대상(InkWell)의 바깥이라, 키가
+        // 안쪽에 있으면 배지를 이 액션의 자손으로 찾을 수 없다.
+        key: const Key('consult-inbox-entry'),
         button: true,
         label: l.consultTitle,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          child: InkWell(
-            key: const Key('consult-inbox-entry'),
-            onTap: onTap,
-            borderRadius: const BorderRadius.all(AppRadius.md),
-            child: Container(
-              height: 36,
-              width: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
+        child: Padding(
+          padding: const EdgeInsets.only(
+            top: _badgeOverflowTop,
+            right: _badgeOverflowRight,
+          ),
+          child: Badge(
+            isLabelVisible: waiting,
+            alignment: Alignment.topRight,
+            offset: const Offset(_badgeOverflowRight, -_badgeOverflowTop),
+            backgroundColor: AppColors.destructive,
+            textColor: AppColors.destructiveForeground,
+            label: Text('$count'),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: const BorderRadius.all(AppRadius.md),
+              child: InkWell(
+                onTap: onTap,
                 borderRadius: const BorderRadius.all(AppRadius.md),
-                border: Border.all(
-                  color: waiting
-                      ? AppColors.destructive.withValues(alpha: 0.45)
-                      : AppColors.primary.withValues(alpha: 0.45),
-                ),
-              ),
-              child: Badge(
-                isLabelVisible: waiting,
-                backgroundColor: AppColors.destructive,
-                textColor: AppColors.destructiveForeground,
-                label: Text('$count'),
-                child: const Icon(
-                  Icons.mark_email_unread_outlined,
-                  size: 17,
-                  color: AppColors.primary,
+                child: Container(
+                  height: 36,
+                  width: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    border: Border.all(
+                      color: waiting
+                          ? AppColors.destructive.withValues(alpha: 0.45)
+                          : AppColors.primary.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.mark_email_unread_outlined,
+                    size: 17,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),

@@ -14,6 +14,13 @@ import 'package:oncare_trainer/features/clients/domain/repositories/client_data_
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
+/// 로스터 한 쪽의 인원. 서버 기본값과 같다(#980).
+const int rosterPageSize = 50;
+
+/// 이어 받을 쪽 수의 상한 — 담당 회원 2,500명이면 어떤 트레이너의 명단도 덮는다.
+/// 서버가 같은 쪽을 계속 돌려주는 상황에서 고리가 멈추지 않는 것만 막는다.
+const int _rosterPageLimit = 50;
+
 /// Reads a trainer's clients + their diet/history from the FastAPI backend.
 /// Selected when `USE_MOCK_API=false` (see [clientRepositoryProvider]).
 ///
@@ -178,8 +185,30 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
     }
   }
 
-  Future<List<TrainerClient>> _fetchClients() =>
-      _getList('/trainer/clients', trainerClientFromJson);
+  /// 로스터 전체. 서버가 한 쪽씩 주므로(#980) 명단이 끝날 때까지 이어 받는다.
+  ///
+  /// 화면에 "더 보기" 를 두지 않는 이유: 담당 회원 목록은 사이드바 개수·검색·차트가
+  /// 모두 **전체**를 전제로 읽는 자리라, 절반만 들고 있으면 트레이너가 명단이 잘린 줄
+  /// 모른 채 빠진 회원을 찾게 된다. 상한은 한 응답이 인원수만큼 커지는 것을 막는
+  /// 장치이고, 여기서는 그 쪽들을 이어 붙여 같은 목록을 만든다. 트레이너 한 명이
+  /// 감당하는 인원만큼만 도는 고리다.
+  Future<List<TrainerClient>> _fetchClients() async {
+    final List<TrainerClient> all = <TrainerClient>[];
+    String? afterId;
+    // 명단 길이에 상한을 두지 않되, 서버가 같은 쪽을 계속 주는 상황에서 매달리지는
+    // 않도록 쪽 수를 넉넉히 제한한다.
+    for (int page = 0; page < _rosterPageLimit; page++) {
+      final List<TrainerClient> rows = await _getList(
+        '/trainer/clients',
+        trainerClientFromJson,
+        query: <String, Object?>{'limit': rosterPageSize, 'after_id': ?afterId},
+      );
+      all.addAll(rows);
+      if (rows.length < rosterPageSize) break;
+      afterId = rows.last.id;
+    }
+    return List<TrainerClient>.unmodifiable(all);
+  }
 
   Future<List<ClientDietEntry>> _fetchDiet(String clientId) => _getList(
     '/trainer/clients/${Uri.encodeComponent(clientId)}/diet',
@@ -246,10 +275,11 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   /// surface as a typed [AppError].
   Future<List<T>> _getList<T>(
     String path,
-    T Function(Map<String, Object?>) fromJson,
-  ) async {
+    T Function(Map<String, Object?>) fromJson, {
+    Map<String, Object?>? query,
+  }) async {
     try {
-      final res = await _dio.get<List<dynamic>>(path);
+      final res = await _dio.get<List<dynamic>>(path, queryParameters: query);
       final data = res.data ?? const <dynamic>[];
       return data
           .map((item) {
