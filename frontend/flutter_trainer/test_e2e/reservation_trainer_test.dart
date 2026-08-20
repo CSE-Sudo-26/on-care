@@ -30,7 +30,23 @@ const int _capacity = 2;
 Future<void> _openSchedule(WidgetTester tester, DateTime day) async {
   await tester.tap(find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')));
   await pumpUntil(tester, find.byType(SchedulePage), step: '스케줄 화면');
-  await tester.tap(find.byKey(ValueKey<String>('schedule-day-${ymd(day)}')));
+
+  // 시간표는 월~일 한 주만 보여 준다(#988). 고르려는 날이 다음 주면 — 오늘이
+  // 일요일이면 내일이 그렇다 — 화살표로 한 주 넘긴 뒤에야 그 요일 칸이 있다.
+  final Finder cell = find.byKey(ValueKey<String>('schedule-day-${ymd(day)}'));
+  await pumpUntil(
+    tester,
+    find.byIcon(Icons.chevron_right),
+    step: '주 이동 화살표',
+  );
+  if (cell.evaluate().isEmpty) {
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  await pumpUntil(tester, cell, step: '요일 칸');
+
+  await tester.tap(cell);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
 }
@@ -172,7 +188,9 @@ void main() {
           find.byKey(ValueKey<String>('schedule-session-${session['id']}')),
           step: '회원 예약으로 생긴 일정 표시',
         );
-        expect(find.text(memberName), findsWidgets);
+        // 로스터에 없는 회원은 이름 뒤에 `(신규)` 가 붙는다(#988) — 이름이
+        // 불렸는지만 본다.
+        expect(find.textContaining(memberName), findsWidgets);
 
         E2eState.merge(<String, Object?>{'scheduleId': session['id']});
 

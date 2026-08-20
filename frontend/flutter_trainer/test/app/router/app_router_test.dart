@@ -276,7 +276,7 @@ void main() {
             final locations = <String>[
               AppRoutes.dashboard,
               AppRoutes.clientDetail('seed-client-1'),
-              AppRoutes.scheduleView('week'),
+              AppRoutes.scheduleAt(),
               AppRoutes.messagesFor('seed-client-1'),
               AppRoutes.coachingFor('seed-client-1'),
               AppRoutes.reportFor('seed-client-1'),

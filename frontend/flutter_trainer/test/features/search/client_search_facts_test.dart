@@ -120,7 +120,7 @@ void main() {
     );
     expect(
       clientSearchDestination(Uri.parse('/schedule'), minsu, facts),
-      '/schedule?v=day&d=2026-08-20',
+      '/schedule?d=2026-08-20',
     );
     expect(
       clientSearchDestination(Uri.parse('/dashboard'), minsu, facts),

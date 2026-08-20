@@ -128,7 +128,7 @@ String clientSearchDestination(
       final next = facts.nextSession[client.id];
       return next == null
           ? AppRoutes.clientDetail(client.id)
-          : AppRoutes.scheduleView('day', date: next.date);
+          : AppRoutes.scheduleAt(date: next.date);
     case 'messages':
       return AppRoutes.messagesFor(
         client.id,

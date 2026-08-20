@@ -2360,17 +2360,23 @@ abstract class AppLocalizations {
   /// **'Couldn\'t mark it complete. Please try again'**
   String get schedCompleteFailed;
 
-  /// No description provided for @schedViewDay.
+  /// No description provided for @schedTimeRange.
   ///
   /// In en, this message translates to:
-  /// **'Day'**
-  String get schedViewDay;
+  /// **'{start}–{end}'**
+  String schedTimeRange(String start, String end);
 
-  /// No description provided for @schedViewWeek.
+  /// No description provided for @schedEmptyWeek.
   ///
   /// In en, this message translates to:
-  /// **'Week'**
-  String get schedViewWeek;
+  /// **'Nothing scheduled this week.'**
+  String get schedEmptyWeek;
+
+  /// No description provided for @schedNewClientTag.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (new)'**
+  String schedNewClientTag(String name);
 
   /// No description provided for @schedSlots.
   ///
@@ -2393,7 +2399,7 @@ abstract class AppLocalizations {
   /// No description provided for @schedEmptyDay.
   ///
   /// In en, this message translates to:
-  /// **'Nothing scheduled for this day.\nAdd a session below.'**
+  /// **'Nothing scheduled for this day.\nUse New session above to add one.'**
   String get schedEmptyDay;
 
   /// No description provided for @schedCompleteTitle.
@@ -2419,12 +2425,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark complete'**
   String get schedCompleteAction;
-
-  /// No description provided for @schedNewClient.
-  ///
-  /// In en, this message translates to:
-  /// **'New client'**
-  String get schedNewClient;
 
   /// No description provided for @schedSaveFailed.
   ///
@@ -2558,6 +2558,24 @@ abstract class AppLocalizations {
   /// **'Trainer\'s note'**
   String get schedNote;
 
+  /// No description provided for @schedEditNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit note'**
+  String get schedEditNote;
+
+  /// No description provided for @schedNoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'No note yet'**
+  String get schedNoNote;
+
+  /// No description provided for @schedNoteOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A consultation is recorded as a note, not a program.'**
+  String get schedNoteOnlyHint;
+
   /// No description provided for @schedNoteHint.
   ///
   /// In en, this message translates to:
@@ -2671,12 +2689,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Build one in the AI routine tab, or agree on it over chat first.'**
   String get progEmptyHint;
-
-  /// No description provided for @schedEmptySlotShort.
-  ///
-  /// In en, this message translates to:
-  /// **'Empty'**
-  String get schedEmptySlotShort;
 
   /// No description provided for @schedSentTo.
   ///

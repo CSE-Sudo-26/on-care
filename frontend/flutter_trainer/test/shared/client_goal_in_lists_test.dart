@@ -75,7 +75,7 @@ void main() {
     expect(find.byType(ClientGoalLabel), findsOneWidget);
   });
 
-  testWidgets('스케줄 일 보기 세션 카드에 고객 목표가 보인다', (tester) async {
+  testWidgets('스케줄 상세 패널의 세션 카드에 고객 목표가 보인다', (tester) async {
     // 세션은 시드가 만든다 — 로스터만 갈아 끼우면 세션의 고객과 이어지지
     // 않아 이 카드가 이름만 그리는 분기로 빠진다.
     tester.view.devicePixelRatio = 1.0;
@@ -89,8 +89,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('김민수'), findsOneWidget);
-    expect(find.text('혈압 관리 · 체중 감량'), findsWidgets);
+    // 이름은 시간표 블록과 상세 패널 양쪽에 있다 — 목표 줄은 카드에만 있다.
+    expect(find.text('김민수'), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('week-detail')),
+        matching: find.text('혈압 관리 · 체중 감량'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('목표가 비면 빈 줄을 만들지 않는다', (tester) async {

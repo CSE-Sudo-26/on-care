@@ -1268,10 +1268,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedCompleteFailed => '완료 처리에 실패했어요. 다시 시도해 주세요';
 
   @override
-  String get schedViewDay => '일';
+  String schedTimeRange(String start, String end) {
+    return '$start–$end';
+  }
 
   @override
-  String get schedViewWeek => '주';
+  String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
+
+  @override
+  String schedNewClientTag(String name) {
+    return '$name(신규)';
+  }
 
   @override
   String get schedSlots => '예약 슬롯';
@@ -1283,7 +1290,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedLoadFailed => '스케줄을 불러오지 못했어요';
 
   @override
-  String get schedEmptyDay => '이 날짜에는 일정이 없어요.\n아래에서 새 일정을 추가해 보세요.';
+  String get schedEmptyDay => '이 날짜에는 일정이 없어요.\n위의 「새 일정」으로 추가해 보세요.';
 
   @override
   String get schedCompleteTitle => '세션 완료 처리';
@@ -1298,9 +1305,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedCompleteAction => '완료 처리';
-
-  @override
-  String get schedNewClient => '신규 고객';
 
   @override
   String get schedSaveFailed => '일정 저장에 실패했어요. 다시 시도해 주세요';
@@ -1378,6 +1382,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedNote => '트레이너 메모';
 
   @override
+  String get schedEditNote => '메모 수정';
+
+  @override
+  String get schedNoNote => '아직 남긴 메모가 없어요';
+
+  @override
+  String get schedNoteOnlyHint => '상담은 프로그램 대신 메모로 남깁니다.';
+
+  @override
   String get schedNoteHint => '수업 준비사항이나 고객 특이사항을 입력하세요';
 
   @override
@@ -1435,9 +1448,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get progEmptyHint => 'AI 루틴 탭에서 프로그램을 만들어 보내거나, 채팅으로 미리 조율해 보세요.';
-
-  @override
-  String get schedEmptySlotShort => '비어 있음';
 
   @override
   String schedSentTo(String name) {
