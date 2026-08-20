@@ -574,7 +574,15 @@ class _TrainerChatButton extends StatelessWidget {
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(l.coachChatWithTrainer),
+            // 배지가 붙으면 라벨과 함께 버튼 폭을 넘는다 — 글씨를 키운 뒤로는
+            // 배지가 없어도 빠듯하다. 문구 쪽이 줄어든다. (#995)
+            Flexible(
+              child: Text(
+                l.coachChatWithTrainer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (unread > 0) ...<Widget>[
               const SizedBox(width: 8),
               Container(
