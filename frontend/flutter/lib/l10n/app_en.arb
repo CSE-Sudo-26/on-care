@@ -1227,5 +1227,20 @@
         "type": "String"
       }
     }
-  }
+  },
+  "a11yChartSummary": "{title}. {detail}",
+  "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},
+  "a11yChartEmpty": "{title}. No records yet",
+  "@a11yChartEmpty": {"placeholders": {"title": {"type": "String"}}},
+  "a11yChartPoint": "{day} {value}",
+  "@a11yChartPoint": {"placeholders": {"day": {"type": "String"}, "value": {"type": "String"}}},
+  "a11yShowPassword": "Show password",
+  "a11yHidePassword": "Hide password",
+  "a11yOpenCoaching": "Open coaching tips",
+  "a11ySendMessage": "Send message",
+  "a11yClearSearch": "Clear search",
+  "a11yRemoveFood": "Remove food",
+  "a11yOpenCalendar": "Open schedule calendar",
+  "a11yPrevWeek": "Previous week",
+  "a11yNextWeek": "Next week"
 }

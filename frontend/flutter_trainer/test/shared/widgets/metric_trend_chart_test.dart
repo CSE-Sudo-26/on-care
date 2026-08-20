@@ -25,6 +25,7 @@ void main() {
           ticks: const <double>[0, 1750, 3500],
           todayIndex: 5,
           replayKey: 'sodium',
+          semanticsLabel: '나트륨 주간 추이',
           goalLabel: goalLabel,
           formatTick: metricTrendNumber,
         ),
@@ -59,7 +60,12 @@ void main() {
   test('눈금은 그리지 않아도 축의 위아래를 정한다', () {
     // `ticks` 를 지우면 세 지표의 축이 서로 다르게 움직인다. 당류처럼 바닥이
     // 0 에 고정되는 성질이 여기서 나온다.
-    for (final (String name, List<double> values, List<double> ticks, double goal)
+    for (final (
+          String name,
+          List<double> values,
+          List<double> ticks,
+          double goal,
+        )
         in <(String, List<double>, List<double>, double)>[
           ('칼로리', <double>[1710, 1830, 1560], <double>[0, 1500, 2500], 2000),
           ('나트륨', <double>[2200, 1900, 2050], <double>[0, 1750, 3500], 2000),

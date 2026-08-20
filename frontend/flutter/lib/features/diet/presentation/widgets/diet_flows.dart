@@ -383,18 +383,21 @@ class _PhotoFailureNoticeState extends State<_PhotoFailureNotice> {
                   ),
                 ),
                 if (_canOpenAppSettings)
-                  GestureDetector(
-                    onTap: _openSettings,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        l.dietOpenSettings,
-                        key: const Key('dietOpenSettingsLink'),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.primary,
-                          decoration: TextDecoration.underline,
+                  Semantics(
+                    button: true,
+                    child: GestureDetector(
+                      onTap: _openSettings,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          l.dietOpenSettings,
+                          key: const Key('dietOpenSettingsLink'),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.primary,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
                     ),
@@ -1182,30 +1185,36 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                     children: <Widget>[
                       for (final MealType t in _types) ...<Widget>[
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _type = t),
-                            child: Container(
-                              alignment: Alignment.center,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _type == t
-                                    ? FigmaColors.primaryA(0.10)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _type == t
-                                      ? FigmaColors.primary
-                                      : FigmaColors.hairline,
+                          child: Semantics(
+                            button: true,
+                            selected: _type == t,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _type = t),
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
                                 ),
-                              ),
-                              child: Text(
-                                mealBadge(l, t),
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
+                                decoration: BoxDecoration(
                                   color: _type == t
-                                      ? FigmaColors.primary
-                                      : AppColors.mutedForeground,
+                                      ? FigmaColors.primaryA(0.10)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _type == t
+                                        ? FigmaColors.primary
+                                        : FigmaColors.hairline,
+                                  ),
+                                ),
+                                child: Text(
+                                  mealBadge(l, t),
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _type == t
+                                        ? FigmaColors.primary
+                                        : AppColors.mutedForeground,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1257,21 +1266,24 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   Row(
                     children: <Widget>[
                       Expanded(child: _FieldLabel(l.dietEatenFood)),
-                      GestureDetector(
-                        onTap: () => setState(
-                          () => _foods = <DietFood>[
-                            ..._foods,
-                            // Empty draft name; the localized label is shown
-                            // only as a placeholder and is validated out on save.
-                            const DietFood('', 0),
-                          ],
-                        ),
-                        child: Text(
-                          l.dietAddFood,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: FigmaColors.primary,
+                      Semantics(
+                        button: true,
+                        child: GestureDetector(
+                          onTap: () => setState(
+                            () => _foods = <DietFood>[
+                              ..._foods,
+                              // Empty draft name; the localized label is shown
+                              // only as a placeholder and is validated out on save.
+                              const DietFood('', 0),
+                            ],
+                          ),
+                          child: Text(
+                            l.dietAddFood,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: FigmaColors.primary,
+                            ),
                           ),
                         ),
                       ),
@@ -1473,9 +1485,17 @@ class _FoodRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onDelete,
-            child: const Icon(Icons.cancel, size: 18, color: Color(0xFFFFB4A8)),
+          Semantics(
+            button: true,
+            label: l.a11yRemoveFood,
+            child: GestureDetector(
+              onTap: onDelete,
+              child: const Icon(
+                Icons.cancel,
+                size: 18,
+                color: Color(0xFFFFB4A8),
+              ),
+            ),
           ),
         ],
       ),
@@ -1565,10 +1585,14 @@ class _CircleClose extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(icon, size: 16, color: FigmaColors.textSub),
+        // 아이콘만 있는 버튼이라 무엇을 닫는지 말할 데가 없다(#972).
+        child: Tooltip(
+          message: MaterialLocalizations.of(context).closeButtonTooltip,
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(icon, size: 16, color: FigmaColors.textSub),
+          ),
         ),
       ),
     );

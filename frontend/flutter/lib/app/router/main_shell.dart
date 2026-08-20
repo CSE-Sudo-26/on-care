@@ -311,18 +311,24 @@ class _NavAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('recordAddButton'),
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: const BoxDecoration(
-          color: FigmaColors.primary,
-          shape: BoxShape.circle,
+    // `GestureDetector` 는 버튼으로 인식되지 않고, 안에 있는 것은 `+` 아이콘
+    // 하나뿐이라 무엇을 여는 자리인지 말할 데가 없다(#972).
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).navAddRecordTitle,
+      child: GestureDetector(
+        key: const Key('recordAddButton'),
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            color: FigmaColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.add, color: Colors.white, size: 28),
         ),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
     );
   }
@@ -543,10 +549,15 @@ class _SheetCloseButton extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: const SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(Icons.close, size: 16, color: FigmaColors.textSub),
+        // 아이콘만 있는 버튼이라 무엇을 닫는지 말할 데가 없다(#972). 닫기는
+        // 플랫폼이 이미 제 언어로 부르는 이름이 있다.
+        child: Tooltip(
+          message: MaterialLocalizations.of(context).closeButtonTooltip,
+          child: const SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(Icons.close, size: 16, color: FigmaColors.textSub),
+          ),
         ),
       ),
     );

@@ -3577,6 +3577,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{title} · {month}/{day}'**
   String exDatedTitle(int month, int day, String title);
+
+  /// No description provided for @a11yChartSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}. {detail}'**
+  String a11yChartSummary(String title, String detail);
+
+  /// No description provided for @a11yChartEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}. No records yet'**
+  String a11yChartEmpty(String title);
+
+  /// No description provided for @a11yChartPoint.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} {value}'**
+  String a11yChartPoint(String day, String value);
+
+  /// No description provided for @a11yShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get a11yShowPassword;
+
+  /// No description provided for @a11yHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get a11yHidePassword;
+
+  /// No description provided for @a11yOpenCoaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Open coaching tips'**
+  String get a11yOpenCoaching;
+
+  /// No description provided for @a11ySendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get a11ySendMessage;
+
+  /// No description provided for @a11yClearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get a11yClearSearch;
+
+  /// No description provided for @a11yRemoveFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove food'**
+  String get a11yRemoveFood;
+
+  /// No description provided for @a11yOpenCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Open schedule calendar'**
+  String get a11yOpenCalendar;
+
+  /// No description provided for @a11yPrevWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous week'**
+  String get a11yPrevWeek;
+
+  /// No description provided for @a11yNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week'**
+  String get a11yNextWeek;
 }
 
 class _AppLocalizationsDelegate

@@ -92,6 +92,7 @@ void main() {
               ticks: const <double>[0, 5, 10],
               todayIndex: 2,
               replayKey: 'k',
+              semanticsLabel: '나트륨 주간 추이',
               formatTick: (double v) => v.toStringAsFixed(0),
             ),
           ),

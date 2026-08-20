@@ -665,5 +665,20 @@
   "alertJustNow": "방금",
   "exPtLogTitle": "오늘 완료한 PT",
   "exPtFeedbackTitle": "오늘의 피드백",
-  "exDatedTitle": "{month}월 {day}일 {title}"
+  "exDatedTitle": "{month}월 {day}일 {title}",
+  "a11yChartSummary": "{title}. {detail}",
+  "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},
+  "a11yChartEmpty": "{title}. 기록이 없어요",
+  "@a11yChartEmpty": {"placeholders": {"title": {"type": "String"}}},
+  "a11yChartPoint": "{day} {value}",
+  "@a11yChartPoint": {"placeholders": {"day": {"type": "String"}, "value": {"type": "String"}}},
+  "a11yShowPassword": "비밀번호 표시",
+  "a11yHidePassword": "비밀번호 숨기기",
+  "a11yOpenCoaching": "코칭 조언 열기",
+  "a11ySendMessage": "메시지 보내기",
+  "a11yClearSearch": "검색어 지우기",
+  "a11yRemoveFood": "음식 지우기",
+  "a11yOpenCalendar": "일정 달력 열기",
+  "a11yPrevWeek": "지난 주",
+  "a11yNextWeek": "다음 주"
 }

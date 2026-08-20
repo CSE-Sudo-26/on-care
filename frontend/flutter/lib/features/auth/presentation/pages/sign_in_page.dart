@@ -144,6 +144,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         obscure: _obscure,
                         onSubmitted: (_) => _login(),
                         trailing: IconButton(
+                          // 아이콘만 있는 버튼이라 무엇을 켜고 끄는지 말할
+                          // 데가 툴팁뿐이다(#972).
+                          tooltip: _obscure
+                              ? l.a11yShowPassword
+                              : l.a11yHidePassword,
                           icon: Icon(
                             _obscure ? Icons.visibility_off : Icons.visibility,
                             size: 20,

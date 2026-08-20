@@ -3,6 +3,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 
 /// A compact labelled bar series (주간 이행률, 세션 수 …).
 ///
@@ -17,6 +18,7 @@ class BarSeriesChart extends StatelessWidget {
     super.key,
     required this.values,
     required this.labels,
+    required this.title,
     this.height = 96,
     this.maxValue,
     this.highlightIndex,
@@ -32,6 +34,11 @@ class BarSeriesChart extends StatelessWidget {
 
   /// X-axis labels, one per value.
   final List<String> labels;
+
+  /// 그래프가 무엇을 그린 것인지. 막대는 높이로만 값을 말하고 [showValues] 가
+  /// 꺼져 있으면 숫자가 화면 어디에도 없어, 음성 안내는 이 이름과 아래에서
+  /// 만드는 요약 문장에 기댄다(#972).
+  final String title;
 
   /// Plot height (excluding labels).
   final double height;
@@ -71,61 +78,83 @@ class BarSeriesChart extends StatelessWidget {
       1,
     ].reduce((a, b) => a > b ? a : b);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        SizedBox(
-          height: height,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              for (var i = 0; i < values.length; i++)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.5),
-                    child: _Bar(
-                      value: values[i],
-                      ceiling: ceiling,
-                      color: _colorFor(i),
-                      label: showValues
-                          ? missingIndices.contains(i)
-                                ? AppLocalizations.of(context).chartNoRecord
-                                : '${values[i]}$valueSuffix'
-                          : null,
-                      pending: i >= pendingFrom,
-                      missing: missingIndices.contains(i),
+    // 기록이 없는 칸(`missingIndices`)과 아직 오지 않은 칸은 읽지 않는다 —
+    // 빈 트랙을 `0` 으로 읽으면 측정된 0 과 구분되지 않는다.
+    final points = <String>[
+      for (var i = 0; i < values.length && i < labels.length; i++)
+        if (i < pendingFrom && !missingIndices.contains(i))
+          chartPointLabel(
+            AppLocalizations.of(context),
+            labels[i],
+            '${values[i]}$valueSuffix',
+          ),
+    ];
+
+    return Semantics(
+      container: true,
+      label: chartSemanticsLabel(
+        AppLocalizations.of(context),
+        title: title,
+        points: points,
+      ),
+      child: ExcludeSemantics(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            SizedBox(
+              height: height,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  for (var i = 0; i < values.length; i++)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                        child: _Bar(
+                          value: values[i],
+                          ceiling: ceiling,
+                          color: _colorFor(i),
+                          label: showValues
+                              ? missingIndices.contains(i)
+                                    ? AppLocalizations.of(context).chartNoRecord
+                                    : '${values[i]}$valueSuffix'
+                              : null,
+                          pending: i >= pendingFrom,
+                          missing: missingIndices.contains(i),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: <Widget>[
+                for (var i = 0; i < labels.length; i++)
+                  Expanded(
+                    child: Text(
+                      labels[i],
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: highlightIndex == i
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: highlightIndex == i
+                            ? AppColors.primary
+                            : i >= pendingFrom
+                            ? AppColors.disabledForeground
+                            : AppColors.subtleForeground,
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Row(
-          children: <Widget>[
-            for (var i = 0; i < labels.length; i++)
-              Expanded(
-                child: Text(
-                  labels[i],
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: highlightIndex == i
-                        ? FontWeight.w800
-                        : FontWeight.w500,
-                    color: highlightIndex == i
-                        ? AppColors.primary
-                        : i >= pendingFrom
-                        ? AppColors.disabledForeground
-                        : AppColors.subtleForeground,
-                  ),
-                ),
-              ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 

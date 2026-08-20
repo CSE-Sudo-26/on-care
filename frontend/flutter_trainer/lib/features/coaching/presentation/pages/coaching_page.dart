@@ -1269,6 +1269,7 @@ class _WeekCompletionBars extends StatelessWidget {
         else
           BarSeriesChart(
             key: const ValueKey<String>('program-week-completion-chart'),
+            title: l.reportsCompletionByDay,
             values: week,
             labels: weekdayLabels(l),
             maxValue: 100,

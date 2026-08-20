@@ -965,5 +965,20 @@
   "reportsPdfAttendance": "{done}/{booked}회 ({rate}%)",
   "@reportsPdfAttendance": {"placeholders": {"done": {"type": "String"}, "booked": {"type": "String"}, "rate": {"type": "String"}}},
   "reportsPdfNoData": "미집계",
-  "reportsPdfNoFeedback": "피드백 없음"
+  "reportsPdfNoFeedback": "피드백 없음",
+  "a11yChartSummary": "{title}. {detail}",
+  "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},
+  "a11yChartEmpty": "{title}. 기록이 없어요",
+  "@a11yChartEmpty": {"placeholders": {"title": {"type": "String"}}},
+  "a11yChartPoint": "{day} {value}",
+  "@a11yChartPoint": {"placeholders": {"day": {"type": "String"}, "value": {"type": "String"}}},
+  "a11yShowPassword": "비밀번호 표시",
+  "a11yHidePassword": "비밀번호 숨기기",
+  "unitMg": "mg",
+  "unitGram": "g",
+  "a11yRemoveExercise": "운동 지우기",
+  "a11yRemoveCertification": "자격증 지우기",
+  "a11yPrevDay": "이전 날",
+  "a11yNextDay": "다음 날",
+  "a11ySendMessage": "메시지 보내기"
 }

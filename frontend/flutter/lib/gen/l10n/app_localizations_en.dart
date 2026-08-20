@@ -1934,4 +1934,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String exDatedTitle(int month, int day, String title) {
     return '$title · $month/$day';
   }
+
+  @override
+  String a11yChartSummary(String title, String detail) {
+    return '$title. $detail';
+  }
+
+  @override
+  String a11yChartEmpty(String title) {
+    return '$title. No records yet';
+  }
+
+  @override
+  String a11yChartPoint(String day, String value) {
+    return '$day $value';
+  }
+
+  @override
+  String get a11yShowPassword => 'Show password';
+
+  @override
+  String get a11yHidePassword => 'Hide password';
+
+  @override
+  String get a11yOpenCoaching => 'Open coaching tips';
+
+  @override
+  String get a11ySendMessage => 'Send message';
+
+  @override
+  String get a11yClearSearch => 'Clear search';
+
+  @override
+  String get a11yRemoveFood => 'Remove food';
+
+  @override
+  String get a11yOpenCalendar => 'Open schedule calendar';
+
+  @override
+  String get a11yPrevWeek => 'Previous week';
+
+  @override
+  String get a11yNextWeek => 'Next week';
 }

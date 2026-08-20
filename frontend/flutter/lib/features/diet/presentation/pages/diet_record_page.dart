@@ -345,32 +345,38 @@ class _PeriodToggle extends StatelessWidget {
         children: <Widget>[
           for (final DietPeriodTab tab in DietPeriodTab.values)
             Flexible(
-              child: GestureDetector(
-                key: Key('diet-period-tab-${tab.name}'),
-                onTap: () => onChanged(tab),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: active == tab
-                        ? FigmaColors.primary
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    labels[tab]!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
+              // 켜진 탭을 파란 알약으로만 알리면 어느 기간을 보고 있는지도,
+              // 이게 누를 수 있는 자리인지도 음성 안내에 나오지 않는다(#972).
+              child: Semantics(
+                button: true,
+                selected: active == tab,
+                child: GestureDetector(
+                  key: Key('diet-period-tab-${tab.name}'),
+                  onTap: () => onChanged(tab),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
                       color: active == tab
-                          ? Colors.white
-                          : AppColors.mutedForeground,
+                          ? FigmaColors.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      labels[tab]!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: active == tab
+                            ? Colors.white
+                            : AppColors.mutedForeground,
+                      ),
                     ),
                   ),
                 ),
@@ -504,28 +510,31 @@ class _DateStrip extends StatelessWidget {
                   ),
                 ),
                 if (showTodayButton)
-                  GestureDetector(
-                    // 기간 토글이 오늘이 아닌 날에는 사라지므로, 되돌아오는
-                    // 길은 이 버튼 하나다 — 테스트가 그 길을 지목할 수 있어야
-                    // 한다(#912).
-                    key: const ValueKey<String>('diet-today-button'),
-                    onTap: onToday,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: FigmaColors.primaryA(0.10),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: FigmaColors.primaryA(0.25)),
-                      ),
-                      child: Text(
-                        l.dietToday,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.primary,
+                  Semantics(
+                    button: true,
+                    child: GestureDetector(
+                      // 기간 토글이 오늘이 아닌 날에는 사라지므로, 되돌아오는
+                      // 길은 이 버튼 하나다 — 테스트가 그 길을 지목할 수 있어야
+                      // 한다(#912).
+                      key: const ValueKey<String>('diet-today-button'),
+                      onTap: onToday,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: FigmaColors.primaryA(0.10),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: FigmaColors.primaryA(0.25)),
+                        ),
+                        child: Text(
+                          l.dietToday,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: FigmaColors.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -536,7 +545,11 @@ class _DateStrip extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
-              _Arrow(icon: Icons.chevron_left, onTap: onPrev),
+              _Arrow(
+                icon: Icons.chevron_left,
+                tooltip: l.a11yPrevWeek,
+                onTap: onPrev,
+              ),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -560,7 +573,11 @@ class _DateStrip extends StatelessWidget {
                   ],
                 ),
               ),
-              _Arrow(icon: Icons.chevron_right, onTap: onNext),
+              _Arrow(
+                icon: Icons.chevron_right,
+                tooltip: l.a11yNextWeek,
+                onTap: onNext,
+              ),
             ],
           ),
         ],
@@ -570,8 +587,15 @@ class _DateStrip extends StatelessWidget {
 }
 
 class _Arrow extends StatelessWidget {
-  const _Arrow({required this.icon, required this.onTap});
+  const _Arrow({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
   final IconData icon;
+
+  /// 화살표 하나뿐이라 어느 쪽으로 가는지 말할 데가 툴팁뿐이다(#972).
+  final String tooltip;
   final VoidCallback? onTap;
 
   @override
@@ -584,10 +608,13 @@ class _Arrow extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: SizedBox(
-            width: 28,
-            height: 28,
-            child: Icon(icon, size: 16, color: FigmaColors.primary),
+          child: Tooltip(
+            message: tooltip,
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Icon(icon, size: 16, color: FigmaColors.primary),
+            ),
           ),
         ),
       ),
@@ -615,51 +642,55 @@ class _DayCell extends StatelessWidget {
     final Color labelColor = isSelected || isToday
         ? FigmaColors.primary
         : AppColors.mutedForeground;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          // 말줄임이 아니라 축소다. 'Mon' 이 'M…' 이 되면 무슨 요일인지가
-          // 사라진다 — 좁아도 읽을 수 있어야 한다(#743).
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              _weekdayLabel(l, day.weekday),
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: labelColor,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // 말줄임이 아니라 축소다. 'Mon' 이 'M…' 이 되면 무슨 요일인지가
+            // 사라진다 — 좁아도 읽을 수 있어야 한다(#743).
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                _weekdayLabel(l, day.weekday),
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Container(
-            width: 30,
-            height: 30,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isSelected ? FigmaColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              // 선택된 날짜 칩도 카드와 같은 회색 그림자를 쓴다(예전 파란 글로우).
-              boxShadow: isSelected ? kCardShadow : null,
-            ),
-            child: Text(
-              '${day.day}',
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: isSelected
-                    ? Colors.white
-                    : isToday
-                    ? FigmaColors.primary
-                    : AppColors.mutedForeground,
+            const SizedBox(height: 3),
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isSelected ? FigmaColors.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                // 선택된 날짜 칩도 카드와 같은 회색 그림자를 쓴다(예전 파란 글로우).
+                boxShadow: isSelected ? kCardShadow : null,
+              ),
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected
+                      ? Colors.white
+                      : isToday
+                      ? FigmaColors.primary
+                      : AppColors.mutedForeground,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

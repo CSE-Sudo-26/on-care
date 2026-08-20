@@ -342,10 +342,15 @@ class _CloseButton extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: const SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(Icons.close, size: 16, color: FigmaColors.textSub),
+        // 아이콘만 있는 버튼이라 무엇을 닫는지 말할 데가 없다(#972). 닫기는
+        // 플랫폼이 이미 제 언어로 부르는 이름이 있다.
+        child: Tooltip(
+          message: MaterialLocalizations.of(context).closeButtonTooltip,
+          child: const SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(Icons.close, size: 16, color: FigmaColors.textSub),
+          ),
         ),
       ),
     );

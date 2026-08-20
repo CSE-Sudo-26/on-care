@@ -1619,5 +1619,20 @@
   "reportsPdfAttendance": "{done}/{booked} ({rate}%)",
   "@reportsPdfAttendance": {"placeholders": {"done": {"type": "String"}, "booked": {"type": "String"}, "rate": {"type": "String"}}},
   "reportsPdfNoData": "Not measured",
-  "reportsPdfNoFeedback": "No feedback"
+  "reportsPdfNoFeedback": "No feedback",
+  "a11yChartSummary": "{title}. {detail}",
+  "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},
+  "a11yChartEmpty": "{title}. No records yet",
+  "@a11yChartEmpty": {"placeholders": {"title": {"type": "String"}}},
+  "a11yChartPoint": "{day} {value}",
+  "@a11yChartPoint": {"placeholders": {"day": {"type": "String"}, "value": {"type": "String"}}},
+  "a11yShowPassword": "Show password",
+  "a11yHidePassword": "Hide password",
+  "unitMg": "mg",
+  "unitGram": "g",
+  "a11yRemoveExercise": "Remove exercise",
+  "a11yRemoveCertification": "Remove certification",
+  "a11yPrevDay": "Previous day",
+  "a11yNextDay": "Next day",
+  "a11ySendMessage": "Send message"
 }

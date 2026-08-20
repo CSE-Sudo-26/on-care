@@ -15,6 +15,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
+import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -299,19 +300,38 @@ class _Body extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         if (weekly)
-          MetricTrendChart(
-            values: values,
-            dayLabels: <String>[
-              for (final DateTime d in dates) _weekdayLabel(l, d),
-            ],
-            goal: goal,
-            ticks: ticks,
-            // 선은 오늘까지만 잇는다. 아직 오지 않은 요일의 0 이 급락처럼
-            // 보이면 안 된다.
-            todayIndex: _todayIndexIn(dates),
-            replayKey: label,
-            goalLabel: '${l.clientPeriodGoal}\n${format(goal)}',
-            formatTick: (double v) => format(v),
+          Builder(
+            builder: (BuildContext context) {
+              final days = <String>[
+                for (final DateTime d in dates) _weekdayLabel(l, d),
+              ];
+              final today = _todayIndexIn(dates);
+              return MetricTrendChart(
+                values: values,
+                dayLabels: days,
+                goal: goal,
+                ticks: ticks,
+                // 선은 오늘까지만 잇는다. 아직 오지 않은 요일의 0 이 급락처럼
+                // 보이면 안 된다.
+                todayIndex: today,
+                replayKey: label,
+                // 카드 머리의 지표 이름으로 시작한다 — 음성 안내에서도 이
+                // 그래프가 무엇의 것인지가 먼저 들린다(#972).
+                semanticsLabel: chartSemanticsLabel(
+                  l,
+                  title: label,
+                  points: chartSeriesPoints(
+                    l,
+                    values: values,
+                    dayLabels: days,
+                    format: (double v) => '${format(v)} $unit',
+                    upTo: today,
+                  ),
+                ),
+                goalLabel: '${l.clientPeriodGoal}\n${format(goal)}',
+                formatTick: (double v) => format(v),
+              );
+            },
           )
         else ...<Widget>[
           _PeriodBars(
@@ -418,74 +438,97 @@ class _PeriodBars extends StatelessWidget {
     final bool hasGoal = goal > 0;
     // 달(30칸)에서도 라벨이 겹치지 않도록 몇 칸에 하나만 적는다.
     final int labelStep = values.length > 10 ? (values.length / 6).ceil() : 1;
+    // 기록이 하나도 없는 달은 막대마다 `기록 없음` 을 서른 번 읽히는 대신 비어
+    // 있다고 한 번만 말한다(#972).
+    final bool empty = logged.every((bool it) => !it);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        SizedBox(
-          height: chartHeight,
-          child: Stack(
-            children: <Widget>[
-              if (hasGoal)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-                  child: const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: AppColors.borderStrong,
-                  ),
-                ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+    return Semantics(
+      container: true,
+      label: empty
+          ? chartSemanticsLabel(l, title: label, points: const <String>[])
+          : null,
+      child: ExcludeSemantics(
+        excluding: empty,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SizedBox(
+              height: chartHeight,
+              child: Stack(
                 children: <Widget>[
-                  for (int i = 0; i < values.length; i++)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                        child: Tooltip(
-                          key: Key('client-diet-bar-$i'),
-                          message: _tip(l, i),
-                          child: _MacroBar(
-                            height:
-                                chartHeight *
-                                (values[i] / maxValue).clamp(0.0, 1.0),
-                            day: _dayAt(i),
-                            logged: logged[i],
-                            // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
-                            // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
-                            // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
-                            // 초과는 목표선과 툴팁이 말한다.
-                            over: hasGoal && values[i] > goal,
-                          ),
-                        ),
+                  if (hasGoal)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
+                      child: const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppColors.borderStrong,
                       ),
                     ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      for (int i = 0; i < values.length; i++)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 1.5,
+                            ),
+                            // 툴팁은 올려야 보인다. 같은 내용을 시맨틱 라벨로도
+                            // 준다 — 막대 하나가 며칠 얼마인지는 이 노드 말고는
+                            // 음성 안내에 나올 데가 없다(#972).
+                            child: Semantics(
+                              label: _tip(l, i)
+                                  .split('\n')
+                                  .map((String s) => s.trim())
+                                  .join(', '),
+                              child: Tooltip(
+                                key: Key('client-diet-bar-$i'),
+                                message: _tip(l, i),
+                                child: _MacroBar(
+                                  height:
+                                      chartHeight *
+                                      (values[i] / maxValue).clamp(0.0, 1.0),
+                                  day: _dayAt(i),
+                                  logged: logged[i],
+                                  // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
+                                  // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
+                                  // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
+                                  // 초과는 목표선과 툴팁이 말한다.
+                                  over: hasGoal && values[i] > goal,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 5),
-        Row(
-          children: <Widget>[
-            for (int i = 0; i < dates.length; i++)
-              Expanded(
-                child: Text(
-                  i % labelStep == 0 ? '${dates[i].day}' : '',
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: <Widget>[
+                for (int i = 0; i < dates.length; i++)
+                  Expanded(
+                    child: Text(
+                      i % labelStep == 0 ? '${dates[i].day}' : '',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
                   ),
-                ),
-              ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 

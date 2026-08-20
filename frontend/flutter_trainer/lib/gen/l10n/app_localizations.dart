@@ -5521,6 +5521,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No feedback'**
   String get reportsPdfNoFeedback;
+
+  /// No description provided for @a11yChartSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}. {detail}'**
+  String a11yChartSummary(String title, String detail);
+
+  /// No description provided for @a11yChartEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}. No records yet'**
+  String a11yChartEmpty(String title);
+
+  /// No description provided for @a11yChartPoint.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} {value}'**
+  String a11yChartPoint(String day, String value);
+
+  /// No description provided for @a11yShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get a11yShowPassword;
+
+  /// No description provided for @a11yHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get a11yHidePassword;
+
+  /// No description provided for @unitMg.
+  ///
+  /// In en, this message translates to:
+  /// **'mg'**
+  String get unitMg;
+
+  /// No description provided for @unitGram.
+  ///
+  /// In en, this message translates to:
+  /// **'g'**
+  String get unitGram;
+
+  /// No description provided for @a11yRemoveExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove exercise'**
+  String get a11yRemoveExercise;
+
+  /// No description provided for @a11yRemoveCertification.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove certification'**
+  String get a11yRemoveCertification;
+
+  /// No description provided for @a11yPrevDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get a11yPrevDay;
+
+  /// No description provided for @a11yNextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get a11yNextDay;
+
+  /// No description provided for @a11ySendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get a11ySendMessage;
 }
 
 class _AppLocalizationsDelegate

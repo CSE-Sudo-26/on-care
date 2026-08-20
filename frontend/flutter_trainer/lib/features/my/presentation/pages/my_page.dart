@@ -1118,12 +1118,19 @@ class _CertsCard extends StatelessWidget {
                     ),
                   ),
                   if (editing)
-                    GestureDetector(
-                      onTap: () => onRemove(i),
-                      child: const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: AppColors.subtleForeground,
+                    // `GestureDetector` 는 버튼으로 인식되지 않고, 안에 있는
+                    // 것은 X 아이콘 하나뿐이라 무엇을 지우는지 말할 데가
+                    // 없다(#972).
+                    Semantics(
+                      button: true,
+                      label: l.a11yRemoveCertification,
+                      child: GestureDetector(
+                        onTap: () => onRemove(i),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: AppColors.subtleForeground,
+                        ),
                       ),
                     ),
                 ],
