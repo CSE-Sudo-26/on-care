@@ -16,10 +16,15 @@ class SessionProgramEditor extends ConsumerStatefulWidget {
     required this.session,
     required this.onSaved,
     required this.onCancel,
+    this.noteOnly = false,
     super.key,
   });
 
   final ScheduleSession session;
+
+  /// 운동 목록 없이 **메모만** 고친다(상담). 저장할 때 기존 프로그램은 건드리지
+  /// 않는다 — 편집기가 보여 주지 않은 값을 지우면 안 된다(#988).
+  final bool noteOnly;
   final VoidCallback onSaved;
   final VoidCallback onCancel;
 
@@ -63,7 +68,7 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
     // await 전에 잡아 둔다 — 실패 경로가 await 뒤에도 있다.
     final AppLocalizations l = AppLocalizations.of(context);
     final program = <ProgramItem>[];
-    for (final item in _items) {
+    for (final item in widget.noteOnly ? const <ProgramDraft>[] : _items) {
       final name = item.name.text.trim();
       final sets = int.tryParse(item.sets.text.trim());
       if (name.isEmpty || sets == null || sets < 1 || sets > 100) {
@@ -90,7 +95,7 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
           .read(scheduleRepositoryProvider)
           .updateProgram(
             widget.session.id,
-            program: program,
+            program: widget.noteOnly ? widget.session.program : program,
             note: _note.text.trim(),
           );
     } catch (_) {
@@ -120,7 +125,7 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            l.progEditTitle,
+            widget.noteOnly ? l.schedEditNote : l.progEditTitle,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
@@ -128,20 +133,22 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          for (var index = 0; index < _items.length; index++) ...<Widget>[
-            _ProgramDraftFields(
-              index: index,
-              draft: _items[index],
-              onRemove: () => _removeItem(index),
+          if (!widget.noteOnly) ...<Widget>[
+            for (var index = 0; index < _items.length; index++) ...<Widget>[
+              _ProgramDraftFields(
+                index: index,
+                draft: _items[index],
+                onRemove: () => _removeItem(index),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _addItem,
+              icon: const Icon(Icons.add, size: 16),
+              label: Text(l.progAddExercise),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
           ],
-          OutlinedButton.icon(
-            onPressed: _saving ? null : _addItem,
-            icon: const Icon(Icons.add, size: 16),
-            label: Text(l.progAddExercise),
-          ),
-          const SizedBox(height: AppSpacing.md),
           Text(
             l.schedNote,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),

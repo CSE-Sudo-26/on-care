@@ -64,8 +64,16 @@ class ScheduleWeekTimetable extends ConsumerWidget {
   /// 무엇보다 **날짜를 고를 자리가 잠깐 없어진다**(review PR 245).
   final Widget? bodyOverride;
 
-  /// 한 시간의 높이. 30분짜리 세션도 글자 두 줄이 들어가는 최소치다.
-  static const double hourHeight = 56;
+  /// 한 시간의 높이.
+  ///
+  /// **가장 짧은 세션(30분)에도 블록의 세 줄이 온전히 들어가는 값**으로 잡는다.
+  /// 56 이었을 때는 30분 블록이 28px 이라 이름 줄이 반쯤 잘렸다. 글자를 줄이는
+  /// 대신 칸을 키운다 — 시간표에서 읽어야 하는 것이 그 세 줄이다.
+  ///
+  /// 필요한 높이 = 세로 여백 6 + (시간 12.5 + 이름 13.75 + 종류 12.35) × 배율.
+  /// 앱 전체 글씨 배율이 1.1 이라(`AppTypography.textScale`) 30분 블록에 약
+  /// 48.5 가 든다 — 한 시간은 그 두 배보다 커야 한다.
+  static const double hourHeight = 104;
 
   /// 왼쪽 시간축 폭.
   static const double gutterWidth = 48;
@@ -610,54 +618,42 @@ class _SessionBlock extends StatelessWidget {
                       )
                     : Border(left: BorderSide(color: tone, width: 2.5)),
               ),
-              // 세 줄이 다 들어가지 않으면 위에서부터 살린다: 시간 → 이름 →
-              // 종류. `ClipRect` 가 없으면 30분 블록에서 픽셀 오버플로가 뜬다.
-              child: ClipRect(
-                child: OverflowBox(
-                  alignment: Alignment.topLeft,
-                  maxHeight: double.infinity,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        range,
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          height: 1.25,
-                          color: tone,
-                        ),
-                      ),
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                          color: session.isFinished
-                              ? AppColors.mutedForeground
-                              : AppColors.foreground,
-                        ),
-                      ),
-                      Text(
-                        detail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
-                          color: AppColors.subtleForeground,
-                        ),
-                      ),
-                    ],
+              // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
+              // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는
+              // 편이 낫다. 줄의 우선순위는 시간 → 이름 → 종류다.
+              child: _BlockLines(
+                lines: <_BlockLine>[
+                  _BlockLine(
+                    text: range,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      height: 1.25,
+                      color: tone,
+                    ),
                   ),
-                ),
+                  _BlockLine(
+                    text: name,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                      color: session.isFinished
+                          ? AppColors.mutedForeground
+                          : AppColors.foreground,
+                    ),
+                  ),
+                  const _BlockLine(
+                    text: '',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                      color: AppColors.subtleForeground,
+                    ),
+                  ),
+                ],
+                detail: detail,
               ),
             ),
           ),
@@ -671,5 +667,64 @@ class _SessionBlock extends StatelessWidget {
     final h = (wrapped ~/ 60).toString().padLeft(2, '0');
     final m = (wrapped % 60).toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+/// 블록 한 줄의 글과 그 글꼴.
+class _BlockLine {
+  const _BlockLine({required this.text, required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  /// 이 줄이 실제로 차지할 높이. 배율이 커지면 함께 커진다.
+  double heightIn(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(style.fontSize ?? 14) *
+      (style.height ?? 1.2);
+}
+
+/// 남는 높이에 들어가는 줄만 위에서부터 그린다. (#988)
+///
+/// 30분 블록에 세 줄을 밀어 넣으면 마지막 줄이 반 토막 난다. 글자를 줄이는 대신
+/// — 시간표에서 읽어야 하는 값들이라 줄일 수 없다 — 들어가지 않는 줄을 뺀다.
+/// 첫 줄(시간)은 자리가 모자라도 언제나 그린다: 그것마저 없으면 블록이 무엇을
+/// 가리키는지 알 수 없다.
+class _BlockLines extends StatelessWidget {
+  const _BlockLines({required this.lines, required this.detail});
+
+  /// 위에서부터의 우선순위 순서. 마지막 줄의 글은 [detail] 로 채운다.
+  final List<_BlockLine> lines;
+
+  /// 마지막 줄에 그릴 종류·소요 시간. 앞 줄들과 달리 값이 늦게 정해진다.
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available = constraints.maxHeight;
+        final drawn = <Widget>[];
+        var used = 0.0;
+        for (var i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          final needed = line.heightIn(context);
+          if (drawn.isNotEmpty && used + needed > available) break;
+          used += needed;
+          drawn.add(
+            Text(
+              i == lines.length - 1 ? detail : line.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: line.style,
+            ),
+          );
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: drawn,
+        );
+      },
+    );
   }
 }

@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/consultations/data/repositories/consulta
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/complete_session_dialog.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/consultation_inbox_action.dart';
@@ -448,63 +449,68 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final range = (from: ymd(start), to: ymd(end));
     final week = ref.watch(scheduleRangeProvider(range));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppLayout.pagePadding,
-            AppLayout.pagePadding,
-            AppLayout.pagePadding,
-            AppSpacing.sm,
-          ),
-          child: ScheduleDateNavBar(
-            start: start,
-            end: end,
-            onShift: _shiftWeek,
-            trailing: _todayControl(),
-          ),
-        ),
-        Expanded(
-          child: Builder(
-            builder: (context) {
-              final sessions = week.valueOrNull ?? const <ScheduleSession>[];
-              // 요일 머리글은 async 상태와 상관없이 남는다 — 주를 넘길 때마다
-              // 날짜 줄이 스피너로 사라지면 고를 자리가 잠깐 없어진다.
-              final Widget? bodyOverride = switch (week) {
-                AsyncError() => Center(
-                  child: Text(
-                    l.schedLoadFailed,
-                    style: const TextStyle(color: AppColors.mutedForeground),
-                  ),
-                ),
-                AsyncValue(hasValue: false) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                _ => null,
-              };
+    // 날짜 행은 **시간표 쪽 열 안**에 있다. 페이지 폭 전체에 걸쳐 두면 `오늘`
+    // 이 상세 패널 위에 떠, 무엇을 조작하는 버튼인지 자리로 말하지 못한다.
+    // 시간표 안에 두면 오른쪽 끝이 일요일 칸 위로 온다(#988).
+    final navBar = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayout.pagePadding,
+        AppLayout.pagePadding,
+        AppLayout.pagePadding,
+        AppSpacing.sm,
+      ),
+      child: ScheduleDateNavBar(
+        start: start,
+        end: end,
+        onShift: _shiftWeek,
+        trailing: _todayControl(),
+      ),
+    );
 
-              // 상세 패널이 무엇을 열지 — 고른 세션이 우선이고, 없으면 고른
-              // 날의 첫 세션이다. 빈 패널로 두면 시간표만 보고 아무것도 다룰
-              // 수 없는 화면이 된다.
-              ScheduleSession? selected;
-              for (final session in sessions) {
-                if (session.id == _selectedSessionId &&
-                    session.date == _selectedYmd) {
-                  selected = session;
-                  break;
-                }
-              }
-              if (selected == null) {
-                for (final session in sessions) {
-                  if (session.date == _selectedYmd && !session.isGap) {
-                    selected = session;
-                    break;
-                  }
-                }
-              }
+    return Builder(
+      builder: (context) {
+        final sessions = week.valueOrNull ?? const <ScheduleSession>[];
+        // 요일 머리글은 async 상태와 상관없이 남는다 — 주를 넘길 때마다
+        // 날짜 줄이 스피너로 사라지면 고를 자리가 잠깐 없어진다.
+        final Widget? bodyOverride = switch (week) {
+          AsyncError() => Center(
+            child: Text(
+              l.schedLoadFailed,
+              style: const TextStyle(color: AppColors.mutedForeground),
+            ),
+          ),
+          AsyncValue(hasValue: false) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          _ => null,
+        };
 
-              final timetable = ScheduleWeekTimetable(
+        // 상세 패널이 무엇을 열지 — 고른 세션이 우선이고, 없으면 고른
+        // 날의 첫 세션이다. 빈 패널로 두면 시간표만 보고 아무것도 다룰
+        // 수 없는 화면이 된다.
+        ScheduleSession? selected;
+        for (final session in sessions) {
+          if (session.id == _selectedSessionId &&
+              session.date == _selectedYmd) {
+            selected = session;
+            break;
+          }
+        }
+        if (selected == null) {
+          for (final session in sessions) {
+            if (session.date == _selectedYmd && !session.isGap) {
+              selected = session;
+              break;
+            }
+          }
+        }
+
+        final timetable = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            navBar,
+            Expanded(
+              child: ScheduleWeekTimetable(
                 weekStart: start,
                 sessions: sessions,
                 selectedDay: _selectedDay,
@@ -520,45 +526,42 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   });
                   context.go(AppRoutes.scheduleAt(date: session.date));
                 },
-              );
+              ),
+            ),
+          ],
+        );
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < 980) {
-                    // 좁은 화면에는 오른쪽에 패널을 둘 폭이 없다. 예전에는
-                    // 패널을 통째로 버렸는데, 탭 핸들러는 그대로 살아 있어서
-                    // 누르면 선택만 바뀌고 화면은 그대로였다 — 트레이너에게는
-                    // 버튼이 고장 난 것으로 보인다(#881).
-                    //
-                    // 같은 패널을 시간표 아래로 쌓는다. 표현을 바꾸지 않으므로
-                    // 넓은 화면에서 익힌 것이 좁은 화면에서도 그대로 통한다.
-                    if (selected == null) return timetable;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Expanded(flex: 3, child: timetable),
-                        const Divider(height: 1, color: AppColors.borderStrong),
-                        Expanded(flex: 2, child: _buildWeekDetail(selected)),
-                      ],
-                    );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Expanded(child: timetable),
-                      const VerticalDivider(
-                        width: 1,
-                        color: AppColors.borderStrong,
-                      ),
-                      SizedBox(width: 340, child: _buildWeekDetail(selected)),
-                    ],
-                  );
-                },
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 980) {
+              // 좁은 화면에는 오른쪽에 패널을 둘 폭이 없다. 예전에는
+              // 패널을 통째로 버렸는데, 탭 핸들러는 그대로 살아 있어서
+              // 누르면 선택만 바뀌고 화면은 그대로였다 — 트레이너에게는
+              // 버튼이 고장 난 것으로 보인다(#881).
+              //
+              // 같은 패널을 시간표 아래로 쌓는다. 표현을 바꾸지 않으므로
+              // 넓은 화면에서 익힌 것이 좁은 화면에서도 그대로 통한다.
+              if (selected == null) return timetable;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(flex: 3, child: timetable),
+                  const Divider(height: 1, color: AppColors.borderStrong),
+                  Expanded(flex: 2, child: _buildWeekDetail(selected)),
+                ],
               );
-            },
-          ),
-        ),
-      ],
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(child: timetable),
+                const VerticalDivider(width: 1, color: AppColors.borderStrong),
+                SizedBox(width: 340, child: _buildWeekDetail(selected)),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -634,6 +637,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ? SessionProgramEditor(
                   key: ValueKey<String>('week-program-editor-${session.id}'),
                   session: session,
+                  // 상담은 프로그램이 아니라 메모를 적는 자리다(#988).
+                  noteOnly: session.type == SessionType.consultation,
                   onSaved: () => setState(() => _editingProgramId = null),
                   onCancel: () => setState(() => _editingProgramId = null),
                 )

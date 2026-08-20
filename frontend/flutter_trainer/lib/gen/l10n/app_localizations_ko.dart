@@ -1382,6 +1382,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedNote => '트레이너 메모';
 
   @override
+  String get schedEditNote => '메모 수정';
+
+  @override
+  String get schedNoNote => '아직 남긴 메모가 없어요';
+
+  @override
+  String get schedNoteOnlyHint => '상담은 프로그램 대신 메모로 남깁니다.';
+
+  @override
   String get schedNoteHint => '수업 준비사항이나 고객 특이사항을 입력하세요';
 
   @override

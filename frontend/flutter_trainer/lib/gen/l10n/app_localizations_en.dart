@@ -1440,6 +1440,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedNote => 'Trainer\'s note';
 
   @override
+  String get schedEditNote => 'Edit note';
+
+  @override
+  String get schedNoNote => 'No note yet';
+
+  @override
+  String get schedNoteOnlyHint =>
+      'A consultation is recorded as a note, not a program.';
+
+  @override
   String get schedNoteHint => 'Anything to prepare, or notes about this client';
 
   @override

@@ -2558,6 +2558,24 @@ abstract class AppLocalizations {
   /// **'Trainer\'s note'**
   String get schedNote;
 
+  /// No description provided for @schedEditNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit note'**
+  String get schedEditNote;
+
+  /// No description provided for @schedNoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'No note yet'**
+  String get schedNoNote;
+
+  /// No description provided for @schedNoteOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A consultation is recorded as a note, not a program.'**
+  String get schedNoteOnlyHint;
+
   /// No description provided for @schedNoteHint.
   ///
   /// In en, this message translates to:

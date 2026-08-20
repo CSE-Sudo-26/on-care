@@ -818,15 +818,42 @@ void main() {
       );
     });
 
-    testWidgets('예정 session without a plan shows the no-plan hint', (
-      tester,
-    ) async {
+    // 상담은 운동 프로그램을 짜는 자리가 아니라 무슨 이야기를 나눴는지 적는
+    // 자리다. 프로그램 안내를 그대로 두면 짜야 할 것이 밀린 것처럼 읽힌다(#988).
+    testWidgets('상담 세션은 프로그램 대신 메모 자리를 보여 준다 (#988)', (tester) async {
       await openSchedule(tester);
 
       await openSession(tester, '윤가온(신규)');
 
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-no-note')),
+      );
+      expect(find.text('아직 남긴 메모가 없어요'), findsOneWidget);
+      expect(find.text('아직 계획된 프로그램이 없어요'), findsNothing);
+      // 같은 자리가 프로그램이 아니라 메모를 연다.
+      expect(find.text('메모 수정'), findsOneWidget);
+      expect(find.text('프로그램 수정'), findsNothing);
+    });
+
+    testWidgets('계획이 없는 1:1 PT 는 프로그램 안내를 보여 준다', (tester) async {
+      await openSchedule(tester);
+
+      // 시드의 예정 PT 에는 모두 계획이 있다. 비어 있는 날에 하나 만들면 그
+      // 세션이 곧바로 상세 패널에 열린다 — 그 날의 유일한 세션이라서다.
+      await tester.tap(
+        find.byKey(ValueKey<String>('schedule-day-${ymd(otherDayThisWeek())}')),
+      );
+      await settle(tester);
+      await tester.tap(find.text('새 일정'));
+      await settle(tester);
+      await tester.tap(find.text('추가하기'));
+      await settle(tester);
+
       await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
+      expect(find.text('프로그램 수정'), findsOneWidget);
+      expect(find.text('메모 수정'), findsNothing);
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {

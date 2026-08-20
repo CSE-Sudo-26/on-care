@@ -64,7 +64,7 @@ void main() {
       )
       .data!;
 
-  testWidgets('세션 종류·소요 시간이 카드 오른쪽 알약으로 보인다', (tester) async {
+  testWidgets('세션 종류·소요 시간이 이름 아래 알약으로 보인다', (tester) async {
     await openSchedule(tester);
 
     await openSession(tester, '김민수');
@@ -76,7 +76,9 @@ void main() {
       findsOneWidget,
     );
 
-    // 이름·목표가 있는 왼쪽 열이 아니라, 그 오른쪽에 선다.
+    // 이름과 같은 줄에 서기에는 상세 패널(폭 340)이 좁다 — 붙여 두면 이름이
+    // `김…` 으로 잘린다(#988). 아랫줄로 내리되 흐린 글씨가 아니라 알약으로
+    // 두어, 회원의 부가 정보가 아니라 상태와 같은 위계로 읽히게 한다(#938).
     final Finder name = find
         .descendant(
           of: find.byKey(const Key('week-detail')),
@@ -84,9 +86,15 @@ void main() {
         )
         .first;
     expect(
-      tester.getRect(first).left,
-      greaterThan(tester.getRect(name).right),
-      reason: '프로필 열의 세 번째 줄로 읽히면 안 된다',
+      tester.getRect(first).top,
+      greaterThan(tester.getRect(name).bottom),
+      reason: '이름 아래 줄에 선다',
+    );
+    // 이름이 잘리지 않는다 — 아랫줄로 내린 이유가 그것이다.
+    expect(
+      tester.widget<Text>(name).data,
+      '김민수',
+      reason: '이름이 말줄임으로 잘리면 누구인지 말하지 못한다',
     );
   });
 
