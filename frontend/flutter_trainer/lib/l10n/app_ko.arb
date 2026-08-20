@@ -554,6 +554,7 @@
   "routineTypeStrength": "근력",
   "routineTypeYoga": "요가",
   "routineTypeStretching": "스트레칭",
+  "routineTypeFlexibility": "유연성",
   "routineTypeOther": "기타",
   "routineFieldType": "운동 유형",
   "routineFieldMinutes": "운동 시간",

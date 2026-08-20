@@ -3230,6 +3230,12 @@ abstract class AppLocalizations {
   /// **'Stretching'**
   String get routineTypeStretching;
 
+  /// No description provided for @routineTypeFlexibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Flexibility'**
+  String get routineTypeFlexibility;
+
   /// No description provided for @routineTypeOther.
   ///
   /// In en, this message translates to:

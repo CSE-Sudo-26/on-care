@@ -1584,13 +1584,13 @@ void main() {
 
         await tester.enterText(
           find.byKey(const ValueKey<String>('custom-exercise-name')),
-          '스트레칭 A',
+          '유연성 A',
         );
-        // Default category is 근력 — switch to 스트레칭 so the assigned
+        // Default category is 근력 — switch to 유연성 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
         final stretching = find.byKey(
-          const ValueKey<String>('custom-exercise-category-스트레칭'),
+          const ValueKey<String>('custom-exercise-category-유연성'),
         );
         final chip = tester.widget<ChoiceChip>(stretching);
         chip.onSelected?.call(true);
@@ -1607,7 +1607,7 @@ void main() {
         // 트레이너가 넣은 운동을 그대로 실어 보낸다.
         expect(
           routineRepo.lastAssignedExercises.map((e) => e['type']),
-          everyElement('스트레칭'),
+          everyElement('유연성'),
         );
         expect(
           routineRepo.lastAssignedExercises.map((e) => e['source']),

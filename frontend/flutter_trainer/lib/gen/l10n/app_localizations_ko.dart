@@ -1740,6 +1740,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineTypeStretching => '스트레칭';
 
   @override
+  String get routineTypeFlexibility => '유연성';
+
+  @override
   String get routineTypeOther => '기타';
 
   @override
