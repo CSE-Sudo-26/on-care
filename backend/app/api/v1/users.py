@@ -27,7 +27,7 @@ from app.services.audit import client_ip, record as audit
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    decode_refresh_token,
+    decode_refresh_claims,
     hash_password,
     verify_password,
 )
@@ -48,7 +48,7 @@ from app.schemas.user import (
     UserMe,
     UserRegister,
 )
-from app.services import reservation_service, trainer_signup_service
+from app.services import reservation_service, token_revocation, trainer_signup_service
 from app.services.health_service import DEMO_SETTINGS
 
 router = APIRouter(tags=["users"])
@@ -358,17 +358,82 @@ def login(
     response_model=Token,
     dependencies=[Depends(rate_limit("auth-refresh"))],
 )
-def refresh(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]) -> Token:
-    """refresh 토큰으로 새 access(+refresh) 토큰 발급(회전)."""
+def refresh(
+    payload: RefreshRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> Token:
+    """refresh 토큰으로 새 access(+refresh) 토큰 발급(회전).
+
+    회전에 쓰인 토큰은 **그 자리에서 폐기된다** — refresh 토큰은 일회용이다.
+    이미 쓴 토큰이 다시 오면 정상 사용자와 탈취자 둘 중 하나가 같은 토큰을 들고
+    있다는 뜻이라, 회전해 주지 않고 거부하고 감사 로그에 남긴다(#966).
+    """
     invalid = HTTPException(status_code=401, detail="유효하지 않은 refresh 토큰입니다.")
     try:
-        user_id = decode_refresh_token(payload.refresh_token)
+        claims = decode_refresh_claims(payload.refresh_token)
     except jwt.InvalidTokenError:
         raise invalid
-    user = db.scalar(select(User).where(User.id == user_id))
+    user = db.scalar(select(User).where(User.id == claims.subject))
     if user is None or not user.is_active:
+        raise invalid
+    first_use = token_revocation.revoke(
+        db, jti=claims.jti, user_id=user.id, expires_at=claims.expires_at
+    )
+    if not first_use:
+        # 로그아웃된 토큰이거나 이미 회전에 쓰인 토큰이다. 어느 쪽이든 여기서 끝난다.
+        audit(
+            db,
+            event="auth.refresh_reuse",
+            user_id=user.id,
+            ip=client_ip(request),
+            success=False,
+        )
         raise invalid
     return Token(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
     )
+
+
+@router.post(
+    "/auth/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(rate_limit("auth-logout"))],
+)
+def logout(
+    payload: RefreshRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """받은 refresh 토큰을 폐기한다 — 서버 쪽에서 세션을 끊는다.
+
+    access 토큰을 요구하지 않는다. 로그아웃은 접근 토큰이 이미 만료된 상태에서도
+    되어야 하고, 여기서 하는 일은 **제시한 토큰 하나를 죽이는 것**뿐이라 그 토큰을
+    가진 것 자체가 자격이다.
+
+    못 알아본 토큰에도 204 로 답한다. 클라이언트가 할 일(로컬 저장소 비우기)은
+    어느 쪽이든 같고, 상태 코드로 "이 토큰은 살아 있다"를 알려 줄 이유도 없다.
+    """
+    try:
+        claims = decode_refresh_claims(payload.refresh_token)
+    except jwt.InvalidTokenError:
+        audit(
+            db,
+            event="auth.logout",
+            ip=client_ip(request),
+            success=False,
+            detail="유효하지 않은 refresh 토큰",
+        )
+        return None
+    token_revocation.revoke(
+        db, jti=claims.jti, user_id=claims.subject, expires_at=claims.expires_at
+    )
+    audit(
+        db,
+        event="auth.logout",
+        user_id=claims.subject,
+        ip=client_ip(request),
+        success=True,
+    )
+    return None
