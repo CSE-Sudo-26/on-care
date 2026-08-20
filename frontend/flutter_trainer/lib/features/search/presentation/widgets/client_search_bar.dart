@@ -269,7 +269,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
                 child: TapRegion(
                   groupId: this,
                   onTapOutside: (_) => _close(),
-                  child: _field(l, facts),
+                  child: _field(l, facts, width),
                 ),
               ),
             ),
@@ -279,7 +279,15 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
     );
   }
 
-  Widget _field(AppLocalizations l, ClientSearchFacts facts) {
+  /// 긴 검색 범위 안내가 들어갈 만한 폭. 이보다 좁으면 짧은 안내로 바꾼다 —
+  /// 줄임표로 끝이 잘리면(`…마지막 루틴 전송…`) 무엇까지 찾아 주는지가 사라진다.
+  /// 글씨를 키운 뒤 1280 폭에서 실제로 그렇게 됐다. (#1004)
+  static const double _longHintMinWidth = 460;
+
+  Widget _field(AppLocalizations l, ClientSearchFacts facts, double width) {
+    final String hint = width >= _longHintMinWidth
+        ? l.searchClientsHint
+        : l.searchClients;
     return CallbackShortcuts(
       // The same keys the dropdown implies: ↑/↓ walk the rows, Esc backs
       // out. Enter is the field's own submit.
@@ -302,7 +310,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
           isDense: true,
           filled: true,
           fillColor: AppColors.inputBackground,
-          hintText: l.searchClientsHint,
+          hintText: hint,
           hintStyle: const TextStyle(
             fontSize: 13,
             color: AppColors.subtleForeground,

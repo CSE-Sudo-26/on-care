@@ -658,14 +658,18 @@ class _ChatButton extends StatelessWidget {
               // 큰 글자 배율에서 라벨이 버튼을 넘겼다. 안 읽은 개수 배지는
               // 접지 않는다 — 몇 건인지가 이 버튼을 누를 이유다(#766).
               Flexible(
-                child: Text(
-                  l.coachChatWithTrainer,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.primary,
+                // 줄임표 대신 축소다 — `Chat with train…` 이 되면 버튼이 무슨
+                // 버튼인지 사라진다. (#1004)
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    l.coachChatWithTrainer,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: FigmaColors.primary,
+                    ),
                   ),
                 ),
               ),

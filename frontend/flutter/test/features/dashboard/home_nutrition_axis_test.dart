@@ -100,9 +100,9 @@ void main() {
   List<({String text, Rect rect})> axisLabels(WidgetTester tester) {
     final Finder slots = find.descendant(
       of: axis,
-      matching: find.byWidgetPredicate(
-        (Widget w) => w is SizedBox && w.height == 26,
-      ),
+      // 칸 높이는 글씨 배율을 따라 달라진다 — 크기가 아니라 이름으로 찾는다.
+      // (#1004)
+      matching: find.byKey(chartGoalLabelKey),
     );
     return <({String text, Rect rect})>[
       for (final Element e in slots.evaluate())

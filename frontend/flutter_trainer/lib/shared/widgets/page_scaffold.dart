@@ -129,13 +129,20 @@ class _Header extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      title,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.foreground,
+                    // 화면 이름은 줄임표로 줄이지 않는다 — `My prof…` 이 되면
+                    // 지금 어느 화면인지가 사라진다. 액션이 많은 화면에서 자리가
+                    // 모자라면 글씨를 줄인다. (#1004)
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.foreground,
+                        ),
                       ),
                     ),
                     if (subtitle != null)
