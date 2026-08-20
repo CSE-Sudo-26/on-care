@@ -5,6 +5,7 @@ CI(전체 의존성)에서 실행한다. 엔드포인트 테스트는 추가로 
 """
 from __future__ import annotations
 
+import time
 from uuid import uuid4
 
 import pytest
@@ -85,3 +86,83 @@ def test_routine_options_limit_is_lower_than_coach_chat():
 
     settings = get_settings()
     assert settings.routine_options_per_minute < settings.coach_chat_per_minute
+
+
+def test_rate_limiter_drops_key_when_window_passes():
+    """윈도우가 지난 키는 `_hits` 에 남지 않는다 (#967).
+
+    키는 `엔드포인트 + IP` 라 로그인 화면을 한 번 스친 IP 도 키를 하나 만든다.
+    비워진 deque 를 그대로 들고 있으면 프로세스가 사는 동안 계속 쌓인다.
+    """
+    from app.core.rate_limit import RateLimiter
+
+    rl = RateLimiter(sweep_interval=0.0)
+    rl.check("ip-a", 3, 0.02)
+    assert "ip-a" in rl._hits
+
+    time.sleep(0.03)
+
+    # 같은 키를 다시 눌러도 만료분은 사라지고 방금 것만 남는다.
+    rl.check("ip-a", 3, 0.02)
+    assert list(rl._hits) == ["ip-a"]
+    assert len(rl._hits["ip-a"]) == 1
+
+    time.sleep(0.03)
+
+    # 다시 오지 않는 키는 다른 키의 요청이 청소해 준다.
+    rl.check("ip-b", 3, 60.0)
+    assert "ip-a" not in rl._hits
+    assert "ip-a" not in rl._expires_at
+
+
+def test_rate_limiter_key_count_is_bounded():
+    """서로 다른 키가 쏟아져도 `_hits` 가 무한히 자라지 않는다 (#967).
+
+    인증 엔드포인트는 공개라 바깥에서 키를 늘릴 수 있다. 윈도우가 아직 살아 있는
+    동안에도 상한을 넘지 않아야 한다.
+    """
+    from app.core.rate_limit import RateLimiter
+
+    rl = RateLimiter(max_keys=50)
+    for i in range(500):
+        rl.check(f"ip-{i}", 3, 60.0)  # window 가 안 지나 청소로는 안 줄어든다
+
+    assert len(rl._hits) <= 50
+    assert len(rl._expires_at) == len(rl._hits)  # 두 표가 어긋나지 않는다
+
+
+def test_rate_limiter_still_raises_429_with_retry_after():
+    """정리를 넣어도 한도 초과 동작(429 + Retry-After)은 그대로 (#967)."""
+    from fastapi import HTTPException
+
+    from app.core.rate_limit import RateLimiter
+
+    rl = RateLimiter(sweep_interval=0.0)
+    for _ in range(2):
+        rl.check("k", 2, 60.0)
+    with pytest.raises(HTTPException) as exc:
+        rl.check("k", 2, 60.0)
+
+    assert exc.value.status_code == 429
+    assert exc.value.headers["Retry-After"] == "60"
+    # 차단된 키는 윈도우가 남아 있으므로 지워지지 않는다.
+    assert "k" in rl._hits
+
+
+def test_rate_limiter_zero_limit_blocks_without_creating_a_key():
+    """한도가 0 이면 첫 요청부터 막히고, 막힌 요청은 키를 만들지 않는다 (#967).
+
+    `defaultdict` 를 걷어내면서 "키가 없으면 0회"로 세는지 고정해 둔다. 막힌 요청이
+    키를 남기면 바깥에서 키를 늘릴 수 있다는 문제가 그대로 돌아온다.
+    """
+    from fastapi import HTTPException
+
+    from app.core.rate_limit import RateLimiter
+
+    rl = RateLimiter()
+    with pytest.raises(HTTPException) as exc:
+        rl.check("k", 0, 60.0)
+
+    assert exc.value.status_code == 429
+    assert rl._hits == {}
+    assert rl._expires_at == {}
