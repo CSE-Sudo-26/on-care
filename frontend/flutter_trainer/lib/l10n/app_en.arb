@@ -392,6 +392,7 @@
   "consultNoPending": "No pending requests",
   "consultShowAll": "All",
   "consultShowPending": "Pending only",
+  "consultLoadMore": "Load earlier requests",
   "consultLoadFailed": "Couldn't load consultation requests",
   "consultRetryLater": "Please try again in a moment",
   "consultEmptyPending": "No pending consultation requests",

@@ -306,16 +306,23 @@ class _SocialButton extends StatelessWidget {
             borderRadius: const BorderRadius.all(AppRadius.lg),
             border: border != null ? Border.all(color: border!) : null,
           ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Icon(icon, color: foreground, size: iconSize),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                label,
-                style: TextStyle(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
+              // 글씨가 커지거나 영어 라벨("Continue with Kakao")이 오면 아이콘과
+              // 문구가 버튼 폭을 넘는다. 줄어들 수 있게 두고 넘치면 줄인다. (#995)
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

@@ -1634,6 +1634,12 @@ abstract class AppLocalizations {
   /// **'Pending only'**
   String get consultShowPending;
 
+  /// No description provided for @consultLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load earlier requests'**
+  String get consultLoadMore;
+
   /// No description provided for @consultLoadFailed.
   ///
   /// In en, this message translates to:

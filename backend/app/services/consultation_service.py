@@ -3,11 +3,12 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.core.pagination import DEFAULT_PAGE
 from app.models.models import (
     ConsultationRequest,
     MemberGym,
@@ -180,15 +181,45 @@ def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[Co
     return out
 
 
-def list_my_consultations(db: Session, member_id: str) -> list[ConsultationOut]:
+def _apply_cursor(query, before: datetime | None, before_id: str | None):
+    """`(created_at, id)` 복합 커서를 건다. (#980)
+
+    시각만으로 자르지 않는 이유는 알림과 같다 — 같은 `created_at` 이 여러 건이면 그
+    경계에서 요청이 빠지거나 겹친다. 상담은 회원이 여러 트레이너에게 연달아 보내는
+    일이 있어 초 단위 동시각이 실제로 나온다.
+    """
+    if before is None:
+        return query
+    if before_id is not None:
+        return query.where(
+            tuple_(ConsultationRequest.created_at, ConsultationRequest.id)
+            < (before, before_id)
+        )
+    return query.where(ConsultationRequest.created_at < before)
+
+
+def list_my_consultations(
+    db: Session,
+    member_id: str,
+    *,
+    limit: int = DEFAULT_PAGE,
+    before: datetime | None = None,
+    before_id: str | None = None,
+) -> list[ConsultationOut]:
+    """내가 보낸 상담 요청 한 쪽(최신순). 기본 50건, 다음 쪽은 커서로 이어 받는다."""
+    query = _apply_cursor(
+        select(ConsultationRequest).where(
+            ConsultationRequest.member_id == member_id
+        ),
+        before,
+        before_id,
+    )
     rows = list(
         db.scalars(
-            select(ConsultationRequest)
-            .where(ConsultationRequest.member_id == member_id)
-            .order_by(
+            query.order_by(
                 ConsultationRequest.created_at.desc(),
                 ConsultationRequest.id.desc(),
-            )
+            ).limit(limit)
         ).all()
     )
     return attach_target_names(db, rows)
@@ -282,11 +313,24 @@ def _to_trainer_out(
 
 
 def list_for_trainer(
-    db: Session, trainer_id: str, status: ConsultationStatusFilter = "pending"
+    db: Session,
+    trainer_id: str,
+    status: ConsultationStatusFilter = "pending",
+    *,
+    limit: int = DEFAULT_PAGE,
+    before: datetime | None = None,
+    before_id: str | None = None,
 ) -> list[TrainerConsultationOut]:
-    """트레이너 인박스. 기본은 미처리(`pending`)만, 최신 요청이 위로 온다."""
-    query = select(ConsultationRequest).where(
-        _inbox_scope(trainer_id)
+    """트레이너 인박스 한 쪽. 기본은 미처리(`pending`)만, 최신 요청이 위로 온다.
+
+    기본값인 `pending` 은 처리하는 만큼 줄어 실무상 짧지만, `status=all` 은 그
+    트레이너에게 들어온 요청 **전체**라 담당 기간에 비례해 자란다. 목록 쪽 나눔과
+    무관하게 배지 수는 [pending_count_for_trainer] 가 DB 에서 따로 센다. (#980)
+    """
+    query = _apply_cursor(
+        select(ConsultationRequest).where(_inbox_scope(trainer_id)),
+        before,
+        before_id,
     )
     if status != "all":
         query = query.where(ConsultationRequest.status == status)
@@ -295,7 +339,7 @@ def list_for_trainer(
             query.order_by(
                 ConsultationRequest.created_at.desc(),
                 ConsultationRequest.id.desc(),
-            )
+            ).limit(limit)
         ).all()
     )
     return _to_trainer_out(db, rows)
