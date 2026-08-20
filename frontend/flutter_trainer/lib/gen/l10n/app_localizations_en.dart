@@ -129,6 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionChange => 'Change';
 
   @override
+  String get actionBack => 'Back';
+
+  @override
   String get appWordmarkTrainer => 'Trainer';
 
   @override
@@ -188,6 +191,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get authInviteCodeHelp =>
       'Enter the code issued by the gym you work at.';
+
+  @override
+  String get authLegalNotice => 'By signing up you agree to';
 
   @override
   String get authSignUpAndStart => 'Sign up and start';
@@ -1646,6 +1652,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myLoginAccount => 'Signed in as';
+
+  @override
+  String get myLegal => 'Terms & policies';
+
+  @override
+  String get myLegalTermsTitle => 'Terms of Service';
+
+  @override
+  String get myLegalTermsHint => 'The terms your trainer account runs under';
+
+  @override
+  String get myLegalPrivacyTitle => 'Privacy Policy';
+
+  @override
+  String get myLegalPrivacyHint =>
+      'How member records and sent reports are handled';
+
+  @override
+  String get myLegalEffectiveDate => 'Effective Jan 1, 2026';
+
+  @override
+  String get myLegalTermsBody =>
+      'This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching routines, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member\'s consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.';
+
+  @override
+  String get myLegalPrivacyBody =>
+      'This English text is provided for convenience; the Korean original governs.\n\n1. Information collected\nFor trainer sign-up and service delivery, On-Care (the \"Company\") collects name, email and phone number, along with gym affiliation, certifications, career, speciality and service access logs.\n\n2. Purpose of collection and use\nThe information is used only to identify trainers and verify their credentials, to connect them with assigned members, to provide scheduling, messaging and reports, and to improve the service and answer enquiries.\n\n3. Access to and processing of member information\nA trainer may open the diet, workout and body-weight records of members they are assigned to, inside the Service. The Company is the controller of those records; the trainer processes them only for coaching and reports, within the scope the Company sets. Reports and messages a trainer sends are delivered to that member and kept in the Service as a record. When an assignment ends, the trainer\'s access is revoked immediately, and a member may withdraw consent to share their information at any time.\n\n4. Retention\nA trainer\'s personal information is destroyed without delay on account deletion, unless the law requires it to be kept, in which case it is stored securely for that period. Reports and messages already delivered belong to the member\'s record and follow the member\'s retention period.\n\n5. Provision to third parties\nThe Company does not provide personal information to outside parties without consent, except where the law specifically requires it.\n\n6. Safeguards\nAccess to member information is limited by assignment, traffic is encrypted in transit, and access logs are retained.\n\n7. Your rights\nA trainer may review or correct their personal information, or request that its processing stop and that it be deleted, at any time.\n\n8. Privacy officer\nFor privacy enquiries, contact customer support (support@oncare.com).\n\nEffective: January 1, 2026';
 
   @override
   String get myAppInfo => 'About';
