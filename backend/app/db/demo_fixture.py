@@ -94,7 +94,7 @@ class FixtureMeal:
 @dataclass(frozen=True)
 class FixtureExercise:
     name: str
-    #: `cardio` | `strength` | `stretching`.
+    #: `cardio` | `strength` | `flexibility` — 표준 어휘 (#996, #997).
     type: str
     minutes: int
     calories: int
