@@ -99,7 +99,7 @@ class MockTrainerRoutineOptionsRepository
           RoutineExercise(
             name: '코어 스트레칭',
             minutes: (totalA - (totalA * 0.6).round()).clamp(1, totalA),
-            type: '스트레칭',
+            type: '유연성',
           ),
         ],
         reason: '짧고 지속하기 쉬운 회복 중심 루틴',

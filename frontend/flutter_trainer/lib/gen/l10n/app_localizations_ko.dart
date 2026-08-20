@@ -841,6 +841,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultShowPending => '대기 중만';
 
   @override
+  String get consultLoadMore => '지난 요청 더 보기';
+
+  @override
   String get consultLoadFailed => '상담 요청을 불러오지 못했어요';
 
   @override
@@ -1738,6 +1741,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineTypeStretching => '스트레칭';
+
+  @override
+  String get routineTypeFlexibility => '유연성';
 
   @override
   String get routineTypeOther => '기타';

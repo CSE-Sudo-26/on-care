@@ -500,6 +500,41 @@ void main() {
       );
     });
 
+    testWidgets('빨간 배지가 아이콘을 가리지 않고 네모 모서리에 붙는다 (#987)', (tester) async {
+      // 배지가 아이콘을 감싸던 때에는 지름 16px 짜리 원이 17px 아이콘의 절반을
+      // 덮어, 남는 것이 빨간 원뿐이었다. 배지는 숫자를 **더하는** 표시이지
+      // 아이콘을 대체하는 표시가 아니다.
+      await openSchedule(tester);
+
+      final Finder entry = find.byKey(const Key('consult-inbox-entry'));
+      final Rect icon = tester.getRect(
+        find.descendant(
+          of: entry,
+          matching: find.byIcon(Icons.mark_email_unread_outlined),
+        ),
+      );
+      final Rect label = tester.getRect(
+        find.descendant(of: entry, matching: find.text('1')),
+      );
+      // 배지 원(지름 16)은 라벨을 가운데 두므로, 원 전체를 아이콘 오른쪽
+      // 바깥에서 재려면 라벨이 아니라 원의 왼쪽 끝을 봐야 한다.
+      final double badgeLeft = label.center.dx - 8;
+
+      expect(
+        badgeLeft,
+        greaterThanOrEqualTo(icon.right),
+        reason: '배지가 아이콘 오른쪽 바깥에 있어야 한다',
+      );
+      final Rect box = tester.getRect(
+        find.descendant(of: entry, matching: find.byType(InkWell)).first,
+      );
+      expect(
+        label.center.dy,
+        lessThan(box.top + 8),
+        reason: '배지는 네모의 위쪽 모서리에 걸친다',
+      );
+    });
+
     testWidgets('대기 건이 없으면 빨간 배지를 달지 않는다', (tester) async {
       // 빨강은 처리할 것이 있을 때만 뜬다 — 0건에도 뜨면 몇 번 겪고 나서
       // 아무도 안 보게 된다.

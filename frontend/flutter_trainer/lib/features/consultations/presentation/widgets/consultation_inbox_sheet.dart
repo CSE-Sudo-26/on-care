@@ -25,7 +25,7 @@ class ConsultationInboxSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final requests = ref.watch(consultationsProvider);
+    final requests = ref.watch(consultationsProvider).requests;
     return SafeArea(
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * .82,

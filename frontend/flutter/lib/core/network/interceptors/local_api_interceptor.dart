@@ -867,6 +867,9 @@ class LocalApiInterceptor extends Interceptor {
     final perDayStretching = <String, int>{
       for (final l in _weekdayLabels) l: 0,
     };
+    // 기타는 유산소에 얹지 않는다 — 서버가 그렇게 세지 않는다 (#996). 목업이
+    // 서버와 다르게 세면 데모(목업)와 실 API 화면의 그래프가 갈라진다. (#997)
+    final perDayOther = <String, int>{for (final l in _weekdayLabels) l: 0};
     int totalMinutes = 0;
     int totalCalories = 0;
     final sessionsJson = <Map<String, Object?>>[];
@@ -887,8 +890,8 @@ class LocalApiInterceptor extends Interceptor {
       final bucket = switch (r.type) {
         'cardio' || 'walking' => perDayCardio,
         'strength' => perDayStrength,
-        'yoga' || 'stretching' => perDayStretching,
-        _ => perDayCardio,
+        'yoga' || 'stretching' || 'flexibility' => perDayStretching,
+        _ => perDayOther,
       };
       bucket.update(
         r.dayLabel,
@@ -931,6 +934,9 @@ class LocalApiInterceptor extends Interceptor {
     final stretchingSeries = <num>[
       for (final l in _weekdayLabels) perDayStretching[l] ?? 0,
     ];
+    final otherSeries = <num>[
+      for (final l in _weekdayLabels) perDayOther[l] ?? 0,
+    ];
 
     final streak = _longestActiveStreak(dailyMinutes);
 
@@ -940,7 +946,11 @@ class LocalApiInterceptor extends Interceptor {
       'daily_calories': dailyCalories,
       'cardio_minutes': cardioSeries,
       'strength_minutes': strengthSeries,
+      // 서버와 같은 이름으로 함께 내려준다 — flexibility 가 표준이고
+      // stretching 은 옮겨 가는 동안의 옛 이름이다. (#996)
+      'flexibility_minutes': stretchingSeries,
       'stretching_minutes': stretchingSeries,
+      'other_minutes': otherSeries,
       'day_labels': _weekdayLabels,
       'total_minutes': totalMinutes,
       'total_calories': totalCalories,
@@ -993,7 +1003,7 @@ class LocalApiInterceptor extends Interceptor {
   String _defaultTimeLabel(String type) => switch (type) {
     'cardio' => '07:30',
     'strength' => '18:00',
-    'yoga' || 'stretching' => '20:00',
+    'yoga' || 'stretching' || 'flexibility' => '20:00',
     'walking' => '12:00',
     _ => '15:00',
   };
@@ -1001,7 +1011,7 @@ class LocalApiInterceptor extends Interceptor {
   List<String> _defaultItems(String type) => switch (type) {
     'cardio' => const <String>['러닝머신 30분'],
     'strength' => const <String>['스쿼트 3세트', '데드리프트 3세트'],
-    'yoga' || 'stretching' => const <String>['전신 스트레칭 20분'],
+    'yoga' || 'stretching' || 'flexibility' => const <String>['전신 스트레칭 20분'],
     'walking' => const <String>['공원 산책'],
     _ => const <String>[],
   };

@@ -9,9 +9,16 @@ from __future__ import annotations
 from datetime import date as _date, datetime as _datetime
 from typing import Annotated, ClassVar, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.partial_update import PartialUpdate
+from app.services import exercise_types
 
 
 def _validate_ymd(v: str) -> str:
@@ -249,7 +256,16 @@ class ChatSendRequest(BaseModel):
     client_request_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
-RoutineType = Literal["걷기", "유산소", "근력", "요가", "스트레칭", "기타"]
+#: 운동 유형 — 유산소 / 근력 / 유연성 / 기타 네 가지. (#996)
+#:
+#: 예전 어휘(걷기·요가·스트레칭)로 들어오면 422 로 막지 않고 접어 준다. 이미
+#: 저장된 루틴과 아직 옛 값을 보내는 화면이 있고, 유형 하나 때문에 배정이 통째로
+#: 실패하는 편이 더 나쁘다. 세분화가 필요한 자리는 유형이 아니라 운동 이름으로
+#: 적는다.
+RoutineType = Annotated[
+    Literal["유산소", "근력", "유연성", "기타"],
+    BeforeValidator(exercise_types.fold_legacy_ko),
+]
 RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
 
 #: 운동 항목의 출처. 'ai' 는 AI 제안을 편집기에 반영한 것, 'trainer' 는 트레이너가
@@ -290,6 +306,10 @@ class RoutineOut(BaseModel):
     id: str
     name: str
     minutes: int
+    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 유형·시간에서 계산한 값이라
+    #: 따로 저장하지 않는다 — 운동을 시간과 칼로리 두 축으로 보여 주기로 한
+    #: 뒤(#996) 배정 카드에도 이 값이 필요해졌다.
+    calories: int = 0
     type: RoutineType
     reason: str
     source: RoutineSource

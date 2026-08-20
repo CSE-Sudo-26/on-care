@@ -35,7 +35,7 @@ class ConsultationsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final filter = ref.watch(consultationFilterProvider);
-    final requests = ref.watch(consultationsProvider);
+    final inbox = ref.watch(consultationsProvider);
     final pending = ref.watch(consultationPendingCountProvider).valueOrNull;
 
     return PageScaffold(
@@ -51,7 +51,7 @@ class ConsultationsPage extends ConsumerWidget {
               filter == 'pending' ? 'all' : 'pending',
         ),
       ],
-      child: requests.when(
+      child: inbox.requests.when(
         loading: () => const Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxl),
           child: Center(child: CircularProgressIndicator()),
@@ -87,6 +87,21 @@ class ConsultationsPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
+                  // 서버는 한 쪽만 준다(#980). 상한에 닿았을 때만 버튼을 띄운다 —
+                  // 늘 보이면 더 없는데도 누를 것이 있는 것처럼 읽힌다.
+                  if (inbox.hasMore)
+                    Align(
+                      child: ActionButton(
+                        key: const ValueKey<String>('consultation-load-more'),
+                        label: l.consultLoadMore,
+                        icon: Icons.history,
+                        onPressed: inbox.loadingMore
+                            ? null
+                            : () => ref
+                                  .read(consultationsProvider.notifier)
+                                  .loadMore(),
+                      ),
+                    ),
                 ],
               ),
       ),
@@ -267,7 +282,10 @@ class _RejectDialogState extends State<_RejectDialog> {
         children: <Widget>[
           Text(
             l.consultRejectNotice,
-            style: const TextStyle(fontSize: 13.5, color: AppColors.mutedForeground),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(

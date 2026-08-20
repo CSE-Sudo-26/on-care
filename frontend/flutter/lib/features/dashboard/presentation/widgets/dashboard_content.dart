@@ -1626,8 +1626,13 @@ class _RecommendedMeals extends ConsumerWidget {
         ),
         SizedBox(
           // 세로 여백은 카드 그림자가 리스트 뷰포트에 잘리지 않게 하는 용도
-          // (카드 자체 높이는 158 그대로).
-          height: 178,
+          // (여백 20 + 카드 높이 158).
+          //
+          // 카드 높이가 글씨 배율을 따라가야 한다 (#995). 158 로 박아 두면
+          // 앱 기본 배율을 키운 순간 이름·설명·태그가 카드 밖으로 밀린다.
+          // 사진(72)과 여백은 그대로 두고 **글씨가 차지하는 만큼만** 늘린다 —
+          // 카드 전체를 한 배율로 곱하면 사진까지 커져 계산이 어긋난다.
+          height: 20 + _recMealCardHeight(context),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -1639,6 +1644,20 @@ class _RecommendedMeals extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// 추천 식단 카드 높이. 사진(72) + 안쪽 여백 + 글씨 세 줄기(이름·설명 2줄·
+/// 태그)를 현재 글씨 배율로 재서 더한다. (#995)
+double _recMealCardHeight(BuildContext context) {
+  final TextScaler ts = MediaQuery.textScalerOf(context);
+  const double photo = 72;
+  const double paddings = 18 + 3 + 6 + 4; // 카드 안쪽 여백 + 요소 사이 간격
+  return photo +
+      paddings +
+      ts.scale(14 * 1.3) + // 이름
+      ts.scale(11 * 1.4) * 2 + // 설명 두 줄
+      ts.scale(12 * 1.2) + // 태그
+      2; // 반올림 여유
 }
 
 class _RecMealCard extends StatelessWidget {
@@ -1715,9 +1734,16 @@ class _RecMealCard extends StatelessWidget {
                     ),
                     child: Text(
                       meal.tag,
+                      // 영어 태그는 길어서 두 줄이 되고, 그만큼 설명이 눌려
+                      // 사라진다 — 태그는 한 줄로 못 박는다. (#1004)
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
+                        // 줄 높이를 못 박아 둔다 — 서체를 바꾸면 폰트 자체의
+                        // 줄 간격이 달라져 카드 높이 계산이 어긋난다. (#995)
+                        height: 1.2,
                         color: meal.tagColor,
                       ),
                     ),
@@ -1944,14 +1970,19 @@ class _ChartLegend extends StatelessWidget {
     return Row(
       children: <Widget>[
         Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
+          // 그래프 제목은 그 그래프가 무슨 지표인지를 말한다 — 줄임표가 되면
+          // (`Weekly Calories tre…`) 그 역할이 사라진다. 좁으면 줄인다. (#1004)
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              title,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.ink,
+              ),
             ),
           ),
         ),

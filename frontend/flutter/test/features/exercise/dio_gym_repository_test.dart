@@ -5,16 +5,19 @@ import 'package:oncare/features/exercise/data/repositories/dio_gym_repository.da
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 
 /// 백엔드 실응답을 그대로 돌려주는 어댑터. 필드명이 어긋나면 여기서 걸린다.
 class _StubAdapter implements HttpClientAdapter {
   _StubAdapter(this.routes);
   final Map<String, Object?> routes;
   final List<String> calls = <String>[];
-  final Map<String, Map<String, dynamic>> queries = <String, Map<String, dynamic>>{};
+  final Map<String, Map<String, dynamic>> queries =
+      <String, Map<String, dynamic>>{};
 
   /// 경로에 실제로 실려 나간 query parameter.
-  Map<String, dynamic> queryOf(String path) => queries[path] ?? <String, dynamic>{};
+  Map<String, dynamic> queryOf(String path) =>
+      queries[path] ?? <String, dynamic>{};
 
   @override
   Future<ResponseBody> fetch(RequestOptions options, _, _) async {
@@ -22,15 +25,21 @@ class _StubAdapter implements HttpClientAdapter {
     queries[options.path] = Map<String, dynamic>.from(options.queryParameters);
     final body = routes[options.path];
     if (body == null) {
-      return ResponseBody.fromString('{"detail":"not found"}', 404,
-          headers: <String, List<String>>{
-            Headers.contentTypeHeader: <String>[Headers.jsonContentType],
-          });
-    }
-    return ResponseBody.fromString(_encode(body), 200,
+      return ResponseBody.fromString(
+        '{"detail":"not found"}',
+        404,
         headers: <String, List<String>>{
           Headers.contentTypeHeader: <String>[Headers.jsonContentType],
-        });
+        },
+      );
+    }
+    return ResponseBody.fromString(
+      _encode(body),
+      200,
+      headers: <String, List<String>>{
+        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+      },
+    );
   }
 
   static String _encode(Object? v) {
@@ -63,6 +72,14 @@ const String _trainersJson = '''
   "role":"퍼스널 트레이너","reason":"혈압 관리와 운동 병행 지도","career":"7년",
   "intro":"혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다.",
   "certifications":["생활스포츠지도사 2급","퍼스널트레이닝 CPT"]}]
+''';
+
+/// `GET /v1/reservations/me` 실응답 — 늦은 예약부터(#980).
+const String _reservationsJson = '''
+[{"id":"resv-2","slot_id":"slot-2","trainer_id":"trainer-demo",
+  "starts_at":"2026-03-02T02:00:00+00:00","cancellable":true},
+ {"id":"resv-1","slot_id":"slot-1","trainer_id":"trainer-demo",
+  "starts_at":"2026-03-02T01:00:00+00:00","cancellable":false}]
 ''';
 
 Dio _dio(_StubAdapter adapter) =>
@@ -133,6 +150,41 @@ void main() {
     expect(q['lng'], kGymSearchLng);
   });
 
+  group('내 예약 목록 (#980)', () {
+    test('첫 쪽은 상한만 싣고 커서는 싣지 않는다', () async {
+      final adapter = _StubAdapter(<String, Object?>{
+        '/reservations/me': _reservationsJson,
+      });
+
+      final list = await DioGymRepository(_dio(adapter)).fetchMyReservations();
+
+      expect(list.first.id, 'resv-2');
+      final Map<String, dynamic> q = adapter.queryOf('/reservations/me');
+      expect(q['limit'], reservationPageSize);
+      expect(q.containsKey('before'), isFalse);
+      expect(q.containsKey('before_id'), isFalse);
+    });
+
+    test('이어 받기는 마지막 예약의 (starts_at, id) 를 UTC 로 넘긴다', () async {
+      // 엔티티는 화면용 로컬 시각을 들고 있다. 그대로 보내면 서버가 UTC 로 읽어
+      // 쪽 경계가 시간대만큼 밀린다.
+      final adapter = _StubAdapter(<String, Object?>{
+        '/reservations/me': _reservationsJson,
+      });
+
+      await DioGymRepository(_dio(adapter)).fetchMyReservations(
+        limit: 10,
+        before: DateTime.utc(2026, 3, 2, 1).toLocal(),
+        beforeId: 'resv-1',
+      );
+
+      final Map<String, dynamic> q = adapter.queryOf('/reservations/me');
+      expect(q['limit'], 10);
+      expect(q['before'], '2026-03-02T01:00:00.000Z');
+      expect(q['before_id'], 'resv-1');
+    });
+  });
+
   test('헬스장 해제는 DELETE /me/coach, 트레이너 해제는 DELETE /me/coach/trainer', () async {
     // 두 휴지통이 같은 엔드포인트로 나가면 트레이너만 끊어도 헬스장이 사라진다.
     final adapter = _StubAdapter(<String, Object?>{
@@ -144,6 +196,9 @@ void main() {
     await repo.disconnectMyGym();
     await repo.disconnectMyTrainer();
 
-    expect(adapter.calls, <String>['DELETE /me/coach', 'DELETE /me/coach/trainer']);
+    expect(adapter.calls, <String>[
+      'DELETE /me/coach',
+      'DELETE /me/coach/trainer',
+    ]);
   });
 }

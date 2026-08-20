@@ -21,6 +21,7 @@ from app.models.models import ExerciseSession
 from app.schemas.exercise_api import (
     ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
 )
+from app.services import exercise_types
 from app.services.coach import personal_ingest
 from app.services.exercise_service import (
     WEEKDAY_LABELS, build_current_week, monday_of_str, monday_of_this_week_str,
@@ -43,7 +44,14 @@ def _session_date(row: ExerciseSession) -> str:
     except (ValueError, IndexError):
         return row.week_start
 
-_ALLOWED_TYPES = {"cardio", "strength", "yoga", "walking", "stretching", "other"}
+#: 저장은 표준 네 가지(유산소/근력/유연성/기타)로만 한다. 옛 값도 받아 접어
+#: 주는 이유는 아직 옛 어휘를 보내는 앱이 있기 때문이다 — 거절하면 기록이
+#: 통째로 사라지는데, 그건 유형 하나 어긋난 것보다 나쁘다. (#996)
+_ALLOWED_TYPES = set(exercise_types.CANONICAL_TYPES) | {
+    "walking",
+    "yoga",
+    "stretching",
+}
 _ALLOWED_INTENSITIES = {"light", "moderate", "high"}
 
 
@@ -122,7 +130,7 @@ def add_session(
         user_id=current_user.id,
         week_start=monday_of_str(today.isoformat()),
         day_label=day_label,
-        type=payload.type,
+        type=exercise_types.normalize(payload.type),
         minutes=payload.minutes,
         calories=payload.calories,
         intensity=payload.intensity,
@@ -171,7 +179,7 @@ def update_session(
     if day_label not in WEEKDAY_LABELS:
         raise HTTPException(status_code=400, detail=f"잘못된 요일 라벨: {day_label}")
 
-    row.type = payload.type
+    row.type = exercise_types.normalize(payload.type)
     row.minutes = payload.minutes
     row.calories = payload.calories
     row.intensity = payload.intensity

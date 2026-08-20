@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/design_system/tokens/typography.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
@@ -724,8 +725,11 @@ void main() {
       expect(listFinder, findsOneWidget);
       // 한 줄에 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
       // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐고(#898), 브라우저 글꼴에서
-      // 마지막 줄이 1px 넘쳐 104 가 됐다(#958).
-      expect(tester.getSize(listFinder).height, 104 * 5);
+      // 마지막 줄이 1px 넘쳐 104 가 됐다(#958). 앱 기본 글씨 배율이 올라가면
+      // 줄 높이도 함께 늘어난다 — 화면과 같은 식으로 기대값을 잡는다. (#995)
+      final double expectedRow =
+          104 + 84 * (AppTypography.textScale - 1).clamp(0.0, 2.0);
+      expect(tester.getSize(listFinder).height, expectedRow * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);
       expect(list.controller!.position.maxScrollExtent, greaterThan(0));
@@ -1584,13 +1588,13 @@ void main() {
 
         await tester.enterText(
           find.byKey(const ValueKey<String>('custom-exercise-name')),
-          '스트레칭 A',
+          '유연성 A',
         );
-        // Default category is 근력 — switch to 스트레칭 so the assigned
+        // Default category is 근력 — switch to 유연성 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
         final stretching = find.byKey(
-          const ValueKey<String>('custom-exercise-category-스트레칭'),
+          const ValueKey<String>('custom-exercise-category-유연성'),
         );
         final chip = tester.widget<ChoiceChip>(stretching);
         chip.onSelected?.call(true);
@@ -1607,7 +1611,7 @@ void main() {
         // 트레이너가 넣은 운동을 그대로 실어 보낸다.
         expect(
           routineRepo.lastAssignedExercises.map((e) => e['type']),
-          everyElement('스트레칭'),
+          everyElement('유연성'),
         );
         expect(
           routineRepo.lastAssignedExercises.map((e) => e['source']),

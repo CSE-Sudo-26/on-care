@@ -136,23 +136,41 @@ class MetricTrendChart extends StatelessWidget {
             // 폭은 눈금 라벨이 쓰던 38 그대로다. `목표 2,000` 을 한 줄로 두면 이
             // 칸이 넓어져야 하는데, 그러면 360px 영어 로케일에서 요일 라벨 줄이
             // 넘친다. 두 줄로 접어 폭을 지킨다.
-            SizedBox(
-              width: 38,
-              height: height,
-              child: Stack(
-                children: <Widget>[
-                  if (goalLabel != null && goal > 0 && goal >= lo && goal <= hi)
-                    Positioned(
-                      right: 0,
-                      top: (height - ((goal - lo) / (hi - lo)) * height - 13)
-                          .clamp(0.0, height - 26),
-                      child: SizedBox(
-                        height: 26,
-                        child: Center(child: _AxisLabel(goalLabel!)),
-                      ),
-                    ),
-                ],
-              ),
+            Builder(
+              builder: (BuildContext context) {
+                // 칸도 글씨 배율을 따라간다 (#1004). 38·26 으로 박아 두면 배율이
+                // 올라간 순간 `목표` 아래 줄(`2,000`)이 상자에 눌려 반만 보인다.
+                final TextScaler ts = MediaQuery.textScalerOf(context);
+                final double labelWidth = 38 * ts.scale(1);
+                // 두 줄(`목표` / 값)이 들어갈 높이를 글씨에서 잰다. 상수로 두면
+                // 배율이 오른 순간 아랫줄이 잘린다. (#1004)
+                final double labelHeight = ts.scale(_axisLabelSize) * 1.35 * 2;
+                return SizedBox(
+                  width: labelWidth,
+                  height: height,
+                  child: Stack(
+                    children: <Widget>[
+                      if (goalLabel != null &&
+                          goal > 0 &&
+                          goal >= lo &&
+                          goal <= hi)
+                        Positioned(
+                          right: 0,
+                          top:
+                              (height -
+                                      ((goal - lo) / (hi - lo)) * height -
+                                      labelHeight / 2)
+                                  .clamp(0.0, height - labelHeight),
+                          child: SizedBox(
+                            key: chartGoalLabelKey,
+                            height: labelHeight,
+                            child: Center(child: _AxisLabel(goalLabel!)),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -221,6 +239,12 @@ class MetricTrendChart extends StatelessWidget {
   }
 }
 
+/// 목표선 라벨 칸. 높이가 글씨 배율을 따라 달라져서, 크기로 찾을 수 없다.
+const Key chartGoalLabelKey = ValueKey<String>('chart-goal-label');
+
+/// 축 라벨 글씨 크기. 라벨 칸 높이를 이 값에서 재므로 한 곳에 둔다. (#1004)
+const double _axisLabelSize = 10;
+
 class _AxisLabel extends StatelessWidget {
   const _AxisLabel(this.text);
 
@@ -232,7 +256,8 @@ class _AxisLabel extends StatelessWidget {
     textAlign: TextAlign.right,
     maxLines: 2,
     style: const TextStyle(
-      fontSize: 10,
+      fontSize: _axisLabelSize,
+      height: 1.35,
       fontWeight: FontWeight.w600,
       color: AppColors.mutedForeground,
     ),
