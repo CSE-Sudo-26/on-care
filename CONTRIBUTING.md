@@ -103,6 +103,21 @@ UI 변경 시 golden 테스트 결과 (`test/golden/failures/`) 도 함께 확�
 
 ---
 
+## 6.1 GitHub Actions 고정
+
+`.github/workflows/` 의 모든 `uses:` 는 **커밋 SHA 로 고정**하고 뒤에 `# vX.Y.Z` 주석을 답니다.
+태그는 옮길 수 있어서, 태그로 두면 아무도 코드를 건드리지 않았는데 파이프라인이 하는 일이
+바뀝니다. 그 파이프라인이 공개 사이트를 올립니다.
+
+올릴 때는 의도적으로 올립니다 — 새 SHA 와 주석을 함께 바꾸고, 그 워크플로가 실제로 도는 것을
+확인한 뒤 머지합니다. SHA 는 이렇게 확인합니다.
+
+```bash
+gh api repos/actions/checkout/git/ref/tags/v4 --jq .object.sha
+```
+
+---
+
 ## 7. 이슈 사용
 
 - 새 작업은 가능한 한 **이슈 → PR → Closes** 흐름을 유지합니다.
