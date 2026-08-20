@@ -412,8 +412,10 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
     }
 
-    Future<void> openSchedule(WidgetTester tester) async {
-      useWideConsole(tester);
+    /// [wide] 가 false 면 부르는 쪽이 잡아 둔 화면 크기를 그대로 쓴다 — 좁은
+    /// 폭 회귀를 보는 테스트가 여기서 다시 넓어지면 아무것도 재지 못한다.
+    Future<void> openSchedule(WidgetTester tester, {bool wide = true}) async {
+      if (wide) useWideConsole(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -638,7 +640,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await openSchedule(tester);
+      await openSchedule(tester, wide: false);
 
       expect(find.byKey(const Key('consult-inbox-entry')), findsOneWidget);
       expect(tester.takeException(), isNull);

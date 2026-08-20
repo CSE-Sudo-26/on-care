@@ -46,10 +46,13 @@ bool isProspectClient(
   required String? clientId,
   required String clientName,
 }) {
-  if (clientName.trim().isEmpty) return false;
+  // 이름은 다듬어 견준다 — 표시용 이름에 앞뒤 공백이 섞여 들어오면, 로스터에
+  // 있는 회원까지 신규로 읽힌다.
+  final name = clientName.trim();
+  if (name.isEmpty) return false;
   for (final client in clients) {
     if (clientId != null && client.id == clientId) return false;
-    if (client.name == clientName) return false;
+    if (client.name.trim() == name) return false;
   }
   return true;
 }

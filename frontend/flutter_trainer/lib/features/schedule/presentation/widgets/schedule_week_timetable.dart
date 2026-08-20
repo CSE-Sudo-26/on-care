@@ -30,7 +30,7 @@ import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 /// 보이는 주는 항상 월요일에서 일요일까지다. `오늘 − 3일` 로 잡던 때에는 매일
 /// 다른 요일에서 시작해, 화면이 말하는 "주" 와 사람이 말하는 "이번 주" 가
 /// 어긋났다.
-class ScheduleWeekTimetable extends StatelessWidget {
+class ScheduleWeekTimetable extends ConsumerWidget {
   /// Creates the week timetable.
   const ScheduleWeekTimetable({
     super.key,
@@ -109,11 +109,24 @@ class ScheduleWeekTimetable extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final days = <DateTime>[
       for (var i = 0; i < 7; i++) weekStart.add(Duration(days: i)),
     ];
+    // 로스터는 여기서 한 번만 구독한다. 블록마다 구독하면 주에 그려지는 수만큼
+    // 구독이 생기고, 로스터가 갱신될 때 그 블록들이 각자 다시 빌드된다.
+    final roster =
+        ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
+    final names = <String, String>{
+      for (final s in sessions)
+        s.id: clientNameWithNewTag(
+          l,
+          roster,
+          clientId: s.clientId,
+          clientName: s.clientName,
+        ),
+    };
     final window = visibleHours(sessions);
     final byDate = <String, List<ScheduleSession>>{};
     for (final s in sessions) {
@@ -181,6 +194,7 @@ class ScheduleWeekTimetable extends StatelessWidget {
                                     byDate[ymd(day)] ??
                                     const <ScheduleSession>[],
                                 selectedSessionId: selectedSessionId,
+                                names: names,
                                 onPickSession: onPickSession,
                               ),
                             ),
@@ -323,6 +337,7 @@ class _DayColumn extends StatelessWidget {
     required this.endHour,
     required this.sessions,
     required this.selectedSessionId,
+    required this.names,
     required this.onPickSession,
   });
 
@@ -332,6 +347,10 @@ class _DayColumn extends StatelessWidget {
   final int endHour;
   final List<ScheduleSession> sessions;
   final String? selectedSessionId;
+
+  /// 세션 id → 화면이 부를 이름. 로스터에 없는 고객이면 `(신규)` 가 붙어 있다.
+  final Map<String, String> names;
+
   final ValueChanged<ScheduleSession> onPickSession;
 
   @override
@@ -385,15 +404,28 @@ class _DayColumn extends StatelessWidget {
                       60 *
                       ScheduleWeekTimetable.hourHeight,
                   left: width * p.lane / p.lanes + 2,
-                  width: width / p.lanes - 4,
+                  // 열이 좁은데 같은 시간대가 여럿 겹치면 음수가 된다. 음수 폭은
+                  // `BoxConstraints` 단정에 걸려 시간표를 통째로 죽인다 — 겹침
+                  // 수는 트레이너가 만드는 값이라 막아 둔다.
+                  width: math.max(width / p.lanes - 4, 1),
+                  // 끝나는 시각도 창 안으로 자른다. 자정을 넘는 세션은 창의
+                  // 끝(24시)까지만 그려야 격자 아래로 삐져나오지 않는다.
                   height: math.max(
-                    (p.endMinute - p.startMinute) /
+                    (p.endMinute.clamp(
+                              windowStart,
+                              windowStart + windowMinutes,
+                            ) -
+                            p.startMinute.clamp(
+                              windowStart,
+                              windowStart + windowMinutes,
+                            )) /
                         60 *
                         ScheduleWeekTimetable.hourHeight,
                     24,
                   ),
                   child: _SessionBlock(
                     session: p.session,
+                    name: names[p.session.id] ?? p.session.clientName,
                     selected: p.session.id == selectedSessionId,
                     onTap: () => onPickSession(p.session),
                   ),
@@ -513,14 +545,19 @@ class _NowLine extends StatelessWidget {
 /// 이름뿐이라, 언제 끝나는지와 `1:1 PT` 인지 `상담` 인지를 알려면 눌러 봐야
 /// 했다(#988). 높이가 허락하는 만큼 위에서부터 채운다 — 30분짜리 블록에 세 줄을
 /// 밀어 넣으면 셋 다 읽히지 않는다.
-class _SessionBlock extends ConsumerWidget {
+class _SessionBlock extends StatelessWidget {
   const _SessionBlock({
     required this.session,
+    required this.name,
     required this.selected,
     required this.onTap,
   });
 
   final ScheduleSession session;
+
+  /// 화면이 부를 이름. 로스터에 없는 고객이면 `(신규)` 가 붙어 있다.
+  final String name;
+
   final bool selected;
   final VoidCallback onTap;
 
@@ -532,18 +569,12 @@ class _SessionBlock extends ConsumerWidget {
   };
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final tone = _tone;
     final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
     final end = start + session.durationMinutes;
     final range = l.schedTimeRange(session.time, _hhmm(end));
-    final name = clientNameWithNewTag(
-      l,
-      ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[],
-      clientId: session.clientId,
-      clientName: session.clientName,
-    );
     final type = sessionTypeLabel(l, session.type);
     final detail = l.sessionTypeAndDuration(type, session.durationMinutes);
 
@@ -552,6 +583,9 @@ class _SessionBlock extends ConsumerWidget {
       child: Semantics(
         button: true,
         label: '$range $name $detail',
+        // 라벨이 이미 같은 값을 말한다. 자식 텍스트까지 읽히면 블록 하나가 두 번
+        // 낭독되어 시간표를 훑기 어렵다.
+        excludeSemantics: true,
         child: Material(
           color: tone.withValues(alpha: session.isFinished ? 0.08 : 0.12),
           borderRadius: const BorderRadius.all(AppRadius.xs),

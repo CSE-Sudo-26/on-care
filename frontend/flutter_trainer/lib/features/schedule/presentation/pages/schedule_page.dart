@@ -62,7 +62,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   /// 보이는 주의 월요일. `오늘 − 3일` 로 잡던 때에는 매일 다른 요일에서 주가
   /// 시작해, 화면이 말하는 "주" 와 사람이 말하는 "이번 주" 가 어긋났다(#988).
-  late DateTime _weekStart = _mondayOf(_selectedDay);
+  ///
+  /// 고른 날에서 **파생한다** — 따로 들고 있으면 둘이 어긋날 수 있다. "주만
+  /// 넘기고 고른 날은 유지" 같은 요구가 생기면 그때 상태로 승격한다.
+  DateTime get _weekStart => _mondayOf(_selectedDay);
 
   /// Session shown in the detail panel.
   String? _selectedSessionId;
@@ -94,11 +97,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     // The URL is the source of truth: a link from the dashboard, or
     // back/forward, must move the calendar.
     if (widget.date != oldWidget.date) {
-      final next = _resolveDay(widget.date);
-      setState(() {
-        _selectedDay = next;
-        _weekStart = _mondayOf(next);
-      });
+      setState(() => _selectedDay = _resolveDay(widget.date));
     }
   }
 
@@ -110,7 +109,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final next = _dateOnly(day);
     setState(() {
       _selectedDay = next;
-      _weekStart = _mondayOf(next);
       _selectedSessionId = null;
     });
     context.go(AppRoutes.scheduleAt(date: ymd(next)));
@@ -384,9 +382,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   Widget _todayControl() {
     final AppLocalizations l = AppLocalizations.of(context);
     final today = _dateOnly(nowKst());
-    if (_selectedDay == today && _weekStart == _mondayOf(today)) {
-      return const SizedBox.shrink();
-    }
+    if (_selectedDay == today) return const SizedBox.shrink();
     return ActionButton(
       label: l.labelToday,
       icon: Icons.today_outlined,

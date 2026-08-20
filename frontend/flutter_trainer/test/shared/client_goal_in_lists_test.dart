@@ -91,7 +91,13 @@ void main() {
 
     // 이름은 시간표 블록과 상세 패널 양쪽에 있다 — 목표 줄은 카드에만 있다.
     expect(find.text('김민수'), findsWidgets);
-    expect(find.text('혈압 관리 · 체중 감량'), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('week-detail')),
+        matching: find.text('혈압 관리 · 체중 감량'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('목표가 비면 빈 줄을 만들지 않는다', (tester) async {
