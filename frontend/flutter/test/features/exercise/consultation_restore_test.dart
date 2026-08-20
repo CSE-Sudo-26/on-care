@@ -30,8 +30,9 @@ class _RestoringRepository implements ConsultationRepository {
   Future<String> create(ConsultationDraft draft) async => 'new-id';
 
   @override
-  Future<List<ConsultationRequest>> fetchMine() async =>
-      <ConsultationRequest>[consultationFromJson(_serverRow)];
+  Future<List<ConsultationRequest>> fetchMine({
+    int limit = consultationPageSize,
+  }) async => <ConsultationRequest>[consultationFromJson(_serverRow)];
 }
 
 class _FailingRepository implements ConsultationRepository {
@@ -39,8 +40,9 @@ class _FailingRepository implements ConsultationRepository {
   Future<String> create(ConsultationDraft draft) async => 'new-id';
 
   @override
-  Future<List<ConsultationRequest>> fetchMine() async =>
-      throw StateError('network down');
+  Future<List<ConsultationRequest>> fetchMine({
+    int limit = consultationPageSize,
+  }) async => throw StateError('network down');
 }
 
 void main() {
@@ -73,10 +75,7 @@ void main() {
 
     expect(c.state, hasLength(1));
     // 복원이 없으면 목록이 비어 같은 대상에 다시 눌러 409 를 받는다.
-    expect(
-      c.hasPending(trainerId: 'trainer-demo'),
-      isTrue,
-    );
+    expect(c.hasPending(trainerId: 'trainer-demo'), isTrue);
   });
 
   test('복원 실패는 화면을 깨뜨리지 않는다', () async {

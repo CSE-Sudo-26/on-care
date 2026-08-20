@@ -9,7 +9,6 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,6 +16,7 @@ from sqlalchemy import func, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, RequireMember
+from app.core.pagination import DEFAULT_PAGE, MAX_PAGE, parse_before
 from app.db.session import get_db
 from app.models.models import Notification
 from app.schemas.misc_api import NotificationAction, NotificationOut
@@ -62,7 +62,9 @@ _time_ago = notification_service.time_ago
 def list_notifications(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
-    limit: int = Query(50, ge=1, le=100, description="한 번에 가져올 최신 알림 수"),
+    limit: int = Query(
+        DEFAULT_PAGE, ge=1, le=MAX_PAGE, description="한 번에 가져올 최신 알림 수"
+    ),
     before: str | None = Query(
         None, description="ISO datetime 커서(다음 쪽) — 받은 마지막 알림의 created_at"
     ),
@@ -83,17 +85,8 @@ def list_notifications(
     파라미터 없이 부르면 최신 50건이다. 기존 클라이언트는 그대로 동작한다.
     """
     query = select(Notification).where(Notification.user_id == current_user.id)
-    if before is not None:
-        try:
-            cursor = datetime.fromisoformat(before)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=422, detail="before 는 ISO datetime 이어야 합니다."
-            ) from exc
-        if cursor.tzinfo is None:
-            # 오프셋 없이 온 커서는 UTC 로 읽는다. created_at 은 UTC 로 저장되므로
-            # (`app.core.clock`), 서버 로컬 타임존에 맡기면 쪽 경계가 밀린다.
-            cursor = cursor.replace(tzinfo=timezone.utc)
+    cursor = parse_before(before)
+    if cursor is not None:
         if before_id is not None:
             query = query.where(
                 tuple_(Notification.created_at, Notification.id) < (cursor, before_id)

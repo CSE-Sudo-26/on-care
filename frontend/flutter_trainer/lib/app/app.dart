@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/app/router/app_router.dart';
 import 'package:oncare_trainer/design_system/theme/app_theme.dart';
+import 'package:oncare_trainer/design_system/tokens/typography.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Root widget for the trainer app. Wires the GoRouter, theme and
@@ -32,6 +33,14 @@ class OncareTrainerApp extends ConsumerWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
+      // 글씨 배율은 여기 한 곳에서만 얹는다 (#995).
+      builder: (BuildContext context, Widget? child) {
+        final MediaQueryData mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: AppTypography.scaler(mq.textScaler)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

@@ -41,6 +41,7 @@ from app.db.demo_fixture import FixtureExercise, load_fixture
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
+from app.services import exercise_types
 from app.services.coach import personal_ingest
 from app.services.coach.rag import has_personal_doc
 
@@ -211,9 +212,9 @@ _CHAT: dict[str, list[tuple[str, str, int]]] = {
 _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
     "user-demo": [
         ("저강도 유산소 (걷기)", 30, "유산소", "혈압 안정에 효과적"),
-        ("하체 스트레칭", 15, "스트레칭", "혈액순환 개선"),
+        ("하체 스트레칭", 15, "유연성", "혈액순환 개선"),
         ("코어 강화", 10, "근력", "기초대사량 향상"),
-        ("어깨 관절 보호 스트레칭", 8, "스트레칭",
+        ("어깨 관절 보호 스트레칭", 8, "유연성",
          "PT 피드백 반영 · 오른쪽 어깨 보호"),
     ],
     "user-jisu": [
@@ -588,11 +589,16 @@ _FIXTURE_ID_PREFIX = "seed-fix-"
 def _by_type(
     exercises: tuple[FixtureExercise, ...],
 ) -> dict[str, tuple[int, int]]:
-    """운동을 종류별로 합친다 — {종류: (분, 칼로리)}. 픽스처 순서를 유지한다."""
+    """운동을 종류별로 합친다 — {종류: (분, 칼로리)}. 픽스처 순서를 유지한다.
+
+    종류는 표준 어휘로 접어서 센다 (#996). 픽스처가 아직 옛 이름을 쓰더라도
+    DB 에는 표준 값만 들어가야 앱이 유형을 다시 매핑하지 않는다.
+    """
     totals: dict[str, tuple[int, int]] = {}
     for exercise in exercises:
-        minutes, calories = totals.get(exercise.type, (0, 0))
-        totals[exercise.type] = (
+        kind = exercise_types.normalize(exercise.type)
+        minutes, calories = totals.get(kind, (0, 0))
+        totals[kind] = (
             minutes + exercise.minutes,
             calories + exercise.calories,
         )
@@ -903,7 +909,7 @@ def _seed_exercise(db: Session, member_id: str) -> None:
             user_id=member_id,
             week_start=week_start,
             day_label=day_label,
-            type=ex_type,
+            type=exercise_types.normalize(ex_type),
             minutes=minutes,
             calories=calories,
             intensity="moderate",

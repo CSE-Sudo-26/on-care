@@ -229,7 +229,9 @@ class ExerciseSession(Base):
     )
     week_start: Mapped[str] = mapped_column(String(10), index=True)  # 월요일 YYYY-MM-DD
     day_label: Mapped[str] = mapped_column(String(4))  # 월/화/...
-    type: Mapped[str] = mapped_column(String(20))  # cardio|strength|yoga|walking
+    #: 운동 유형 — cardio|strength|flexibility|other 네 가지 (#996).
+    #: 옛 값(walking·yoga·stretching)은 0053 마이그레이션에서 접었다.
+    type: Mapped[str] = mapped_column(String(20))
     minutes: Mapped[int] = mapped_column(Integer, default=0)
     calories: Mapped[int] = mapped_column(Integer, default=0)
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
@@ -850,7 +852,8 @@ class TrainerRoutine(Base):
     )
     name: Mapped[str] = mapped_column(String(100))
     minutes: Mapped[int] = mapped_column(Integer, default=0)
-    type: Mapped[str] = mapped_column(String(20))  # 유산소|근력|스트레칭
+    #: 운동 유형 — 유산소|근력|유연성|기타 네 가지 (#996).
+    type: Mapped[str] = mapped_column(String(20))
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
     #: 검토 상태 — approved(회원에게 노출) | pending(트레이너 검토 대기) |

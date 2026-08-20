@@ -13,6 +13,9 @@ class AppTheme {
   static ThemeData light() {
     final base = ThemeData(
       useMaterial3: true,
+      // 두 앱 공통 한글 UI 서체 (#995). pubspec 의 Pretendard 패밀리를
+      // 앱 전역 기본으로 둔다 — 화면에서 fontFamily 를 따로 지정하지 않는다.
+      fontFamily: AppTypography.fontFamily,
       brightness: Brightness.light,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,

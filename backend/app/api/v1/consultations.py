@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireMember
+from app.core.pagination import DEFAULT_PAGE, MAX_PAGE, parse_before
 from app.db.session import get_db
 from app.schemas.consultation_api import ConsultationCreate, ConsultationOut
 from app.services import consultation_service
@@ -37,8 +38,28 @@ def create_consultation(
 def list_my_consultations(
     member: RequireMember,
     db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(
+        DEFAULT_PAGE, ge=1, le=MAX_PAGE, description="한 번에 가져올 요청 수"
+    ),
+    before: str | None = Query(
+        None, description="ISO datetime 커서(다음 쪽) — 받은 마지막 요청의 created_at"
+    ),
+    before_id: str | None = Query(
+        None, description="복합 커서 tie-break — 받은 마지막 요청의 id"
+    ),
 ) -> list[ConsultationOut]:
-    return consultation_service.list_my_consultations(db, member.id)
+    """내가 보낸 상담 요청 한 쪽(최신순, 기본 50건). (#980)
+
+    필터가 없어 승인·거절된 지난 요청까지 함께 자란다. 파라미터 없이 부르면 최신
+    50건이고, 그보다 오래된 요청은 커서로 이어 받는다.
+    """
+    return consultation_service.list_my_consultations(
+        db,
+        member.id,
+        limit=limit,
+        before=parse_before(before),
+        before_id=before_id,
+    )
 
 
 @router.get(

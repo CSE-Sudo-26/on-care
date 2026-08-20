@@ -74,7 +74,7 @@ class MockTrainerRoutineSuggestionRepository
       id: 'demo-suggestion-shoulder',
       name: '어깨 관절 보호 스트레칭',
       minutes: 8,
-      type: '스트레칭',
+      type: '유연성',
       reason: '회전근개와 어깨 안정화를 돕는 가벼운 스트레칭이에요. 통증이 있으면 멈추세요.',
       evidence: <String>['최근 PT 피드백 반영', '최근 근력운동 비중 높음'],
     ),
