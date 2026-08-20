@@ -38,6 +38,38 @@ class AppRoutes {
   /// 내 정보 / 설정 — reached from the sidebar footer, not the nav list.
   static const String my = '/my';
 
+  /// 약관 · 개인정보 처리방침 — 로그인 없이도 열리는 문서 화면. (#968)
+  ///
+  /// 셸 밖의 최상위 라우트다. 내 정보에서만 열 수 있게 `/my` 아래에 두면
+  /// 가입 화면에서는 걸 수 없다 — 동의할 문서를 동의하기 전에 읽지 못하는
+  /// 셈이 된다. 인증 게이트도 이 경로만 통과시킨다([sessionRedirect]).
+  static const String legal = '/legal';
+
+  /// 이용약관 문서의 URL 세그먼트.
+  static const String legalTerms = 'terms';
+
+  /// 개인정보 처리방침 문서의 URL 세그먼트.
+  static const String legalPrivacy = 'privacy';
+
+  /// The documents [legal] can render, as URL segments.
+  static const List<String> legalDocuments = <String>[legalTerms, legalPrivacy];
+
+  /// Route pattern for a legal document.
+  static const String legalDocumentPattern = ':document';
+
+  /// Builds `/legal/<document>`. An unknown document falls back to the
+  /// 이용약관 rather than resolving to nothing.
+  static String legalDocument(String document) {
+    final safe = legalDocuments.contains(document)
+        ? document
+        : legalDocuments.first;
+    return '$legal/$safe';
+  }
+
+  /// Is [path] one of the documents that must open without a session?
+  static bool isLegalPath(String path) =>
+      path == legal || path.startsWith('$legal/');
+
   /// 상담 요청 — the inbox where a member becomes a client. (#467)
   ///
   /// Its nav row only exists against the real API: the demo has no member

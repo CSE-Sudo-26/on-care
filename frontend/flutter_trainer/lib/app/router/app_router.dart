@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/coaching/presentation/pages/coaching_pag
 import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare_trainer/features/messages/presentation/pages/messages_page.dart';
+import 'package:oncare_trainer/features/my/presentation/pages/legal_document_page.dart';
 import 'package:oncare_trainer/features/my/presentation/pages/my_page.dart';
 import 'package:oncare_trainer/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
@@ -21,6 +22,9 @@ import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_pag
 /// Pure auth-guard policy for the router's `redirect`. Kept free of
 /// `BuildContext`/`GoRouterState` so it can be unit-tested directly.
 ///
+/// - 약관·개인정보 처리방침 → 세션과 무관하게 그대로 둔다: 가입 전에도
+///   읽을 수 있어야 하고, 읽는 중에 세션이 확정됐다고 화면이 바뀌어서도
+///   안 된다 (#968);
 /// - signed-out (or still restoring) → forced onto the sign-in screen,
 ///   **carrying where they were headed** (`?from=`);
 /// - in the app (demo or authenticated) → kept off sign-in, and sent to
@@ -37,6 +41,7 @@ import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_pag
 /// Returning `null` means "no redirect — stay put".
 String? sessionRedirect(SessionStatus status, String location) {
   final path = Uri.tryParse(location)?.path ?? location;
+  if (AppRoutes.isLegalPath(path)) return null;
   final onAuthRoute = path == AppRoutes.signIn || path == AppRoutes.signUp;
   switch (status) {
     case SessionStatus.unknown:
@@ -214,6 +219,21 @@ GoRouter buildAppRouter({
             ],
           ),
         ],
+      ),
+      // 셸 밖에 둔다 — 사이드바를 띄우려면 세션이 있어야 하는데, 이 문서는
+      // 로그인 전에도 열려야 한다. (#968)
+      // 문서 라우트를 `/legal` 의 자식으로 두지 않는다 — go_router 는 매치된
+      // 경로의 **부모 redirect 까지** 실행하므로, 부모에 기본 문서 redirect 를
+      // 걸면 `/legal/privacy` 도 약관으로 끌려간다.
+      GoRoute(
+        path: AppRoutes.legal,
+        redirect: (context, state) =>
+            AppRoutes.legalDocument(AppRoutes.legalDocuments.first),
+      ),
+      GoRoute(
+        path: '${AppRoutes.legal}/${AppRoutes.legalDocumentPattern}',
+        builder: (context, state) =>
+            LegalDocumentPage(document: state.pathParameters['document']),
       ),
       GoRoute(
         path: AppRoutes.signIn,
