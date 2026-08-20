@@ -929,6 +929,7 @@
   "routineTypeStrength": "Strength",
   "routineTypeYoga": "Yoga",
   "routineTypeStretching": "Stretching",
+  "routineTypeFlexibility": "Flexibility",
   "routineTypeOther": "Other",
   "routineFieldType": "Exercise type",
   "routineFieldMinutes": "Duration",

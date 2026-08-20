@@ -204,8 +204,8 @@ def _analysis() -> RoutineOptionAnalysisOut:
 
 
 def test_routine_categories_match_the_member_app():
-    categories = ("걷기", "유산소", "근력", "요가", "스트레칭", "기타")
-    for category in categories:
+    """유형은 네 가지다 — 유산소 / 근력 / 유연성 / 기타. (#996)"""
+    for category in ("유산소", "근력", "유연성", "기타"):
         exercise = RoutineOptionExerciseOut(
             name="테스트 운동", minutes=10, type=category
         )
@@ -213,6 +213,19 @@ def test_routine_categories_match_the_member_app():
 
     with pytest.raises(ValidationError):
         RoutineOptionExerciseOut(name="테스트 운동", minutes=10, type="미지원")
+
+
+def test_legacy_categories_are_folded_not_refused():
+    """옛 값으로 오는 요청을 422 로 막지 않는다.
+
+    유형 하나가 옛 이름이라고 배정이 통째로 실패하는 편이, 걷기를 유산소로
+    적어 두는 것보다 나쁘다. 모르는 값은 그대로 거절한다(위 테스트).
+    """
+    for legacy, folded in (("걷기", "유산소"), ("요가", "유연성"), ("스트레칭", "유연성")):
+        exercise = RoutineOptionExerciseOut(
+            name="테스트 운동", minutes=10, type=legacy
+        )
+        assert exercise.type == folded
 
 
 def test_rule_fallback_respects_requested_minutes():

@@ -1812,6 +1812,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineTypeStretching => 'Stretching';
 
   @override
+  String get routineTypeFlexibility => 'Flexibility';
+
+  @override
   String get routineTypeOther => 'Other';
 
   @override

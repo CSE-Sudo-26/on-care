@@ -42,6 +42,7 @@ from app.services import (
     auto_routine_service,
     diet_photo_service,
     exercise_service,
+    exercise_types,
     notification_service,
     routine_suggestion_service,
 )
@@ -1014,6 +1015,9 @@ def _routine_out(
     """
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
+        # 예상 소모 칼로리. 배정 시점에는 강도를 모르니 보통으로 잡는다 — 회원이
+        # 수행을 마치면 그때의 강도로 계산한 값이 운동 기록에 남는다. (#996)
+        calories=exercise_service.estimate_calories(rt.type, rt.minutes, "moderate"),
         reason=rt.reason, source=rt.source,
         program_name=rt.program_name,
         session_name=rt.session_name,
@@ -1033,14 +1037,8 @@ def _routine_out(
     )
 
 
-_ROUTINE_EXERCISE_TYPES = {
-    "걷기": "walking",
-    "유산소": "cardio",
-    "근력": "strength",
-    "요가": "yoga",
-    "스트레칭": "stretching",
-    "기타": "other",
-}
+#: 루틴의 한글 유형 → 운동 기록의 영문 코드. 옛 값도 함께 접힌다. (#996)
+_ROUTINE_EXERCISE_TYPES = exercise_types.normalize
 
 
 
@@ -1241,7 +1239,7 @@ def complete_assigned_routine(
         return _routine_out(routine, existing)
 
     completed_at = clock.now()
-    exercise_type = _ROUTINE_EXERCISE_TYPES.get(routine.type, "other")
+    exercise_type = _ROUTINE_EXERCISE_TYPES(routine.type)
     row = ExerciseSession(
         id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
         user_id=member_id,
