@@ -115,7 +115,7 @@ void main() {
       );
       expect(
         AppRoutes.followUpTarget('m1', FollowUpContext.schedule.wire),
-        AppRoutes.scheduleView('day'),
+        AppRoutes.scheduleAt(),
       );
     });
 

@@ -14,8 +14,8 @@ import 'package:oncare_trainer/features/consultations/data/repositories/consulta
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -139,7 +139,7 @@ void main() {
       final seongho = slots.firstWhere((s) => s.clientName == '박성호');
       expect(seongho.expandable, isTrue); // 예정 now opens (plan preview)
       expect(seongho.isUpcoming, isTrue);
-      final consult = slots.firstWhere((s) => s.clientName == '신규 고객');
+      final consult = slots.firstWhere((s) => s.clientName == '윤가온');
       expect(consult.program, isEmpty);
       expect(consult.expandable, isTrue); // opens with the no-plan hint
     });
@@ -286,14 +286,14 @@ void main() {
       () async {
         final repo = DriftScheduleRepository(db);
         final before = await repo.watchToday().first;
-        final consult = before.firstWhere((s) => s.clientName == '신규 고객');
+        final consult = before.firstWhere((s) => s.clientName == '윤가온');
         final histBefore =
             (await db.select(db.clientRoutineHistory).get()).length;
 
         await repo.completeSession(consult.id);
 
         final after = await repo.watchToday().first;
-        expect(after.firstWhere((s) => s.clientName == '신규 고객').isDone, isTrue);
+        expect(after.firstWhere((s) => s.clientName == '윤가온').isDone, isTrue);
         final histAfter =
             (await db.select(db.clientRoutineHistory).get()).length;
         expect(histAfter, histBefore); // no orphan history row
@@ -392,16 +392,28 @@ void main() {
     test('deleteSession removes the slot', () async {
       final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;
-      final target = before.firstWhere((s) => s.clientName == '신규 고객');
+      final target = before.firstWhere((s) => s.clientName == '윤가온');
       await repo.deleteSession(target.id);
       final after = await repo.watchToday().first;
       expect(after.length, before.length - 1);
-      expect(after.where((s) => s.clientName == '신규 고객'), isEmpty);
+      expect(after.where((s) => s.clientName == '윤가온'), isEmpty);
     });
   });
 
   group('SchedulePage', () {
+    /// 상세 패널이 시간표 오른쪽에 서는 폭으로 창을 넓힌다. (#988)
+    ///
+    /// 세션을 다루는 동선(수정·삭제·완료·채팅)이 전부 그 패널에 있어서, 좁은
+    /// 화면에서는 스크롤 대상이 시간표와 패널 둘로 갈린다.
+    void useWideConsole(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1440, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
+
     Future<void> openSchedule(WidgetTester tester) async {
+      useWideConsole(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -409,23 +421,69 @@ void main() {
       );
     }
 
-    testWidgets('renders header, week strip, and the timeline', (tester) async {
+    /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
+    Future<void> openSession(WidgetTester tester, String name) async {
+      final block = find
+          .descendant(
+            of: find.byType(ScheduleWeekTimetable),
+            matching: find.text(name),
+          )
+          .first;
+      await tester.ensureVisible(block);
+      await tester.pump();
+      await tester.tap(block);
+      await settle(tester);
+    }
+
+    /// 상세 패널 안에서 [finder] 가 보일 때까지 스크롤한다.
+    Future<void> revealInPanel(WidgetTester tester, Finder finder) async {
+      await tester.scrollUntilVisible(
+        finder,
+        120,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('week-detail')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pump();
+    }
+
+    /// 이번 주 안에서 오늘이 아닌 날 — 시드가 오늘만 채우므로 빈 날이다.
+    DateTime otherDayThisWeek() {
+      final today = todayKst();
+      final monday = today.subtract(Duration(days: today.weekday - 1));
+      return monday == today ? monday.add(const Duration(days: 1)) : monday;
+    }
+
+    testWidgets('주간 시간표에 시간축·격자·세션 블록이 함께 그려진다 (#988)', (tester) async {
       await openSchedule(tester);
 
       expect(find.text('스케줄'), findsWidgets);
-      expect(find.text('김민수'), findsOneWidget);
-      expect(find.text('이지수'), findsOneWidget);
+      expect(find.byType(ScheduleWeekTimetable), findsOneWidget);
+
+      // 왼쪽 시간축 — 일정이 없는 시간대도 눈금으로 남는다. 이것이 없던 때에는
+      // 10시 세션과 17시 세션이 세로로 붙어 그 사이가 비었다는 사실이 화면에
+      // 없었다.
+      expect(find.text('07:00'), findsOneWidget);
+      expect(find.text('13:00'), findsOneWidget);
+      expect(find.text('21:00'), findsOneWidget);
+
+      // 블록은 시간 범위와 종류를 함께 말한다.
+      expect(find.text('10:00\u201311:00'), findsWidgets);
+      expect(find.text('17:00\u201317:30'), findsOneWidget);
+      expect(find.text('김민수'), findsWidgets);
+      expect(find.text('이지수'), findsWidgets);
+      expect(find.text('박성호'), findsWidgets);
       expect(find.text('1:1 PT · 60분'), findsWidgets);
-      // Two of the day's sessions are already 완료 — the status word on
-      // the row, not the action chip.
-      expect(find.text('완료'), findsNWidgets(2));
-      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
-      expect(find.text('박성호'), findsOneWidget);
-      expect(find.text('상담 · 30분'), findsOneWidget);
-      // Lazy list: off-screen rows are disposed, so assert presence
-      // rather than an exact count.
-      expect(find.text('빈 시간'), findsWidgets);
-      expect(find.text('예정'), findsWidgets);
+      expect(find.text('상담 · 30분'), findsWidgets);
+
+      // 로스터에 없는 상담 고객은 이름 뒤에 신규 표가 붙는다.
+      expect(find.text('윤가온(신규)'), findsWidgets);
+
+      // 고른 날의 첫 세션이 상세 패널에 열려 있다.
+      expect(find.byKey(const Key('week-detail')), findsOneWidget);
     });
 
     // 좁은 화면에서도 누르면 세부 프로그램이 떠야 한다. 예전에는 패널을
@@ -439,14 +497,21 @@ void main() {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
-        at: AppRoutes.scheduleView('week', date: ymd(todayKst())),
+        at: AppRoutes.scheduleAt(date: ymd(todayKst())),
       );
 
       // 넓은 화면에서 쓰는 패널과 같은 위젯이 그리드 아래에 쌓인다.
       expect(find.byKey(const Key('week-detail')), findsOneWidget);
 
       // 세션을 고르면 그 세션의 프로그램이 패널에 실린다.
-      await tester.tap(find.text('김민수').first);
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(ScheduleWeekTimetable),
+              matching: find.text('김민수'),
+            )
+            .first,
+      );
       await settle(tester);
       expect(
         find.descendant(
@@ -464,22 +529,32 @@ void main() {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
-        at: AppRoutes.scheduleView('week', date: ymd(today)),
+        at: AppRoutes.scheduleAt(date: ymd(today)),
       );
 
-      await tester.tap(find.text('김민수').first);
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(ScheduleWeekTimetable),
+              matching: find.text('김민수'),
+            )
+            .first,
+      );
       await settle(tester);
       await goTo(
         tester,
-        AppRoutes.scheduleView(
-          'week',
-          date: ymd(today.add(const Duration(days: 1))),
-        ),
+        AppRoutes.scheduleAt(date: ymd(today.add(const Duration(days: 1)))),
       );
 
-      // The old selected card still appears once in the week's grid, but it
-      // must not be duplicated in the detail panel for tomorrow.
-      expect(find.text('김민수'), findsOneWidget);
+      // 어제 고른 세션이 내일의 상세 패널에 남아 있으면 안 된다. 블록은 같은
+      // 주에 있는 동안 그대로 있어도 된다 — 그 자리가 그 세션의 자리다.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('김민수'),
+        ),
+        findsNothing,
+      );
     });
 
     // 진입점은 헤더 액션이고, 대기 건수는 빨간 배지로 뜬다(#882).
@@ -653,11 +728,13 @@ void main() {
     testWidgets('완료 세션의 프로그램을 회원에게 보내고 그 사실이 남는다 (#822)', (tester) async {
       // 펼친 완료 카드와 그 아래 전송 버튼이 한 화면에 들어와야 탭이 닿는다.
       await withWideSurface(tester, () async {
-        await openSchedule(tester);
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.schedule,
+        );
 
-        // Expand 김민수 (완료).
-        await tester.tap(find.text('김민수'));
-        await tester.pump();
+        await openSession(tester, '김민수');
         expect(find.text('레그프레스'), findsOneWidget);
         expect(find.text('카프레이즈'), findsOneWidget);
         expect(find.text('트레이너 메모'), findsOneWidget);
@@ -691,13 +768,9 @@ void main() {
         'actions', (tester) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호');
 
-      await tester.scrollUntilVisible(find.text('일정 수정'), 120);
+      await revealInPanel(tester, find.text('일정 수정'));
       expect(find.text('벤치프레스'), findsOneWidget); // planned program
       expect(find.text('일정 수정'), findsOneWidget);
       expect(find.text('프로그램 수정'), findsOneWidget);
@@ -713,13 +786,9 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
-      await tester.ensureVisible(find.text('신규 고객'));
-      await tester.pump();
-      await tester.tap(find.text('신규 고객'));
-      await tester.pump();
+      await openSession(tester, '윤가온(신규)');
 
-      await tester.scrollUntilVisible(find.text('아직 계획된 프로그램이 없어요'), 120);
+      await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
     });
 
@@ -738,7 +807,8 @@ void main() {
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      expect(find.text('10:15'), findsOneWidget);
+      // 시간표 블록이 시작·끝을 함께 말한다(기본 60분).
+      expect(find.text('10:15\u201311:15'), findsOneWidget);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -746,15 +816,9 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호');
 
-      await tester.scrollUntilVisible(find.text('일정 수정'), 120);
-      await tester.ensureVisible(find.text('일정 수정'));
-      await tester.pump();
+      await revealInPanel(tester, find.text('일정 수정'));
       await tester.tap(find.text('일정 수정'));
       await settle(tester);
 
@@ -762,7 +826,7 @@ void main() {
       // trainer memo editing have their own separate action.
       expect(
         find.byKey(
-          const ValueKey<String>('inline-session-editor-seed-schedule-3'),
+          const ValueKey<String>('week-session-editor-seed-schedule-3'),
         ),
         findsOneWidget,
       );
@@ -781,8 +845,8 @@ void main() {
       await tester.tap(find.text('저장하기'));
       await settle(tester);
 
-      expect(find.text('15:30'), findsOneWidget);
-      expect(find.text('15:00'), findsNothing);
+      expect(find.text('15:30\u201316:30'), findsOneWidget);
+      expect(find.text('15:00\u201316:00'), findsNothing);
     });
 
     testWidgets('프로그램 수정 edits exercises and memo inside the card', (
@@ -790,27 +854,21 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호');
 
-      await tester.scrollUntilVisible(find.text('프로그램 수정'), 120);
-      await tester.ensureVisible(find.text('프로그램 수정'));
-      await tester.pump();
+      await revealInPanel(tester, find.text('프로그램 수정'));
       await tester.tap(find.text('프로그램 수정'));
       await settle(tester);
 
       expect(
         find.byKey(
-          const ValueKey<String>('inline-program-editor-seed-schedule-3'),
+          const ValueKey<String>('week-program-editor-seed-schedule-3'),
         ),
         findsOneWidget,
       );
       expect(
         find.byKey(
-          const ValueKey<String>('inline-session-editor-seed-schedule-3'),
+          const ValueKey<String>('week-session-editor-seed-schedule-3'),
         ),
         findsNothing,
       );
@@ -838,11 +896,11 @@ void main() {
 
       expect(
         find.byKey(
-          const ValueKey<String>('inline-program-editor-seed-schedule-3'),
+          const ValueKey<String>('week-program-editor-seed-schedule-3'),
         ),
         findsNothing,
       );
-      expect(find.text('15:00'), findsOneWidget);
+      expect(find.text('15:00\u201316:00'), findsOneWidget);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트 × 8회'), findsOneWidget);
       expect(find.text('견갑 고정 확인'), findsOneWidget);
@@ -851,22 +909,16 @@ void main() {
     testWidgets('삭제 removes the session after confirmation', (tester) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
-      await tester.ensureVisible(find.text('신규 고객'));
-      await tester.pump();
-      await tester.tap(find.text('신규 고객'));
-      await tester.pump();
+      await openSession(tester, '윤가온(신규)');
 
-      await tester.scrollUntilVisible(find.text('삭제'), 120);
-      await tester.ensureVisible(find.text('삭제'));
-      await tester.pump();
+      await revealInPanel(tester, find.text('삭제'));
       await tester.tap(find.text('삭제'));
       await settle(tester);
       // Confirm in the dialog (its action is the last 삭제 on screen).
       await tester.tap(find.text('삭제').last);
       await settle(tester);
 
-      expect(find.text('신규 고객'), findsNothing);
+      expect(find.text('윤가온(신규)'), findsNothing);
     });
 
     testWidgets('unsupported program send does not create a chat bubble', (
@@ -874,12 +926,8 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.tap(find.text('김민수'));
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.textContaining('오늘 PT 프로그램 전송'),
-        150,
-      );
+      await openSession(tester, '김민수');
+      await revealInPanel(tester, find.textContaining('오늘 PT 프로그램 전송'));
       // There is no delivery endpoint, so merely rendering the disabled
       // action must not manufacture a trainer-authored chat event.
       await goTo(
@@ -894,20 +942,12 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호');
 
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey<String>('session-complete-chip')),
-        120,
-      );
-      await tester.ensureVisible(
+      await revealInPanel(
+        tester,
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      await tester.pump();
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
@@ -954,18 +994,17 @@ void main() {
     testWidgets('a future session offers no 완료 action', (tester) async {
       await openSchedule(tester);
 
-      // Browse to tomorrow and book a session there.
+      // Browse to tomorrow and book a session there. 주가 월~일 로 고정이라
+      // 내일이 다음 주일 수도 있다 — 날짜는 URL 로 지정한다(#988).
       final tomorrow = nowKst().add(const Duration(days: 1));
-      await tester.tap(find.text('${tomorrow.day}').first);
-      await settle(tester);
+      await goTo(tester, AppRoutes.scheduleAt(date: ymd(tomorrow)));
       await tester.tap(find.text('새 일정'));
       await settle(tester);
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      // Expand the freshly booked 예정 card.
-      await tester.tap(find.text('김민수'));
-      await tester.pump();
+      // 갓 만든 예정 세션을 상세 패널에 연다.
+      await openSession(tester, '김민수');
 
       // Manage actions are there, but 완료 is not — the class is in the
       // future (review PR 245).
@@ -981,121 +1020,128 @@ void main() {
       );
     });
 
-    testWidgets('picking another day browses it; 오늘로 returns to today', (
-      tester,
-    ) async {
+    testWidgets('요일 칸을 누르면 그 날을 보고, 오늘 로 돌아온다', (tester) async {
       await openSchedule(tester);
-      expect(find.text('김민수'), findsOneWidget);
-      // On today, the 오늘로 shortcut is hidden.
+      expect(find.text('김민수'), findsWidgets);
+      // 오늘을 보고 있으면 `오늘` 은 눌러도 달라질 것이 없어 뜨지 않는다.
       expect(find.text('오늘'), findsNothing);
 
-      // Default window is centred on today (D-3…D+3); tap tomorrow.
-      final tomorrow = nowKst().add(const Duration(days: 1));
-      await tester.tap(find.text('${tomorrow.day}').first);
+      // 같은 주의 다른 날 — 시드는 오늘만 채우므로 비어 있다.
+      final other = otherDayThisWeek();
+      await tester.tap(
+        find.byKey(ValueKey<String>('schedule-day-${ymd(other)}')),
+      );
       await settle(tester);
 
-      // Tomorrow has no seeded sessions → empty state, and 오늘로 appears.
-      expect(find.text('김민수'), findsNothing);
+      // 그 날에는 세션이 없어 상세 패널이 비고, `오늘` 이 나타난다.
+      expect(
+        find.descendant(
+          of: find.byType(ScheduleWeekTimetable),
+          matching: find.text('김민수'),
+        ),
+        findsWidgets,
+        reason: '같은 주라 오늘의 블록은 그대로 있다',
+      );
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsOneWidget);
       expect(find.text('오늘'), findsOneWidget);
 
-      // Book a session on the browsed day; the empty state clears.
+      // 그 날에 일정을 만들면 빈 안내가 사라진다.
       await tester.tap(find.text('새 일정'));
       await settle(tester);
       await tester.tap(find.text('추가하기'));
       await settle(tester);
-      expect(find.text('10:00'), findsOneWidget);
+      expect(find.text('10:00\u201311:00'), findsWidgets);
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsNothing);
 
-      // 오늘로 → today's seeded timeline is intact and the button hides.
+      // 오늘 → 오늘의 세션이 다시 패널에 실리고 버튼은 숨는다.
       await tester.tap(find.text('오늘'));
       await settle(tester);
-      expect(find.text('김민수'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('김민수'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('오늘'), findsNothing);
     });
 
-    // 오늘·일|주 는 날짜 행 오른쪽에 붙고, 오른쪽 끝이 요일 칸 그리드의
-    // 오른쪽 끝과 맞아야 한다(#882).
-    testWidgets('일·주 전환은 날짜 행 오른쪽에서 그리드 끝에 맞는다', (tester) async {
-      tester.view.physicalSize = const Size(1600, 900);
+    testWidgets('보이는 주는 월요일에서 시작해 일요일에서 끝난다 (#988)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await openSchedule(tester);
-
-      // schedule-day-* 키는 nowKst() 로 만들어진다 — 같은 기준을 쓴다.
-      final lastCell = find.byKey(
-        ValueKey<String>(
-          'schedule-day-${ymd(todayKst().add(const Duration(days: 3)))}',
-        ),
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.schedule,
       );
-      final switcher = find.byType(SegmentedSwitch);
 
-      expect(lastCell, findsOneWidget);
-      expect(switcher, findsOneWidget);
-      // 두 오른쪽 끝이 같은 pagePadding 을 쓰므로 1px 안에서 맞는다.
+      final today = todayKst();
+      final monday = today.subtract(Duration(days: today.weekday - 1));
+      final sunday = monday.add(const Duration(days: 6));
+
+      final first = find.byKey(ValueKey<String>('schedule-day-${ymd(monday)}'));
+      final last = find.byKey(ValueKey<String>('schedule-day-${ymd(sunday)}'));
+      expect(first, findsOneWidget);
+      expect(last, findsOneWidget);
+      // 월요일 앞과 일요일 뒤는 없다 — 창이 `오늘 − 3일` 로 떠다니지 않는다.
       expect(
-        (tester.getBottomRight(switcher).dx -
-                tester.getBottomRight(lastCell).dx)
-            .abs(),
-        lessThanOrEqualTo(1.0),
-      );
-    });
-
-    testWidgets('요일 칸은 폭 전체를 나눠 쓴다', (tester) async {
-      // 460px 상한으로 좁혀 둔 적이 있는데, 넓은 콘솔에서 오른쪽이 통째로
-      // 비어 날짜를 좁힐 이유가 없었다(#859 → #882).
-      tester.view.physicalSize = const Size(1600, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await openSchedule(tester);
-
-      final anchor = todayKst().subtract(const Duration(days: 3));
-      final first = find.byKey(ValueKey<String>('schedule-day-${ymd(anchor)}'));
-      final last = find.byKey(
-        ValueKey<String>(
-          'schedule-day-${ymd(anchor.add(const Duration(days: 6)))}',
+        find.byKey(
+          ValueKey<String>(
+            'schedule-day-${ymd(monday.subtract(const Duration(days: 1)))}',
+          ),
         ),
+        findsNothing,
       );
 
-      final spanned =
-          tester.getBottomRight(last).dx - tester.getTopLeft(first).dx;
-      expect(spanned, greaterThan(900), reason: '폭 상한이 다시 생기면 여기서 걸린다');
+      // 일곱 칸이 폭을 고르게 나눠 쓴다.
+      final firstBox = tester.getRect(first);
+      final lastBox = tester.getRect(last);
+      expect((firstBox.width - lastBox.width).abs(), lessThanOrEqualTo(1.0));
+      expect(
+        lastBox.right - firstBox.left,
+        greaterThan(600),
+        reason: '폭 상한이 다시 생기면 여기서 걸린다',
+      );
     });
 
-    testWidgets('the week strip fits a narrow column without overflowing', (
-      tester,
-    ) async {
-      // A narrow viewport is where the fixed-width cells used to overflow
-      // by ~4px; flexible cells must fit any width.
+    testWidgets('시간표가 좁은 폭에서도 넘치지 않는다', (tester) async {
+      // 가장 좁은 지원 폭. 고정 폭 칸을 쓰던 때에는 여기서 4px 씩 넘쳤다.
       tester.view.physicalSize = const Size(360, 720);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await openSchedule(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.schedule,
+      );
 
-      // The chevrons render and no RenderFlex overflow was thrown.
       expect(find.byIcon(Icons.chevron_left), findsOneWidget);
       expect(find.byIcon(Icons.chevron_right), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('the chevron scrubs the visible week without moving the '
-        'selection', (tester) async {
+    testWidgets('화살표는 주와 함께 보고 있는 날을 옮긴다 (#988)', (tester) async {
       await openSchedule(tester);
-      expect(find.text('김민수'), findsOneWidget); // today selected
+      expect(find.text('김민수'), findsWidgets);
+      expect(find.text('오늘'), findsNothing);
 
-      // Shifting the window a week forward keeps today selected, so the
-      // timeline still shows today's sessions.
+      // 다음 주에는 시드가 없다 — 시간표가 통째로 비고 `오늘` 이 나타난다.
       await tester.tap(find.byIcon(Icons.chevron_right));
       await settle(tester);
-      expect(find.text('김민수'), findsOneWidget);
-      // Today is now off the visible window, so 오늘로 is offered.
+      expect(find.text('김민수'), findsNothing);
+      expect(find.text('이번 주에는 일정이 없어요.'), findsOneWidget);
       expect(find.text('오늘'), findsOneWidget);
+
+      // 되돌아오면 오늘이 다시 선택된 주다.
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await settle(tester);
+      expect(find.text('김민수'), findsWidgets);
+      expect(find.text('오늘'), findsNothing);
     });
 
     testWidgets('채팅 chip jumps to the standalone message thread', (
@@ -1103,20 +1149,12 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호');
 
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey<String>('session-chat-chip')),
-        120,
-      );
-      await tester.ensureVisible(
+      await revealInPanel(
+        tester,
         find.byKey(const ValueKey<String>('session-chat-chip')),
       );
-      await tester.pump();
       await tester.tap(find.byKey(const ValueKey<String>('session-chat-chip')));
       await settle(tester);
 
@@ -1128,29 +1166,34 @@ void main() {
       );
       // The thread auto-scrolls to the newest message; drag back up so
       // the lazily-built banner at the top of the thread exists.
-      await tester.drag(find.byType(ListView), const Offset(0, 600));
+      await tester.drag(
+        find
+            .descendant(
+              of: find.byKey(
+                const ValueKey<String>('messages-thread-seed-client-3'),
+              ),
+              matching: find.byType(ListView),
+            )
+            .first,
+        const Offset(0, 600),
+      );
       await tester.pump();
       expect(find.textContaining('AI가 박성호님의'), findsOneWidget);
     });
 
     testWidgets('editing a session whose client is not in the roster keeps '
         'its own values on a no-op save', (tester) async {
+      useWideConsole(tester);
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
       );
       await goTo(tester, AppRoutes.schedule);
 
-      // 신규 고객 (상담, 30분) is booked but is NOT a registered client.
-      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
-      await tester.ensureVisible(find.text('신규 고객'));
-      await tester.pump();
-      await tester.tap(find.text('신규 고객'));
-      await tester.pump();
+      // 윤가온 (상담, 30분) is booked but is NOT a registered client.
+      await openSession(tester, '윤가온(신규)');
 
-      await tester.scrollUntilVisible(find.text('일정 수정'), 120);
-      await tester.ensureVisible(find.text('일정 수정'));
-      await tester.pump();
+      await revealInPanel(tester, find.text('일정 수정'));
       await tester.tap(find.text('일정 수정'));
       await settle(tester);
 
@@ -1177,7 +1220,7 @@ void main() {
         duration = consult.durationMinutes;
       });
 
-      expect(clientName, '신규 고객'); // not reassigned to 김민수
+      expect(clientName, '윤가온'); // not reassigned to 김민수
       expect(type, '상담');
       expect(duration, 30);
     });
@@ -1185,6 +1228,7 @@ void main() {
     testWidgets('unsupported program action does not call chat repository', (
       tester,
     ) async {
+      useWideConsole(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -1196,12 +1240,8 @@ void main() {
       );
       await goTo(tester, AppRoutes.schedule);
 
-      await tester.tap(find.text('김민수')); // 완료 session with a program
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.textContaining('오늘 PT 프로그램 전송'),
-        150,
-      );
+      await openSession(tester, '김민수'); // 완료 session with a program
+      await revealInPanel(tester, find.textContaining('오늘 PT 프로그램 전송'));
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
       expect(find.text('김민수님에게 전송됨'), findsNothing);
     });
@@ -1209,6 +1249,7 @@ void main() {
     testWidgets('a failed save shows a snackbar and keeps the sheet open', (
       tester,
     ) async {
+      useWideConsole(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -1234,6 +1275,7 @@ void main() {
     testWidgets('a failed completion keeps the session 예정 and shows an error', (
       tester,
     ) async {
+      useWideConsole(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -1246,20 +1288,12 @@ void main() {
       );
       await goTo(tester, AppRoutes.schedule);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120); // 예정 session
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호'); // 예정 session
 
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey<String>('session-complete-chip')),
-        120,
-      );
-      await tester.ensureVisible(
+      await revealInPanel(
+        tester,
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      await tester.pump();
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
@@ -1274,6 +1308,7 @@ void main() {
     });
 
     testWidgets('a failed delete shows a snackbar', (tester) async {
+      useWideConsole(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -1286,15 +1321,9 @@ void main() {
       );
       await goTo(tester, AppRoutes.schedule);
 
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await tester.pump();
+      await openSession(tester, '박성호');
 
-      await tester.scrollUntilVisible(find.text('삭제'), 120);
-      await tester.ensureVisible(find.text('삭제'));
-      await tester.pump();
+      await revealInPanel(tester, find.text('삭제'));
       await tester.tap(find.text('삭제'));
       await settle(tester);
       await tester.tap(find.text('삭제').last); // confirm in dialog

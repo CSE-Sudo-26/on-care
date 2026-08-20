@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
@@ -144,6 +145,11 @@ void main() {
 
   group('스케줄 화면', () {
     Future<void> openSchedule(WidgetTester tester) async {
+      // 세션을 다루는 동선은 시간표 오른쪽 상세 패널에 있다(#988).
+      tester.view.physicalSize = const Size(1440, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -151,19 +157,38 @@ void main() {
       );
     }
 
+    /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
     Future<void> openSession(WidgetTester tester, String name) async {
-      await tester.scrollUntilVisible(find.text(name), 120);
-      await tester.ensureVisible(find.text(name));
+      final block = find
+          .descendant(
+            of: find.byType(ScheduleWeekTimetable),
+            matching: find.text(name),
+          )
+          .first;
+      await tester.ensureVisible(block);
       await tester.pump();
-      await tester.tap(find.text(name));
+      await tester.tap(block);
+      await settle(tester);
+    }
+
+    /// 상세 패널 안에서 [finder] 가 보일 때까지 스크롤한다.
+    Future<void> revealInPanel(WidgetTester tester, Finder finder) async {
+      await tester.scrollUntilVisible(
+        finder,
+        120,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('week-detail')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.pump();
     }
 
     Future<void> tapChip(WidgetTester tester, String key) async {
       final chip = find.byKey(ValueKey<String>(key));
-      await tester.scrollUntilVisible(chip, 120);
-      await tester.ensureVisible(chip);
-      await tester.pump();
+      await revealInPanel(tester, chip);
       await tester.tap(chip);
       await settle(tester);
     }
@@ -179,7 +204,9 @@ void main() {
       );
       expect(tester.widget<ActionButton>(confirm).onPressed, isNull);
 
-      await tester.tap(find.byKey(const ValueKey<String>('cancel-source-member')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('cancel-source-member')),
+      );
       await settle(tester);
       expect(tester.widget<ActionButton>(confirm).onPressed, isNotNull);
     });
@@ -189,17 +216,21 @@ void main() {
       await openSession(tester, '박성호');
       await tapChip(tester, 'session-cancel-chip');
 
-      await tester.tap(find.byKey(const ValueKey<String>('cancel-source-member')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('cancel-source-member')),
+      );
       await settle(tester);
       await tester.enterText(
         find.byKey(const ValueKey<String>('cancel-reason-input')),
         '고객 출장',
       );
-      await tester.tap(find.byKey(const ValueKey<String>('session-cancel-confirm')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-cancel-confirm')),
+      );
       await settle(tester);
 
       // 삭제가 아니다 — 그 자리에 남아 취소로 보인다.
-      expect(find.text('박성호'), findsOneWidget);
+      expect(find.text('박성호'), findsWidgets);
       expect(find.text('취소'), findsWidgets);
       // 데모도 주체·시각을 저장하므로 기록 줄이 그대로 뜬다(#906).
       expect(find.textContaining('고객 취소'), findsOneWidget);
@@ -225,7 +256,7 @@ void main() {
       );
       await settle(tester);
 
-      expect(find.text('박성호'), findsOneWidget);
+      expect(find.text('박성호'), findsWidgets);
       expect(find.text('노쇼'), findsWidgets);
       expect(
         find.byKey(const ValueKey<String>('session-no-show-chip')),
@@ -237,17 +268,12 @@ void main() {
       await openSchedule(tester);
       await openSession(tester, '박성호');
       final delete = find.text('삭제');
-      await tester.scrollUntilVisible(delete.first, 120);
-      await tester.ensureVisible(delete.first);
-      await tester.pump();
+      await revealInPanel(tester, delete.first);
       await tester.tap(delete.first);
       await settle(tester);
 
       // 잘못 만든 일정과 진행되지 않은 PT 를 가르는 문장이다(#871).
-      expect(
-        find.textContaining('취소·노쇼로 남기세요'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('취소·노쇼로 남기세요'), findsOneWidget);
     });
   });
 }

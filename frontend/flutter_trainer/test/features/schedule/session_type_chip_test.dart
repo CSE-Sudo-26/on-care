@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/session_chips.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -28,8 +30,44 @@ void main() {
 
   Finder chip() => find.byKey(const ValueKey<String>('session-type-chip'));
 
+  /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다. 카드는 한 번에 하나만
+  /// 열리므로, 완료와 예정을 견주려면 하나씩 골라야 한다(#988).
+  Future<void> openSession(WidgetTester tester, String name) async {
+    final Finder block = find
+        .descendant(
+          of: find.byType(ScheduleWeekTimetable),
+          matching: find.text(name),
+        )
+        .first;
+    await tester.ensureVisible(block);
+    await tester.pump();
+    await tester.tap(block);
+    await tester.pumpAndSettle();
+  }
+
+  /// 열려 있는 카드의 알약 글자 스타일.
+  TextStyle chipStyle(WidgetTester tester) => tester
+      .widget<Text>(
+        find.descendant(of: chip().first, matching: find.byType(Text)).first,
+      )
+      .style!;
+
+  /// 열려 있는 카드의 상태 칩 문구.
+  String cardStatus(WidgetTester tester) => tester
+      .widget<Text>(
+        find
+            .descendant(
+              of: find.byType(SessionStatusChip),
+              matching: find.byType(Text),
+            )
+            .first,
+      )
+      .data!;
+
   testWidgets('세션 종류·소요 시간이 카드 오른쪽 알약으로 보인다', (tester) async {
     await openSchedule(tester);
+
+    await openSession(tester, '김민수');
 
     expect(chip(), findsWidgets);
     final Finder first = chip().first;
@@ -39,7 +77,12 @@ void main() {
     );
 
     // 이름·목표가 있는 왼쪽 열이 아니라, 그 오른쪽에 선다.
-    final Finder name = find.text('김민수').first;
+    final Finder name = find
+        .descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('김민수'),
+        )
+        .first;
     expect(
       tester.getRect(first).left,
       greaterThan(tester.getRect(name).right),
@@ -47,55 +90,27 @@ void main() {
     );
   });
 
-  /// 알약 하나의 글자 스타일. 같은 카드의 상태 칩으로 완료 여부를 가른다.
-  ({TextStyle style, bool done}) chipAt(WidgetTester tester, Element e) {
-    final Text label = tester.widget<Text>(
-      find
-          .descendant(of: find.byWidget(e.widget), matching: find.byType(Text))
-          .first,
-    );
-    // 같은 카드 안의 상태 칩이 `완료` 라고 적혀 있으면 끝난 세션이다.
-    final Finder card = find
-        .ancestor(of: find.byWidget(e.widget), matching: find.byType(Container))
-        .last;
-    final bool done = find
-        .descendant(of: card, matching: find.text('완료'))
-        .evaluate()
-        .isNotEmpty;
-    return (style: label.style!, done: done);
-  }
-
   testWidgets('알약 글자는 목표 줄보다 뚜렷하고, 완료 세션만 물러난다', (tester) async {
     await openSchedule(tester);
 
-    final List<({TextStyle style, bool done})> chips =
-        <({TextStyle style, bool done})>[
-          for (final Element e in chip().evaluate()) chipAt(tester, e),
-        ];
-    expect(chips, isNotEmpty);
+    // 시드에는 완료와 예정이 둘 다 있다 — 하나만 확인하면 다른 쪽 규칙이
+    // 깨져도 통과한다.
+    await openSession(tester, '김민수');
+    final TextStyle finished = chipStyle(tester);
+    expect(cardStatus(tester), '완료');
+
+    await openSession(tester, '박성호');
+    final TextStyle upcoming = chipStyle(tester);
+    expect(cardStatus(tester), '예정');
 
     // 목표 줄은 11.5px · w500 · subtleForeground 다. 같은 무게로 두면 옮겨도
     // 여전히 부가 정보로 읽힌다.
-    for (final ({TextStyle style, bool done}) c in chips) {
-      expect(c.style.fontWeight, FontWeight.w800);
-    }
+    expect(finished.fontWeight, FontWeight.w800);
+    expect(upcoming.fontWeight, FontWeight.w800);
 
-    // 예정 세션은 브랜드 남색, 끝난 세션은 상태 칩과 함께 물러난다. 시드에는
-    // 둘 다 있다 — 하나만 확인하면 다른 쪽 규칙이 깨져도 통과한다.
-    final Iterable<({TextStyle style, bool done})> upcoming = chips.where(
-      (({TextStyle style, bool done}) c) => !c.done,
-    );
-    final Iterable<({TextStyle style, bool done})> finished = chips.where(
-      (({TextStyle style, bool done}) c) => c.done,
-    );
-    expect(upcoming, isNotEmpty);
-    expect(finished, isNotEmpty, reason: '시드에 완료 세션이 있어야 이 단언이 뜻을 갖는다');
-    for (final ({TextStyle style, bool done}) c in upcoming) {
-      expect(c.style.color, AppColors.primary);
-    }
-    for (final ({TextStyle style, bool done}) c in finished) {
-      expect(c.style.color, AppColors.disabledForeground);
-    }
+    // 예정 세션은 브랜드 남색, 끝난 세션은 상태 칩과 함께 물러난다.
+    expect(upcoming.color, AppColors.primary);
+    expect(finished.color, AppColors.disabledForeground);
   });
 
   testWidgets('가장 좁은 지원 조합에서 알약이 카드 안에 들어온다', (tester) async {
@@ -139,7 +154,7 @@ void main() {
 
     // 이름과 상태는 잘리면 안 되는 값이라 그대로 남는다.
     expect(find.text('김민수'), findsWidgets);
-    expect(find.text('예정'), findsWidgets);
+    expect(find.text('완료'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }
