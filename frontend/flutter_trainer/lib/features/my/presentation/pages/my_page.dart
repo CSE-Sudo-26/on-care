@@ -479,6 +479,31 @@ class _MyPageState extends ConsumerState<MyPage> {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        // 약관은 계정 카드보다 위에 둔다 — 로그아웃·탈퇴 옆에 붙이면 읽는
+        // 문서가 되돌릴 수 없는 동작과 같은 무게로 보인다. (#968)
+        SectionCard(
+          title: l.myLegal,
+          icon: Icons.gavel_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _LegalRow(
+                icon: Icons.description_outlined,
+                label: l.myLegalTermsTitle,
+                hint: l.myLegalTermsHint,
+                document: AppRoutes.legalTerms,
+              ),
+              const Divider(height: 1, color: AppColors.borderStrong),
+              _LegalRow(
+                icon: Icons.privacy_tip_outlined,
+                label: l.myLegalPrivacyTitle,
+                hint: l.myLegalPrivacyHint,
+                document: AppRoutes.legalPrivacy,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
         SectionCard(
           title: l.myAccount,
           icon: Icons.lock_outline,
@@ -581,6 +606,66 @@ class _MyPageState extends ConsumerState<MyPage> {
         context,
       ).showSnackBar(SnackBar(content: Text(l.myPasswordChanged)));
     }
+  }
+}
+
+/// 약관·개인정보 처리방침 한 줄. 문서는 셸 밖의 `/legal/<문서>` 라우트가
+/// 그리므로 push 로 열고, 뒤로 누르면 이 화면으로 돌아온다. (#968)
+class _LegalRow extends StatelessWidget {
+  const _LegalRow({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.document,
+  });
+
+  final IconData icon;
+  final String label;
+  final String hint;
+  final String document;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => context.push(AppRoutes.legalDocument(document)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Row(
+          children: <Widget>[
+            Icon(icon, size: 18, color: AppColors.mutedForeground),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  Text(
+                    hint,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.disabledForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.disabledForeground,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1340,7 +1425,10 @@ class _GymChoiceField extends StatelessWidget {
             loading: () => const LinearProgressIndicator(minHeight: 2),
             error: (_, _) => Text(
               l.myGymListFailed,
-              style: const TextStyle(color: AppColors.destructive, fontSize: 12),
+              style: const TextStyle(
+                color: AppColors.destructive,
+                fontSize: 12,
+              ),
             ),
             data: (items) {
               final currentId = selectedGymId;

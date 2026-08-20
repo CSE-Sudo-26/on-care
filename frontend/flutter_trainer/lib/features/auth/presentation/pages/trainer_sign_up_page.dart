@@ -238,6 +238,30 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                         onTap: _register,
                       ),
                       const SizedBox(height: AppSpacing.sm),
+                      // 동의 대상 문서는 동의하기 전에 열 수 있어야 한다 —
+                      // 두 문서 모두 세션 없이 열리는 라우트다. (#968)
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          Text(
+                            l.authLegalNotice,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          _LegalLink(
+                            label: l.myLegalTermsTitle,
+                            document: AppRoutes.legalTerms,
+                          ),
+                          _LegalLink(
+                            label: l.myLegalPrivacyTitle,
+                            document: AppRoutes.legalPrivacy,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
                       // Row 가 아니라 Wrap — 영어 문구가 길어 좁은 폭에서
                       // 넘친다(로그인 화면과 같은 이유). (#501)
                       Wrap(
@@ -265,6 +289,34 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 가입 화면의 약관 링크. 화면을 갈아치우지 않고 push 로 열어, 뒤로 누르면
+/// 입력하던 값이 그대로 남아 있게 한다. (#968)
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({required this.label, required this.document});
+
+  final String label;
+  final String document;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () => context.push(AppRoutes.legalDocument(document)),
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          decoration: TextDecoration.underline,
+        ),
+      ),
+      child: Text(label),
     );
   }
 }
