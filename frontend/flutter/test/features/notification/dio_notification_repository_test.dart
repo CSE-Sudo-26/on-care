@@ -79,7 +79,7 @@ void main() {
     });
   });
 
-  group('fetchAll', () {
+  group('fetchPage', () {
     test('서버가 준 action 을 이동 경로로 옮긴다', () async {
       final repo = DioNotificationRepository(
         _dio(<Object?>[
@@ -98,7 +98,7 @@ void main() {
         ]),
       );
 
-      final AlertItem item = (await repo.fetchAll()).single;
+      final AlertItem item = (await repo.fetchPage()).single;
       expect(item.action?.label, '기록하러 가기');
       expect(item.action?.target, AlertTarget.dashboard);
       expect(item.action?.isNavigable, isTrue);
@@ -122,7 +122,7 @@ void main() {
         ]),
       );
 
-      final AlertItem item = (await repo.fetchAll()).single;
+      final AlertItem item = (await repo.fetchPage()).single;
       // 안 보이는 알림보다 갈 곳 없는 알림이 낫다(트레이너 웹과 같은 규칙).
       expect(item.action?.target, AlertTarget.unknown);
       expect(item.action?.isNavigable, isFalse);
@@ -164,7 +164,7 @@ void main() {
         ]),
       );
 
-      final List<AlertItem> items = await repo.fetchAll();
+      final List<AlertItem> items = await repo.fetchPage();
       expect(items, hasLength(3));
       // 깨진 것은 action 만 잃고, 알림 자체는 목록에 남는다.
       expect(items[0].action, isNull);
@@ -186,7 +186,7 @@ void main() {
         ]),
       );
 
-      final AlertItem item = (await repo.fetchAll()).single;
+      final AlertItem item = (await repo.fetchPage()).single;
       expect(item.action, isNull);
       expect(item.read, isTrue);
     });

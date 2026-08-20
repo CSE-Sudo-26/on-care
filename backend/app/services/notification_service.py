@@ -11,11 +11,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import (
     MemberNotificationSetting,
     Notification,
@@ -263,3 +264,73 @@ def queue_for_trainer(
     )
     db.add(notification)
     return notification
+
+
+# --------------------------------------------------------------------------
+# 보존 기간 (#965)
+# --------------------------------------------------------------------------
+#: 읽은 알림을 남겨 두는 기간(일).
+#:
+#: 알림은 식단·운동·일정 훅에서 계속 만들어지는데 지우는 경로가 없었다. 오래 쓴
+#: 계정일수록 알림함이 무한히 자란다.
+#:
+#: **읽은 것만 대상으로 삼는다.** 미확인 알림은 아무리 오래돼도 남긴다 — 사용자가
+#: 보지 않은 알림을 서버가 지우면 무엇이 사라졌는지 알 길이 없다. 배지 수도 그만큼
+#: 조용히 줄어든다.
+READ_RETENTION_DAYS = 90
+
+
+def retention_cutoff(
+    days: int = READ_RETENTION_DAYS, *, now: datetime | None = None
+) -> datetime:
+    """정리 기준 시각. 이보다 오래 전에 만들어진 읽은 알림이 대상이다.
+
+    [now] 는 테스트가 시간을 고정하려고 넘긴다. 기본은 서비스 기준 시각(KST).
+    """
+    if days < 1:
+        # 0 이나 음수를 허용하면 "전부 삭제" 가 된다. 실수 한 번의 대가가 너무 크다.
+        raise ValueError("보존 기간은 1일 이상이어야 합니다.")
+    base = now if now is not None else clock.now()
+    if base.tzinfo is None:
+        # DB 의 created_at 은 tz-aware 다. naive 와 비교하면 예외가 난다.
+        base = base.replace(tzinfo=timezone.utc)
+    return base - timedelta(days=days)
+
+
+def expired_notifications(
+    db: Session,
+    *,
+    days: int = READ_RETENTION_DAYS,
+    now: datetime | None = None,
+    user_id: str | None = None,
+) -> list[Notification]:
+    """정리 대상 알림(오래된 순).
+
+    지우는 일과 **고르는 일을 나눠 둔다.** 삭제는 되돌릴 수 없어서, 무엇이 지워질지
+    먼저 볼 수 있어야 한다(`scripts/purge_notifications.py` 의 dry-run 이 이 목록을
+    그대로 출력한다).
+    """
+    query = select(Notification).where(
+        Notification.read.is_(True),
+        Notification.created_at < retention_cutoff(days, now=now),
+    )
+    if user_id is not None:
+        query = query.where(Notification.user_id == user_id)
+    return list(
+        db.scalars(query.order_by(Notification.created_at, Notification.id)).all()
+    )
+
+
+def purge_expired(
+    db: Session,
+    *,
+    days: int = READ_RETENTION_DAYS,
+    now: datetime | None = None,
+    user_id: str | None = None,
+) -> int:
+    """[expired_notifications] 가 고른 것을 지우고 건수를 돌려준다."""
+    rows = expired_notifications(db, days=days, now=now, user_id=user_id)
+    for row in rows:
+        db.delete(row)
+    db.commit()
+    return len(rows)

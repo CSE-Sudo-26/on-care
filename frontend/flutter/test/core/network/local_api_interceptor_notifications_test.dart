@@ -74,4 +74,36 @@ void main() {
     expect(byId['n-1']!['read'], isFalse);
     expect(byId['n-3']!['read'], isTrue);
   });
+
+  // 로컬 모드가 상한을 무시하면 여기서만 무한 목록이 되어, 이어 받기가 도는지
+  // 개발 중에 확인할 수 없다. 실서버와 같은 계약으로 답해야 한다(#965).
+  test('limit 만큼만 돌려준다', () async {
+    final res = await dio.get<List<Object?>>(
+      '/notifications',
+      queryParameters: <String, Object?>{'limit': 2},
+    );
+
+    final list = res.data!.cast<Map<String, Object?>>();
+    expect(list.map((e) => e['id']), <String>['n-1', 'n-2']);
+  });
+
+  test('커서 뒤쪽을 이어 받는다', () async {
+    final first = await dio.get<List<Object?>>(
+      '/notifications',
+      queryParameters: <String, Object?>{'limit': 2},
+    );
+    final last = first.data!.cast<Map<String, Object?>>().last;
+
+    final next = await dio.get<List<Object?>>(
+      '/notifications',
+      queryParameters: <String, Object?>{
+        'limit': 2,
+        'before': last['created_at'],
+        'before_id': last['id'],
+      },
+    );
+
+    final list = next.data!.cast<Map<String, Object?>>();
+    expect(list.map((e) => e['id']), <String>['n-3']);
+  });
 }

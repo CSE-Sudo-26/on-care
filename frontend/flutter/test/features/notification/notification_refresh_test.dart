@@ -61,7 +61,11 @@ class _ScriptedRepo implements NotificationRepository {
   void serve(List<AlertItem> items) => _items = items;
 
   @override
-  Future<List<AlertItem>> fetchAll() async {
+  Future<List<AlertItem>> fetchPage({
+    int limit = notificationPageSize,
+    String? before,
+    String? beforeId,
+  }) async {
     fetchCalls++;
     if (gate != null) await gate!.future;
     if (fetchThrows) throw StateError('네트워크 없음');

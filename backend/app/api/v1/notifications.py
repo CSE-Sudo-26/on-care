@@ -1,7 +1,7 @@
 """
 알림 라우터 — 프론트 계약 정렬.
 
-  GET  /notifications              -> 최신순 배열 (time_ago 포함)
+  GET  /notifications              -> 최신순 배열 (time_ago 포함, 기본 50건·커서)
   POST /notifications/{id}/read    -> 읽음 처리
 
 회원 알림 수신 설정(GET/PUT /users/me/notification-settings)도 여기 둔다 — 알림을
@@ -12,8 +12,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select, update
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, RequireMember
@@ -62,11 +62,47 @@ _time_ago = notification_service.time_ago
 def list_notifications(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(50, ge=1, le=100, description="한 번에 가져올 최신 알림 수"),
+    before: str | None = Query(
+        None, description="ISO datetime 커서(다음 쪽) — 받은 마지막 알림의 created_at"
+    ),
+    before_id: str | None = Query(
+        None, description="복합 커서 tie-break — 받은 마지막 알림의 id"
+    ),
 ) -> list[NotificationOut]:
+    """내 알림(최신순, 기본 50건). 다음 쪽은 커서로 이어 받는다. (#965)
+
+    상한이 없던 시절에는 계정을 오래 쓸수록 알림 탭을 열 때마다 응답이 선형으로
+    커졌다 — 알림을 만드는 훅은 여럿인데 지우는 경로가 없었기 때문이다.
+
+    커서는 채팅 스레드와 같은 모양이다(`GET /me/coach/chat`): 받은 마지막 알림의
+    `(created_at, id)` 를 `(before, before_id)` 로 넘긴다. 같은 `created_at` 이
+    여러 건이어도 경계에서 빠지거나 겹치지 않도록 복합 커서를 쓴다 — 알림은 훅
+    하나가 여러 건을 한 트랜잭션에 넣기도 해서 동시각이 실제로 나온다.
+
+    파라미터 없이 부르면 최신 50건이다. 기존 클라이언트는 그대로 동작한다.
+    """
+    query = select(Notification).where(Notification.user_id == current_user.id)
+    if before is not None:
+        try:
+            cursor = datetime.fromisoformat(before)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="before 는 ISO datetime 이어야 합니다."
+            ) from exc
+        if cursor.tzinfo is None:
+            # 오프셋 없이 온 커서는 UTC 로 읽는다. created_at 은 UTC 로 저장되므로
+            # (`app.core.clock`), 서버 로컬 타임존에 맡기면 쪽 경계가 밀린다.
+            cursor = cursor.replace(tzinfo=timezone.utc)
+        if before_id is not None:
+            query = query.where(
+                tuple_(Notification.created_at, Notification.id) < (cursor, before_id)
+            )
+        else:
+            query = query.where(Notification.created_at < cursor)
     rows = db.scalars(
-        select(Notification)
-        .where(Notification.user_id == current_user.id)
-        .order_by(Notification.created_at.desc())
+        query.order_by(Notification.created_at.desc(), Notification.id.desc())
+        .limit(limit)
     ).all()
     return [
         NotificationOut(
