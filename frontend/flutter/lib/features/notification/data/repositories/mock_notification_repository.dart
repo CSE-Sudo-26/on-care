@@ -57,8 +57,14 @@ class MockNotificationRepository implements NotificationRepository {
 
   List<AlertItem> _items = List<AlertItem>.of(demoAlerts);
 
+  /// 데모 목록은 네 건뿐이라 쪽을 나누지 않는다 — 커서를 무시하고 늘 전부 준다.
+  /// 여기서 쪽을 흉내 내면 데모 화면이 실서버 없이 "더 보기" 를 그리게 된다.
   @override
-  Future<List<AlertItem>> fetchAll() async => List<AlertItem>.of(_items);
+  Future<List<AlertItem>> fetchPage({
+    int limit = notificationPageSize,
+    String? before,
+    String? beforeId,
+  }) async => List<AlertItem>.of(_items);
 
   @override
   Future<void> markRead(String id) async {

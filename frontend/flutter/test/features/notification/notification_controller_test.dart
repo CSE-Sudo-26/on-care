@@ -28,7 +28,7 @@ ProviderContainer _container() {
   return container;
 }
 
-/// 실모드 검증용 리포 — fetchAll 결과를 돌려주고 읽음 호출을 기록한다.
+/// 실모드 검증용 리포 — fetchPage 결과를 돌려주고 읽음 호출을 기록한다.
 class _RecordingRepo implements NotificationRepository {
   _RecordingRepo(this._items);
 
@@ -37,7 +37,11 @@ class _RecordingRepo implements NotificationRepository {
   int markAllReadCalls = 0;
 
   @override
-  Future<List<AlertItem>> fetchAll() async => _items;
+  Future<List<AlertItem>> fetchPage({
+    int limit = notificationPageSize,
+    String? before,
+    String? beforeId,
+  }) async => _items;
 
   @override
   Future<void> markRead(String id) async => markReadCalls.add(id);

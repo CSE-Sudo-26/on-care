@@ -42,15 +42,58 @@ class NotificationController extends StateNotifier<NotificationState> {
   Future<void> _loadOnce() async {
     if (mounted) state = state.copyWith(loading: true);
     try {
-      final items = await _repo.fetchAll();
+      final items = await _repo.fetchPage(limit: notificationPageSize);
       if (!mounted) return;
       // 서버가 진실원본이다. 목록을 통째로 갈아 끼우므로 중복이 남지 않는다.
-      state = NotificationState(items: items);
+      // 새로고침은 **첫 쪽으로 되돌린다** — 이어 받아 둔 과거 알림을 그대로 두면
+      // 그 사이 지워진 알림이 목록에 남는다.
+      state = NotificationState(
+        items: items,
+        hasMore: items.length >= notificationPageSize,
+      );
       onChanged?.call();
     } catch (_) {
       // 실패해도 **이미 받아 둔 목록은 지우지 않는다.** 화면이 재시도를 제안한다.
       if (!mounted) return;
       state = state.copyWith(loading: false, failedToLoad: true);
+    }
+  }
+
+  /// 과거 알림을 한 쪽 더 이어 붙인다. (#965)
+  ///
+  /// 목록 끝에 닿을 때 화면이 부른다. 이미 받는 중이거나 더 없을 때, 그리고 첫
+  /// 조회가 진행 중일 때는 아무 일도 하지 않는다 — 새로고침이 첫 쪽으로 되돌리는
+  /// 중에 뒤쪽을 붙이면 목록이 어긋난다.
+  Future<void> loadMore() async {
+    if (_allowSimulatePush) return; // 목/데모는 시드가 전부다.
+    if (!state.hasMore || state.loadingMore || _inFlight != null) return;
+    final AlertItem? last = state.items.isEmpty ? null : state.items.last;
+    if (last == null || last.createdAt.isEmpty) return;
+
+    state = state.copyWith(loadingMore: true);
+    try {
+      final page = await _repo.fetchPage(
+        limit: notificationPageSize,
+        before: last.createdAt,
+        beforeId: last.id,
+      );
+      if (!mounted) return;
+      // 커서가 겹치는 경우(같은 시각의 알림이 여러 건)에도 같은 항목이 두 번
+      // 그려지지 않게 id 로 걸러 붙인다.
+      final seen = state.items.map((AlertItem i) => i.id).toSet();
+      final fresh = page
+          .where((AlertItem i) => seen.add(i.id))
+          .toList(growable: false);
+      state = state.copyWith(
+        items: <AlertItem>[...state.items, ...fresh],
+        loadingMore: false,
+        hasMore: page.length >= notificationPageSize,
+      );
+    } catch (_) {
+      // 이어 받기 실패는 이미 보고 있는 목록을 건드리지 않는다. 다시 스크롤하면
+      // 또 시도한다 — 첫 조회와 달리 배너까지 띄울 일은 아니다.
+      if (!mounted) return;
+      state = state.copyWith(loadingMore: false);
     }
   }
 
@@ -64,7 +107,9 @@ class NotificationController extends StateNotifier<NotificationState> {
   }
 
   Future<void> markRead(String id) async {
-    state = NotificationState(
+    // copyWith 로 바꾼다 — 새 상태를 통째로 만들면 이어 받아 둔 쪽 정보(hasMore)가
+    // 사라져, 읽음 처리 한 번에 "더 보기" 가 멈춘다.
+    state = state.copyWith(
       items: state.items
           .map((AlertItem i) => i.id == id ? i.copyWith(read: true) : i)
           .toList(),
@@ -81,7 +126,7 @@ class NotificationController extends StateNotifier<NotificationState> {
   }
 
   Future<void> markAllRead() async {
-    state = NotificationState(
+    state = state.copyWith(
       items: state.items.map((AlertItem i) => i.copyWith(read: true)).toList(),
     );
     try {
@@ -111,7 +156,7 @@ class NotificationController extends StateNotifier<NotificationState> {
       timeAgo: timeAgo,
       category: AlertCategory.reminder,
     );
-    state = NotificationState(items: <AlertItem>[injected, ...state.items]);
+    state = state.copyWith(items: <AlertItem>[injected, ...state.items]);
   }
 }
 
@@ -157,8 +202,12 @@ final notificationUnreadProvider = StreamProvider<int>((ref) {
   );
 }, name: 'notificationUnread');
 
-/// 안읽음 배지 등 가벼운 소비처용 목록(리포 직접). 컨트롤러와 별개로 유지한다.
+/// 가벼운 소비처용 **최신 한 쪽**(리포 직접). 컨트롤러와 별개로 유지한다.
+///
+/// 전체가 아니라 한 쪽인 이유: 서버가 더 이상 전부 주지 않는다(#965). 여기서 세어
+/// 미읽음 수를 만들면 안 된다 — 그 값은 [notificationUnreadProvider] 가 서버에서
+/// 받아 온다.
 final notificationListProvider = FutureProvider.autoDispose<List<AlertItem>>(
-  (ref) => ref.watch(notificationRepositoryProvider).fetchAll(),
+  (ref) => ref.watch(notificationRepositoryProvider).fetchPage(),
   name: 'notificationList',
 );

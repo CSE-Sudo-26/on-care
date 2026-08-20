@@ -3,7 +3,15 @@ import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart'
-    show OrderClauseGenerator, OrderingMode, OrderingTerm, Value;
+    show
+        // 알림 커서 비교(`<`, `&`, `|`)에 필요한 확장 — `show` 목록에 없으면 범위
+        // 밖이라 메서드가 아예 보이지 않는다(#965).
+        BooleanExpressionOperators,
+        ComparableExpr,
+        OrderClauseGenerator,
+        OrderingMode,
+        OrderingTerm,
+        Value;
 import 'package:logger/logger.dart';
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
@@ -1217,11 +1225,39 @@ class LocalApiInterceptor extends Interceptor {
 
   // ---- Notifications ----
 
+  /// 실서버와 같은 계약으로 답한다 — 최신순 한 쪽, `limit`·`before`·`before_id`
+  /// 커서(#965). 여기서 상한을 무시하면 로컬 모드에서만 무한 목록이 되어, 이어
+  /// 받기가 되는지 개발 중에 확인할 수 없다.
   Future<Response<Object?>> _notifications(RequestOptions options) async {
+    final Map<String, dynamic> params = options.queryParameters;
+    final int limit = switch (params['limit']) {
+      final int v => v.clamp(1, 100),
+      final String v => (int.tryParse(v) ?? 50).clamp(1, 100),
+      _ => 50,
+    };
+    final DateTime? before = switch (params['before']) {
+      final String v => DateTime.tryParse(v),
+      _ => null,
+    };
+    final String? beforeId = params['before_id'] as String?;
+
     final query = _db.select(_db.notificationItems)
       ..orderBy(<OrderClauseGenerator<$NotificationItemsTable>>[
         (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+        (t) => OrderingTerm(expression: t.id, mode: OrderingMode.desc),
       ]);
+    if (before != null) {
+      // (created_at, id) 복합 커서 — 같은 시각의 알림이 여러 건이어도 경계에서
+      // 빠지거나 겹치지 않는다.
+      query.where(
+        (t) => beforeId == null
+            ? t.createdAt.isSmallerThanValue(before)
+            : t.createdAt.isSmallerThanValue(before) |
+                  (t.createdAt.equals(before) &
+                      t.id.isSmallerThanValue(beforeId)),
+      );
+    }
+    query.limit(limit);
     final rows = await query.get();
 
     final now = nowKst();
