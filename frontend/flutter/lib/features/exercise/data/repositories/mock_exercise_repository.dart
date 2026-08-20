@@ -106,13 +106,14 @@ class MockExerciseRepository implements ExerciseRepository {
     return out;
   }
 
-  /// 픽스처의 종류 문자열(`cardio`|`strength`|`stretching`) → [ExerciseType].
+  /// 픽스처의 종류 문자열(`cardio`|`strength`|`flexibility`) → [ExerciseType].
+  ///
+  /// 옛 값(`walking`·`yoga`·`stretching`)도 읽어 준다 — 픽스처는 표준 어휘로
+  /// 옮겼지만(#997) 손으로 고친 사본이나 예전 캐시가 남아 있을 수 있다.
   ExerciseType _typeOf(FixtureExercise e) => switch (e.type) {
-    'cardio' => ExerciseType.cardio,
-    'walking' => ExerciseType.walking,
+    'cardio' || 'walking' => ExerciseType.cardio,
     'strength' => ExerciseType.strength,
-    'stretching' => ExerciseType.stretching,
-    'yoga' => ExerciseType.yoga,
+    'flexibility' || 'stretching' || 'yoga' => ExerciseType.stretching,
     _ => ExerciseType.other,
   };
 
