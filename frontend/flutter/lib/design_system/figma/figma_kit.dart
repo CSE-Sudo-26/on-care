@@ -358,15 +358,21 @@ class FigmaTabHeader extends StatelessWidget {
         children: <Widget>[
           if (leading != null) ...<Widget>[leading!, const SizedBox(width: 6)],
           Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: FigmaColors.ink,
-                letterSpacing: -0.5,
+            // 말줄임이 아니라 축소다 (#1004). 서비스 이름이 `On - Ca…` 가 되면
+            // 헤더가 무엇을 가리키는지 사라진다 — 글씨를 키운 뒤로 좁은 폰에서
+            // 실제로 그렇게 됐다.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                title,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: FigmaColors.ink,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
           ),
