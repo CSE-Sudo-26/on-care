@@ -69,8 +69,10 @@ class SessionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final s = session;
+    final roster =
+        ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
     final client = findClientIdentity(
-      ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[],
+      roster,
       clientId: session.clientId,
       clientName: session.clientName,
     );
@@ -97,6 +99,23 @@ class SessionCard extends ConsumerWidget {
               ),
               child: Row(
                 children: <Widget>[
+                  // 시각은 일 보기 타임라인의 왼쪽 홈통이 그리던 값이다. 보기가
+                  // 시간표 하나로 모이면서 그 홈통이 사라졌으므로, 카드가 직접
+                  // 말한다 — 상세 패널에서 "몇 시 약속인가" 가 빠지면 카드만
+                  // 보고는 알 수 없다(#988).
+                  SizedBox(
+                    width: 46,
+                    child: Text(
+                      s.time,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: s.isFinished
+                            ? AppColors.disabledForeground
+                            : AppColors.foreground,
+                      ),
+                    ),
+                  ),
                   ClientAvatar(
                     // Guard: a non-gap row with an empty name must not
                     // crash `.characters.first`.
@@ -111,8 +130,16 @@ class SessionCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         if (client == null)
+                          // 로스터에 없는 고객은 이름 뒤에 `(신규)` 로 그
+                          // 사실을 단다 — 이름 자리에 `신규 고객` 이라는
+                          // 분류명을 넣으면 서로 구분되지 않는다(#988).
                           Text(
-                            s.clientName,
+                            clientNameWithNewTag(
+                              l,
+                              roster,
+                              clientId: s.clientId,
+                              clientName: s.clientName,
+                            ),
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,

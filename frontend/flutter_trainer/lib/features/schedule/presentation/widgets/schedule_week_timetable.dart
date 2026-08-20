@@ -1,0 +1,627 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/design_system/tokens/radius.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
+
+/// 월~일 주간 시간표 — 왼쪽 시간축과 요일 열의 격자. (#988)
+///
+/// 이전 주 보기는 요일마다 세션 칩을 위에서부터 차곡차곡 쌓았다. 그래서
+/// **빈 시간이 화면에 없었다** — 10시 세션과 19시 세션이 세로로 붙어 있어
+/// 그 사이가 9시간 비어 있다는 사실을 칩의 글씨를 읽기 전에는 알 수 없었다.
+/// 트레이너가 주 보기를 여는 이유가 "어디에 넣을 수 있나" 인데, 정작 그
+/// 질문에 답하지 못하는 표현이었다.
+///
+/// 지금은 세로축이 **시각**이다. 블록의 위치는 시작 시각, 높이는 소요 시간이라
+/// 빈 시간이 빈 칸으로 남는다. 한 시간마다 눈금선이 있어 요일 사이를 가로로
+/// 훑어 같은 시간대를 비교할 수 있다.
+///
+/// 보이는 주는 항상 월요일에서 일요일까지다. `오늘 − 3일` 로 잡던 때에는 매일
+/// 다른 요일에서 시작해, 화면이 말하는 "주" 와 사람이 말하는 "이번 주" 가
+/// 어긋났다.
+class ScheduleWeekTimetable extends StatelessWidget {
+  /// Creates the week timetable.
+  const ScheduleWeekTimetable({
+    super.key,
+    required this.weekStart,
+    required this.sessions,
+    required this.selectedDay,
+    required this.selectedSessionId,
+    required this.onPickDay,
+    required this.onPickSession,
+  });
+
+  /// 보이는 주의 월요일.
+  final DateTime weekStart;
+
+  /// 그 주 전체의 세션. 공백 슬롯은 그리지 않는다 — 빈 시간은 이제 격자가
+  /// 말한다.
+  final List<ScheduleSession> sessions;
+
+  /// 상세 패널이 보고 있는 날.
+  final DateTime selectedDay;
+
+  /// 상세 패널이 보고 있는 세션. 그 블록만 테두리로 도드라진다.
+  final String? selectedSessionId;
+
+  final ValueChanged<DateTime> onPickDay;
+  final ValueChanged<ScheduleSession> onPickSession;
+
+  /// 한 시간의 높이. 30분짜리 세션도 글자 두 줄이 들어가는 최소치다.
+  static const double hourHeight = 56;
+
+  /// 왼쪽 시간축 폭.
+  static const double gutterWidth = 48;
+
+  /// 요일 머리글 높이.
+  static const double headerHeight = 46;
+
+  /// 세션이 없어도 늘 보여 주는 시간대. 빈 주에 격자가 한 줄만 남으면 그것대로
+  /// 읽히지 않는다.
+  static const int defaultStartHour = 7;
+  static const int defaultEndHour = 22;
+
+  /// `HH:mm` 을 자정부터의 분으로. 형식이 다르면 null — 시각을 모르는 행은
+  /// 시간표에 앉힐 자리가 없다.
+  static int? minutesOfDay(String time) {
+    final parts = time.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return hour * 60 + minute;
+  }
+
+  /// 이 주가 보여야 할 시간 창. 기본 창을 세션이 넘으면 넓힌다 — 06:00 수업이
+  /// 화면 밖에 있으면 시간표가 거짓말을 한다.
+  static ({int start, int end}) visibleHours(List<ScheduleSession> sessions) {
+    var start = defaultStartHour;
+    var end = defaultEndHour;
+    for (final s in sessions) {
+      if (s.isGap) continue;
+      final from = minutesOfDay(s.time);
+      if (from == null) continue;
+      final to = from + math.max<int>(s.durationMinutes, 30);
+      start = math.min(start, from ~/ 60);
+      end = math.max(end, (to / 60).ceil());
+    }
+    start = start.clamp(0, 23);
+    end = end.clamp(start + 1, 24);
+    return (start: start, end: end);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final days = <DateTime>[
+      for (var i = 0; i < 7; i++) weekStart.add(Duration(days: i)),
+    ];
+    final window = visibleHours(sessions);
+    final byDate = <String, List<ScheduleSession>>{};
+    for (final s in sessions) {
+      if (s.isGap || minutesOfDay(s.time) == null) continue;
+      byDate.putIfAbsent(s.date, () => <ScheduleSession>[]).add(s);
+    }
+    final today = ymd(nowKst());
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayout.pagePadding,
+        0,
+        AppLayout.pagePadding,
+        AppSpacing.lg,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: const BorderRadius.all(AppRadius.md),
+          border: Border.all(color: AppColors.borderStrong),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SizedBox(
+              height: headerHeight,
+              child: Row(
+                children: <Widget>[
+                  const SizedBox(width: gutterWidth),
+                  for (final day in days)
+                    Expanded(
+                      child: _DayHeader(
+                        day: day,
+                        isToday: ymd(day) == today,
+                        selected: ymd(day) == ymd(selectedDay),
+                        onTap: () => onPickDay(day),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.borderStrong),
+            Expanded(
+              child: SingleChildScrollView(
+                key: const Key('schedule-timetable-scroll'),
+                child: SizedBox(
+                  height: (window.end - window.start) * hourHeight,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      _TimeGutter(startHour: window.start, endHour: window.end),
+                      for (final day in days)
+                        Expanded(
+                          child: _DayColumn(
+                            day: day,
+                            isToday: ymd(day) == today,
+                            startHour: window.start,
+                            endHour: window.end,
+                            sessions:
+                                byDate[ymd(day)] ?? const <ScheduleSession>[],
+                            selectedSessionId: selectedSessionId,
+                            onPickSession: onPickSession,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (byDate.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Text(
+                  l.schedEmptyWeek,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 요일 머리글 한 칸 — `월` 과 날짜. 누르면 그 날을 고른다.
+class _DayHeader extends StatelessWidget {
+  const _DayHeader({
+    required this.day,
+    required this.isToday,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final bool isToday;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final weekend = day.weekday >= DateTime.saturday;
+
+    return InkWell(
+      key: ValueKey<String>('schedule-day-${ymd(day)}'),
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accentSurface : Colors.transparent,
+          border: const Border(left: BorderSide(color: AppColors.border)),
+        ),
+        // 큰 글자 배율(#849 관문은 1.3 을 쓴다)에서 두 줄이 머리글 높이를
+        // 넘는다. 글자를 자르는 대신 통째로 작게 그린다.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                weekdayNames(l)[day.weekday - 1],
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: weekend
+                      ? AppColors.subtleForeground
+                      : AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: isToday ? AppColors.primary : AppColors.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 왼쪽 시간축 — 눈금선이 그어지는 자리에 그 시각을 적는다.
+class _TimeGutter extends StatelessWidget {
+  const _TimeGutter({required this.startHour, required this.endHour});
+
+  final int startHour;
+  final int endHour;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: ScheduleWeekTimetable.gutterWidth,
+      child: Column(
+        children: <Widget>[
+          for (var hour = startHour; hour < endHour; hour++)
+            SizedBox(
+              height: ScheduleWeekTimetable.hourHeight,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  // 눈금선 위에 걸치게 올려 둔다 — 칸 한가운데 적으면 어느
+                  // 선이 그 시각인지 읽는 사람이 한 번 더 생각해야 한다.
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: Transform.translate(
+                    offset: const Offset(0, -5),
+                    child: Text(
+                      '${hour.toString().padLeft(2, '0')}:00',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.subtleForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 하루 열 — 눈금 격자 위에 세션 블록을 앉힌다.
+class _DayColumn extends StatelessWidget {
+  const _DayColumn({
+    required this.day,
+    required this.isToday,
+    required this.startHour,
+    required this.endHour,
+    required this.sessions,
+    required this.selectedSessionId,
+    required this.onPickSession,
+  });
+
+  final DateTime day;
+  final bool isToday;
+  final int startHour;
+  final int endHour;
+  final List<ScheduleSession> sessions;
+  final String? selectedSessionId;
+  final ValueChanged<ScheduleSession> onPickSession;
+
+  @override
+  Widget build(BuildContext context) {
+    final placed = _placeSessions(sessions);
+    final windowStart = startHour * 60;
+    final windowMinutes = (endHour - startHour) * 60;
+    final now = nowKst();
+    final nowMinutes = now.hour * 60 + now.minute;
+    final showNow =
+        isToday && nowMinutes >= windowStart && nowMinutes <= endHour * 60;
+
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: AppColors.border)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              // 격자 — 일정이 없는 시간대도 칸으로 남는다.
+              Column(
+                children: <Widget>[
+                  for (var hour = startHour; hour < endHour; hour++)
+                    Container(
+                      height: ScheduleWeekTimetable.hourHeight,
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (showNow)
+                Positioned(
+                  top:
+                      (nowMinutes - windowStart) /
+                      60 *
+                      ScheduleWeekTimetable.hourHeight,
+                  left: 0,
+                  right: 0,
+                  child: const _NowLine(),
+                ),
+              for (final p in placed)
+                Positioned(
+                  top:
+                      (p.startMinute - windowStart).clamp(0, windowMinutes) /
+                      60 *
+                      ScheduleWeekTimetable.hourHeight,
+                  left: width * p.lane / p.lanes + 2,
+                  width: width / p.lanes - 4,
+                  height: math.max(
+                    (p.endMinute - p.startMinute) /
+                        60 *
+                        ScheduleWeekTimetable.hourHeight,
+                    24,
+                  ),
+                  child: _SessionBlock(
+                    session: p.session,
+                    selected: p.session.id == selectedSessionId,
+                    onTap: () => onPickSession(p.session),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 시간표에 앉은 세션 한 건 — 시작·끝(분)과 겹침을 나눠 쓰는 열 번호.
+class _Placed {
+  const _Placed({
+    required this.session,
+    required this.startMinute,
+    required this.endMinute,
+    required this.lane,
+    required this.lanes,
+  });
+
+  final ScheduleSession session;
+  final int startMinute;
+  final int endMinute;
+  final int lane;
+  final int lanes;
+}
+
+/// 겹치는 세션을 나란히 세운다.
+///
+/// 겹치는 것끼리 묶어(뭉치) 그 뭉치 안에서만 폭을 나눈다. 하루 전체를 기준으로
+/// 나누면 아침에 한 번 겹쳤다는 이유로 저녁 세션까지 반으로 얇아진다.
+List<_Placed> _placeSessions(List<ScheduleSession> sessions) {
+  final spans = <({ScheduleSession session, int start, int end})>[];
+  for (final s in sessions) {
+    final start = ScheduleWeekTimetable.minutesOfDay(s.time);
+    if (start == null) continue;
+    // 0분짜리 행도 손가락으로 짚을 수 있어야 한다.
+    final end = start + math.max<int>(s.durationMinutes, 30);
+    spans.add((session: s, start: start, end: end));
+  }
+  spans.sort((a, b) {
+    final byStart = a.start.compareTo(b.start);
+    return byStart != 0 ? byStart : a.session.id.compareTo(b.session.id);
+  });
+
+  final placed = <_Placed>[];
+  var cluster = <({ScheduleSession session, int start, int end})>[];
+  var clusterEnd = -1;
+
+  void flush() {
+    if (cluster.isEmpty) return;
+    final laneEnds = <int>[];
+    final laneOf = <int>[];
+    for (final span in cluster) {
+      var lane = laneEnds.indexWhere((end) => end <= span.start);
+      if (lane < 0) {
+        laneEnds.add(span.end);
+        lane = laneEnds.length - 1;
+      } else {
+        laneEnds[lane] = span.end;
+      }
+      laneOf.add(lane);
+    }
+    for (var i = 0; i < cluster.length; i++) {
+      placed.add(
+        _Placed(
+          session: cluster[i].session,
+          startMinute: cluster[i].start,
+          endMinute: cluster[i].end,
+          lane: laneOf[i],
+          lanes: laneEnds.length,
+        ),
+      );
+    }
+    cluster = <({ScheduleSession session, int start, int end})>[];
+    clusterEnd = -1;
+  }
+
+  for (final span in spans) {
+    if (cluster.isNotEmpty && span.start >= clusterEnd) flush();
+    cluster.add(span);
+    clusterEnd = math.max(clusterEnd, span.end);
+  }
+  flush();
+  return placed;
+}
+
+/// 오늘 열의 현재 시각 선.
+class _NowLine extends StatelessWidget {
+  const _NowLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.warning,
+            ),
+          ),
+          const Expanded(child: Divider(height: 1, color: AppColors.warning)),
+        ],
+      ),
+    );
+  }
+}
+
+/// 시간표 위의 세션 한 건.
+///
+/// 블록이 답해야 하는 것은 **언제·누구와·무엇을** 이다. 이전 칩에는 시작 시각과
+/// 이름뿐이라, 언제 끝나는지와 `1:1 PT` 인지 `상담` 인지를 알려면 눌러 봐야
+/// 했다(#988). 높이가 허락하는 만큼 위에서부터 채운다 — 30분짜리 블록에 세 줄을
+/// 밀어 넣으면 셋 다 읽히지 않는다.
+class _SessionBlock extends ConsumerWidget {
+  const _SessionBlock({
+    required this.session,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ScheduleSession session;
+  final bool selected;
+  final VoidCallback onTap;
+
+  /// 상태가 결과를 말한다 — 예정(남색)·완료(초록)·취소/노쇼(빨강).
+  Color get _tone => switch (session.status) {
+    ScheduleStatus.done => AppColors.success,
+    ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
+    _ => AppColors.primary,
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final tone = _tone;
+    final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
+    final end = start + session.durationMinutes;
+    final range = l.schedTimeRange(session.time, _hhmm(end));
+    final name = clientNameWithNewTag(
+      l,
+      ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[],
+      clientId: session.clientId,
+      clientName: session.clientName,
+    );
+    final type = sessionTypeLabel(l, session.type);
+    final detail = l.sessionTypeAndDuration(type, session.durationMinutes);
+
+    return Tooltip(
+      message: '$range · $name · $detail',
+      child: Semantics(
+        button: true,
+        label: '$range $name $detail',
+        child: Material(
+          color: tone.withValues(alpha: session.isFinished ? 0.08 : 0.12),
+          borderRadius: const BorderRadius.all(AppRadius.xs),
+          child: InkWell(
+            key: ValueKey<String>('schedule-block-${session.id}'),
+            onTap: onTap,
+            borderRadius: const BorderRadius.all(AppRadius.xs),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(5, 3, 4, 3),
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.all(AppRadius.xs),
+                // 폭 0 짜리 변은 두지 않는다 — 모서리가 둥근 상자에 그리려 하면
+                // 프레임워크가 hairline 단정에서 걸린다.
+                border: selected
+                    ? Border(
+                        left: BorderSide(color: tone, width: 4),
+                        top: BorderSide(color: tone, width: 1.5),
+                        right: BorderSide(color: tone, width: 1.5),
+                        bottom: BorderSide(color: tone, width: 1.5),
+                      )
+                    : Border(left: BorderSide(color: tone, width: 2.5)),
+              ),
+              // 세 줄이 다 들어가지 않으면 위에서부터 살린다: 시간 → 이름 →
+              // 종류. `ClipRect` 가 없으면 30분 블록에서 픽셀 오버플로가 뜬다.
+              child: ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.topLeft,
+                  maxHeight: double.infinity,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        range,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          height: 1.25,
+                          color: tone,
+                        ),
+                      ),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                          color: session.isFinished
+                              ? AppColors.mutedForeground
+                              : AppColors.foreground,
+                        ),
+                      ),
+                      Text(
+                        detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _hhmm(int minutes) {
+    final wrapped = minutes % (24 * 60);
+    final h = (wrapped ~/ 60).toString().padLeft(2, '0');
+    final m = (wrapped % 60).toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+}

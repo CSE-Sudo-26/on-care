@@ -18,9 +18,7 @@ import 'package:oncare_trainer/features/schedule/presentation/widgets/complete_s
 import 'package:oncare_trainer/features/schedule/presentation/widgets/consultation_inbox_action.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_date_nav_bar.dart';
-import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_timeline_row.dart';
-import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_grid.dart';
-import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_strip.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_card.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_program_editor.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_sheet.dart';
@@ -30,25 +28,26 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
-/// 스케줄 tab — the trainer's calendar, in two views.
+/// 스케줄 tab — 트레이너의 주간 시간표. (#988)
 ///
-/// **일** is the timeline: every booked session expands, 완료 shows the
-/// finished program and can be sent to the client, 예정 shows the plan
-/// (or a no-plan hint) with a chat shortcut. Add / edit (15-minute
-/// steps) / delete / 완료 처리 all live here.
+/// 왼쪽 시간축과 월~일 일곱 열의 격자 위에 세션 블록이 앉는다. 블록의 위치는
+/// 시작 시각, 높이는 소요 시간이라 **빈 시간이 빈 칸으로 남는다** — 트레이너가
+/// 달력을 여는 이유가 대개 "어디에 넣을 수 있나" 라서다.
 ///
-/// **주** is a seven-column overview for the question the timeline can't
-/// answer — where the gaps are. Picking a day from it drops back into
-/// the timeline.
+/// 블록을 고르면 오른쪽(좁은 화면에서는 아래) 상세 패널이 그 세션을 연다.
+/// 완료는 끝난 프로그램을 보여 주고 회원에게 보낼 수 있고, 예정은 계획(없으면
+/// 힌트)과 채팅 동선을 연다. 추가·수정(15분 단위)·삭제·완료·취소·노쇼 처리가
+/// 모두 그 패널에 있다.
 ///
-/// Both the view and the browsed day come from the URL (`?v=week&d=…`)
-/// so the dashboard can link to a specific day and a refresh keeps it.
+/// 예전에는 `일`·`주` 두 보기가 있었다. `일` 은 하루치 목록이라 빈 시간을
+/// 말하지 못했고, `주` 는 칩을 위에서부터 쌓아 같은 문제를 안고 있었다. 하나로
+/// 모으면서 라우트의 `v=` 파라미터도 없앴다 — 고를 것이 없다.
+///
+/// 보고 있는 날은 URL(`?d=…`)에서 온다. 대시보드가 특정 날짜로 링크할 수 있고
+/// 새로고침해도 그 자리에 남는다.
 class SchedulePage extends ConsumerStatefulWidget {
   /// Creates the schedule tab.
-  const SchedulePage({super.key, this.view, this.date});
-
-  /// `day` (default) or `week`.
-  final String? view;
+  const SchedulePage({super.key, this.date});
 
   /// Browsed day as `YYYY-MM-DD`; invalid or absent means today.
   final String? date;
@@ -61,14 +60,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// The calendar day being browsed (defaults to today).
   late DateTime _selectedDay = _resolveDay(widget.date);
 
-  /// Leftmost day of the visible 7-day strip. Centred on today (D-3) so
-  /// today sits in the middle; chevrons shift it a week at a time.
-  late DateTime _weekAnchor = _selectedDay.subtract(const Duration(days: 3));
+  /// 보이는 주의 월요일. `오늘 − 3일` 로 잡던 때에는 매일 다른 요일에서 주가
+  /// 시작해, 화면이 말하는 "주" 와 사람이 말하는 "이번 주" 가 어긋났다(#988).
+  late DateTime _weekStart = _mondayOf(_selectedDay);
 
-  /// Whether the week grid is showing.
-  late bool _weekView = widget.view == 'week';
-
-  /// Session shown in the week view's detail panel.
+  /// Session shown in the detail panel.
   String? _selectedSessionId;
 
   /// 프로그램 전송이 진행 중인 세션. 두 번 눌러 두 번 보내지 않는다.
@@ -79,6 +75,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   final Map<String, String> _sendRequestIds = <String, String>{};
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  /// [d] 가 속한 주의 월요일.
+  static DateTime _mondayOf(DateTime d) =>
+      _dateOnly(d).subtract(Duration(days: d.weekday - DateTime.monday));
 
   /// Parses a `YYYY-MM-DD` route parameter, falling back to today. A
   /// malformed date in the URL should land the trainer on today rather
@@ -97,39 +97,31 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       final next = _resolveDay(widget.date);
       setState(() {
         _selectedDay = next;
-        _weekAnchor = next.subtract(const Duration(days: 3));
+        _weekStart = _mondayOf(next);
       });
-    }
-    if (widget.view != oldWidget.view) {
-      setState(() => _weekView = widget.view == 'week');
     }
   }
 
   /// Moves to [day], keeping the URL in step so the view is shareable.
-  void _selectDay(DateTime day, {bool toTimeline = false}) {
+  ///
+  /// 고른 날이 다른 주면 시간표도 그 주로 넘어간다 — 보고 있는 날이 화면 밖에
+  /// 있는 상태를 만들지 않는다.
+  void _selectDay(DateTime day) {
+    final next = _dateOnly(day);
     setState(() {
-      _selectedDay = _dateOnly(day);
+      _selectedDay = next;
+      _weekStart = _mondayOf(next);
       _selectedSessionId = null;
-      if (toTimeline) _weekView = false;
     });
-    context.go(
-      AppRoutes.scheduleView(
-        _weekView ? 'week' : 'day',
-        date: ymd(_selectedDay),
-      ),
-    );
+    context.go(AppRoutes.scheduleAt(date: ymd(next)));
   }
 
-  final Set<String> _expanded = <String>{};
+  /// `-1` = 지난 주, `+1` = 다음 주. 고른 날을 함께 옮긴다.
+  void _shiftWeek(int direction) =>
+      _selectDay(_selectedDay.add(Duration(days: 7 * direction)));
+
   String? _editingScheduleId;
   String? _editingProgramId;
-
-  void _toggle(ScheduleSession s) {
-    if (!s.expandable) return;
-    setState(() {
-      _expanded.contains(s.id) ? _expanded.remove(s.id) : _expanded.add(s.id);
-    });
-  }
 
   /// New schedules use a sheet; existing schedules are edited in their card.
   Future<void> _openSessionSheet() async {
@@ -173,7 +165,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       builder: (_) => const ConsultationInboxSheet(),
     );
     final day = date == null ? null : DateTime.tryParse(date);
-    if (day != null && mounted) _selectDay(day, toTimeline: true);
+    if (day != null && mounted) _selectDay(day);
   }
 
   Future<void> _confirmDelete(ScheduleSession s) async {
@@ -381,58 +373,35 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   String get _selectedYmd => ymd(_selectedDay);
 
-  /// 날짜 행 오른쪽에 붙는 컨트롤 — `오늘` 과 `일|주`. (#882)
+  /// 날짜 행 오른쪽에 붙는 `오늘`. (#882, #988)
   ///
   /// 예전에는 페이지 헤더 오른쪽 끝에서 `예약 슬롯`·`새 일정` 같은 문서 액션과
-  /// 섞여 있었다. 둘 다 **날짜를 바꾸는** 컨트롤인데 조작 대상(날짜 행)과 100px
-  /// 넘게 떨어져 있었다. 일 보기와 주 보기가 같은 자리에 같은 것을 두도록
-  /// 양쪽 날짜 행이 이 위젯을 함께 쓴다.
-  Widget _viewControls() {
+  /// 섞여 있었다. 날짜를 바꾸는 컨트롤인데 조작 대상(날짜 행)과 100px 넘게
+  /// 떨어져 있었다. 함께 있던 `일|주` 는 보기가 하나로 모이면서 사라졌다.
+  ///
+  /// 이번 주 오늘을 보고 있으면 아무것도 그리지 않는다 — 눌러도 달라질 것이
+  /// 없는 버튼이다.
+  Widget _todayControl() {
     final AppLocalizations l = AppLocalizations.of(context);
     final today = _dateOnly(nowKst());
-    final defaultAnchor = today.subtract(const Duration(days: 3));
-    final showToday = _selectedDay != today || _weekAnchor != defaultAnchor;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (showToday) ...<Widget>[
-          ActionButton(
-            label: l.labelToday,
-            icon: Icons.today_outlined,
-            onPressed: () {
-              setState(() => _weekAnchor = defaultAnchor);
-              _selectDay(today);
-            },
-          ),
-          const SizedBox(width: AppSpacing.sm),
-        ],
-        SegmentedSwitch(
-          labels: <String>[l.schedViewDay, l.schedViewWeek],
-          selected: _weekView ? 1 : 0,
-          onChanged: (i) {
-            setState(() => _weekView = i == 1);
-            context.go(
-              AppRoutes.scheduleView(
-                _weekView ? 'week' : 'day',
-                date: _selectedYmd,
-              ),
-            );
-          },
-        ),
-      ],
+    if (_selectedDay == today && _weekStart == _mondayOf(today)) {
+      return const SizedBox.shrink();
+    }
+    return ActionButton(
+      label: l.labelToday,
+      icon: Icons.today_outlined,
+      onPressed: () => _selectDay(today),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final schedule = ref.watch(scheduleForDateProvider(_selectedYmd));
     // Keep the client stream live so the booking sheet and the chat
     // shortcut have data even when this tab is the first one opened.
     ref.watch(clientsProvider);
-    // 오늘·기본 앵커 계산은 이제 [_viewControls] 안에 있다 — 그 버튼들이
-    // 헤더가 아니라 날짜 행에 살기 때문이다(#882).
+    // 오늘 버튼 계산은 [_todayControl] 안에 있다 — 그 버튼이 헤더가 아니라
+    // 날짜 행에 살기 때문이다(#882).
     final consultationInbox = ref.watch(consultationInboxEnabledProvider);
     final pendingConsultations = consultationInbox
         ? ref.watch(consultationPendingCountProvider).valueOrNull
@@ -443,7 +412,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       subtitle: dateLabel(l, _selectedDay),
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
-        // 오늘·일|주 는 날짜를 바꾸는 컨트롤이라 날짜 행 오른쪽으로 내렸다.
+        // 오늘 은 날짜를 바꾸는 컨트롤이라 날짜 행 오른쪽으로 내렸다.
         // 비워진 이 자리에 상담 요청이 들어온다(#882).
         if (consultationInbox)
           ConsultationInboxAction(
@@ -465,26 +434,20 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ],
       scrollable: false,
       contentPadding: EdgeInsets.zero,
-      // The week strip lives OUTSIDE the async `when()`: switching days
-      // spins up a new provider that starts in `loading`, and blanking
-      // the whole page to a spinner each tap made the strip flicker.
-      // Only the session list reacts to the async state (review PR 245).
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Expanded(
-            child: _weekView ? _buildWeekGrid() : _buildDayView(schedule),
-          ),
-        ],
-      ),
+      // 날짜 행은 async `when()` **바깥**에 있다: 주를 넘길 때마다 새 provider
+      // 가 `loading` 으로 시작하는데, 그때 페이지 전체를 스피너로 비우면 날짜
+      // 행이 깜빡인다. 격자만 async 상태를 따른다(review PR 245).
+      child: _buildTimetable(),
     );
   }
 
-  /// 주 — a seven-column grid of the week's sessions. One range query
-  /// backs it, so switching weeks doesn't fan out into seven streams.
-  Widget _buildWeekGrid() {
+  /// 주간 시간표와 그 오른쪽(좁은 화면에서는 아래)의 상세 패널. (#988)
+  ///
+  /// 한 번의 범위 질의가 주 전체를 받친다 — 요일마다 스트림을 하나씩 열면 주를
+  /// 넘길 때마다 일곱 개가 함께 흔들린다.
+  Widget _buildTimetable() {
     final AppLocalizations l = AppLocalizations.of(context);
-    final start = _dateOnly(_weekAnchor);
+    final start = _weekStart;
     final end = start.add(const Duration(days: 6));
     final range = (from: ymd(start), to: ymd(end));
     final week = ref.watch(scheduleRangeProvider(range));
@@ -502,10 +465,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           child: ScheduleDateNavBar(
             start: start,
             end: end,
-            onShift: (dir) => setState(
-              () => _weekAnchor = _weekAnchor.add(Duration(days: 7 * dir)),
-            ),
-            trailing: _viewControls(),
+            onShift: _shiftWeek,
+            trailing: _todayControl(),
           ),
         ),
         Expanded(
@@ -518,6 +479,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ),
             ),
             data: (sessions) {
+              // 상세 패널이 무엇을 열지 — 고른 세션이 우선이고, 없으면 고른
+              // 날의 첫 세션이다. 빈 패널로 두면 시간표만 보고 아무것도 다룰 수
+              // 없는 화면이 된다.
               ScheduleSession? selected;
               for (final session in sessions) {
                 if (session.id == _selectedSessionId &&
@@ -528,17 +492,18 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               }
               if (selected == null) {
                 for (final session in sessions) {
-                  if (session.date == _selectedYmd) {
+                  if (session.date == _selectedYmd && !session.isGap) {
                     selected = session;
                     break;
                   }
                 }
               }
 
-              final grid = ScheduleWeekGrid(
-                start: start,
+              final timetable = ScheduleWeekTimetable(
+                weekStart: start,
                 sessions: sessions,
                 selectedDay: _selectedDay,
+                selectedSessionId: selected?.id,
                 onPickDay: _selectDay,
                 onPickSession: (session) {
                   final day = DateTime.tryParse(session.date);
@@ -546,11 +511,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   setState(() {
                     _selectedDay = _dateOnly(day);
                     _selectedSessionId = session.id;
-                    _expanded.add(session.id);
                   });
-                  context.go(
-                    AppRoutes.scheduleView('week', date: session.date),
-                  );
+                  context.go(AppRoutes.scheduleAt(date: session.date));
                 },
               );
 
@@ -562,13 +524,13 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                     // 누르면 선택만 바뀌고 화면은 그대로였다 — 트레이너에게는
                     // 버튼이 고장 난 것으로 보인다(#881).
                     //
-                    // 같은 패널을 그리드 아래로 쌓는다. 표현을 바꾸지 않으므로
+                    // 같은 패널을 시간표 아래로 쌓는다. 표현을 바꾸지 않으므로
                     // 넓은 화면에서 익힌 것이 좁은 화면에서도 그대로 통한다.
-                    if (selected == null) return grid;
+                    if (selected == null) return timetable;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        Expanded(flex: 3, child: grid),
+                        Expanded(flex: 3, child: timetable),
                         const Divider(height: 1, color: AppColors.borderStrong),
                         Expanded(flex: 2, child: _buildWeekDetail(selected)),
                       ],
@@ -577,7 +539,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Expanded(child: grid),
+                      Expanded(child: timetable),
                       const VerticalDivider(
                         width: 1,
                         color: AppColors.borderStrong,
@@ -673,155 +635,5 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ),
       ],
     );
-  }
-
-  /// 일 — the week strip plus the day's timeline.
-  Widget _buildDayView(AsyncValue<List<ScheduleSession>> schedule) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppLayout.pagePadding,
-            AppLayout.pagePadding,
-            AppLayout.pagePadding,
-            AppSpacing.sm,
-          ),
-          child: ScheduleWeekStrip(
-            weekAnchor: _weekAnchor,
-            selectedDay: _selectedDay,
-            bookedDates:
-                ref.watch(bookedDatesProvider).valueOrNull ?? const <String>{},
-            onSelect: _selectDay,
-            onShiftWeek: (dir) => setState(
-              () => _weekAnchor = _weekAnchor.add(Duration(days: 7 * dir)),
-            ),
-            trailing: _viewControls(),
-          ),
-        ),
-        Expanded(child: _buildTimeline(schedule)),
-      ],
-    );
-  }
-
-  /// The scrollable timeline for the selected day.
-  Widget _buildTimeline(AsyncValue<List<ScheduleSession>> schedule) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppLayout.pagePadding,
-        AppSpacing.sm,
-        AppLayout.pagePadding,
-        AppLayout.pagePadding,
-      ),
-      children: <Widget>[
-        ...schedule.when(
-          loading: () => const <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ],
-          error: (e, _) => <Widget>[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-              child: Center(
-                child: Text(
-                  l.schedLoadFailed,
-                  style: const TextStyle(color: AppColors.mutedForeground),
-                ),
-              ),
-            ),
-          ],
-          data: _timelineChildren,
-        ),
-      ],
-    );
-  }
-
-  /// The empty-state box or the session rows for [sessions].
-  List<Widget> _timelineChildren(List<ScheduleSession> sessions) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    // 완료 is offered only for 예정 sessions that aren't dated in the
-    // future — you can't complete a class that hasn't happened yet. The
-    // repository enforces the same rule (review PR 245).
-    final isFuture = _selectedDay.isAfter(_dateOnly(nowKst()));
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    final today = _dateOnly(nowKst());
-    final dateLabel = _selectedDay == today
-        ? l.labelToday
-        : l.dateMonthDay(_selectedDay.month, _selectedDay.day);
-    return <Widget>[
-      if (sessions.isEmpty)
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.xl,
-          ),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(color: AppColors.borderStrong),
-          ),
-          child: Text(
-            l.schedEmptyDay,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.mutedForeground,
-              height: 1.5,
-            ),
-          ),
-        ),
-      for (final s in sessions) ...<Widget>[
-        ScheduleTimelineRow(
-          session: s,
-          expanded: _expanded.contains(s.id),
-          onToggle: () => _toggle(s),
-          onEditSchedule: () => setState(() {
-            _editingScheduleId = s.id;
-            _editingProgramId = null;
-            _expanded.add(s.id);
-          }),
-          onEditProgram: () => setState(() {
-            _editingProgramId = s.id;
-            _editingScheduleId = null;
-            _expanded.add(s.id);
-          }),
-          onDelete: () => _confirmDelete(s),
-          onChat: () => _openChat(s),
-          onComplete: (s.isUpcoming && !isFuture)
-              ? () => _confirmComplete(s)
-              : null,
-          onCancel: s.isUpcoming ? () => _confirmCancel(s) : null,
-          onNoShow: (s.isUpcoming && !isFuture)
-              ? () => _confirmNoShow(s)
-              : null,
-          programDateLabel: dateLabel,
-          sendingProgram: _sendingProgramId == s.id,
-          onSendProgram: () => _sendProgram(s),
-          inlineEditor: _editingScheduleId == s.id
-              ? SessionSheet(
-                  key: ValueKey<String>('inline-session-editor-${s.id}'),
-                  clientNames: clients.map((c) => c.name).toList(),
-                  date: _selectedYmd,
-                  existing: s,
-                  inline: true,
-                  onSaved: () => setState(() => _editingScheduleId = null),
-                  onCancel: () => setState(() => _editingScheduleId = null),
-                )
-              : _editingProgramId == s.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('inline-program-editor-${s.id}'),
-                  session: s,
-                  onSaved: () => setState(() => _editingProgramId = null),
-                  onCancel: () => setState(() => _editingProgramId = null),
-                )
-              : null,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-      ],
-    ];
   }
 }

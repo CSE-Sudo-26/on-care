@@ -76,7 +76,7 @@ String? _destinationRoute(
 ) => switch (destination) {
   _SearchDestination.clients => AppRoutes.clientDetail(client.id),
   _SearchDestination.schedule => switch (facts.nextSession[client.id]) {
-    final next? => AppRoutes.scheduleView('day', date: next.date),
+    final next? => AppRoutes.scheduleAt(date: next.date),
     null => null,
   },
   _SearchDestination.messages => AppRoutes.messagesFor(client.id),

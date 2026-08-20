@@ -175,10 +175,12 @@ class AppRoutes {
     queryParameters: <String, String>{'client': clientId},
   ).toString();
 
-  /// Builds the 스케줄 tab on a given [view] (`day` | `week`) and date.
-  static String scheduleView(String view, {String? date}) => Uri(
+  /// Builds the 스케줄 tab on a given date.
+  ///
+  /// 보기가 주간 시간표 하나뿐이라 `v=` 는 없다(#988). 날짜만 실어 보낸다.
+  static String scheduleAt({String? date}) => Uri(
     path: schedule,
-    queryParameters: <String, String>{'v': view, 'd': ?date},
+    queryParameters: <String, String>{'d': ?date},
   ).toString();
 
   /// 후속 관리 할 일이 열어야 할 화면. (#869)
@@ -194,7 +196,7 @@ class AppRoutes {
       switch (contextWire) {
         'message' => messagesFor(clientId),
         'program' => coachingFor(clientId),
-        'schedule' => scheduleView('day'),
+        'schedule' => scheduleAt(),
         'diet' => clientDetail(clientId, section: 'diet'),
         'exercise' => clientDetail(clientId, section: 'workout'),
         _ => clientDetail(clientId),

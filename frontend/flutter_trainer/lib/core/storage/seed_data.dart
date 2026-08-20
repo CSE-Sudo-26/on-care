@@ -893,9 +893,11 @@ const List<_Slot> _schedule = <_Slot>[
       },
     ],
   ),
+  // 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다.
+  // 예전에는 이름 자리에 `신규 고객` 이라는 분류명이 들어가 있었다(#988).
   _Slot(
     time: '17:00',
-    clientName: '신규 고객',
+    clientName: '윤가온',
     type: SessionType.consultation,
     durationMinutes: 30,
     status: ScheduleStatus.upcoming,

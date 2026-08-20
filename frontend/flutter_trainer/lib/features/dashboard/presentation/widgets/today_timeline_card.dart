@@ -38,7 +38,7 @@ class TodayTimelineCard extends ConsumerWidget {
       icon: Icons.today_outlined,
       trailing: CardLink(
         label: l.dashSeeAll,
-        onTap: () => context.go(AppRoutes.scheduleView('day')),
+        onTap: () => context.go(AppRoutes.scheduleAt()),
       ),
       child: schedule.when(
         loading: () => const Padding(
@@ -63,10 +63,18 @@ class TodayTimelineCard extends ConsumerWidget {
                     clientId: session.clientId,
                     clientName: session.clientName,
                   ),
+                  // 로스터에 없는 고객(상담으로 잡힌 가망 고객)은 이름 뒤에
+                  // `(신규)` 가 붙는다 — 스케줄 탭과 같은 표기다(#988).
+                  fallbackName: clientNameWithNewTag(
+                    l,
+                    clients,
+                    clientId: session.clientId,
+                    clientName: session.clientName,
+                  ),
                   imminent:
                       settings.sessionReminders &&
                       startsWithin(session, settings.reminderLeadMinutes),
-                  onTap: () => context.go(AppRoutes.scheduleView('day')),
+                  onTap: () => context.go(AppRoutes.scheduleAt()),
                 ),
             ],
           );
@@ -80,12 +88,16 @@ class _Row extends StatelessWidget {
   const _Row({
     required this.session,
     required this.client,
+    required this.fallbackName,
     required this.imminent,
     required this.onTap,
   });
 
   final ScheduleSession session;
   final TrainerClient? client;
+
+  /// 로스터에서 못 찾은 고객을 부를 이름. 가망 고객이면 `(신규)` 가 붙는다.
+  final String fallbackName;
 
   /// 시작이 알림 시점 안으로 들어온 세션인가. (#817)
   final bool imminent;
@@ -150,7 +162,7 @@ class _Row extends StatelessWidget {
                         ),
                       )
                     : Text(
-                        '${client == null ? session.clientName : clientIdentityLabel(context, client!)} · ${session.type}',
+                        '${client == null ? fallbackName : clientIdentityLabel(context, client!)} · ${session.type}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

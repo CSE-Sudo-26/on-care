@@ -1322,10 +1322,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t mark it complete. Please try again';
 
   @override
-  String get schedViewDay => 'Day';
+  String schedTimeRange(String start, String end) {
+    return '$start–$end';
+  }
 
   @override
-  String get schedViewWeek => 'Week';
+  String get schedEmptyWeek => 'Nothing scheduled this week.';
+
+  @override
+  String schedNewClientTag(String name) {
+    return '$name (new)';
+  }
 
   @override
   String get schedSlots => 'Booking slots';
@@ -1338,7 +1345,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedEmptyDay =>
-      'Nothing scheduled for this day.\nAdd a session below.';
+      'Nothing scheduled for this day.\nUse New session above to add one.';
 
   @override
   String get schedCompleteTitle => 'Mark session complete';
@@ -1353,9 +1360,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedCompleteAction => 'Mark complete';
-
-  @override
-  String get schedNewClient => 'New client';
 
   @override
   String get schedSaveFailed => 'Couldn\'t save the session. Please try again';
@@ -1491,9 +1495,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get progEmptyHint =>
       'Build one in the AI routine tab, or agree on it over chat first.';
-
-  @override
-  String get schedEmptySlotShort => 'Empty';
 
   @override
   String schedSentTo(String name) {
