@@ -69,4 +69,40 @@ class AppColors {
   static const Color info = primary;
   static const Color error = destructive;
   static const Color primaryContainer = accent;
+
+  // --- Status / chart semantics (수정사항 선행 토큰, #995) ---
+  //
+  // 세 파트(공통·사용자앱 / 트레이너 대시보드·메시지·스케줄·리포트 /
+  // 트레이너 고객·프로그램)가 **같은 이름**으로 읽도록 두 앱에 같은 이름·같은
+  // 값으로 둔다. 화면에서 색을 직접 고르지 말고 여기서 가져간다.
+
+  /// 정상 초록. "고객-식단-정상 초록"을 기준값으로 승격한 것이다.
+  /// 식단 그래프·정상 태그·달성 표시가 모두 이 초록 하나를 쓴다.
+  static const Color statusNormal = Color(0xFF22A882);
+
+  /// 주의 주황 — **고객 상태 등급**의 중간 단계(주의 고객)에 쓴다.
+  /// 텍스트·아이콘용. 배지 배경·막대는 [statusCautionFill].
+  static const Color statusCaution = Color(0xFFE8760A);
+
+  /// 주의 주황(채움). 배지 배경, 진행 막대의 '주의' 구간.
+  static const Color statusCautionFill = Color(0xFFFF953C);
+
+  /// 위험 빨강 — 고객 상태 등급의 마지막 단계(이탈 위험).
+  static const Color statusDanger = Color(0xFFF04438);
+
+  /// 목표 초과 빨강 — 칼로리·나트륨·당류가 목표를 넘은 지표 표시.
+  /// [statusDanger] 와 **같은 값이다.** 회원이 자기 폰에서 빨갛게 보는 초과를
+  /// 트레이너 화면에서 다른 세기로 보여주지 않는다.
+  static const Color statusOver = statusDanger;
+
+  /// 식단 그래프 색. 파랑에서 초록으로 옮긴다 — 운동과 한눈에 갈라 보라는
+  /// 요구이므로 식단만 바꾸고 운동은 파랑을 지킨다.
+  static const Color dietChart = statusNormal;
+
+  /// 운동 그래프 색. 앱별 브랜드 파랑을 그대로 쓴다.
+  static const Color exerciseChart = primary;
+
+  /// 그래프 목표선(파선). 데이터 선과 섞이지 않도록 중립 회색을 쓰고,
+  /// 굵기·파선 간격은 차트 위젯에서 통일한다.
+  static const Color chartGoalLine = Color(0xFF98A2B3);
 }

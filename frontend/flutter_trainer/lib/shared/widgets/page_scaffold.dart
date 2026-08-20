@@ -219,15 +219,30 @@ class _HeaderLayoutDelegate extends MultiChildLayoutDelegate {
     final sideWidth = startSize.width > endSize.width
         ? startSize.width
         : endSize.width;
-    final centerWidth = (size.width - sideWidth * 2).clamp(0.0, size.width);
-    final centerSize = layoutChild(
+    double centerWidth = (size.width - sideWidth * 2).clamp(0.0, size.width);
+    double centerLeft = (size.width - centerWidth) / 2;
+
+    // 대칭 예약이 가운데를 굶기면 대칭을 포기한다 (#995).
+    //
+    // 좌우에 같은 폭을 예약하는 것은 탭을 옮겨도 검색 바가 제자리에 있게 하려는
+    // 것인데, 액션이 많은 화면(리포트)에서는 그 예약 때문에 가운데가 인라인
+    // 최소 폭 아래로 떨어져 검색 바가 통째로 아이콘으로 접혔다. 글씨를 키우면
+    // 액션 폭이 함께 늘어 더 자주 걸린다. 자리를 못 지키는 것보다 가운데가
+    // 조금 치우치는 편이 낫다.
+    if (centerWidth < AppLayout.headerCenterMinWidth) {
+      final double gap =
+          size.width - startSize.width - endSize.width - AppSpacing.sm * 2;
+      if (gap > centerWidth) {
+        centerWidth = gap.clamp(0.0, size.width);
+        centerLeft = startSize.width + AppSpacing.sm;
+      }
+    }
+
+    layoutChild(
       _HeaderSlot.center,
       BoxConstraints.tightFor(width: centerWidth, height: size.height),
     );
-    positionChild(
-      _HeaderSlot.center,
-      Offset((size.width - centerSize.width) / 2, 0),
-    );
+    positionChild(_HeaderSlot.center, Offset(centerLeft, 0));
   }
 
   @override
