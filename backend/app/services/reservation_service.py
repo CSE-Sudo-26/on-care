@@ -3,11 +3,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.clock import SEOUL
+from app.core.pagination import DEFAULT_PAGE
 from app.models.models import (
     TrainerClient,
     TrainerReservation,
@@ -349,22 +350,49 @@ def reserve(
 
 
 def list_member_reservations(
-    db: Session, member_id: str, *, now: datetime | None = None
+    db: Session,
+    member_id: str,
+    *,
+    now: datetime | None = None,
+    limit: int = DEFAULT_PAGE,
+    before: datetime | None = None,
+    before_id: str | None = None,
 ) -> list[MyReservationOut]:
-    """회원의 예약 목록(예정된 것 먼저). 지난 예약도 함께 준다.
+    """회원의 예약 목록 한 쪽(다가오는 것부터). 지난 예약도 함께 준다.
 
     지난 것을 숨기지 않는 이유: 회원이 "내가 그 시간에 예약했었나" 를 확인하는
     자리이기도 하다. 대신 `cancellable` 로 취소 가능 여부를 서버가 판단해 준다.
+
+    **순서가 늦은 것부터로 바뀌었다(#980).** 예약은 한 건씩 영구히 쌓이는데 예전에는
+    상한 없이 `starts_at` 오름차순으로 전부 돌려줬다 — 여기에 상한만 씌우면 첫 쪽이
+    **가장 오래된 지난 예약**으로 채워져, 정작 다가오는 예약이 화면에서 사라진다.
+    내림차순이면 첫 쪽이 항상 예정된 예약이고, 지난 예약은 이어 받는 쪽으로 밀린다.
+
+    커서는 알림·채팅 스레드와 같은 모양이다 — 받은 마지막 예약의
+    `(starts_at, id)` 를 `(before, before_id)` 로 넘긴다. 한 트레이너가 같은 시각에
+    슬롯을 여러 개 열어 둘 수 있어 동시각이 실제로 나오므로 복합 커서를 쓴다.
     """
     current = now or datetime.now(timezone.utc)
-    rows = db.execute(
+    query = (
         select(TrainerReservation, TrainerReservationSlot)
         .join(
             TrainerReservationSlot,
             TrainerReservationSlot.id == TrainerReservation.slot_id,
         )
         .where(TrainerReservation.member_id == member_id)
-        .order_by(TrainerReservationSlot.starts_at)
+    )
+    if before is not None:
+        if before_id is not None:
+            query = query.where(
+                tuple_(TrainerReservationSlot.starts_at, TrainerReservation.id)
+                < (before, before_id)
+            )
+        else:
+            query = query.where(TrainerReservationSlot.starts_at < before)
+    rows = db.execute(
+        query.order_by(
+            TrainerReservationSlot.starts_at.desc(), TrainerReservation.id.desc()
+        ).limit(limit)
     ).all()
     return [
         MyReservationOut(

@@ -18,8 +18,11 @@ class _FailingGymRepository implements GymRepository {
   const _FailingGymRepository();
 
   @override
-  Future<List<MyReservation>> fetchMyReservations() async =>
-      const <MyReservation>[];
+  Future<List<MyReservation>> fetchMyReservations({
+    int limit = reservationPageSize,
+    DateTime? before,
+    String? beforeId,
+  }) async => const <MyReservation>[];
 
   @override
   Future<void> cancelReservation(String reservationId) async {}

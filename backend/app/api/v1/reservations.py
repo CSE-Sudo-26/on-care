@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireMember, RequireTrainer
+from app.core.pagination import DEFAULT_PAGE, MAX_PAGE, parse_before
 from app.db.session import get_db
 from app.schemas.reservation_api import (
     MyReservationOut,
@@ -67,12 +68,31 @@ def create_reservation(
 def my_reservations(
     member: RequireMember,
     db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(
+        DEFAULT_PAGE, ge=1, le=MAX_PAGE, description="한 번에 가져올 예약 수"
+    ),
+    before: str | None = Query(
+        None, description="ISO datetime 커서(다음 쪽) — 받은 마지막 예약의 starts_at"
+    ),
+    before_id: str | None = Query(
+        None, description="복합 커서 tie-break — 받은 마지막 예약의 id"
+    ),
 ) -> list[MyReservationOut]:
-    """회원의 예약 목록. 앱이 '내가 잡은 자리'를 표시하고 취소를 걸 자리다. (#502)
+    """회원의 예약 목록 한 쪽. 앱이 '내가 잡은 자리'를 표시하고 취소를 걸 자리다. (#502)
+
+    예약은 취소해도 이력이 남아야 해 계정마다 계속 쌓인다. 상한 없이 전부 돌려주던
+    시절에는 예약할 때마다 이 응답이 한 건씩 길어졌다 — 다가오는 예약부터 기본 50건씩
+    주고, 지난 예약은 커서로 이어 받는다. (#980)
 
     `/reservations/{id}` 보다 먼저 선언해야 "me" 가 id 로 잡히지 않는다.
     """
-    return reservation_service.list_member_reservations(db, member.id)
+    return reservation_service.list_member_reservations(
+        db,
+        member.id,
+        limit=limit,
+        before=parse_before(before),
+        before_id=before_id,
+    )
 
 
 @router.delete("/reservations/{reservation_id}", status_code=200)

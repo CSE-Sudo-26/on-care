@@ -12,12 +12,17 @@ void main() {
       ThemeData(useMaterial3: true).textTheme,
     );
 
-    expect(textTheme.bodyLarge!.fontSize, 17);
-    expect(textTheme.bodyMedium!.fontSize, 16);
-    expect(textTheme.bodySmall!.fontSize, 14);
-    expect(textTheme.labelLarge!.fontSize, 16);
-    expect(textTheme.labelMedium!.fontSize, 14);
-    expect(textTheme.labelSmall!.fontSize, 13);
+    // 바닥값으로 검사한다 — 이 테스트가 막으려는 것은 글씨가 **작아지는**
+    // 회귀다. 등호로 박아 두면 글씨를 키울 때마다 테스트가 먼저 깨진다. (#995)
+    expect(textTheme.bodyLarge!.fontSize, greaterThanOrEqualTo(17));
+    expect(textTheme.bodyMedium!.fontSize, greaterThanOrEqualTo(16));
+    expect(textTheme.bodySmall!.fontSize, greaterThanOrEqualTo(15));
+    expect(textTheme.labelLarge!.fontSize, greaterThanOrEqualTo(16));
+    expect(textTheme.labelMedium!.fontSize, greaterThanOrEqualTo(15));
+    expect(textTheme.labelSmall!.fontSize, greaterThanOrEqualTo(14));
+
+    // 앱 전역 배율도 함께 지킨다 — 배율만 되돌려도 화면 글씨는 다시 작아진다.
+    expect(AppTypography.textScale, greaterThanOrEqualTo(1.1));
   });
 
   test('회색 텍스트 토큰은 흰 배경에서 의도한 대비를 유지한다', () {

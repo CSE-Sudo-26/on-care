@@ -33,8 +33,13 @@ class DioConsultationRepository implements ConsultationRepository {
   }
 
   @override
-  Future<List<ConsultationRequest>> fetchMine() async {
-    final res = await _dio.get<List<Object?>>('/consultations/me');
+  Future<List<ConsultationRequest>> fetchMine({
+    int limit = consultationPageSize,
+  }) async {
+    final res = await _dio.get<List<Object?>>(
+      '/consultations/me',
+      queryParameters: <String, Object?>{'limit': limit},
+    );
     return (res.data ?? const <Object?>[])
         .cast<Map<String, Object?>>()
         .map(consultationFromJson)
@@ -59,6 +64,7 @@ class MockConsultationRepository implements ConsultationRepository {
 
   /// 데모에는 서버가 없으므로 복원할 것도 없다.
   @override
-  Future<List<ConsultationRequest>> fetchMine() async =>
-      const <ConsultationRequest>[];
+  Future<List<ConsultationRequest>> fetchMine({
+    int limit = consultationPageSize,
+  }) async => const <ConsultationRequest>[];
 }

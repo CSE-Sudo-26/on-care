@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/design_system/tokens/typography.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
@@ -724,8 +725,11 @@ void main() {
       expect(listFinder, findsOneWidget);
       // 한 줄에 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
       // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐고(#898), 브라우저 글꼴에서
-      // 마지막 줄이 1px 넘쳐 104 가 됐다(#958).
-      expect(tester.getSize(listFinder).height, 104 * 5);
+      // 마지막 줄이 1px 넘쳐 104 가 됐다(#958). 앱 기본 글씨 배율이 올라가면
+      // 줄 높이도 함께 늘어난다 — 화면과 같은 식으로 기대값을 잡는다. (#995)
+      final double expectedRow =
+          104 + 84 * (AppTypography.textScale - 1).clamp(0.0, 2.0);
+      expect(tester.getSize(listFinder).height, expectedRow * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);
       expect(list.controller!.position.maxScrollExtent, greaterThan(0));
