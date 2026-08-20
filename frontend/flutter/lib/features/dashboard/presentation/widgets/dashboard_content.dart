@@ -772,7 +772,12 @@ class _ExerciseCard extends ConsumerWidget {
     // 칼로리를 읽어 홈 카드와 운동 탭이 항상 일치한다. 이 provider 는 오늘 체크한
     // AI 추천 운동까지 이미 더한 값이라, 아래 3지표와 주간 추이 차트가 같이 움직인다.
     // 로딩 전에는 summary 값으로 폴백.
-    final ExerciseWeek? wk = ref.watch(exerciseWeekViewProvider).valueOrNull;
+    final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
+      exerciseWeekViewProvider,
+    );
+    // 새로고침 중에는 직전 값을 계속 그린다 — 이미 맞는 그림을 지웠다 다시
+    // 그리면 깜빡임만 는다.
+    final ExerciseWeek? wk = weekAsync.valueOrNull;
     final int minutes = wk?.totalMinutes ?? summary.exerciseMinutes;
     final int count = wk?.workoutCount ?? summary.exerciseCount;
     final double burned = (wk?.totalCalories ?? summary.exerciseCalories)
@@ -781,17 +786,6 @@ class _ExerciseCard extends ConsumerWidget {
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
     // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = nowKst().weekday - 1;
-    // 데모 상수는 주간 데이터가 아직 로드되지 않았을 때만 쓴다. 실제 데이터가
-    // 있으면 그 일별 칼로리를 그대로 그린다(값이 없는 주는 빈 차트가 정답).
-    final List<double> baseCal = (wk != null && wk.dailyCalories.isNotEmpty)
-        ? wk.dailyCalories
-        : _demoExerciseWeekCalories;
-    final List<double> week = <double>[
-      for (int i = 0; i < baseCal.length; i++)
-        if (i > todayIdx) 0 else baseCal[i],
-    ];
-    final List<String> days = weekDayLabels(l);
-    final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
 
     return _HomeCard(
@@ -844,81 +838,13 @@ class _ExerciseCard extends ConsumerWidget {
               if (showCharts)
                 Expanded(
                   flex: 6,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        '${l.homeWeeklyExerciseTrend} (${l.unitKcal})',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        key: const ValueKey<String>('dashboard-exercise-chart'),
-                        height: 96,
-                        child: ChartReveal(
-                          duration: AppMotion.chartGrow,
-                          // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
-                          // 마스터 진행도는 선형으로 받는다.
-                          curve: Curves.linear,
-                          builder: (BuildContext context, double t) =>
-                              CustomPaint(
-                                size: Size.infinite,
-                                painter: _ExerciseBarPainter(
-                                  data: week,
-                                  lo: lo,
-                                  hi: hi,
-                                  todayIndex: todayIdx,
-                                  color: FigmaColors.primary,
-                                  progress: t,
-                                ),
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: <Widget>[
-                          for (int i = 0; i < days.length; i++)
-                            Expanded(
-                              child: Center(
-                                // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
-                                // 원형 안에 흰색 요일 글씨로 표기한다.
-                                child: i == todayIdx
-                                    ? Container(
-                                        width: 18,
-                                        height: 18,
-                                        alignment: Alignment.center,
-                                        decoration: const BoxDecoration(
-                                          color: FigmaColors.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Text(
-                                          days[i],
-                                          style: const TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      )
-                                    : Text(
-                                        days[i],
-                                        style: const TextStyle(
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.mutedForeground,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
+                  child: _ExerciseTrend(
+                    weekAsync: weekAsync,
+                    todayIndex: todayIdx,
+                    // 되짚는 대상은 파생 provider 가 아니라 실제로 서버를
+                    // 부르는 쪽이다 — 뷰만 무효화하면 캐시된 에러가 그대로
+                    // 다시 계산돼 아무 일도 일어나지 않는다.
+                    onRetry: () => ref.invalidate(exerciseWeekProvider),
                   ),
                 ),
             ],
@@ -928,6 +854,198 @@ class _ExerciseCard extends ConsumerWidget {
     );
   }
 }
+
+/// 운동 카드 오른쪽의 주간 추이. 상태를 세 갈래로 나눈다 — 값이 있으면 그리고,
+/// 실패했으면 실패했다고 말하고, 아직이면 자리만 잡는다.
+///
+/// 예전에는 값이 없을 때 데모 상수(월 300 · 화 420 …)를 그렸다. `valueOrNull`
+/// 은 로딩과 에러를 똑같이 `null` 로 주므로 그 폴백은 첫 프레임이 아니라
+/// **요청이 실패한 동안 계속** 걸렸고, 운동 기록이 하나도 없는 회원의 홈에
+/// 오류 표시 하나 없이 "이만큼 태웠다" 는 막대가 남았다. 왼쪽 3지표는 서버가
+/// 준 주간 합계로 폴백하니, 지표와 그래프가 서로 다른 이야기를 했다(#962).
+class _ExerciseTrend extends StatelessWidget {
+  const _ExerciseTrend({
+    required this.weekAsync,
+    required this.todayIndex,
+    required this.onRetry,
+  });
+
+  final AsyncValue<ExerciseWeek> weekAsync;
+
+  /// 오늘 요일(0=월 … 6=일).
+  final int todayIndex;
+  final VoidCallback onRetry;
+
+  /// 차트가 차지하는 높이. 세 상태가 같은 높이를 써야 로딩에서 데이터로 바뀔 때
+  /// 카드가 튀지 않는다.
+  static const double _chartHeight = 96;
+
+  /// 서버가 준 일별 칼로리를 일곱 칸으로 맞춘다. 모자라는 칸은 0 이고, 아직
+  /// 오지 않은 요일도 0 이다.
+  static List<double> series(List<double> daily, int todayIndex) {
+    return <double>[
+      for (int i = 0; i < 7; i++)
+        if (i > todayIndex || i >= daily.length) 0 else daily[i],
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final ExerciseWeek? wk = weekAsync.valueOrNull;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '${l.homeWeeklyExerciseTrend} (${l.unitKcal})',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w700,
+            color: FigmaColors.ink,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (wk != null)
+          _chart(context, l, wk)
+        else if (weekAsync.hasError)
+          _unavailable(l)
+        else
+          _placeholder(),
+      ],
+    );
+  }
+
+  Widget _chart(BuildContext context, AppLocalizations l, ExerciseWeek wk) {
+    final List<double> week = series(wk.dailyCalories, todayIndex);
+    final (double lo, double hi) = _barScale(week);
+    final List<String> days = weekDayLabels(l);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          key: const ValueKey<String>('dashboard-exercise-chart'),
+          height: _chartHeight,
+          child: ChartReveal(
+            duration: AppMotion.chartGrow,
+            // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
+            // 마스터 진행도는 선형으로 받는다.
+            curve: Curves.linear,
+            builder: (BuildContext context, double t) => CustomPaint(
+              size: Size.infinite,
+              painter: _ExerciseBarPainter(
+                data: week,
+                lo: lo,
+                hi: hi,
+                todayIndex: todayIndex,
+                color: FigmaColors.primary,
+                progress: t,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: <Widget>[
+            for (int i = 0; i < days.length; i++)
+              Expanded(
+                child: Center(
+                  // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
+                  // 원형 안에 흰색 요일 글씨로 표기한다.
+                  child: i == todayIndex
+                      ? Container(
+                          width: 18,
+                          height: 18,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: FigmaColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            days[i],
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          days[i],
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 불러오지 못했을 때. 값을 지어내는 대신 못 불러왔다고 적고, 다시 시도할
+  /// 자리를 준다.
+  Widget _unavailable(AppLocalizations l) {
+    return SizedBox(
+      key: const ValueKey<String>('dashboard-exercise-chart-error'),
+      height: _chartHeight + 24,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.homeExerciseTrendUnavailable,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.35,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextButton(
+            key: const ValueKey<String>('dashboard-exercise-chart-retry'),
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              l.actionRetry,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 아직 읽는 중. 자리만 잡아 두면 값이 도착했을 때 카드가 튀지 않는다.
+  Widget _placeholder() {
+    return Container(
+      key: const ValueKey<String>('dashboard-exercise-chart-loading'),
+      height: _chartHeight + 24,
+      decoration: BoxDecoration(
+        color: FigmaColors.primaryA(0.05),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+}
+
+/// [_ExerciseTrend.series] 를 테스트에서 부르기 위한 창구. 일곱 칸 정규화는
+/// 위젯을 띄우지 않고도 못박아 두고 싶은 규칙이다.
+@visibleForTesting
+List<double> exerciseTrendSeriesForTest(List<double> daily, int todayIndex) =>
+    _ExerciseTrend.series(daily, todayIndex);
 
 /// One activity metric in the 운동 card's left column: a blue icon chip with
 /// its label on the first line and the value underneath, per the Home layout
@@ -1062,15 +1180,14 @@ class _NutData {
 /// so the shown language never becomes an internal key.
 enum _NutTabKind { calories, sodium, sugar }
 
-/// Older dashboard responses can omit weekly nutrition history. Keep the
-/// original demo series only as a backward-compatible fallback.
-const Map<_NutTabKind, _NutData>
-_demoNutritionHistory = <_NutTabKind, _NutData>{
-  _NutTabKind.calories: _NutData(
-    // Monday through Saturday are demo history. Sunday is replaced at runtime.
-    cur: <double>[1650, 2100, 1480, 1720, 1390, 1860, 967],
+/// 지표마다 고정된 표시 규칙 — 단위·눈금·색. 값은 여기 없다.
+///
+/// 예전에는 이 자리에 주간 이력 예시 숫자까지 함께 들어 있었고, 응답이 7일을
+/// 채우지 않으면 그 숫자가 그대로 그려졌다. 화면에 뜬 한 주가 회원의 것이
+/// 아닐 수 있다는 뜻이라, 표시 규칙만 남기고 값은 응답에서만 온다(#962).
+const Map<_NutTabKind, _NutStyle> _nutStyles = <_NutTabKind, _NutStyle>{
+  _NutTabKind.calories: _NutStyle(
     unit: 'kcal',
-    goal: 2000,
     // 맨 아래 0 눈금은 당류 그래프와 같은 기준선 역할이라 항상 넣는다 —
     // 세 지표가 한 카드에서 탭으로 바뀌는데 축의 바닥이 서로 달랐다 (#548).
     // 그 위 눈금은 2개만 둔다. 라벨 칸은 16px 인데 촘촘히(1000·1500·2000·2500)
@@ -1079,25 +1196,29 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
     // 포인트 상태색으로만 표현) 2000 을 빼도 잃는 정보가 없다.
     ticks: <double>[0, 1500, 2500],
     color: FigmaColors.primary,
-    warn: false,
   ),
-  _NutTabKind.sodium: _NutData(
-    cur: <double>[1600, 1900, 2200, 1550, 1850, 2600, 3421],
+  _NutTabKind.sodium: _NutStyle(
     unit: 'mg',
-    goal: 2000,
     ticks: <double>[0, 1750, 3500],
     color: FigmaColors.orange,
-    warn: true,
   ),
-  _NutTabKind.sugar: _NutData(
-    cur: <double>[30, 48, 22, 55, 18, 47, 14.8],
+  _NutTabKind.sugar: _NutStyle(
     unit: 'g',
-    goal: 50,
     ticks: <double>[0, 25, 50],
     color: FigmaColors.sugarPurple,
-    warn: false,
   ),
 };
+
+class _NutStyle {
+  const _NutStyle({
+    required this.unit,
+    required this.ticks,
+    required this.color,
+  });
+  final String unit;
+  final List<double> ticks;
+  final Color color;
+}
 
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
@@ -1108,10 +1229,11 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final List<NutritionDay>? week = summary.nutritionWeek.length == 7
       ? summary.nutritionWeek
       : null;
-  // 구버전 응답은 데모 이력을 쓰되, 오늘 값만 실제 요일 자리에 넣는다.
+  // 주간 이력이 없으면 오늘 값만 제 요일 자리에 놓고 나머지는 비운다 —
+  // 없는 기록을 지어내지 않는다.
   final int todayIdx = _todayIndex();
   return <_NutTabKind, _NutData>{
-    for (final entry in _demoNutritionHistory.entries)
+    for (final entry in _nutStyles.entries)
       entry.key: _NutData(
         cur: week != null
             ? <double>[
@@ -1123,10 +1245,8 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
                   },
               ]
             : <double>[
-                for (int i = 0; i < entry.value.cur.length; i++)
-                  i == todayIdx
-                      ? liveValues[entry.key]!.current.toDouble()
-                      : entry.value.cur[i],
+                for (int i = 0; i < 7; i++)
+                  i == todayIdx ? liveValues[entry.key]!.current.toDouble() : 0,
               ],
         unit: entry.value.unit,
         goal: liveValues[entry.key]!.max.toDouble(),
@@ -1136,20 +1256,6 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
       ),
   };
 }
-
-/// Presentation-only history until the dashboard API exposes daily exercise
-/// series. Weekly live totals are shown separately in the metrics above.
-// 운동 탭 '운동 현황(이번 주)' 일별 소모 칼로리와 일치시킨다(수 휴식, 일 활동).
-// 월300·화420·목480·금400·토330·일520 = 운동 페이지 시드 하루 총합.
-const List<double> _demoExerciseWeekCalories = <double>[
-  300,
-  420,
-  0,
-  480,
-  400,
-  330,
-  520,
-];
 
 /// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
 /// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)
