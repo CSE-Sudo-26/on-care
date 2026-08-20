@@ -12,7 +12,6 @@ import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dar
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 import '../../helpers/pump_app.dart';
@@ -27,7 +26,17 @@ void main() {
 
       expect(find.text('대화'), findsOneWidget);
       expect(find.textContaining('읽지 않음'), findsOneWidget);
-      expect(find.widgetWithText(ActionButton, '고객 상세 보기'), findsOneWidget);
+      final detail = find.byKey(
+        const ValueKey<String>('messages-client-detail-button'),
+      );
+      expect(
+        find.descendant(of: detail, matching: find.text('고객 상세')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: detail, matching: find.byIcon(Icons.chevron_right)),
+        findsOneWidget,
+      );
       expect(find.byType(TextField), findsWidgets);
 
       final selectedTile = find.byKey(
@@ -185,6 +194,51 @@ void main() {
     },
   );
 
+  testWidgets('thread header is the detailed side: status and every alert', (
+    tester,
+  ) async {
+    await withWideSurface(tester, () async {
+      // 배지 우선순위는 요일에 따라 뒤집힌다 — 주가 끝난 일요일로 고정한다.
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        seedClock: DateTime(2026, 8, 16), // 일요일
+      );
+      await goTo(tester, AppRoutes.messagesFor('seed-client-3'));
+
+      final identity = find.byKey(
+        const ValueKey<String>('messages-thread-identity'),
+      );
+      expect(identity, findsOneWidget);
+      // 활성/휴면 알약이 이름 줄에 선다.
+      expect(
+        find.descendant(
+          of: identity,
+          matching: find.byKey(
+            const ValueKey<String>('messages-thread-status'),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: identity, matching: find.text('휴면')),
+        findsOneWidget,
+      );
+      // 목록과 달리 주의 배지는 **전부** 선다 — 자세한 쪽이 여기다.
+      expect(
+        find.descendant(of: identity, matching: find.text('나트륨 초과')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: identity, matching: find.text('당류 초과')),
+        findsOneWidget,
+      );
+      // 대화 화면은 대화만 한다 — 운동 데이터는 고객 탭이 보여 준다.
+      expect(find.textContaining('최근 운동'), findsNothing);
+      expect(find.textContaining('주간 이행률'), findsNothing);
+    });
+  });
+
   testWidgets('client query keeps the selected member in the thread', (
     tester,
   ) async {
@@ -212,7 +266,12 @@ void main() {
       expect(find.text('Conversations'), findsOneWidget);
       expect(find.textContaining('Unread'), findsOneWidget);
       expect(
-        find.widgetWithText(ActionButton, 'View client details'),
+        find.descendant(
+          of: find.byKey(
+            const ValueKey<String>('messages-client-detail-button'),
+          ),
+          matching: find.text('Client details'),
+        ),
         findsOneWidget,
       );
       expect(find.text('대화'), findsNothing);

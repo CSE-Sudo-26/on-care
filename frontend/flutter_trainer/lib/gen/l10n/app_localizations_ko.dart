@@ -2452,20 +2452,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagesNoPreview => '아직 대화가 없어요';
 
   @override
-  String messagesRecentWorkout(String value) {
-    return '최근 운동 $value';
-  }
-
-  @override
-  String get messagesNoCompletion => '주간 이행률 기록 없음';
-
-  @override
-  String messagesCompletion(int percent) {
-    return '주간 이행률 $percent%';
-  }
-
-  @override
-  String get messagesClientDetail => '고객 상세 보기';
+  String get messagesClientDetail => '고객 상세';
 
   @override
   String get messagesSelectPrompt => '왼쪽 목록에서 대화할 고객을 선택하세요.';
