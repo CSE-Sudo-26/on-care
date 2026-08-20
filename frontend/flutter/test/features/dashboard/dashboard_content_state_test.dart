@@ -13,6 +13,8 @@ import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/dashboard/presentation/widgets/dashboard_content.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
@@ -63,6 +65,23 @@ void main() {
     exerciseFeedback: '이번 주 운동 목표의 80%를 달성했어요.',
   );
 
+  /// 홈 운동 카드는 이제 주간 조회가 실패하면 막대 대신 실패를 그린다(#962).
+  /// 예전에는 그 자리에 데모 상수가 들어가 provider 가 터져도 차트가 보였다 —
+  /// 그래서 이 테스트들이 통과했다. 레이아웃을 보는 테스트이니 값을 넣어 준다.
+  const AsyncValue<ExerciseWeek> exerciseWeek = AsyncValue<ExerciseWeek>.data(
+    ExerciseWeek(
+      sessions: <ExerciseSession>[],
+      // 합계가 summary 와 맞는다 — 45분 · 520kcal · 운동 4일.
+      dailyMinutes: <double>[10, 10, 0, 15, 10, 0, 0],
+      dayLabels: <String>['월', '화', '수', '목', '금', '토', '일'],
+      totalMinutes: 45,
+      totalCalories: 520,
+      streakDays: 2,
+      aiCoachMessage: '',
+      dailyCalories: <double>[120, 120, 0, 160, 120, 0, 0],
+    ),
+  );
+
   Future<void> pumpDashboard(
     WidgetTester tester, {
     required Future<DashboardSummary> Function() load,
@@ -87,6 +106,7 @@ void main() {
           memberCoachRepositoryProvider.overrideWithValue(
             MockMemberCoachRepository(),
           ),
+          exerciseWeekViewProvider.overrideWithValue(exerciseWeek),
           ...extraOverrides,
         ],
         child: MaterialApp(

@@ -314,6 +314,12 @@ abstract class AppLocalizations {
   /// **'Exercise trend'**
   String get homeWeeklyExerciseTrend;
 
+  /// No description provided for @homeExerciseTrendUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this week\'s workout history.'**
+  String get homeExerciseTrendUnavailable;
+
   /// No description provided for @homeMetricOver.
   ///
   /// In en, this message translates to:
