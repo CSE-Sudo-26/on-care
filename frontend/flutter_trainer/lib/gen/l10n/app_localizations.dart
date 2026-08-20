@@ -4496,6 +4496,12 @@ abstract class AppLocalizations {
   /// **'Conversation list'**
   String get messagesBackToList;
 
+  /// No description provided for @messagesNoPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get messagesNoPreview;
+
   /// No description provided for @messagesRecentWorkout.
   ///
   /// In en, this message translates to:

@@ -1414,6 +1414,7 @@
   "messagesFilterUnreadCount": "Unread {count}",
   "@messagesFilterUnreadCount": {"placeholders": {"count": {"type": "int"}}},
   "messagesBackToList": "Conversation list",
+  "messagesNoPreview": "No messages yet",
   "messagesRecentWorkout": "Recent workout {value}",
   "@messagesRecentWorkout": {"placeholders": {"value": {"type": "String"}}},
   "messagesNoCompletion": "No completion record this week",

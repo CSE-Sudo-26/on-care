@@ -2541,6 +2541,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesBackToList => 'Conversation list';
 
   @override
+  String get messagesNoPreview => 'No messages yet';
+
+  @override
   String messagesRecentWorkout(String value) {
     return 'Recent workout $value';
   }

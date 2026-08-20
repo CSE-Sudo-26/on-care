@@ -288,7 +288,12 @@ class _ConversationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alerts = healthAlertsFor(client);
+    final l = AppLocalizations.of(context);
+    // 로스터의 미리보기는 대화가 없는 고객에게 빈 문자열이다(실 API의
+    // `last_message=… if last_msg else ""`). 빈 `Text` 는 아무것도 그리지
+    // 않아 그 줄이 통째로 사라졌고, 옆 고객만 한 줄 높은 타일을 가졌다 —
+    // 화면은 "미리보기가 없다"가 아니라 "아직 대화가 없다"를 말해야 한다.
+    final hasPreview = client.lastMessage.trim().isNotEmpty;
     return DecoratedBox(
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.all(AppRadius.card),
@@ -350,17 +355,30 @@ class _ConversationTile extends StatelessWidget {
                       // 고르는 목록에는 없었다(#898).
                       const SizedBox(height: 2),
                       ClientGoalLabel(client: client),
+                      // 활성/주의 배지는 여기 없다. 목록은 **어느 대화를 열까**
+                      // 를 정하는 자리라 이름 · 목표 · 마지막 말 · 안읽음이면
+                      // 충분하고, 상태의 자세한 내막은 대화를 연 뒤 헤더가
+                      // 말한다(#991). 같은 사실을 두 번 세우면 목록이 길어질
+                      // 뿐 고르는 데 도움이 되지 않는다. 활성/휴면만은 아바타
+                      // 모서리의 점으로 남는다 — 훑는 자리의 표시다.
                       const SizedBox(height: 3),
                       Row(
                         children: <Widget>[
                           Expanded(
                             child: Text(
-                              client.lastMessage,
+                              hasPreview
+                                  ? client.lastMessage
+                                  : l.messagesNoPreview,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: AppColors.mutedForeground,
+                                color: hasPreview
+                                    ? AppColors.mutedForeground
+                                    : AppColors.subtleForeground,
                                 fontSize: 11.5,
+                                fontStyle: hasPreview
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
                                 fontWeight: unread > 0
                                     ? FontWeight.w700
                                     : FontWeight.w500,
@@ -396,10 +414,6 @@ class _ConversationTile extends StatelessWidget {
                             ),
                         ],
                       ),
-                      if (alerts.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 7),
-                        AlertBadge(alert: alerts.first),
-                      ],
                     ],
                   ),
                 ),
