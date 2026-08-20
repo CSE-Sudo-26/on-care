@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,8 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -85,10 +88,12 @@ void main() {
         const ValueKey<String>('messages-conversation-seed-client-3'),
       );
       expect(conversation, findsOneWidget);
+      // 미리보기는 스레드의 **마지막** 메시지다 — 회원이 보낸 옛 메시지가
+      // 아니라, 트레이너가 마지막으로 보낸 답장이 뜬다.
       expect(
         find.descendant(
           of: conversation,
-          matching: find.text('이번 주 운동 못했어요...'),
+          matching: find.textContaining('이해해요! 대신 AI 식단 분석'),
         ),
         findsOneWidget,
       );
@@ -96,8 +101,59 @@ void main() {
         find.byKey(const ValueKey<String>('messages-unread-seed-client-3')),
         findsOneWidget,
       );
+      // 목록은 어느 대화를 열까를 정하는 자리다 — 상태의 자세한 내막은
+      // 대화를 연 뒤 헤더가 말한다. 활성/휴면은 아바타 점으로만 남는다.
+      expect(
+        find.descendant(of: conversation, matching: find.text('휴면')),
+        findsNothing,
+      );
       expect(
         find.descendant(of: conversation, matching: find.text('나트륨 초과')),
+        findsNothing,
+      );
+    });
+  });
+
+  testWidgets('conversation without a thread still shows a preview line', (
+    tester,
+  ) async {
+    await withWideSurface(tester, () async {
+      // 실 API 는 대화가 없는 고객의 `last_message` 를 빈 문자열로 준다.
+      // 그대로 그리면 미리보기 줄이 통째로 사라져 타일 높이가 고객마다
+      // 달라졌다 — 빈 값도 뜻을 갖고 한 줄을 지켜야 한다.
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        extraOverrides: <Override>[
+          clientsProvider.overrideWith(
+            (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+              const TrainerClient(
+                id: 'quiet-client',
+                name: '한조용',
+                avatar: '한',
+                goal: '목표 설정 전',
+                lastMessage: '',
+                lastTime: '-',
+                active: true,
+                calories: 0,
+                sodiumMg: 0,
+                sugarG: 0,
+                lastRoutine: '-',
+                weekCompletion: <int>[],
+                sodiumWeek: <int>[],
+              ),
+            ]),
+          ),
+        ],
+      );
+      await goTo(tester, AppRoutes.messages);
+
+      final conversation = find.byKey(
+        const ValueKey<String>('messages-conversation-quiet-client'),
+      );
+      expect(conversation, findsOneWidget);
+      expect(
+        find.descendant(of: conversation, matching: find.text('아직 대화가 없어요')),
         findsOneWidget,
       );
     });

@@ -2449,6 +2449,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagesBackToList => '대화 목록';
 
   @override
+  String get messagesNoPreview => '아직 대화가 없어요';
+
+  @override
   String messagesRecentWorkout(String value) {
     return '최근 운동 $value';
   }
