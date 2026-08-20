@@ -150,25 +150,30 @@ MEALS: dict[str, tuple[str, str, str, str, list[str]]] = {
 ROUTINE: dict[int, list[tuple[str, str, int]]] = {
     0: [("저강도 유산소 (걷기) 30분", "cardio", 30),
         ("코어 강화 10분", "strength", 10),
-        ("하체 스트레칭 5분", "stretching", 5)],
+        ("하체 스트레칭 5분", "flexibility", 5)],
     1: [("저강도 유산소 (걷기) 40분", "cardio", 40),
-        ("하체 스트레칭 10분", "stretching", 10)],
+        ("하체 스트레칭 10분", "flexibility", 10)],
     2: [],
     3: [("저강도 유산소 (걷기) 35분", "cardio", 35),
         ("코어 강화 20분", "strength", 20),
-        ("하체 스트레칭 5분", "stretching", 5)],
+        ("하체 스트레칭 5분", "flexibility", 5)],
     4: [("저강도 유산소 (걷기) 45분", "cardio", 45),
-        ("어깨 관절 보호 스트레칭 10분", "stretching", 10)],
+        ("어깨 관절 보호 스트레칭 10분", "flexibility", 10)],
     5: [("저강도 유산소 (걷기) 25분", "cardio", 25),
         ("코어 강화 30분", "strength", 30),
-        ("하체 스트레칭 15분", "stretching", 15)],
+        ("하체 스트레칭 15분", "flexibility", 15)],
     6: [("저강도 유산소 (걷기) 20분", "cardio", 20),
-        ("하체 스트레칭 10분", "stretching", 10)],
+        ("하체 스트레칭 10분", "flexibility", 10)],
 }
 
 #: 분당 칼로리. 종류마다 다르다 — 걷기와 스트레칭을 같은 값으로 두면 주간 활동
 #: 그래프의 스택이 실제 운동 강도와 어긋난다.
-KCAL_PER_MIN = {"cardio": 7.5, "strength": 5, "stretching": 3}
+#:
+#: 값은 앱·백엔드의 추정표와 **같아야 한다**(`_estimateCalories`,
+#: `exercise_service._KCAL_PER_MIN`). 예전에는 여기만 7.5·5 로 낮아, 데모의 30분
+#: 유산소는 225kcal 인데 같은 운동을 회원이 직접 기록하면 270kcal 이 나왔다.
+#: 같은 사람의 같은 운동이 기록 경로에 따라 다른 숫자가 되는 셈이다. (#997)
+KCAL_PER_MIN = {"cardio": 9, "strength": 6, "flexibility": 3}
 
 # ── 주별 이야기 ────────────────────────────────────────────────────────────
 # 12주를 7가지 주로 돌려 채운다. 예전에는 주마다 계수 하나를 곱해 흔들었는데,
@@ -316,7 +321,7 @@ RECENT: list[dict] = [
         "exercises": [
             ("레그프레스 3세트", "strength", 25, True),
             ("레그컬 3세트", "strength", 20, True),
-            ("하체 스트레칭 15분", "stretching", 15, True),
+            ("하체 스트레칭 15분", "flexibility", 15, True),
         ],
         "meals": [
             (B_EGG, "seed-diet-breakfast", "08:20",
@@ -337,7 +342,7 @@ RECENT: list[dict] = [
         "exercises": [
             ("저강도 유산소 (걷기) 30분", "cardio", 30, True),
             ("코어 강화 10분", "strength", 10, True),
-            ("하체 스트레칭 15분", "stretching", 15, False),
+            ("하체 스트레칭 15분", "flexibility", 15, False),
         ],
         "meals": [
             (B_OAT, "seed-diet-yesterday-breakfast", "08:10",
@@ -358,7 +363,7 @@ RECENT: list[dict] = [
         "exercises": [
             ("저강도 유산소 (걷기) 30분", "cardio", 30, True),
             ("코어 강화 10분", "strength", 10, True),
-            ("하체 스트레칭 15분", "stretching", 15, True),
+            ("하체 스트레칭 15분", "flexibility", 15, True),
         ],
         "meals": [
             (B_YOG, "seed-diet-two-days-ago-breakfast", "08:35",

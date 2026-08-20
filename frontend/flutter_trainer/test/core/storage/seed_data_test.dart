@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:demo_fixture/demo_fixture.dart';
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,20 +84,22 @@ void main() {
       await seedIfEmpty(db);
 
       final Map<String, FixtureDay> byDate = <String, FixtureDay>{
-        for (final FixtureDay day in _fixture.daysFor(nowKst()))
-          day.date: day,
+        for (final FixtureDay day in _fixture.daysFor(nowKst())) day.date: day,
       };
 
-      final rows =
-          await (db.select(db.clientDailyMetrics)
-                ..where((t) => t.clientId.equals('seed-client-1')))
-              .get();
+      final rows = await (db.select(
+        db.clientDailyMetrics,
+      )..where((t) => t.clientId.equals('seed-client-1'))).get();
       expect(rows, isNotEmpty);
       for (final row in rows) {
         final FixtureDay day = byDate[row.date]!;
         expect(row.calories, day.calories, reason: '${row.date} 칼로리');
         expect(row.sodiumMg, day.sodiumMg, reason: '${row.date} 나트륨');
-        expect(row.sugarG, closeTo(day.sugarG, 0.001), reason: '${row.date} 당류');
+        expect(
+          row.sugarG,
+          closeTo(day.sugarG, 0.001),
+          reason: '${row.date} 당류',
+        );
         expect(row.completion, day.completion, reason: '${row.date} 이행률');
       }
 
@@ -214,10 +217,9 @@ void main() {
       // 그 날짜에서 센다. 실제 오늘로 재면 시드가 만들어진 주와 어긋나 CI 가
       // 도는 날에 따라 결과가 달라진다(#826).
       final twelveWeeksAgo = pinned.subtract(const Duration(days: 7 * 11));
-      final dailyRows =
-          await (db.select(db.clientDailyMetrics)
-                ..where((t) => t.clientId.equals(full.id)))
-              .get();
+      final dailyRows = await (db.select(
+        db.clientDailyMetrics,
+      )..where((t) => t.clientId.equals(full.id))).get();
       final oldest = dailyRows
           .map((row) => row.date)
           .reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
@@ -424,6 +426,30 @@ void main() {
         expect(await db.readValue('trainer_seeded_v18'), today);
       },
     );
+
+    test('목록 미리보기가 그 스레드의 마지막 메시지와 같다', () async {
+      // 예전에는 로스터의 `lastMessage` 를 손으로 적어 뒀다. 대화를 손볼 때
+      // 한쪽만 바뀌어서, 김민수는 우연히 맞고 박성호는 회원이 보낸 옛
+      // 메시지가 목록에 떴다 — 같은 화면이 고객마다 다른 말을 했다.
+      await seedIfEmpty(db);
+
+      final clients = await db.select(db.trainerClients).get();
+      expect(clients, isNotEmpty);
+      for (final client in clients) {
+        final thread =
+            await (db.select(db.clientChatMessages)
+                  ..where((t) => t.clientId.equals(client.id))
+                  ..orderBy(<OrderingTerm Function($ClientChatMessagesTable)>[
+                    (t) => OrderingTerm(expression: t.createdAt),
+                  ]))
+                .get();
+        expect(
+          client.lastMessage,
+          thread.isEmpty ? '' : thread.last.body,
+          reason: '${client.name}(${client.id})의 미리보기가 스레드와 어긋난다',
+        );
+      }
+    });
 
     test('user-added (non-seed) chat messages survive a re-seed', () async {
       await seedIfEmpty(db);

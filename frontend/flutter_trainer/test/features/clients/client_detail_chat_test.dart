@@ -455,6 +455,27 @@ void main() {
       expect(find.text('다음 세션 때 봐요!'), findsWidgets);
     });
 
+    testWidgets('a sent message lands below the routine-sent banner', (
+      tester,
+    ) async {
+      await openMessages(tester);
+      await tester.enterText(find.byType(TextField).last, '다음 세션 때 봬요!');
+      await tester.tap(find.byIcon(Icons.send));
+      await settle(tester);
+
+      // 배너는 그날의 분석 → 대화 → 루틴 전송이라는 하루의 **끝**을 표시한다.
+      // 목록 맨 아래에 고정돼 있으면 방금 보낸 답장이 그 앞으로 들어가,
+      // 화면에서는 "내가 보낸 말이 루틴 전송보다 먼저" 로 읽힌다.
+      // 배너는 날이 바뀌는 자리마다 한 번씩 더 있다 — 닫는 배너는 맨 뒤다.
+      final banner = find.textContaining('AI 분석 기반 루틴이').last;
+      final sent = find.text('다음 세션 때 봬요!').last;
+      expect(banner, findsOneWidget);
+      expect(
+        tester.getTopLeft(banner).dy,
+        lessThan(tester.getTopLeft(sent).dy),
+      );
+    });
+
     testWidgets(
       'mashing send while an insert is in flight stores one message',
       (tester) async {

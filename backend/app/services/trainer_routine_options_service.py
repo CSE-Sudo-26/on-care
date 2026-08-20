@@ -39,7 +39,7 @@ from app.schemas.trainer_api import (
     RoutineOptionsOut,
     RoutineOptionsRequest,
 )
-from app.services import routine_ai
+from app.services import exercise_types, routine_ai
 from app.services.coach import prompt_safety
 from app.services.coach.llm import DEFAULT_THINKING_BUDGET, get_coach_llm
 
@@ -209,9 +209,10 @@ def _exercise_name(item: object) -> str:
 
 def _guess_intensity(exercise_type: str) -> RoutineIntensityPreference:
     """마지막으로 배정한 루틴의 운동 타입으로 강도 선호를 대강 짐작한다."""
-    if exercise_type == "근력":
+    code = exercise_types.normalize(exercise_type)
+    if code == exercise_types.STRENGTH:
         return "high"
-    if exercise_type in ("스트레칭", "요가"):
+    if code == exercise_types.FLEXIBILITY:
         return "low"
     return "moderate"
 

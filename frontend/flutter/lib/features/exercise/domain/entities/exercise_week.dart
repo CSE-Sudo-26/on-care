@@ -209,7 +209,11 @@ class ExerciseWeek {
       dailyCalories: dailyCalories,
       cardioMinutes: parseDoubleList('cardio_minutes'),
       strengthMinutes: parseDoubleList('strength_minutes'),
-      stretchingMinutes: parseDoubleList('stretching_minutes'),
+      // 표준 이름을 먼저 본다. 옛 이름은 서버가 아직 함께 내려주는 동안의
+      // 다리다 — 둘 다 없으면 빈 목록이라 그래프가 그 줄기만 비운다. (#997)
+      stretchingMinutes: parseDoubleList('flexibility_minutes').isNotEmpty
+          ? parseDoubleList('flexibility_minutes')
+          : parseDoubleList('stretching_minutes'),
     );
   }
 }

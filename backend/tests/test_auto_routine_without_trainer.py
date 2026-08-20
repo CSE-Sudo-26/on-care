@@ -88,7 +88,7 @@ def test_auto_recommendations_stay_in_a_safe_range(client, lone_member):
 
     # 승인할 사람이 없으므로 범위 자체가 안전장치다. 고강도·고위험 운동을
     # 회원 기록만으로 새로 처방하지 않는다.
-    assert {r["type"] for r in mine.json()} <= {"유산소", "스트레칭"}
+    assert {r["type"] for r in mine.json()} <= {"유산소", "유연성"}
     assert all(r["minutes"] <= 30 for r in mine.json())
     assert all(r["reason"] for r in mine.json()), "왜 하는지 없이 주지 않는다"
 

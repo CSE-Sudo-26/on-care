@@ -796,8 +796,10 @@ class _WeekDay extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Container(
-              width: 30,
-              height: 30,
+              // 알약도 글씨 배율을 따라간다 — 30 으로 박아 두면 날짜 숫자가
+              // 상자에 눌린다. (#1004)
+              width: 30 * MediaQuery.textScalerOf(context).scale(1),
+              height: 30 * MediaQuery.textScalerOf(context).scale(1),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: isSelected ? FigmaColors.primary : Colors.transparent,

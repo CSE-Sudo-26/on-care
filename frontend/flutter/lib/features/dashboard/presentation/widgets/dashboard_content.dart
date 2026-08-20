@@ -1734,6 +1734,10 @@ class _RecMealCard extends StatelessWidget {
                     ),
                     child: Text(
                       meal.tag,
+                      // 영어 태그는 길어서 두 줄이 되고, 그만큼 설명이 눌려
+                      // 사라진다 — 태그는 한 줄로 못 박는다. (#1004)
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1966,14 +1970,19 @@ class _ChartLegend extends StatelessWidget {
     return Row(
       children: <Widget>[
         Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
+          // 그래프 제목은 그 그래프가 무슨 지표인지를 말한다 — 줄임표가 되면
+          // (`Weekly Calories tre…`) 그 역할이 사라진다. 좁으면 줄인다. (#1004)
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              title,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.ink,
+              ),
             ),
           ),
         ),

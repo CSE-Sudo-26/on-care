@@ -56,8 +56,6 @@ const List<_Client> _clients = <_Client>[
     // 없는 문구('오늘 식단 전송됐어요')가 떴고, 그 다음에는 마지막 메시지의
     // 중간 토막을 잘라 써서 목록과 대화의 첫 마디가 서로 달랐다. 길이는 카드가
     // 알아서 줄임표로 자른다 — 여기서 미리 자르면 안 된다.
-    lastMessage:
-        '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
     lastTime: '18:18',
     threadHandled: true,
     active: true,
@@ -79,7 +77,7 @@ const List<_Client> _clients = <_Client>[
     diet: <_Meal>[],
     aiRoutine: <_Routine>[
       _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
-      _Routine('하체 스트레칭', 15, '스트레칭', '혈액순환 개선'),
+      _Routine('하체 스트레칭', 15, '유연성', '혈액순환 개선'),
       _Routine('코어 강화', 10, '근력', '기초대사량 향상'),
     ],
     // 운동 이력도 픽스처가 정한다. 예전에는 날짜 라벨이 `'7/12 (오늘)'` 로 박혀
@@ -176,7 +174,6 @@ const List<_Client> _clients = <_Client>[
     name: '이지수',
     avatar: '이',
     goal: '체력 강화 · 다이어트',
-    lastMessage: '루틴 받았어요, 감사합니다!',
     lastTime: '1시간 전',
     active: true,
     calories: 1680,
@@ -260,7 +257,6 @@ const List<_Client> _clients = <_Client>[
     name: '박성호',
     avatar: '박',
     goal: '근력 향상',
-    lastMessage: '이번 주 운동 못했어요...',
     lastTime: '3일 전',
     active: false,
     calories: 2100,
@@ -342,7 +338,6 @@ const List<_Client> _clients = <_Client>[
     name: '정하윤',
     avatar: '정',
     goal: '산후 체력 회복',
-    lastMessage: '이번 주부터 다시 시작했어요!',
     lastTime: '2시간 전',
     threadHandled: true,
     active: true,
@@ -371,7 +366,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 걷기', 25, '유산소', '회복기 심박 관리'),
-      _Routine('골반 안정화', 15, '스트레칭', '산후 코어 재활'),
+      _Routine('골반 안정화', 15, '유연성', '산후 코어 재활'),
       _Routine('밴드 로우', 12, '근력', '상체 자세 교정'),
     ],
     history: <_History>[
@@ -413,7 +408,6 @@ const List<_Client> _clients = <_Client>[
     name: '최우진',
     avatar: '최',
     goal: '마라톤 완주 준비',
-    lastMessage: '내일 장거리 뜁니다',
     lastTime: '어제',
     threadHandled: true,
     active: true,
@@ -460,7 +454,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('LSD 러닝', 45, '유산소', '유산소 기반 다지기'),
       _Routine('힙 힌지 드릴', 12, '근력', '러닝 이코노미 개선'),
-      _Routine('종아리 스트레칭', 10, '스트레칭', '부상 예방'),
+      _Routine('종아리 스트레칭', 10, '유연성', '부상 예방'),
     ],
     history: <_History>[
       _History(
@@ -493,7 +487,6 @@ const List<_Client> _clients = <_Client>[
     name: '강서연',
     avatar: '강',
     goal: '체지방 감량',
-    lastMessage: '주말엔 약속이 많아서요 😅',
     lastTime: '5시간 전',
     threadHandled: true,
     active: true,
@@ -533,7 +526,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('주말 회복 걷기', 30, '유산소', '주말 나트륨 배출'),
       _Routine('전신 서킷', 20, '근력', '평일 루틴 유지'),
-      _Routine('상체 스트레칭', 10, '스트레칭', '피로 해소'),
+      _Routine('상체 스트레칭', 10, '유연성', '피로 해소'),
     ],
     history: <_History>[
       _History(
@@ -570,7 +563,6 @@ const List<_Client> _clients = <_Client>[
     name: '임도현',
     avatar: '임',
     goal: '목표 설정 전',
-    lastMessage: '아직 대화가 없어요',
     lastTime: '-',
     threadHandled: true,
     active: true,
@@ -588,7 +580,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('체력 측정 걷기', 20, '유산소', '기초 체력 파악'),
       _Routine('맨몸 스쿼트', 10, '근력', '하체 기준선 측정'),
-      _Routine('전신 스트레칭', 10, '스트레칭', '가동범위 확인'),
+      _Routine('전신 스트레칭', 10, '유연성', '가동범위 확인'),
     ],
     history: <_History>[],
     chat: <_Chat>[],
@@ -600,7 +592,6 @@ const List<_Client> _clients = <_Client>[
     name: '오세라',
     avatar: '오',
     goal: '고혈압 관리',
-    lastMessage: '요즘 너무 바빠서 못 하고 있어요',
     lastTime: '어제',
     active: true,
     calories: 2480,
@@ -629,7 +620,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 걷기', 20, '유산소', '혈압 우선 안정'),
-      _Routine('호흡 이완', 10, '스트레칭', '교감신경 완화'),
+      _Routine('호흡 이완', 10, '유연성', '교감신경 완화'),
       _Routine('의자 스쿼트', 8, '근력', '최소 부하로 재시작'),
     ],
     history: <_History>[
@@ -663,7 +654,6 @@ const List<_Client> _clients = <_Client>[
     name: '배준혁',
     avatar: '배',
     goal: '수면 · 컨디션 개선',
-    lastMessage: '오늘도 야근이라 못 갈 것 같아요',
     lastTime: '30분 전',
     active: true,
     calories: 2050,
@@ -691,7 +681,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('퇴근 후 걷기', 15, '유산소', '짧게라도 유지'),
-      _Routine('목·어깨 스트레칭', 10, '스트레칭', '장시간 착석 보완'),
+      _Routine('목·어깨 스트레칭', 10, '유연성', '장시간 착석 보완'),
       _Routine('플랭크', 5, '근력', '최소 코어 유지'),
     ],
     history: <_History>[
@@ -724,7 +714,6 @@ const List<_Client> _clients = <_Client>[
     name: '신유나',
     avatar: '신',
     goal: '재활 후 복귀',
-    lastMessage: '이번 주는 다 지켰어요 :)',
     lastTime: '3시간 전',
     threadHandled: true,
     active: true,
@@ -763,7 +752,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('실내 자전거', 20, '유산소', '무릎 부담 없는 유산소'),
       _Routine('레그 익스텐션', 12, '근력', '대퇴사두 재건'),
-      _Routine('무릎 가동범위', 10, '스트레칭', '재활 프로토콜'),
+      _Routine('무릎 가동범위', 10, '유연성', '재활 프로토콜'),
     ],
     history: <_History>[
       _History(
@@ -796,7 +785,6 @@ const List<_Client> _clients = <_Client>[
     name: '한지호',
     avatar: '한',
     goal: '현 체중 유지',
-    lastMessage: '똑같은 것 같아요',
     lastTime: '어제',
     threadHandled: true,
     active: true,
@@ -827,7 +815,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('트레드밀 경사 걷기', 25, '유산소', '정체 구간 자극 변화'),
       _Routine('풀업 어시스트', 12, '근력', '상체 자극 전환'),
-      _Routine('전신 스트레칭', 10, '스트레칭', '회복'),
+      _Routine('전신 스트레칭', 10, '유연성', '회복'),
     ],
     history: <_History>[
       _History(
@@ -852,7 +840,6 @@ const List<_Client> _clients = <_Client>[
     name: '문가영',
     avatar: '문',
     goal: '체력 회복',
-    lastMessage: '당분간 쉬려고요',
     lastTime: '3주 전',
     active: false,
     calories: 770,
@@ -872,7 +859,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('가벼운 걷기', 20, '유산소', '복귀 준비'),
-      _Routine('전신 스트레칭', 15, '스트레칭', '휴식기 유연성 유지'),
+      _Routine('전신 스트레칭', 15, '유연성', '휴식기 유연성 유지'),
       _Routine('맨몸 스쿼트', 8, '근력', '최소 근력 유지'),
     ],
     history: <_History>[
@@ -897,7 +884,6 @@ const List<_Client> _clients = <_Client>[
     name: '류태경',
     avatar: '류',
     goal: '벌크업',
-    lastMessage: '오늘은 제대로 했습니다',
     lastTime: '1시간 전',
     active: true,
     calories: 3120,
@@ -967,7 +953,6 @@ const List<_Client> _clients = <_Client>[
     name: '백서진',
     avatar: '백',
     goal: '식습관 개선',
-    lastMessage: '국물을 못 끊겠어요',
     lastTime: '어제',
     threadHandled: true,
     active: true,
@@ -998,7 +983,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('러닝머신', 30, '유산소', '나트륨 배출 지원'),
       _Routine('전신 근력 서킷', 25, '근력', '현 루틴 유지'),
-      _Routine('스트레칭', 10, '스트레칭', '회복'),
+      _Routine('스트레칭', 10, '유연성', '회복'),
     ],
     history: <_History>[
       _History(
@@ -1023,7 +1008,6 @@ const List<_Client> _clients = <_Client>[
     name: '노은채',
     avatar: '노',
     goal: '운동 습관 만들기',
-    lastMessage: '첫 운동 했어요!',
     lastTime: '어제',
     threadHandled: true,
     active: true,
@@ -1045,7 +1029,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('걷기', 20, '유산소', '습관 형성 우선'),
       _Routine('맨몸 스쿼트', 8, '근력', '부담 없는 시작'),
-      _Routine('전신 스트레칭', 10, '스트레칭', '운동 후 회복'),
+      _Routine('전신 스트레칭', 10, '유연성', '운동 후 회복'),
     ],
     history: <_History>[
       _History(
