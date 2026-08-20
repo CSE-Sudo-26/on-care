@@ -83,7 +83,24 @@ abstract class TrainerAuthRepository {
 
   /// Rotates an expired session (POST /v1/auth/refresh). Throws
   /// [AuthException] when the refresh token is invalid/expired.
+  ///
+  /// 회전에 쓴 토큰은 서버에서 **그 자리에 폐기된다** — 한 번 쓴 갱신 토큰으로
+  /// 다시 회전하면 재사용으로 보고 거부된다(#966). 회전 결과는 반드시 저장해야
+  /// 하고, 같은 토큰으로 두 번 부르면 안 된다.
   Future<TrainerAuthTokens> refresh(String refreshToken);
+
+  /// 서버 쪽 세션을 끊는다 (POST /v1/auth/logout) — [refreshToken] 을 폐기해
+  /// 더 이상 회전에 쓰이지 못하게 한다.
+  ///
+  /// 공용 PC 에서 브라우저 저장소가 복사되거나 토큰이 새면, 로컬 저장소를 지우는
+  /// 것만으로는 그 세션이 끊기지 않는다 — 갱신 토큰은 만료(기본 30일)까지
+  /// 살아 있다(#966).
+  ///
+  /// 다른 메서드처럼 실패하면 던진다. 다만 **로그아웃은 그 실패로 멈추지 않는다** —
+  /// 사용자가 이미 결정한 일이라, 네트워크가 끊겼다고 로그인 화면으로 못 나가면 안 된다.
+  /// 그 판단은 호출부(`SessionController.signOut`)가 한곳에서 한다. 서버가 못 받은
+  /// 폐기는 그 토큰의 만료까지 남지만, 이 기기의 자격은 어차피 지워진다.
+  Future<void> logout(String refreshToken);
 
   /// Reads the signed-in trainer's profile (GET /v1/trainer/me) using
   /// [accessToken].

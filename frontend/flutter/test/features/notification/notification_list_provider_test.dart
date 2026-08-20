@@ -39,7 +39,7 @@ void _demoReadStateTests() {
 
     expect(await repo.unreadCount(), 0);
     expect(
-      (await repo.fetchAll()).every((AlertItem a) => a.read),
+      (await repo.fetchPage()).every((AlertItem a) => a.read),
       isTrue,
     );
   });
@@ -47,7 +47,7 @@ void _demoReadStateTests() {
   test('데모에서 한 건 읽으면 그만큼만 줄어든다', () async {
     final repo = MockNotificationRepository();
     final int before = await repo.unreadCount();
-    final AlertItem unread = (await repo.fetchAll()).firstWhere(
+    final AlertItem unread = (await repo.fetchPage()).firstWhere(
       (AlertItem a) => !a.read,
     );
 

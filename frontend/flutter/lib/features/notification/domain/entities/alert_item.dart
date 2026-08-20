@@ -30,6 +30,7 @@ class AlertItem {
     required this.category,
     this.read = false,
     this.action,
+    this.createdAt = '',
   });
 
   final String id;
@@ -38,6 +39,15 @@ class AlertItem {
   final String timeAgo;
   final AlertCategory category;
   final bool read;
+
+  /// 서버가 준 `created_at` **그대로**(ISO). 다음 쪽을 이어 받는 커서로 되돌려 준다.
+  ///
+  /// 파싱해서 들고 있지 않는 이유: 되돌려 줄 때 다시 문자열로 만들면 표기가 미묘하게
+  /// 달라질 수 있고(정밀도·오프셋), 커서는 서버가 준 값과 **같아야** 경계가 맞는다.
+  /// 화면에 보이는 시각은 별도로 [timeAgo] 가 담당한다.
+  ///
+  /// 데모 알림처럼 서버에서 오지 않은 항목은 비어 있다 — 목 모드는 쪽을 나누지 않는다.
+  final String createdAt;
 
   /// 서버가 지정한 이동 경로. 없으면 읽음 처리만 한다.
   final AlertAction? action;
@@ -50,6 +60,7 @@ class AlertItem {
     category: category,
     read: read ?? this.read,
     action: action,
+    createdAt: createdAt,
   );
 }
 
@@ -63,6 +74,8 @@ class NotificationState {
     required this.items,
     this.loading = false,
     this.failedToLoad = false,
+    this.hasMore = false,
+    this.loadingMore = false,
   });
 
   final List<AlertItem> items;
@@ -73,15 +86,29 @@ class NotificationState {
   /// 마지막 조회가 실패했는가. 화면이 재시도를 제안하는 근거다.
   final bool failedToLoad;
 
+  /// 더 받아 올 과거 알림이 남아 있을 수 있는가. (#965)
+  ///
+  /// 서버가 청한 만큼 꽉 채워 줬으면 참이다. 마지막 쪽이 정확히 한 쪽 크기였다면
+  /// 한 번 더 물어보고 빈 쪽을 받게 되는데, 그 편이 **남은 알림을 못 보는 것보다**
+  /// 낫다.
+  final bool hasMore;
+
+  /// 다음 쪽을 받는 중인가. 목록 끝에 진행 표시를 그리는 근거다.
+  final bool loadingMore;
+
   int get unreadCount => items.where((AlertItem i) => !i.read).length;
 
   NotificationState copyWith({
     List<AlertItem>? items,
     bool? loading,
     bool? failedToLoad,
+    bool? hasMore,
+    bool? loadingMore,
   }) => NotificationState(
     items: items ?? this.items,
     loading: loading ?? this.loading,
     failedToLoad: failedToLoad ?? this.failedToLoad,
+    hasMore: hasMore ?? this.hasMore,
+    loadingMore: loadingMore ?? this.loadingMore,
   );
 }

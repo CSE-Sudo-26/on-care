@@ -257,7 +257,11 @@ class _EmptyProfile extends ProfileController {
 
 class _EmptyNotificationRepository implements NotificationRepository {
   @override
-  Future<List<AlertItem>> fetchAll() async => const <AlertItem>[];
+  Future<List<AlertItem>> fetchPage({
+    int limit = notificationPageSize,
+    String? before,
+    String? beforeId,
+  }) async => const <AlertItem>[];
 
   @override
   Future<void> markRead(String id) async {}

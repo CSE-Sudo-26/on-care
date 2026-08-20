@@ -10,8 +10,21 @@ class DioNotificationRepository implements NotificationRepository {
   final Dio _dio;
 
   @override
-  Future<List<AlertItem>> fetchAll() async {
-    final res = await _dio.get<List<Object?>>('/notifications');
+  Future<List<AlertItem>> fetchPage({
+    int limit = notificationPageSize,
+    String? before,
+    String? beforeId,
+  }) async {
+    final res = await _dio.get<List<Object?>>(
+      '/notifications',
+      queryParameters: <String, Object?>{
+        'limit': limit,
+        // 커서는 첫 쪽에서 없다. null 을 실어 보내면 서버가 빈 문자열로 읽는 일이
+        // 생기므로 있는 것만 붙인다.
+        'before': ?before,
+        'before_id': ?beforeId,
+      },
+    );
     final rows = res.data ?? const <Object?>[];
     return rows.cast<Map<String, Object?>>().map(_fromJson).toList();
   }
@@ -54,6 +67,8 @@ class DioNotificationRepository implements NotificationRepository {
       category: _categoryFrom(json['category']! as String),
       read: (json['read'] as bool?) ?? false,
       action: _actionFrom(json['action']),
+      // 다음 쪽 커서로 되돌려 줄 값이라 **문자열 그대로** 들고 간다(#965).
+      createdAt: (json['created_at'] as String?) ?? '',
     );
   }
 

@@ -276,11 +276,43 @@ class SessionController extends StateNotifier<SessionState> {
     state = SessionState(status: status, profile: profile);
   }
 
-  /// Signs out — clears persisted tokens and returns to the login screen.
+  /// Signs out — revokes the session server-side, clears persisted tokens,
+  /// and returns to the login screen.
   Future<void> signOut() async {
     _userActionStarted = true;
+    // 지우기 **전에** 서버에 알린다 — 지운 뒤에는 폐기할 토큰이 없다.
+    await _revokeSession();
     // 사용자가 직접 요청한 만료다 — 자기 자신의 가드에 막히면 안 된다.
     await _expire(userInitiated: true);
+  }
+
+  /// 저장된 갱신 토큰을 서버에서 폐기한다(`POST /auth/logout`).
+  ///
+  /// 여기까지 로그아웃은 이 브라우저의 저장소를 비우는 일이었다. 갱신 토큰은 만료
+  /// (기본 30일)까지 살아 있어서, 공용 PC 에서 저장소가 복사되거나 토큰이 새면
+  /// 로그아웃을 눌러도 그 세션은 그대로였다 — 트레이너 계정은 담당 회원의 식단·운동·
+  /// 건강 정보를 전부 읽는 계정이라 영향 범위가 좁지 않다(#966).
+  ///
+  /// **어떤 실패도 로그아웃을 막지 않는다.** 폐기는 성사되면 좋은 일이고, 실패했다고
+  /// 사용자를 로그인된 화면에 붙잡아 두는 쪽이 훨씬 나쁘다.
+  Future<void> _revokeSession() async {
+    String? refresh;
+    try {
+      // 읽기도 저장 큐를 탄다 — 회전이 방금 저장한 토큰이 있다면 그것을 끊어야 한다.
+      await _serializeTokenStorage(() async {
+        refresh = await _tokens.readRefreshToken();
+      });
+    } catch (_) {
+      return; // secure storage 를 못 읽으면 끊을 대상도 모른다.
+    }
+    final token = refresh;
+    // 데모 세션에는 저장된 토큰이 없다 — 부를 것도 없다.
+    if (token == null || token.isEmpty) return;
+    try {
+      await _repo.logout(token);
+    } catch (_) {
+      // 위 주석 참고 — 삼킨다.
+    }
   }
 
   // --- helpers ------------------------------------------------------------

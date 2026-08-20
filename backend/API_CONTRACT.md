@@ -94,13 +94,47 @@ category: hospital|exercise|meal|medication|other
 
 | Method | Path | 응답 |
 |---|---|---|
-| GET | `/notifications` | `[{ id, title, body, category, read(bool), created_at(ISO), time_ago }]` (배열, 최신순) |
+| GET | `/notifications` | `[{ id, title, body, category, read(bool), created_at(ISO), time_ago }]` (배열, 최신순, 기본 50건) |
 | GET | `/notifications/unread-count` | `{ unread(int) }` |
 | POST | `/notifications/{id}/read` | 단건 읽음 → `{ id, read: true }` |
 | POST | `/notifications/read-all` | 전체 읽음 → `{ marked_read(int) }` |
 | DELETE | `/notifications/{id}` | 삭제 → `{ status: "deleted" }` |
 
 category: reminder|health_check|achievement|system
+
+#### 목록 페이지네이션 (#965)
+
+`GET /notifications` 는 **한 쪽**만 돌려줍니다. 파라미터 없이 부르면 최신 50건입니다.
+
+| 파라미터 | 기본 | 설명 |
+|---|---|---|
+| `limit` | 50 | 1~100. 범위를 벗어나면 **422** |
+| `before` | — | 다음 쪽 커서. 받은 마지막 알림의 `created_at`(ISO) 을 그대로 되돌려 줍니다. 파싱 실패는 **422** |
+| `before_id` | — | 복합 커서 tie-break. 받은 마지막 알림의 `id` |
+
+- 커서는 채팅 스레드(`GET /me/coach/chat`)와 **같은 모양**입니다.
+- `(created_at, id)` 복합 커서를 쓰는 이유: 훅 하나가 여러 알림을 한 트랜잭션에 넣어
+  같은 `created_at` 이 실제로 나옵니다. 시각만으로 자르면 그 경계에서 알림이 빠지거나 겹칩니다.
+- **미확인 배지 수(`/notifications/unread-count`)는 쪽 나눔과 무관합니다** — DB 에서 세므로
+  전체 기준입니다.
+- 오프셋 없는 `before` 는 UTC 로 읽습니다(`created_at` 은 UTC 로 저장).
+
+#### 보존 기간 (#965)
+
+**읽은 알림은 90일까지 보존합니다**(`notification_service.READ_RETENTION_DAYS`).
+
+- 대상은 `read = true` 이고 `created_at` 이 90일보다 오래된 행뿐입니다.
+- **미확인 알림은 아무리 오래돼도 지우지 않습니다.** 사용자가 보지 않은 알림을 서버가
+  지우면 무엇이 사라졌는지 알 길이 없고, 배지 수도 그만큼 조용히 줄어듭니다.
+- 자동으로 돌지 않습니다. 삭제는 되돌릴 수 없어 **사람이 실행**합니다:
+
+  ```
+  python -m scripts.purge_notifications --dry-run   # 대상만 본다
+  python -m scripts.purge_notifications             # 실제로 지운다
+  ```
+
+- 정리 대상 선정(`expired_notifications`)은 지우는 일과 분리돼 있고 테스트가 있습니다
+  (`tests/test_notification_pagination.py`).
 
 ### AI 코치
 
@@ -197,6 +231,24 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 두 앱 모두 로그인과 토큰 저장이 붙어 있다(`session_controller.dart`, `secure_token_store.dart`,
 `auth_interceptor.dart`). 발급은 `POST /auth/login`·`POST /auth/refresh`·`POST /auth/social/{provider}`
 이고, 이후 요청은 `Authorization: Bearer <access>` 를 단다.
+
+### 세션 폐기 (#966)
+
+refresh 토큰은 **일회용**이다. `POST /auth/refresh` 는 회전할 때 쓰인 토큰을 그 자리에서
+폐기하므로, 회전 결과를 저장하지 못하면 다음 회전은 401 이다. 이미 쓴 토큰이 다시 오면
+재사용으로 보고 거부하고 `auth.refresh_reuse` 감사 로그를 남긴다.
+
+`POST /auth/logout` 은 `{refresh_token}` 을 받아 그 토큰을 폐기하고 **204** 로 답한다.
+못 알아본 토큰에도 204 다 — 클라이언트가 할 일(로컬 저장소 비우기)은 어느 쪽이든 같고,
+상태 코드로 "이 토큰은 살아 있다"를 알려 줄 이유가 없다. access 토큰은 요구하지 않는다
+(이미 만료된 상태에서도 로그아웃할 수 있어야 한다).
+
+폐기는 토큰 문자열이 아니라 `jti` 만 `revoked_refresh_tokens` 에 적는다. 만료된 항목은
+새 폐기가 생길 때마다 함께 정리되므로 별도 배치가 없다. `jti` 가 없는 예전 토큰
+(#966 이전 발급)은 폐기할 이름이 없어 회전에서 거부된다 — 한 번의 재로그인이 필요하다.
+
+발급된 access 토큰 자체는 남은 수명(기본 하루)까지 유효하다. 상태 없는 JWT 의 성질이며,
+로그아웃이 끊는 것은 **세션을 계속 되살리는 능력**이다.
 
 ### 의존성 네 갈래
 

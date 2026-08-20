@@ -38,16 +38,26 @@ class NotificationPage extends ConsumerStatefulWidget {
 /// 잠깐 다른 앱을 다녀오는 것이 실제로 자주 하는 동작이다.
 class _NotificationPageState extends ConsumerState<NotificationPage>
     with WidgetsBindingObserver {
+  /// 목록 끝에 다가오면 다음 쪽을 부르기 위해 스크롤 위치를 본다. (#965)
+  final ScrollController _scroll = ScrollController();
+
+  /// 바닥에서 이만큼 남았을 때 미리 부른다. 다 닿은 뒤에 부르면 기다리는 것이
+  /// 그대로 보인다.
+  static const double _loadMoreThreshold = 320;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scroll.addListener(_maybeLoadMore);
     // 첫 프레임 뒤에 부른다 — build 중에 provider 를 건드리지 않는다.
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
   @override
   void dispose() {
+    _scroll.removeListener(_maybeLoadMore);
+    _scroll.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -62,6 +72,14 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
     return ref.read(notificationControllerProvider.notifier).refresh();
   }
 
+  /// 바닥 근처면 다음 쪽을 잇는다. 중복 호출·더 없음은 컨트롤러가 막는다.
+  void _maybeLoadMore() {
+    if (!mounted || !_scroll.hasClients) return;
+    final ScrollPosition p = _scroll.position;
+    if (p.maxScrollExtent - p.pixels > _loadMoreThreshold) return;
+    ref.read(notificationControllerProvider.notifier).loadMore();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -69,6 +87,12 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
     final state = ref.watch(notificationControllerProvider);
     final notifier = ref.read(notificationControllerProvider.notifier);
     final bool showRetry = state.failedToLoad;
+    final int leading = showRetry ? 1 : 0;
+    final int bodyCount = state.items.isEmpty ? 1 : state.items.length;
+    // 더 받을 것이 남아 있을 때만 꼬리를 단다. 빈 목록에는 달지 않는다 — 받을 것이
+    // 없는데 도는 표시는 영영 도는 표시로 보인다.
+    final int trailing =
+        state.items.isNotEmpty && (state.hasMore || state.loadingMore) ? 1 : 0;
 
     final Widget page = Scaffold(
       key: const Key('notificationPage'),
@@ -86,11 +110,10 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView.separated(
+          controller: _scroll,
           padding: const EdgeInsets.all(AppSpacing.lg),
           physics: const AlwaysScrollableScrollPhysics(),
-          itemCount:
-              (showRetry ? 1 : 0) +
-              (state.items.isEmpty ? 1 : state.items.length),
+          itemCount: leading + bodyCount + trailing,
           separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (BuildContext ctx, int i) {
             // 조회가 실패해도 **받아 둔 목록은 그대로 둔다.** 맨 위에 사정과 재시도만
@@ -107,7 +130,10 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
                 ),
               );
             }
-            final AlertItem item = state.items[i - (showRetry ? 1 : 0)];
+            final int j = i - leading;
+            // 마지막 칸은 이어 받기 표시다. 과거 알림이 남아 있는 동안만 그린다.
+            if (j >= state.items.length) return const _LoadingMoreFooter();
+            final AlertItem item = state.items[j];
             return _AlertTile(
               item: item,
               // 읽음 처리를 기다리지 않고 이동한다 — 서버 왕복 동안 화면이 멈춰
@@ -209,6 +235,27 @@ class _RetryBanner extends StatelessWidget {
             child: Text(l.actionRetry),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// 과거 알림을 이어 받는 동안 목록 끝에 서는 표시. (#965)
+class _LoadingMoreFooter extends StatelessWidget {
+  const _LoadingMoreFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      key: Key('notificationLoadMore'),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
       ),
     );
   }
