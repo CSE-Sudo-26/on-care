@@ -2544,20 +2544,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesNoPreview => 'No messages yet';
 
   @override
-  String messagesRecentWorkout(String value) {
-    return 'Recent workout $value';
-  }
-
-  @override
-  String get messagesNoCompletion => 'No completion record this week';
-
-  @override
-  String messagesCompletion(int percent) {
-    return '$percent% completion this week';
-  }
-
-  @override
-  String get messagesClientDetail => 'View client details';
+  String get messagesClientDetail => 'Client details';
 
   @override
   String get messagesSelectPrompt =>

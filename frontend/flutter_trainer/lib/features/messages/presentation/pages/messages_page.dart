@@ -20,6 +20,7 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 
 enum _ConversationFilter {
   all('all'),
@@ -435,8 +436,6 @@ class _ThreadPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final completion = recordedCompletionMean(client)?.round();
-    final alerts = healthAlertsFor(client);
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -453,71 +452,20 @@ class _ThreadPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                 ],
-                ClientAvatar(label: client.avatar, active: client.active),
+                // 활성/휴면은 옆의 알약이 글자로 말한다 — 여기 점까지 찍으면
+                // 같은 사실이 한 뼘 안에 두 번 선다. 목록의 아바타는 반대다:
+                // 그쪽엔 알약이 없어 점이 유일한 표시다.
+                ClientAvatar(label: client.avatar),
                 const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      ClientIdentity(
-                        client: client,
-                        nameStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.foreground,
-                        ),
-                      ),
-                      Text(
-                        client.goal,
-                        style: const TextStyle(
-                          color: AppColors.subtleForeground,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ActionButton(
+                Expanded(child: _Identity(client: client)),
+                // 식단·운동은 고객 탭이 훨씬 자세히 보여 준다. 이 화면은
+                // 대화를 하는 곳이므로, 그 데이터를 여기로 옮겨 오는 대신
+                // **가는 길**만 둔다.
+                _ClientDetailLink(
                   key: const ValueKey<String>('messages-client-detail-button'),
                   label: l.messagesClientDetail,
                   onPressed: () =>
                       context.go(AppRoutes.clientDetail(client.id)),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.xs,
-            ),
-            color: AppColors.accentSurface.withValues(alpha: 0.55),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(
-                          l.messagesRecentWorkout(client.lastRoutine),
-                          style: _signalStyle,
-                        ),
-                        const _SignalDivider(),
-                        Text(
-                          completion == null
-                              ? l.messagesNoCompletion
-                              : l.messagesCompletion(completion),
-                          style: _signalStyle,
-                        ),
-                        if (alerts.isNotEmpty) ...<Widget>[
-                          const _SignalDivider(),
-                          AlertBadge(alert: alerts.first),
-                        ],
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -535,22 +483,153 @@ class _ThreadPanel extends StatelessWidget {
       ),
     );
   }
-
-  static const TextStyle _signalStyle = TextStyle(
-    fontSize: 12,
-    color: AppColors.mutedForeground,
-    fontWeight: FontWeight.w600,
-  );
 }
 
-class _SignalDivider extends StatelessWidget {
-  const _SignalDivider();
+/// 대화 헤더가 말하는 이 사람 — 이름 · 성별·나이 · 활성/휴면 · 주의사항,
+/// 그 아래 목표.
+///
+/// 고객 탭 상세(`client_detail_view.dart` 의 `_identityRow`)와 같은 구성이다.
+/// 같은 사실을 두 탭이 다른 모양으로 말하지 않도록 색·문구·모양을 맞춘다(#926).
+///
+/// 여기가 목록보다 **자세한** 자리다. 목록은 어느 대화를 열까만 정하고,
+/// 연 뒤에 이 사람이 어떤 상태인지는 여기서 읽는다.
+///
+/// `Row` 가 아니라 `Wrap` 인 이유: 알약과 배지는 글자 길이만큼 자리를 요구할
+/// 뿐 줄어들 수 없어서, 좁은 폭에서는 다음 줄로 내려야 한다.
+///
+/// 알약은 **읽기 전용**이다. 활성/휴면을 바꾸는 자리는 고객 탭이고, 대화
+/// 중에 눌러서 바뀌면 되돌릴 곳이 이 화면에 없다.
+class _Identity extends StatelessWidget {
+  const _Identity({required this.client});
+
+  final TrainerClient client;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      child: Container(width: 1, height: 12, color: AppColors.borderStrong),
+    final l = AppLocalizations.of(context);
+    final alerts = healthAlertsFor(client);
+    final statusColor = client.active
+        ? AppColors.success
+        : AppColors.disabledForeground;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints c) => Wrap(
+            key: const ValueKey<String>('messages-thread-identity'),
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.xs,
+            runSpacing: 4,
+            children: <Widget>[
+              // 이름만은 줄 폭 안에서 말줄임한다 — `Wrap` 의 자식은 폭이
+              // 무제한이라 기대는 곳이 없으면 긴 이름이 그대로 뻗는다.
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: c.maxWidth),
+                child: ClientIdentity(
+                  client: client,
+                  nameStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              Container(
+                key: const ValueKey<String>('messages-thread-status'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: const BorderRadius.all(AppRadius.pill),
+                ),
+                child: StatusDotLabel(
+                  label: client.active ? l.clientActive : l.clientDormant,
+                  filled: client.active,
+                  color: statusColor,
+                ),
+              ),
+              // 배지는 하나씩 `Wrap` 의 자식이다. 묶어서 넣으면 그 묶음이
+              // 통째로 다음 줄로 내려가고, 묶음 안에서는 다시 접히지 않는다.
+              //
+              // 목록과 달리 **전부** 세운다 — 자세한 쪽이 여기다.
+              for (final alert in alerts)
+                KeyedSubtree(
+                  key: ValueKey<String>('messages-thread-alert-${alert.name}'),
+                  child: AlertBadge(alert: alert),
+                ),
+            ],
+          ),
+        ),
+        Text(
+          client.goal,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.subtleForeground,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 고객 탭으로 가는 길 — 화살표 앞에 목적지 이름을 세운다.
+///
+/// 화살표만 두면 "여기서 어디로 가는가" 를 아이콘 모양으로 짐작해야 한다.
+/// 그렇다고 채워진 버튼으로 세우면 이 화면의 주된 동작인 메시지 보내기보다
+/// 강하게 읽힌다 — 글자를 화살표와 **같은 색·같은 크기**로 두어, 길잡이는
+/// 되되 눈길은 끌지 않게 한다.
+class _ClientDetailLink extends StatelessWidget {
+  const _ClientDetailLink({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 6,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: const TextStyle(
+                    // 화살표(20)와 같은 크기·같은 색. 둘이 한 덩어리로 읽힌다.
+                    fontSize: 13,
+                    height: 1.1,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.disabledForeground,
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.disabledForeground,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

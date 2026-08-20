@@ -4502,28 +4502,10 @@ abstract class AppLocalizations {
   /// **'No messages yet'**
   String get messagesNoPreview;
 
-  /// No description provided for @messagesRecentWorkout.
-  ///
-  /// In en, this message translates to:
-  /// **'Recent workout {value}'**
-  String messagesRecentWorkout(String value);
-
-  /// No description provided for @messagesNoCompletion.
-  ///
-  /// In en, this message translates to:
-  /// **'No completion record this week'**
-  String get messagesNoCompletion;
-
-  /// No description provided for @messagesCompletion.
-  ///
-  /// In en, this message translates to:
-  /// **'{percent}% completion this week'**
-  String messagesCompletion(int percent);
-
   /// No description provided for @messagesClientDetail.
   ///
   /// In en, this message translates to:
-  /// **'View client details'**
+  /// **'Client details'**
   String get messagesClientDetail;
 
   /// No description provided for @messagesSelectPrompt.
