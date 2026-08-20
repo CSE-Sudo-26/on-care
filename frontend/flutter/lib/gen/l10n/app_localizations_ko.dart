@@ -120,6 +120,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeWeeklyExerciseTrend => '운동 추이';
 
   @override
+  String get homeExerciseTrendUnavailable => '주간 운동 기록을 불러오지 못했어요.';
+
+  @override
   String get homeMetricOver => '초과';
 
   @override

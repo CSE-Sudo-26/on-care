@@ -36,6 +36,7 @@
   "homeAchieveRate": "달성률",
   "homeWeeklyMetricTrend": "주간 {metric} 추이",
   "homeWeeklyExerciseTrend": "운동 추이",
+  "homeExerciseTrendUnavailable": "주간 운동 기록을 불러오지 못했어요.",
   "homeMetricOver": "초과",
   "homeMetricNormal": "정상",
   "dietAmountOver": "목표보다 {amount} 많아요",

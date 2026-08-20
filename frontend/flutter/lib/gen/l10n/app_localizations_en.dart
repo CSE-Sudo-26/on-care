@@ -121,6 +121,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeeklyExerciseTrend => 'Exercise trend';
 
   @override
+  String get homeExerciseTrendUnavailable =>
+      'Couldn\'t load this week\'s workout history.';
+
+  @override
   String get homeMetricOver => 'Over';
 
   @override
