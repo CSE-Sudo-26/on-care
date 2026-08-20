@@ -95,3 +95,18 @@ flutter:
 
   assets:
     - assets/images/
+
+  fonts:
+    # Pretendard (SIL OFL 1.1) — 두 앱 공통 한글 UI 서체 (#995).
+    # 정적 4종만 담는다: 400/500/600/700 이 타입 스케일이 실제로 쓰는 굵기다.
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/fonts/Pretendard-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.otf
+          weight: 700
+
