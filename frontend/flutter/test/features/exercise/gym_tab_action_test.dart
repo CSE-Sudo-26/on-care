@@ -9,6 +9,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -90,6 +91,7 @@ void main() {
     Trainer? trainer = _trainer,
     MemberCoach? coach,
     int unread = 0,
+    List<MyReservation> reservations = const <MyReservation>[],
   }) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -138,6 +140,7 @@ void main() {
           ),
           memberCoachProvider.overrideWith((ref) async => coach),
           coachUnreadProvider.overrideWith((ref) async => unread),
+          myReservationsProvider.overrideWith((ref) async => reservations),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -165,6 +168,57 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
   }
+
+  testWidgets('예약 패널은 다가오는 자리를 위에, 지난 예약을 아래에 둔다', (WidgetTester tester) async {
+    // 서버는 늦은 예약부터 준다(#980) — 쪽을 나누려면 그 순서여야 한다. 그대로
+    // 그리면 다음 주 자리가 내일 자리보다 위에 오고, 지난 예약이 그 사이에 섞인다.
+    await pumpGymTab(
+      tester,
+      reservations: <MyReservation>[
+        MyReservation(
+          id: 'far',
+          slotId: 'slot-far',
+          trainerId: _trainer.id,
+          startsAt: DateTime(2026, 9, 30, 10),
+          cancellable: true,
+        ),
+        MyReservation(
+          id: 'past',
+          slotId: 'slot-past',
+          trainerId: _trainer.id,
+          startsAt: DateTime(2026, 8, 1, 10),
+          cancellable: false,
+        ),
+        MyReservation(
+          id: 'soon',
+          slotId: 'slot-soon',
+          trainerId: _trainer.id,
+          startsAt: DateTime(2026, 9, 1, 10),
+          cancellable: true,
+        ),
+      ],
+    );
+    await tester.scrollUntilVisible(
+      reservationPanel(),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    double y(Finder finder) => tester.getTopLeft(finder).dy;
+
+    expect(
+      y(find.byKey(const ValueKey<String>('cancel-reservation-soon'))),
+      lessThan(y(find.byKey(const ValueKey<String>('cancel-reservation-far')))),
+    );
+    // 지난 예약은 취소 버튼 대신 그 사실이 적히고, 예정된 자리 아래로 밀린다.
+    expect(
+      y(find.byKey(const ValueKey<String>('cancel-reservation-far'))),
+      lessThan(y(find.text(l.exReservationPast))),
+    );
+  });
 
   testWidgets('legacy footer actions and their trailing space are removed', (
     WidgetTester tester,
@@ -383,9 +437,7 @@ void main() {
   // "거절됨" 배지만으로는 다시 신청해도 되는지, 다른 트레이너를 찾아야 하는지
   // 알 수 없다. 사유가 결과 전달의 본체다.
 
-  testWidgets('거절된 요청은 트레이너가 남긴 사유를 보여준다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('거절된 요청은 트레이너가 남긴 사유를 보여준다', (WidgetTester tester) async {
     await pumpGymTab(
       tester,
       consultation: _consultation(
@@ -417,9 +469,7 @@ void main() {
     expect(find.text(l.exConsultRejectedReasonLabel), findsNothing);
   });
 
-  testWidgets('승인된 요청은 채팅으로 이어지는 안내를 보여준다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('승인된 요청은 채팅으로 이어지는 안내를 보여준다', (WidgetTester tester) async {
     await pumpGymTab(
       tester,
       consultation: _consultation(ConsultationStatus.accepted),

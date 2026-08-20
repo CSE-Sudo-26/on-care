@@ -20,6 +20,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/session/session_feature_reset.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
+import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 
@@ -40,7 +41,11 @@ class _CountingGymRepository extends MockGymRepository {
   String accountId = 'account-a';
 
   @override
-  Future<List<MyReservation>> fetchMyReservations() async {
+  Future<List<MyReservation>> fetchMyReservations({
+    int limit = reservationPageSize,
+    DateTime? before,
+    String? beforeId,
+  }) async {
     fetchReservationsCalls++;
     return <MyReservation>[
       MyReservation(

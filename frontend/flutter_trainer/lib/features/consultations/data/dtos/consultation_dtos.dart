@@ -55,6 +55,7 @@ ConsultationRequest consultationRequestFromJson(Map<String, Object?> json) {
     message: _nullable(json['message']),
     status: _str(json['status']),
     decisionNote: _nullable(json['decision_note']),
+    createdAt: DateTime.tryParse(_str(json['created_at'])),
   );
 }
 

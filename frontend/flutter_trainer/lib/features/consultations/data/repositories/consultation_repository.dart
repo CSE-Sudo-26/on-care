@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
@@ -27,11 +29,25 @@ abstract interface class ConsultationRepository {
   bool get supportsInbox;
 
   /// Pending requests, newest first. `status` may be `pending` or `all`.
-  Future<List<ConsultationRequest>> fetch({String status = 'pending'});
+  ///
+  /// 서버가 한 쪽만 준다(#980). 더 오래된 요청은 받은 마지막 요청의 `createdAt`·`id` 를
+  /// [before]·[beforeId] 로 넘겨 이어 받는다.
+  Future<List<ConsultationRequest>> fetch({
+    String status = 'pending',
+    int limit,
+    DateTime? before,
+    String? beforeId,
+  });
 
   /// Subscribes to the inbox for [status] — the open screen keeps up with
   /// requests that arrive while the trainer is looking at it. (#917)
-  Stream<List<ConsultationRequest>> watch({String status = 'pending'});
+  ///
+  /// **첫 쪽만** 흘려보낸다. 이어 받아 둔 과거 요청까지 매번 다시 읽으면 폴링이
+  /// 인박스 길이에 비례해 무거워진다 — 과거 요청은 바뀌지 않으므로 한 번 받으면 된다.
+  Stream<List<ConsultationRequest>> watch({
+    String status = 'pending',
+    int limit,
+  });
 
   /// Number of undecided requests — the sidebar badge.
   Future<int> pendingCount();
@@ -90,16 +106,29 @@ class DemoConsultationRepository implements ConsultationRepository {
   bool get supportsInbox => true;
 
   @override
-  Future<List<ConsultationRequest>> fetch({String status = 'pending'}) async =>
-      status == 'all'
-      ? List<ConsultationRequest>.unmodifiable(_requests)
-      : _requests.where((request) => request.status == status).toList();
+  Future<List<ConsultationRequest>> fetch({
+    String status = 'pending',
+    int limit = consultationPageSize,
+    DateTime? before,
+    String? beforeId,
+  }) async {
+    // 데모 인박스는 한 줌이라 커서가 실제로 쓰일 일이 없다 — 상한만 지킨다.
+    if (before != null) return const <ConsultationRequest>[];
+    final Iterable<ConsultationRequest> rows = status == 'all'
+        ? _requests
+        : _requests.where((request) => request.status == status);
+    return List<ConsultationRequest>.unmodifiable(rows.take(limit));
+  }
 
   /// 데모의 인박스는 메모리에 있다. 폴링해도 같은 값을 다시 세는 것뿐이라
   /// 한 번 내고 끝내고, 수락·거절 뒤의 갱신은 지금처럼 invalidate 가 맡는다.
   @override
-  Stream<List<ConsultationRequest>> watch({String status = 'pending'}) =>
-      Stream<List<ConsultationRequest>>.fromFuture(fetch(status: status));
+  Stream<List<ConsultationRequest>> watch({
+    String status = 'pending',
+    int limit = consultationPageSize,
+  }) => Stream<List<ConsultationRequest>>.fromFuture(
+    fetch(status: status, limit: limit),
+  );
 
   @override
   Future<int> pendingCount() async =>
@@ -162,11 +191,22 @@ class DioConsultationRepository implements ConsultationRepository {
   bool get supportsInbox => true;
 
   @override
-  Future<List<ConsultationRequest>> fetch({String status = 'pending'}) async {
+  Future<List<ConsultationRequest>> fetch({
+    String status = 'pending',
+    int limit = consultationPageSize,
+    DateTime? before,
+    String? beforeId,
+  }) async {
     try {
       final res = await _dio.get<List<dynamic>>(
         '/trainer/consultations',
-        queryParameters: <String, Object?>{'status': status},
+        queryParameters: <String, Object?>{
+          'status': status,
+          'limit': limit,
+          // 커서는 서버가 준 시각 그대로여야 한다 — 엔티티는 로컬 시각을 들고 있다.
+          if (before != null) 'before': before.toUtc().toIso8601String(),
+          'before_id': ?beforeId,
+        },
       );
       return (res.data ?? const <dynamic>[])
           .whereType<Map<String, Object?>>()
@@ -178,11 +218,13 @@ class DioConsultationRepository implements ConsultationRepository {
   }
 
   @override
-  Stream<List<ConsultationRequest>> watch({String status = 'pending'}) =>
-      activePollingStream<List<ConsultationRequest>>(
-        load: () => fetch(status: status),
-        interval: pollInterval,
-      );
+  Stream<List<ConsultationRequest>> watch({
+    String status = 'pending',
+    int limit = consultationPageSize,
+  }) => activePollingStream<List<ConsultationRequest>>(
+    load: () => fetch(status: status, limit: limit),
+    interval: pollInterval,
+  );
 
   @override
   Stream<int> watchPendingCount() =>
@@ -269,11 +311,146 @@ final consultationFilterProvider = StateProvider<String>(
   name: 'consultationFilter',
 );
 
+/// 인박스 한 쪽의 건수. 서버 기본값과 같다(#980).
+const int consultationPageSize = 50;
+
+/// 인박스 화면 상태 — 목록과 "더 있는가".
+class ConsultationInboxState {
+  /// Creates the inbox state.
+  const ConsultationInboxState({
+    this.requests = const AsyncValue<List<ConsultationRequest>>.loading(),
+    this.loadingMore = false,
+    this.hasMore = false,
+  });
+
+  /// 첫 쪽 + 이어 받은 과거 요청. 화면은 이 값만 그린다.
+  final AsyncValue<List<ConsultationRequest>> requests;
+
+  /// 다음 쪽을 받는 중인가 — 버튼이 두 번 눌리는 것을 막는다.
+  final bool loadingMore;
+
+  /// 더 받을 것이 남았는가. 마지막 쪽이 상한만큼 왔으면 남았다고 본다.
+  final bool hasMore;
+
+  /// Copies with the given fields replaced.
+  ConsultationInboxState copyWith({
+    AsyncValue<List<ConsultationRequest>>? requests,
+    bool? loadingMore,
+    bool? hasMore,
+  }) => ConsultationInboxState(
+    requests: requests ?? this.requests,
+    loadingMore: loadingMore ?? this.loadingMore,
+    hasMore: hasMore ?? this.hasMore,
+  );
+}
+
+/// 인박스 목록 — 폴링하는 첫 쪽 위에 이어 받은 과거 요청을 붙여 둔다. (#980)
+///
+/// 두 갈래를 나눠 두는 이유: 폴링은 **새로 들어온 요청**을 보려는 것이라 첫 쪽만
+/// 다시 읽으면 되고, 이어 받은 과거 요청은 이미 처리된 이력이라 바뀌지 않는다.
+/// 매번 전체를 다시 읽으면 인박스가 길어질수록 폴링이 그만큼 무거워진다.
+class ConsultationInboxController
+    extends StateNotifier<ConsultationInboxState> {
+  /// Subscribes to the first page for [status].
+  ConsultationInboxController(this._repository, this._status)
+    : super(const ConsultationInboxState()) {
+    _subscription = _repository
+        .watch(status: _status, limit: consultationPageSize)
+        .listen(_onFirstPage, onError: _onError);
+  }
+
+  final ConsultationRepository _repository;
+  final String _status;
+  late final StreamSubscription<List<ConsultationRequest>> _subscription;
+
+  /// 이어 받아 둔 과거 요청(오래된 쪽).
+  List<ConsultationRequest> _older = const <ConsultationRequest>[];
+
+  void _onFirstPage(List<ConsultationRequest> page) {
+    if (!mounted) return;
+    // 첫 쪽에 다시 나타난 요청은 이어 받아 둔 목록에서 뺀다 — 같은 요청이 두 줄로
+    // 그려지면 트레이너는 요청이 두 건 온 것으로 읽는다.
+    final Set<String> ids = page.map((r) => r.id).toSet();
+    _older = _older
+        .where((ConsultationRequest r) => !ids.contains(r.id))
+        .toList(growable: false);
+    state = state.copyWith(
+      requests: AsyncValue<List<ConsultationRequest>>.data(
+        <ConsultationRequest>[...page, ..._older],
+      ),
+      // 이어 받은 쪽이 있으면 "더 있는가" 는 그 마지막 쪽이 이미 답했다.
+      hasMore: _older.isEmpty ? page.length >= consultationPageSize : null,
+    );
+  }
+
+  void _onError(Object error, StackTrace stack) {
+    if (!mounted) return;
+    // 이미 받아 둔 목록이 있으면 지우지 않는다 — 폴링 한 번 실패했다고 인박스를
+    // 오류 화면으로 덮을 일은 아니다.
+    if (state.requests.hasValue) return;
+    state = state.copyWith(
+      requests: AsyncValue<List<ConsultationRequest>>.error(error, stack),
+    );
+  }
+
+  /// 과거 요청을 한 쪽 더 이어 붙인다.
+  Future<void> loadMore() async {
+    if (!state.hasMore || state.loadingMore) return;
+    final List<ConsultationRequest> shown =
+        state.requests.valueOrNull ?? const <ConsultationRequest>[];
+    final ConsultationRequest? last = shown.isEmpty ? null : shown.last;
+    // 커서를 만들 수 없으면 이어 받지 않는다 — 커서 없이 다시 부르면 첫 쪽이 또 온다.
+    if (last?.createdAt == null) {
+      state = state.copyWith(hasMore: false);
+      return;
+    }
+
+    state = state.copyWith(loadingMore: true);
+    try {
+      final List<ConsultationRequest> page = await _repository.fetch(
+        status: _status,
+        limit: consultationPageSize,
+        before: last!.createdAt,
+        beforeId: last.id,
+      );
+      if (!mounted) return;
+      final Set<String> seen = shown.map((r) => r.id).toSet();
+      final List<ConsultationRequest> fresh = page
+          .where((ConsultationRequest r) => seen.add(r.id))
+          .toList(growable: false);
+      _older = <ConsultationRequest>[..._older, ...fresh];
+      state = state.copyWith(
+        requests: AsyncValue<List<ConsultationRequest>>.data(
+          <ConsultationRequest>[...shown, ...fresh],
+        ),
+        loadingMore: false,
+        hasMore: page.length >= consultationPageSize,
+      );
+    } on Object {
+      // 이어 받기 실패는 보고 있는 목록을 건드리지 않는다. 다시 누르면 또 시도한다.
+      if (!mounted) return;
+      state = state.copyWith(loadingMore: false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 /// The inbox list for the active filter.
 final consultationsProvider =
-    StreamProvider.autoDispose<List<ConsultationRequest>>((ref) {
+    StateNotifierProvider.autoDispose<
+      ConsultationInboxController,
+      ConsultationInboxState
+    >((ref) {
       final status = ref.watch(consultationFilterProvider);
-      return ref.watch(consultationRepositoryProvider).watch(status: status);
+      return ConsultationInboxController(
+        ref.watch(consultationRepositoryProvider),
+        status,
+      );
     }, name: 'consultations');
 
 /// Pending count for the sidebar badge.

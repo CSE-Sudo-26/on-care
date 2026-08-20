@@ -111,7 +111,10 @@ class DioGymRepository implements GymRepository {
     try {
       final res = await _dio.get<Map<String, Object?>>(
         '/me/gym',
-        queryParameters: <String, Object?>{'lat': kGymSearchLat, 'lng': kGymSearchLng},
+        queryParameters: <String, Object?>{
+          'lat': kGymSearchLat,
+          'lng': kGymSearchLng,
+        },
       );
       if (res.data != null) return _gym(res.data!);
     } on DioException catch (e) {
@@ -142,8 +145,21 @@ class DioGymRepository implements GymRepository {
       _list('/trainers/$trainerId/slots', _slot);
 
   @override
-  Future<List<MyReservation>> fetchMyReservations() =>
-      _list('/reservations/me', MyReservation.fromJson);
+  Future<List<MyReservation>> fetchMyReservations({
+    int limit = reservationPageSize,
+    DateTime? before,
+    String? beforeId,
+  }) => _list(
+    '/reservations/me',
+    MyReservation.fromJson,
+    query: <String, Object?>{
+      'limit': limit,
+      // 커서는 서버가 준 시각 그대로여야 한다 — 엔티티는 화면용으로 로컬 시각을
+      // 들고 있으므로 UTC 로 되돌려 보낸다.
+      if (before != null) 'before': before.toUtc().toIso8601String(),
+      'before_id': ?beforeId,
+    },
+  );
 
   @override
   Future<void> cancelReservation(String reservationId) async {

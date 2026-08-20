@@ -731,7 +731,16 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
         (ref.watch(myReservationsProvider).valueOrNull ??
                 const <MyReservation>[])
             .where((MyReservation r) => r.trainerId == widget.trainer.id)
-            .toList();
+            .toList()
+          // 서버는 늦은 예약부터 준다(#980) — 쪽을 나누려면 그 순서여야 한다. 화면은
+          // 다르다: **곧 다가오는 자리가 맨 위**여야 하고, 지난 예약은 최근 것부터
+          // 아래에 남는다. 취소 가능 여부(`cancellable`)가 곧 예정/지난 판단이다.
+          ..sort((MyReservation a, MyReservation b) {
+            if (a.cancellable != b.cancellable) return a.cancellable ? -1 : 1;
+            return a.cancellable
+                ? a.startsAt.compareTo(b.startsAt)
+                : b.startsAt.compareTo(a.startsAt);
+          });
     final bool busy = _reserving != null || _cancelling != null;
     return Container(
       width: double.infinity,
