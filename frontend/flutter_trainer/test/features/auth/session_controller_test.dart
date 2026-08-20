@@ -388,6 +388,69 @@ void main() {
       },
     );
 
+    test('signOut revokes the stored refresh token server-side', () async {
+      // 로컬 저장소만 지우면 그 갱신 토큰은 만료까지 살아 있다 — 새어 나갔다면
+      // 로그아웃을 눌러도 세션이 그대로다(#966).
+      final repo = _FakeAuthRepository();
+      final container = _makeContainer(
+        tokens: <String, String>{
+          'access_token': 'stored-access',
+          'refresh_token': 'stored-refresh',
+        },
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(repo),
+      );
+      container.read(sessionControllerProvider.notifier);
+      await _settle();
+
+      await container.read(sessionControllerProvider.notifier).signOut();
+
+      expect(repo.logoutTokens, <String>['stored-refresh']);
+    });
+
+    test('signOut completes even when the revoke call fails', () async {
+      final repo = _FakeAuthRepository()..logoutThrows = true;
+      final container = _makeContainer(
+        tokens: <String, String>{
+          'access_token': 'stored-access',
+          'refresh_token': 'stored-refresh',
+        },
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(repo),
+      );
+      container.read(sessionControllerProvider.notifier);
+      await _settle();
+
+      await container.read(sessionControllerProvider.notifier).signOut();
+
+      expect(repo.logoutTokens, <String>['stored-refresh']);
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.signedOut,
+      );
+      expect(
+        await container.read(secureTokenStoreProvider).readRefreshToken(),
+        isNull,
+      );
+    });
+
+    test('signOut without a stored refresh token skips the revoke', () async {
+      // 데모 세션에는 저장된 토큰이 없다 — 끊을 서버 세션도 없다.
+      final repo = _FakeAuthRepository();
+      final container = _makeContainer(
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(repo),
+      );
+      final controller = container.read(sessionControllerProvider.notifier);
+      await _settle();
+      controller.enterDemo();
+
+      await controller.signOut();
+
+      expect(repo.logoutTokens, isEmpty);
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.signedOut,
+      );
+    });
+
     test('signOut clears tokens and returns to signed out', () async {
       final container = _makeContainer();
       final controller = container.read(sessionControllerProvider.notifier);
@@ -431,6 +494,10 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   int refreshCalls = 0;
   int _profileCalls = 0;
 
+  /// `logout()` 이 받은 갱신 토큰들. 로그아웃이 서버 폐기를 부르는지 본다(#966).
+  final List<String> logoutTokens = <String>[];
+  bool logoutThrows = false;
+
   TrainerAuthTokens _tokens(String tag) =>
       TrainerAuthTokens(access: '$tag-access', refresh: '$tag-refresh');
 
@@ -453,6 +520,12 @@ class _FakeAuthRepository implements TrainerAuthRepository {
     required String provider,
     required String token,
   }) async => _tokens('social');
+
+  @override
+  Future<void> logout(String refreshToken) async {
+    logoutTokens.add(refreshToken);
+    if (logoutThrows) throw const AuthException(AuthFailure.network);
+  }
 
   @override
   Future<TrainerAuthTokens> refresh(String refreshToken) async {

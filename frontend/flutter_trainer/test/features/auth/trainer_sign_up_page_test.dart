@@ -53,6 +53,9 @@ class _RecordingAuthRepository implements TrainerAuthRepository {
   Future<TrainerAuthTokens> refresh(String refreshToken) async => _tokens;
 
   @override
+  Future<void> logout(String refreshToken) async {}
+
+  @override
   Future<TrainerProfile> fetchProfile(String accessToken) async =>
       const TrainerProfile(
         name: '신규 트레이너',
