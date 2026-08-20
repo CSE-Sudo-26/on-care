@@ -2915,4 +2915,110 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsPdfFallbackClient => '고객';
+
+  @override
+  String get reportsPdfDocTitle => '주간 코칭 리포트';
+
+  @override
+  String get reportsPdfDocTitleContinued => '주간 코칭 리포트 (계속)';
+
+  @override
+  String reportsPdfClient(String name) {
+    return '고객  $name';
+  }
+
+  @override
+  String reportsPdfPeriod(String start, String end) {
+    return '기간  $start ~ $end';
+  }
+
+  @override
+  String get reportsPdfSectionMetrics => '핵심 지표';
+
+  @override
+  String get reportsPdfSectionChange => '전주 대비 변화';
+
+  @override
+  String get reportsPdfSectionTrend => '주간 추이 (월~일)';
+
+  @override
+  String get reportsPdfSectionDaily => '일자별 운동';
+
+  @override
+  String reportsPdfBullet(String label, String value) {
+    return '• $label: $value';
+  }
+
+  @override
+  String reportsPdfDay(String weekday, String completion, String exercises) {
+    return '$weekday: $completion · $exercises';
+  }
+
+  @override
+  String get reportsPdfLabelCompletion => '운동 수행률';
+
+  @override
+  String get reportsPdfLabelSessions => 'PT 진행';
+
+  @override
+  String get reportsPdfLabelSessionCount => 'PT 진행 횟수';
+
+  @override
+  String get reportsPdfLabelSodiumOver => '나트륨 목표 초과';
+
+  @override
+  String get reportsPdfLabelCalories => '평균 열량';
+
+  @override
+  String get reportsPdfLabelSugar => '평균 당류';
+
+  @override
+  String get reportsPdfLabelCaloriesShort => '열량';
+
+  @override
+  String get reportsPdfLabelSodiumShort => '나트륨';
+
+  @override
+  String get reportsPdfLabelSugarShort => '당류';
+
+  @override
+  String reportsPdfValuePercent(String value) {
+    return '$value%';
+  }
+
+  @override
+  String reportsPdfValueMg(String value) {
+    return '${value}mg';
+  }
+
+  @override
+  String reportsPdfValueKcal(String value) {
+    return '${value}kcal';
+  }
+
+  @override
+  String reportsPdfValueGram(String value) {
+    return '${value}g';
+  }
+
+  @override
+  String reportsPdfValueDays(String value) {
+    return '$value일';
+  }
+
+  @override
+  String reportsPdfValueSessions(String value) {
+    return '$value회';
+  }
+
+  @override
+  String reportsPdfAttendance(String done, String booked, String rate) {
+    return '$done/$booked회 ($rate%)';
+  }
+
+  @override
+  String get reportsPdfNoData => '미집계';
+
+  @override
+  String get reportsPdfNoFeedback => '피드백 없음';
 }

@@ -286,11 +286,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Future<void> _openPdfExport(WeeklyReport report) async {
     if (_generatingPdf) return;
     final messenger = ScaffoldMessenger.of(context);
-    final feedback = _messageFor(
-      AppLocalizations.of(context),
-      report,
-      _savedDraftOf(report),
-    );
+    // await 를 넘어 `context` 를 다시 읽지 않도록 messenger 와 함께 미리 잡아
+    // 둔다. PDF 문구도 화면과 같은 로케일이어야 한다 (#964).
+    final AppLocalizations l = AppLocalizations.of(context);
+    final feedback = _messageFor(l, report, _savedDraftOf(report));
     setState(() => _generatingPdf = true);
     try {
       WeeklyReport? previous;
@@ -307,6 +306,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       final bytes = await ref
           .read(reportPdfGeneratorProvider)
           .generate(
+            l: l,
             report: report,
             feedback: feedback,
             previousReport: previous,
@@ -319,11 +319,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     } catch (_) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).reportsPdfGenerationFailed,
-            ),
-          ),
+          SnackBar(content: Text(l.reportsPdfGenerationFailed)),
         );
       }
     } finally {

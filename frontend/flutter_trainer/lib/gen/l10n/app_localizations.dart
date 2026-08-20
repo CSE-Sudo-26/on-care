@@ -5353,6 +5353,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'client'**
   String get reportsPdfFallbackClient;
+
+  /// No description provided for @reportsPdfDocTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly coaching report'**
+  String get reportsPdfDocTitle;
+
+  /// No description provided for @reportsPdfDocTitleContinued.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly coaching report (continued)'**
+  String get reportsPdfDocTitleContinued;
+
+  /// No description provided for @reportsPdfClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client  {name}'**
+  String reportsPdfClient(String name);
+
+  /// No description provided for @reportsPdfPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period  {start} – {end}'**
+  String reportsPdfPeriod(String start, String end);
+
+  /// No description provided for @reportsPdfSectionMetrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Key metrics'**
+  String get reportsPdfSectionMetrics;
+
+  /// No description provided for @reportsPdfSectionChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change from last week'**
+  String get reportsPdfSectionChange;
+
+  /// No description provided for @reportsPdfSectionTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly trend (Mon–Sun)'**
+  String get reportsPdfSectionTrend;
+
+  /// No description provided for @reportsPdfSectionDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts by day'**
+  String get reportsPdfSectionDaily;
+
+  /// No description provided for @reportsPdfBullet.
+  ///
+  /// In en, this message translates to:
+  /// **'• {label}: {value}'**
+  String reportsPdfBullet(String label, String value);
+
+  /// No description provided for @reportsPdfDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday}: {completion} · {exercises}'**
+  String reportsPdfDay(String weekday, String completion, String exercises);
+
+  /// No description provided for @reportsPdfLabelCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout completion'**
+  String get reportsPdfLabelCompletion;
+
+  /// No description provided for @reportsPdfLabelSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions'**
+  String get reportsPdfLabelSessions;
+
+  /// No description provided for @reportsPdfLabelSessionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions completed'**
+  String get reportsPdfLabelSessionCount;
+
+  /// No description provided for @reportsPdfLabelSodiumOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Days over sodium target'**
+  String get reportsPdfLabelSodiumOver;
+
+  /// No description provided for @reportsPdfLabelCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Average calories'**
+  String get reportsPdfLabelCalories;
+
+  /// No description provided for @reportsPdfLabelSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Average sugar'**
+  String get reportsPdfLabelSugar;
+
+  /// No description provided for @reportsPdfLabelCaloriesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get reportsPdfLabelCaloriesShort;
+
+  /// No description provided for @reportsPdfLabelSodiumShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium'**
+  String get reportsPdfLabelSodiumShort;
+
+  /// No description provided for @reportsPdfLabelSugarShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar'**
+  String get reportsPdfLabelSugarShort;
+
+  /// No description provided for @reportsPdfValuePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}%'**
+  String reportsPdfValuePercent(String value);
+
+  /// No description provided for @reportsPdfValueMg.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}mg'**
+  String reportsPdfValueMg(String value);
+
+  /// No description provided for @reportsPdfValueKcal.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}kcal'**
+  String reportsPdfValueKcal(String value);
+
+  /// No description provided for @reportsPdfValueGram.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}g'**
+  String reportsPdfValueGram(String value);
+
+  /// No description provided for @reportsPdfValueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} days'**
+  String reportsPdfValueDays(String value);
+
+  /// No description provided for @reportsPdfValueSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}'**
+  String reportsPdfValueSessions(String value);
+
+  /// No description provided for @reportsPdfAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'{done}/{booked} ({rate}%)'**
+  String reportsPdfAttendance(String done, String booked, String rate);
+
+  /// No description provided for @reportsPdfNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'Not measured'**
+  String get reportsPdfNoData;
+
+  /// No description provided for @reportsPdfNoFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'No feedback'**
+  String get reportsPdfNoFeedback;
 }
 
 class _AppLocalizationsDelegate

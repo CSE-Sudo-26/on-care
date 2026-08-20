@@ -3035,4 +3035,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsPdfFallbackClient => 'client';
+
+  @override
+  String get reportsPdfDocTitle => 'Weekly coaching report';
+
+  @override
+  String get reportsPdfDocTitleContinued =>
+      'Weekly coaching report (continued)';
+
+  @override
+  String reportsPdfClient(String name) {
+    return 'Client  $name';
+  }
+
+  @override
+  String reportsPdfPeriod(String start, String end) {
+    return 'Period  $start – $end';
+  }
+
+  @override
+  String get reportsPdfSectionMetrics => 'Key metrics';
+
+  @override
+  String get reportsPdfSectionChange => 'Change from last week';
+
+  @override
+  String get reportsPdfSectionTrend => 'Weekly trend (Mon–Sun)';
+
+  @override
+  String get reportsPdfSectionDaily => 'Workouts by day';
+
+  @override
+  String reportsPdfBullet(String label, String value) {
+    return '• $label: $value';
+  }
+
+  @override
+  String reportsPdfDay(String weekday, String completion, String exercises) {
+    return '$weekday: $completion · $exercises';
+  }
+
+  @override
+  String get reportsPdfLabelCompletion => 'Workout completion';
+
+  @override
+  String get reportsPdfLabelSessions => 'PT sessions';
+
+  @override
+  String get reportsPdfLabelSessionCount => 'PT sessions completed';
+
+  @override
+  String get reportsPdfLabelSodiumOver => 'Days over sodium target';
+
+  @override
+  String get reportsPdfLabelCalories => 'Average calories';
+
+  @override
+  String get reportsPdfLabelSugar => 'Average sugar';
+
+  @override
+  String get reportsPdfLabelCaloriesShort => 'Calories';
+
+  @override
+  String get reportsPdfLabelSodiumShort => 'Sodium';
+
+  @override
+  String get reportsPdfLabelSugarShort => 'Sugar';
+
+  @override
+  String reportsPdfValuePercent(String value) {
+    return '$value%';
+  }
+
+  @override
+  String reportsPdfValueMg(String value) {
+    return '${value}mg';
+  }
+
+  @override
+  String reportsPdfValueKcal(String value) {
+    return '${value}kcal';
+  }
+
+  @override
+  String reportsPdfValueGram(String value) {
+    return '${value}g';
+  }
+
+  @override
+  String reportsPdfValueDays(String value) {
+    return '$value days';
+  }
+
+  @override
+  String reportsPdfValueSessions(String value) {
+    return '$value';
+  }
+
+  @override
+  String reportsPdfAttendance(String done, String booked, String rate) {
+    return '$done/$booked ($rate%)';
+  }
+
+  @override
+  String get reportsPdfNoData => 'Not measured';
+
+  @override
+  String get reportsPdfNoFeedback => 'No feedback';
 }
