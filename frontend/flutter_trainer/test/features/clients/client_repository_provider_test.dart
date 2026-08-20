@@ -224,7 +224,12 @@ void main() {
       'exactly one GET /trainer/clients in real-API mode (review: the two '
       'providers used to each fetch independently)', () async {
     final dio = _MockDio();
-    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer(
       (_) async => Response<List<dynamic>>(
         requestOptions: RequestOptions(path: '/trainer/clients'),
         statusCode: 200,
@@ -244,7 +249,12 @@ void main() {
     // future to await.
     final prioritized = container.read(prioritizedClientsProvider).valueOrNull;
 
-    verify(() => dio.get<List<dynamic>>('/trainer/clients')).called(1);
+    verify(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).called(1);
     expect(clients.map((c) => c.id), <String>['a', 'b']);
     expect(prioritized!.map((c) => c.id), <String>['a', 'b']); // a is over
   });

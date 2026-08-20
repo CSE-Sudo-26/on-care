@@ -41,7 +41,12 @@ void main() {
   });
 
   test('watchClients parses the roster', () async {
-    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer(
       (_) async => _okList(<dynamic>[
         <String, Object?>{'id': 'm1', 'name': '김민수', 'sodium_mg': 2100},
         <String, Object?>{'id': 'm2', 'name': '이지수', 'sodium_mg': 1500},
@@ -53,8 +58,48 @@ void main() {
     expect(clients.first.sodiumOverBudget, isTrue);
   });
 
+  test('로스터는 명단이 끝날 때까지 쪽을 이어 받는다 (#980)', () async {
+    // 서버가 한 쪽만 준다고 화면의 명단이 잘리면 안 된다 — 사이드바 개수·검색이
+    // 모두 전체를 전제로 읽는 자리라, 트레이너는 빠진 회원을 찾아 헤매게 된다.
+    final List<Map<String, Object?>> full = <Map<String, Object?>>[
+      for (int i = 0; i < rosterPageSize; i++)
+        <String, Object?>{'id': 'm$i', 'name': '회원 $i'},
+    ];
+    final List<Object?> cursors = <Object?>[];
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer((invocation) async {
+      final Map<Object?, Object?> query =
+          invocation.namedArguments[#queryParameters] as Map<Object?, Object?>;
+      cursors.add(query['after_id']);
+      return _okList(
+        query['after_id'] == null
+            ? full
+            : <dynamic>[
+                <String, Object?>{'id': 'last', 'name': '마지막 회원'},
+              ],
+        '/trainer/clients',
+      );
+    });
+
+    final clients = await repo.watchClients().first;
+
+    // 첫 쪽은 커서 없이, 다음 쪽은 받은 마지막 회원의 id 로 이어 받는다.
+    expect(cursors, <Object?>[null, 'm${rosterPageSize - 1}']);
+    expect(clients, hasLength(rosterPageSize + 1));
+    expect(clients.map((c) => c.id), contains('last'));
+  });
+
   test('the roster ordering puts the over-target client first', () async {
-    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer(
       (_) async => _okList(<dynamic>[
         <String, Object?>{'id': 'ok', 'name': 'A', 'sodium_mg': 1500},
         <String, Object?>{'id': 'over', 'name': 'B', 'sodium_mg': 2500},
@@ -125,9 +170,12 @@ void main() {
   test('the roster re-reads itself so a change made elsewhere lands without a '
       'manual refresh (#918)', () async {
     var calls = 0;
-    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer((
-      _,
-    ) async {
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer((_) async {
       calls += 1;
       return _okList(<dynamic>[
         <String, Object?>{'id': 'm$calls', 'name': '김민수'},
@@ -174,9 +222,12 @@ void main() {
 
   test('the roster stops re-reading once nothing listens', () async {
     var calls = 0;
-    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer((
-      _,
-    ) async {
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer((_) async {
       calls += 1;
       return _okList(const <dynamic>[], '/trainer/clients');
     });
@@ -244,7 +295,12 @@ void main() {
       var calls = 0;
       final Completer<void> firstValue = Completer<void>();
       final Completer<void> refreshAttempted = Completer<void>();
-      when(() => dio.get<List<dynamic>>(path)).thenAnswer((_) async {
+      when(
+        () => dio.get<List<dynamic>>(
+          path,
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer((_) async {
         calls += 1;
         if (calls == 1) {
           return _okList(<dynamic>[
@@ -336,7 +392,12 @@ void main() {
   });
 
   test('malformed list entries fail instead of being silently dropped', () {
-    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer(
       (_) async => _okList(<dynamic>[
         <String, Object?>{'id': 'm1'},
         'not-an-object',
@@ -400,7 +461,12 @@ void main() {
     test('a confirmed change re-fetches the roster so the badge follows the '
         'server, not the tap', () async {
       var rosterActive = true;
-      when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+      when(
+        () => dio.get<List<dynamic>>(
+          '/trainer/clients',
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
         (_) async => _okList(<dynamic>[
           <String, Object?>{'id': 'm1', 'name': 'A', 'active': rosterActive},
         ], '/trainer/clients'),
@@ -431,7 +497,12 @@ void main() {
 
     test('a rejected change surfaces a typed error and does not refresh the '
         'roster — the badge keeps the state the server still has', () async {
-      when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+      when(
+        () => dio.get<List<dynamic>>(
+          '/trainer/clients',
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
         (_) async => _okList(<dynamic>[
           <String, Object?>{'id': 'm1', 'name': 'A', 'active': true},
         ], '/trainer/clients'),

@@ -5,6 +5,12 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 
 /// Gym + trainer directory, plus the user's own two links. Both live here
 /// because the links are coupled: leaving a gym also drops its trainer.
+/// 예약 목록 한 쪽의 건수. 서버 기본값과 같다(#980).
+///
+/// 한 화면에 다 그리는 패널이라 알림함(30)보다 크게 잡는다 — 회원 한 명이 잡아 둔
+/// 예약은 트레이너별로 갈라 보이고, 첫 쪽에 다가오는 예약이 모두 들어와야 한다.
+const int reservationPageSize = 50;
+
 abstract class GymRepository {
   /// User's current gym (one). `null` until they register one.
   Future<Gym?> fetchMyGym();
@@ -46,8 +52,15 @@ abstract class GymRepository {
   /// stale screen cannot silently overbook.
   Future<void> reserve(String slotId);
 
-  /// 내가 잡아 둔 예약들. 예약 패널이 '내 자리'를 표시하고 취소를 걸 근거다. (#502)
-  Future<List<MyReservation>> fetchMyReservations();
+  /// 내가 잡아 둔 예약 한 쪽. 예약 패널이 '내 자리'를 표시하고 취소를 걸 근거다. (#502)
+  ///
+  /// **다가오는 예약부터** 온다. 서버가 한 번에 주는 건수에 상한이 있어(#980), 더 과거를
+  /// 보려면 받은 마지막 예약의 `startsAt`·`id` 를 [before]·[beforeId] 로 넘긴다.
+  Future<List<MyReservation>> fetchMyReservations({
+    int limit,
+    DateTime? before,
+    String? beforeId,
+  });
 
   /// 예약 취소. 좌석과 트레이너 일정이 함께 돌아간다.
   ///

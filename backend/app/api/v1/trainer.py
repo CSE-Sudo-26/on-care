@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
 from app.core.config import get_settings
+from app.core.pagination import DEFAULT_PAGE, MAX_PAGE, parse_before
 from app.core.rate_limit import limiter, rate_limit
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
@@ -284,10 +285,30 @@ def trainer_update_settings(
 def trainer_clients(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(
+        DEFAULT_PAGE, ge=1, le=MAX_PAGE, description="한 번에 가져올 고객 수"
+    ),
+    after_id: str | None = Query(
+        None, description="다음 쪽 커서 — 받은 마지막 고객의 id(회원 id)"
+    ),
 ) -> list[TrainerClientOut]:
-    """담당 고객 로스터. 각 카드의 오늘 영양소와 나트륨 추세는
-    회원의 실제 식단 기록(DietEntry)에서 집계한다 — 트레이너↔회원 실데이터 공유."""
-    return trainer_service.build_roster(db, trainer.id)
+    """담당 고객 로스터 한 쪽. 각 카드의 오늘 영양소와 나트륨 추세는
+    회원의 실제 식단 기록(DietEntry)에서 집계한다 — 트레이너↔회원 실데이터 공유.
+
+    로스터는 트레이너 한 명이 감당하는 인원만큼만 자라 급하지 않지만, 상한이 없으면
+    카드마다 붙는 집계까지 인원수에 비례해 커진다. (#980)
+
+    커서가 다른 목록과 다르다 — 정렬키가 시각이 아니라 트레이너가 정한 순서
+    (`sort_order`)이고 그 값은 카드에 실리지 않으므로, 받은 마지막 카드의 **id 하나**만
+    넘기면 서버가 그 자리를 찾아 이어 준다. 명단에 없는 id 는 422 다(조용히 첫 쪽을
+    돌려주면 이어 받기가 제자리를 돈다).
+    """
+    try:
+        return trainer_service.build_roster(
+            db, trainer.id, limit=limit, after_id=after_id
+        )
+    except trainer_service.RosterCursorNotFound as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.put(
@@ -2036,9 +2057,29 @@ def trainer_consultations(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[ConsultationStatusFilter, Query()] = "pending",
+    limit: int = Query(
+        DEFAULT_PAGE, ge=1, le=MAX_PAGE, description="한 번에 가져올 요청 수"
+    ),
+    before: str | None = Query(
+        None, description="ISO datetime 커서(다음 쪽) — 받은 마지막 요청의 created_at"
+    ),
+    before_id: str | None = Query(
+        None, description="복합 커서 tie-break — 받은 마지막 요청의 id"
+    ),
 ) -> list[TrainerConsultationOut]:
-    """나를 지정한 상담 요청. 기본은 미처리만."""
-    return consultation_service.list_for_trainer(db, trainer.id, status)
+    """나를 지정한 상담 요청 한 쪽. 기본은 미처리만, 최신 50건. (#980)
+
+    미처리 배지(`/trainer/consultations/pending-count`)는 이 쪽 나눔과 무관하게
+    전체를 센다 — 배지가 첫 쪽 안에서만 세어지면 인박스가 길어질수록 조용히 줄어든다.
+    """
+    return consultation_service.list_for_trainer(
+        db,
+        trainer.id,
+        status,
+        limit=limit,
+        before=parse_before(before),
+        before_id=before_id,
+    )
 
 
 @router.get("/trainer/consultations/pending-count", response_model=dict[str, int])

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,6 +19,7 @@ ConsultationRequest _request({
   String name = '김민수',
   String status = 'pending',
   String? message = '상담 부탁드립니다.',
+  DateTime? createdAt,
 }) => ConsultationRequest(
   id: id,
   memberId: 'user-$id',
@@ -28,6 +30,7 @@ ConsultationRequest _request({
   preferredTimeCode: 'evening',
   message: message,
   status: status,
+  createdAt: createdAt,
 );
 
 /// A stand-in inbox that reports itself enabled (so the nav row renders)
@@ -47,17 +50,47 @@ class _FakeConsultationRepository implements ConsultationRepository {
   @override
   bool get supportsInbox => true;
 
+  /// 이어 받기 요청으로 들어온 커서 — 인박스가 무엇을 넘겼는지 확인한다(#980).
+  final List<(DateTime?, String?)> cursors = <(DateTime?, String?)>[];
+
   @override
-  Future<List<ConsultationRequest>> fetch({String status = 'pending'}) async {
+  Future<List<ConsultationRequest>> fetch({
+    String status = 'pending',
+    int limit = consultationPageSize,
+    DateTime? before,
+    String? beforeId,
+  }) async {
     if (failure != null) throw failure!;
-    return status == 'pending'
-        ? requests.where((r) => r.isPending).toList()
-        : requests;
+    // 서버와 같은 순서로 준다 — 최신 요청이 먼저다. 이 순서가 아니면 커서가 가리키는
+    // '받은 마지막 요청'이 가장 오래된 것이 아니게 되어 이어 받기가 성립하지 않는다.
+    final List<ConsultationRequest> rows =
+        (status == 'pending' ? requests.where((r) => r.isPending) : requests)
+            .toList()
+          ..sort((ConsultationRequest a, ConsultationRequest b) {
+            final DateTime? x = a.createdAt;
+            final DateTime? y = b.createdAt;
+            if (x == null || y == null) return 0;
+            return y.compareTo(x);
+          });
+    if (before == null) return rows.take(limit).toList();
+    cursors.add((before, beforeId));
+    // 커서보다 오래된 것만 — 서버와 같은 규칙이다.
+    return rows
+        .where(
+          (ConsultationRequest r) =>
+              r.createdAt != null && r.createdAt!.isBefore(before),
+        )
+        .take(limit)
+        .toList();
   }
 
   @override
-  Stream<List<ConsultationRequest>> watch({String status = 'pending'}) =>
-      Stream<List<ConsultationRequest>>.fromFuture(fetch(status: status));
+  Stream<List<ConsultationRequest>> watch({
+    String status = 'pending',
+    int limit = consultationPageSize,
+  }) => Stream<List<ConsultationRequest>>.fromFuture(
+    fetch(status: status, limit: limit),
+  );
 
   @override
   Future<int> pendingCount() async => requests.where((r) => r.isPending).length;
@@ -116,9 +149,7 @@ void main() {
   ) async {
     await _pumpInbox(
       tester,
-      _FakeConsultationRepository(
-        requests: <ConsultationRequest>[_request()],
-      ),
+      _FakeConsultationRepository(requests: <ConsultationRequest>[_request()]),
     );
 
     // 요청은 트레이너 한 사람 앞으로만 온다 — "헬스장 문의" 갈래는 없어졌다.
@@ -186,6 +217,45 @@ void main() {
         expect(find.text(navLabel(_ko, destination.label)), findsWidgets);
       }
     });
+  });
+
+  testWidgets('상한에 닿은 인박스는 지난 요청을 이어 받는다 (#980)', (tester) async {
+    // 서버는 한 쪽만 준다. 버튼이 없으면 트레이너는 첫 쪽 너머의 요청을 볼 길이 없고,
+    // 목록이 잘렸다는 사실조차 화면에 남지 않는다.
+    final repo = _FakeConsultationRepository(
+      requests: <ConsultationRequest>[
+        for (int i = 0; i < consultationPageSize; i++)
+          _request(
+            id: 'consult-new-$i',
+            name: '최근 $i',
+            createdAt: DateTime.utc(2026, 8, 19, 9).add(Duration(minutes: i)),
+          ),
+        _request(
+          id: 'consult-old',
+          name: '지난 요청',
+          createdAt: DateTime.utc(2026, 8, 1, 9),
+        ),
+      ],
+    );
+
+    await _pumpInbox(tester, repo);
+
+    // 첫 쪽에는 오래된 요청이 없다.
+    expect(find.text('지난 요청'), findsNothing);
+
+    final Finder more = find.byKey(
+      const ValueKey<String>('consultation-load-more'),
+    );
+    await tester.scrollUntilVisible(more, 400);
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+
+    // 커서는 받은 쪽의 **가장 오래된** 요청이다 — 최신순 목록의 마지막 줄.
+    expect(repo.cursors.single.$2, 'consult-new-0');
+    await tester.scrollUntilVisible(find.text('지난 요청'), 400);
+    expect(find.text('지난 요청'), findsOneWidget);
+    // 다 받았으면 버튼은 사라진다 — 남아 있으면 눌러도 아무 일이 없다.
+    expect(more, findsNothing);
   });
 
   testWidgets('the real-API console also keeps the separate row hidden', (

@@ -87,6 +87,41 @@ void main() {
       expect(captured['status'], 'pending');
     });
 
+    test('첫 쪽은 상한만 싣고, 이어 받기는 (created_at, id) 를 UTC 로 넘긴다 (#980)', () async {
+      when(
+        () => dio.get<List<dynamic>>(
+          '/trainer/consultations',
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            _ok<List<dynamic>>(const <dynamic>[], '/trainer/consultations'),
+      );
+
+      await repo.fetch();
+      await repo.fetch(
+        status: 'all',
+        before: DateTime.utc(2026, 8, 19, 9).toLocal(),
+        beforeId: 'consult-1',
+      );
+
+      final captured = verify(
+        () => dio.get<List<dynamic>>(
+          '/trainer/consultations',
+          queryParameters: captureAny(named: 'queryParameters'),
+        ),
+      ).captured.cast<Map<String, Object?>>();
+
+      // 첫 쪽에는 커서를 싣지 않는다 — 실으면 첫 쪽이 한 칸 밀린다.
+      expect(captured.first['limit'], consultationPageSize);
+      expect(captured.first.containsKey('before'), isFalse);
+      expect(captured.first.containsKey('before_id'), isFalse);
+      // 엔티티는 로컬 시각을 들고 있다. 그대로 보내면 쪽 경계가 시간대만큼 밀린다.
+      expect(captured.last['status'], 'all');
+      expect(captured.last['before'], '2026-08-19T09:00:00.000Z');
+      expect(captured.last['before_id'], 'consult-1');
+    });
+
     test('fetch skips malformed elements instead of throwing', () async {
       when(
         () => dio.get<List<dynamic>>(
@@ -330,7 +365,10 @@ void main() {
       when(
         () => dio.get<List<dynamic>>(
           '/trainer/consultations',
-          queryParameters: <String, Object?>{'status': 'pending'},
+          queryParameters: <String, Object?>{
+            'status': 'pending',
+            'limit': consultationPageSize,
+          },
         ),
       ).thenAnswer((_) async {
         calls += 1;

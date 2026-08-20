@@ -107,7 +107,7 @@
 | POST | `/trainer/me/password` | 비밀번호 변경(현재 비밀번호 확인) |
 | GET | `/trainer/me/settings` | 알림 수신 설정 |
 | PUT | `/trainer/me/settings` | 알림 수신 설정 부분 수정 |
-| GET | `/trainer/clients` | 고객 로스터(회원 실데이터 집계) |
+| GET | `/trainer/clients` | 고객 로스터(회원 실데이터 집계) — 기본 50명, `after_id` 로 이어 받기 (#980) |
 | PUT | `/trainer/clients/{member_id}/status` | 활성/휴면 전환(담당 관계는 유지, #707) |
 | GET | `/trainer/clients/{member_id}/diet?date=` | 해당 회원의 실제 식단 기록 |
 | GET | `/trainer/clients/{member_id}/history` | 해당 회원 운동 기록(최신순) |
@@ -289,6 +289,14 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
   '오늘/어제'가 어긋난다. 운영은 `TZ=Asia/Seoul`.
 - 채팅 스레드는 `(created_at, id)` **복합 커서**(`before`/`before_id`)로 페이지네이션 —
   같은 `created_at`이 여러 건이어도 안정적으로 끊어 읽는다.
+- **로스터도 한 쪽만 준다**(기본 50명, `limit` 1~100). 쿼리 수는 인원과 무관하게
+  상수지만 *한 쿼리가 읽는 양*은 인원만큼 자라고, 카드마다 붙는 집계도 함께 커진다. (#980)
+- 로스터 커서는 다른 목록과 모양이 다르다 — 정렬키가 시각이 아니라 트레이너가 정한
+  순서(`sort_order`)이고 그 값은 카드에 실리지 않아서, 받은 마지막 카드의 **회원 id**
+  하나(`after_id`)만 넘기면 서버가 그 자리를 찾아 이어 준다. 명단에 없는 id 는 **422** 다
+  — 조용히 첫 쪽을 돌려주면 이어 받기가 제자리를 돈다. 정렬 tie-break 는
+  `created_at` 이 아니라 회원 id 이며(같은 `sort_order` 안에서만 차이), 담당 링크는
+  만들 때마다 `max(sort_order) + 1` 을 받아 값이 겹치는 일 자체가 드물다.
 
 ## 5. 예약 → 수업 → 기록 루프
 
