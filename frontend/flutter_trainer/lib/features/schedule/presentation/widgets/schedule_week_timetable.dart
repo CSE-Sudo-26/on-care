@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/clock_provider.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -366,10 +368,6 @@ class _DayColumn extends StatelessWidget {
     final placed = _placeSessions(sessions);
     final windowStart = startHour * 60;
     final windowMinutes = (endHour - startHour) * 60;
-    final now = nowKst();
-    final nowMinutes = now.hour * 60 + now.minute;
-    final showNow =
-        isToday && nowMinutes >= windowStart && nowMinutes <= endHour * 60;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -395,15 +393,12 @@ class _DayColumn extends StatelessWidget {
                     ),
                 ],
               ),
-              if (showNow)
-                Positioned(
-                  top:
-                      (nowMinutes - windowStart) /
-                      60 *
-                      ScheduleWeekTimetable.hourHeight,
-                  left: 0,
-                  right: 0,
-                  child: const _NowLine(),
+              // 오늘 열에만 현재 시각 선을 얹는다. 위치를 정하는 시각은 선
+              // 안에서 읽는다 — 여기서 읽으면 1분마다 이 열이 통째로 다시
+              // 그려지고, 그 안의 세션 블록까지 따라 온다(#1006).
+              if (isToday)
+                Positioned.fill(
+                  child: _NowLine(startHour: startHour, endHour: endHour),
                 ),
               for (final p in placed)
                 Positioned(
@@ -523,24 +518,104 @@ List<_Placed> _placeSessions(List<ScheduleSession> sessions) {
   return placed;
 }
 
-/// 오늘 열의 현재 시각 선.
-class _NowLine extends StatelessWidget {
-  const _NowLine();
+/// 오늘 열의 현재 시각 선. (#1006)
+///
+/// **스스로 1분마다 다시 그린다.** 예전에는 열의 `build` 에서 시각을 한 번 읽어,
+/// 다시 그릴 이유(주 이동·세션 선택·로스터 갱신)가 없으면 선이 그 시점에 멈췄다.
+/// 콘솔을 종일 띄워 두는 화면이라 벌어지는 폭이 몇 시간까지 갔고, 화면이 아는
+/// 척하면서 틀린 값을 가리켰다.
+///
+/// 갱신 범위는 **이 위젯 하나**다. 열이나 시간표가 대상이 되면 그 안의 세션 블록
+/// 수만큼 재빌드가 따라온다.
+///
+/// 타이머를 위젯이 들고 [dispose] 에서 거두는 까닭은 테스트다. provider 쪽에
+/// 두면 정리가 한 박자 늦어, 선을 보지도 않는 테스트가 "A Timer is still
+/// pending" 으로 깨진다. 위젯 트리가 헐릴 때 함께 끊기면 그 틈이 없다.
+///
+/// 첫 타이머는 **분이 바뀌는 순간**에 맞춘다. 구독한 시각에서 60초를 세면 선이
+/// 매번 어중간한 초에 움직인다 — 시계가 12:00 을 가리키는 순간과 선이 내려오는
+/// 순간이 어긋나면, 맞는 값을 보여 주면서도 틀린 것처럼 읽힌다.
+class _NowLine extends ConsumerStatefulWidget {
+  const _NowLine({required this.startHour, required this.endHour});
+
+  final int startHour;
+  final int endHour;
+
+  @override
+  ConsumerState<_NowLine> createState() => _NowLineState();
+}
+
+class _NowLineState extends ConsumerState<_NowLine> {
+  late DateTime _now;
+  Timer? _alignment;
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = _read();
+    _alignment = Timer(_untilNextMinute(_now), () {
+      _tick();
+      _ticker = Timer.periodic(const Duration(minutes: 1), (_) => _tick());
+    });
+  }
+
+  DateTime _read() => ref.read(scheduleClockProvider)();
+
+  static Duration _untilNextMinute(DateTime from) => Duration(
+    milliseconds:
+        Duration.millisecondsPerMinute -
+        (from.second * Duration.millisecondsPerSecond + from.millisecond),
+  );
+
+  void _tick() {
+    if (!mounted) return;
+    setState(() => _now = _read());
+  }
+
+  @override
+  void dispose() {
+    _alignment?.cancel();
+    _ticker?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final int minutes = _now.hour * 60 + _now.minute;
+    final int windowStart = widget.startHour * 60;
+    // 보이는 창 밖(이른 새벽·늦은 밤)이면 아무것도 그리지 않는다 — 격자에 없는
+    // 시각을 가리키는 선은 자리를 잘못 짚은 것과 같다.
+    if (minutes < windowStart || minutes > widget.endHour * 60) {
+      return const SizedBox.shrink();
+    }
+
     return IgnorePointer(
-      child: Row(
+      child: Stack(
+        clipBehavior: Clip.none,
         children: <Widget>[
-          Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.warning,
+          Positioned(
+            top:
+                (minutes - windowStart) / 60 * ScheduleWeekTimetable.hourHeight,
+            left: 0,
+            right: 0,
+            child: const Row(
+              key: Key('schedule-now-line'),
+              children: <Widget>[
+                SizedBox(
+                  width: 6,
+                  height: 6,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(height: 1, color: AppColors.warning)),
+              ],
             ),
           ),
-          const Expanded(child: Divider(height: 1, color: AppColors.warning)),
         ],
       ),
     );
