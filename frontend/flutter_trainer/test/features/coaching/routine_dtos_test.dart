@@ -49,7 +49,13 @@ void main() {
 
     test('falls back to 근력 for an invalid type', () {
       expect(assignRoutineToJson(_routine(type: 'weird'))['type'], '근력');
-      expect(assignRoutineToJson(_routine(type: '스트레칭'))['type'], '스트레칭');
+      expect(assignRoutineToJson(_routine(type: '유연성'))['type'], '유연성');
+    });
+
+    test('folds a legacy type instead of dropping it to 근력 (#996)', () {
+      expect(assignRoutineToJson(_routine(type: '스트레칭'))['type'], '유연성');
+      expect(assignRoutineToJson(_routine(type: '요가'))['type'], '유연성');
+      expect(assignRoutineToJson(_routine(type: '걷기'))['type'], '유산소');
     });
 
     test('defaults a blank name and truncates a long reason', () {

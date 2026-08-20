@@ -230,24 +230,32 @@ class _Brand extends StatelessWidget {
                 logo,
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        const TextSpan(
-                          text: 'On-Care ',
-                          style: TextStyle(color: AppColors.foreground),
+                  // 서비스 이름이 `On-Care 트레…` 가 되면 이 콘솔이 무엇인지가
+                  // 사라진다 — 좁으면 글씨를 줄인다. (#1004)
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text.rich(
+                      TextSpan(
+                        children: <InlineSpan>[
+                          const TextSpan(
+                            text: 'On-Care ',
+                            style: TextStyle(color: AppColors.foreground),
+                          ),
+                          TextSpan(
+                            text: AppLocalizations.of(
+                              context,
+                            ).appWordmarkTrainer,
+                            style: const TextStyle(color: AppColors.primary),
+                          ),
+                        ],
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
                         ),
-                        TextSpan(
-                          text: AppLocalizations.of(context).appWordmarkTrainer,
-                          style: const TextStyle(color: AppColors.primary),
-                        ),
-                      ],
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
                       ),
+                      maxLines: 1,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

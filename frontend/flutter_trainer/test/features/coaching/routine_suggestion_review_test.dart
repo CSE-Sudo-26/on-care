@@ -78,7 +78,7 @@ const RoutineSuggestion _shoulder = RoutineSuggestion(
   id: 's-shoulder',
   name: '어깨 관절 보호 스트레칭',
   minutes: 8,
-  type: '스트레칭',
+  type: '유연성',
   reason: '회전근개와 어깨 안정화를 돕는 스트레칭이에요',
   evidence: <String>['최근 PT 피드백 반영'],
 );
@@ -295,7 +295,7 @@ void main() {
       '오른쪽 어깨에 통증이 생기면 중단하세요',
     );
     await tester.tap(
-      find.byKey(const ValueKey<String>('suggestion-edit-type-요가')),
+      find.byKey(const ValueKey<String>('suggestion-edit-type-유연성')),
     );
     await tester.pumpAndSettle();
     await tester.tap(
@@ -307,7 +307,7 @@ void main() {
     final edit = repo.approvalEdits.single;
     expect(edit['name'], '어깨 회복 스트레칭');
     expect(edit['reason'], '오른쪽 어깨에 통증이 생기면 중단하세요');
-    expect(edit['type'], '요가');
+    expect(edit['type'], '유연성');
     expect(edit['minutes'], _shoulder.minutes);
   });
 

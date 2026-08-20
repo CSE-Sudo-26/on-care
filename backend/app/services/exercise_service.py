@@ -3,7 +3,8 @@
 
 핵심 규칙(프론트와 동일):
 - 요일 라벨: 월~일 (월=index 0)
-- 타입 버킷: cardio|walking → 유산소, strength → 근력, yoga|stretching → 스트레칭
+- 타입 버킷: 유산소 / 근력 / 유연성 / 기타 네 가지(app.services.exercise_types).
+  옛 값(walking·yoga·stretching)은 읽는 자리에서 접어 준다.
 - date_label: 오늘/어제/MM월 DD일/N요일 (요일 라벨 → 날짜 환산)
 - time_label, items: 타입별 기본값 합성 (drift 스키마에 없는 표시용 데이터)
 - streak: 운동한 요일 중 가장 긴 연속 구간의 길이 ("N일 연속"). 활성 일수의 단순
@@ -16,6 +17,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from app.core import clock
+from app.services import exercise_types
 
 WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
 
@@ -24,12 +26,10 @@ WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
 #: 보내고 PT 완료분은 서버가 계산하므로, 두 값이 다르면 같은 운동인데 회원
 #: 화면에서 칼로리가 갈린다.
 _KCAL_PER_MIN = {
-    "cardio": 9.0,
-    "strength": 6.0,
-    "walking": 4.0,
-    "stretching": 3.0,
-    "yoga": 3.0,
-    "other": 5.0,
+    exercise_types.CARDIO: 9.0,
+    exercise_types.STRENGTH: 6.0,
+    exercise_types.FLEXIBILITY: 3.0,
+    exercise_types.OTHER: 5.0,
 }
 
 #: 강도 배수 — 회원 앱 `_intensityFactor` 와 같다.
@@ -64,8 +64,14 @@ def weekday_label_of(day: str) -> str:
 
 
 def estimate_calories(type_: str, minutes: int, intensity: str) -> int:
-    """분·강도로 소모 칼로리 추정. 회원 앱과 같은 표를 쓴다."""
-    per_min = _KCAL_PER_MIN.get(type_, _KCAL_PER_MIN["other"])
+    """분·강도로 소모 칼로리 추정. 회원 앱과 같은 표를 쓴다.
+
+    운동 유형은 정규화해서 본다 — 옛 값(`walking`·`yoga`)으로 저장된 기록도
+    같은 표를 타야 회원 화면에서 칼로리가 갈리지 않는다.
+    """
+    per_min = _KCAL_PER_MIN.get(
+        exercise_types.normalize(type_), _KCAL_PER_MIN[exercise_types.OTHER]
+    )
     factor = _INTENSITY_FACTOR.get(intensity, 1.0)
     return round(per_min * max(minutes, 0) * factor)
 
@@ -89,28 +95,23 @@ def _date_label_for_day(day_label: str) -> str:
 
 def _default_time_label(t: str) -> str:
     return {
-        "cardio": "07:30", "strength": "18:00",
-        "yoga": "20:00", "stretching": "20:00", "walking": "12:00",
-    }.get(t, "15:00")
+        exercise_types.CARDIO: "07:30",
+        exercise_types.STRENGTH: "18:00",
+        exercise_types.FLEXIBILITY: "20:00",
+    }.get(exercise_types.normalize(t), "15:00")
 
 
 def _default_items(t: str) -> list[str]:
     return {
-        "cardio": ["러닝머신 30분"],
-        "strength": ["스쿼트 3세트", "데드리프트 3세트"],
-        "yoga": ["전신 스트레칭 20분"], "stretching": ["전신 스트레칭 20분"],
-        "walking": ["공원 산책"],
-    }.get(t, [])
+        exercise_types.CARDIO: ["러닝머신 30분"],
+        exercise_types.STRENGTH: ["스쿼트 3세트", "데드리프트 3세트"],
+        exercise_types.FLEXIBILITY: ["전신 스트레칭 20분"],
+    }.get(exercise_types.normalize(t), [])
 
 
 def _bucket(t: str) -> str:
-    if t in ("cardio", "walking"):
-        return "cardio"
-    if t == "strength":
-        return "strength"
-    if t in ("yoga", "stretching"):
-        return "stretching"
-    return "cardio"
+    """집계 축. 기타는 유산소가 아니라 자기 칸으로 간다 (#996)."""
+    return exercise_types.normalize(t)
 
 
 def _longest_streak(daily: list[int]) -> int:
@@ -132,7 +133,8 @@ def build_current_week(rows: list) -> dict:
     per_day_cal = {l: 0 for l in WEEKDAY_LABELS}
     per_cardio = {l: 0 for l in WEEKDAY_LABELS}
     per_strength = {l: 0 for l in WEEKDAY_LABELS}
-    per_stretch = {l: 0 for l in WEEKDAY_LABELS}
+    per_flex = {l: 0 for l in WEEKDAY_LABELS}
+    per_other = {l: 0 for l in WEEKDAY_LABELS}
     total_minutes = 0
     total_calories = 0
     sessions = []
@@ -142,7 +144,12 @@ def build_current_week(rows: list) -> dict:
         total_calories += r.calories
         per_day[r.day_label] = per_day.get(r.day_label, 0) + r.minutes
         per_day_cal[r.day_label] = per_day_cal.get(r.day_label, 0) + r.calories
-        bucket_map ={"cardio": per_cardio, "strength": per_strength, "stretching": per_stretch}
+        bucket_map = {
+            exercise_types.CARDIO: per_cardio,
+            exercise_types.STRENGTH: per_strength,
+            exercise_types.FLEXIBILITY: per_flex,
+            exercise_types.OTHER: per_other,
+        }
         target = bucket_map[_bucket(r.type)]
         target[r.day_label] = target.get(r.day_label, 0) + r.minutes
         sessions.append({
@@ -182,7 +189,11 @@ def build_current_week(rows: list) -> dict:
         "daily_calories": [per_day_cal[l] for l in WEEKDAY_LABELS],
         "cardio_minutes": [per_cardio[l] for l in WEEKDAY_LABELS],
         "strength_minutes": [per_strength[l] for l in WEEKDAY_LABELS],
-        "stretching_minutes": [per_stretch[l] for l in WEEKDAY_LABELS],
+        "flexibility_minutes": [per_flex[l] for l in WEEKDAY_LABELS],
+        "other_minutes": [per_other[l] for l in WEEKDAY_LABELS],
+        # 옛 이름. 아직 이 필드를 읽는 클라이언트가 있어 같은 값을 함께 내려준다.
+        # 두 앱이 flexibility_minutes 로 옮긴 뒤에 지운다. (#996)
+        "stretching_minutes": [per_flex[l] for l in WEEKDAY_LABELS],
         "day_labels": WEEKDAY_LABELS,
         "total_minutes": total_minutes,
         "total_calories": total_calories,

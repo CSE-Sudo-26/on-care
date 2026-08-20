@@ -1823,6 +1823,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineTypeStretching => 'Stretching';
 
   @override
+  String get routineTypeFlexibility => 'Flexibility';
+
+  @override
   String get routineTypeOther => 'Other';
 
   @override
@@ -2555,20 +2558,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesBackToList => 'Conversation list';
 
   @override
-  String messagesRecentWorkout(String value) {
-    return 'Recent workout $value';
-  }
+  String get messagesNoPreview => 'No messages yet';
 
   @override
-  String get messagesNoCompletion => 'No completion record this week';
-
-  @override
-  String messagesCompletion(int percent) {
-    return '$percent% completion this week';
-  }
-
-  @override
-  String get messagesClientDetail => 'View client details';
+  String get messagesClientDetail => 'Client details';
 
   @override
   String get messagesSelectPrompt =>
