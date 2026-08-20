@@ -40,6 +40,7 @@ class ScheduleWeekTimetable extends StatelessWidget {
     required this.selectedSessionId,
     required this.onPickDay,
     required this.onPickSession,
+    this.bodyOverride,
   });
 
   /// 보이는 주의 월요일.
@@ -57,6 +58,11 @@ class ScheduleWeekTimetable extends StatelessWidget {
 
   final ValueChanged<DateTime> onPickDay;
   final ValueChanged<ScheduleSession> onPickSession;
+
+  /// 격자 대신 그릴 것 — 주를 불러오는 중이거나 실패했을 때. 요일 머리글은 늘
+  /// 남는다: 주를 넘길 때마다 날짜 줄이 스피너로 사라지면 화면이 깜빡이고,
+  /// 무엇보다 **날짜를 고를 자리가 잠깐 없어진다**(review PR 245).
+  final Widget? bodyOverride;
 
   /// 한 시간의 높이. 30분짜리 세션도 글자 두 줄이 들어가는 최소치다.
   static const double hourHeight = 56;
@@ -151,33 +157,39 @@ class ScheduleWeekTimetable extends StatelessWidget {
             ),
             const Divider(height: 1, color: AppColors.borderStrong),
             Expanded(
-              child: SingleChildScrollView(
-                key: const Key('schedule-timetable-scroll'),
-                child: SizedBox(
-                  height: (window.end - window.start) * hourHeight,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      _TimeGutter(startHour: window.start, endHour: window.end),
-                      for (final day in days)
-                        Expanded(
-                          child: _DayColumn(
-                            day: day,
-                            isToday: ymd(day) == today,
+              child:
+                  bodyOverride ??
+                  SingleChildScrollView(
+                    key: const Key('schedule-timetable-scroll'),
+                    child: SizedBox(
+                      height: (window.end - window.start) * hourHeight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          _TimeGutter(
                             startHour: window.start,
                             endHour: window.end,
-                            sessions:
-                                byDate[ymd(day)] ?? const <ScheduleSession>[],
-                            selectedSessionId: selectedSessionId,
-                            onPickSession: onPickSession,
                           ),
-                        ),
-                    ],
+                          for (final day in days)
+                            Expanded(
+                              child: _DayColumn(
+                                day: day,
+                                isToday: ymd(day) == today,
+                                startHour: window.start,
+                                endHour: window.end,
+                                sessions:
+                                    byDate[ymd(day)] ??
+                                    const <ScheduleSession>[],
+                                selectedSessionId: selectedSessionId,
+                                onPickSession: onPickSession,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
             ),
-            if (byDate.isEmpty)
+            if (bodyOverride == null && byDate.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Text(
@@ -544,7 +556,9 @@ class _SessionBlock extends ConsumerWidget {
           color: tone.withValues(alpha: session.isFinished ? 0.08 : 0.12),
           borderRadius: const BorderRadius.all(AppRadius.xs),
           child: InkWell(
-            key: ValueKey<String>('schedule-block-${session.id}'),
+            // 일정 한 건이 달력에 그려졌음을 가리키는 키. 일 보기 타임라인이
+            // 쓰던 이름을 그대로 이어받는다 — E2E 가 이 이름으로 찾는다.
+            key: ValueKey<String>('schedule-session-${session.id}'),
             onTap: onTap,
             borderRadius: const BorderRadius.all(AppRadius.xs),
             child: Container(

@@ -470,18 +470,27 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           ),
         ),
         Expanded(
-          child: week.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Text(
-                l.schedLoadFailed,
-                style: const TextStyle(color: AppColors.mutedForeground),
-              ),
-            ),
-            data: (sessions) {
+          child: Builder(
+            builder: (context) {
+              final sessions = week.valueOrNull ?? const <ScheduleSession>[];
+              // 요일 머리글은 async 상태와 상관없이 남는다 — 주를 넘길 때마다
+              // 날짜 줄이 스피너로 사라지면 고를 자리가 잠깐 없어진다.
+              final Widget? bodyOverride = switch (week) {
+                AsyncError() => Center(
+                  child: Text(
+                    l.schedLoadFailed,
+                    style: const TextStyle(color: AppColors.mutedForeground),
+                  ),
+                ),
+                AsyncValue(hasValue: false) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                _ => null,
+              };
+
               // 상세 패널이 무엇을 열지 — 고른 세션이 우선이고, 없으면 고른
-              // 날의 첫 세션이다. 빈 패널로 두면 시간표만 보고 아무것도 다룰 수
-              // 없는 화면이 된다.
+              // 날의 첫 세션이다. 빈 패널로 두면 시간표만 보고 아무것도 다룰
+              // 수 없는 화면이 된다.
               ScheduleSession? selected;
               for (final session in sessions) {
                 if (session.id == _selectedSessionId &&
@@ -504,6 +513,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                 sessions: sessions,
                 selectedDay: _selectedDay,
                 selectedSessionId: selected?.id,
+                bodyOverride: bodyOverride,
                 onPickDay: _selectDay,
                 onPickSession: (session) {
                   final day = DateTime.tryParse(session.date);
