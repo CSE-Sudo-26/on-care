@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
@@ -432,7 +434,11 @@ class _PeriodBody extends StatelessWidget {
               days: days,
             ),
           // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
-          if (!weekly && days != null) ...<Widget>[
+          // 칼로리 지표에서는 `days` 가 언제나 넘어온다. 실서버가 영양을 주지
+          // 않아 모든 날이 한 색 막대인데도 3색 범례를 붙이면, 범례가 막대 색의
+          // 뜻을 잘못 설명한다(#956).
+          if (!weekly &&
+              (days?.any((DietPeriodDay d) => d.hasMacros) ?? false)) ...<Widget>[
             const SizedBox(height: 10),
             Wrap(
               alignment: WrapAlignment.center,
@@ -497,6 +503,17 @@ class _PeriodBars extends StatelessWidget {
     return source[i];
   }
 
+  /// 아직 오지 않은 날인가. (#950)
+  ///
+  /// 기록하지 않은 것이 아니라 **기록할 수 없는** 날이다. 둘을 같은 말로 그리면
+  /// 한 달을 훑으며 "며칠을 빠뜨렸나" 를 셀 때 미래의 빈 칸까지 빠뜨린 날처럼
+  /// 읽힌다 — 달 초에는 그 수가 스무 날이 넘는다.
+  ///
+  /// 운동 쪽은 트레이너 리포트의 `BarSeriesChart` 가 `pendingFromIndex` 로 이미
+  /// 같은 구분을 한다(#754). 같은 규칙을 여기에도 둔다.
+  bool _isPending(int i) =>
+      DateUtils.dateOnly(dates[i]).isAfter(DateUtils.dateOnly(nowKst()));
+
   /// 한 막대의 툴팁 내용 — 운동 탭 `운동 현황` 툴팁과 같은 구조다.
   /// `[색 사각형] 지표  값 단위` 한 줄, 목표를 넘긴 날은 초과분을 한 줄 더.
   List<InlineSpan> _tipSpans(
@@ -513,6 +530,13 @@ class _PeriodBars extends StatelessWidget {
         style: const TextStyle(color: AppColors.mutedForeground),
       ),
     ];
+    // 아직 오지 않은 날과 지나갔는데 비운 날은 다른 말이다(#950). 하루 평균이
+    // 이미 **기록이 있는 날만으로** 나누므로, 계산은 둘을 구분하는데 화면만
+    // 구분하지 않는 셈이었다.
+    if (_isPending(i)) {
+      spans.add(TextSpan(text: l.dietPeriodNotYet));
+      return spans;
+    }
     // 기록이 없는 날은 0 이 아니라 '기록 없음' 이다. 0 으로 적으면 굶은 날과
     // 적지 않은 날이 같은 말이 된다.
     if (value <= 0) {
@@ -647,6 +671,7 @@ class _PeriodBars extends StatelessWidget {
                                 chartHeight *
                                 (values[i] / maxValue).clamp(0.0, 1.0) *
                                 chartStagger(t, i, values.length),
+                            pending: _isPending(i),
                             day: _dayAt(i),
                             // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
                             // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
@@ -733,9 +758,15 @@ class _Bar extends StatelessWidget {
     required this.day,
     required this.over,
     required this.color,
+    this.pending = false,
   });
 
   final double height;
+
+  /// 아직 오지 않은 날인가. 지나간 빈 날의 그루터기보다 **더 옅게** 그린다 —
+  /// 트레이너 리포트가 `pendingFromIndex` 에 쓰는 규칙과 같다(#754, #950).
+  final bool pending;
+
   final DietPeriodDay? day;
 
   /// 목표를 넘긴 날인가. 쌓을 성분이 없을 때만 색으로 말한다.
@@ -746,6 +777,17 @@ class _Bar extends StatelessWidget {
   Widget build(BuildContext context) {
     final DietPeriodDay? d = day;
     const BorderRadius radius = BorderRadius.vertical(top: Radius.circular(3));
+    if (pending) {
+      // 아직 오지 않은 날은 **빈 트랙**이다. 지나간 빈 날과 같은 그루터기를
+      // 그리면 둘이 구분되지 않는다.
+      return Container(
+        height: 2,
+        decoration: const BoxDecoration(
+          color: FigmaColors.hairline,
+          borderRadius: radius,
+        ),
+      );
+    }
     if (d == null || !d.hasMacros) {
       return Container(
         height: height,
@@ -765,32 +807,51 @@ class _Bar extends StatelessWidget {
         ),
       );
     }
+    // 막대 **높이**는 칼로리를 따른다(목표선과 견주려면 그래야 한다). 그런데
+    // 구간 비율만 탄단지 합계로 잡으면, 둘이 어긋나는 날에 세 색이 막대를 꽉
+    // 채워 **없는 기여분을 지어내는 셈**이 된다 — 1,800kcal 인 날의 탄단지가
+    // 1,200kcal 어치뿐이어도 "이 1,800kcal 이 전부 탄·단·지에서 왔다" 고
+    // 말하게 된다. 실서버 값은 음식 DB 에서 오므로 딱 맞지 않는 날이 흔하다.
+    //
+    // 그래서 분모를 **둘 중 큰 값**으로 둔다. 탄단지가 칼로리에 못 미치면 남는
+    // 만큼이 `나머지` 로 위에 남고, 넘치면 탄단지 합계에 맞춰 꽉 찬다(#956).
+    final double basis = math.max(d.calories.toDouble(), total);
+    final double rest = basis - total;
+    // 값이 있는 구간만 만든다. `flex: 0` 이 터지지는 않지만(확인함), 셋이 모두
+    // 0 으로 반올림되면 높이만 있고 아무것도 그려지지 않은 막대가 남는다 —
+    // #947 과 같은 종류의 사라짐이다. 그래서 남는 구간에는 **최소 1** 을 준다:
+    // 아주 적게 먹은 영양소는 실오라기로라도 보이는 편이 없는 것보다 낫다.
+    //
+    // 위에서부터 나머지·지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
+    // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
+    final List<({Color color, double kcal})> parts =
+        <({Color color, double kcal})>[
+          // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
+          // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
+          if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
+          if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
+          if (d.proteinKcal > 0)
+            (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
+          if (d.carbsKcal > 0)
+            (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
+        ];
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
         height: height,
-        // 위에서부터 지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
-        // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
         child: Column(
           // **stretch 여야 한다.** 기본값(center)이면 자식이 가로로 느슨하게
-          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 세 구간이
+          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 구간이
           // 통째로 사라진다(#947). 한 색 막대가 멀쩡했던 이유는 그쪽이
           // `Container` 라서다 — 자식도 크기도 없는 Container 는 들어온 제약만큼
           // 커지려고 하므로 폭을 다 채운다.
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Expanded(
-              flex: (d.fatKcal / total * 1000).round(),
-              child: const ColoredBox(color: FigmaColors.macroFat),
-            ),
-            Expanded(
-              flex: (d.proteinKcal / total * 1000).round(),
-              child: const ColoredBox(color: FigmaColors.macroProtein),
-            ),
-            Expanded(
-              flex: (d.carbsKcal / total * 1000).round(),
-              child: const ColoredBox(color: FigmaColors.macroCarbs),
-            ),
+            for (final ({Color color, double kcal}) part in parts)
+              Expanded(
+                flex: math.max(1, (part.kcal / basis * 1000).round()),
+                child: ColoredBox(color: part.color),
+              ),
           ],
         ),
       ),

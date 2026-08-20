@@ -1,6 +1,8 @@
 """비밀번호 해싱 + JWT 토큰."""
 from __future__ import annotations
 
+import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -23,9 +25,13 @@ def verify_password(plain: str, hashed: str) -> bool:
     return _password_hash.verify(plain, hashed)
 
 
-def _encode(subject: str, token_type: str, ttl: timedelta) -> str:
+def _encode(
+    subject: str, token_type: str, ttl: timedelta, *, jti: str | None = None
+) -> str:
     now = datetime.now(timezone.utc)
     payload = {"sub": subject, "type": token_type, "iat": now, "exp": now + ttl}
+    if jti is not None:
+        payload["jti"] = jti
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
@@ -34,7 +40,17 @@ def create_access_token(subject: str) -> str:
 
 
 def create_refresh_token(subject: str) -> str:
-    return _encode(subject, "refresh", timedelta(days=settings.refresh_token_expire_days))
+    """폐기 가능한 refresh 토큰을 만든다.
+
+    `jti` 는 이 토큰 한 장의 이름이다. 로그아웃과 회전이 "이 토큰은 이제 쓸 수
+    없다"고 남길 대상이 있어야 서버가 세션을 끊을 수 있다(#966).
+    """
+    return _encode(
+        subject,
+        "refresh",
+        timedelta(days=settings.refresh_token_expire_days),
+        jti=uuid.uuid4().hex,
+    )
 
 
 def decode_access_token(token: str) -> str:
@@ -48,11 +64,36 @@ def decode_access_token(token: str) -> str:
     return str(sub)
 
 
-def decode_refresh_token(token: str) -> str:
+@dataclass(frozen=True)
+class RefreshClaims:
+    """refresh 토큰에서 폐기 판단에 필요한 값만 뽑은 것."""
+
+    subject: str
+    jti: str
+    expires_at: datetime
+
+
+def decode_refresh_claims(token: str) -> RefreshClaims:
+    """refresh 토큰을 검증하고 `sub`·`jti`·`exp` 를 돌려준다.
+
+    `jti` 가 없는 토큰(#966 이전에 발급된 것)은 거부한다. 폐기 표에 적을 이름이
+    없어 **일회용으로 만들 수 없는** 토큰이라, 받아 주면 로그아웃도 재사용 탐지도
+    그 토큰만 비껴간다. 거부의 대가는 한 번의 재로그인이다.
+    """
     payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     if payload.get("type") != "refresh":
         raise jwt.InvalidTokenError("refresh 토큰이 아닙니다.")
     sub = payload.get("sub")
     if sub is None:
         raise jwt.InvalidTokenError("sub 없음")
-    return str(sub)
+    jti = payload.get("jti")
+    if not jti:
+        raise jwt.InvalidTokenError("jti 없음 — 폐기할 수 없는 토큰")
+    exp = payload.get("exp")
+    if exp is None:
+        raise jwt.InvalidTokenError("exp 없음")
+    return RefreshClaims(
+        subject=str(sub),
+        jti=str(jti),
+        expires_at=datetime.fromtimestamp(float(exp), tz=timezone.utc),
+    )

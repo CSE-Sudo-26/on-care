@@ -65,6 +65,7 @@ class LocalApiInterceptor extends Interceptor {
     'POST /ai-coach/chat': _aiCoachChat,
     'POST /auth/login': _authLogin,
     'POST /auth/register': _authRegister,
+    'POST /auth/logout': _authLogout,
     'POST /auth/social/kakao': _authSocial,
     'POST /auth/social/google': _authSocial,
     'GET /users/me': _usersMe,
@@ -1417,6 +1418,12 @@ class LocalApiInterceptor extends Interceptor {
         'email': email,
       },
     );
+  }
+
+  /// POST /auth/logout — 데모에는 폐기할 서버 세션이 없다. 여기서 받아 주지 않으면
+  /// 목업 모드의 로그아웃이 실 네트워크로 새어 나가 타임아웃까지 멎는다(#966).
+  Future<Response<Object?>> _authLogout(RequestOptions options) async {
+    return Response<Object?>(requestOptions: options, statusCode: 204);
   }
 
   /// POST /auth/social/{provider} — the demo exchanges any non-empty

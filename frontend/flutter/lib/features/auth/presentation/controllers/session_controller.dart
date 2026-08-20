@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -278,12 +280,45 @@ class SessionController extends StateNotifier<SessionState> {
 
   Future<void> signOut() async {
     _userActionStarted = true;
+    // 저장소를 지우기 **전에** 서버에 알린다 — 지운 뒤에는 폐기할 토큰이 없다.
+    await _revokeSession();
     try {
       await _ref.read(secureTokenStoreProvider).clear();
     } catch (_) {}
     _setToken(null);
     _resetFeatureState();
     state = const SessionState(status: SessionStatus.signedOut);
+  }
+
+  /// 저장된 갱신 토큰을 서버에서 폐기한다(`POST /auth/logout`).
+  ///
+  /// 지금까지 로그아웃은 이 기기의 저장소를 비우는 일이었다. 토큰 자체는 만료까지
+  /// 살아 있어서, 어딘가로 새어 나갔다면 로그아웃을 눌러도 그 세션은 그대로였다(#966).
+  ///
+  /// **어떤 실패도 로그아웃을 막지 않는다.** 사용자가 이미 결정한 일이고, 네트워크가
+  /// 끊겼다고 로그인 화면으로 못 나가는 쪽이 더 나쁘다. 기본 타임아웃(연결 10초)을
+  /// 그대로 기다리면 나가는 데 그만큼 걸리므로 짧게 끊는다 — 서버가 못 받은 폐기는
+  /// 그 토큰의 만료까지 남지만, 이 기기에서는 어차피 지워진다.
+  Future<void> _revokeSession() async {
+    String? refresh;
+    try {
+      refresh = await _ref.read(secureTokenStoreProvider).readRefreshToken();
+    } catch (_) {
+      return;
+    }
+    // 데모 세션에는 토큰이 없다 — 부를 것도 없다.
+    if (refresh == null || refresh.isEmpty) return;
+    try {
+      await _ref
+          .read(dioProvider)
+          .post<void>(
+            '/auth/logout',
+            data: <String, Object?>{'refresh_token': refresh},
+          )
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // 무시한다 — 위 주석 참고.
+    }
   }
 }
 

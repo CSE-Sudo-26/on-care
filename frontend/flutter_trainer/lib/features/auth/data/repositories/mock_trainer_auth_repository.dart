@@ -69,6 +69,11 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
   }
 
   @override
+  Future<void> logout(String refreshToken) async {
+    // 데모에는 폐기할 서버가 없다. 로그아웃은 로컬 자격을 지우는 것으로 끝난다.
+  }
+
+  @override
   Future<TrainerProfile> fetchProfile(String accessToken) async {
     if (accessToken.isEmpty) {
       throw const AuthException(AuthFailure.sessionExpired);

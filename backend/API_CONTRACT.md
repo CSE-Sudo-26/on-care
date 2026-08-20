@@ -232,6 +232,24 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 `auth_interceptor.dart`). 발급은 `POST /auth/login`·`POST /auth/refresh`·`POST /auth/social/{provider}`
 이고, 이후 요청은 `Authorization: Bearer <access>` 를 단다.
 
+### 세션 폐기 (#966)
+
+refresh 토큰은 **일회용**이다. `POST /auth/refresh` 는 회전할 때 쓰인 토큰을 그 자리에서
+폐기하므로, 회전 결과를 저장하지 못하면 다음 회전은 401 이다. 이미 쓴 토큰이 다시 오면
+재사용으로 보고 거부하고 `auth.refresh_reuse` 감사 로그를 남긴다.
+
+`POST /auth/logout` 은 `{refresh_token}` 을 받아 그 토큰을 폐기하고 **204** 로 답한다.
+못 알아본 토큰에도 204 다 — 클라이언트가 할 일(로컬 저장소 비우기)은 어느 쪽이든 같고,
+상태 코드로 "이 토큰은 살아 있다"를 알려 줄 이유가 없다. access 토큰은 요구하지 않는다
+(이미 만료된 상태에서도 로그아웃할 수 있어야 한다).
+
+폐기는 토큰 문자열이 아니라 `jti` 만 `revoked_refresh_tokens` 에 적는다. 만료된 항목은
+새 폐기가 생길 때마다 함께 정리되므로 별도 배치가 없다. `jti` 가 없는 예전 토큰
+(#966 이전 발급)은 폐기할 이름이 없어 회전에서 거부된다 — 한 번의 재로그인이 필요하다.
+
+발급된 access 토큰 자체는 남은 수명(기본 하루)까지 유효하다. 상태 없는 JWT 의 성질이며,
+로그아웃이 끊는 것은 **세션을 계속 되살리는 능력**이다.
+
 ### 의존성 네 갈래
 
 엔드포인트가 어떤 의존성을 쓰느냐로 동작이 갈린다 (`app/api/deps.py`).

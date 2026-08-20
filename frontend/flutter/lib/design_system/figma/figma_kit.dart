@@ -36,15 +36,23 @@ class FigmaColors {
   ); // spark accent(주의 오렌지로 통일)
   static const Color sugarPurple = Color(0xFF9B8FD4); // 당류 chart
 
-  // 식단 기간 그래프의 탄단지 3색. 하루 뷰의 탄단지 진행 바가 이미 파랑
-  // 계열이라 같은 계열을 쓰되, 한 막대 안에서 셋이 갈리도록 명도를 벌린다.
+  // 식단 기간 그래프의 탄단지 3색 — **브랜드 색 하나의 농담**이다. (#953)
   //
-  // 운동 탭 `운동 현황` 의 3색(#3EAFDF · #1B6FA8 · #D4EEF8)과는 **다른 계열**
-  // 이다. 그쪽은 청록(cyan) 쪽이고 이쪽은 남색(indigo)~파랑이다 — 같은 화면을
-  // 오가는 회원이 두 그래프의 색을 같은 뜻으로 읽으면 안 된다.
-  static const Color macroCarbs = Color(0xFF1E3A8A); // 탄수화물 — 짙은 남색
-  static const Color macroProtein = Color(0xFF3B82F6); // 단백질 — 파랑
-  static const Color macroFat = Color(0xFF93C5FD); // 지방 — 연한 파랑
+  // 처음에는 남색(indigo) 램프였는데, `오늘` 뷰가 칼로리 링도 탄단지 진행 바도
+  // 모두 [primary] 하나로 그리는 탓에 토글로 두 뷰를 오갈 때 색이 튀었다.
+  // 셋은 서로 다른 지표가 아니라 **한 칼로리를 나눈 것**이라, 색상환을 바꾸는
+  // 것보다 농담으로 가르는 편이 뜻에도 맞는다.
+  //
+  // 값은 [primary] 를 흰 배경 위에 100% / 65% / 35% 로 얹은 결과다. 알파 대신
+  // 불투명 값으로 박아 두는 이유는 막대가 목표선 위에 겹쳐 그려지기 때문이다 —
+  // 반투명이면 선이 비쳐 층 경계가 흐려진다.
+  //
+  // 운동 탭 `운동 현황` 의 3색(#3EAFDF · #1B6FA8 · #D4EEF8)은 **서로 다른 세
+  // 색**이고 이쪽은 **한 색의 농담**이라, 나란히 놓아도 두 그래프가 같은 뜻으로
+  // 읽히지 않는다.
+  static const Color macroCarbs = Color(0xFF3EAFDF); // 탄수화물 — 브랜드 100%
+  static const Color macroProtein = Color(0xFF82CBEA); // 단백질 — 브랜드 65%
+  static const Color macroFat = Color(0xFFBBE3F4); // 지방 — 브랜드 35%
   static const Color sleepPurple = Color(0xFF6B7FE0); // 수면 chart
 
   // Dots / status

@@ -326,6 +326,9 @@ class _FakeTrainerAuthRepository implements TrainerAuthRepository {
   Future<TrainerAuthTokens> refresh(String refreshToken) async => _tokens;
 
   @override
+  Future<void> logout(String refreshToken) async {}
+
+  @override
   Future<TrainerProfile> fetchProfile(String accessToken) async =>
       seedTrainerProfile;
 }
