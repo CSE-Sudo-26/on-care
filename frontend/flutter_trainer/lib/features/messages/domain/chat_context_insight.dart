@@ -45,7 +45,7 @@ class ChatContextInsightDetector {
     final text = message.body.toLowerCase();
 
     final part = _bodyPartIn(text);
-    if (_discomfortTerms.any(text.contains)) {
+    if (_matches(_discomfortPatterns, text)) {
       return ChatContextInsight(
         id: '${message.id}:discomfort',
         messageId: message.id,
@@ -55,7 +55,7 @@ class ChatContextInsightDetector {
       );
     }
 
-    if (_negativeTerms.any(text.contains)) {
+    if (_matches(_negativePatterns, text)) {
       return ChatContextInsight(
         id: '${message.id}:negative',
         messageId: message.id,
@@ -65,6 +65,9 @@ class ChatContextInsightDetector {
     }
     return null;
   }
+
+  static bool _matches(List<RegExp> patterns, String text) =>
+      patterns.any((RegExp p) => p.hasMatch(text));
 
   /// 문장이 가리키는 신체 부위. 짚을 것이 없으면 null 이고, 그때 배너는
   /// 부위 없는 문구로 뜬다.
@@ -107,37 +110,61 @@ class ChatContextInsightDetector {
     ),
   ];
 
-  static const List<String> _discomfortTerms = <String>[
-    '아프',
-    '통증',
-    '당기',
-    '불편',
-    '저리',
-    '쑤',
-    '붓',
-    // 영어 쪽 `stiff` 와 짝이 없어 비어 있던 자리.
-    '뻐근',
-    'pain',
-    'hurt',
-    'sore',
-    'discomfort',
-    'stiff',
+  /// 통증을 말하는 표현. 부위와 **같은 규칙**을 쓴다(#963) — 어간을 부분
+  /// 문자열로 찾으면 `아프리카` 의 `아프` 까지 통증이 되고, 어간 하나만 두면
+  /// `아프네요` 는 잡으면서 한국어에서 가장 흔한 `아파요` 를 지나친다. 활용형과
+  /// 경계 규칙은 함께 가야 한다(#975).
+  ///
+  /// 앞 음절이 한글이면 다른 낱말의 꼬리로 본다(`(?<![가-힣])`). 뒤쪽은 조사와
+  /// 어미가 붙어야 하므로 한글을 막을 수 없어, 그 음절로 시작하는 **다른
+  /// 낱말**을 명시해 배제한다.
+  static final List<RegExp> _discomfortPatterns = <RegExp>[
+    // 아프다·아파요·아팠어요·아픈·아픔·아픕니다.
+    // `아파트` 와 `아프리카` 는 통증이 아니다.
+    RegExp(r'(?<![가-힣])아(?:프(?!리카|리칸|간)|파(?!트)|팠|픈|픔|픕)'),
+    // 앞을 막지 않는 유일한 한국어 항목이다 — `근육통증`·`관절통증` 처럼 다른
+    // 낱말 뒤에 붙어도 뜻이 그대로다.
+    RegExp(r'통증'),
+    // 당기다·당겨요·당겼어요·당김.
+    RegExp(r'(?<![가-힣])당(?:기|겨|겼|김)'),
+    RegExp(r'(?<![가-힣])불편'),
+    // 저리다·저려요·저렸어요·저릿하다. `저리 가` 는 통증이 아니라 방향이다.
+    RegExp(r'(?<![가-힣])저(?:리(?!\s*가)|려|렸|릿)'),
+    // 쑤시다·쑤셔요. 어간 `쑤` 만 두면 다른 낱말의 첫 음절까지 걸린다.
+    RegExp(r'(?<![가-힣])쑤(?:시|셔|셨|신)'),
+    // 붓다·부어요·부었어요·붓기.
+    RegExp(r'(?<![가-힣])(?:붓|부어|부었|부기)'),
+    RegExp(r'(?<![가-힣])뻐근'),
+    // 영어는 낱말 경계로 가른다. 부위의 `back` 과 달리 이 낱말들은 문맥 없이도
+    // 통증을 뜻한다.
+    RegExp(r'\bpain(?:s|ful|fully)?\b'),
+    RegExp(r'\bhurt(?:s|ing)?\b'),
+    RegExp(r'\bsore(?:s|ness)?\b'),
+    RegExp(r'\bdiscomforts?\b'),
+    RegExp(r'\bstiff(?:ness)?\b'),
+    // 부위 규칙이 `back ache` 를 부위로 읽으면서도 통증어 목록에는 없어,
+    // `my back aches` 가 아무 신호도 만들지 않고 있었다.
+    RegExp(r'\bach(?:e|es|ed|ing|y)\b'),
   ];
 
-  static const List<String> _negativeTerms = <String>[
-    '너무 힘들',
-    '못 ',
-    '못 했',
-    '못했',
-    '포기',
-    '별로',
-    '무리',
-    '부담',
-    '지쳐',
-    'too hard',
-    'couldn\'t',
-    'cannot',
-    'gave up',
-    'exhausted',
+  /// 운동을 못 했다는 보고. 같은 경계 규칙을 쓴다.
+  static final List<RegExp> _negativePatterns = <RegExp>[
+    RegExp(r'너무\s*힘들'),
+    // 못 갔어요·못했어요·못하겠어요. `연못 근처` 의 꼬리는 아니다.
+    RegExp(r'(?<![가-힣])못(?:\s|했|하|해)'),
+    RegExp(r'(?<![가-힣])포기'),
+    RegExp(r'(?<![가-힣])별로'),
+    // 프로그램이 준비운동·본운동·마무리로 나뉘어 있어(#934) `마무리` 는 이
+    // 대화에서 흔한 말이다. 그 꼬리를 무리로 읽으면 **잘 마쳤다는 보고가
+    // 경고 배너로 뜬다**. `아무리` 도 같은 이유로 걸러진다.
+    RegExp(r'(?<![가-힣])무리(?!수)'),
+    RegExp(r'(?<![가-힣])부담'),
+    // 지쳐요·지쳤어요. `지침`(안내)은 지친 것이 아니다.
+    RegExp(r'(?<![가-힣])지(?:쳐|쳤)'),
+    RegExp(r'\btoo hard\b'),
+    RegExp(r"\bcouldn'?t\b"),
+    RegExp(r'\bcannot\b'),
+    RegExp(r'\bgave up\b'),
+    RegExp(r'\bexhausted\b'),
   ];
 }
