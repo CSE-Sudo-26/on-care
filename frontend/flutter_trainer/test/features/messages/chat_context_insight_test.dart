@@ -83,6 +83,89 @@ void main() {
     });
   });
 
+  group('통증어·부정어도 낱말 경계에서 끊는다 (#975)', () {
+    test('마무리 운동 보고는 아무 신호도 만들지 않는다', () {
+      // 프로그램이 준비운동·본운동·마무리로 나뉘어 있어(#934) `마무리` 는 이
+      // 대화에서 흔한 말이다. 잘 마쳤다는 보고가 경고 배너로 뜨면 안 된다.
+      expect(detector.detect(message('마무리 운동까지 다 했어요')), isNull);
+    });
+
+    test('아무리 해도 라는 말이 무리로 읽히지 않는다', () {
+      expect(detector.detect(message('아무리 해도 재밌네요')), isNull);
+    });
+
+    test('무리했다는 보고는 그대로 잡는다', () {
+      expect(
+        detector.detect(message('어제 좀 무리했어요'))?.kind,
+        ChatInsightKind.negativeFeedback,
+      );
+    });
+
+    test('아프리카는 통증이 아니다', () {
+      expect(detector.detect(message('아프리카 다큐 보면서 걸었어요')), isNull);
+    });
+
+    test('아파트는 통증이 아니다', () {
+      expect(detector.detect(message('아파트 계단으로 올라갔어요')), isNull);
+    });
+
+    test('연못은 못 갔다는 말이 아니다', () {
+      expect(detector.detect(message('연못 근처를 한 바퀴 걸었어요')), isNull);
+    });
+
+    test('가장 흔한 통증 활용형을 모두 잡는다', () {
+      // 어간 하나만 두면 `아프네요` 는 잡으면서 `아파요` 를 지나친다.
+      for (final (String body, String? part) in <(String, String?)>[
+        ('무릎이 아파요', '무릎'),
+        ('어제부터 아팠어요', null),
+        ('어깨가 저려요', '어깨'),
+        ('허리가 당겨요', '허리'),
+        ('발목이 부었어요', '발목'),
+        ('종아리가 쑤셔요', null),
+        ('오늘은 좀 아픔이 있어요', null),
+      ]) {
+        final insight = detector.detect(message(body));
+        expect(
+          insight?.kind,
+          ChatInsightKind.discomfort,
+          reason: '`$body` 를 통증으로 읽지 못했습니다.',
+        );
+        expect(insight?.bodyPart, part, reason: body);
+      }
+    });
+
+    test('예전부터 잡히던 표현은 그대로 잡힌다', () {
+      for (final (String body, ChatInsightKind kind)
+          in <(String, ChatInsightKind)>[
+            ('무릎이 아프네요', ChatInsightKind.discomfort),
+            ('어깨가 불편해요', ChatInsightKind.discomfort),
+            ('통증이 좀 있어요', ChatInsightKind.discomfort),
+            ('목이 뻐근해요', ChatInsightKind.discomfort),
+            ('운동을 못 갔어요', ChatInsightKind.negativeFeedback),
+            ('오늘은 못했어요', ChatInsightKind.negativeFeedback),
+            ('너무 힘들어서 포기했어요', ChatInsightKind.negativeFeedback),
+            ('별로였어요', ChatInsightKind.negativeFeedback),
+            ('오늘은 지쳤어요', ChatInsightKind.negativeFeedback),
+            ('계단이 좀 부담돼요', ChatInsightKind.negativeFeedback),
+          ]) {
+        expect(detector.detect(message(body))?.kind, kind, reason: body);
+      }
+    });
+
+    test('영어 통증어도 낱말 경계에서 끊는다', () {
+      // `painting`·`sorely` 처럼 통증과 무관한 낱말에 어간이 들어 있다.
+      expect(detector.detect(message('did some painting today')), isNull);
+      expect(
+        detector.detect(message('my knee hurts'))?.kind,
+        ChatInsightKind.discomfort,
+      );
+      expect(
+        detector.detect(message('my back aches since monday'))?.bodyPart,
+        'Back',
+      );
+    });
+  });
+
   group('english body parts need real word context', () {
     test('coming back to the gym is not the back', () {
       final insight = detector.detect(
