@@ -60,11 +60,13 @@ def test_exercise_is_ingested_into_the_exercise_domain(_captured):
     ("type_", "expected"),
     [
         ("cardio", "유산소"),
-        ("walking", "걷기"),
         ("strength", "근력"),
-        ("yoga", "요가"),
-        ("stretching", "스트레칭"),
+        ("flexibility", "유연성"),
         ("other", "기타"),
+        # 옛 값도 표준 라벨로 접힌다 (#996).
+        ("walking", "유산소"),
+        ("yoga", "유연성"),
+        ("stretching", "유연성"),
     ],
 )
 def test_every_allowed_exercise_type_has_a_label(_captured, type_, expected):
@@ -110,7 +112,8 @@ def test_logging_a_session_ingests_it(client, _captured):
     assert r.status_code == 201, r.text
     assert len(_captured) == 1
     assert _captured[0]["domain"] == "exercise"
-    assert "걷기" in _captured[0]["text"] and "25분" in _captured[0]["text"]
+    # walking 은 유산소로 접혀 저장·적재된다 (#996).
+    assert "유산소" in _captured[0]["text"] and "25분" in _captured[0]["text"]
 
 
 def test_ingest_failure_never_breaks_the_session_save(client, monkeypatch):
