@@ -24,6 +24,11 @@ class AppLayout {
   /// and becomes a drawer behind a menu button (tablet portrait/phone).
   static const double sidebarDrawerBreakpoint = 1024;
 
+  /// 헤더 가운데 슬롯(통합 검색 바)이 인라인 형태를 유지하는 최소 폭.
+  /// 이보다 좁아지면 검색 바가 스스로 아이콘으로 접힌다 — 접히기 전에
+  /// 좌우 대칭 예약을 포기하고 남는 자리를 몰아 준다. (#995)
+  static const double headerCenterMinWidth = 400;
+
   // --- Content ---
 
   /// Max width of a single, readable content column (forms, timelines,
