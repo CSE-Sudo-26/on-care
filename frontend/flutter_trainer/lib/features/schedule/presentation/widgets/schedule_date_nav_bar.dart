@@ -45,15 +45,25 @@ class ScheduleDateNavBar extends StatelessWidget {
         onTap: () => onShift(-1),
       ),
       const SizedBox(width: AppSpacing.sm),
-      Text(
-        l.dateRange(
-          l.dateMonthDay(start.month, start.day),
-          l.dateMonthDay(end.month, end.day),
-        ),
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          color: AppColors.foreground,
+      // 날짜 범위가 줄을 넘기지 않게 이쪽이 먼저 줄어든다. 화살표는 손이 닿는
+      // 크기가 있어야 해서 줄일 수 없고, 날짜는 통째로 작게 그려도 읽힌다 —
+      // 좁은 폭(360)에 큰 글자 배율(1.3)이 겹치면 그 차이가 69px 이다(#1009).
+      Flexible(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            l.dateRange(
+              l.dateMonthDay(start.month, start.day),
+              l.dateMonthDay(end.month, end.day),
+            ),
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+            ),
+          ),
         ),
       ),
       const SizedBox(width: AppSpacing.sm),
@@ -97,20 +107,44 @@ class _ChevronButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
+  /// 원의 지름. 손가락이 닿는 최소치(44)보다 작지만, 날짜 행이 한 줄에 들어가야
+  /// 해서 이 값이 상한이다. 대신 [_tapPadding] 으로 탭 영역을 넓혀 둔다.
+  static const double _diameter = 30;
+
+  /// 원 바깥으로 넓히는 탭 영역. 보이는 원은 30 이지만 실제로 눌리는 범위는
+  /// 44 다 — 작은 원을 정확히 겨누게 만들 이유가 없다.
+  static const double _tapPadding = 7;
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 28,
-      height: 44,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+    // 색을 아이콘이 아니라 **원 영역**에 준다. 배경 없는 회색 아이콘이던 때에는
+    // 어디까지가 눌리는 범위인지 형태로 알 수 없었고, 주변 글씨와 같은 계열이라
+    // "누르는 것" 으로 읽히지도 않았다(#1009).
+    //
+    // 주 이동에는 제한이 없다 — 앞뒤 어느 쪽으로든 갈 수 있어야 하므로 비활성
+    // 상태를 만들지 않는다.
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        excludeSemantics: true,
+        child: InkResponse(
           onTap: onTap,
-          child: Tooltip(
-            message: tooltip,
-            child: Icon(icon, size: 20, color: AppColors.mutedForeground),
+          radius: _diameter / 2 + _tapPadding,
+          child: Padding(
+            padding: const EdgeInsets.all(_tapPadding),
+            child: Container(
+              key: ValueKey<String>('schedule-week-arrow-${icon.codePoint}'),
+              width: _diameter,
+              height: _diameter,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary,
+              ),
+              child: Icon(icon, size: 18, color: AppColors.primaryForeground),
+            ),
           ),
         ),
       ),
