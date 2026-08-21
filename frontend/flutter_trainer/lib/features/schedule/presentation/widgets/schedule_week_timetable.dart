@@ -66,16 +66,16 @@ class ScheduleWeekTimetable extends ConsumerWidget {
   /// 무엇보다 **날짜를 고를 자리가 잠깐 없어진다**(review PR 245).
   final Widget? bodyOverride;
 
-  /// 한 시간의 높이.
+  /// 한 시간 칸의 최대 높이. 이보다 커질 이유는 없다 — 블록에 담을 것이 두
+  /// 줄뿐이라 남는 자리는 여백이 된다.
+  static const double maxHourHeight = 104;
+
+  /// 한 시간 칸의 최소 높이. 30분 블록에 **시간·이름 두 줄**이 들어가는 값이다.
   ///
-  /// **가장 짧은 세션(30분)에도 블록의 세 줄이 온전히 들어가는 값**으로 잡는다.
-  /// 56 이었을 때는 30분 블록이 28px 이라 이름 줄이 반쯤 잘렸다. 글자를 줄이는
-  /// 대신 칸을 키운다 — 시간표에서 읽어야 하는 것이 그 세 줄이다.
-  ///
-  /// 필요한 높이 = 세로 여백 6 + (시간 12.5 + 이름 13.75 + 종류 12.35) × 배율.
-  /// 앱 전체 글씨 배율이 1.1 이라(`AppTypography.textScale`) 30분 블록에 약
-  /// 48.5 가 든다 — 한 시간은 그 두 배보다 커야 한다.
-  static const double hourHeight = 104;
+  /// 필요한 높이 = 세로 여백 6 + (시간 13.1 + 이름 13.75) × 글씨 배율 1.1 ≈ 36.
+  /// 30분이 그만큼이려면 한 시간은 72 이상이어야 한다. 76 으로 조금 띄워 둔다 —
+  /// 딱 맞춰 두면 글꼴이 바뀌는 것만으로 이름 줄이 통째로 사라진다.
+  static const double minHourHeight = 76;
 
   /// 왼쪽 시간축 폭.
   static const double gutterWidth = 48;
@@ -83,10 +83,20 @@ class ScheduleWeekTimetable extends ConsumerWidget {
   /// 요일 머리글 높이.
   static const double headerHeight = 46;
 
-  /// 세션이 없어도 늘 보여 주는 시간대. 빈 주에 격자가 한 줄만 남으면 그것대로
-  /// 읽히지 않는다.
-  static const int defaultStartHour = 7;
-  static const int defaultEndHour = 22;
+  /// 세션이 없어도 늘 보여 주는 시간대(자정부터의 분).
+  ///
+  /// **07:30 에서 시작한다.** 07:00 을 창의 첫 줄로 두면 그 라벨을 올릴 자리가
+  /// 위에 없어 카드 경계에 잘린다. 반만 보이는 라벨은 읽히지도 않으면서 잘린
+  /// 것처럼 보이므로, 그 30분을 아예 창에 넣지 않는다(#1010).
+  static const int defaultStartMinute = 7 * 60 + 30;
+
+  /// 끝도 30분을 더 둔다. 23:00 을 창의 마지막 줄로 두면 그 라벨 아래에 여백이
+  /// 없어, 07:00 이 위에서 잘리던 것과 같은 일이 아래에서 벌어진다(#1010).
+  static const int defaultEndMinute = 23 * 60 + 30;
+
+  /// 창의 양 끝을 맞추는 단위. 30분보다 잘게 맞추면 첫 눈금이 어중간한 자리에
+  /// 걸려 시간축이 읽히지 않는다.
+  static const int windowStep = 30;
 
   /// `HH:mm` 을 자정부터의 분으로. 형식이 다르면 null — 시각을 모르는 행은
   /// 시간표에 앉힐 자리가 없다.
@@ -100,23 +110,26 @@ class ScheduleWeekTimetable extends ConsumerWidget {
     return hour * 60 + minute;
   }
 
-  /// 이 주가 보여야 할 시간 창. 기본 창을 세션이 넘으면 넓힌다 — 06:00 수업이
-  /// 화면 밖에 있으면 시간표가 거짓말을 한다.
-  static ({int start, int end}) visibleHours(List<ScheduleSession> sessions) {
-    var start = defaultStartHour;
-    var end = defaultEndHour;
+  /// 이 주가 보여야 할 시간 창(자정부터의 분). 기본 창을 세션이 넘으면 그만큼
+  /// 넓힌다 — 06:00 수업이 화면 밖에 있으면 시간표가 거짓말을 한다.
+  static ({int start, int end}) visibleWindow(List<ScheduleSession> sessions) {
+    var start = defaultStartMinute;
+    var end = defaultEndMinute;
     for (final s in sessions) {
       if (s.isGap) continue;
       final from = minutesOfDay(s.time);
       if (from == null) continue;
       final to = from + math.max<int>(s.durationMinutes, 30);
-      start = math.min(start, from ~/ 60);
-      end = math.max(end, (to / 60).ceil());
+      start = math.min(start, (from ~/ windowStep) * windowStep);
+      end = math.max(end, ((to + windowStep - 1) ~/ windowStep) * windowStep);
     }
-    start = start.clamp(0, 23);
-    end = end.clamp(start + 1, 24);
+    start = start.clamp(0, minutesPerDay - windowStep);
+    end = end.clamp(start + windowStep, minutesPerDay);
     return (start: start, end: end);
   }
+
+  /// 하루의 분.
+  static const int minutesPerDay = 24 * 60;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -137,7 +150,7 @@ class ScheduleWeekTimetable extends ConsumerWidget {
           clientName: s.clientName,
         ),
     };
-    final window = visibleHours(sessions);
+    final window = visibleWindow(sessions);
     final byDate = <String, List<ScheduleSession>>{};
     for (final s in sessions) {
       if (s.isGap || minutesOfDay(s.time) == null) continue;
@@ -182,35 +195,45 @@ class ScheduleWeekTimetable extends ConsumerWidget {
             Expanded(
               child:
                   bodyOverride ??
-                  SingleChildScrollView(
-                    key: const Key('schedule-timetable-scroll'),
-                    child: SizedBox(
-                      height: (window.end - window.start) * hourHeight,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          _TimeGutter(
-                            startHour: window.start,
-                            endHour: window.end,
-                          ),
-                          for (final day in days)
-                            Expanded(
-                              child: _DayColumn(
-                                day: day,
-                                isToday: ymd(day) == today,
-                                startHour: window.start,
-                                endHour: window.end,
-                                sessions:
-                                    byDate[ymd(day)] ??
-                                    const <ScheduleSession>[],
-                                selectedSessionId: selectedSessionId,
-                                names: names,
-                                onPickSession: onPickSession,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final double hours = (window.end - window.start) / 60;
+                      // 남는 높이에 맞춰 칸을 늘리고 줄인다. 들어갈 수 있으면
+                      // 스크롤 없이 한 주가 통째로 보이고, 모자라면 최소 높이
+                      // 까지 줄인 뒤 그때부터 스크롤한다(#1010).
+                      final double hourHeight = (constraints.maxHeight / hours)
+                          .clamp(minHourHeight, maxHourHeight);
+                      return SingleChildScrollView(
+                        key: const Key('schedule-timetable-scroll'),
+                        child: SizedBox(
+                          height: hours * hourHeight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              _TimeGutter(
+                                window: window,
+                                hourHeight: hourHeight,
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
+                              for (final day in days)
+                                Expanded(
+                                  child: _DayColumn(
+                                    day: day,
+                                    isToday: ymd(day) == today,
+                                    window: window,
+                                    hourHeight: hourHeight,
+                                    sessions:
+                                        byDate[ymd(day)] ??
+                                        const <ScheduleSession>[],
+                                    selectedSessionId: selectedSessionId,
+                                    names: names,
+                                    onPickSession: onPickSession,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
             ),
             if (bodyOverride == null && byDate.isEmpty)
@@ -297,39 +320,45 @@ class _DayHeader extends StatelessWidget {
 }
 
 /// 왼쪽 시간축 — 눈금선이 그어지는 자리에 그 시각을 적는다.
+///
+/// 창이 정각에서 시작하지 않으므로(07:30) 라벨을 칸 단위로 쌓지 않고 **분으로
+/// 앉힌다.** 라벨은 눈금선에 걸치게 올려 둔다 — 칸 한가운데 적으면 어느 선이
+/// 그 시각인지 읽는 사람이 한 번 더 생각해야 한다.
 class _TimeGutter extends StatelessWidget {
-  const _TimeGutter({required this.startHour, required this.endHour});
+  const _TimeGutter({required this.window, required this.hourHeight});
 
-  final int startHour;
-  final int endHour;
+  final ({int start, int end}) window;
+  final double hourHeight;
+
+  static const TextStyle _style = TextStyle(
+    fontSize: 10.5,
+    fontWeight: FontWeight.w600,
+    color: AppColors.subtleForeground,
+  );
 
   @override
   Widget build(BuildContext context) {
+    final double labelHeight =
+        MediaQuery.textScalerOf(context).scale(_style.fontSize!) * 1.3;
+    final double gridHeight = (window.end - window.start) / 60 * hourHeight;
+    final int firstHour = (window.start + 59) ~/ 60;
+
     return SizedBox(
       width: ScheduleWeekTimetable.gutterWidth,
-      child: Column(
+      child: Stack(
         children: <Widget>[
-          for (var hour = startHour; hour < endHour; hour++)
-            SizedBox(
-              height: ScheduleWeekTimetable.hourHeight,
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  // 눈금선 위에 걸치게 올려 둔다 — 칸 한가운데 적으면 어느
-                  // 선이 그 시각인지 읽는 사람이 한 번 더 생각해야 한다.
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
-                  child: Transform.translate(
-                    offset: const Offset(0, -5),
-                    child: Text(
-                      '${hour.toString().padLeft(2, '0')}:00',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.subtleForeground,
-                      ),
-                    ),
-                  ),
-                ),
+          for (var hour = firstHour; hour * 60 <= window.end; hour++)
+            Positioned(
+              // 창의 양 끝에서는 라벨을 격자 안으로 밀어 넣는다. 반만 보이는
+              // 라벨을 남기느니 눈금에서 조금 어긋나는 편이 낫다.
+              top:
+                  ((hour * 60 - window.start) / 60 * hourHeight -
+                          labelHeight / 2)
+                      .clamp(0.0, math.max(gridHeight - labelHeight, 0.0)),
+              right: AppSpacing.sm,
+              child: Text(
+                '${hour.toString().padLeft(2, '0')}:00',
+                style: _style,
               ),
             ),
         ],
@@ -343,8 +372,8 @@ class _DayColumn extends StatelessWidget {
   const _DayColumn({
     required this.day,
     required this.isToday,
-    required this.startHour,
-    required this.endHour,
+    required this.window,
+    required this.hourHeight,
     required this.sessions,
     required this.selectedSessionId,
     required this.names,
@@ -353,8 +382,8 @@ class _DayColumn extends StatelessWidget {
 
   final DateTime day;
   final bool isToday;
-  final int startHour;
-  final int endHour;
+  final ({int start, int end}) window;
+  final double hourHeight;
   final List<ScheduleSession> sessions;
   final String? selectedSessionId;
 
@@ -366,8 +395,9 @@ class _DayColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final placed = _placeSessions(sessions);
-    final windowStart = startHour * 60;
-    final windowMinutes = (endHour - startHour) * 60;
+    final windowStart = window.start;
+    final windowMinutes = window.end - window.start;
+    final firstHour = (windowStart + 59) ~/ 60;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -379,33 +409,28 @@ class _DayColumn extends StatelessWidget {
           return Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
-              // 격자 — 일정이 없는 시간대도 칸으로 남는다.
-              Column(
-                children: <Widget>[
-                  for (var hour = startHour; hour < endHour; hour++)
-                    Container(
-                      height: ScheduleWeekTimetable.hourHeight,
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: AppColors.border),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+              // 격자 — 일정이 없는 시간대도 칸으로 남는다. 창이 정각에서
+              // 시작하지 않으므로 칸을 쌓지 않고 정각마다 선을 앉힌다.
+              for (var hour = firstHour; hour * 60 < window.end; hour++)
+                Positioned(
+                  top: (hour * 60 - windowStart) / 60 * hourHeight,
+                  left: 0,
+                  right: 0,
+                  child: const Divider(height: 1, color: AppColors.border),
+                ),
               // 오늘 열에만 현재 시각 선을 얹는다. 위치를 정하는 시각은 선
               // 안에서 읽는다 — 여기서 읽으면 1분마다 이 열이 통째로 다시
               // 그려지고, 그 안의 세션 블록까지 따라 온다(#1006).
               if (isToday)
                 Positioned.fill(
-                  child: _NowLine(startHour: startHour, endHour: endHour),
+                  child: _NowLine(window: window, hourHeight: hourHeight),
                 ),
               for (final p in placed)
                 Positioned(
                   top:
                       (p.startMinute - windowStart).clamp(0, windowMinutes) /
                       60 *
-                      ScheduleWeekTimetable.hourHeight,
+                      hourHeight,
                   left: width * p.lane / p.lanes + 2,
                   // 열이 좁은데 같은 시간대가 여럿 겹치면 음수가 된다. 음수 폭은
                   // `BoxConstraints` 단정에 걸려 시간표를 통째로 죽인다 — 겹침
@@ -423,7 +448,7 @@ class _DayColumn extends StatelessWidget {
                               windowStart + windowMinutes,
                             )) /
                         60 *
-                        ScheduleWeekTimetable.hourHeight,
+                        hourHeight,
                     24,
                   ),
                   child: _SessionBlock(
@@ -536,10 +561,10 @@ List<_Placed> _placeSessions(List<ScheduleSession> sessions) {
 /// 매번 어중간한 초에 움직인다 — 시계가 12:00 을 가리키는 순간과 선이 내려오는
 /// 순간이 어긋나면, 맞는 값을 보여 주면서도 틀린 것처럼 읽힌다.
 class _NowLine extends ConsumerStatefulWidget {
-  const _NowLine({required this.startHour, required this.endHour});
+  const _NowLine({required this.window, required this.hourHeight});
 
-  final int startHour;
-  final int endHour;
+  final ({int start, int end}) window;
+  final double hourHeight;
 
   @override
   ConsumerState<_NowLine> createState() => _NowLineState();
@@ -583,10 +608,10 @@ class _NowLineState extends ConsumerState<_NowLine> {
   @override
   Widget build(BuildContext context) {
     final int minutes = _now.hour * 60 + _now.minute;
-    final int windowStart = widget.startHour * 60;
+    final int windowStart = widget.window.start;
     // 보이는 창 밖(이른 새벽·늦은 밤)이면 아무것도 그리지 않는다 — 격자에 없는
     // 시각을 가리키는 선은 자리를 잘못 짚은 것과 같다.
-    if (minutes < windowStart || minutes > widget.endHour * 60) {
+    if (minutes < windowStart || minutes > widget.window.end) {
       return const SizedBox.shrink();
     }
 
@@ -595,8 +620,7 @@ class _NowLineState extends ConsumerState<_NowLine> {
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned(
-            top:
-                (minutes - windowStart) / 60 * ScheduleWeekTimetable.hourHeight,
+            top: (minutes - windowStart) / 60 * widget.hourHeight,
             left: 0,
             right: 0,
             child: const Row(
@@ -657,9 +681,20 @@ class _SessionBlock extends StatelessWidget {
     final tone = _tone;
     final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
     final end = start + session.durationMinutes;
-    final range = l.schedTimeRange(session.time, _hhmm(end));
     final type = sessionTypeLabel(l, session.type);
+    // 블록은 두 줄이다: `10–11 60분` / `김민수 1:1 PT`. 세 줄이던 때에는 30분
+    // 세션이 칸의 절반을 차지해 하루가 한 화면에 들어오지 않았다(#1010).
+    //
+    // 정각의 `:00` 은 읽는 데 보태는 것이 없어 뗀다. 툴팁과 시맨틱스에는 자른
+    // 값이 아니라 온전한 시각을 남긴다 — 소리로 듣는 쪽은 줄일 이유가 없다.
+    final range = l.schedTimeRange(session.time, _hhmm(end));
     final detail = l.sessionTypeAndDuration(type, session.durationMinutes);
+    // 시각은 자르지 않는다. `10–11` 로 줄였더니 그 자리가 무엇을 가리키는지
+    // 한 번 더 생각해야 했다 — 시간표에서 시각은 줄일 값이 아니다.
+    final timeLine = l.schedBlockTime(
+      range,
+      l.minutesShort(session.durationMinutes),
+    );
 
     return Tooltip(
       message: '$range · $name · $detail',
@@ -695,40 +730,42 @@ class _SessionBlock extends StatelessWidget {
               ),
               // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
               // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는
-              // 편이 낫다. 줄의 우선순위는 시간 → 이름 → 종류다.
+              // 편이 낫다. 시간이 먼저고 사람이 그 다음이다.
               child: _BlockLines(
                 lines: <_BlockLine>[
                   _BlockLine(
-                    text: range,
+                    text: timeLine,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       height: 1.25,
                       color: tone,
                     ),
                   ),
+                  // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
+                  // 같은 줄에 붙되 한 단계 작고 흐리게 물린다 — 이름과 같은
+                  // 무게로 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
                   _BlockLine(
                     text: name,
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
                       height: 1.25,
                       color: session.isFinished
                           ? AppColors.mutedForeground
                           : AppColors.foreground,
                     ),
-                  ),
-                  const _BlockLine(
-                    text: '',
-                    style: TextStyle(
+                    trailing: type,
+                    trailingStyle: TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w600,
-                      height: 1.3,
-                      color: AppColors.subtleForeground,
+                      height: 1.25,
+                      color: session.isFinished
+                          ? AppColors.disabledForeground
+                          : AppColors.subtleForeground,
                     ),
                   ),
                 ],
-                detail: detail,
               ),
             ),
           ),
@@ -747,10 +784,19 @@ class _SessionBlock extends StatelessWidget {
 
 /// 블록 한 줄의 글과 그 글꼴.
 class _BlockLine {
-  const _BlockLine({required this.text, required this.style});
+  const _BlockLine({
+    required this.text,
+    required this.style,
+    this.trailing,
+    this.trailingStyle,
+  });
 
   final String text;
   final TextStyle style;
+
+  /// [text] 뒤에 한 단계 물려 붙는 글. 같은 줄이지만 무게가 다르다.
+  final String? trailing;
+  final TextStyle? trailingStyle;
 
   /// 이 줄이 실제로 차지할 높이. 배율이 커지면 함께 커진다.
   double heightIn(BuildContext context) =>
@@ -765,13 +811,10 @@ class _BlockLine {
 /// 첫 줄(시간)은 자리가 모자라도 언제나 그린다: 그것마저 없으면 블록이 무엇을
 /// 가리키는지 알 수 없다.
 class _BlockLines extends StatelessWidget {
-  const _BlockLines({required this.lines, required this.detail});
+  const _BlockLines({required this.lines});
 
-  /// 위에서부터의 우선순위 순서. 마지막 줄의 글은 [detail] 로 채운다.
+  /// 위에서부터의 우선순위 순서.
   final List<_BlockLine> lines;
-
-  /// 마지막 줄에 그릴 종류·소요 시간. 앞 줄들과 달리 값이 늦게 정해진다.
-  final String detail;
 
   @override
   Widget build(BuildContext context) {
@@ -785,12 +828,32 @@ class _BlockLines extends StatelessWidget {
           final needed = line.heightIn(context);
           if (drawn.isNotEmpty && used + needed > available) break;
           used += needed;
+          // 한 줄에 두 가지 무게를 그릴 때도 `Text` 두 개로 나눈다. `Text.rich`
+          // 로 묶으면 `find.text` 가 기본으로 지나쳐, 화면에 있는 글을 테스트가
+          // 못 찾는다.
           drawn.add(
-            Text(
-              i == lines.length - 1 ? detail : line.text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: line.style,
+            Row(
+              children: <Widget>[
+                Flexible(
+                  child: Text(
+                    line.text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: line.style,
+                  ),
+                ),
+                if (line.trailing != null) ...<Widget>[
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      line.trailing!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: line.trailingStyle ?? line.style,
+                    ),
+                  ),
+                ],
+              ],
             ),
           );
         }

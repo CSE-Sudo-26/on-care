@@ -36,7 +36,7 @@ void main() {
     final Finder block = find
         .descendant(
           of: find.byType(ScheduleWeekTimetable),
-          matching: find.text(name),
+          matching: find.textContaining(name),
         )
         .first;
     await tester.ensureVisible(block);
