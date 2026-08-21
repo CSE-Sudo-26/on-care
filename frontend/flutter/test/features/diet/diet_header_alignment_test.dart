@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -67,16 +68,9 @@ void main() {
         moreOrLessEquals(tester.getRect(header).right, epsilon: 0.5),
       );
       // 제목은 여전히 줄 왼쪽에 있다 — 둘이 가운데로 몰리지 않는다.
+      // 제목 왼쪽에는 이제 아이콘이 붙으므로 제목 묶음 전체로 잰다. (#1058)
       expect(
-        tester
-            .getRect(
-              find.text(
-                AppLocalizations.of(
-                  tester.element(header),
-                ).dietNutritionSummary,
-              ),
-            )
-            .left,
+        tester.getRect(find.byType(SectionTitle).first).left,
         moreOrLessEquals(tester.getRect(header).left, epsilon: 0.5),
       );
     });

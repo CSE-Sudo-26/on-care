@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 part 'app_database.g.dart';
 
-/// Generic key-value table. Holds tiny app-level state — currently the
-/// seed flag (`trainer_seeded_v1`).
+/// Generic key-value table. Holds tiny app-level state — the seed flag
+/// (`trainer_seeded_v<N>`, bumped whenever the seeded content changes)
+/// and the per-client chat read markers.
 class AppKeyValues extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();

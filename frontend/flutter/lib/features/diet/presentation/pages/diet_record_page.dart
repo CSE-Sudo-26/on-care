@@ -5,6 +5,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -13,10 +14,12 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
-import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart';
+import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
+import 'package:oncare/features/diet/presentation/widgets/week_strip_label.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/ai_advice_card.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// 식단 tab, rebuilt to match the On-Care Figma redesign. The weekly date
@@ -137,12 +140,23 @@ void resetDietTransientUiState(WidgetRef ref) {
 /// 30일이 보이고 나머지는 옆으로 밀어 본다. (#1018)
 const int kDietAllPeriodDays = 84;
 
+/// 기간 토글 → 서버가 아는 기간 이름. 화면과 서버가 같은 말을 쓴다. (#1017)
+String _advicePeriod(DietPeriodTab tab) => switch (tab) {
+  DietPeriodTab.day => 'today',
+  DietPeriodTab.week => 'week',
+  DietPeriodTab.month => 'all',
+};
+
 DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
   if (tab == DietPeriodTab.month) {
     // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
     // 추세를 볼 수 없다.
     return (
-      from: DateTime(today.year, today.month, today.day - kDietAllPeriodDays + 1),
+      from: DateTime(
+        today.year,
+        today.month,
+        today.day - kDietAllPeriodDays + 1,
+      ),
       to: DateTime(today.year, today.month, today.day),
     );
   }
@@ -172,11 +186,6 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     _selected = _today;
   }
 
-  int _weekOfMonth(DateTime d) {
-    final DateTime first = DateTime(d.year, d.month);
-    final int offset = first.weekday - 1; // days from Monday
-    return ((d.day + offset - 1) / 7).floor() + 1;
-  }
 
   DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
       dietRangeForTab(tab, today);
@@ -194,12 +203,16 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     final AppLocalizations l = AppLocalizations.of(context);
     final DietPeriodTab selectedPeriod = ref.watch(dietPeriodTabProvider);
     final DateTime today = _today;
-    // Window is always centred on today (+ whole-week shifts): 3 days before,
-    // today in the middle, 3 days after.
+    // 스트립은 늘 월요일에서 시작해 일요일로 끝난다 (#1059). 오늘을 가운데
+    // 두면 한 줄에 지난주 끝과 이번 주 앞이 섞여, `이번 주` 그래프가 세는
+    // 주와 달력이 보여 주는 주가 서로 어긋났다.
     final DateTime center = today.add(Duration(days: _weekShift * 7));
+    final DateTime monday = center.subtract(
+      Duration(days: center.weekday - DateTime.monday),
+    );
     final List<DateTime> days = List<DateTime>.generate(
       7,
-      (int i) => center.add(Duration(days: i - 3)),
+      (int i) => monday.add(Duration(days: i)),
     );
     final bool atToday = _weekShift == 0 && _selected == today;
     // 날짜를 옮기면 기간 토글이 사라진다 — 운동 탭이 오늘이 아닌 날에
@@ -240,9 +253,11 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: l.dietWeekLabel(
-                    center.month,
-                    _weekOfMonth(center),
+                  weekLabel: weekStripLabel(
+                    context,
+                    l,
+                    selected: _selected,
+                    today: today,
                   ),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
@@ -298,7 +313,21 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                       : Column(
                           children: <Widget>[
                             const SizedBox(height: 20),
-                            _AiFeedback(message: day.aiCoachMessage),
+                            // 기간 토글을 따라 조언도 바뀐다 (#1017). 지난
+                            // 날짜를 고른 동안에는 그날의 조언이다 — 기간
+                            // 토글이 숨겨져 있어 화면이 하루를 말하고 있다.
+                            _AiFeedback(
+                              message: atToday
+                                  ? ref
+                                            .watch(
+                                              dietAdviceProvider(
+                                                _advicePeriod(selectedPeriod),
+                                              ),
+                                            )
+                                            .valueOrNull ??
+                                        day.aiCoachMessage
+                                  : day.aiCoachMessage,
+                            ),
                             const SizedBox(height: 20),
                             _MealLog(
                               entries: day.entries,
@@ -363,9 +392,16 @@ class _PeriodToggle extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
+                    // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
+                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
+                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
+                    // (#1058)
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3
+                          ? 12
+                          : 18,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: active == tab
@@ -440,15 +476,9 @@ class _NutritionSectionHeader extends StatelessWidget {
           Flexible(
             child: Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text(
-                l.dietNutritionSummary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
+              child: SectionTitle(
+                icon: Icons.restaurant_outlined,
+                label: l.dietNutritionSummary,
               ),
             ),
           ),
@@ -798,13 +828,9 @@ class NutritionSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (showHeader) ...<Widget>[
-            Text(
-              l.dietNutritionSummary,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
+            SectionTitle(
+              icon: Icons.restaurant_outlined,
+              label: l.dietNutritionSummary,
             ),
             const SizedBox(height: 10),
           ],
@@ -1430,53 +1456,14 @@ class _AiFeedback extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) {
-    if (message.trim().isEmpty) return const SizedBox.shrink();
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: FigmaColors.softBlue,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: FigmaColors.primaryA(0.15)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const OniAvatar(size: 40),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    l.dietAiFeedback,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                      color: FigmaColors.ink,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    // 운동 탭도 같은 카드를 쓴다 — 그림은 공용 위젯에 있다. (#1021)
+    child: AiAdviceCard(
+      title: AppLocalizations.of(context).dietAiFeedback,
+      message: message,
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────── meal log ──
@@ -1790,23 +1777,26 @@ class _MealCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: <Widget>[
+                    // 정상은 초록이다 — 같은 탭의 기간 그래프·나트륨 카드가
+                    // 이미 초록으로 정상을 말한다. 여기만 파랑이면 한 탭 안에서
+                    // 같은 뜻이 두 색을 쓰게 된다. (#1053)
                     _TotalPill(
                       label: l.dietCalories,
                       value: '${_formatInt(meal.total)} ${l.unitKcal}',
-                      color: FigmaColors.primary,
+                      color: FigmaColors.statusNormal,
                     ),
                     _TotalPill(
                       label: l.dietSodium,
                       value: '${_formatInt(meal.sodium)} ${l.dietUnitMg}',
-                      // 좋으면 파란계열, 나트륨이 과다하면 빨간계열.
+                      // 정상은 초록, 나트륨이 과다하면 빨강.
                       color: meal.sodium > 1000
                           ? FigmaColors.dangerRed
-                          : FigmaColors.primary,
+                          : FigmaColors.statusNormal,
                     ),
                     _TotalPill(
                       label: l.dietSugar,
                       value: '${_formatG(meal.sugar)} ${l.dietUnitG}',
-                      color: FigmaColors.primary,
+                      color: FigmaColors.statusNormal,
                     ),
                   ],
                 ),
@@ -1826,53 +1816,20 @@ class _MealCard extends StatelessWidget {
 /// Meal thumbnail: the photo the member uploaded, then the bundled demo
 /// asset, then the meal-type emoji chip.
 ///
-/// 실서버에서는 회원이 올린 사진(`photoUrl`)이 온다. 번들 자산은 실서버에 붙으면
-/// 늘 비어 있던 데모 값이라 뒤로 물린다. (#699)
+/// 고르는 순서는 [MealPhotoView] 가 안다 — 수정 화면 상단의 큰 사진과 같은
+/// 규칙을 쓴다. (#1053)
 class _MealThumb extends StatelessWidget {
   const _MealThumb({required this.meal});
   final DietMeal meal;
 
   @override
-  Widget build(BuildContext context) {
-    final String? url = meal.photoUrl;
-    if (url != null && url.isNotEmpty) {
-      return StoredMealPhoto(
-        path: url,
-        size: 52,
-        fallback: _assetOrEmojiThumb(),
-      );
-    }
-    return _assetOrEmojiThumb();
-  }
-
-  Widget _assetOrEmojiThumb() {
-    final String? asset = meal.photoAsset;
-    if (asset != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          asset,
-          width: 52,
-          height: 52,
-          fit: BoxFit.cover,
-          // Fall back to the emoji chip if the bundled asset is missing.
-          errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
-              _emojiThumb(),
-        ),
-      );
-    }
-    return _emojiThumb();
-  }
-
-  Widget _emojiThumb() => Container(
+  Widget build(BuildContext context) => MealPhotoView(
+    photoUrl: meal.photoUrl,
+    photoAsset: meal.photoAsset,
+    emoji: meal.emoji,
+    background: meal.thumbBg,
     width: 52,
     height: 52,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: meal.thumbBg,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text(meal.emoji, style: const TextStyle(fontSize: 24)),
   );
 }
 

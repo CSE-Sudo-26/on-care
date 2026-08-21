@@ -109,12 +109,18 @@ class _ConsultationRequestPageState
       _healthPurpose == _HealthPurpose.other &&
       _healthPurposeController.text.trim().isEmpty;
 
+  /// 데이터 공유에 동의했는가. 신청은 회원이 하고 연결은 나중에 트레이너가
+  /// 수락하며 만들어진다 — 회원이 그 자리에 없으므로 동의는 여기서 받는다.
+  /// (#1022)
+  bool _dataSharingConsent = false;
+
   bool get _isValid =>
       _exerciseGoal != null &&
       _healthPurpose != null &&
       !_healthPurposeInputMissing &&
       _preferredDate != null &&
-      _preferredTime != null;
+      _preferredTime != null &&
+      _dataSharingConsent;
 
   Future<void> _submit({
     required Gym gym,
@@ -163,6 +169,7 @@ class _ConsultationRequestPageState
       preferredDate: _preferredDate!,
       preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
+      dataSharingConsent: _dataSharingConsent,
     );
 
     final ConsultationRequest? saved;
@@ -298,7 +305,12 @@ class _ConsultationRequestPageState
           children: <Widget>[
             _TargetCard(gym: gym, trainer: trainer),
             const SizedBox(height: 12),
-            const _DataSharingNotice(),
+            _DataSharingNotice(
+              consented: _dataSharingConsent,
+              onChanged: (bool next) =>
+                  setState(() => _dataSharingConsent = next),
+              showRequired: _attempted && !_dataSharingConsent,
+            ),
             const SizedBox(height: 20),
             _ChoiceField<_ExerciseGoal>(
               chipKeyPrefix: 'consult-goal',
@@ -528,7 +540,19 @@ class _TargetCard extends StatelessWidget {
 /// 여기 없는 항목(예: 혈압·혈당)은 애초에 수집하지 않으므로 트레이너도 볼 수
 /// 없다.
 class _DataSharingNotice extends StatelessWidget {
-  const _DataSharingNotice();
+  const _DataSharingNotice({
+    required this.consented,
+    required this.onChanged,
+    required this.showRequired,
+  });
+
+  /// 동의했는가. 이 값은 화면 상태(`_dataSharingConsent`)가 들고 있다 — 제출
+  /// 가능 여부를 함께 판단해야 해서다. (#1022)
+  final bool consented;
+  final ValueChanged<bool> onChanged;
+
+  /// 제출을 눌렀는데 아직 동의하지 않았는가 — 그때만 빨간 안내를 붙인다.
+  final bool showRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -542,25 +566,75 @@ class _DataSharingNotice extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: FigmaColors.hairline),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(
-            Icons.info_outline,
-            size: 16,
-            color: FigmaColors.textSub,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l.exConsultDataSharingNotice,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: FigmaColors.textBody,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: FigmaColors.textSub,
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.exConsultDataSharingNotice,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: FigmaColors.textBody,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // 안내로 지나가지 않고 **동의를 받는다** — 수락되는 순간 넘어가는
+          // 것은 회원의 건강 기록이다. (#1022)
+          const SizedBox(height: 6),
+          InkWell(
+            key: const Key('consultDataSharingConsent'),
+            onTap: () => onChanged(!consented),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Checkbox(
+                  value: consented,
+                  onChanged: (bool? next) => onChanged(next ?? false),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  activeColor: FigmaColors.primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      l.exConsultDataSharingAgree,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          if (showRequired) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              l.exConsultDataSharingRequired,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: FigmaColors.dangerRed,
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -134,9 +134,10 @@ void main() {
     expect(find.text('주의 고객'), findsOneWidget);
 
     // 13 of the 15 seeded clients are active; 박성호 and 문가영 are the
-    // two 휴면 fixtures. Six threads are waiting on a reply.
+    // two 휴면 fixtures. 답장 대기는 **회원이 마지막으로 말한** 스레드다 —
+    // 시드에서는 넷(오세라 · 배준혁 · 문가영 · 노태강)이 그렇다.
     expect(find.text('휴면 2명'), findsOneWidget);
-    expect(find.text('고객 6명 대기 중'), findsOneWidget);
+    expect(find.text('고객 4명 대기 중'), findsOneWidget);
   });
 
   testWidgets('주의 고객 counts health signals, not the reply backlog', (

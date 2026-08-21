@@ -215,7 +215,7 @@ void main() {
     await pump(
       tester,
       const Scaffold(
-        body: SingleChildScrollView(child: AiCoachingCard(coachingPoint: '')),
+        body: SingleChildScrollView(child: AiCoachingCard()),
       ),
       lang: 'en',
       overrides: <Override>[

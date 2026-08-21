@@ -45,7 +45,7 @@ void main() {
       final avatar = tester.widget<ClientAvatar>(
         find.descendant(of: selectedTile, matching: find.byType(ClientAvatar)),
       );
-      expect(avatar.showStatus, isTrue);
+      expect(avatar.showStatus, isFalse);
       expect(avatar.size, 36);
       final surface = tester.widget<Material>(
         find
@@ -81,7 +81,10 @@ void main() {
   testWidgets('conversation list keeps unread and status information', (
     tester,
   ) async {
-    await withWideSurface(tester, () async {
+    // 목록이 최신순이라 박성호는 아래쪽에 선다. 기본 높이로는 지연 생성
+    // 목록이 그를 만들지 않아, `findsNothing` 단언이 화면 밖이라는 이유로
+    // 통과해 버린다 - 목록 전체가 한 화면에 들어오는 높이로 띄운다.
+    await withWideSurface(tester, size: const Size(1440, 2200), () async {
       // 박성호의 배지는 요일에 따라 뒤집힌다. 시드가 주간 계열을 오늘까지만
       // 채우므로, 화요일에는 그 주에 기록된 날이 33% 하루뿐이라 이행률 저조가
       // 나트륨 초과보다 급한 신호가 된다. 주가 끝난 일요일로 고정해 어느 날
@@ -106,20 +109,36 @@ void main() {
         ),
         findsOneWidget,
       );
+      // 박성호는 트레이너가 마지막으로 답장해 두었다 — 기다리는 것이
+      // 없으므로 안읽음 배지도 없다. 배지는 회원이 마지막으로 말한
+      // 스레드에만 붙는다.
       expect(
         find.byKey(const ValueKey<String>('messages-unread-seed-client-3')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('messages-unread-seed-client-8')),
         findsOneWidget,
       );
-      // 목록은 어느 대화를 열까를 정하는 자리다 — 상태의 자세한 내막은
-      // 대화를 연 뒤 헤더가 말한다. 활성/휴면은 아바타 점으로만 남는다.
+      // 목록은 어느 대화를 열까를 정하는 자리다 — 이름 · 시각 · 마지막
+      // 말 · 안읽음뿐이고, 목표도 상태도 없다.
       expect(
-        find.descendant(of: conversation, matching: find.text('휴면')),
+        find.descendant(of: conversation, matching: find.text('근력 향상')),
         findsNothing,
       );
       expect(
         find.descendant(of: conversation, matching: find.text('나트륨 초과')),
         findsNothing,
       );
+      // 목표 자리를 미리보기가 가져갔다 — 두 줄이면 뒤에 무엇이 붙는지까지
+      // 읽히고, 열어 볼 대화인지 목록에서 판단할 수 있다.
+      final preview = tester.widget<Text>(
+        find.descendant(
+          of: conversation,
+          matching: find.textContaining('이해해요! 대신 AI 식단 분석'),
+        ),
+      );
+      expect(preview.maxLines, 2);
     });
   });
 
@@ -210,21 +229,16 @@ void main() {
         const ValueKey<String>('messages-thread-identity'),
       );
       expect(identity, findsOneWidget);
-      // 활성/휴면 알약이 이름 줄에 선다.
+      // 활성/휴면은 메시지 탭 어디에도 없다 — 이 사람과 지금 이야기하는
+      // 데 쓰이지 않는 값이고, 바꿀 수 있는 자리도 고객 탭이다.
       expect(
-        find.descendant(
-          of: identity,
-          matching: find.byKey(
-            const ValueKey<String>('messages-thread-status'),
-          ),
-        ),
-        findsOneWidget,
+        find.byKey(const ValueKey<String>('messages-thread-status')),
+        findsNothing,
       );
-      expect(
-        find.descendant(of: identity, matching: find.text('휴면')),
-        findsOneWidget,
-      );
-      // 목록과 달리 주의 배지는 **전부** 선다 — 자세한 쪽이 여기다.
+      expect(find.text('휴면'), findsNothing);
+      expect(find.text('활성'), findsNothing);
+      // 주의 배지는 **전부** 선다 — 나트륨이 넘쳤다는 사실은 지금 이
+      // 대화에서 할 말을 바꾼다.
       expect(
         find.descendant(of: identity, matching: find.text('나트륨 초과')),
         findsOneWidget,
@@ -236,6 +250,70 @@ void main() {
       // 대화 화면은 대화만 한다 — 운동 데이터는 고객 탭이 보여 준다.
       expect(find.textContaining('최근 운동'), findsNothing);
       expect(find.textContaining('주간 이행률'), findsNothing);
+    });
+  });
+
+  testWidgets('a long message never fills the whole thread width', (
+    tester,
+  ) async {
+    await withWideSurface(tester, () async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+      await goTo(tester, AppRoutes.messagesFor('seed-client-3'));
+
+      // 상한이 없으면 긴 메시지가 대화 창을 가로로 다 채운다. 그러면 누가
+      // 한 말인지를 말해 주던 "어느 쪽으로 붙어 있는가" 가 사라진다.
+      final thread = find.byKey(
+        const ValueKey<String>('messages-thread-seed-client-3'),
+      );
+      // 같은 문장이 목록 미리보기에도 있다 — 대화 쪽 말풍선만 잰다.
+      final message = find.descendant(
+        of: thread,
+        matching: find.textContaining('이해해요! 대신 AI 식단 분석'),
+      );
+      expect(message, findsOneWidget);
+      final threadWidth = tester.getSize(thread).width;
+      final bubbleWidth = tester.getSize(message).width;
+
+      expect(bubbleWidth, lessThan(threadWidth * 0.75));
+      // 그렇다고 쓸데없이 좁지도 않다 — 넓은 화면에서는 상한까지 쓴다.
+      expect(bubbleWidth, greaterThan(threadWidth * 0.5));
+    });
+  });
+
+  testWidgets('전체는 마지막 말이 새로운 순, 관리 필요만 주의 우선', (tester) async {
+    // 두 대화의 세로 자리를 재는 단언이라 둘 다 그려져 있어야 한다 -
+    // 지연 생성 목록이 화면 밖 대화를 만들지 않으므로 목록 전체가 들어오는
+    // 높이로 띄운다.
+    await withWideSurface(tester, size: const Size(1440, 2200), () async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        seedClock: DateTime(2026, 8, 16), // 일요일 — 배지 우선순위 고정
+      );
+
+      double topOf(String id) => tester
+          .getTopLeft(find.byKey(ValueKey<String>('messages-conversation-$id')))
+          .dy;
+
+      // `전체` 는 대화 목록이다 — 방금 말이 오간 순서로 선다. 노태강은
+      // 오늘, 박성호는 사흘 전에 마지막 말이 오갔다. 예전에는 어느
+      // 필터에서든 나트륨이 넘친 박성호가 위로 올라와, 방금 답장이 온
+      // 고객이 목록 아래에 묻혔다.
+      await goTo(tester, AppRoutes.messages);
+      expect(topOf('seed-client-13'), lessThan(topOf('seed-client-3')));
+
+      // `관리 필요` 는 챙길 사람을 고르는 자리다 — 주의 신호가 앞선다.
+      // 노태강은 신호가 없어 목록에서 아예 빠진다.
+      await goTo(tester, AppRoutes.messagesFor(null, filter: 'attention'));
+      expect(
+        find.byKey(
+          const ValueKey<String>('messages-conversation-seed-client-13'),
+        ),
+        findsNothing,
+      );
+      // 나트륨이 넘친 박성호는 이행률만 낮은 고객보다 위다 — 사흘 전
+      // 대화인데도. 최신순이었다면 반대로 섰다.
+      expect(topOf('seed-client-3'), lessThan(topOf('seed-client-12')));
     });
   });
 
@@ -319,6 +397,24 @@ void main() {
       await settle(tester);
 
       expect(find.text('메모 추가됨'), findsOneWidget);
+      // 옮겨 적은 뒤에는 바탕만 비운다 — 붉은 바탕은 "아직 볼 것이 있다"
+      // 는 신호라, 처리한 배너와 안 한 배너가 똑같이 붉으면 안 된다.
+      // 윤곽선과 버튼의 붉은색은 무슨 일이 있었는지를 남긴다.
+      final banner = tester.widget<Container>(
+        find.byKey(
+          const ValueKey<String>('chat-insight-banner-seed-chat-1-16'),
+        ),
+      );
+      final decoration = banner.decoration! as BoxDecoration;
+      expect(decoration.color, AppColors.card);
+      expect(
+        (decoration.border! as Border).top.color,
+        AppColors.warning.withValues(alpha: 0.28),
+      );
+      expect(
+        tester.widget<Text>(find.text('메모 추가됨')).style?.color,
+        AppColors.warning,
+      );
       // 채팅에서 저장한 메모는 회원 상세가 읽는 것과 **같은** 메모 목록에 들어간다.
       final memos = await container
           .read(trainerMemoRepositoryProvider)
