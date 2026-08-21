@@ -134,10 +134,7 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
     // 사람이 읽을 문구는 화면이 붙인다(#501). 문구 없는 [NotFoundError] 는
     // 화면의 지역화된 기본 안내로 떨어진다.
     if (index < 0) throw const NotFoundError();
-    final updated = memos[index].copyWith(
-      body: body,
-      updatedAt: nowKst(),
-    );
+    final updated = memos[index].copyWith(body: body, updatedAt: nowKst());
     memos[index] = updated;
     await _write(clientId, memos);
     return updated;

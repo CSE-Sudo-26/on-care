@@ -668,26 +668,28 @@ class _SessionBlock extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// **면의 색은 종류**를 말한다 — 1:1 PT(남색)·상담(보라). 시간표를 훑는
-  /// 동안 읽는 것은 색이라, 종류가 셋째 줄 글씨로만 있으면 둘이 똑같아
-  /// 보인다(#1013).
-  Color get _typeTone => session.type == SessionType.consultation
-      ? AppColors.sessionConsultation
-      : AppColors.sessionPersonalTraining;
+  /// 상담인가. 종류는 색을 하나 더 들이는 대신 **채움과 비움**으로 가른다 —
+  /// 1:1 PT 는 연한 남색으로 채우고, 상담은 흰 바탕에 남색 윤곽선을 두른다.
+  /// 헤더의 `예약 슬롯` 버튼과 같은 표현이라 화면이 이미 쓰고 있는 어휘를
+  /// 그대로 빌린다(#1013).
+  bool get _isConsultation => session.type == SessionType.consultation;
 
-  /// **왼쪽 띠의 색은 상태**를 말한다 — 예정(종류색)·완료(초록)·취소/노쇼(빨강).
-  /// 면과 갈래가 달라 두 값이 서로를 덮지 않는다.
+  /// **왼쪽 띠의 색은 상태**를 말한다 — 예정(남색)·완료(초록)·취소/노쇼(빨강).
+  /// 면(종류)과 갈래가 달라 두 값이 서로를 덮지 않는다.
   Color get _statusTone => switch (session.status) {
     ScheduleStatus.done => AppColors.success,
     ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
-    _ => _typeTone,
+    _ => AppColors.primary,
   };
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final tone = _typeTone;
+    const tone = AppColors.primary;
     final statusTone = _statusTone;
+    final surface = _isConsultation
+        ? AppColors.card
+        : tone.withValues(alpha: session.isFinished ? 0.08 : 0.12);
     final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
     final end = start + session.durationMinutes;
     final type = sessionTypeLabel(l, session.type);
@@ -714,7 +716,7 @@ class _SessionBlock extends StatelessWidget {
         // 낭독되어 시간표를 훑기 어렵다.
         excludeSemantics: true,
         child: Material(
-          color: tone.withValues(alpha: session.isFinished ? 0.08 : 0.12),
+          color: surface,
           borderRadius: const BorderRadius.all(AppRadius.xs),
           child: InkWell(
             // 일정 한 건이 달력에 그려졌음을 가리키는 키. 일 보기 타임라인이
@@ -722,59 +724,79 @@ class _SessionBlock extends StatelessWidget {
             key: ValueKey<String>('schedule-session-${session.id}'),
             onTap: onTap,
             borderRadius: const BorderRadius.all(AppRadius.xs),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(5, 3, 4, 3),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(AppRadius.xs),
-                // 폭 0 짜리 변은 두지 않는다 — 모서리가 둥근 상자에 그리려 하면
-                // 프레임워크가 hairline 단정에서 걸린다.
-                border: selected
-                    ? Border(
-                        left: BorderSide(color: statusTone, width: 4),
-                        top: BorderSide(color: statusTone, width: 1.5),
-                        right: BorderSide(color: statusTone, width: 1.5),
-                        bottom: BorderSide(color: statusTone, width: 1.5),
-                      )
-                    : Border(left: BorderSide(color: statusTone, width: 2.5)),
-              ),
-              // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
-              // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는
-              // 편이 낫다. 시간이 먼저고 사람이 그 다음이다.
-              child: _BlockLines(
-                lines: <_BlockLine>[
-                  _BlockLine(
-                    text: timeLine,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
-                      color: tone,
+            // 상태 띠를 `Border` 의 왼쪽 변으로 그리면 네 변의 색이 달라져,
+            // 둥근 모서리와 함께 쓸 수 없다("borderRadius can only be given on
+            // borders with uniform colors"). 띠를 자식으로 세우고 윤곽선은
+            // 균일하게 둔다.
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(AppRadius.xs),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  // 상담은 사면을 두른다 — 그 윤곽선이 종류를 말한다. 고른
+                  // 블록은 어느 종류든 테두리가 굵어진다.
+                  border: selected || _isConsultation
+                      ? Border.all(
+                          color: selected
+                              ? statusTone
+                              : tone.withValues(alpha: 0.45),
+                          width: selected ? 1.5 : 1,
+                        )
+                      : null,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // 왼쪽 띠가 상태를 말한다.
+                    SizedBox(
+                      width: selected ? 4 : 2.5,
+                      child: ColoredBox(color: statusTone),
                     ),
-                  ),
-                  // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
-                  // 같은 줄에 붙되 한 단계 작고 흐리게 물린다 — 이름과 같은
-                  // 무게로 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
-                  _BlockLine(
-                    text: name,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
-                      color: session.isFinished
-                          ? AppColors.mutedForeground
-                          : AppColors.foreground,
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(5, 3, 4, 3),
+                        // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
+                        // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는
+                        // 편이 낫다. 시간이 먼저고 사람이 그 다음이다.
+                        child: _BlockLines(
+                          lines: <_BlockLine>[
+                            _BlockLine(
+                              text: timeLine,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                height: 1.25,
+                                color: tone,
+                              ),
+                            ),
+                            // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
+                            // 같은 줄에 붙되 한 단계 작고 흐리게 물린다 — 이름과 같은
+                            // 무게로 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
+                            _BlockLine(
+                              text: name,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                height: 1.25,
+                                color: session.isFinished
+                                    ? AppColors.mutedForeground
+                                    : AppColors.foreground,
+                              ),
+                              trailing: type,
+                              trailingStyle: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                height: 1.25,
+                                color: session.isFinished
+                                    ? AppColors.disabledForeground
+                                    : AppColors.subtleForeground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    trailing: type,
-                    trailingStyle: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.25,
-                      color: session.isFinished
-                          ? AppColors.disabledForeground
-                          : AppColors.subtleForeground,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

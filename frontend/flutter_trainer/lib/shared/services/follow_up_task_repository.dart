@@ -51,7 +51,11 @@ abstract interface class FollowUpTaskRepository {
   });
 
   /// 할 일의 내용·예정일을 고친다. 상태는 [complete] 로만 바뀐다.
-  Future<FollowUpTask> update(String taskId, {String? title, DateTime? dueDate});
+  Future<FollowUpTask> update(
+    String taskId, {
+    String? title,
+    DateTime? dueDate,
+  });
 
   /// 완료 처리. 같은 요청을 반복해도 성공하고 완료 시각은 처음 값을 지킨다.
   Future<FollowUpTask> complete(String taskId);
@@ -108,10 +112,11 @@ class LocalFollowUpTaskRepository implements FollowUpTaskRepository {
     String clientId, {
     bool includeCompleted = false,
   }) async {
-    final tasks = _read(clientId)
-        .where((task) => includeCompleted || !task.isCompleted)
-        .toList()
-      ..sort(_byDueDate);
+    final tasks =
+        _read(
+            clientId,
+          ).where((task) => includeCompleted || !task.isCompleted).toList()
+          ..sort(_byDueDate);
     return tasks;
   }
 

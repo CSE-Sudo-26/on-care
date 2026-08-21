@@ -79,17 +79,17 @@ class ConsultationInboxAction extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.all(AppRadius.md),
+                  // 옆의 `예약 슬롯` 과 같은 남색 윤곽선이다. 대기 건이 있다고
+                  // 테두리까지 빨갛게 물들이면 헤더에서 이 버튼만 튄다 —
+                  // 알리는 일은 배지 하나로 충분하다(#1013).
                   border: Border.all(
-                    color: waiting
-                        ? AppColors.destructive.withValues(alpha: 0.45)
-                        : AppColors.sessionConsultation.withValues(alpha: 0.45),
+                    color: AppColors.primary.withValues(alpha: 0.45),
                   ),
                 ),
-                // 상담은 상담의 색으로 — 시간표 블록·종류 알약과 같다(#1013).
                 child: const Icon(
                   Icons.mark_email_unread_outlined,
                   size: 17,
-                  color: AppColors.sessionConsultation,
+                  color: AppColors.primary,
                 ),
               ),
             ),

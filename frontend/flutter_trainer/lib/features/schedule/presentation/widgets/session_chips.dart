@@ -18,7 +18,7 @@ class SessionTypeChip extends StatelessWidget {
     super.key,
     required this.label,
     required this.muted,
-    this.tone = AppColors.sessionPersonalTraining,
+    this.outlined = false,
   });
 
   final String label;
@@ -26,8 +26,10 @@ class SessionTypeChip extends StatelessWidget {
   /// 끝난 세션인가. 상태 칩과 같은 기준으로 함께 물러난다.
   final bool muted;
 
-  /// 종류의 색. 시간표 블록과 같은 값을 써야 두 자리가 같은 것을 말한다(#1013).
-  final Color tone;
+  /// 채우지 않고 윤곽선만 두른다(상담). 색을 하나 더 들이는 대신 **채움과
+  /// 비움**으로 종류를 가른다 — 헤더의 `예약 슬롯` 버튼과 같은 표현이라, 화면이
+  /// 이미 쓰고 있는 어휘를 그대로 빌린다(#1013).
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +45,14 @@ class SessionTypeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: muted
               ? AppColors.inputBackground
-              : tone.withValues(alpha: 0.10),
+              : (outlined
+                    ? AppColors.card
+                    : AppColors.primary.withValues(alpha: 0.10)),
           borderRadius: const BorderRadius.all(AppRadius.pill),
           border: Border.all(
-            color: muted ? AppColors.border : tone.withValues(alpha: 0.25),
+            color: muted
+                ? AppColors.border
+                : AppColors.primary.withValues(alpha: outlined ? 0.45 : 0.25),
           ),
         ),
         child: Text(
@@ -55,7 +61,7 @@ class SessionTypeChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
-            color: muted ? AppColors.disabledForeground : tone,
+            color: muted ? AppColors.disabledForeground : AppColors.primary,
           ),
         ),
       ),

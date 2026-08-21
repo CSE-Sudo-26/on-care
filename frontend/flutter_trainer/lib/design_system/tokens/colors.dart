@@ -98,20 +98,6 @@ class AppColors {
 
   // --- Semantic ---
   /// Success / "완료" green (`#34C759`).
-  /// 세션 **종류**의 색. 상태(예정·완료·취소·노쇼)와 갈래가 다르다. (#1013)
-  ///
-  /// 시간표에서 읽는 것은 색과 자리다. 종류를 셋째 줄 글씨로만 말하면 훑는
-  /// 동안에는 `1:1 PT` 와 `상담` 이 똑같이 보인다. 그래서 **면의 색이 종류를**,
-  /// 왼쪽 띠의 색이 상태를 말한다 — 두 값이 서로를 덮지 않는다.
-  ///
-  /// 색만으로 구분하지도 않는다. 블록과 알약에 `상담` 이라는 글씨가 그대로
-  /// 남아, 색을 못 보는 경우에도 종류를 알 수 있다.
-  static const Color sessionPersonalTraining = primary;
-
-  /// 상담. 남색 계열(1:1 PT)·초록(완료)·빨강(취소·노쇼) 어디와도 겹치지 않는
-  /// 색을 골랐다.
-  static const Color sessionConsultation = Color(0xFF7C5CD1);
-
   static const Color success = Color(0xFF34C759);
 
   /// '주의' 빨강 (`#F04438`). [overTarget] 과 **같은 색이다.**

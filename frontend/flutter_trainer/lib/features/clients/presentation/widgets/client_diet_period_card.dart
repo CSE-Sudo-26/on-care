@@ -614,8 +614,7 @@ class _MacroBar extends StatelessWidget {
         <({Color color, double kcal})>[
           // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
           // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
-          if (rest / basis > 0.01)
-            (color: AppColors.borderStrong, kcal: rest),
+          if (rest / basis > 0.01) (color: AppColors.borderStrong, kcal: rest),
           if (d.fatKcal > 0) (color: AppColors.macroFat, kcal: d.fatKcal),
           if (d.proteinKcal > 0)
             (color: AppColors.macroProtein, kcal: d.proteinKcal),
