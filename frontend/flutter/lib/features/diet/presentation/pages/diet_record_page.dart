@@ -5,6 +5,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -14,6 +15,7 @@ import 'package:oncare/features/diet/presentation/controllers/diet_controller.da
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
 import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
+import 'package:oncare/features/diet/presentation/widgets/week_strip_label.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -150,7 +152,11 @@ DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
     // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
     // 추세를 볼 수 없다.
     return (
-      from: DateTime(today.year, today.month, today.day - kDietAllPeriodDays + 1),
+      from: DateTime(
+        today.year,
+        today.month,
+        today.day - kDietAllPeriodDays + 1,
+      ),
       to: DateTime(today.year, today.month, today.day),
     );
   }
@@ -180,11 +186,6 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     _selected = _today;
   }
 
-  int _weekOfMonth(DateTime d) {
-    final DateTime first = DateTime(d.year, d.month);
-    final int offset = first.weekday - 1; // days from Monday
-    return ((d.day + offset - 1) / 7).floor() + 1;
-  }
 
   DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
       dietRangeForTab(tab, today);
@@ -202,12 +203,16 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     final AppLocalizations l = AppLocalizations.of(context);
     final DietPeriodTab selectedPeriod = ref.watch(dietPeriodTabProvider);
     final DateTime today = _today;
-    // Window is always centred on today (+ whole-week shifts): 3 days before,
-    // today in the middle, 3 days after.
+    // 스트립은 늘 월요일에서 시작해 일요일로 끝난다 (#1059). 오늘을 가운데
+    // 두면 한 줄에 지난주 끝과 이번 주 앞이 섞여, `이번 주` 그래프가 세는
+    // 주와 달력이 보여 주는 주가 서로 어긋났다.
     final DateTime center = today.add(Duration(days: _weekShift * 7));
+    final DateTime monday = center.subtract(
+      Duration(days: center.weekday - DateTime.monday),
+    );
     final List<DateTime> days = List<DateTime>.generate(
       7,
-      (int i) => center.add(Duration(days: i - 3)),
+      (int i) => monday.add(Duration(days: i)),
     );
     final bool atToday = _weekShift == 0 && _selected == today;
     // 날짜를 옮기면 기간 토글이 사라진다 — 운동 탭이 오늘이 아닌 날에
@@ -248,9 +253,11 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: l.dietWeekLabel(
-                    center.month,
-                    _weekOfMonth(center),
+                  weekLabel: weekStripLabel(
+                    context,
+                    l,
+                    selected: _selected,
+                    today: today,
                   ),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
@@ -385,9 +392,16 @@ class _PeriodToggle extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
+                    // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
+                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
+                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
+                    // (#1058)
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3
+                          ? 12
+                          : 18,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: active == tab
@@ -462,15 +476,9 @@ class _NutritionSectionHeader extends StatelessWidget {
           Flexible(
             child: Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text(
-                l.dietNutritionSummary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
+              child: SectionTitle(
+                icon: Icons.restaurant_outlined,
+                label: l.dietNutritionSummary,
               ),
             ),
           ),
@@ -820,13 +828,9 @@ class NutritionSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (showHeader) ...<Widget>[
-            Text(
-              l.dietNutritionSummary,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
+            SectionTitle(
+              icon: Icons.restaurant_outlined,
+              label: l.dietNutritionSummary,
             ),
             const SizedBox(height: 10),
           ],

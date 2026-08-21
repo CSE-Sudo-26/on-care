@@ -198,8 +198,11 @@ void main() {
       // 글씨와 수치 색으로만 말한다.
       expect(find.text('목표 초과'), findsNothing);
       expect(find.text('정상'), findsNothing);
-      expect(find.text('목표보다 1,428mg 많아요'), findsNothing);
-      expect(find.text('목표까지 32.2g 남았어요'), findsNothing);
+      // #1054 에서 짧게 줄인 문구도 함께 사라졌다.
+      expect(find.text('1,428mg 많아요'), findsNothing);
+      expect(find.text('32.2g 남았어요'), findsNothing);
+      expect(find.textContaining('많아요'), findsNothing);
+      expect(find.textContaining('남았어요'), findsNothing);
       // 라벨과 한 덩어리(Text.rich)라 리치 텍스트까지 뒤져야 잡힌다.
       expect(
         find.textContaining('+1,428mg', findRichText: true),

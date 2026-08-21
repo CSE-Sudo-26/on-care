@@ -11,12 +11,10 @@ enum TrainerMemoSource {
   chatInsight;
 
   /// The backend wire value (`source` on `/trainer/clients/{id}/memos`).
-  String get wire => this == TrainerMemoSource.chatInsight
-      ? 'chat_insight'
-      : 'trainer';
+  String get wire =>
+      this == TrainerMemoSource.chatInsight ? 'chat_insight' : 'trainer';
 
-  static TrainerMemoSource fromWire(String? value) =>
-      value == 'chat_insight'
+  static TrainerMemoSource fromWire(String? value) => value == 'chat_insight'
       ? TrainerMemoSource.chatInsight
       : TrainerMemoSource.trainer;
 }

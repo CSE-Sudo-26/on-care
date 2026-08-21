@@ -95,9 +95,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealChickenSalad => 'Chicken breast salad';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI analysis';
-
-  @override
   String get homeDetails => 'Details';
 
   @override
@@ -137,6 +134,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonSodium => 'Great for sodium control';
 
   @override
+  String get homeMealSourceTrainer => 'Trainer pick';
+
+  @override
+  String get homeMealSourceAi => 'AI pick';
+
+  @override
   String get homeMealTagLowSodium => 'Low sodium';
 
   @override
@@ -146,7 +149,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonGlucose => 'Helps steady blood sugar';
 
   @override
-  String get homeMealTagLowGi => 'Low GI';
+  String get homeMealTagLowSugar => 'Low sugar';
 
   @override
   String get homeMealSalmon => 'Grilled salmon + greens';
@@ -173,7 +176,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonFiber => 'Rich in dietary fiber';
 
   @override
-  String get homeMealTagHighFiber => 'High fiber';
+  String get homeMealTagLowFat => 'Low fat';
 
   @override
   String homeRecBasisSodium(int days, String sodium) {
@@ -229,11 +232,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietToday => 'Today';
-
-  @override
-  String dietWeekLabel(int month, int week) {
-    return 'Month $month, Week $week';
-  }
 
   @override
   String get dietWeekdayMon => 'Mon';
@@ -294,17 +292,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietPeriodTotal => 'Period total';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days days logged',
-      one: '1 day logged',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';
@@ -1011,6 +998,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String myTrainerDisconnectConfirm(String trainer, String gym) {
     return 'Disconnect trainer $trainer?\nYour connection to $gym will remain.';
   }
+
+  @override
+  String get myGymDetailTooltip => 'Gym details';
+
+  @override
+  String get myTrainerDetailTooltip => 'Trainer details';
 
   @override
   String get myGymDisconnectTooltip => 'Disconnect gym';

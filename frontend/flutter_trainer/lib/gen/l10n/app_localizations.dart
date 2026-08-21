@@ -2336,6 +2336,12 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get schedTitle;
 
+  /// No description provided for @schedDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session detail'**
+  String get schedDetailTitle;
+
   /// No description provided for @schedDeleteTitle.
   ///
   /// In en, this message translates to:
@@ -2365,6 +2371,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{start}–{end}'**
   String schedTimeRange(String start, String end);
+
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
 
   /// No description provided for @schedEmptyWeek.
   ///
@@ -5582,17 +5594,17 @@ abstract class AppLocalizations {
   /// **'Remove certification'**
   String get a11yRemoveCertification;
 
-  /// No description provided for @a11yPrevDay.
+  /// No description provided for @a11yPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous day'**
-  String get a11yPrevDay;
+  /// **'Previous week'**
+  String get a11yPrevWeek;
 
-  /// No description provided for @a11yNextDay.
+  /// No description provided for @a11yNextWeek.
   ///
   /// In en, this message translates to:
-  /// **'Next day'**
-  String get a11yNextDay;
+  /// **'Next week'**
+  String get a11yNextWeek;
 
   /// No description provided for @a11ySendMessage.
   ///

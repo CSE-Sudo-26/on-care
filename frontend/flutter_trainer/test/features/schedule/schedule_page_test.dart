@@ -425,10 +425,11 @@ void main() {
 
     /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
     Future<void> openSession(WidgetTester tester, String name) async {
+      // 블록의 둘째 줄은 `이름 종류` 라 이름만으로는 정확히 맞지 않는다(#1010).
       final block = find
           .descendant(
             of: find.byType(ScheduleWeekTimetable),
-            matching: find.text(name),
+            matching: find.textContaining(name),
           )
           .first;
       await tester.ensureVisible(block);
@@ -468,21 +469,22 @@ void main() {
       // 왼쪽 시간축 — 일정이 없는 시간대도 눈금으로 남는다. 이것이 없던 때에는
       // 10시 세션과 17시 세션이 세로로 붙어 그 사이가 비었다는 사실이 화면에
       // 없었다.
-      expect(find.text('07:00'), findsOneWidget);
+      expect(find.text('08:00'), findsOneWidget);
       expect(find.text('13:00'), findsOneWidget);
-      expect(find.text('21:00'), findsOneWidget);
+      expect(find.text('22:00'), findsOneWidget);
 
       // 블록은 시간 범위와 종류를 함께 말한다.
       expect(find.text('10:00\u201311:00'), findsWidgets);
       expect(find.text('17:00\u201317:30'), findsOneWidget);
       expect(find.text('김민수'), findsWidgets);
-      expect(find.text('이지수'), findsWidgets);
-      expect(find.text('박성호'), findsWidgets);
+      expect(find.textContaining('이지수'), findsWidgets);
+      expect(find.textContaining('박성호'), findsWidgets);
       expect(find.text('1:1 PT · 60분'), findsWidgets);
-      expect(find.text('상담 · 30분'), findsWidgets);
+      expect(find.text('윤가온(신규)'), findsWidgets);
+      expect(find.text('상담'), findsWidgets);
 
       // 로스터에 없는 상담 고객은 이름 뒤에 신규 표가 붙는다.
-      expect(find.text('윤가온(신규)'), findsWidgets);
+      expect(find.textContaining('윤가온(신규)'), findsWidgets);
 
       // 고른 날의 첫 세션이 상세 패널에 열려 있다.
       expect(find.byKey(const Key('week-detail')), findsOneWidget);
@@ -510,7 +512,7 @@ void main() {
         find
             .descendant(
               of: find.byType(ScheduleWeekTimetable),
-              matching: find.text('김민수'),
+              matching: find.textContaining('김민수'),
             )
             .first,
       );
@@ -538,7 +540,7 @@ void main() {
         find
             .descendant(
               of: find.byType(ScheduleWeekTimetable),
-              matching: find.text('김민수'),
+              matching: find.textContaining('김민수'),
             )
             .first,
       );
@@ -553,7 +555,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('김민수'),
+          matching: find.textContaining('김민수'),
         ),
         findsNothing,
       );
@@ -853,7 +855,8 @@ void main() {
       await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
       expect(find.text('프로그램 수정'), findsOneWidget);
-      expect(find.text('메모 수정'), findsNothing);
+      // 메모 자리는 종류와 상관없이 있다(#1011).
+      expect(find.text('메모 수정'), findsOneWidget);
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {
@@ -913,9 +916,7 @@ void main() {
       expect(find.text('15:00\u201316:00'), findsNothing);
     });
 
-    testWidgets('프로그램 수정 edits exercises and memo inside the card', (
-      tester,
-    ) async {
+    testWidgets('프로그램 수정 edits exercises inside the card', (tester) async {
       await openSchedule(tester);
 
       await openSession(tester, '박성호');
@@ -944,9 +945,11 @@ void main() {
         find.byKey(const ValueKey<String>('program-sets-0')),
         '4',
       );
-      await tester.enterText(
+      // 메모는 이 편집기에 없다 — 고치는 자리가 둘이면 어느 쪽이 최신인지
+      // 읽는 사람이 알 수 없다(#1011).
+      expect(
         find.byKey(const ValueKey<String>('program-trainer-note')),
-        '견갑 고정 확인',
+        findsNothing,
       );
       await tester.ensureVisible(
         find.byKey(const ValueKey<String>('save-program')),
@@ -967,7 +970,49 @@ void main() {
       expect(find.text('15:00\u201316:00'), findsOneWidget);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트 × 8회'), findsOneWidget);
+      // 프로그램만 고쳤으므로 원래 메모는 그대로 남는다.
+      expect(find.text('벤치 컨디션 확인 필요.'), findsNothing);
+    });
+
+    // 메모는 세션 종류와 상관없이 제 자리를 갖는다. `프로그램 수정` 안쪽,
+    // 운동 목록을 다 지나야 나오는 자리에만 있던 때에는 매주 반복되는 1:1 PT 의
+    // 메모를 남기려면 프로그램 편집기를 열고 스크롤해 내려가야 했다(#1011).
+    testWidgets('1:1 PT 도 메모만 따로 고칠 수 있다 (#1011)', (tester) async {
+      await openSchedule(tester);
+      await openSession(tester, '박성호');
+
+      await revealInPanel(tester, find.text('메모 수정'));
+      await tester.tap(find.text('메모 수정'));
+      await settle(tester);
+
+      // 운동 목록 없이 메모만 연다.
+      expect(
+        find.byKey(const ValueKey<String>('week-note-editor-seed-schedule-3')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-name-0')),
+        findsNothing,
+      );
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('program-trainer-note')),
+        '견갑 고정 확인',
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('save-program')),
+      );
+      await tester.pump();
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey<String>('save-program')),
+          )
+          .onPressed!();
+      await settle(tester);
+
       expect(find.text('견갑 고정 확인'), findsOneWidget);
+      // 저장이 프로그램을 지우지 않는다 — 편집기가 보여 주지 않은 값이다.
+      expect(find.text('벤치프레스'), findsOneWidget);
     });
 
     testWidgets('삭제 removes the session after confirmation', (tester) async {
@@ -982,7 +1027,7 @@ void main() {
       await tester.tap(find.text('삭제').last);
       await settle(tester);
 
-      expect(find.text('윤가온(신규)'), findsNothing);
+      expect(find.textContaining('윤가온(신규)'), findsNothing);
     });
 
     testWidgets('unsupported program send does not create a chat bubble', (
@@ -1101,7 +1146,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(ScheduleWeekTimetable),
-          matching: find.text('김민수'),
+          matching: find.textContaining('김민수'),
         ),
         findsWidgets,
         reason: '같은 주라 오늘의 블록은 그대로 있다',

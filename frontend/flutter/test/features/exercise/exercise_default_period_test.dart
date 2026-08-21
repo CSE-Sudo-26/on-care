@@ -92,7 +92,7 @@ void main() {
     expect(find.text('오늘 총 운동 시간'), findsNothing);
 
     // 오늘 ↔ 이번 주 왕복이 상태를 망가뜨리지 않는다.
-    await tester.tap(find.text('오늘'));
+    await tester.tap(find.byKey(const Key('exercise-period-tab-0')));
     await tester.pumpAndSettle();
     expect(find.text('오늘 총 운동 시간'), findsOneWidget);
   });

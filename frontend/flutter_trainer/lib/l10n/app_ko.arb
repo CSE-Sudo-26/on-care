@@ -401,11 +401,13 @@
   "reportBodyEncourage": "다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요.",
   "reportBodyNoRecords": "이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. 다음 주 시작을 같이 잡아 봐요.",
   "schedTitle": "스케줄",
+  "schedDetailTitle": "상세 스케줄",
   "schedDeleteTitle": "일정 삭제",
   "schedDeleteConfirm": "{time} {name}님 세션을 삭제할까요?",
   "schedDeleteFailed": "일정 삭제에 실패했어요. 다시 시도해 주세요",
   "schedCompleteFailed": "완료 처리에 실패했어요. 다시 시도해 주세요",
   "schedTimeRange": "{start}\u2013{end}",
+  "schedBlockTime": "{range} ({duration})",
   "schedEmptyWeek": "이번 주에는 일정이 없어요.",
   "schedNewClientTag": "{name}(신규)",
   "schedSlots": "예약 슬롯",
@@ -979,7 +981,7 @@
   "unitGram": "g",
   "a11yRemoveExercise": "운동 지우기",
   "a11yRemoveCertification": "자격증 지우기",
-  "a11yPrevDay": "이전 날",
-  "a11yNextDay": "다음 날",
+  "a11yPrevWeek": "이전 주",
+  "a11yNextWeek": "다음 주",
   "a11ySendMessage": "메시지 보내기"
 }

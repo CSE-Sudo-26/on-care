@@ -266,12 +266,6 @@ abstract class AppLocalizations {
   /// **'Chicken breast salad'**
   String get homeMealChickenSalad;
 
-  /// No description provided for @homeAiAnalysisPill.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI analysis'**
-  String get homeAiAnalysisPill;
-
   /// No description provided for @homeDetails.
   ///
   /// In en, this message translates to:
@@ -344,6 +338,18 @@ abstract class AppLocalizations {
   /// **'Great for sodium control'**
   String get homeMealReasonSodium;
 
+  /// No description provided for @homeMealSourceTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer pick'**
+  String get homeMealSourceTrainer;
+
+  /// No description provided for @homeMealSourceAi.
+  ///
+  /// In en, this message translates to:
+  /// **'AI pick'**
+  String get homeMealSourceAi;
+
   /// No description provided for @homeMealTagLowSodium.
   ///
   /// In en, this message translates to:
@@ -362,11 +368,11 @@ abstract class AppLocalizations {
   /// **'Helps steady blood sugar'**
   String get homeMealReasonGlucose;
 
-  /// No description provided for @homeMealTagLowGi.
+  /// No description provided for @homeMealTagLowSugar.
   ///
   /// In en, this message translates to:
-  /// **'Low GI'**
-  String get homeMealTagLowGi;
+  /// **'Low sugar'**
+  String get homeMealTagLowSugar;
 
   /// No description provided for @homeMealSalmon.
   ///
@@ -416,11 +422,11 @@ abstract class AppLocalizations {
   /// **'Rich in dietary fiber'**
   String get homeMealReasonFiber;
 
-  /// No description provided for @homeMealTagHighFiber.
+  /// No description provided for @homeMealTagLowFat.
   ///
   /// In en, this message translates to:
-  /// **'High fiber'**
-  String get homeMealTagHighFiber;
+  /// **'Low fat'**
+  String get homeMealTagLowFat;
 
   /// No description provided for @homeRecBasisSodium.
   ///
@@ -499,12 +505,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today'**
   String get dietToday;
-
-  /// No description provided for @dietWeekLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Month {month}, Week {week}'**
-  String dietWeekLabel(int month, int week);
 
   /// No description provided for @dietWeekdayMon.
   ///
@@ -625,12 +625,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Period total'**
   String get dietPeriodTotal;
-
-  /// No description provided for @dietPeriodLoggedDays.
-  ///
-  /// In en, this message translates to:
-  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
-  String dietPeriodLoggedDays(int days);
 
   /// No description provided for @dietPeriodEmpty.
   ///
@@ -1867,6 +1861,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect trainer {trainer}?\nYour connection to {gym} will remain.'**
   String myTrainerDisconnectConfirm(String trainer, String gym);
+
+  /// No description provided for @myGymDetailTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym details'**
+  String get myGymDetailTooltip;
+
+  /// No description provided for @myTrainerDetailTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer details'**
+  String get myTrainerDetailTooltip;
 
   /// No description provided for @myGymDisconnectTooltip.
   ///

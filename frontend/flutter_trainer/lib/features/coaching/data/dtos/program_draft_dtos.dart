@@ -28,26 +28,25 @@ String capSessionName(String value) => _cap(value, _kNameMax);
 /// Clamps to the server's validators so a draft never fails to save over a
 /// value the editor happily accepted — losing the trainer's work to a 422 is
 /// worse than storing a shortened note.
-Map<String, Object?> programExerciseToJson(ProgramExerciseDraft exercise) =>
-    <String, Object?>{
-      'id': _cap(exercise.id, 64),
-      // The backend requires a name; a blank row would reject the draft.
-      'name': exercise.name.trim().isEmpty
-          ? '-'
-          : _cap(exercise.name, _kNameMax),
-      'sets': _cap(exercise.sets, _kFieldMax),
-      'reps': _cap(exercise.reps, _kFieldMax),
-      'weight': _cap(exercise.weight, _kFieldMax),
-      'duration': _cap(exercise.duration, _kFieldMax),
-      'distance': _cap(exercise.distance, _kFieldMax),
-      'rest': _cap(exercise.rest, _kFieldMax),
-      'rpe': _cap(exercise.rpe, _kFieldMax),
-      'memo': _cap(exercise.memo, _kMemoMax),
-      'type': kRoutineTypes.contains(exercise.type) ? exercise.type : '근력',
-      'source': kProgramExerciseSources.contains(exercise.source)
-          ? exercise.source
-          : 'trainer',
-    };
+Map<String, Object?> programExerciseToJson(
+  ProgramExerciseDraft exercise,
+) => <String, Object?>{
+  'id': _cap(exercise.id, 64),
+  // The backend requires a name; a blank row would reject the draft.
+  'name': exercise.name.trim().isEmpty ? '-' : _cap(exercise.name, _kNameMax),
+  'sets': _cap(exercise.sets, _kFieldMax),
+  'reps': _cap(exercise.reps, _kFieldMax),
+  'weight': _cap(exercise.weight, _kFieldMax),
+  'duration': _cap(exercise.duration, _kFieldMax),
+  'distance': _cap(exercise.distance, _kFieldMax),
+  'rest': _cap(exercise.rest, _kFieldMax),
+  'rpe': _cap(exercise.rpe, _kFieldMax),
+  'memo': _cap(exercise.memo, _kMemoMax),
+  'type': kRoutineTypes.contains(exercise.type) ? exercise.type : '근력',
+  'source': kProgramExerciseSources.contains(exercise.source)
+      ? exercise.source
+      : 'trainer',
+};
 
 /// `ProgramDraftExercise` JSON → [ProgramExerciseDraft].
 ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
@@ -67,15 +66,15 @@ ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
     );
 
 /// [ProgramSessionDraft] → `ProgramDraftSession` JSON.
-Map<String, Object?> programSessionToJson(ProgramSessionDraft session) =>
-    <String, Object?>{
-      'id': _cap(session.id, 64),
-      'name': _cap(session.name, _kNameMax),
-      'exercises': <Map<String, Object?>>[
-        for (final exercise in session.exercises)
-          programExerciseToJson(exercise),
-      ],
-    };
+Map<String, Object?> programSessionToJson(
+  ProgramSessionDraft session,
+) => <String, Object?>{
+  'id': _cap(session.id, 64),
+  'name': _cap(session.name, _kNameMax),
+  'exercises': <Map<String, Object?>>[
+    for (final exercise in session.exercises) programExerciseToJson(exercise),
+  ],
+};
 
 /// `ProgramDraftSession` JSON → [ProgramSessionDraft].
 ProgramSessionDraft programSessionFromJson(
@@ -84,14 +83,13 @@ ProgramSessionDraft programSessionFromJson(
 }) => ProgramSessionDraft(
   id: json['id'] as String? ?? 'session-${index + 1}',
   name: json['name'] as String? ?? '',
-  exercises:
-      ((json['exercises'] as List<Object?>?) ?? const <Object?>[])
-          .map(
-            (item) => programExerciseFromJson(
-              (item! as Map<Object?, Object?>).cast<String, Object?>(),
-            ),
-          )
-          .toList(),
+  exercises: ((json['exercises'] as List<Object?>?) ?? const <Object?>[])
+      .map(
+        (item) => programExerciseFromJson(
+          (item! as Map<Object?, Object?>).cast<String, Object?>(),
+        ),
+      )
+      .toList(),
 );
 
 /// [ProgramEditorState] → create/update payload.

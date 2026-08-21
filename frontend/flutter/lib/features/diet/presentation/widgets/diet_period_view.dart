@@ -403,17 +403,10 @@ class _PeriodBody extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
+          // 기록한 날 수는 막대 개수가 곧 말해 준다 — 같은 것을 글자로 한 번 더
+          // 적으면 카드 위쪽이 숫자로 붐빈다. (#1054)
           Row(
             children: <Widget>[
-              Text(
-                l.dietPeriodLoggedDays(period.loggedDays),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.foreground,
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   '${l.dietPeriodTotal} ${format(total)} $unit',

@@ -94,9 +94,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealChickenSalad => '닭가슴살 샐러드';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI 분석';
-
-  @override
   String get homeDetails => '자세히';
 
   @override
@@ -135,6 +132,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonSodium => '나트륨 조절에 좋아요';
 
   @override
+  String get homeMealSourceTrainer => '트레이너 추천';
+
+  @override
+  String get homeMealSourceAi => 'AI 추천';
+
+  @override
   String get homeMealTagLowSodium => '저나트륨';
 
   @override
@@ -144,7 +147,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonGlucose => '혈당 안정에 도움돼요';
 
   @override
-  String get homeMealTagLowGi => '저GI';
+  String get homeMealTagLowSugar => '저당류';
 
   @override
   String get homeMealSalmon => '연어 구이 + 나물';
@@ -153,7 +156,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonOmega => '오메가3 + 식이섬유';
 
   @override
-  String get homeMealTagHighProtein => '고단백';
+  String get homeMealTagHighProtein => '고단백질';
 
   @override
   String get homeMealTofu => '두부 채소 볶음';
@@ -171,7 +174,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonFiber => '식이섬유가 풍부해요';
 
   @override
-  String get homeMealTagHighFiber => '고식이섬유';
+  String get homeMealTagLowFat => '저지방';
 
   @override
   String homeRecBasisSodium(int days, String sodium) {
@@ -227,11 +230,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietToday => '오늘로';
-
-  @override
-  String dietWeekLabel(int month, int week) {
-    return '$month월 $week주차';
-  }
 
   @override
   String get dietWeekdayMon => '월';
@@ -292,11 +290,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietPeriodTotal => '기간 합계';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    return '$days일 기록';
-  }
 
   @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';
@@ -980,6 +973,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String myTrainerDisconnectConfirm(String trainer, String gym) {
     return '담당 트레이너 $trainer 연결을 삭제하시겠습니까?\n$gym 헬스장 연결은 유지됩니다.';
   }
+
+  @override
+  String get myGymDetailTooltip => '헬스장 상세 보기';
+
+  @override
+  String get myTrainerDetailTooltip => '트레이너 상세 보기';
 
   @override
   String get myGymDisconnectTooltip => '헬스장 연결 삭제';
