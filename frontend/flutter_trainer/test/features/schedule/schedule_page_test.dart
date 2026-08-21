@@ -452,6 +452,21 @@ void main() {
       await tester.pump();
     }
 
+    /// 메모 자리가 스스로를 뭐라고 부르는가 — `메모 추가` 인가 `메모 수정` 인가.
+    /// 아이콘만 그리는 자리라 그 이름은 툴팁과 시맨틱스에만 남는다(#1011).
+    String noteActionLabel(WidgetTester tester) => tester
+        .widget<Tooltip>(
+          find
+              .descendant(
+                of: find.byKey(
+                  const ValueKey<String>('session-edit-note-chip'),
+                ),
+                matching: find.byType(Tooltip),
+              )
+              .first,
+        )
+        .message!;
+
     /// 이번 주 안에서 오늘이 아닌 날 — 시드가 오늘만 채우므로 빈 날이다.
     DateTime otherDayThisWeek() {
       final today = todayKst();
@@ -849,6 +864,8 @@ void main() {
         find.byKey(const ValueKey<String>('session-edit-note-chip')),
         findsOneWidget,
       );
+      // 아직 적은 것이 없으므로 `메모 수정` 이 아니라 `메모 추가` 다(#1011).
+      expect(noteActionLabel(tester), '메모 추가');
       expect(
         find.byKey(const ValueKey<String>('session-edit-program-chip')),
         findsNothing,
@@ -880,6 +897,7 @@ void main() {
         find.byKey(const ValueKey<String>('session-edit-note-chip')),
         findsOneWidget,
       );
+      expect(noteActionLabel(tester), '메모 추가');
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {
@@ -1025,6 +1043,8 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('session-edit-note-chip')),
       );
+      // 메모가 없는 세션이라 이 자리는 아직 `메모 추가` 다(#1011).
+      expect(noteActionLabel(tester), '메모 추가');
       await tester.tap(
         find.byKey(const ValueKey<String>('session-edit-note-chip')),
       );
@@ -1058,6 +1078,42 @@ void main() {
       expect(find.text('견갑 고정 확인'), findsOneWidget);
       // 저장이 프로그램을 지우지 않는다 — 편집기가 보여 주지 않은 값이다.
       expect(find.text('벤치프레스'), findsOneWidget);
+
+      // 메모를 남긴 뒤에는 같은 자리가 `메모 수정` 으로 이름을 바꾼다.
+      expect(noteActionLabel(tester), '메모 수정');
+    });
+
+    // 자리는 하나지만 하는 일이 둘이다 — 처음 적는 것과 고치는 것. 아무것도
+    // 적지 않았는데 `메모 수정` 이라고 부르면, 어딘가에 이미 메모가 있는데 못
+    // 찾고 있는 것처럼 읽힌다(#1011).
+    testWidgets('메모가 있으면 `메모 수정`, 없으면 `메모 추가` (#1011)', (tester) async {
+      await openSchedule(tester);
+
+      final Finder noteChip = find.byKey(
+        const ValueKey<String>('session-edit-note-chip'),
+      );
+
+      // 시드의 김민수 세션에는 메모가 있다.
+      await openSession(tester, '김민수');
+      await revealInPanel(tester, noteChip);
+      expect(noteActionLabel(tester), '메모 수정');
+      expect(
+        find.descendant(of: noteChip, matching: find.byIcon(Icons.edit_note)),
+        findsOneWidget,
+        reason: '아이콘도 함께 갈린다 — 글씨 없이 아이콘만 그리는 자리다',
+      );
+
+      // 박성호 세션에는 없다.
+      await openSession(tester, '박성호');
+      await revealInPanel(tester, noteChip);
+      expect(noteActionLabel(tester), '메모 추가');
+      expect(
+        find.descendant(
+          of: noteChip,
+          matching: find.byIcon(Icons.note_add_outlined),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('삭제 removes the session after confirmation', (tester) async {

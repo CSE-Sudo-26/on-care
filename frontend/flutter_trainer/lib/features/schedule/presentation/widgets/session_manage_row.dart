@@ -26,6 +26,7 @@ class SessionManageRow extends StatelessWidget {
     required this.onEditSchedule,
     required this.onEditProgram,
     required this.onEditNote,
+    required this.hasNote,
     required this.hasProgram,
     required this.onDelete,
     required this.onChat,
@@ -39,6 +40,14 @@ class SessionManageRow extends StatelessWidget {
 
   /// 운동 목록 없이 메모만 여는 자리. 세션 종류와 상관없이 있다(#1011).
   final VoidCallback onEditNote;
+
+  /// 이미 남긴 메모가 있는가. (#1011)
+  ///
+  /// 자리는 하나지만 **하는 일이 둘**이다 — 빈 세션에서는 처음 적는 것이고,
+  /// 적어 둔 세션에서는 고치는 것이다. 아무것도 적지 않았는데 `메모 수정` 이라고
+  /// 부르면, 어딘가에 이미 메모가 있는데 못 찾고 있는 것처럼 읽힌다. 글자와
+  /// 아이콘이 함께 갈린다 — `메모 추가`(＋)와 `메모 수정`(연필).
+  final bool hasNote;
 
   /// 프로그램을 짜는 세션인가. 상담은 아니므로 `프로그램 수정` 이 서지 않는다 —
   /// 누를 이유가 없는 버튼으로 읽힌다(#988).
@@ -108,8 +117,10 @@ class SessionManageRow extends StatelessWidget {
         ),
       _ActionChip(
         key: const ValueKey<String>('session-edit-note-chip'),
-        icon: Icons.edit_note,
-        label: l.schedEditNote,
+        // 아이콘도 함께 갈린다 — 글자 없이 아이콘만 그리는 자리라, 글자만
+        // 바꾸면 툴팁을 띄우기 전에는 무엇이 달라졌는지 보이지 않는다.
+        icon: hasNote ? Icons.edit_note : Icons.note_add_outlined,
+        label: hasNote ? l.schedEditNote : l.schedAddNote,
         // 메모지의 색이다. `SessionNoteBox` 와 같은 주황을 써야 두 자리가 같은
         // 것을 가리킨다 — 주의(빨강)가 아니라 적어 두는 자리다(#690, #1012).
         color: AppColors.brandOrange,

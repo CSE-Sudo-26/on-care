@@ -2570,6 +2570,12 @@ abstract class AppLocalizations {
   /// **'Edit note'**
   String get schedEditNote;
 
+  /// No description provided for @schedAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get schedAddNote;
+
   /// No description provided for @schedNoNote.
   ///
   /// In en, this message translates to:

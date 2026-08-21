@@ -749,6 +749,7 @@
   "schedRepeatConflictHint": "Nothing was created. Change the time, or clear the sessions that clash.",
   "schedNote": "Trainer's note",
   "schedEditNote": "Edit note",
+  "schedAddNote": "Add note",
   "schedNoNote": "No note yet",
   "schedNoteOnlyHint": "A consultation is recorded as a note, not a program.",
   "schedNoteHint": "Anything to prepare, or notes about this client",
