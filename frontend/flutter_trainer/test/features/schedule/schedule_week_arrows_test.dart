@@ -109,6 +109,34 @@ void main() {
     expect(tester.getRect(arrow(Icons.chevron_left)), left);
     expect(tester.getRect(arrow(Icons.chevron_right)), right);
     expect(tester.getRect(dateLabel), date);
+
+    // 그리고 그 자리는 두 화살표 사이의 **한가운데**다. `오늘` 자리를 날짜
+    // 오른쪽에만 비워 두면 날짜가 그만큼 왼쪽으로 치우친다.
+    expect(
+      tester.getRect(dateLabel).center.dx,
+      closeTo(
+        (tester.getRect(arrow(Icons.chevron_left)).center.dx +
+                tester.getRect(arrow(Icons.chevron_right)).center.dx) /
+            2,
+        1,
+      ),
+      reason: '날짜는 화살표 사이 한가운데에 선다',
+    );
+  });
+
+  testWidgets('`오늘` 이 없을 때도 날짜가 화살표 사이 한가운데다 (#1009)', (tester) async {
+    await openSchedule(tester);
+    expect(find.text('오늘'), findsNothing);
+
+    final Rect left = tester.getRect(arrow(Icons.chevron_left));
+    final Rect right = tester.getRect(arrow(Icons.chevron_right));
+    final Rect date = tester.getRect(
+      find.descendant(
+        of: find.byType(ScheduleDateNavBar),
+        matching: find.textContaining('월'),
+      ),
+    );
+    expect(date.center.dx, closeTo((left.center.dx + right.center.dx) / 2, 1));
   });
 
   testWidgets('좁은 폭과 큰 글자 배율에서도 날짜 행이 넘치지 않는다', (tester) async {
