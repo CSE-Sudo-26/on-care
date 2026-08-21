@@ -980,7 +980,7 @@
   "unitGram": "g",
   "a11yRemoveExercise": "운동 지우기",
   "a11yRemoveCertification": "자격증 지우기",
-  "a11yPrevDay": "이전 날",
-  "a11yNextDay": "다음 날",
+  "a11yPrevWeek": "이전 주",
+  "a11yNextWeek": "다음 주",
   "a11ySendMessage": "메시지 보내기"
 }

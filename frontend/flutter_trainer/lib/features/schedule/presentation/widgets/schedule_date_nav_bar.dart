@@ -65,7 +65,7 @@ class ScheduleDateNavBar extends StatelessWidget {
       children: <Widget>[
         _ChevronButton(
           icon: Icons.chevron_left,
-          tooltip: l.a11yPrevDay,
+          tooltip: l.a11yPrevWeek,
           onTap: () => onShift(-1),
         ),
         const SizedBox(width: _gap),
@@ -104,7 +104,7 @@ class ScheduleDateNavBar extends StatelessWidget {
         const SizedBox(width: _gap),
         _ChevronButton(
           icon: Icons.chevron_right,
-          tooltip: l.a11yNextDay,
+          tooltip: l.a11yNextWeek,
           onTap: () => onShift(1),
         ),
       ],

@@ -3184,10 +3184,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get a11yRemoveCertification => 'Remove certification';
 
   @override
-  String get a11yPrevDay => 'Previous day';
+  String get a11yPrevWeek => 'Previous week';
 
   @override
-  String get a11yNextDay => 'Next day';
+  String get a11yNextWeek => 'Next week';
 
   @override
   String get a11ySendMessage => 'Send message';
