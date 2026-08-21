@@ -198,7 +198,7 @@ void main() {
     expect(find.text('채팅에서 감지'), findsOneWidget);
   });
 
-  testWidgets('the client detail memo action opens the memo dialog', (
+  testWidgets('the client detail memo action expands the inline memo panel (#1024)', (
     tester,
   ) async {
     final repository = _FakeMemoRepository();
@@ -211,10 +211,14 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('메모'));
+    // 메모는 더 이상 모달을 열지 않는다 — 신체·목표와 합쳐진 인라인 패널을
+    // 펼치고 그 자리로 스크롤한다(#1024).
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-detail-open-memo')),
+    );
     await settle(tester);
 
-    expect(find.byType(ClientMemoDialog), findsOneWidget);
+    expect(find.byType(ClientMemoDialog), findsNothing);
     expect(find.text('아직 남긴 메모가 없어요.'), findsOneWidget);
   });
 
@@ -241,7 +245,9 @@ void main() {
 
       // Same data source: the client detail memo list shows what chat saved.
       await goTo(tester, AppRoutes.clientDetail('seed-client-1'));
-      await tester.tap(find.text('메모'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-detail-open-memo')),
+      );
       await settle(tester);
 
       expect(find.text('무릎이 가볍게 당기긴 했는데 괜찮아요'), findsOneWidget);

@@ -2574,7 +2574,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientQuickProgram => 'Program';
 
   @override
+  String get clientQuickReport => 'Report';
+
+  @override
   String get clientHealthGoals => 'Body profile & goals';
+
+  @override
+  String get clientProfileSectionTitle => 'Body, goals & memo';
 
   @override
   String get clientTrainerMemo => 'Memo';

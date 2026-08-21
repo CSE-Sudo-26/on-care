@@ -4550,11 +4550,23 @@ abstract class AppLocalizations {
   /// **'Program'**
   String get clientQuickProgram;
 
+  /// No description provided for @clientQuickReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get clientQuickReport;
+
   /// No description provided for @clientHealthGoals.
   ///
   /// In en, this message translates to:
   /// **'Body profile & goals'**
   String get clientHealthGoals;
+
+  /// No description provided for @clientProfileSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Body, goals & memo'**
+  String get clientProfileSectionTitle;
 
   /// No description provided for @clientTrainerMemo.
   ///

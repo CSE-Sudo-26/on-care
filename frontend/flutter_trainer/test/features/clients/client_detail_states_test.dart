@@ -7,7 +7,6 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -59,12 +58,11 @@ void main() {
     // 아니다. 이 테스트가 재는 것은 "배지가 탭 위에 남는가" 이므로 그가
     // 실제로 달고 있는 건강 신호로 확인한다.
     expect(find.text('나트륨 초과'), findsOneWidget);
-    final scroll = find
-        .descendant(
-          of: find.byKey(const ValueKey<String>('diet-seed-client-3')),
-          matching: find.byType(ListView),
-        )
-        .first;
+    // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
+    // 패널과 하나의 스크롤을 공유한다. 그 `ListView` 자체가 이 키를 단다.
+    final scroll = find.byKey(
+      const ValueKey<String>('client-detail-tabs-seed-client-3'),
+    );
     await tester.drag(scroll, const Offset(0, -500));
     await tester.pump();
     expect(find.text('나트륨 초과'), findsOneWidget);
@@ -126,11 +124,14 @@ void main() {
 
     // 식단·운동을 읽다가 그 자리에서 이어지는 동작들. 예전에는 이 줄이
     // 신체·목표와 메모 둘뿐이라, 말을 걸려면 메시지 탭에서 같은 사람을 다시
-    // 찾아야 했다(#823).
+    // 찾아야 했다(#823). 신체·목표와 후속 관리는 #1024 에서 이 줄을 떠났다 —
+    // 전자는 아래 인라인 패널, 후자는 걷어냈다. 메모는 아이콘만 남았다.
     expect(find.text('메시지'), findsOneWidget);
     expect(find.text('프로그램'), findsOneWidget);
-    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-    expect(find.text('메모'), findsOneWidget);
+    expect(find.text('리포트'), findsOneWidget);
+    expect(find.text('고객 신체·목표 관리'), findsNothing);
+    expect(find.text('후속 관리'), findsNothing);
+    expect(find.text('메모'), findsNothing);
     // 일정 등록은 스케줄 라우트에 고객을 실을 자리가 없어 아직 넣지 않는다.
     expect(find.text('일정 등록'), findsNothing);
     expect(find.text('주간 리포트'), findsNothing);
@@ -139,10 +140,14 @@ void main() {
       const ValueKey<String>('client-detail-quick-actions'),
     );
     expect(actions, findsOneWidget);
-    // 메모가 줄의 오른쪽 끝을 지킨다 — 새 버튼은 왼쪽에 붙어 이 정렬을 깨지
-    // 않는다(#729).
+    // 메모가 줄의 오른쪽 끝을 지킨다 — 새 리포트 버튼은 왼쪽에 붙어 이 정렬을
+    // 깨지 않는다(#729, #1024).
     expect(
-      tester.getRect(find.widgetWithText(ActionButton, '메모')).right,
+      tester
+          .getRect(
+            find.byKey(const ValueKey<String>('client-detail-open-memo')),
+          )
+          .right,
       closeTo(tester.getRect(actions).right, 0.1),
     );
   });

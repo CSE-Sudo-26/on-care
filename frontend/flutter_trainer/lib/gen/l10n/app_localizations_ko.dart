@@ -2474,7 +2474,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientQuickProgram => '프로그램';
 
   @override
+  String get clientQuickReport => '리포트';
+
+  @override
   String get clientHealthGoals => '고객 신체·목표 관리';
+
+  @override
+  String get clientProfileSectionTitle => '신체·목표·메모';
 
   @override
   String get clientTrainerMemo => '메모';

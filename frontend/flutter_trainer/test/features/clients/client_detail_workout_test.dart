@@ -225,14 +225,13 @@ void main() {
   });
 
   group('WorkoutView', () {
+    // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
+    // 패널과 하나의 스크롤을 공유하도록 `embedded: true` 로 그려진다. 그
+    // 공유 스크롤(`ListView`) 자체가 `client-detail-tabs-$clientId` 키를
+    // 달고 있다.
     Finder detailScrollable(String clientId) => find
         .descendant(
-          of: find
-              .descendant(
-                of: find.byKey(ValueKey<String>('workout-$clientId')),
-                matching: find.byType(ListView),
-              )
-              .first,
+          of: find.byKey(ValueKey<String>('client-detail-tabs-$clientId')),
           matching: find.byType(Scrollable),
         )
         .first;
@@ -322,13 +321,15 @@ void main() {
       expect(find.text('고객 피드백'), findsWidgets);
       // A skipped exercise line renders (struck-through content present).
       // 어느 항목을 걸렀는지는 픽스처가 정한다 — 이름을 여기 적으면 두 벌이 된다.
+      // 같은 이름이 다른 날짜 줄에도 나올 수 있어(#1024 부터는 모든 기록
+      // 카드가 한 스크롤에 같이 마운트된다) `.first` 로 하나만 겨냥한다.
       final String skipped = _minsuSkippedExercise();
       await tester.scrollUntilVisible(
-        find.text(skipped),
+        find.text(skipped).first,
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text(skipped), findsOneWidget);
+      expect(find.text(skipped), findsWidgets);
     });
 
     testWidgets('a failed 운동 기록 load does not take the routines with it', (

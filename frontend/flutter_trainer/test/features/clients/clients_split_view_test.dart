@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
@@ -276,7 +275,9 @@ void main() {
     expect(rendered.first.client.sodiumOverBudget, isTrue);
   });
 
-  testWidgets('낮은 이행률이어도 고객 목록 진행 바와 퍼센트는 남색을 유지한다', (tester) async {
+  testWidgets('고객 리스트 카드에 더 이상 주간 이행률 바가 없다 (#1024)', (tester) async {
+    // 이 지표는 식단·운동을 나누지 않은 공용 값이라 "주간 이행률"과 "운동
+    // 이행률"이 실제로는 같은 하나였다 — 카드에서 통째로 걷어냈다.
     await openWide(tester);
     await scrollToCard(tester, '배준혁');
 
@@ -284,24 +285,13 @@ void main() {
       of: find.text('배준혁'),
       matching: find.byType(ClientCard),
     );
-    final progress = tester.widget<LinearProgressIndicator>(
+    expect(
       find.descendant(
         of: clientCard,
         matching: find.byType(LinearProgressIndicator),
       ),
+      findsNothing,
     );
-
-    expect(progress.color, AppColors.primary);
-
-    final percentage = tester.widget<Text>(
-      find.descendant(
-        of: clientCard,
-        matching: find.byWidgetPredicate(
-          (widget) => widget is Text && (widget.data?.endsWith('%') ?? false),
-        ),
-      ),
-    );
-    expect(percentage.style?.color, AppColors.primary);
   });
 
   testWidgets('the panel location is a path that encodes the section', (
@@ -339,8 +329,12 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('나트륨 초과'), findsWidgets);
-    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-    expect(find.text('메모'), findsOneWidget);
+    // 신체·목표는 인라인 패널이 되었고 메모는 아이콘만 남았다(#1024).
+    expect(find.text('리포트'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('client-detail-open-memo')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a percent-encoded id round-trips through the path', (

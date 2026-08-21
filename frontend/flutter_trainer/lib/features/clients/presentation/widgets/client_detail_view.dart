@@ -8,10 +8,8 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_follow_up_dialog.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_memo_dialog.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_profile_panel.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/member_health_profile_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
@@ -21,21 +19,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
-import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
-
-/// Labels for [AppRoutes.clientTabSections], in the same order.
-///
-/// 함수인 이유: const 리스트로 두면 생성 시점에 로케일을 알 수 없다. 개수는
-/// 라우트 개수와 맞아야 하므로 [clientSectionCount] 로 따로 센다. (#501)
-List<String> clientSectionLabels(AppLocalizations l) => <String>[
-  l.clientTabDiet,
-  l.clientTabWorkout,
-];
-
-/// 탭 개수 — 라우트(`AppRoutes.clientTabSections`)와 맞물리는 값이라
-/// 로케일과 무관하다.
-const int clientSectionCount = 2;
 
 /// The trainer-only client detail: identity and actions stay above the diet and
 /// workout tabs. The selected tab mirrors the route so deep links, refreshes,
@@ -79,44 +63,32 @@ class ClientDetailView extends ConsumerStatefulWidget {
   ConsumerState<ClientDetailView> createState() => _ClientDetailViewState();
 }
 
-class _ClientDetailViewState extends ConsumerState<ClientDetailView>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  late int _reportedIndex;
-
+class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
   /// A 활성/휴면 write is in flight. The badge is a one-tap control, so
   /// without this a second tap fires a second request and the two answers
   /// land in whatever order the network decides.
   bool _statusSaving = false;
 
-  int get _routeIndex =>
-      AppRoutes.clientTabSections.indexOf(widget.resolvedSection);
+  /// Expands the merged 신체·목표·메모 panel from the header's 메모 quick
+  /// action — one control instead of a second popup (#1024).
+  final ExpansibleController _profileController = ExpansibleController();
 
-  @override
-  void initState() {
-    super.initState();
-    _reportedIndex = _routeIndex;
-    _tabController = TabController(
-      length: clientSectionCount,
-      initialIndex: _reportedIndex,
-      vsync: this,
-    )..addListener(_handleTabChange);
-  }
+  /// Scrolled into view once [_profileController] expands, so the header
+  /// button actually brings the panel on screen instead of just opening it
+  /// off the bottom of a long page.
+  final GlobalKey _profileKey = GlobalKey();
 
-  @override
-  void didUpdateWidget(covariant ClientDetailView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final nextIndex = _routeIndex;
-    if (nextIndex != _tabController.index) {
-      _reportedIndex = nextIndex;
-      _tabController.animateTo(nextIndex);
-    }
-  }
-
-  void _handleTabChange() {
-    if (_tabController.index == _reportedIndex) return;
-    _reportedIndex = _tabController.index;
-    widget.onSectionChange(AppRoutes.clientTabSections[_reportedIndex]);
+  void _openProfilePanel() {
+    _profileController.expand();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? panelContext = _profileKey.currentContext;
+      if (panelContext == null || !panelContext.mounted) return;
+      Scrollable.ensureVisible(
+        panelContext,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   /// Moves the client between 활성 and 휴면. (#707)
@@ -157,14 +129,6 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
   }
 
   @override
-  void dispose() {
-    _tabController
-      ..removeListener(_handleTabChange)
-      ..dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     // Distinguish loading / error / loaded instead of flattening them
@@ -196,15 +160,24 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
           );
         }
         final client = match.first;
+        final String section = widget.resolvedSection;
 
-        final diet = DietView(
-          key: ValueKey<String>('diet-${widget.clientId}'),
-          client: client,
-        );
-        final workout = WorkoutView(
-          key: ValueKey<String>('workout-${widget.clientId}'),
-          client: client,
-        );
+        // 식단/운동은 라우트가 곧 선택 상태다 — 별도 `TabController` 없이
+        // 현재 섹션 하나로 어느 쪽을 그릴지 결정한다(#1024). 두 뷰 모두
+        // `embedded: true` 로 자기 `ListView` 를 만들지 않는다 — 아래
+        // 신체·목표·메모 패널과 같은 스크롤 하나를 공유해야, 패널이 얼마나
+        // 펼쳐지든(메모가 아무리 쌓여도) 좁은 화면에서도 절대 넘치지 않는다.
+        final Widget content = section == 'workout'
+            ? WorkoutView(
+                key: ValueKey<String>('workout-${widget.clientId}'),
+                client: client,
+                embedded: true,
+              )
+            : DietView(
+                key: ValueKey<String>('diet-${widget.clientId}'),
+                client: client,
+                embedded: true,
+              );
 
         return Column(
           children: <Widget>[
@@ -213,6 +186,7 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
               showBack: widget.showBack,
               onClose: widget.onClose,
+              onOpenProfile: _openProfilePanel,
               onRefresh: () {
                 final ClientRepository repository = ref.read(
                   clientRepositoryProvider,
@@ -225,32 +199,135 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
                   ? null
                   : () => _setActive(client.id, !client.active),
             ),
-            Material(
-              color: AppColors.card,
-              child: TabBar(
-                key: const ValueKey<String>('client-detail-sub-tabs'),
-                controller: _tabController,
-                tabs: <Widget>[
-                  Tab(text: l.clientTabDiet),
-                  Tab(text: l.clientTabWorkout),
-                ],
-                labelColor: AppColors.primary,
-                unselectedLabelColor: AppColors.mutedForeground,
-                indicatorColor: AppColors.primary,
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: AppColors.borderStrong,
-              ),
-            ),
             Expanded(
-              child: TabBarView(
+              child: ListView(
                 key: ValueKey<String>('client-detail-tabs-${widget.clientId}'),
-                controller: _tabController,
-                children: <Widget>[diet, workout],
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: <Widget>[
+                  ClientProfilePanel(
+                    key: _profileKey,
+                    controller: _profileController,
+                    clientId: client.id,
+                    clientName: client.name,
+                    // 서버에 성별이 없으면 로스터가 보여 주는 값으로 연다 —
+                    // 헤더와 패널이 다른 말을 하지 않도록(#960).
+                    fallbackGender: client.rosterGender,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _sectionTabs(l, section),
+                  const SizedBox(height: AppSpacing.sm),
+                  content,
+                ],
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  /// 식단 ↔ 운동 전환 스트립 — 프로그램 탭 `_ClientDataTab` 과 같은 pill
+  /// 스타일이다(#1024). `coaching_page.dart` 를 고치지 않고 그 모양만 여기에
+  /// 다시 그린다 — 공유 위젯으로 뽑으면 그 파일의 동작까지 바뀔 위험이
+  /// 있어서다.
+  Widget _sectionTabs(AppLocalizations l, String current) => Container(
+    key: const ValueKey<String>('client-detail-sub-tabs'),
+    height: 44,
+    decoration: BoxDecoration(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+    ),
+    foregroundDecoration: BoxDecoration(
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Expanded(
+          child: _SectionTab(
+            label: l.clientTabDiet,
+            icon: Icons.restaurant_outlined,
+            selected: current == 'diet',
+            onTap: () => widget.onSectionChange('diet'),
+          ),
+        ),
+        Expanded(
+          child: _SectionTab(
+            label: l.clientTabWorkout,
+            icon: Icons.fitness_center_outlined,
+            selected: current == 'workout',
+            onTap: () => widget.onSectionChange('workout'),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _SectionTab extends StatelessWidget {
+  const _SectionTab({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? AppColors.primary : AppColors.mutedForeground;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.card : const Color(0x00000000),
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          border: selected ? Border.all(color: AppColors.card) : null,
+          boxShadow: selected
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: const Color(0x00000000),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(icon, size: 17, color: foreground),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -297,10 +374,10 @@ class _StatusView extends StatelessWidget {
   }
 }
 
-/// Identity, why this client is flagged, and the two things the trainer most
+/// Identity, why this client is flagged, and the things the trainer most
 /// often does next — above the tabs, so actionable context stays visible no
 /// matter which tab is open without duplicating the tab-specific summaries.
-class _Header extends ConsumerWidget {
+class _Header extends StatelessWidget {
   const _Header({
     required this.client,
     required this.alerts,
@@ -308,6 +385,7 @@ class _Header extends ConsumerWidget {
     required this.onClose,
     required this.onRefresh,
     required this.onToggleActive,
+    required this.onOpenProfile,
   });
 
   final TrainerClient client;
@@ -322,8 +400,11 @@ class _Header extends ConsumerWidget {
   /// Flips the client between 활성 and 휴면.
   final VoidCallback? onToggleActive;
 
+  /// Expands the merged 신체·목표·메모 panel and scrolls it into view (#1024).
+  final VoidCallback onOpenProfile;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -342,26 +423,29 @@ class _Header extends ConsumerWidget {
           // 없었다. 배지가 하나뿐인 경우가 대부분이라 그 줄은 거의 언제나
           // 배지 한 개와 빈 여백이었고, 그만큼 아래 식단·운동이 밀렸다. 경고가
           // 없는 회원은 줄이 통째로 사라져 회원을 옮길 때마다 빠른 버튼 줄의
-          // 세로 위치까지 달라졌다.
+          // 세로 위치까지 달라졌다. (#1024 에서 다시 검토했지만, 이름이 짧아진
+          // 지금도 여전히 가장 자연스러운 자리라 그대로 둔다.)
           _identityRow(context),
           const SizedBox(height: AppSpacing.md),
           Wrap(
             key: const ValueKey<String>('client-detail-quick-actions'),
             alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            // 파랑·하양이 번갈아 선다 — 메시지 · 프로그램 · 신체·목표 · 후속 관리 ·
-            // 메모. 같은 무게로만 서면 어느 것이 이 화면의 주된 동작인지 읽히지
-            // 않는다.
+            // 메시지 · 프로그램 · 리포트는 모두 흰 배경이다 — 이 회원의 다른
+            // 화면으로 넘어가는 동등한 세 자리라, 하나만 남색으로 튀면 그중
+            // 하나가 특별해 보인다. 남색은 메모 하나에만 남겨 둔다 — 모달
+            // 두 개를 인라인 패널 하나로 합친 뒤(#1024)에도, 지금 보던
+            // 화면을 나가지 않고 그 패널로 뛰어내리는 유일한 동작이라서다.
             children: <Widget>[
-              // 이 회원을 보다가 바로 이어지는 두 자리. 예전에는 식단·운동을
+              // 이 회원을 보다가 바로 이어지는 자리들. 예전에는 식단·운동을
               // 다 읽고도 메시지 탭·프로그램 탭으로 건너가 같은 사람을 목록에서
               // 다시 찾아야 했다(#823).
               ActionButton(
                 key: const ValueKey<String>('client-detail-open-messages'),
                 label: l.clientQuickMessages,
                 icon: Icons.chat_bubble_outline,
-                primary: true,
                 onPressed: () => context.go(AppRoutes.messagesFor(client.id)),
               ),
               ActionButton(
@@ -370,42 +454,19 @@ class _Header extends ConsumerWidget {
                 icon: Icons.auto_awesome_outlined,
                 onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
               ),
+              // 새로 생긴 자리(#1024) — 리포트를 보려면 예전에는 리포트 탭으로
+              // 옮겨 가 이 고객을 다시 찾아야 했다.
               ActionButton(
-                label: l.clientHealthGoals,
-                icon: Icons.badge_outlined,
-                primary: true,
-                onPressed: () => showMemberHealthProfileDialog(
-                  context,
-                  memberId: client.id,
-                  repository: ref.read(clientRepositoryProvider),
-                  // 서버에 성별이 없으면 로스터가 보여 주는 값으로 연다 —
-                  // 헤더와 대화상자가 다른 말을 하지 않도록(#960).
-                  fallbackGender: client.rosterGender,
-                ),
+                key: const ValueKey<String>('client-detail-open-report'),
+                label: l.clientQuickReport,
+                icon: Icons.bar_chart_outlined,
+                onPressed: () => context.go(AppRoutes.reportFor(client.id)),
               ),
-              // 메모 바로 앞이다 — 끝의 두 자리는 둘 다 내가 이 고객에 대해 남기는
-              // 기록이고, 다른 점은 "언제까지 무엇을 할 것인가"가 붙느냐뿐이다
-              // (#869). 메모는 줄의 오른쪽 끝을 계속 지킨다(#729).
-              ActionButton(
-                key: const ValueKey<String>('client-detail-follow-up'),
-                label: l.followUp,
-                icon: Icons.event_available_outlined,
-                onPressed: () => showClientFollowUpDialog(
-                  context,
-                  clientId: client.id,
-                  clientName: client.name,
-                ),
-              ),
-              ActionButton(
-                label: l.clientTrainerMemo,
-                icon: Icons.edit_note_outlined,
-                primary: true,
-                onPressed: () => showClientMemoDialog(
-                  context,
-                  clientId: client.id,
-                  clientName: client.name,
-                ),
-              ),
+              // 신체·목표 관리와 후속 관리 버튼은 사라졌다 — 전자는 아래
+              // 인라인 패널이 되었고(#1024), 후자는 이 줄에서 걷어냈다. 메모는
+              // 아이콘만 남기고 그 패널을 펼친다 — 같은 인라인 영역을 여는
+              // 동작이 버튼마다 다른 말을 하지 않도록.
+              _MemoQuickAction(onPressed: onOpenProfile),
             ],
           ),
         ],
@@ -448,13 +509,21 @@ class _Header extends ConsumerWidget {
                   spacing: AppSpacing.xs,
                   runSpacing: 4,
                   children: <Widget>[
+                    // 이름만 — 성별·나이는 더 이상 여기 없다(#1024). 목록
+                    // 카드가 같은 화면에 늘 함께 떠 있는 분할 보기에서, 그
+                    // 정보는 고객 카드가 이미 말하고 있었다. 좁은 화면에서
+                    // 목록이 가려질 때는 아래 인라인 신체·목표 패널의 성별
+                    // 항목이 그 자리를 대신한다.
+                    //
                     // 이름만은 줄 폭 안에서 말줄임한다 — `Wrap` 의 자식은 폭이
                     // 무제한이라 기대는 곳이 없으면 긴 이름이 그대로 뻗는다.
                     ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: c.maxWidth),
-                      child: ClientIdentity(
-                        client: client,
-                        nameStyle: const TextStyle(
+                      child: Text(
+                        client.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: AppColors.foreground,
@@ -532,6 +601,46 @@ class _Header extends ConsumerWidget {
             onPressed: onClose,
           ),
       ],
+    );
+  }
+}
+
+/// The header's 메모 quick action — icon only, navy-filled. (#1024)
+///
+/// Text used to be here (`ActionButton(label: l.clientTrainerMemo, ...)`),
+/// but the merged inline panel already carries the same word as its own
+/// section heading a few pixels below; keeping it on the button too just
+/// repeated it. The icon plus a tooltip is enough once there's only one
+/// navy action left in the row.
+class _MemoQuickAction extends StatelessWidget {
+  const _MemoQuickAction({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Material(
+      key: const ValueKey<String>('client-detail-open-memo'),
+      color: AppColors.primary,
+      borderRadius: const BorderRadius.all(AppRadius.md),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        child: Container(
+          height: 36,
+          width: 36,
+          alignment: Alignment.center,
+          child: Tooltip(
+            message: l.clientTrainerMemo,
+            child: const Icon(
+              Icons.edit_note_outlined,
+              size: 18,
+              color: AppColors.primaryForeground,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

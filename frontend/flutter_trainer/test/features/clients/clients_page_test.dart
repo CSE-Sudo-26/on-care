@@ -408,12 +408,16 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — both evidence tabs and the two quick actions are
-      // unique to it.
+      // Detail opened — both evidence tabs and the quick actions are
+      // unique to it. 신체·목표 is now an inline panel, not a button
+      // (#1024), and 메모 is icon-only.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
-      expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-      expect(find.text('메모'), findsOneWidget);
+      expect(find.text('리포트'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-detail-open-memo')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
