@@ -12,6 +12,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/session_chips.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -769,8 +770,12 @@ class _SessionBlock extends StatelessWidget {
                               ),
                             ),
                             // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
-                            // 같은 줄에 붙되 한 단계 작고 흐리게 물린다 — 이름과 같은
-                            // 무게로 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
+                            // 같은 줄에 붙되 한 단계 작게 물린다 — 이름과 같은 무게로
+                            // 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
+                            //
+                            // 흐린 글씨이던 것을 **상세 카드와 같은 알약**으로 바꾼다.
+                            // 같은 값을 두 자리가 다른 모양으로 말하면 읽는 쪽이 두 번
+                            // 익혀야 하고, 흐린 글씨로는 상담의 `비움` 이 보이지 않았다.
                             _BlockLine(
                               text: name,
                               style: TextStyle(
@@ -781,14 +786,11 @@ class _SessionBlock extends StatelessWidget {
                                     ? AppColors.mutedForeground
                                     : AppColors.foreground,
                               ),
-                              trailing: type,
-                              trailingStyle: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w600,
-                                height: 1.25,
-                                color: session.isFinished
-                                    ? AppColors.disabledForeground
-                                    : AppColors.subtleForeground,
+                              trailing: SessionTypeChip(
+                                label: type,
+                                muted: session.isFinished,
+                                outlined: _isConsultation,
+                                compact: true,
                               ),
                             ),
                           ],
@@ -815,19 +817,16 @@ class _SessionBlock extends StatelessWidget {
 
 /// 블록 한 줄의 글과 그 글꼴.
 class _BlockLine {
-  const _BlockLine({
-    required this.text,
-    required this.style,
-    this.trailing,
-    this.trailingStyle,
-  });
+  const _BlockLine({required this.text, required this.style, this.trailing});
 
   final String text;
   final TextStyle style;
 
-  /// [text] 뒤에 한 단계 물려 붙는 글. 같은 줄이지만 무게가 다르다.
-  final String? trailing;
-  final TextStyle? trailingStyle;
+  /// [text] 오른쪽 끝에 붙는 것 — 종류 알약. 같은 줄이지만 무게가 다르다.
+  ///
+  /// 글씨가 [style] 보다 한 단계 작아야 한다. 이 줄의 높이는 [text] 로만 재므로,
+  /// 더 두꺼운 것을 붙이면 [_BlockLines] 의 자리 계산이 어긋난다.
+  final Widget? trailing;
 
   /// 이 줄이 실제로 차지할 높이. 배율이 커지면 함께 커진다.
   double heightIn(BuildContext context) =>
@@ -859,13 +858,18 @@ class _BlockLines extends StatelessWidget {
           final needed = line.heightIn(context);
           if (drawn.isNotEmpty && used + needed > available) break;
           used += needed;
-          // 한 줄에 두 가지 무게를 그릴 때도 `Text` 두 개로 나눈다. `Text.rich`
-          // 로 묶으면 `find.text` 가 기본으로 지나쳐, 화면에 있는 글을 테스트가
-          // 못 찾는다.
+          // 한 줄에 두 가지 무게를 그릴 때도 위젯을 나눈다. `Text.rich` 로 묶으면
+          // `find.text` 가 기본으로 지나쳐, 화면에 있는 글을 테스트가 못 찾는다.
+          //
+          // **이름이 먼저 자리를 가져간다.** 둘을 반씩 나눠 주던 때에는 이름이
+          // 네 글자만 되어도 `윤가온(신…` 으로 잘리는데 옆의 종류는 멀쩡했다 —
+          // 블록에서 잘리면 안 되는 값은 이름 쪽이다. 종류는 [FittedBox] 로
+          // 통째로 작게 그려져 넘치지 않는다.
           drawn.add(
             Row(
               children: <Widget>[
                 Flexible(
+                  flex: 3,
                   child: Text(
                     line.text,
                     maxLines: 1,
@@ -875,14 +879,7 @@ class _BlockLines extends StatelessWidget {
                 ),
                 if (line.trailing != null) ...<Widget>[
                   const SizedBox(width: 3),
-                  Flexible(
-                    child: Text(
-                      line.trailing!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: line.trailingStyle ?? line.style,
-                    ),
-                  ),
+                  Flexible(flex: 2, child: line.trailing!),
                 ],
               ],
             ),

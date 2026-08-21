@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
@@ -63,6 +64,60 @@ void main() {
 
     expect(find.text('상담'), findsWidgets);
     expect(find.textContaining('1:1 PT'), findsWidgets);
+  });
+
+  /// [name] 블록 안의 종류 알약 테두리 상자.
+  BoxDecoration chipOf(WidgetTester tester, String name) {
+    final chip = find
+        .descendant(
+          of: find.ancestor(
+            of: find
+                .descendant(
+                  of: find.byType(ScheduleWeekTimetable),
+                  matching: find.text(name),
+                )
+                .first,
+            matching: find.byType(Row),
+          ),
+          matching: find.byKey(const ValueKey<String>('session-type-chip')),
+        )
+        .first;
+    return tester.widget<Container>(chip).decoration! as BoxDecoration;
+  }
+
+  // 같은 값을 두 자리가 다른 모양으로 말하면 읽는 쪽이 두 번 익혀야 한다.
+  // 시간표 블록의 종류도 상세 카드와 같은 알약이다 — 치수만 작다(#1013).
+  testWidgets('시간표 블록의 종류가 상세 카드와 같은 알약으로 선다', (tester) async {
+    await openSchedule(tester);
+
+    expect(
+      chipOf(tester, '박성호').color,
+      AppColors.primary.withValues(alpha: 0.10),
+      reason: '1:1 PT 는 채운 알약이다',
+    );
+    expect(
+      chipOf(tester, '윤가온(신규)').color,
+      AppColors.card,
+      reason: '상담은 비운 알약이다 — 블록의 면과 같은 규칙',
+    );
+  });
+
+  // 블록에서 잘리면 안 되는 값은 이름 쪽이다. 이름과 종류가 자리를 반씩
+  // 나눠 가지던 때에는 이름이 먼저 `윤가온(신…` 으로 잘렸다.
+  testWidgets('종류 알약이 이름을 잘라먹지 않는다', (tester) async {
+    await openSchedule(tester);
+
+    for (final name in <String>['박성호', '김민수']) {
+      final RenderParagraph text = tester.renderObject<RenderParagraph>(
+        find
+            .descendant(
+              of: find.byType(ScheduleWeekTimetable),
+              matching: find.text(name),
+            )
+            .first,
+      );
+      expect(text.didExceedMaxLines, isFalse, reason: '$name 이 종류에 밀려 잘렸다');
+    }
   });
 
   testWidgets('상담 요청 버튼이 예약 슬롯과 같은 그리드에 선다', (tester) async {

@@ -19,12 +19,24 @@ class SessionTypeChip extends StatelessWidget {
     required this.label,
     required this.muted,
     this.outlined = false,
+    this.compact = false,
   });
 
   final String label;
 
   /// 끝난 세션인가. 상태 칩과 같은 기준으로 함께 물러난다.
   final bool muted;
+
+  /// 시간표 블록 안에 서는가. (#1013)
+  ///
+  /// 블록의 둘째 줄은 이름과 종류가 나눠 쓰는 한 줄이라, 상세 카드의 알약을
+  /// 그대로 앉히면 이름이 밀린다. **표현은 그대로 두고 치수만 줄인다** — 두
+  /// 자리가 다른 모양을 쓰면 같은 값을 두 번 익혀야 한다.
+  ///
+  /// 줄 높이는 건드리지 않는다. 글씨가 이름보다 한 단계 작아, 여백과 윤곽선을
+  /// 더해도 이름 줄 안에 들어간다 — 알약 때문에 줄이 두꺼워지면 30분 블록에서
+  /// 이름 줄이 통째로 사라진다(#1010).
+  final bool compact;
 
   /// 채우지 않고 윤곽선만 두른다(상담). 색을 하나 더 들이는 대신 **채움과
   /// 비움**으로 종류를 가른다 — 헤더의 `예약 슬롯` 버튼과 같은 표현이라, 화면이
@@ -38,9 +50,9 @@ class SessionTypeChip extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         key: const ValueKey<String>('session-type-chip'),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 2,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 5 : AppSpacing.sm,
+          vertical: compact ? 1 : 2,
         ),
         decoration: BoxDecoration(
           color: muted
@@ -59,7 +71,9 @@ class SessionTypeChip extends StatelessWidget {
           label,
           maxLines: 1,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: compact ? 10.5 : 11,
+            // 줄 높이를 글꼴 기본값에 맡기면 알약이 이름 줄보다 두꺼워진다.
+            height: compact ? 1.05 : null,
             fontWeight: FontWeight.w800,
             color: muted ? AppColors.disabledForeground : AppColors.primary,
           ),
