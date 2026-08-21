@@ -14,12 +14,24 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 좁아지면 **이 알약이 먼저 줄어든다.** 이름과 상태는 잘리면 안 되는 값이라,
 /// 글자를 자르는 대신 `FittedBox` 로 통째로 작게 그린다.
 class SessionTypeChip extends StatelessWidget {
-  const SessionTypeChip({super.key, required this.label, required this.muted});
+  const SessionTypeChip({
+    super.key,
+    required this.label,
+    required this.muted,
+    this.prominent = false,
+  });
 
   final String label;
 
   /// 끝난 세션인가. 상태 칩과 같은 기준으로 함께 물러난다.
   final bool muted;
+
+  /// 상세 카드의 프로필 줄에 서는가. (#1012)
+  ///
+  /// 그 자리는 오른쪽이 통째로 비어 있어 알약이 줄어들 이유가 없다. 시간표
+  /// 블록처럼 좁은 자리에서 쓰는 치수 그대로 두면, 넓은 자리에서 이 값만
+  /// 유독 작게 읽힌다 — **표현은 그대로 두고 치수만 키운다.**
+  final bool prominent;
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +40,9 @@ class SessionTypeChip extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         key: const ValueKey<String>('session-type-chip'),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 2,
+        padding: EdgeInsets.symmetric(
+          horizontal: prominent ? AppSpacing.md : AppSpacing.sm,
+          vertical: prominent ? 3 : 2,
         ),
         decoration: BoxDecoration(
           color: muted
@@ -47,7 +59,7 @@ class SessionTypeChip extends StatelessWidget {
           label,
           maxLines: 1,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: prominent ? 12.5 : 11,
             fontWeight: FontWeight.w800,
             color: muted ? AppColors.disabledForeground : AppColors.primary,
           ),

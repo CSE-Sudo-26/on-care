@@ -17,17 +17,19 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 
-/// 타임라인의 세션 한 건 — 접으면 시간·이름·상태, 펼치면 그날 할 일.
+/// 상세 패널의 세션 한 건 — 시간·상태·누구인가와 그날 할 일.
 ///
 /// 완료된 세션은 프로그램과 메모를 보여 주고 고객에게 보낼 수 있다. 예정된
 /// 세션은 계획(없으면 [SessionNoPlanBox])과 수정·삭제·채팅 동선을 연다.
 /// 취소·노쇼로 끝난 세션은 [SessionEndedBox] 로 그 기록을 남긴다.
+///
+/// 카드는 **늘 펼친 상태**다(#1012). 접었다 펴는 손잡이가 머리글에 있었지만,
+/// 이 카드가 서는 자리는 이미 한 세션만 골라 보여 주는 상세 패널이라 접을
+/// 것이 없었다 — 눌러도 아무 일도 일어나지 않는 화살표였다.
 class SessionCard extends ConsumerWidget {
   const SessionCard({
     super.key,
     required this.session,
-    required this.expanded,
-    required this.onToggle,
     required this.onEditSchedule,
     required this.onEditProgram,
     required this.onEditNote,
@@ -43,8 +45,6 @@ class SessionCard extends ConsumerWidget {
   });
 
   final ScheduleSession session;
-  final bool expanded;
-  final VoidCallback onToggle;
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
 
@@ -98,203 +98,193 @@ class SessionCard extends ConsumerWidget {
       ),
       child: Column(
         children: <Widget>[
-          InkWell(
-            onTap: s.expandable ? onToggle : null,
-            borderRadius: const BorderRadius.all(AppRadius.card),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              // 머리글은 **무엇이 어떻게 됐나 → 누구인가** 순서다. (#1012)
-              //
-              //   [완료]  12:00–12:50 (50분)  1:1 PT
-              //   [프로필]  이지수  여성 · 32세
-              //             체지방 감량
-              //
-              // 첫 줄은 약속에 관한 값만 담는다. 아바타를 그 줄에 세우면 사람이
-              // 먼저 눈에 들어와, 상태·시각을 먼저 찾는 훑기와 어긋난다.
-              // 소요 시간은 시각 옆 괄호에 둔다 — 종류와 묶어 `1:1 PT · 50분`
-              // 으로 두었더니 서로 다른 두 값이 한 덩어리로 읽혔다.
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      SessionStatusChip(status: s.status),
-                      const SizedBox(width: AppSpacing.xs),
-                      // 시각은 잘리면 안 되는 값이라 글자를 자르는 대신 통째로
-                      // 작게 그린다 — 폭 340 패널에 큰 글자 배율이 겹치면 이
-                      // 줄이 먼저 넘친다.
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            l.schedBlockTime(
-                              _timeRange(l, s),
-                              l.minutesShort(s.durationMinutes),
-                            ),
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: s.isFinished
-                                  ? AppColors.disabledForeground
-                                  : AppColors.foreground,
-                            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            // 머리글은 **무엇이 어떻게 됐나 → 누구인가** 순서다. (#1012)
+            //
+            //   [완료]  12:00–12:50 (50분)
+            //   [프로필]  이지수  여성 · 32세          [1:1 PT]
+            //             체지방 감량
+            //
+            // 첫 줄은 약속에 관한 값만 담는다. 아바타를 그 줄에 세우면 사람이
+            // 먼저 눈에 들어와, 상태·시각을 먼저 찾는 훑기와 어긋난다.
+            // 소요 시간은 시각 옆 괄호에 둔다 — 종류와 묶어 `1:1 PT · 50분`
+            // 으로 두었더니 서로 다른 두 값이 한 덩어리로 읽혔다.
+            //
+            // 종류 알약은 둘째 줄 오른쪽 끝이다. 시각 옆에 두었을 때는 그
+            // 줄이 세 값으로 빽빽한데 프로필 줄 오른쪽은 통째로 비어 있었다.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    SessionStatusChip(status: s.status),
+                    const SizedBox(width: AppSpacing.xs),
+                    // 시각은 잘리면 안 되는 값이라 글자를 자르는 대신 통째로
+                    // 작게 그린다 — 폭 340 패널에 큰 글자 배율이 겹치면 이
+                    // 줄이 먼저 넘친다.
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l.schedBlockTime(
+                            _timeRange(l, s),
+                            l.minutesShort(s.durationMinutes),
+                          ),
+                          maxLines: 1,
+                          style: TextStyle(
+                            // 시각은 이 카드에서 가장 먼저 읽는 값이다 —
+                            // 상태 칩(10.5)과 같은 크기로 두었더니 어느
+                            // 것이 제목인지 알 수 없었다(#1012).
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: s.isFinished
+                                ? AppColors.disabledForeground
+                                : AppColors.foreground,
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.xs),
-                      // 종류는 흐린 글씨가 아니라 알약으로 둔다 — 회원의 부가
-                      // 정보가 아니라 이 약속이 무엇인가를 말하는 값이다(#938).
-                      Flexible(
-                        child: SessionTypeChip(
-                          label: sessionTypeLabel(l, s.type),
-                          muted: s.isDone,
-                        ),
-                      ),
-                      if (s.expandable) ...<Widget>[
-                        const SizedBox(width: AppSpacing.xs),
-                        Icon(
-                          expanded
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: AppColors.disabledForeground,
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      ClientAvatar(
-                        // Guard: a non-gap row with an empty name must not
-                        // crash `.characters.first`.
-                        label: s.clientName.isEmpty
-                            ? '?'
-                            : s.clientName.characters.first,
-                        size: 34,
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            if (client == null)
-                              // 로스터에 없는 고객은 이름 뒤에 `(신규)` 로 그
-                              // 사실을 단다(#988).
-                              Text(
-                                clientNameWithNewTag(
-                                  l,
-                                  roster,
-                                  clientId: s.clientId,
-                                  clientName: s.clientName,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.foreground,
-                                ),
-                              )
-                            else ...<Widget>[
-                              ClientIdentity(
-                                client: client,
-                                nameStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.foreground,
-                                ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  // 프로필(아바타)과 이름을 세로 가운데로 맞춘다 — 전에는
+                  // `start` 로 둬서 아바타가 이름보다 커서 이름 줄이 위로
+                  // 붙어 보였다. `Row` 의 기본값이 가운데라 값을 명시하지
+                  // 않는다.
+                  children: <Widget>[
+                    ClientAvatar(
+                      // Guard: a non-gap row with an empty name must not
+                      // crash `.characters.first`.
+                      label: s.clientName.isEmpty
+                          ? '?'
+                          : s.clientName.characters.first,
+                      size: 34,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          if (client == null)
+                            // 로스터에 없는 고객(상담으로 잡힌 가망 고객)은
+                            // 이름만 부른다. 뒤에 `(신규)` 를 달아 두었더니
+                            // 네 글자 이름이 그 표에 밀려 잘렸다 — 신규라는
+                            // 사실은 종류 알약(`상담`)이 이미 말한다(#1012).
+                            Text(
+                              s.clientName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.foreground,
                               ),
-                              // 오늘 만날 회원이 무엇을 목표로 하는 사람인지는
-                              // 세션 종류만큼 자리에서 필요하다(#898).
-                              ClientGoalLabel(client: client),
-                            ],
+                            )
+                          else ...<Widget>[
+                            ClientIdentity(
+                              client: client,
+                              nameStyle: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.foreground,
+                              ),
+                            ),
+                            // 오늘 만날 회원이 무엇을 목표로 하는 사람인지는
+                            // 세션 종류만큼 자리에서 필요하다(#898).
+                            ClientGoalLabel(client: client),
                           ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // 종류는 흐린 글씨가 아니라 알약으로 둔다 — 회원의 부가
+                    // 정보가 아니라 이 약속이 무엇인가를 말하는 값이다(#938).
+                    SessionTypeChip(
+                      label: sessionTypeLabel(l, s.type),
+                      muted: s.isDone,
+                      prominent: true,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  const Divider(height: 1, color: AppColors.borderStrong),
-                  const SizedBox(height: AppSpacing.md),
-                  if (inlineEditor != null)
-                    inlineEditor!
-                  else ...<Widget>[
-                    if (!noteOnly)
-                      if (s.program.isNotEmpty)
-                        for (var i = 0; i < s.program.length; i++) ...<Widget>[
-                          SessionProgramRow(index: i + 1, item: s.program[i]),
-                          const SizedBox(height: AppSpacing.sm),
-                        ]
-                      else if (s.isUpcoming) ...<Widget>[
-                        // 예정 session without a plan yet.
-                        const SessionNoPlanBox(),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                    if (s.note.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: AppSpacing.xs),
-                      SessionNoteBox(note: s.note),
-                      const SizedBox(height: AppSpacing.md),
-                    ] else if (noteOnly) ...<Widget>[
-                      const SessionNoNoteBox(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Divider(height: 1, color: AppColors.borderStrong),
+                const SizedBox(height: AppSpacing.md),
+                if (inlineEditor != null)
+                  inlineEditor!
+                else ...<Widget>[
+                  if (!noteOnly)
+                    if (s.program.isNotEmpty)
+                      for (var i = 0; i < s.program.length; i++) ...<Widget>[
+                        SessionProgramRow(index: i + 1, item: s.program[i]),
+                        const SizedBox(height: AppSpacing.sm),
+                      ]
+                    else if (s.isUpcoming) ...<Widget>[
+                      // 예정 session without a plan yet.
+                      const SessionNoPlanBox(),
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    // 취소는 삭제와 달리 기록이라, 그 기록을 볼 수 있어야
-                    // 만든 의미가 있다(#871).
-                    if (s.isCancelled || s.isNoShow) ...<Widget>[
-                      SessionEndedBox(session: s),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    SessionManageRow(
-                      onEditSchedule: onEditSchedule,
-                      onEditProgram: onEditProgram,
-                      onEditNote: onEditNote,
-                      hasNote: s.note.trim().isNotEmpty,
-                      hasProgram: !noteOnly,
-                      onDelete: onDelete,
-                      onCancel: onCancel,
-                      onNoShow: onNoShow,
-                      onChat: onChat,
-                      onComplete: onComplete,
+                  if (s.note.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: AppSpacing.xs),
+                    SessionNoteBox(note: s.note),
+                    const SizedBox(height: AppSpacing.md),
+                  ] else if (noteOnly) ...<Widget>[
+                    const SessionNoNoteBox(),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  // 취소는 삭제와 달리 기록이라, 그 기록을 볼 수 있어야
+                  // 만든 의미가 있다(#871).
+                  if (s.isCancelled || s.isNoShow) ...<Widget>[
+                    SessionEndedBox(session: s),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  SessionManageRow(
+                    onEditSchedule: onEditSchedule,
+                    onEditProgram: onEditProgram,
+                    onEditNote: onEditNote,
+                    hasNote: s.note.trim().isNotEmpty,
+                    hasProgram: !noteOnly,
+                    onDelete: onDelete,
+                    onCancel: onCancel,
+                    onNoShow: onNoShow,
+                    onChat: onChat,
+                    onComplete: onComplete,
+                  ),
+                  if (!noteOnly &&
+                      s.isDone &&
+                      s.program.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: AppSpacing.md),
+                    _SendButton(
+                      clientName: s.clientName,
+                      dateLabel: programDateLabel,
+                      sent: s.programSent,
+                      sending: sendingProgram,
+                      onSend: (s.programSent || sendingProgram)
+                          ? null
+                          : onSendProgram,
                     ),
-                    if (!noteOnly &&
-                        s.isDone &&
-                        s.program.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: AppSpacing.md),
-                      _SendButton(
-                        clientName: s.clientName,
-                        dateLabel: programDateLabel,
-                        sent: s.programSent,
-                        sending: sendingProgram,
-                        onSend: (s.programSent || sendingProgram)
-                            ? null
-                            : onSendProgram,
-                      ),
-                    ],
                   ],
                 ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );

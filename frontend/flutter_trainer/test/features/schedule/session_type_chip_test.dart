@@ -8,10 +8,10 @@ import 'package:oncare_trainer/features/schedule/presentation/widgets/session_ch
 
 import '../../helpers/pump_app.dart';
 
-/// 일정 카드의 `1:1 PT · 60분` 은 **이 약속이 무엇인가**를 말한다. (#938)
+/// 일정 카드의 `1:1 PT` 알약은 **이 약속이 무엇인가**를 말한다. (#938)
 ///
 /// 프로필 열 세 번째 줄에 가장 흐린 색으로 두었더니 회원의 부가 정보처럼
-/// 읽혔다. 비어 있던 오른쪽 여백으로 옮겨 상태 칩 옆에 세운다.
+/// 읽혔다. 프로필 줄(이름) 오른쪽으로 옮긴다 — 그 자리가 비어 있었다(#1012).
 void main() {
   Future<void> openSchedule(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;
@@ -78,9 +78,10 @@ void main() {
       findsOneWidget,
     );
 
-    // 머리글 첫 줄은 **이 약속이 어떻게 됐나 · 언제 · 무엇인가** 다(#1012).
-    // 사람에 관한 값은 그 아래로 내린다. 흐린 글씨가 아니라 알약으로 두어
-    // 회원의 부가 정보가 아니라 상태와 같은 위계로 읽히게 한다(#938).
+    // 머리글 첫 줄은 **이 약속이 어떻게 됐나 · 언제** 다. 무엇인가(종류)는
+    // 프로필 줄로 내려, 이름과 나란히 오른쪽 끝에 선다(#1012). 흐린 글씨가
+    // 아니라 알약으로 두어 회원의 부가 정보가 아니라 상태와 같은 위계로
+    // 읽히게 한다(#938).
     final Finder name = find
         .descendant(
           of: find.byKey(const Key('week-detail')),
@@ -88,11 +89,17 @@ void main() {
         )
         .first;
     expect(
-      tester.getRect(first).bottom,
-      lessThanOrEqualTo(tester.getRect(name).top),
-      reason: '이름보다 윗줄에 선다',
+      tester.getRect(first).left,
+      greaterThanOrEqualTo(tester.getRect(name).right),
+      reason: '이름 오른쪽에 선다',
     );
-    // 이름이 잘리지 않는다 — 아랫줄로 내린 이유가 그것이다.
+    // 프로필 줄과 같은 높이다 — 아래로 내려앉지 않는다.
+    expect(
+      tester.getRect(first).top,
+      lessThan(tester.getRect(name).bottom),
+      reason: '이름과 같은 줄에서 겹치는 높이로 선다',
+    );
+    // 이름이 잘리지 않는다.
     expect(
       tester.widget<Text>(name).data,
       '김민수',
