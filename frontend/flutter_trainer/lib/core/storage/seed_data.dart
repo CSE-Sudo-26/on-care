@@ -147,7 +147,11 @@ Future<void> seedIfEmpty(
               // 한쪽만 바뀌었다 — 김민수는 우연히 맞고 박성호는 회원이
               // 보낸 옛 메시지가 떠서, 목록이 고객마다 다른 말을 했다.
               lastMessage: _lastChatText(client.chat),
-              lastTime: client.lastTime,
+              // 시각도 같다 — 카카오톡처럼 오늘이면 시각, 어제는 `어제`,
+              // 그 전이면 날짜다. 문구를 픽스처에 적어 두면 하루만
+              // 지나도 거짓이 되므로, 며칠 전인지만 적고 심을 때마다
+              // 오늘 기준으로 다시 만든다.
+              lastTime: _lastTimeLabel(client, now),
               active: Value(client.active),
               caloriesToday: fromFixture
                   ? fixtureClient.today.calories
@@ -726,7 +730,7 @@ class _Client {
     required this.name,
     required this.avatar,
     required this.goal,
-    required this.lastTime,
+    required this.daysAgo,
     required this.active,
     required this.calories,
     required this.sodiumMg,
@@ -747,10 +751,17 @@ class _Client {
   final String avatar;
   final String goal;
 
-  /// 목록에 뜨는 상대 시각. 대화는 고정된 옛 epoch 위에 심으므로
-  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 계산하면 "9500일 전" 이 된다 —
-  /// 이 스레드가 며칠 전 이야기인지는 픽스처가 정한다.
-  final String lastTime;
+  /// 스레드의 마지막 메시지가 **며칠 전**인가. 0 은 오늘이다.
+  ///
+  /// 문구(`2026-08-15`)를 그대로 적지 않는 이유: 데모는 날짜가 바뀔 때마다
+  /// 다시 심으므로 박아 둔 날짜는 하루만 지나도 거짓이 된다. 며칠 전인지만
+  /// 적어 두면 문구는 심을 때마다 오늘 기준으로 다시 만들어진다
+  /// ([_lastTimeLabel]).
+  ///
+  /// 대화 자체는 고정된 옛 epoch 위에 심으므로
+  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 날짜를
+  /// 되읽을 수는 없다 — 그 값은 런타임 답장이 시드 뒤에 오도록 하는 용도다.
+  final int daysAgo;
   final bool active;
   final int calories;
   final int sodiumMg;
@@ -779,18 +790,50 @@ class _Client {
   final bool threadHandled;
 }
 
-/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
-/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+/// 스레드의 **마지막** 메시지.
 ///
-/// 순서는 목록 순서가 아니라 심는 시각 순이다(`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
+/// 순서는 목록 순서가 아니라 심는 시각 순이다
+/// (`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
 /// 날짜(`dayIndex`)가 먼저고, 같은 날 안에서는 목록 순서가 늦은 쪽이 뒤다.
-String _lastChatText(List<_Chat> chat) {
-  if (chat.isEmpty) return '';
+_Chat _lastChat(List<_Chat> chat) {
   int last = 0;
   for (var i = 1; i < chat.length; i++) {
     if (chat[i].dayIndex >= chat[last].dayIndex) last = i;
   }
-  return chat[last].text;
+  return chat[last];
+}
+
+/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
+/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+String _lastChatText(List<_Chat> chat) =>
+    chat.isEmpty ? '' : _lastChat(chat).text;
+
+/// 목록 오른쪽 위에 뜨는 시각 — 카카오톡과 같은 규칙이다.
+///
+///  * 오늘  → 그 메시지의 시각(`18:18`)
+///  * 어제  → `어제`
+///  * 그 전 → 날짜(`2026-08-15`)
+///
+/// "3일 전" 처럼 흘러간 시간을 세지 않는다. 며칠씩 지난 대화에서 트레이너가
+/// 알고 싶은 것은 "얼마나 됐나" 가 아니라 **언제였나** 이고, 그건 운동·식단
+/// 기록과 맞춰 보려면 날짜여야 한다.
+///
+/// 백엔드 `trainer_service.relative_time_label` 과 같은 규칙이다 — 데모와 실
+/// API 가 같은 자리에 다른 모양을 그리면 안 된다.
+String _lastTimeLabel(_Client client, DateTime now) {
+  if (client.chat.isEmpty) return '-';
+  if (client.daysAgo == 0) return _clockOf(_lastChat(client.chat).timeLabel);
+  if (client.daysAgo == 1) return '어제';
+  return ymd(now.subtract(Duration(days: client.daysAgo)));
+}
+
+/// `'화 10:26'` · `'6/21 12:40'` · `'18:18'` 에서 `HH:MM` 만 남긴다 — 라벨은
+/// 말풍선 옆에 그리려고 요일·날짜를 앞에 달고 있을 수 있다.
+String _clockOf(String timeLabel) {
+  final RegExpMatch? match = RegExp(
+    r'(\d{1,2}:\d{2})$',
+  ).firstMatch(timeLabel.trim());
+  return match?.group(1) ?? timeLabel;
 }
 
 class _Slot {
