@@ -12,6 +12,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/session_chips.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -668,8 +669,15 @@ class _SessionBlock extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// 상태가 결과를 말한다 — 예정(남색)·완료(초록)·취소/노쇼(빨강).
-  Color get _tone => switch (session.status) {
+  /// 상담인가. 종류는 색을 하나 더 들이는 대신 **채움과 비움**으로 가른다 —
+  /// 1:1 PT 는 연한 남색으로 채우고, 상담은 흰 바탕에 남색 윤곽선을 두른다.
+  /// 헤더의 `예약 슬롯` 버튼과 같은 표현이라 화면이 이미 쓰고 있는 어휘를
+  /// 그대로 빌린다(#1013).
+  bool get _isConsultation => session.type == SessionType.consultation;
+
+  /// **왼쪽 띠의 색은 상태**를 말한다 — 예정(남색)·완료(초록)·취소/노쇼(빨강).
+  /// 면(종류)과 갈래가 달라 두 값이 서로를 덮지 않는다.
+  Color get _statusTone => switch (session.status) {
     ScheduleStatus.done => AppColors.success,
     ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
     _ => AppColors.primary,
@@ -678,23 +686,30 @@ class _SessionBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final tone = _tone;
+    const tone = AppColors.primary;
+    final statusTone = _statusTone;
+    // 끝난 세션은 종류(파랑)가 아니라 **상세 카드와 같은 회색**으로 물러난다.
+    // 왼쪽 띠가 이미 초록(완료)으로 결과를 말하는데, 면까지 파랑이면 종류가
+    // 아직 진행 중인 것처럼 두 번 읽혔다(#1012, #1013).
+    const Color finishedTone = AppColors.disabledForeground;
+    final surface = _isConsultation
+        ? AppColors.card
+        : (session.isFinished
+              ? AppColors.inputBackground
+              : tone.withValues(alpha: 0.12));
     final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
     final end = start + session.durationMinutes;
     final type = sessionTypeLabel(l, session.type);
-    // 블록은 두 줄이다: `10–11 60분` / `김민수 1:1 PT`. 세 줄이던 때에는 30분
+    // 블록은 두 줄이다: `10–11` / `김민수 1:1 PT`. 세 줄이던 때에는 30분
     // 세션이 칸의 절반을 차지해 하루가 한 화면에 들어오지 않았다(#1010).
     //
     // 정각의 `:00` 은 읽는 데 보태는 것이 없어 뗀다. 툴팁과 시맨틱스에는 자른
     // 값이 아니라 온전한 시각을 남긴다 — 소리로 듣는 쪽은 줄일 이유가 없다.
     final range = l.schedTimeRange(session.time, _hhmm(end));
     final detail = l.sessionTypeAndDuration(type, session.durationMinutes);
-    // 시각은 자르지 않는다. `10–11` 로 줄였더니 그 자리가 무엇을 가리키는지
-    // 한 번 더 생각해야 했다 — 시간표에서 시각은 줄일 값이 아니다.
-    final timeLine = l.schedBlockTime(
-      range,
-      l.minutesShort(session.durationMinutes),
-    );
+    // 소요 시간은 첫 줄에 적지 않는다. 시각 옆 `(60분)` 은 좁은 블록에서
+    // 자리만 먹고, 종류·이름을 훑는 데 보태는 것이 없었다 — 필요하면 툴팁·
+    // 시맨틱스(`detail`)에 남아 있다.
 
     return Tooltip(
       message: '$range · $name · $detail',
@@ -705,7 +720,7 @@ class _SessionBlock extends StatelessWidget {
         // 낭독되어 시간표를 훑기 어렵다.
         excludeSemantics: true,
         child: Material(
-          color: tone.withValues(alpha: session.isFinished ? 0.08 : 0.12),
+          color: surface,
           borderRadius: const BorderRadius.all(AppRadius.xs),
           child: InkWell(
             // 일정 한 건이 달력에 그려졌음을 가리키는 키. 일 보기 타임라인이
@@ -713,59 +728,82 @@ class _SessionBlock extends StatelessWidget {
             key: ValueKey<String>('schedule-session-${session.id}'),
             onTap: onTap,
             borderRadius: const BorderRadius.all(AppRadius.xs),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(5, 3, 4, 3),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(AppRadius.xs),
-                // 폭 0 짜리 변은 두지 않는다 — 모서리가 둥근 상자에 그리려 하면
-                // 프레임워크가 hairline 단정에서 걸린다.
-                border: selected
-                    ? Border(
-                        left: BorderSide(color: tone, width: 4),
-                        top: BorderSide(color: tone, width: 1.5),
-                        right: BorderSide(color: tone, width: 1.5),
-                        bottom: BorderSide(color: tone, width: 1.5),
-                      )
-                    : Border(left: BorderSide(color: tone, width: 2.5)),
-              ),
-              // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
-              // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는
-              // 편이 낫다. 시간이 먼저고 사람이 그 다음이다.
-              child: _BlockLines(
-                lines: <_BlockLine>[
-                  _BlockLine(
-                    text: timeLine,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
-                      color: tone,
+            // 상태 띠를 `Border` 의 왼쪽 변으로 그리면 네 변의 색이 달라져,
+            // 둥근 모서리와 함께 쓸 수 없다("borderRadius can only be given on
+            // borders with uniform colors"). 띠를 자식으로 세우고 윤곽선은
+            // 균일하게 둔다.
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(AppRadius.xs),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  // 상담은 사면을 두른다 — 그 윤곽선이 종류를 말한다. 고른
+                  // 블록은 어느 종류든 테두리가 굵어진다.
+                  border: selected || _isConsultation
+                      ? Border.all(
+                          color: selected
+                              ? statusTone
+                              : (session.isFinished ? finishedTone : tone)
+                                    .withValues(alpha: 0.45),
+                          width: selected ? 1.5 : 1,
+                        )
+                      : null,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // 왼쪽 띠가 상태를 말한다.
+                    SizedBox(
+                      width: selected ? 4 : 2.5,
+                      child: ColoredBox(color: statusTone),
                     ),
-                  ),
-                  // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
-                  // 같은 줄에 붙되 한 단계 작고 흐리게 물린다 — 이름과 같은
-                  // 무게로 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
-                  _BlockLine(
-                    text: name,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.25,
-                      color: session.isFinished
-                          ? AppColors.mutedForeground
-                          : AppColors.foreground,
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(5, 3, 4, 3),
+                        // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
+                        // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는
+                        // 편이 낫다. 시간이 먼저고 사람이 그 다음이다.
+                        child: _BlockLines(
+                          lines: <_BlockLine>[
+                            _BlockLine(
+                              text: range,
+                              // 소요 시간을 빼며 생긴 자리만큼 조금 키운다.
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                height: 1.25,
+                                color: session.isFinished ? finishedTone : tone,
+                              ),
+                            ),
+                            // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
+                            // 같은 줄에 붙되 한 단계 작게 물린다 — 이름과 같은 무게로
+                            // 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
+                            //
+                            // 흐린 글씨이던 것을 **상세 카드와 같은 알약**으로 바꾼다.
+                            // 같은 값을 두 자리가 다른 모양으로 말하면 읽는 쪽이 두 번
+                            // 익혀야 하고, 흐린 글씨로는 상담의 `비움` 이 보이지 않았다.
+                            _BlockLine(
+                              text: name,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                height: 1.25,
+                                color: session.isFinished
+                                    ? AppColors.mutedForeground
+                                    : AppColors.foreground,
+                              ),
+                              trailing: SessionTypeChip(
+                                label: type,
+                                muted: session.isFinished,
+                                outlined: _isConsultation,
+                                compact: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    trailing: type,
-                    trailingStyle: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.25,
-                      color: session.isFinished
-                          ? AppColors.disabledForeground
-                          : AppColors.subtleForeground,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -784,19 +822,16 @@ class _SessionBlock extends StatelessWidget {
 
 /// 블록 한 줄의 글과 그 글꼴.
 class _BlockLine {
-  const _BlockLine({
-    required this.text,
-    required this.style,
-    this.trailing,
-    this.trailingStyle,
-  });
+  const _BlockLine({required this.text, required this.style, this.trailing});
 
   final String text;
   final TextStyle style;
 
-  /// [text] 뒤에 한 단계 물려 붙는 글. 같은 줄이지만 무게가 다르다.
-  final String? trailing;
-  final TextStyle? trailingStyle;
+  /// [text] 오른쪽 끝에 붙는 것 — 종류 알약. 같은 줄이지만 무게가 다르다.
+  ///
+  /// 글씨가 [style] 보다 한 단계 작아야 한다. 이 줄의 높이는 [text] 로만 재므로,
+  /// 더 두꺼운 것을 붙이면 [_BlockLines] 의 자리 계산이 어긋난다.
+  final Widget? trailing;
 
   /// 이 줄이 실제로 차지할 높이. 배율이 커지면 함께 커진다.
   double heightIn(BuildContext context) =>
@@ -828,13 +863,18 @@ class _BlockLines extends StatelessWidget {
           final needed = line.heightIn(context);
           if (drawn.isNotEmpty && used + needed > available) break;
           used += needed;
-          // 한 줄에 두 가지 무게를 그릴 때도 `Text` 두 개로 나눈다. `Text.rich`
-          // 로 묶으면 `find.text` 가 기본으로 지나쳐, 화면에 있는 글을 테스트가
-          // 못 찾는다.
+          // 한 줄에 두 가지 무게를 그릴 때도 위젯을 나눈다. `Text.rich` 로 묶으면
+          // `find.text` 가 기본으로 지나쳐, 화면에 있는 글을 테스트가 못 찾는다.
+          //
+          // **이름이 먼저 자리를 가져간다.** 둘을 반씩 나눠 주던 때에는 이름이
+          // 네 글자만 되어도 `윤가온(신…` 으로 잘리는데 옆의 종류는 멀쩡했다 —
+          // 블록에서 잘리면 안 되는 값은 이름 쪽이다. 종류는 [FittedBox] 로
+          // 통째로 작게 그려져 넘치지 않는다.
           drawn.add(
             Row(
               children: <Widget>[
                 Flexible(
+                  flex: 3,
                   child: Text(
                     line.text,
                     maxLines: 1,
@@ -844,14 +884,7 @@ class _BlockLines extends StatelessWidget {
                 ),
                 if (line.trailing != null) ...<Widget>[
                   const SizedBox(width: 3),
-                  Flexible(
-                    child: Text(
-                      line.trailing!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: line.trailingStyle ?? line.style,
-                    ),
-                  ),
+                  Flexible(flex: 2, child: line.trailing!),
                 ],
               ],
             ),

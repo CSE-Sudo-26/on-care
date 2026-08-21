@@ -113,11 +113,7 @@ class MetricTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (lo, hi) = metricTrendScale(
-      values: values,
-      ticks: ticks,
-      goal: goal,
-    );
+    final (lo, hi) = metricTrendScale(values: values, ticks: ticks, goal: goal);
     final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     // 눈금·요일 라벨은 낱개로 읽어 봐야 `월` `화` 뿐이라 그래프가 무슨 값을
     // 말하는지 알 수 없다. 한 덩어리로 묶고 요약 한 문장만 읽힌다.

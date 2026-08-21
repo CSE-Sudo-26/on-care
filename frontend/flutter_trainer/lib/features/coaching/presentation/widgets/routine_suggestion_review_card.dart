@@ -69,10 +69,7 @@ class _RoutineSuggestionReviewCardState
             type: edit?.type,
             reason: edit?.reason,
           ),
-      l.suggestionApproved(
-        edit?.name ?? suggestion.name,
-        widget.clientName,
-      ),
+      l.suggestionApproved(edit?.name ?? suggestion.name, widget.clientName),
     );
   }
 
@@ -133,9 +130,7 @@ class _RoutineSuggestionReviewCardState
       );
     } on Object {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.suggestionActionFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.suggestionActionFailed)));
     } finally {
       if (mounted) setState(() => _busy.remove(suggestion.id));
     }
