@@ -468,6 +468,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsManagementAttention => '관리 필요';
 
   @override
+  String get clientsFiltersClearAll => '전체 초기화';
+
+  @override
   String get clientsSortPriority => '정렬: 관리 우선';
 
   @override

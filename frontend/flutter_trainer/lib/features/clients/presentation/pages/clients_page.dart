@@ -128,19 +128,11 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
         final AppLocalizations l = AppLocalizations.of(context);
         var list = applyClientFilter(all, activeFilter, unread: unread);
         list = list
-            .where((client) {
-              switch (view.filter) {
-                case RosterManagementFilter.all:
-                  return true;
-                case RosterManagementFilter.attention:
-                  return healthAlertsFor(client).isNotEmpty ||
-                      (unread[client.id] ?? 0) > 0;
-                case RosterManagementFilter.active:
-                  return client.active;
-                case RosterManagementFilter.dormant:
-                  return !client.active;
-              }
-            })
+            .where((client) => _matchesManagementFilters(
+                  client,
+                  view.filters,
+                  unread: unread,
+                ))
             .toList(growable: false);
         if (view.sort == RosterSort.name) {
           list = [...list]..sort((a, b) => a.name.compareTo(b.name));
@@ -236,13 +228,13 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 children: <Widget>[
                   if (wide || selected == null)
                     _MemberManagementToolbar(
-                      managementFilter: view.filter,
+                      managementFilters: view.filters,
                       sort: view.sort,
                       shownCount: list.length,
                       activeCount: all.where((client) => client.active).length,
-                      onFilterChanged: (value) =>
+                      onFiltersChanged: (value) =>
                           ref.read(rosterViewProvider.notifier).state = view
-                              .copyWith(filter: value),
+                              .copyWith(filters: value),
                       onSortChanged: (value) =>
                           ref.read(rosterViewProvider.notifier).state = view
                               .copyWith(sort: value),
@@ -279,21 +271,57 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
   }
 }
 
+/// The client this row would need to match for [filter] to select it —
+/// shared by the toolbar's filtering and its "n개 선택" chip labels so the
+/// two can never disagree about what a filter means.
+bool _matchesManagementFilter(
+  TrainerClient client,
+  RosterManagementFilter filter, {
+  required Map<String, int> unread,
+}) {
+  switch (filter) {
+    case RosterManagementFilter.attention:
+      return healthAlertsFor(client).isNotEmpty || (unread[client.id] ?? 0) > 0;
+    case RosterManagementFilter.active:
+      return client.active;
+    case RosterManagementFilter.dormant:
+      return !client.active;
+    case RosterManagementFilter.sodiumOver:
+      return client.sodiumOverBudget;
+    case RosterManagementFilter.sugarOver:
+      return client.sugarOverBudget;
+  }
+}
+
+/// A client passes an empty selection (전체 보기) or any one of the chosen
+/// filters — OR, not AND: `active`+`dormant` selected together reads as
+/// "show me both states", which only OR can produce.
+bool _matchesManagementFilters(
+  TrainerClient client,
+  Set<RosterManagementFilter> filters, {
+  required Map<String, int> unread,
+}) {
+  if (filters.isEmpty) return true;
+  return filters.any(
+    (filter) => _matchesManagementFilter(client, filter, unread: unread),
+  );
+}
+
 class _MemberManagementToolbar extends StatelessWidget {
   const _MemberManagementToolbar({
-    required this.managementFilter,
+    required this.managementFilters,
     required this.sort,
     required this.shownCount,
     required this.activeCount,
-    required this.onFilterChanged,
+    required this.onFiltersChanged,
     required this.onSortChanged,
   });
 
-  final RosterManagementFilter managementFilter;
+  final Set<RosterManagementFilter> managementFilters;
   final RosterSort sort;
   final int shownCount;
   final int activeCount;
-  final ValueChanged<RosterManagementFilter> onFilterChanged;
+  final ValueChanged<Set<RosterManagementFilter>> onFiltersChanged;
   final ValueChanged<RosterSort> onSortChanged;
 
   @override
@@ -311,13 +339,35 @@ class _MemberManagementToolbar extends StatelessWidget {
         runSpacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          _ToolbarMenu<RosterManagementFilter>(
-            value: managementFilter,
-            label: _managementLabel(l, managementFilter),
-            items: RosterManagementFilter.values,
-            itemLabel: (value) => _managementLabel(l, value),
-            onSelected: onFilterChanged,
-          ),
+          for (final value in RosterManagementFilter.values)
+            _ManagementFilterChip(
+              label: _managementLabel(l, value),
+              selected: managementFilters.contains(value),
+              onTap: () {
+                final next = Set<RosterManagementFilter>.of(managementFilters);
+                if (!next.remove(value)) next.add(value);
+                onFiltersChanged(next);
+              },
+            ),
+          if (managementFilters.isNotEmpty)
+            InkWell(
+              onTap: () => onFiltersChanged(const <RosterManagementFilter>{}),
+              borderRadius: const BorderRadius.all(AppRadius.sm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: 4,
+                ),
+                child: Text(
+                  l.clientsFiltersClearAll,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+            ),
           _ToolbarMenu<RosterSort>(
             value: sort,
             label: _sortLabel(l, sort),
@@ -340,14 +390,16 @@ class _MemberManagementToolbar extends StatelessWidget {
 
   String _managementLabel(AppLocalizations l, RosterManagementFilter value) {
     switch (value) {
-      case RosterManagementFilter.all:
-        return l.filterAll;
       case RosterManagementFilter.attention:
         return l.clientsManagementAttention;
       case RosterManagementFilter.active:
         return l.clientActive;
       case RosterManagementFilter.dormant:
         return l.clientDormant;
+      case RosterManagementFilter.sodiumOver:
+        return l.alertSodiumOver;
+      case RosterManagementFilter.sugarOver:
+        return l.alertSugarOver;
     }
   }
 
@@ -358,6 +410,75 @@ class _MemberManagementToolbar extends StatelessWidget {
       case RosterSort.name:
         return l.clientsSortName;
     }
+  }
+}
+
+/// One multi-select filter option, shown and removed as a chip/tag (#1026).
+///
+/// Selected state doubles as the chip's own removal control — a check on
+/// one side, a close glyph on the other — so there's no separate "selected
+/// filters" row to keep in sync with the picker itself.
+class _ManagementFilterChip extends StatelessWidget {
+  const _ManagementFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.accentSurface,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (selected) ...<Widget>[
+              const Icon(
+                Icons.check,
+                size: 14,
+                color: AppColors.primaryForeground,
+              ),
+              const SizedBox(width: 3),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? AppColors.primaryForeground
+                    : AppColors.foreground,
+              ),
+            ),
+            if (selected) ...<Widget>[
+              const SizedBox(width: 3),
+              const Icon(
+                Icons.close,
+                size: 14,
+                color: AppColors.primaryForeground,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

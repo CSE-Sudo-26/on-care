@@ -938,6 +938,12 @@ abstract class AppLocalizations {
   /// **'Needs attention'**
   String get clientsManagementAttention;
 
+  /// No description provided for @clientsFiltersClearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get clientsFiltersClearAll;
+
   /// No description provided for @clientsSortPriority.
   ///
   /// In en, this message translates to:

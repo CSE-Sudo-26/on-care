@@ -2,28 +2,51 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 로스터를 관리 상태로 좁히는 필터. URL 의 `f` 프리셋과는 다른 축이다 —
 /// 그쪽은 대시보드가 걸어 주는 것이고, 이쪽은 트레이너가 툴바에서 고른다.
-enum RosterManagementFilter { all, attention, active, dormant }
+///
+/// 복수 선택이 가능하다(#1026) — 선택된 조건 중 하나라도 맞으면 그 고객을
+/// 보여준다(OR). `active`/`dormant` 처럼 서로 배타적인 값을 동시에 골라도
+/// "둘 다 보기" 로 자연스럽게 읽히는 쪽은 AND 가 아니라 OR 뿐이다.
+///
+/// `나트륨 초과`/`당류 초과` 는 `TrainerClient.sodiumOverBudget`/
+/// `sugarOverBudget` 을 그대로 재사용한다 — 새 임계값을 여기서 만들지 않는다.
+/// `칼로리 초과` 는 넣지 않는다: 방향이 회원마다 다르다는 이유로 #767 에서
+/// 이미 배지 후보에서 제외된 결정이다. `식단 이행률 저조`/`운동 이행률 저조`
+/// 를 나눈 필터도 없다 — 모델에 `weekCompletion` 하나뿐이라 분리된 값을
+/// 지어낼 수 없다(#1026 §3). `활동 저조` 도 마지막 기록 시각 필드가 없어
+/// 뺐다.
+enum RosterManagementFilter {
+  attention,
+  active,
+  dormant,
+  sodiumOver,
+  sugarOver,
+}
 
 /// 로스터 정렬 기준.
+///
+/// `메시지 최신순`/`활동순` 은 넣지 않는다 — `lastTime` 은 실제 타임스탬프가
+/// 아니라 "방금"/"3일 전" 같은 표시용 상대 시각 문자열이라 정렬 키로 쓸 수
+/// 없고(#1026 §6, Part B 소유), 활동순이 참조할 마지막 활동 시각 필드는
+/// 모델에 아예 없다.
 enum RosterSort { priority, name }
 
 /// 고객 탭의 보기 설정 한 벌.
 class RosterView {
   /// Creates a view state.
   const RosterView({
-    this.filter = RosterManagementFilter.all,
+    this.filters = const <RosterManagementFilter>{},
     this.sort = RosterSort.priority,
   });
 
-  /// 툴바에서 고른 관리 필터.
-  final RosterManagementFilter filter;
+  /// 툴바에서 고른 관리 필터. 비어 있으면 전체 보기.
+  final Set<RosterManagementFilter> filters;
 
   /// 툴바에서 고른 정렬.
   final RosterSort sort;
 
   /// Returns a copy with the given fields replaced.
-  RosterView copyWith({RosterManagementFilter? filter, RosterSort? sort}) =>
-      RosterView(filter: filter ?? this.filter, sort: sort ?? this.sort);
+  RosterView copyWith({Set<RosterManagementFilter>? filters, RosterSort? sort}) =>
+      RosterView(filters: filters ?? this.filters, sort: sort ?? this.sort);
 }
 
 /// 고객 탭의 정렬·관리 필터.

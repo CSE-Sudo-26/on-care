@@ -143,6 +143,7 @@
   "clientsNew": "신규 고객",
   "clientsTitle": "고객 관리",
   "clientsManagementAttention": "관리 필요",
+  "clientsFiltersClearAll": "전체 초기화",
   "clientsSortPriority": "정렬: 관리 우선",
   "clientsSortName": "정렬: 이름순",
   "clientsToolbarCount": "{shown}명 · 활성 {active}명",

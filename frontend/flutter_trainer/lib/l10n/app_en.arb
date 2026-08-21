@@ -223,6 +223,7 @@
   "clientsNew": "New client",
   "clientsTitle": "Member management",
   "clientsManagementAttention": "Needs attention",
+  "clientsFiltersClearAll": "Clear all",
   "clientsSortPriority": "Sort: priority",
   "clientsSortName": "Sort: name",
   "clientsToolbarCount": "{shown} members · {active} active",

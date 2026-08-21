@@ -487,6 +487,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsManagementAttention => 'Needs attention';
 
   @override
+  String get clientsFiltersClearAll => 'Clear all';
+
+  @override
   String get clientsSortPriority => 'Sort: priority';
 
   @override
