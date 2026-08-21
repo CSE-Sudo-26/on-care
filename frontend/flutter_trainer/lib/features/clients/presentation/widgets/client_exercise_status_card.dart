@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -11,6 +12,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
+import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 고객 운동 현황 — 회원 앱 운동 탭 `운동 현황` 과 **같은 그림**이다. (#943)
@@ -123,41 +125,88 @@ class _Today extends StatelessWidget {
   }
 }
 
-class _Range extends StatelessWidget {
+class _Range extends StatefulWidget {
   const _Range({required this.period});
 
   final ClientExercisePeriod period;
 
   @override
+  State<_Range> createState() => _RangeState();
+}
+
+class _RangeState extends State<_Range> {
+  /// `전체` 그래프의 스크롤 위치와 고른 날. 위의 요약 숫자가 이걸 따라간다 —
+  /// 보이지 않는 날까지 더한 합계는 지금 화면을 설명하지 못한다. (#1018)
+  final PeriodChartSelection _selection = PeriodChartSelection();
+
+  @override
+  void dispose() {
+    _selection.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final ClientExercisePeriod period = widget.period;
     final List<ClientExerciseDay> days = period.days;
     final bool monthly = days.length > 10;
     return Column(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _SummaryMetric(
-                label: l.clientTrendWorkoutDays,
-                value: l.clientTrendWorkoutDaysValue(period.workoutDays),
-              ),
-            ),
-            Expanded(
-              child: _SummaryMetric(
-                label: l.clientTrendWorkoutMinutes,
-                value: '${period.totalMinutes}',
-                unit: l.unitMinutes,
-              ),
-            ),
-            Expanded(
-              child: _SummaryMetric(
-                label: l.clientTrendCaloriesBurned,
-                value: '${period.totalCalories}',
-                unit: l.unitKcal,
-              ),
-            ),
-          ],
+        ListenableBuilder(
+          listenable: _selection,
+          builder: (BuildContext context, Widget? _) {
+            // 전체가 아니면 지금까지처럼 기간 전체의 합계다.
+            final int? picked = monthly ? _selection.selected : null;
+            final (int first, int last) = monthly
+                ? (_selection.visible ?? (0, days.length - 1))
+                : (0, days.length - 1);
+            final Iterable<ClientExerciseDay> shown = picked != null
+                ? <ClientExerciseDay>[days[picked]]
+                : days.sublist(
+                    first.clamp(0, days.length),
+                    (last + 1).clamp(0, days.length),
+                  );
+            final int workoutDays = shown
+                .where((ClientExerciseDay d) => d.logged)
+                .length;
+            final int minutes = shown.fold<int>(
+              0,
+              (int a, ClientExerciseDay d) => a + d.minutes,
+            );
+            final int calories = shown.fold<int>(
+              0,
+              (int a, ClientExerciseDay d) => a + d.calories,
+            );
+            return Row(
+              children: <Widget>[
+                Expanded(
+                  child: _SummaryMetric(
+                    label: picked == null
+                        ? l.clientTrendWorkoutDays
+                        : DateFormat.yMd(
+                            Localizations.localeOf(context).toString(),
+                          ).format(days[picked].date),
+                    value: l.clientTrendWorkoutDaysValue(workoutDays),
+                  ),
+                ),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: l.clientTrendWorkoutMinutes,
+                    value: '$minutes',
+                    unit: l.unitMinutes,
+                  ),
+                ),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: l.clientTrendCaloriesBurned,
+                    value: '$calories',
+                    unit: l.unitKcal,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: AppSpacing.md),
         ActivityBarChart(
@@ -165,6 +214,11 @@ class _Range extends StatelessWidget {
           // 회원이 세운 주간 목표를 하루로 나눈 값 — 회원 앱 그래프와 같은
           // 선이 그려진다. (#1015)
           dailyGoalMinutes: period.dailyGoalMinutes,
+          // 전체만 옆으로 밀어 본다 — 주간은 일곱 칸이 이미 한 화면이다.
+          selection: monthly ? _selection : null,
+          dates: <DateTime>[
+            for (final ClientExerciseDay d in days) d.date,
+          ],
           bars: <ActivityBar>[
             for (final ClientExerciseDay d in days)
               if (d.hasTypeSplit)

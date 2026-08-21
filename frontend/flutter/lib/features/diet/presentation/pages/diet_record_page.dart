@@ -132,11 +132,18 @@ void resetDietTransientUiState(WidgetRef ref) {
 /// 날짜를 Duration 이 아니라 성분으로 옮긴다. 로컬 시간에 Duration 을 더하면
 /// 서머타임이 있는 지역에서 주 전체가 하루씩 밀린다. `DateTime(y, m + 1, 0)`
 /// 은 12월이면 다음 해 1월 0일 = 12월 31일로 알아서 넘어간다.
+/// `전체` 가 거슬러 올라가는 날 수. 12주 — 데모 픽스처가 들고 있는 기간이자,
+/// 하루 한 번씩 조회하는 지금 구조에서 감당할 수 있는 범위다. 화면에는 한 번에
+/// 30일이 보이고 나머지는 옆으로 밀어 본다. (#1018)
+const int kDietAllPeriodDays = 84;
+
 DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
   if (tab == DietPeriodTab.month) {
+    // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
+    // 추세를 볼 수 없다.
     return (
-      from: DateTime(today.year, today.month),
-      to: DateTime(today.year, today.month + 1, 0),
+      from: DateTime(today.year, today.month, today.day - kDietAllPeriodDays + 1),
+      to: DateTime(today.year, today.month, today.day),
     );
   }
   final DateTime monday = DateTime(
@@ -331,7 +338,7 @@ class _PeriodToggle extends StatelessWidget {
     final Map<DietPeriodTab, String> labels = <DietPeriodTab, String>{
       DietPeriodTab.day: l.exToday,
       DietPeriodTab.week: l.exThisWeek,
-      DietPeriodTab.month: l.exThisMonth,
+      DietPeriodTab.month: l.exPeriodAll,
     };
     return Container(
       key: const ValueKey<String>('diet-period-toggle'),

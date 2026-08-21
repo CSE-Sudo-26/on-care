@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // NumberFormat 만 가져온다 — intl 의 TextDirection 이 dart:ui 것과 충돌한다.
-import 'package:intl/intl.dart' show NumberFormat;
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/charts/goal_line.dart';
+import 'package:oncare/design_system/charts/period_scroll_chart.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
@@ -974,6 +975,16 @@ class _ActivityStatus extends ConsumerStatefulWidget {
 }
 
 class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
+  /// `전체` 그래프의 스크롤 위치와 고른 날. 머리의 숫자와 막대가 같은 상태를
+  /// 본다. (#1018)
+  final PeriodChartSelection _selection = PeriodChartSelection();
+
+  @override
+  void dispose() {
+    _selection.dispose();
+    super.dispose();
+  }
+
   /// 오늘 요일 인덱스(0=월 … 6=일)를 이번 주 범위로 클램프. 홈 주간추이와 같은
   /// 실제 오늘을 가리키도록 해, '오늘=일 고정' 문제를 없앤다.
   int _weekTodayIndex(int n) =>
@@ -1008,73 +1019,14 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
     ];
   }
 
-  _Bar _monthBar(double total, int day) {
-    final double strengthRatio = day % 3 == 0 ? 0.30 : 0.20;
-    return _Bar(
-      total * 0.55,
-      total * strengthRatio,
-      total * (0.45 - strengthRatio),
-    );
-  }
-
-  _ChartPeriod _dataFor(int period) {
-    switch (period) {
-      case 2: // 이번 달 — 레퍼런스처럼 일별 막대를 촘촘하게 표시한다.
-        const List<double> dailyTotals = <double>[
-          28,
-          46,
-          72,
-          78,
-          50,
-          82,
-          38,
-          96,
-          84,
-          64,
-          52,
-          56,
-          68,
-          48,
-          36,
-          30,
-          74,
-          86,
-          80,
-          92,
-          84,
-          58,
-          12,
-          24,
-          0,
-          16,
-          38,
-          66,
-          54,
-          76,
-          34,
-        ];
-        return _ChartPeriod(
-          <_Bar>[
-            for (int day = 1; day <= dailyTotals.length; day++)
-              _monthBar(dailyTotals[day - 1], day),
-          ],
-          <String>[
-            for (int day = 1; day <= dailyTotals.length; day++)
-              if (day == 1 || day % 3 == 1 || day == dailyTotals.length)
-                '$day'
-              else
-                '',
-          ],
-          -1,
-        );
-      default: // 이번 주
-        return _ChartPeriod(
-          _weekBars(),
-          widget.week.dayLabels,
-          _weekTodayIndex(widget.week.dailyMinutes.length),
-        );
-    }
-  }
+  /// 이번 주 막대. `전체` 는 12주치를 따로 읽어 [_AllPeriodChart] 가 그린다 —
+  /// 예전에는 여기 한 달치 **하드코딩 배열**이 있어서, 화면에 보이던 한 달이
+  /// 실제 기록이 아니었다. (#1018)
+  _ChartPeriod _weekData() => _ChartPeriod(
+    _weekBars(),
+    widget.week.dayLabels,
+    _weekTodayIndex(widget.week.dailyMinutes.length),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1108,7 +1060,7 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
             Flexible(
               child: _PeriodToggle(
                 active: period,
-                labels: <String>[l.exToday, l.exThisWeek, l.exThisMonth],
+                labels: <String>[l.exToday, l.exThisWeek, l.exPeriodAll],
                 onChanged: (int i) =>
                     ref.read(exerciseActivityPeriodProvider.notifier).state = i,
               ),
@@ -1141,20 +1093,26 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
               ),
             ],
           )
-        else
+        else if (period == 1)
           Builder(
             builder: (BuildContext context) {
-              final _ChartPeriod data = _dataFor(period);
+              final _ChartPeriod data = _weekData();
               return _ActivityChart(
                 bars: data.bars,
                 dayLabels: data.labels,
                 todayIndex: data.todayIndex,
                 dailyGoalMinutes: goals.minutes / 7,
-                // 주 ↔ 월 전환은 같은 위젯이 데이터만 갈아끼우므로,
+                // 주 ↔ 전체 전환은 같은 위젯이 데이터만 갈아끼우므로,
                 // 기간을 재생 키로 넘겨 막대를 다시 자라게 한다.
                 replayKey: period,
               );
             },
+          )
+        else
+          // `전체` 는 12주치를 옆으로 밀어 본다 — 한 화면에 30일 (#1018).
+          _AllPeriodChart(
+            dailyGoalMinutes: goals.minutes / 7,
+            selection: _selection,
           ),
       ],
     );
@@ -1563,7 +1521,7 @@ class _ActivityChart extends StatelessWidget {
       child: ExcludeSemantics(
         excluding: empty,
         child: Container(
-          key: bars.length > 10 ? const Key('exerciseMonthlyDailyChart') : null,
+          key: const Key('exerciseWeeklyChart'),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1715,6 +1673,232 @@ class _Bar {
   final double stretch;
 
   double get total => cardio + strength + stretch;
+}
+
+/// `전체` 운동 그래프 — 12주치를 옆으로 밀어 보고, 한 칸을 고르면 그날의
+/// 시간이 머리에 뜬다. (#1018)
+class _AllPeriodChart extends ConsumerWidget {
+  const _AllPeriodChart({
+    required this.dailyGoalMinutes,
+    required this.selection,
+  });
+
+  final double dailyGoalMinutes;
+  final PeriodChartSelection selection;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return ref
+        .watch(exerciseAllPeriodProvider)
+        .when(
+          loading: () => const SizedBox(
+            height: 176,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (Object _, StackTrace _) => SizedBox(
+            height: 176,
+            child: Center(
+              child: Text(
+                l.homeExerciseTrendUnavailable,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+          ),
+          data: (List<ExerciseDayBar> days) =>
+              _AllPeriodBody(
+                key: const Key('exerciseAllPeriodChart'),
+                days: days,
+                dailyGoalMinutes: dailyGoalMinutes,
+                selection: selection,
+              ),
+        );
+  }
+}
+
+class _AllPeriodBody extends StatelessWidget {
+  const _AllPeriodBody({
+    super.key,
+    required this.days,
+    required this.dailyGoalMinutes,
+    required this.selection,
+  });
+
+  final List<ExerciseDayBar> days;
+  final double dailyGoalMinutes;
+  final PeriodChartSelection selection;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    if (days.isEmpty) return const SizedBox(height: 176);
+    const double chartHeight = 140;
+    final List<double> minutes = <double>[
+      for (final ExerciseDayBar d in days) d.minutes,
+    ];
+    // 축 위쪽에 여유를 둔다 — 목표선이 맨 위에 붙어 테두리처럼 보이지 않게.
+    final double peak = <double>[
+      dailyGoalMinutes,
+      ...minutes,
+    ].fold<double>(1, (double a, double b) => b > a ? b : a);
+    final double max = peak * 1.15;
+    // 30칸에 날짜를 모두 적으면 겹친다 — 몇 칸에 하나만.
+    final int labelStep = (days.length / 12).ceil().clamp(1, 7);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        ListenableBuilder(
+          listenable: selection,
+          builder: (BuildContext context, Widget? _) {
+            final int? picked = selection.selected;
+            final double value = picked == null
+                ? selection.averageOf(minutes)
+                : minutes[picked];
+            return PeriodChartHeadline(
+              selected: picked != null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    picked == null
+                        ? l.dietPeriodAverage
+                        : DateFormat.yMd(
+                            Localizations.localeOf(context).toString(),
+                          ).format(days[picked].date),
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l.unitMinutesValue(value.round()),
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: FigmaColors.ink,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        ListenableBuilder(
+          listenable: selection,
+          builder: (BuildContext context, Widget? _) => PeriodScrollChart(
+            count: days.length,
+            height: chartHeight,
+            selectedIndex: selection.selected,
+            onSelected: selection.select,
+            onVisibleRangeChanged: selection.setVisible,
+            goalOverlay: GoalLineOverlay(
+              visible: dailyGoalMinutes > 0,
+              bottom:
+                  chartHeight * (dailyGoalMinutes / max).clamp(0.0, 1.0),
+              label:
+                  '${l.homeGoal} '
+                  '${l.unitMinutesValue(dailyGoalMinutes.round())}',
+            ),
+            labelBuilder: (int i) =>
+                i % labelStep == 0 ? '${days[i].date.day}' : '',
+            calloutBuilder: (BuildContext context, int i) =>
+                const SizedBox.shrink(),
+            barBuilder: (BuildContext context, int i) => _StackedBarColumn(
+              bar: _Bar(
+                days[i].cardio,
+                days[i].strength,
+                days[i].stretching,
+              ),
+              max: max,
+              height: chartHeight,
+              dimmed:
+                  selection.selected != null && selection.selected != i,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// `전체` 그래프의 막대 한 칸 — 유연성(연) → 근력(진) → 유산소(브랜드) 순으로
+/// 아래에서 쌓는다. 주간 막대를 그리는 [_StackedBarPainter] 와 **같은 색·같은
+/// 순서**다. 스크롤 그래프는 칸마다 위젯이라 그림만 따로 둔다. (#1018)
+class _StackedBarColumn extends StatelessWidget {
+  const _StackedBarColumn({
+    required this.bar,
+    required this.max,
+    required this.height,
+    required this.dimmed,
+  });
+
+  final _Bar bar;
+  final double max;
+  final double height;
+
+  /// 다른 날을 골랐을 때 옅게 — 고른 날이 어느 칸인지 눈으로 짚인다.
+  final bool dimmed;
+
+  double _h(double minutes) =>
+      max <= 0 ? 0 : (minutes / max).clamp(0.0, 1.0) * height;
+
+  @override
+  Widget build(BuildContext context) {
+    final double cardio = _h(bar.cardio);
+    final double strength = _h(bar.strength);
+    final double stretch = _h(bar.stretch);
+    final double opacity = dimmed ? 0.35 : 1;
+    const Radius cap = Radius.circular(4);
+    Widget seg(double h, Color color, {bool top = false}) => Container(
+      height: h,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: opacity),
+        borderRadius: top
+            ? const BorderRadius.vertical(top: cap)
+            : BorderRadius.zero,
+      ),
+    );
+
+    final bool cardioTop = bar.cardio > 0;
+    final bool strengthTop = !cardioTop && bar.strength > 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          if (cardio > 0) seg(cardio, FigmaColors.primary, top: true),
+          if (strength > 0)
+            seg(strength, const Color(0xFF1B6FA8), top: strengthTop),
+          if (stretch > 0)
+            seg(
+              stretch,
+              const Color(0xFFD4EEF8),
+              top: !cardioTop && !strengthTop,
+            ),
+          // 기록이 없는 날도 자리는 남긴다 — 빈 칸이 이어지면 그 주가 통째로
+          // 사라진 것처럼 보인다.
+          if (cardio + strength + stretch <= 0)
+            Container(
+              height: 2,
+              decoration: const BoxDecoration(
+                color: FigmaColors.hairline,
+                borderRadius: BorderRadius.vertical(top: cap),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StackedBarPainter extends CustomPainter {

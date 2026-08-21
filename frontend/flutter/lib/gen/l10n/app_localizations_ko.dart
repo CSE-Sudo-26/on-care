@@ -613,7 +613,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exThisWeek => '이번 주';
 
   @override
-  String get exThisMonth => '이번 달';
+  String get exPeriodAll => '전체';
 
   @override
   String get exExerciseContent => '운동 내용';
