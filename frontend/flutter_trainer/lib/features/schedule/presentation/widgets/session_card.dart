@@ -246,7 +246,7 @@ class SessionCard extends ConsumerWidget {
                     SessionNoteBox(note: s.note),
                     const SizedBox(height: AppSpacing.md),
                   ] else if (noteOnly) ...<Widget>[
-                    const SessionNoNoteBox(),
+                    SessionNoNoteBox(onAdd: onEditNote),
                     const SizedBox(height: AppSpacing.md),
                   ],
                   // 취소는 삭제와 달리 기록이라, 그 기록을 볼 수 있어야
@@ -261,6 +261,9 @@ class SessionCard extends ConsumerWidget {
                     onEditNote: onEditNote,
                     hasNote: s.note.trim().isNotEmpty,
                     hasProgram: !noteOnly,
+                    // 상담이면서 아직 메모가 없으면 `메모 추가` 는 위
+                    // `SessionNoNoteBox` 안으로 옮겨 갔다(#1012).
+                    showEditNote: !(noteOnly && s.note.trim().isEmpty),
                     onDelete: onDelete,
                     onCancel: onCancel,
                     onNoShow: onNoShow,

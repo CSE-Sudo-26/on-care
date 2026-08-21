@@ -28,6 +28,7 @@ class SessionManageRow extends StatelessWidget {
     required this.onEditNote,
     required this.hasNote,
     required this.hasProgram,
+    this.showEditNote = true,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -52,6 +53,11 @@ class SessionManageRow extends StatelessWidget {
   /// 프로그램을 짜는 세션인가. 상담은 아니므로 `프로그램 수정` 이 서지 않는다 —
   /// 누를 이유가 없는 버튼으로 읽힌다(#988).
   final bool hasProgram;
+
+  /// `메모 추가`·`메모 수정` 을 이 줄에 세우는가. 상담이면서 아직 메모가
+  /// 없으면 그 자리는 [SessionNoNoteBox] 안으로 옮겨 갔다 — 이 줄에 또
+  /// 세우면 같은 동작이 두 자리에서 보인다.
+  final bool showEditNote;
 
   final VoidCallback onDelete;
   final VoidCallback onChat;
@@ -115,18 +121,20 @@ class SessionManageRow extends StatelessWidget {
           iconOnly: true,
           onTap: onEditProgram,
         ),
-      _ActionChip(
-        key: const ValueKey<String>('session-edit-note-chip'),
-        // 아이콘도 함께 갈린다 — 글자 없이 아이콘만 그리는 자리라, 글자만
-        // 바꾸면 툴팁을 띄우기 전에는 무엇이 달라졌는지 보이지 않는다.
-        icon: hasNote ? Icons.edit_note : Icons.note_add_outlined,
-        label: hasNote ? l.schedEditNote : l.schedAddNote,
-        // 메모지의 색이다. `SessionNoteBox` 와 같은 주황을 써야 두 자리가 같은
-        // 것을 가리킨다 — 주의(빨강)가 아니라 적어 두는 자리다(#690, #1012).
-        color: AppColors.brandOrange,
-        iconOnly: true,
-        onTap: onEditNote,
-      ),
+      if (showEditNote)
+        _ActionChip(
+          key: const ValueKey<String>('session-edit-note-chip'),
+          // 아이콘도 함께 갈린다 — 글자 없이 아이콘만 그리는 자리라, 글자만
+          // 바꾸면 툴팁을 띄우기 전에는 무엇이 달라졌는지 보이지 않는다.
+          icon: hasNote ? Icons.edit_note : Icons.note_add_outlined,
+          label: hasNote ? l.schedEditNote : l.schedAddNote,
+          // 메모지의 색이다. `SessionNoteBox` 와 같은 주황을 써야 두 자리가
+          // 같은 것을 가리킨다 — 주의(빨강)가 아니라 적어 두는 자리다(#690,
+          // #1012).
+          color: AppColors.brandOrange,
+          iconOnly: true,
+          onTap: onEditNote,
+        ),
     ];
 
     // 갈래를 띄울 거라면 끝까지 띄운다 — `채팅`·`삭제` 는 오른쪽 끝에 붙여
