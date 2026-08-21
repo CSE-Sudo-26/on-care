@@ -1278,11 +1278,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String schedBlockWho(String name, String type) {
-    return '$name $type';
-  }
-
-  @override
   String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
 
   @override

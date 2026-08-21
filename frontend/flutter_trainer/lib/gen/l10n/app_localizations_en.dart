@@ -1335,11 +1335,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String schedBlockWho(String name, String type) {
-    return '$name $type';
-  }
-
-  @override
   String get schedEmptyWeek => 'Nothing scheduled this week.';
 
   @override

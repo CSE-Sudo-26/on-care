@@ -2372,12 +2372,6 @@ abstract class AppLocalizations {
   /// **'{range} ({duration})'**
   String schedBlockTime(String range, String duration);
 
-  /// No description provided for @schedBlockWho.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} {type}'**
-  String schedBlockWho(String name, String type);
-
   /// No description provided for @schedEmptyWeek.
   ///
   /// In en, this message translates to:

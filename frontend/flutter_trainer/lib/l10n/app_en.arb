@@ -695,11 +695,6 @@
       }
     }
   },
-      "type": {
-        "type": "String"
-      }
-    }
-  },
   "schedEmptyWeek": "Nothing scheduled this week.",
   "schedNewClientTag": "{name} (new)",
   "@schedNewClientTag": {
