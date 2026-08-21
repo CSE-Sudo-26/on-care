@@ -138,6 +138,13 @@ void resetDietTransientUiState(WidgetRef ref) {
 /// 30일이 보이고 나머지는 옆으로 밀어 본다. (#1018)
 const int kDietAllPeriodDays = 84;
 
+/// 기간 토글 → 서버가 아는 기간 이름. 화면과 서버가 같은 말을 쓴다. (#1017)
+String _advicePeriod(DietPeriodTab tab) => switch (tab) {
+  DietPeriodTab.day => 'today',
+  DietPeriodTab.week => 'week',
+  DietPeriodTab.month => 'all',
+};
+
 DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
   if (tab == DietPeriodTab.month) {
     // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
@@ -299,7 +306,21 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                       : Column(
                           children: <Widget>[
                             const SizedBox(height: 20),
-                            _AiFeedback(message: day.aiCoachMessage),
+                            // 기간 토글을 따라 조언도 바뀐다 (#1017). 지난
+                            // 날짜를 고른 동안에는 그날의 조언이다 — 기간
+                            // 토글이 숨겨져 있어 화면이 하루를 말하고 있다.
+                            _AiFeedback(
+                              message: atToday
+                                  ? ref
+                                            .watch(
+                                              dietAdviceProvider(
+                                                _advicePeriod(selectedPeriod),
+                                              ),
+                                            )
+                                            .valueOrNull ??
+                                        day.aiCoachMessage
+                                  : day.aiCoachMessage,
+                            ),
                             const SizedBox(height: 20),
                             _MealLog(
                               entries: day.entries,

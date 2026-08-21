@@ -86,6 +86,20 @@ class DietEntryUpdate(PartialUpdate):
     sugar_g: float | None = Field(None, ge=0, allow_inf_nan=False)
 
 
+class DietAdviceResponse(BaseModel):
+    """기간에 맞는 식단 조언. (#1017)
+
+    기간 경계도 함께 돌려준다 — 화면이 "무슨 구간을 두고 한 말인가" 를 보여 줄 수
+    있어야 하고, 앱과 서버가 서로 다른 주를 셌는지도 이 값으로 드러난다.
+    """
+
+    period: str
+    from_date: str
+    to_date: str
+    days_logged: int
+    message: str
+
+
 class DietTodayResponse(BaseModel):
     entries: list[DietEntryOut]
     total_calories: int
