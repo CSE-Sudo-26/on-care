@@ -16,6 +16,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
+import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -456,17 +457,13 @@ class _PeriodBars extends StatelessWidget {
               height: chartHeight,
               child: Stack(
                 children: <Widget>[
-                  if (hasGoal)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-                      child: const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: AppColors.borderStrong,
-                      ),
-                    ),
+                  // 가로선은 목표선 하나뿐이다 (#1015). 실선 하나로 그리던 때는
+                  // 축처럼 보여, 목표를 넘겼는지가 선에서 읽히지 않았다.
+                  GoalLineOverlay(
+                    visible: hasGoal,
+                    bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
+                    label: '${l.clientPeriodGoal} ${format(goal)}',
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: <Widget>[

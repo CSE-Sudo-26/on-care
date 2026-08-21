@@ -28,6 +28,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
+import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 
 /// 도넛 한 조각 / 범례 한 줄.
 class ActivitySeg {
@@ -266,10 +267,15 @@ class ActivityBarChart extends StatelessWidget {
     required this.dayLabels,
     required this.todayIndex,
     required this.title,
+    this.dailyGoalMinutes = 0,
   });
 
   final List<ActivityBar> bars;
   final List<String> dayLabels;
+
+  /// 하루 목표 운동 시간(분). 0 이면 목표선을 그리지 않는다. 가로선은 이
+  /// 목표선 하나뿐이다 — 눈금선은 지웠다. (#1015)
+  final double dailyGoalMinutes;
 
   /// 그래프가 무엇을 그린 것인지 — 기록이 하나도 없는 기간에 비어 있다고
   /// 말할 때 이 이름으로 부른다(#972).
@@ -354,6 +360,11 @@ class ActivityBarChart extends StatelessWidget {
                         dayLabels: dayLabels,
                         todayIndex: todayIndex,
                         todayLabel: l.labelToday,
+                        goal: dailyGoalMinutes,
+                        goalLabel:
+                            '${l.clientPeriodGoal} '
+                            '${dailyGoalMinutes.round()}${l.unitMinutes}',
+                        textDirection: Directionality.of(context),
                       ),
                     ),
                   ),
@@ -470,6 +481,9 @@ class _StackedBarPainter extends CustomPainter {
     required this.dayLabels,
     required this.todayIndex,
     required this.todayLabel,
+    required this.goal,
+    required this.goalLabel,
+    required this.textDirection,
   });
 
   final List<ActivityBar> bars;
@@ -478,6 +492,11 @@ class _StackedBarPainter extends CustomPainter {
 
   /// `CustomPainter` 는 BuildContext 가 없어 부르는 쪽이 문구를 넘긴다.
   final String todayLabel;
+
+  /// 하루 목표(분)와 그 라벨. 가로선은 이 목표선 하나뿐이다 (#1015).
+  final double goal;
+  final String goalLabel;
+  final TextDirection textDirection;
 
   /// 가장 바쁜 날을 20분 단위로 올려 잡는다 — 막대가 위로 잘리지 않는다.
   /// 기록이 하나도 없으면 90분 축으로 둔다.
@@ -498,30 +517,19 @@ class _StackedBarPainter extends CustomPainter {
     final double chartH = size.height - bottomPad;
     final double max = _max;
 
-    const TextStyle gridStyle = TextStyle(
-      fontSize: 9,
-      color: AppColors.mutedForeground,
-    );
-    for (final double g in <double>[
-      max,
-      max * 0.75,
-      max * 0.5,
-      max * 0.25,
-      0,
-    ]) {
-      final double y = chartH - (g / max) * chartH;
-      canvas.drawLine(
-        Offset(left, y),
-        Offset(size.width, y),
-        Paint()
-          ..color = const Color(0x0F000000)
-          ..strokeWidth = 1,
+    // 가로선은 목표선 하나다 (#1015). 눈금선 다섯 줄과 축 숫자를 함께 그리던
+    // 자리인데, 목표선과 굵기·색이 비슷해 어느 선이 목표인지 읽히지 않았다.
+    // 값은 막대 툴팁과 카드 머리의 요약이 말한다.
+    if (goal > 0 && goal <= max) {
+      final double goalY = chartH - (goal / max) * chartH;
+      ChartGoalLine.paint(canvas, y: goalY, left: left, right: size.width);
+      ChartGoalLine.paintLabel(
+        canvas,
+        y: goalY,
+        right: size.width,
+        text: goalLabel,
+        textDirection: textDirection,
       );
-      final TextPainter tp = TextPainter(
-        text: TextSpan(text: '${g.round()}', style: gridStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(left - tp.width - 4, y - tp.height / 2));
     }
 
     final double slot = (size.width - left) / bars.length;

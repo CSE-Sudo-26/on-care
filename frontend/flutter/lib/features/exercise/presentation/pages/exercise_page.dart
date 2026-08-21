@@ -9,6 +9,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
@@ -1079,6 +1080,7 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final int period = ref.watch(exerciseActivityPeriodProvider);
+    final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1147,6 +1149,7 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
                 bars: data.bars,
                 dayLabels: data.labels,
                 todayIndex: data.todayIndex,
+                dailyGoalMinutes: goals.minutes / 7,
                 // 주 ↔ 월 전환은 같은 위젯이 데이터만 갈아끼우므로,
                 // 기간을 재생 키로 넘겨 막대를 다시 자라게 한다.
                 replayKey: period,
@@ -1464,12 +1467,17 @@ class _ActivityChart extends StatelessWidget {
     required this.bars,
     required this.dayLabels,
     required this.todayIndex,
+    required this.dailyGoalMinutes,
     this.replayKey,
   });
 
   final List<_Bar> bars;
   final List<String> dayLabels;
   final int todayIndex;
+
+  /// 하루 목표 운동 시간(분). 목표는 주 단위로만 세우므로 7 로 나눈 값이다 —
+  /// 식단 그래프가 하루 목표를 그리는 것과 같은 뜻이 되도록 맞췄다. (#1015)
+  final double dailyGoalMinutes;
 
   /// 값이 바뀌면 막대 성장 애니메이션을 처음부터 다시 재생하기 위한 키.
   final Object? replayKey;
@@ -1582,6 +1590,11 @@ class _ActivityChart extends StatelessWidget {
                                 dayLabels: dayLabels,
                                 todayIndex: todayIndex,
                                 todayLabel: l.exToday,
+                                goal: dailyGoalMinutes,
+                                goalLabel:
+                                    '${l.homeGoal} '
+                                    '${l.unitMinutesValue(dailyGoalMinutes.round())}',
+                                textDirection: Directionality.of(context),
                                 progress: t,
                               ),
                             ),
@@ -1710,12 +1723,20 @@ class _StackedBarPainter extends CustomPainter {
     required this.dayLabels,
     required this.todayIndex,
     required this.todayLabel,
+    required this.goal,
+    required this.goalLabel,
+    required this.textDirection,
     this.progress = 1,
   });
 
   final List<_Bar> bars;
   final List<String> dayLabels;
   final int todayIndex;
+
+  /// 하루 목표 운동 시간(분)과 그 라벨. 가로선은 이 목표선 하나뿐이다 (#1015).
+  final double goal;
+  final String goalLabel;
+  final TextDirection textDirection;
 
   /// Resolved in the widget's build (CustomPainter has no BuildContext).
   final String todayLabel;
@@ -1744,29 +1765,19 @@ class _StackedBarPainter extends CustomPainter {
     final double chartH = size.height - bottomPad;
     final double chartW = size.width - left;
     final double max = _max;
-    final List<double> grids = <double>[
-      max,
-      max * 0.75,
-      max * 0.5,
-      max * 0.25,
-      0,
-    ];
-
-    const TextStyle gridStyle = TextStyle(
-      fontSize: 9,
-      color: AppColors.mutedForeground,
-    );
-    for (final double g in grids) {
-      final double y = chartH - (g / max) * chartH;
-      final Paint line = Paint()
-        ..color = const Color(0x0F000000)
-        ..strokeWidth = 1;
-      canvas.drawLine(Offset(left, y), Offset(size.width, y), line);
-      final TextPainter tp = TextPainter(
-        text: TextSpan(text: '${g.round()}', style: gridStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(left - tp.width - 4, y - tp.height / 2));
+    // 가로선은 목표선 하나다 (#1015). 눈금선 다섯 줄과 축 숫자를 함께 그리던
+    // 자리인데, 목표선과 굵기·색이 비슷해 어느 선이 목표인지 읽히지 않았다.
+    // 값은 막대에 올려 둔 툴팁과 요약 카드가 말한다.
+    if (goal > 0 && goal <= max) {
+      final double goalY = chartH - (goal / max) * chartH;
+      ChartGoalLine.paint(canvas, y: goalY, left: left, right: size.width);
+      ChartGoalLine.paintLabel(
+        canvas,
+        y: goalY,
+        right: size.width,
+        text: goalLabel,
+        textDirection: textDirection,
+      );
     }
 
     final double slot = chartW / bars.length;

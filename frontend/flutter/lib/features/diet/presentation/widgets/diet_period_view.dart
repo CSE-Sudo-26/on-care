@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -684,17 +685,13 @@ class _PeriodBars extends StatelessWidget {
               height: chartHeight,
               child: Stack(
                 children: <Widget>[
-                  if (hasGoal)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-                      child: const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: FigmaColors.hairline,
-                      ),
-                    ),
+                  // 가로선은 목표선 하나뿐이다 (#1015). 예전에는 옅은 회색
+                  // 실선이라 축처럼 보였다 — 점선에 값을 붙여 목표라고 말한다.
+                  GoalLineOverlay(
+                    visible: hasGoal,
+                    bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
+                    label: '${l.homeGoal} ${format(goal)}',
+                  ),
                   // 막대 전체를 하나의 ChartReveal 로 감싸고 순서만 어긋내
                   // (chartStagger) 준다. 막대마다 애니메이션을 두면 한 달치에
                   // 티커가 31개 생긴다.

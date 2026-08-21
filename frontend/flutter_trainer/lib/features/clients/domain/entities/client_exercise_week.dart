@@ -9,6 +9,7 @@ class ClientExerciseWeek {
     this.strengthMinutes = const <int>[],
     this.stretchingMinutes = const <int>[],
     this.sessionCount,
+    this.weeklyGoalMinutes = 0,
   });
 
   final List<String> dayLabels;
@@ -25,6 +26,11 @@ class ClientExerciseWeek {
   final int totalMinutes;
   final int totalCalories;
   final int? sessionCount;
+
+  /// 이 회원의 주간 운동 시간 목표(분). 그래프의 목표선이 회원 앱과 같은 값을
+  /// 쓰게 서버가 함께 내려준다 — 트레이너 화면은 회원 프로필을 따로 읽지
+  /// 않는다. (#1015)
+  final int weeklyGoalMinutes;
 
   /// 유형 분해가 실려 왔는가. 길이가 어긋난 응답은 없는 것으로 본다 — 반쪽만
   /// 쌓으면 막대가 실제보다 낮아 보인다.
@@ -57,6 +63,8 @@ class ClientExerciseWeek {
       totalMinutes: (json['total_minutes'] as num?)?.toInt() ?? 0,
       totalCalories: (json['total_calories'] as num?)?.toInt() ?? 0,
       sessionCount: (json['sessions'] as List<Object?>?)?.length,
+      weeklyGoalMinutes:
+          (json['weekly_goal_minutes'] as num?)?.toInt() ?? 0,
     );
   }
 }
