@@ -37,8 +37,8 @@ final storedMealPhotoProvider = FutureProvider.family<Uint8List?, String>((
   }
 });
 
-/// Square thumbnail of a **stored** meal photo (the one the member already
-/// uploaded), with [fallback] shown while it
+/// A **stored** meal photo (the one the member already uploaded) drawn at
+/// [width] × [height], with [fallback] shown while it
 /// loads and whenever it can't be shown (no photo, network failure, corrupt
 /// bytes). The fallback is the existing emoji/asset chip, so a photo that
 /// isn't there changes nothing about the layout.
@@ -46,14 +46,19 @@ class StoredMealPhoto extends ConsumerWidget {
   const StoredMealPhoto({
     super.key,
     required this.path,
-    required this.size,
+    required this.width,
+    required this.height,
     required this.fallback,
     this.borderRadius = 12,
   });
 
   /// API path relative to the API base (`/diet/photos/<id>`).
   final String path;
-  final double size;
+
+  /// 크기는 호출부가 정한다 — 목록 썸네일은 정사각, 수정 화면 상단은 가로로
+  /// 넓은 사진이다. (#1053)
+  final double width;
+  final double height;
   final Widget fallback;
   final double borderRadius;
 
@@ -69,8 +74,8 @@ class StoredMealPhoto extends ConsumerWidget {
               borderRadius: BorderRadius.circular(borderRadius),
               child: Image.memory(
                 bytes,
-                width: size,
-                height: size,
+                width: width,
+                height: height,
                 fit: BoxFit.cover,
                 errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
                     fallback,

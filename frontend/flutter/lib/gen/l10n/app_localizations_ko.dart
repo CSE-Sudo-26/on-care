@@ -94,9 +94,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealChickenSalad => '닭가슴살 샐러드';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI 분석';
-
-  @override
   String get homeDetails => '자세히';
 
   @override
@@ -130,12 +127,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String dietAmountOver(String amount) {
-    return '목표보다 $amount 많아요';
+    return '$amount 많아요';
   }
 
   @override
   String dietAmountRemaining(String amount) {
-    return '목표까지 $amount 남았어요';
+    return '$amount 남았어요';
   }
 
   @override
@@ -314,11 +311,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietPeriodTotal => '기간 합계';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    return '$days일 기록';
-  }
 
   @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';

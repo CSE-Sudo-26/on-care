@@ -13,7 +13,7 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
-import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart';
+import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -1773,23 +1773,26 @@ class _MealCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: <Widget>[
+                    // 정상은 초록이다 — 같은 탭의 기간 그래프·나트륨 카드가
+                    // 이미 초록으로 정상을 말한다. 여기만 파랑이면 한 탭 안에서
+                    // 같은 뜻이 두 색을 쓰게 된다. (#1053)
                     _TotalPill(
                       label: l.dietCalories,
                       value: '${_formatInt(meal.total)} ${l.unitKcal}',
-                      color: FigmaColors.primary,
+                      color: FigmaColors.statusNormal,
                     ),
                     _TotalPill(
                       label: l.dietSodium,
                       value: '${_formatInt(meal.sodium)} ${l.dietUnitMg}',
-                      // 좋으면 파란계열, 나트륨이 과다하면 빨간계열.
+                      // 정상은 초록, 나트륨이 과다하면 빨강.
                       color: meal.sodium > 1000
                           ? FigmaColors.dangerRed
-                          : FigmaColors.primary,
+                          : FigmaColors.statusNormal,
                     ),
                     _TotalPill(
                       label: l.dietSugar,
                       value: '${_formatG(meal.sugar)} ${l.dietUnitG}',
-                      color: FigmaColors.primary,
+                      color: FigmaColors.statusNormal,
                     ),
                   ],
                 ),
@@ -1809,53 +1812,20 @@ class _MealCard extends StatelessWidget {
 /// Meal thumbnail: the photo the member uploaded, then the bundled demo
 /// asset, then the meal-type emoji chip.
 ///
-/// 실서버에서는 회원이 올린 사진(`photoUrl`)이 온다. 번들 자산은 실서버에 붙으면
-/// 늘 비어 있던 데모 값이라 뒤로 물린다. (#699)
+/// 고르는 순서는 [MealPhotoView] 가 안다 — 수정 화면 상단의 큰 사진과 같은
+/// 규칙을 쓴다. (#1053)
 class _MealThumb extends StatelessWidget {
   const _MealThumb({required this.meal});
   final DietMeal meal;
 
   @override
-  Widget build(BuildContext context) {
-    final String? url = meal.photoUrl;
-    if (url != null && url.isNotEmpty) {
-      return StoredMealPhoto(
-        path: url,
-        size: 52,
-        fallback: _assetOrEmojiThumb(),
-      );
-    }
-    return _assetOrEmojiThumb();
-  }
-
-  Widget _assetOrEmojiThumb() {
-    final String? asset = meal.photoAsset;
-    if (asset != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          asset,
-          width: 52,
-          height: 52,
-          fit: BoxFit.cover,
-          // Fall back to the emoji chip if the bundled asset is missing.
-          errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
-              _emojiThumb(),
-        ),
-      );
-    }
-    return _emojiThumb();
-  }
-
-  Widget _emojiThumb() => Container(
+  Widget build(BuildContext context) => MealPhotoView(
+    photoUrl: meal.photoUrl,
+    photoAsset: meal.photoAsset,
+    emoji: meal.emoji,
+    background: meal.thumbBg,
     width: 52,
     height: 52,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: meal.thumbBg,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text(meal.emoji, style: const TextStyle(fontSize: 24)),
   );
 }
 

@@ -266,12 +266,6 @@ abstract class AppLocalizations {
   /// **'Chicken breast salad'**
   String get homeMealChickenSalad;
 
-  /// No description provided for @homeAiAnalysisPill.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI analysis'**
-  String get homeAiAnalysisPill;
-
   /// No description provided for @homeDetails.
   ///
   /// In en, this message translates to:
@@ -335,13 +329,13 @@ abstract class AppLocalizations {
   /// No description provided for @dietAmountOver.
   ///
   /// In en, this message translates to:
-  /// **'{amount} over the goal'**
+  /// **'{amount} over'**
   String dietAmountOver(String amount);
 
   /// No description provided for @dietAmountRemaining.
   ///
   /// In en, this message translates to:
-  /// **'{amount} remaining to the goal'**
+  /// **'{amount} to go'**
   String dietAmountRemaining(String amount);
 
   /// No description provided for @homeExerciseActiveTime.
@@ -661,12 +655,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Period total'**
   String get dietPeriodTotal;
-
-  /// No description provided for @dietPeriodLoggedDays.
-  ///
-  /// In en, this message translates to:
-  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
-  String dietPeriodLoggedDays(int days);
 
   /// No description provided for @dietPeriodEmpty.
   ///

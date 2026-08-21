@@ -95,9 +95,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealChickenSalad => 'Chicken breast salad';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI analysis';
-
-  @override
   String get homeDetails => 'Details';
 
   @override
@@ -132,12 +129,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dietAmountOver(String amount) {
-    return '$amount over the goal';
+    return '$amount over';
   }
 
   @override
   String dietAmountRemaining(String amount) {
-    return '$amount remaining to the goal';
+    return '$amount to go';
   }
 
   @override
@@ -316,17 +313,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietPeriodTotal => 'Period total';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days days logged',
-      one: '1 day logged',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';

@@ -31,7 +31,6 @@
   "homeMacroProtein": "Protein",
   "homeMacroFat": "Fat",
   "homeMealChickenSalad": "Chicken breast salad",
-  "homeAiAnalysisPill": "✦ AI analysis",
   "homeDetails": "Details",
   "homeGoal": "Goal",
   "homeDietNutritionTitle": "Diet & nutrition",
@@ -49,7 +48,7 @@
   "homeExerciseTrendUnavailable": "Couldn't load this week's workout history.",
   "homeMetricOver": "Over",
   "homeMetricNormal": "On track",
-  "dietAmountOver": "{amount} over the goal",
+  "dietAmountOver": "{amount} over",
   "@dietAmountOver": {
     "placeholders": {
       "amount": {
@@ -57,7 +56,7 @@
       }
     }
   },
-  "dietAmountRemaining": "{amount} remaining to the goal",
+  "dietAmountRemaining": "{amount} to go",
   "@dietAmountRemaining": {
     "placeholders": {
       "amount": {
@@ -167,14 +166,6 @@
   "dietLoadError": "Couldn't load your diet.",
   "dietPeriodAverage": "Daily average",
   "dietPeriodTotal": "Period total",
-  "dietPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
-  "@dietPeriodLoggedDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
   "dietPeriodEmpty": "No meals were logged in this period.",
   "dietPeriodRange": "{start} - {end}",
   "@dietPeriodRange": {
