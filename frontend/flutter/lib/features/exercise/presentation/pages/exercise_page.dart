@@ -12,6 +12,7 @@ import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/charts/period_scroll_chart.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -931,20 +932,18 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
         // 제목과 토글 **사이**로 가고, 둘 다 좁아지면 접힌다. `Spacer` 로 밀면
         // 정렬은 맞지만 접힐 자리가 없어 320px 에서 줄이 넘쳤다(#766).
         Row(
+          // 제목 줄의 오른쪽 끝을 테스트가 잴 수 있어야 한다 — 제목 안에도
+          // Row 가 생겨 바깥 줄을 이름으로 집는다. (#1058)
+          key: const ValueKey<String>('exercise-section-header'),
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: Text(
-                  l.exActivityTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.ink,
-                  ),
+                child: SectionTitle(
+                  // 트레이너웹 고객 탭 `운동 현황` 과 같은 아이콘이다. (#1058)
+                  icon: Icons.monitor_heart_outlined,
+                  label: l.exActivityTitle,
                 ),
               ),
             ),
@@ -1306,9 +1305,16 @@ class _PeriodToggle extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
+                    // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
+                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
+                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
+                    // (#1058)
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3
+                          ? 12
+                          : 18,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: active == i
@@ -1459,21 +1465,20 @@ class _ActivityChart extends StatelessWidget {
                         duration: AppMotion.chartGrow,
                         // 막대별 stagger 는 painter 안에서 곡선을 적용한다.
                         curve: Curves.linear,
-                        builder: (BuildContext context, double t) =>
-                            CustomPaint(
-                              painter: _StackedBarPainter(
-                                bars: bars,
-                                dayLabels: dayLabels,
-                                todayIndex: todayIndex,
-                                todayLabel: l.exToday,
-                                goal: dailyGoalMinutes,
-                                goalLabel:
-                                    '${l.homeGoal} '
-                                    '${l.unitMinutesValue(dailyGoalMinutes.round())}',
-                                textDirection: Directionality.of(context),
-                                progress: t,
-                              ),
-                            ),
+                        builder: (BuildContext context, double t) => CustomPaint(
+                          painter: _StackedBarPainter(
+                            bars: bars,
+                            dayLabels: dayLabels,
+                            todayIndex: todayIndex,
+                            todayLabel: l.exToday,
+                            goal: dailyGoalMinutes,
+                            goalLabel:
+                                '${l.homeGoal} '
+                                '${l.unitMinutesValue(dailyGoalMinutes.round())}',
+                            textDirection: Directionality.of(context),
+                            progress: t,
+                          ),
+                        ),
                       ),
                     ),
                     // Transparent per-bar hover regions aligned to the painter's
@@ -1626,13 +1631,12 @@ class _AllPeriodChart extends ConsumerWidget {
               ),
             ),
           ),
-          data: (List<ExerciseDayBar> days) =>
-              _AllPeriodBody(
-                key: const Key('exerciseAllPeriodChart'),
-                days: days,
-                dailyGoalMinutes: dailyGoalMinutes,
-                selection: selection,
-              ),
+          data: (List<ExerciseDayBar> days) => _AllPeriodBody(
+            key: const Key('exerciseAllPeriodChart'),
+            days: days,
+            dailyGoalMinutes: dailyGoalMinutes,
+            selection: selection,
+          ),
         );
   }
 }
@@ -1721,8 +1725,7 @@ class _AllPeriodBody extends StatelessWidget {
             onVisibleRangeChanged: selection.setVisible,
             goalOverlay: GoalLineOverlay(
               visible: dailyGoalMinutes > 0,
-              bottom:
-                  chartHeight * (dailyGoalMinutes / max).clamp(0.0, 1.0),
+              bottom: chartHeight * (dailyGoalMinutes / max).clamp(0.0, 1.0),
               label:
                   '${l.homeGoal} '
                   '${l.unitMinutesValue(dailyGoalMinutes.round())}',
@@ -1732,15 +1735,10 @@ class _AllPeriodBody extends StatelessWidget {
             calloutBuilder: (BuildContext context, int i) =>
                 const SizedBox.shrink(),
             barBuilder: (BuildContext context, int i) => _StackedBarColumn(
-              bar: _Bar(
-                days[i].cardio,
-                days[i].strength,
-                days[i].stretching,
-              ),
+              bar: _Bar(days[i].cardio, days[i].strength, days[i].stretching),
               max: max,
               height: chartHeight,
-              dimmed:
-                  selection.selected != null && selection.selected != i,
+              dimmed: selection.selected != null && selection.selected != i,
             ),
           ),
         ),
