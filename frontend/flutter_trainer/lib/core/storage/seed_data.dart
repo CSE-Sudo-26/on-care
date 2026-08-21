@@ -142,7 +142,11 @@ Future<void> seedIfEmpty(
               name: client.name,
               avatar: client.avatar,
               goal: client.goal,
-              lastMessage: client.lastMessage,
+              // 목록의 미리보기는 **그 스레드의 마지막 메시지**다. 예전에는
+              // 여기에 손으로 적어 둔 문장이 들어가서, 대화를 손볼 때마다
+              // 한쪽만 바뀌었다 — 김민수는 우연히 맞고 박성호는 회원이
+              // 보낸 옛 메시지가 떠서, 목록이 고객마다 다른 말을 했다.
+              lastMessage: _lastChatText(client.chat),
               lastTime: client.lastTime,
               active: Value(client.active),
               caloriesToday: fromFixture
@@ -722,7 +726,6 @@ class _Client {
     required this.name,
     required this.avatar,
     required this.goal,
-    required this.lastMessage,
     required this.lastTime,
     required this.active,
     required this.calories,
@@ -743,7 +746,10 @@ class _Client {
   final String name;
   final String avatar;
   final String goal;
-  final String lastMessage;
+
+  /// 목록에 뜨는 상대 시각. 대화는 고정된 옛 epoch 위에 심으므로
+  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 계산하면 "9500일 전" 이 된다 —
+  /// 이 스레드가 며칠 전 이야기인지는 픽스처가 정한다.
   final String lastTime;
   final bool active;
   final int calories;
@@ -771,6 +777,20 @@ class _Client {
   /// member sent. Without this flag the demo opens with all three members
   /// waiting, which is not the state we want to show.
   final bool threadHandled;
+}
+
+/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
+/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+///
+/// 순서는 목록 순서가 아니라 심는 시각 순이다(`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
+/// 날짜(`dayIndex`)가 먼저고, 같은 날 안에서는 목록 순서가 늦은 쪽이 뒤다.
+String _lastChatText(List<_Chat> chat) {
+  if (chat.isEmpty) return '';
+  int last = 0;
+  for (var i = 1; i < chat.length; i++) {
+    if (chat[i].dayIndex >= chat[last].dayIndex) last = i;
+  }
+  return chat[last].text;
 }
 
 class _Slot {
@@ -893,9 +913,11 @@ const List<_Slot> _schedule = <_Slot>[
       },
     ],
   ),
+  // 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다.
+  // 예전에는 이름 자리에 `신규 고객` 이라는 분류명이 들어가 있었다(#988).
   _Slot(
     time: '17:00',
-    clientName: '신규 고객',
+    clientName: '윤가온',
     type: SessionType.consultation,
     durationMinutes: 30,
     status: ScheduleStatus.upcoming,

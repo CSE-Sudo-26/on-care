@@ -164,10 +164,8 @@ GoRouter buildAppRouter({
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutes.schedule,
-                builder: (context, state) => SchedulePage(
-                  view: state.uri.queryParameters['v'],
-                  date: state.uri.queryParameters['d'],
-                ),
+                builder: (context, state) =>
+                    SchedulePage(date: state.uri.queryParameters['d']),
               ),
             ],
           ),

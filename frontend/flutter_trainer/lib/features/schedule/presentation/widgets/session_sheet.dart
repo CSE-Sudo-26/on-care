@@ -67,9 +67,9 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
 
   // Option lists always CONTAIN the edited session's own values. Falling
   // back to a default instead would silently rewrite the session on an
-  // otherwise no-op save — e.g. a 상담 booked for l.schedNewClient (not a
-  // registered client) would be reassigned to the first client, and a
-  // 50-minute session would become 60 (review PR 218).
+  // otherwise no-op save — e.g. a 상담 booked for a prospect who is not
+  // on the roster would be reassigned to the first client, and a 50-minute
+  // session would become 60 (review PR 218).
   late List<String> _clientOptions;
   late List<String> _typeOptions;
   late List<int> _hourOptions;

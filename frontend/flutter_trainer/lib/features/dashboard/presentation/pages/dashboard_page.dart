@@ -49,7 +49,7 @@ class DashboardPage extends ConsumerWidget {
           label: l.dashAddSchedule,
           icon: Icons.add,
           primary: true,
-          onPressed: () => context.go(AppRoutes.scheduleView('day')),
+          onPressed: () => context.go(AppRoutes.scheduleAt()),
         ),
       ],
       child: summaryAsync.when(
@@ -333,7 +333,7 @@ class _KpiRow extends StatelessWidget {
         unit: l.dashUnitCount,
         icon: Icons.event_available_outlined,
         hint: l.dashSeeInSchedule,
-        onTap: () => context.go(AppRoutes.scheduleView('day')),
+        onTap: () => context.go(AppRoutes.scheduleAt()),
       ),
       StatCard(
         label: l.dashMyClients,

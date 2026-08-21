@@ -54,3 +54,51 @@ class SessionNoteBox extends StatelessWidget {
     );
   }
 }
+
+/// 아직 메모가 없는 상담 세션의 자리. (#988)
+///
+/// 상담은 운동 프로그램을 짜는 자리가 아니라 **무슨 이야기를 나눴는지** 를 적는
+/// 자리다. 프로그램이 없다는 안내([SessionNoPlanBox])를 그대로 쓰면, 짜야 할
+/// 프로그램이 밀려 있는 것처럼 읽힌다.
+class SessionNoNoteBox extends StatelessWidget {
+  /// Creates the empty-note hint.
+  const SessionNoNoteBox({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      key: const ValueKey<String>('session-no-note'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.schedNoNote,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l.schedNoteOnlyHint,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.subtleForeground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

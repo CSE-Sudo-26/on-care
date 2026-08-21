@@ -83,12 +83,6 @@ String _location(WidgetTester tester) {
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(AppShell)));
 
-bool _isSelectedSegment(Finder label) => find
-    .ancestor(of: label, matching: find.byType(Semantics))
-    .evaluate()
-    .map((element) => (element.widget as Semantics).properties.selected)
-    .contains(true);
-
 Future<void> _bootSignedOut(WidgetTester tester) async {
   final config = AppConfig.fromEnvironment();
   expect(
@@ -428,7 +422,7 @@ void main() {
     expect(decided['decision_note'], _rejectionNote);
   });
 
-  testWidgets('schedule view/date selection opens the booked client', (
+  testWidgets('schedule date selection opens the booked client', (
     tester,
   ) async {
     await _bootSignedOut(tester);
@@ -440,26 +434,16 @@ void main() {
       step: 'schedule navigation',
     );
 
-    final l = _l10n(tester);
-    await tester.tap(find.text(l.schedViewWeek));
-    await tester.pump();
-    expect(_location(tester), contains('v=week'));
-    expect(
-      _isSelectedSegment(find.text(l.schedViewWeek)),
-      isTrue,
-      reason: 'weekly schedule display and URL diverged',
-    );
-    await tester.tap(find.text(l.schedViewDay));
-    await tester.pump();
-    expect(_location(tester), contains('v=day'));
-    expect(
-      _isSelectedSegment(find.text(l.schedViewDay)),
-      isTrue,
-      reason: 'daily schedule display and URL diverged',
-    );
+    // 보기는 주간 시간표 하나뿐이라 라우트에 `v=` 가 없다(#988).
+    expect(_location(tester), isNot(contains('v=')));
 
+    // 시간표는 월~일 한 주만 보여 준다. 같은 주 안의 다른 날을 고른다 —
+    // 내일은 다음 주일 수 있어 요일 칸이 화면에 없을 수 있다.
     final today = DateTime.now();
-    final anotherDay = today.add(const Duration(days: 1));
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    final anotherDay = _ymd(monday) == _ymd(today)
+        ? monday.add(const Duration(days: 1))
+        : monday;
     await tester.tap(
       find.byKey(ValueKey<String>('schedule-day-${_ymd(anotherDay)}')),
     );
@@ -471,7 +455,8 @@ void main() {
         (widget) =>
             widget is Container &&
             widget.decoration is BoxDecoration &&
-            (widget.decoration! as BoxDecoration).color == AppColors.primary,
+            (widget.decoration! as BoxDecoration).color ==
+                AppColors.accentSurface,
       ),
     );
     expect(
@@ -485,17 +470,20 @@ void main() {
     await _pumpUntil(
       tester,
       find.text('김민수'),
-      step: 'booked client schedule row',
+      step: 'booked client schedule block',
     );
 
-    await tester.tap(
-      find.ancestor(of: find.text('김민수'), matching: find.byType(InkWell)).first,
-    );
+    // 시간표의 블록을 누르면 상세 패널이 그 세션을 펼친 채로 연다.
+    await tester.tap(find.text('김민수').first);
     await _pumpUntil(
       tester,
       find.byKey(const ValueKey<String>('session-chat-chip')),
       step: 'booked client actions',
     );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('session-chat-chip')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey<String>('session-chat-chip')));
     await _pumpUntil(
       tester,

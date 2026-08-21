@@ -10,6 +10,7 @@ class SessionManageRow extends StatelessWidget {
     super.key,
     required this.onEditSchedule,
     required this.onEditProgram,
+    required this.noteOnly,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -19,6 +20,12 @@ class SessionManageRow extends StatelessWidget {
 
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
+
+  /// 프로그램 없이 메모만 남기는 세션인가(상담). 같은 자리가 여는 편집기와
+  /// 라벨이 함께 바뀐다 — `프로그램 수정` 이라 적혀 있으면 상담에서 누를 이유가
+  /// 없는 버튼으로 읽힌다(#988).
+  final bool noteOnly;
+
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final VoidCallback? onComplete;
@@ -70,7 +77,8 @@ class SessionManageRow extends StatelessWidget {
           onTap: onEditSchedule,
         ),
         _ActionChip(
-          label: l.progEditTitle,
+          key: const ValueKey<String>('session-edit-program-chip'),
+          label: noteOnly ? l.schedEditNote : l.progEditTitle,
           color: AppColors.secondary,
           onTap: onEditProgram,
         ),
