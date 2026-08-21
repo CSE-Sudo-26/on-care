@@ -478,7 +478,8 @@ void main() {
       expect(find.text('김민수'), findsWidgets);
       expect(find.text('이지수'), findsWidgets);
       expect(find.text('박성호'), findsWidgets);
-      expect(find.text('1:1 PT · 60분'), findsWidgets);
+      // 소요 시간은 시각 옆 괄호로 갔다(#1012) — 종류만 본다.
+      expect(find.textContaining('1:1 PT'), findsWidgets);
       expect(find.text('상담 · 30분'), findsWidgets);
 
       // 로스터에 없는 상담 고객은 이름 뒤에 신규 표가 붙는다.
@@ -1006,7 +1007,7 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.text('15:00\u201316:00'), findsOneWidget);
+      expect(find.textContaining('15:00\u201316:00'), findsWidgets);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트 × 8회'), findsOneWidget);
       // 프로그램만 고쳤으므로 원래 메모는 그대로 남는다.
