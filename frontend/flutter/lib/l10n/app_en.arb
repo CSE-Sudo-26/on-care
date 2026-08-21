@@ -31,7 +31,6 @@
   "homeMacroProtein": "Protein",
   "homeMacroFat": "Fat",
   "homeMealChickenSalad": "Chicken breast salad",
-  "homeAiAnalysisPill": "✦ AI analysis",
   "homeDetails": "Details",
   "homeGoal": "Goal",
   "homeDietNutritionTitle": "Diet & nutrition",
@@ -49,7 +48,7 @@
   "homeExerciseTrendUnavailable": "Couldn't load this week's workout history.",
   "homeMetricOver": "Over",
   "homeMetricNormal": "On track",
-  "dietAmountOver": "{amount} over the goal",
+  "dietAmountOver": "{amount} over",
   "@dietAmountOver": {
     "placeholders": {
       "amount": {
@@ -57,7 +56,7 @@
       }
     }
   },
-  "dietAmountRemaining": "{amount} remaining to the goal",
+  "dietAmountRemaining": "{amount} to go",
   "@dietAmountRemaining": {
     "placeholders": {
       "amount": {
@@ -69,10 +68,12 @@
   "homeExerciseBurned": "Calories",
   "homeExerciseDays": "Workout days",
   "homeMealReasonSodium": "Great for sodium control",
+  "homeMealSourceTrainer": "Trainer pick",
+  "homeMealSourceAi": "AI pick",
   "homeMealTagLowSodium": "Low sodium",
   "homeMealBrownRiceBox": "Brown rice lunchbox",
   "homeMealReasonGlucose": "Helps steady blood sugar",
-  "homeMealTagLowGi": "Low GI",
+  "homeMealTagLowSugar": "Low sugar",
   "homeMealSalmon": "Grilled salmon + greens",
   "homeMealReasonOmega": "Omega-3 + fiber",
   "homeMealTagHighProtein": "High protein",
@@ -81,7 +82,7 @@
   "homeMealTagLowCal": "Low calorie",
   "homeMealNamulBibimbap": "Namul bibimbap",
   "homeMealReasonFiber": "Rich in dietary fiber",
-  "homeMealTagHighFiber": "High fiber",
+  "homeMealTagLowFat": "Low fat",
   "homeRecBasisSodium": "{days}-day avg sodium {sodium}mg",
   "@homeRecBasisSodium": {
     "placeholders": {
@@ -134,17 +135,6 @@
   },
   "dietTitle": "Diet",
   "dietToday": "Today",
-  "dietWeekLabel": "Month {month}, Week {week}",
-  "@dietWeekLabel": {
-    "placeholders": {
-      "month": {
-        "type": "int"
-      },
-      "week": {
-        "type": "int"
-      }
-    }
-  },
   "dietWeekdayMon": "Mon",
   "dietWeekdayTue": "Tue",
   "dietWeekdayWed": "Wed",
@@ -165,14 +155,6 @@
   "dietLoadError": "Couldn't load your diet.",
   "dietPeriodAverage": "Daily average",
   "dietPeriodTotal": "Period total",
-  "dietPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
-  "@dietPeriodLoggedDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
   "dietPeriodEmpty": "No meals were logged in this period.",
   "dietPeriodRange": "{start} - {end}",
   "@dietPeriodRange": {
@@ -582,6 +564,8 @@
       }
     }
   },
+  "myGymDetailTooltip": "Gym details",
+  "myTrainerDetailTooltip": "Trainer details",
   "myGymDisconnectTooltip": "Disconnect gym",
   "myTrainerDisconnectTooltip": "Disconnect trainer",
   "myNoTrainer": "No assigned trainer",

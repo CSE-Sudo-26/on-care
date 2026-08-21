@@ -54,10 +54,7 @@ CoachSession _session({
   status: status,
 );
 
-Future<void> _pump(
-  WidgetTester tester, {
-  List<CoachSession>? sessions,
-}) async {
+Future<void> _pump(WidgetTester tester, {List<CoachSession>? sessions}) async {
   await tester.binding.setSurfaceSize(const Size(800, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
@@ -91,69 +88,69 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('트레이너가 잡은 오늘 PT 가 홈 일정에 나타난다', (
-    WidgetTester tester,
-  ) async {
-    await _pump(tester, sessions: <CoachSession>[_session()]);
+  // 홈 하단 오늘의 일정 카드는 지금 화면에 걸지 않았다 (#1055). 트레이너 세션을
+  // 내 일정과 섞는 규칙은 그 카드 안에 있어, 카드가 돌아올 때 이 검사도 함께
+  // 돌아온다 — 지우면 규칙이 무엇이었는지가 사라진다.
+  group('오늘의 일정 카드 (지금은 화면에서 내려 둠)', skip: '#1055 에서 주석 처리', () {
+    testWidgets('트레이너가 잡은 오늘 PT 가 홈 일정에 나타난다', (WidgetTester tester) async {
+      await _pump(tester, sessions: <CoachSession>[_session()]);
 
-    expect(find.text('1:1 PT'), findsOneWidget);
-    // 내가 만든 일정도 그대로 남는다.
-    expect(find.text('병원 정기검진'), findsOneWidget);
-  });
+      expect(find.text('1:1 PT'), findsOneWidget);
+      // 내가 만든 일정도 그대로 남는다.
+      expect(find.text('병원 정기검진'), findsOneWidget);
+    });
 
-  testWidgets('시간순으로 섞인다', (WidgetTester tester) async {
-    // '다음에 뭐가 있는지'를 한 번에 읽으려면 두 출처가 시간순이어야 한다.
-    await _pump(tester, sessions: <CoachSession>[_session()]);
+    testWidgets('시간순으로 섞인다', (WidgetTester tester) async {
+      // '다음에 뭐가 있는지'를 한 번에 읽으려면 두 출처가 시간순이어야 한다.
+      await _pump(tester, sessions: <CoachSession>[_session()]);
 
-    final double ptY = tester.getTopLeft(find.text('1:1 PT')).dy;
-    final double checkupY = tester.getTopLeft(find.text('병원 정기검진')).dy;
-    expect(ptY, lessThan(checkupY));
-  });
+      final double ptY = tester.getTopLeft(find.text('1:1 PT')).dy;
+      final double checkupY = tester.getTopLeft(find.text('병원 정기검진')).dy;
+      expect(ptY, lessThan(checkupY));
+    });
 
-  testWidgets('완료된 세션은 오늘의 일정에 남지 않는다', (WidgetTester tester) async {
-    await _pump(
-      tester,
-      sessions: <CoachSession>[_session(status: '완료')],
-    );
+    testWidgets('완료된 세션은 오늘의 일정에 남지 않는다', (WidgetTester tester) async {
+      await _pump(tester, sessions: <CoachSession>[_session(status: '완료')]);
 
-    expect(find.text('1:1 PT'), findsNothing);
-  });
+      expect(find.text('1:1 PT'), findsNothing);
+    });
 
-  testWidgets('다른 날 세션은 오늘에 끼어들지 않는다', (WidgetTester tester) async {
-    await _pump(
-      tester,
-      sessions: <CoachSession>[
-        _session(date: nowKst().add(const Duration(days: 3))),
-      ],
-    );
+    testWidgets('다른 날 세션은 오늘에 끼어들지 않는다', (WidgetTester tester) async {
+      await _pump(
+        tester,
+        sessions: <CoachSession>[
+          _session(date: nowKst().add(const Duration(days: 3))),
+        ],
+      );
 
-    expect(find.text('1:1 PT'), findsNothing);
-  });
+      expect(find.text('1:1 PT'), findsNothing);
+    });
 
-  testWidgets('날짜가 없는 세션은 걸러진다', (WidgetTester tester) async {
-    // 서버가 깨진 날짜를 줘도 화면이 흔들리지 않아야 한다.
-    await _pump(
-      tester,
-      sessions: <CoachSession>[
-        const CoachSession(
-          id: 'broken',
-          date: null,
-          time: '09:00',
-          type: '1:1 PT',
-          durationMinutes: 50,
-          status: '예정',
-        ),
-      ],
-    );
+    testWidgets('날짜가 없는 세션은 걸러진다', (WidgetTester tester) async {
+      // 서버가 깨진 날짜를 줘도 화면이 흔들리지 않아야 한다.
+      await _pump(
+        tester,
+        sessions: <CoachSession>[
+          const CoachSession(
+            id: 'broken',
+            date: null,
+            time: '09:00',
+            type: '1:1 PT',
+            durationMinutes: 50,
+            status: '예정',
+          ),
+        ],
+      );
 
-    expect(find.text('1:1 PT'), findsNothing);
-  });
+      expect(find.text('1:1 PT'), findsNothing);
+    });
 
-  testWidgets('데모 홈 일정은 지금과 같다', (WidgetTester tester) async {
-    // override 없이 — 데모는 목 저장소가 빈 목록을 주므로 카드가 그대로다.
-    await _pump(tester);
+    testWidgets('데모 홈 일정은 지금과 같다', (WidgetTester tester) async {
+      // override 없이 — 데모는 목 저장소가 빈 목록을 주므로 카드가 그대로다.
+      await _pump(tester);
 
-    expect(find.text('병원 정기검진'), findsOneWidget);
-    expect(find.text('1:1 PT'), findsNothing);
+      expect(find.text('병원 정기검진'), findsOneWidget);
+      expect(find.text('1:1 PT'), findsNothing);
+    });
   });
 }

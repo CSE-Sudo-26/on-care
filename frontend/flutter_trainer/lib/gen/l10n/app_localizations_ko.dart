@@ -1254,6 +1254,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
+  String get schedDetailTitle => '상세 스케줄';
+
+  @override
   String get schedDeleteTitle => '일정 삭제';
 
   @override

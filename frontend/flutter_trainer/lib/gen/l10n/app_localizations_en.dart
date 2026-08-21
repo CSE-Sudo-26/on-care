@@ -1309,6 +1309,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedTitle => 'Schedule';
 
   @override
+  String get schedDetailTitle => 'Session detail';
+
+  @override
   String get schedDeleteTitle => 'Delete session';
 
   @override
