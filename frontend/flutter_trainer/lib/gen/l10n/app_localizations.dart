@@ -2336,6 +2336,12 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get schedTitle;
 
+  /// No description provided for @schedDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session detail'**
+  String get schedDetailTitle;
+
   /// No description provided for @schedDeleteTitle.
   ///
   /// In en, this message translates to:
