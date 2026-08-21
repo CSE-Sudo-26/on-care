@@ -587,6 +587,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exActivityTitle => '운동 현황';
 
   @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return '$month월 $week주차';
+  }
+
+  @override
+  String get exBurnTodayTitle => '오늘 소모';
+
+  @override
+  String get exBurnWeekTitle => '이번 주 소모';
+
+  @override
+  String get exBurnAllTitle => '평균 소모';
+
+  @override
+  String get exLoadDayTitle => '소모';
+
+  @override
+  String exGoalValue(String value) {
+    return '목표 $value';
+  }
+
+  @override
+  String get exLoadEmpty => '아직 기록이 없어요.';
+
+  @override
   String get exThisWeek => '이번 주';
 
   @override

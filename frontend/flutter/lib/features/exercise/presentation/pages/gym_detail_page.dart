@@ -278,8 +278,7 @@ Future<void> _pickTrainerForConsultation(BuildContext context, Gym gym) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (BuildContext sheetContext) =>
-        _TrainerPickerSheet(gym: gym),
+    builder: (BuildContext sheetContext) => _TrainerPickerSheet(gym: gym),
   );
 }
 

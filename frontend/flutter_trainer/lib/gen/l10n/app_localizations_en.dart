@@ -1138,6 +1138,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientPeriodGoal => 'Goal';
 
   @override
+  String get exBurnTodayTitle => 'Burned today';
+
+  @override
+  String get exBurnWeekTitle => 'Burned this week';
+
+  @override
+  String get exBurnMonthTitle => 'Burned this month';
+
+  @override
+  String get exBurnDayTitle => 'Burned';
+
+  @override
+  String get exTypeOther => 'Other';
+
+  @override
+  String exSetsValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String clientPeriodLoggedDays(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,
