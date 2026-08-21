@@ -1661,7 +1661,7 @@
   "unitGram": "g",
   "a11yRemoveExercise": "Remove exercise",
   "a11yRemoveCertification": "Remove certification",
-  "a11yPrevDay": "Previous day",
-  "a11yNextDay": "Next day",
+  "a11yPrevWeek": "Previous week",
+  "a11yNextWeek": "Next week",
   "a11ySendMessage": "Send message"
 }

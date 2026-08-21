@@ -77,7 +77,9 @@ class _ClientMemoDialogState extends ConsumerState<ClientMemoDialog> {
     } on AppError catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
-      _toast(serverDetailOr(AppLocalizations.of(context), error.message, fallback));
+      _toast(
+        serverDetailOr(AppLocalizations.of(context), error.message, fallback),
+      );
     } on Object {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -86,7 +88,9 @@ class _ClientMemoDialogState extends ConsumerState<ClientMemoDialog> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _add() async {

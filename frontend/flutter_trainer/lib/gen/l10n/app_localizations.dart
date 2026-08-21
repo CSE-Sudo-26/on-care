@@ -5600,17 +5600,17 @@ abstract class AppLocalizations {
   /// **'Remove certification'**
   String get a11yRemoveCertification;
 
-  /// No description provided for @a11yPrevDay.
+  /// No description provided for @a11yPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous day'**
-  String get a11yPrevDay;
+  /// **'Previous week'**
+  String get a11yPrevWeek;
 
-  /// No description provided for @a11yNextDay.
+  /// No description provided for @a11yNextWeek.
   ///
   /// In en, this message translates to:
-  /// **'Next day'**
-  String get a11yNextDay;
+  /// **'Next week'**
+  String get a11yNextWeek;
 
   /// No description provided for @a11ySendMessage.
   ///

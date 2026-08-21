@@ -72,9 +72,8 @@ class LocalTrainerProgramDraftRepository
   Future<List<TrainerProgramDraftSummary>> list() async {
     final drafts = _read()
       ..sort(
-        (a, b) => (b['updated_at']! as String).compareTo(
-          a['updated_at']! as String,
-        ),
+        (a, b) =>
+            (b['updated_at']! as String).compareTo(a['updated_at']! as String),
       );
     return drafts
         .map(
@@ -86,17 +85,17 @@ class LocalTrainerProgramDraftRepository
             sessionCount:
                 ((draft['sessions'] as List<Object?>?) ?? const <Object?>[])
                     .length,
-            exerciseCount: ((draft['sessions'] as List<Object?>?) ??
-                    const <Object?>[])
-                .fold<int>(
-                  0,
-                  (count, session) =>
-                      count +
-                      (((session! as Map<Object?, Object?>)['exercises']
-                                  as List<Object?>?) ??
-                              const <Object?>[])
-                          .length,
-                ),
+            exerciseCount:
+                ((draft['sessions'] as List<Object?>?) ?? const <Object?>[])
+                    .fold<int>(
+                      0,
+                      (count, session) =>
+                          count +
+                          (((session! as Map<Object?, Object?>)['exercises']
+                                      as List<Object?>?) ??
+                                  const <Object?>[])
+                              .length,
+                    ),
             updatedAt: DateTime.parse(draft['updated_at']! as String),
           ),
         )
