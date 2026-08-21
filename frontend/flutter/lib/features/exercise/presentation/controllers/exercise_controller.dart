@@ -51,6 +51,97 @@ final exercisePastWeekProvider = FutureProvider.family<ExerciseWeek, DateTime>((
   return ref.watch(exerciseRepositoryProvider).fetchWeek(weekStart);
 }, name: 'exercisePastWeek');
 
+/// `전체` 기간이 거슬러 올라가는 주 수. 12주 — 데모 픽스처가 들고 있는 기간이자
+/// 식단 `전체` 와 같은 길이다. 화면에는 한 번에 30일이 보이고 나머지는 옆으로
+/// 밀어 본다. (#1018)
+const int kExerciseAllPeriodWeeks = 12;
+
+/// `전체` 그래프의 하루치.
+class ExerciseDayBar {
+  const ExerciseDayBar({
+    required this.date,
+    required this.cardio,
+    required this.strength,
+    required this.stretching,
+    required this.minutes,
+    required this.calories,
+  });
+
+  final DateTime date;
+  final double cardio;
+  final double strength;
+  final double stretching;
+  final double minutes;
+  final double calories;
+}
+
+/// `전체` 기간의 일별 운동. 최근 [kExerciseAllPeriodWeeks] 주를 주 단위로 읽어
+/// 이어 붙인다 — 서버가 운동 이력을 주 단위로 들고 있어서다(트레이너 화면도
+/// 같은 방식으로 읽는다).
+///
+/// 이번 주만 [exerciseWeekViewProvider] 에서 가져온다. 오늘 체크한 AI 추천 운동이
+/// 더해진 값과 두 벌이 되면 같은 주가 화면마다 다른 수치를 갖는다(#671).
+final exerciseAllPeriodProvider = FutureProvider<List<ExerciseDayBar>>((
+  ref,
+) async {
+  final DateTime today = DateTime(
+    nowKst().year,
+    nowKst().month,
+    nowKst().day,
+  );
+  final DateTime thisMonday = mondayOfWeek(today);
+
+  // watch 는 await 이전에 모두 걸어 둔다 — 한 주라도 바뀌면 전체도 다시
+  // 계산되고, 요청은 순차가 아니라 한꺼번에 나간다.
+  final List<Future<ExerciseWeek>> pending = <Future<ExerciseWeek>>[
+    for (int back = kExerciseAllPeriodWeeks - 1; back >= 1; back--)
+      ref.watch(
+        exercisePastWeekProvider(
+          DateTime(
+            thisMonday.year,
+            thisMonday.month,
+            thisMonday.day - back * 7,
+          ),
+        ).future,
+      ),
+  ];
+  final List<ExerciseWeek> past = await Future.wait(pending);
+  final ExerciseWeek current = await ref.watch(exerciseWeekProvider.future);
+  final ExerciseWeek thisWeek = applyTodayBonus(
+    current,
+    ref.watch(exerciseTodayBonusProvider),
+  );
+
+  double at(List<double> xs, int i) => i < xs.length ? xs[i] : 0;
+
+  final List<ExerciseDayBar> days = <ExerciseDayBar>[];
+  for (int w = 0; w < past.length + 1; w++) {
+    final ExerciseWeek week = w < past.length ? past[w] : thisWeek;
+    final int back = kExerciseAllPeriodWeeks - 1 - w;
+    final DateTime monday = DateTime(
+      thisMonday.year,
+      thisMonday.month,
+      thisMonday.day - back * 7,
+    );
+    for (int d = 0; d < 7; d++) {
+      final DateTime date = DateTime(monday.year, monday.month, monday.day + d);
+      // 아직 오지 않은 날은 칸을 만들지 않는다 — 빈 칸이 "안 했다" 로 읽힌다.
+      if (date.isAfter(today)) break;
+      days.add(
+        ExerciseDayBar(
+          date: date,
+          cardio: at(week.cardioMinutes, d),
+          strength: at(week.strengthMinutes, d),
+          stretching: at(week.stretchingMinutes, d),
+          minutes: at(week.dailyMinutes, d),
+          calories: at(week.dailyCalories, d),
+        ),
+      );
+    }
+  }
+  return days;
+}, name: 'exerciseAllPeriod');
+
 /// Today's activity delta for one AI recommendation. Shared so the exercise
 /// tab's check and the home "주간 추이" chart read the same numbers.
 class AiRoutineDelta {

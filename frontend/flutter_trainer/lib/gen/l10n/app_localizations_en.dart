@@ -1129,7 +1129,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientPeriodWeek => 'This week';
 
   @override
-  String get clientPeriodMonth => 'This month';
+  String get clientPeriodMonth => 'All';
 
   @override
   String get clientPeriodAverage => 'Daily average';

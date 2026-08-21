@@ -122,6 +122,7 @@ def _payload(*, trainer_id: str | None = None) -> dict:
         "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
         "preferred_time_slot": "afternoon",
         "message": "  상담을 받고 싶습니다.  ",
+        "data_sharing_consent": True,
     }
 
 

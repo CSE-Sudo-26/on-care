@@ -2063,7 +2063,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientPeriodMonth.
   ///
   /// In en, this message translates to:
-  /// **'This month'**
+  /// **'All'**
   String get clientPeriodMonth;
 
   /// No description provided for @clientPeriodAverage.

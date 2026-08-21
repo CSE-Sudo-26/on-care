@@ -194,23 +194,27 @@ void main() {
       () async {
         final repo = DriftChatRepository(db);
 
-        // 이지수 · 박성호 are waiting on a reply; 김민수's thread is
-        // seeded already answered and read, so he has no badge.
+        // 오세라 · 배준혁 are waiting on a reply — their threads end with
+        // a member message (오세라's with two in a row). 김민수 · 이지수 ·
+        // 박성호 end with the trainer's reply, so the seed marks them read
+        // and they have no badge.
         var counts = await repo.watchUnreadCounts().first;
         expect(counts.containsKey('seed-client-1'), isFalse);
-        expect(counts['seed-client-2'], 1);
-        expect(counts['seed-client-3'], 1);
-
-        // Opening 이지수's thread clears her badge only.
-        await repo.markThreadRead('seed-client-2');
-        counts = await repo.watchUnreadCounts().first;
         expect(counts.containsKey('seed-client-2'), isFalse);
-        expect(counts['seed-client-3'], 1);
+        expect(counts.containsKey('seed-client-3'), isFalse);
+        expect(counts['seed-client-8'], 2);
+        expect(counts['seed-client-9'], 1);
+
+        // Opening 오세라's thread clears her badge only.
+        await repo.markThreadRead('seed-client-8');
+        counts = await repo.watchUnreadCounts().first;
+        expect(counts.containsKey('seed-client-8'), isFalse);
+        expect(counts['seed-client-9'], 1);
 
         // A trainer message never counts as unread.
-        await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '확인!');
+        await repo.sendTrainerMessage(clientId: 'seed-client-8', text: '확인!');
         counts = await repo.watchUnreadCounts().first;
-        expect(counts.containsKey('seed-client-2'), isFalse);
+        expect(counts.containsKey('seed-client-8'), isFalse);
 
         // A NEW client reply after the marker counts again.
         await db
@@ -218,7 +222,7 @@ void main() {
             .insert(
               ClientChatMessagesCompanion.insert(
                 id: 'chat-reply-1',
-                clientId: 'seed-client-2',
+                clientId: 'seed-client-8',
                 sender: 'client',
                 body: '네 감사합니다!',
                 timeLabel: '09:00',
@@ -226,7 +230,7 @@ void main() {
               ),
             );
         counts = await repo.watchUnreadCounts().first;
-        expect(counts['seed-client-2'], 1);
+        expect(counts['seed-client-8'], 1);
       },
     );
 

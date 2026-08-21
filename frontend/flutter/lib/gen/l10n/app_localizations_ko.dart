@@ -613,7 +613,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exThisWeek => '이번 주';
 
   @override
-  String get exThisMonth => '이번 달';
+  String get exPeriodAll => '전체';
 
   @override
   String get exExerciseContent => '운동 내용';
@@ -657,6 +657,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exUnitStreakDays => '일 연속';
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '오늘 운동으로 연속 기록을 시작해 봐요.';
 
   @override
   String get exToday => '오늘';
@@ -1253,6 +1261,24 @@ class AppLocalizationsKo extends AppLocalizations {
       '요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.';
 
   @override
+  String get exConsultDataSharingAgree =>
+      '위 내용을 확인했고, 식단·운동 기록과 신체 정보를 이 트레이너에게 공유하는 데 동의해요';
+
+  @override
+  String get exConsultDataSharingRequired => '공유에 동의해야 상담을 신청할 수 있어요';
+
+  @override
+  String get coachInviteConsentTitle => '담당 연결 전에 확인해 주세요';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return '$name 트레이너와 담당으로 연결되면, 회원님의 식단 기록·운동 기록·신체 정보와 건강 목표를 이 트레이너가 볼 수 있어요. 연결을 해제하면 열람 권한도 함께 사라져요.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => '동의하고 연결';
+
+  @override
   String get exExerciseGoal => '운동 목표';
 
   @override
@@ -1783,6 +1809,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachRoutineDone => '수행 완료';
 
   @override
+  String get coachRoutineCancel => '이 개인 운동 취소';
+
+  @override
+  String coachRoutineCancelConfirm(String name) {
+    return '\'$name\'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.';
+  }
+
+  @override
+  String get coachRoutineCancelled => '개인 운동을 취소했어요';
+
+  @override
+  String get coachRoutineCancelFailed => '개인 운동을 취소하지 못했어요';
+
+  @override
   String coachRoutineMyNote(String note) {
     return '내 메모: $note';
   }
@@ -1866,6 +1906,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exPtFeedbackTitle => '오늘의 피드백';
+
+  @override
+  String exNextPtSchedule(String when) {
+    return '다음 PT · $when';
+  }
+
+  @override
+  String get exNextPtNone => '다음 PT 일정이 아직 없어요';
 
   @override
   String exDatedTitle(int month, int day, String title) {
