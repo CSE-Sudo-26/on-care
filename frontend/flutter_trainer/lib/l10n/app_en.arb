@@ -685,17 +685,6 @@
     }
   },
   "schedEmptyWeek": "Nothing scheduled this week.",
-  "schedBlockTime": "{range} ({duration})",
-  "@schedBlockTime": {
-    "placeholders": {
-      "range": {
-        "type": "String"
-      },
-      "duration": {
-        "type": "String"
-      }
-    }
-  },
   "schedSlots": "Booking slots",
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",

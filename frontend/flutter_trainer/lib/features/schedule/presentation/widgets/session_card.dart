@@ -131,10 +131,10 @@ class SessionCard extends ConsumerWidget {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          l.schedBlockTime(
-                            _timeRange(l, s),
-                            l.minutesShort(s.durationMinutes),
-                          ),
+                          // 소요 시간(`(50분)`)은 적지 않는다 — 시작·끝 시각이
+                          // 이미 그 값을 말하고 있어, 옆에 다시 적으면 같은
+                          // 사실을 두 번 읽게 된다.
+                          _timeRange(l, s),
                           maxLines: 1,
                           style: TextStyle(
                             // 시각은 이 카드에서 가장 먼저 읽는 값이다 —

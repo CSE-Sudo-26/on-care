@@ -128,10 +128,10 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('week-detail')),
-        matching: find.text('10:00\u201311:00 (60분)'),
+        matching: find.text('10:00\u201311:00'),
       ),
       findsOneWidget,
-      reason: '시각은 자르지 않고 소요 시간은 괄호로 붙는다',
+      reason: '시각은 자르지 않는다 — 소요 시간은 옆에 다시 적지 않는다',
     );
   });
 }
