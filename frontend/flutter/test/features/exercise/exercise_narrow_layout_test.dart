@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
@@ -118,15 +119,9 @@ void main() {
       // 식단 탭에서 같은 자리가 가운데로 밀렸던 적이 있다(#761).
       await pumpExercise(tester, lang: 'ko', size: const Size(800, 3000));
 
-      final AppLocalizations l = AppLocalizations.of(
-        tester.element(find.byType(ExercisePage)),
+      final Finder row = find.byKey(
+        const ValueKey<String>('exercise-section-header'),
       );
-      final Finder row = find
-          .ancestor(
-            of: find.text(l.exActivityTitle),
-            matching: find.byType(Row),
-          )
-          .first;
       final Finder toggle = find.byKey(
         const ValueKey<String>('exercise-period-toggle'),
       );
@@ -136,9 +131,10 @@ void main() {
         tester.getRect(toggle).right,
         moreOrLessEquals(tester.getRect(row).right, epsilon: 0.5),
       );
-      // 제목은 여전히 줄 왼쪽에 있다 — 둘이 가운데로 몰리지 않는다.
+      // 제목은 여전히 줄 왼쪽에 있다 — 둘이 가운데로 몰리지 않는다. 제목
+      // 왼쪽에는 이제 아이콘이 붙으므로 제목 묶음 전체로 잰다. (#1058)
       expect(
-        tester.getRect(find.text(l.exActivityTitle)).left,
+        tester.getRect(find.byType(SectionTitle).first).left,
         moreOrLessEquals(tester.getRect(row).left, epsilon: 0.5),
       );
     });

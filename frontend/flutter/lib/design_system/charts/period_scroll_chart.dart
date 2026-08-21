@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 
 /// `전체` 그래프의 선택·보이는 구간 상태. (#1018)
@@ -181,21 +182,42 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                           left: slot * widget.selectedIndex! + slot / 2,
                           height: widget.height,
                         ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: <Widget>[
-                          for (int i = 0; i < widget.count; i++)
-                            SizedBox(
-                              width: slot,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => widget.onSelected?.call(
-                                  widget.selectedIndex == i ? null : i,
+                      // 막대는 바닥에서 자라 오른다 (#1058). 기간을 바꿔 들어온
+                      // 그림이 그냥 나타나면, 다른 기간에서 넘어왔는지 처음부터
+                      // 그랬는지 구분되지 않는다.
+                      //
+                      // 되감기는 칸 수가 바뀔 때만 한다 — 막대를 고를 때마다
+                      // 다시 자라면 눌러 읽는 동작을 방해한다.
+                      ChartReveal(
+                        replayKey: widget.count,
+                        builder: (BuildContext context, double t) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: <Widget>[
+                            for (int i = 0; i < widget.count; i++)
+                              SizedBox(
+                                width: slot,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => widget.onSelected?.call(
+                                    widget.selectedIndex == i ? null : i,
+                                  ),
+                                  // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
+                                  // 자르지 않으면 막대가 줄어든 상자 밖으로
+                                  // 삐져나와 그대로 다 보인다.
+                                  child: ClipRect(
+                                    key: ValueKey<String>(
+                                      'period-bar-reveal-$i',
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.bottomCenter,
+                                      heightFactor: t,
+                                      child: widget.barBuilder(context, i),
+                                    ),
+                                  ),
                                 ),
-                                child: widget.barBuilder(context, i),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),

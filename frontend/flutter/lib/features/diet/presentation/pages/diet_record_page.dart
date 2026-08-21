@@ -5,6 +5,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -151,7 +152,11 @@ DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
     // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
     // 추세를 볼 수 없다.
     return (
-      from: DateTime(today.year, today.month, today.day - kDietAllPeriodDays + 1),
+      from: DateTime(
+        today.year,
+        today.month,
+        today.day - kDietAllPeriodDays + 1,
+      ),
       to: DateTime(today.year, today.month, today.day),
     );
   }
@@ -387,9 +392,16 @@ class _PeriodToggle extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
+                    // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
+                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
+                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
+                    // (#1058)
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3
+                          ? 12
+                          : 18,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: active == tab
@@ -464,15 +476,9 @@ class _NutritionSectionHeader extends StatelessWidget {
           Flexible(
             child: Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text(
-                l.dietNutritionSummary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
+              child: SectionTitle(
+                icon: Icons.restaurant_outlined,
+                label: l.dietNutritionSummary,
               ),
             ),
           ),
@@ -822,13 +828,9 @@ class NutritionSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (showHeader) ...<Widget>[
-            Text(
-              l.dietNutritionSummary,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
+            SectionTitle(
+              icon: Icons.restaurant_outlined,
+              label: l.dietNutritionSummary,
             ),
             const SizedBox(height: 10),
           ],
