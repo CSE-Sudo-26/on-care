@@ -579,7 +579,7 @@
   },
   "clientPeriodToday": "Today",
   "clientPeriodWeek": "This week",
-  "clientPeriodMonth": "This month",
+  "clientPeriodMonth": "All",
   "clientPeriodAverage": "Daily average",
   "clientPeriodGoal": "Goal",
   "clientPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
@@ -691,11 +691,6 @@
         "type": "String"
       },
       "duration": {
-        "type": "String"
-      }
-    }
-  },
-      "type": {
         "type": "String"
       }
     }

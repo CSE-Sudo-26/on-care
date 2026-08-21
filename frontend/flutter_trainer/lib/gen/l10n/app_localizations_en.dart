@@ -1129,7 +1129,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientPeriodWeek => 'This week';
 
   @override
-  String get clientPeriodMonth => 'This month';
+  String get clientPeriodMonth => 'All';
 
   @override
   String get clientPeriodAverage => 'Daily average';
@@ -1332,11 +1332,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String schedBlockTime(String range, String duration) {
     return '$range ($duration)';
-  }
-
-  @override
-  String schedBlockWho(String name, String type) {
-    return '$name $type';
   }
 
   @override

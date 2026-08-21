@@ -22,6 +22,13 @@ abstract interface class MemberCoachRepository {
     String memberNote = '',
   });
 
+  /// 개인 운동을 취소한다. **담당 트레이너가 없을 때만** 서버가 받아 준다 —
+  /// 담당이 배정한 것을 회원이 조용히 없애면 다음 상담에서 둘이 서로 다른
+  /// 기록을 본다. (#1020)
+  ///
+  /// 이미 수행한 기록은 남는다. 지우는 것은 배정이지 한 일이 아니다.
+  Future<void> deleteRoutine(String routineId);
+
   /// PT sessions the coach booked. The trainer owns the schedule — the
   /// member reads it only. (#490)
   Future<List<CoachSession>> fetchSessions();
@@ -46,7 +53,11 @@ abstract interface class MemberCoachRepository {
   Future<List<CoachInvite>> fetchInvites();
 
   /// 요청을 수락한다 — 담당 관계는 이 호출로 생긴다.
-  Future<void> acceptInvite(String inviteId);
+  /// 담당 요청을 수락한다 — 담당 링크가 여기서 생긴다.
+  ///
+  /// [dataSharingConsent] 없이는 서버가 400 으로 막는다. 수락하는 순간
+  /// 트레이너가 회원의 식단·운동·신체 정보를 읽기 때문이다. (#1022)
+  Future<void> acceptInvite(String inviteId, {required bool dataSharingConsent});
 
   /// 요청을 거절한다. 담당은 생기지 않는다.
   Future<void> rejectInvite(String inviteId);

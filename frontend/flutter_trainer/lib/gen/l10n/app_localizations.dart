@@ -2063,7 +2063,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientPeriodMonth.
   ///
   /// In en, this message translates to:
-  /// **'This month'**
+  /// **'All'**
   String get clientPeriodMonth;
 
   /// No description provided for @clientPeriodAverage.
@@ -2371,12 +2371,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{range} ({duration})'**
   String schedBlockTime(String range, String duration);
-
-  /// No description provided for @schedBlockWho.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} {type}'**
-  String schedBlockWho(String name, String type);
 
   /// No description provided for @schedEmptyWeek.
   ///

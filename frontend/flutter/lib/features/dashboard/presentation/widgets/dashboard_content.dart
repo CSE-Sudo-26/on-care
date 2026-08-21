@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
@@ -865,6 +866,9 @@ class _ExerciseCard extends ConsumerWidget {
                   child: _ExerciseTrend(
                     weekAsync: weekAsync,
                     todayIndex: todayIdx,
+                    // 하루 목표. 목표는 주 단위로만 세우므로 7 로 나눈다 —
+                    // 식단 그래프가 하루 목표를 그리는 것과 같은 뜻이다. (#1015)
+                    dailyGoalCalories: goals.burnCalories / 7,
                     // 되짚는 대상은 파생 provider 가 아니라 실제로 서버를
                     // 부르는 쪽이다 — 뷰만 무효화하면 캐시된 에러가 그대로
                     // 다시 계산돼 아무 일도 일어나지 않는다.
@@ -891,10 +895,14 @@ class _ExerciseTrend extends StatelessWidget {
   const _ExerciseTrend({
     required this.weekAsync,
     required this.todayIndex,
+    required this.dailyGoalCalories,
     required this.onRetry,
   });
 
   final AsyncValue<ExerciseWeek> weekAsync;
+
+  /// 하루 목표 소모 칼로리 — 주간 목표 ÷ 7. (#1015)
+  final double dailyGoalCalories;
 
   /// 오늘 요일(0=월 … 6=일).
   final int todayIndex;
@@ -982,6 +990,11 @@ class _ExerciseTrend extends StatelessWidget {
                     hi: hi,
                     todayIndex: todayIndex,
                     color: FigmaColors.primary,
+                    goal: dailyGoalCalories,
+                    goalLabel:
+                        '${l.homeGoal} '
+                        '${NumberFormat('#,###').format(dailyGoalCalories.round())}',
+                    textDirection: Directionality.of(context),
                     progress: t,
                   ),
                 ),
@@ -1347,6 +1360,9 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.hi,
     required this.todayIndex,
     required this.color,
+    required this.goal,
+    required this.goalLabel,
+    required this.textDirection,
     this.progress = 1,
   });
 
@@ -1357,6 +1373,11 @@ class _ExerciseBarPainter extends CustomPainter {
   /// 오늘 요일 인덱스(0=월 … 6=일). 마지막 막대 고정이 아니라 이 막대를 강조한다.
   final int todayIndex;
   final Color color;
+
+  /// 하루 목표 소모 칼로리와 라벨. 가로선은 이 목표선 하나뿐이다 (#1015).
+  final double goal;
+  final String goalLabel;
+  final ui.TextDirection textDirection;
 
   /// 0 → 1 진입 애니메이션 진행도(선형). 막대는 월요일부터 차례로 바닥에서
   /// 자라 오르고, 값 라벨은 해당 막대와 함께 페이드인한다.
@@ -1372,13 +1393,20 @@ class _ExerciseBarPainter extends CustomPainter {
     final double barW = math.min(slot * 0.5, 22);
     const double labelGap = 20;
 
-    canvas.drawLine(
-      Offset(0, h - 0.5),
-      Offset(w, h - 0.5),
-      Paint()
-        ..color = const Color(0xFFEFF3F7)
-        ..strokeWidth = 1,
-    );
+    // 가로선은 목표선 하나다 (#1015). 바닥에 긋던 축선은 지운다 — 막대가
+    // 이미 바닥을 그리고, 두 선이 같은 굵기라 어느 쪽이 목표인지 헷갈렸다.
+    final double span2 = span;
+    final double goalY = h - ((goal - lo) / span2) * (h - labelGap);
+    if (goal > lo && goal < hi) {
+      ChartGoalLine.paint(canvas, y: goalY, left: 0, right: w);
+      ChartGoalLine.paintLabel(
+        canvas,
+        y: goalY,
+        right: w,
+        text: goalLabel,
+        textDirection: textDirection,
+      );
+    }
 
     for (int i = 0; i < n; i++) {
       final double v = data[i];

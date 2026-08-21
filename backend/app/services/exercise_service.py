@@ -114,6 +114,22 @@ def _bucket(t: str) -> str:
     return exercise_types.normalize(t)
 
 
+#: 프로필에 목표가 없을 때 쓰는 기본값. 회원 앱의 `UserProfile` 기본값과 같다 —
+#: 두 앱이 다른 기본값을 쓰면 같은 회원의 그래프에 다른 목표선이 그려진다.
+DEFAULT_WEEKLY_MINUTES_GOAL = 150
+DEFAULT_WEEKLY_BURN_GOAL = 500
+
+
+def weekly_goals(profile) -> tuple[int, int]:
+    """(주간 운동 시간 목표, 주간 소모 칼로리 목표). 프로필이 없으면 기본값."""
+    minutes = getattr(profile, "weekly_exercise_minutes_goal", None)
+    calories = getattr(profile, "weekly_burn_goal", None)
+    return (
+        minutes if minutes and minutes > 0 else DEFAULT_WEEKLY_MINUTES_GOAL,
+        calories if calories and calories > 0 else DEFAULT_WEEKLY_BURN_GOAL,
+    )
+
+
 def _longest_streak(daily: list[int]) -> int:
     """'N일 연속' — 운동한 요일 중 가장 긴 연속 구간의 길이.
 

@@ -1214,11 +1214,11 @@ abstract class AppLocalizations {
   /// **'This week'**
   String get exThisWeek;
 
-  /// No description provided for @exThisMonth.
+  /// No description provided for @exPeriodAll.
   ///
   /// In en, this message translates to:
-  /// **'This month'**
-  String get exThisMonth;
+  /// **'All'**
+  String get exPeriodAll;
 
   /// No description provided for @exExerciseContent.
   ///
@@ -1297,6 +1297,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'day streak'**
   String get exUnitStreakDays;
+
+  /// No description provided for @exStreakCheer.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days in a row!'**
+  String exStreakCheer(int days);
+
+  /// No description provided for @exStreakStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a streak with today\'s workout.'**
+  String get exStreakStart;
 
   /// No description provided for @exToday.
   ///
@@ -2378,6 +2390,36 @@ abstract class AppLocalizations {
   /// **'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.'**
   String get exConsultDataSharingNotice;
 
+  /// No description provided for @exConsultDataSharingAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read this and agree to share my meal and workout records and body information with this trainer'**
+  String get exConsultDataSharingAgree;
+
+  /// No description provided for @exConsultDataSharingRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please agree to sharing before requesting a consultation'**
+  String get exConsultDataSharingRequired;
+
+  /// No description provided for @coachInviteConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Before you connect'**
+  String get coachInviteConsentTitle;
+
+  /// No description provided for @coachInviteConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once {name} becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.'**
+  String coachInviteConsentBody(String name);
+
+  /// No description provided for @coachInviteConsentAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree and connect'**
+  String get coachInviteConsentAgree;
+
   /// No description provided for @exExerciseGoal.
   ///
   /// In en, this message translates to:
@@ -3410,6 +3452,30 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get coachRoutineDone;
 
+  /// No description provided for @coachRoutineCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this workout'**
+  String get coachRoutineCancel;
+
+  /// No description provided for @coachRoutineCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove \'{name}\' from the list? Anything you already logged stays.'**
+  String coachRoutineCancelConfirm(String name);
+
+  /// No description provided for @coachRoutineCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout cancelled'**
+  String get coachRoutineCancelled;
+
+  /// No description provided for @coachRoutineCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel the workout'**
+  String get coachRoutineCancelFailed;
+
   /// The member's own note on a completed routine.
   ///
   /// In en, this message translates to:
@@ -3571,6 +3637,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today\'s feedback'**
   String get exPtFeedbackTitle;
+
+  /// No description provided for @exNextPtSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Next PT · {when}'**
+  String exNextPtSchedule(String when);
+
+  /// No description provided for @exNextPtNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No PT scheduled yet'**
+  String get exNextPtNone;
 
   /// Screen title carrying the selected date.
   ///

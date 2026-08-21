@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 
 /// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
 const Color kMetricTrendLine = Color(0xFFDDE2E8);
@@ -307,19 +308,8 @@ class MetricTrendPainter extends CustomPainter {
     // 목표(범위를 벗어난 주)는 그리지 않는다 — 가장자리에 붙어 테두리처럼
     // 보인다.
     if (goal > 0 && goal >= lo && goal <= hi) {
-      final goalY = dy(goal);
-      final Paint dash = Paint()
-        ..color = AppColors.mutedForeground.withValues(alpha: 0.45)
-        ..strokeWidth = 1;
-      const double dashW = 4;
-      const double gapW = 3;
-      for (double x = 0; x < w; x += dashW + gapW) {
-        canvas.drawLine(
-          Offset(x, goalY),
-          Offset(math.min(x + dashW, w), goalY),
-          dash,
-        );
-      }
+      // 네 그래프가 같은 모양의 목표선을 쓴다 (#1015).
+      ChartGoalLine.paint(canvas, y: dy(goal), left: 0, right: w);
     }
 
     final lastIdx = todayIndex.clamp(0, cur.length - 1);

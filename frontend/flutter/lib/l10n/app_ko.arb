@@ -218,7 +218,7 @@
   "exWeekSummary": "이번 주 운동 요약",
   "exActivityTitle": "운동 현황",
   "exThisWeek": "이번 주",
-  "exThisMonth": "이번 달",
+  "exPeriodAll": "전체",
   "exExerciseContent": "운동 내용",
   "exViewDetail": "상세보기",
   "exRegister": "등록하기",
@@ -232,6 +232,11 @@
   "exStatCalories": "칼로리",
   "exStatStreak": "연속",
   "exUnitStreakDays": "일 연속",
+  "exStreakCheer": "{days}일 연속 운동 중이에요!",
+  "@exStreakCheer": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "exStreakStart": "오늘 운동으로 연속 기록을 시작해 봐요.",
   "exToday": "오늘",
   "exLoadError": "운동 정보를 불러오지 못했어요.",
   "exCompletedPtTitle": "오늘 완료한 PT",
@@ -466,6 +471,14 @@
   "exTrainerConsultType": "트레이너 상담",
   "exAssignedTrainer": "담당 트레이너",
   "exConsultDataSharingNotice": "요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.",
+  "exConsultDataSharingAgree": "위 내용을 확인했고, 식단·운동 기록과 신체 정보를 이 트레이너에게 공유하는 데 동의해요",
+  "exConsultDataSharingRequired": "공유에 동의해야 상담을 신청할 수 있어요",
+  "coachInviteConsentTitle": "담당 연결 전에 확인해 주세요",
+  "coachInviteConsentBody": "{name} 트레이너와 담당으로 연결되면, 회원님의 식단 기록·운동 기록·신체 정보와 건강 목표를 이 트레이너가 볼 수 있어요. 연결을 해제하면 열람 권한도 함께 사라져요.",
+  "@coachInviteConsentBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachInviteConsentAgree": "동의하고 연결",
   "exExerciseGoal": "운동 목표",
   "exGoalWeightLoss": "체중 감량",
   "exGoalStrength": "근력 향상",
@@ -638,6 +651,13 @@
   "coachRoutineNetworkError": "네트워크 연결을 확인하고 다시 시도해 주세요",
   "coachRoutineLogFailed": "완료 기록에 실패했어요.",
   "coachRoutineDone": "수행 완료",
+  "coachRoutineCancel": "이 개인 운동 취소",
+  "coachRoutineCancelConfirm": "'{name}'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.",
+  "@coachRoutineCancelConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineCancelled": "개인 운동을 취소했어요",
+  "coachRoutineCancelFailed": "개인 운동을 취소하지 못했어요",
   "coachRoutineMyNote": "내 메모: {note}",
   "coachRoutineTrainerFeedback": "트레이너 피드백: {feedback}",
   "coachRoutineCompleteTitle": "루틴 수행 완료",
@@ -665,6 +685,11 @@
   "alertJustNow": "방금",
   "exPtLogTitle": "오늘 완료한 PT",
   "exPtFeedbackTitle": "오늘의 피드백",
+  "exNextPtSchedule": "다음 PT · {when}",
+  "@exNextPtSchedule": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "exNextPtNone": "다음 PT 일정이 아직 없어요",
   "exDatedTitle": "{month}월 {day}일 {title}",
   "a11yChartSummary": "{title}. {detail}",
   "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},
