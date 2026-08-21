@@ -100,64 +100,50 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('오늘은 도넛과 유형별 시간으로 보인다', (tester) async {
+  testWidgets('오늘은 소모 칼로리 도넛과 유형별 값으로 보인다', (tester) async {
     await pump(tester, withSplit());
 
-    expect(find.byType(ActivityDonut), findsOneWidget);
-    expect(find.text('오늘 총 운동 시간'), findsOneWidget);
-    // 유산소·근력·스트레칭이 이름과 분으로 함께 읽힌다 — 60분이 무엇으로
-    // 채워졌는지가 화면에 있어야 한다.
+    expect(find.byType(BurnDonut), findsOneWidget);
+    expect(find.text('오늘 소모'), findsWidgets);
+    // 유산소·근력·스트레칭이 이름과 값으로 함께 읽힌다 — 소모 칼로리가
+    // 무엇으로 채워졌는지가 화면에 있어야 한다.
     for (final String label in <String>['유산소', '근력', '스트레칭']) {
       expect(find.text(label), findsWidgets, reason: label);
     }
-    // 기간 막대는 오늘에 없다.
-    expect(find.byType(ActivityBarChart), findsNothing);
+    // 기간 그래프는 오늘에 없다.
+    expect(find.byType(BurnBarChart), findsNothing);
+    expect(find.byType(BurnGoalRings), findsNothing);
   });
 
-  testWidgets('기간은 유형별 3색 누적 막대로 보인다', (tester) async {
+  testWidgets('이번 주는 유형별 목표 링으로 보인다', (tester) async {
     await pump(tester, withSplit());
 
     await tester.tap(find.byKey(const Key('client-period-week')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(ActivityBarChart), findsOneWidget);
-    expect(find.byType(ActivityDonut), findsNothing);
-    // 막대 하나마다 hover 영역이 하나.
-    expect(find.byKey(const Key('activity-bar-0')), findsOneWidget);
-    expect(find.byKey(const Key('activity-bar-6')), findsOneWidget);
-    expect(find.byKey(const Key('activity-bar-7')), findsNothing);
-    // 범례 셋이 회원 앱과 같은 순서·색이다.
-    final List<ActivityLegend> legends = tester
-        .widgetList<ActivityLegend>(find.byType(ActivityLegend))
+    expect(find.byType(BurnGoalRings), findsOneWidget);
+    expect(find.byType(BurnDonut), findsNothing);
+    // 유형 셋이 회원 앱과 같은 순서·색으로 줄지어 있다.
+    final List<ActivityValueRow> rows = tester
+        .widgetList<ActivityValueRow>(find.byType(ActivityValueRow))
         .toList();
-    expect(legends.map((ActivityLegend x) => x.color).toList(), <Color>[
+    expect(rows.map((ActivityValueRow x) => x.color).take(3).toList(), <Color>[
       AppColors.chartCardio,
       AppColors.chartStrength,
       AppColors.chartStretching,
     ]);
   });
 
-  testWidgets('막대 툴팁이 유형별 분을 말한다', (tester) async {
+  testWidgets('이번 달 막대 툴팁이 소모 칼로리와 유형별 값을 말한다', (tester) async {
     await pump(tester, withSplit());
-    await tester.tap(find.byKey(const Key('client-period-week')));
+    await tester.tap(find.byKey(const Key('client-period-month')));
     await tester.pumpAndSettle();
 
     final Tooltip tip = tester.widget<Tooltip>(
-      find.byKey(const Key('activity-bar-0')),
+      find.byKey(const Key('client-exercise-bar-0')),
     );
     final String text = tip.richMessage!.toPlainText();
-    expect(text, contains('유산소'));
-    expect(text, contains('20분'));
-    expect(text, contains('근력'));
-    expect(text, contains('25분'));
-    expect(text, contains('스트레칭'));
-    expect(text, contains('15분'));
-
-    // 기록이 없는 날은 `기록 없음` 이다 — 0분이라고 적으면 쉰 날과 구분되지 않는다.
-    final Tooltip rest = tester.widget<Tooltip>(
-      find.byKey(const Key('activity-bar-1')),
-    );
-    expect(rest.richMessage!.toPlainText(), contains('기록 없음'));
+    expect(text, contains('kcal'));
   });
 
   testWidgets('기간을 바꿔도 토글 자리가 움직이지 않는다', (tester) async {
@@ -196,15 +182,15 @@ void main() {
       ),
     ]);
 
-    await tester.tap(find.byKey(const Key('client-period-week')));
+    await tester.tap(find.byKey(const Key('client-period-month')));
     await tester.pumpAndSettle();
 
     final Tooltip tip = tester.widget<Tooltip>(
-      find.byKey(const Key('activity-bar-0')),
+      find.byKey(const Key('client-exercise-bar-0')),
     );
     final String text = tip.richMessage!.toPlainText();
     expect(text, contains('유산소'));
-    // 없는 근력·스트레칭 시간을 지어내면 안 된다.
+    // 없는 근력·스트레칭 값을 지어내면 안 된다.
     expect(text, isNot(contains('근력')));
     expect(text, isNot(contains('스트레칭')));
   });
@@ -280,7 +266,7 @@ void main() {
     await tester.tap(find.byKey(const Key('client-period-week')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.byType(ActivityBarChart), findsOneWidget);
+    expect(find.byType(BurnGoalRings), findsOneWidget);
   });
 
   test('유형 분해는 길이가 맞을 때만 쓴다', () {

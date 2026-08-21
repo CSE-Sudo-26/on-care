@@ -8,6 +8,8 @@ class ClientExerciseWeek {
     this.cardioMinutes = const <int>[],
     this.strengthMinutes = const <int>[],
     this.stretchingMinutes = const <int>[],
+    this.otherMinutes = const <int>[],
+    this.strengthSets = const <int>[],
     this.sessionCount,
     this.weeklyGoalMinutes = 0,
   });
@@ -22,6 +24,15 @@ class ClientExerciseWeek {
   final List<int> cardioMinutes;
   final List<int> strengthMinutes;
   final List<int> stretchingMinutes;
+
+  /// 목표가 없는 나머지 운동(기타). 그래프에는 그리지 않고 분 수만 적는다 —
+  /// 무엇에 견줘야 할지 정해지지 않은 값을 막대로 쌓으면 다른 유형의 높이까지
+  /// 뜻을 잃는다. 회원 앱과 같은 규칙이다.
+  final List<int> otherMinutes;
+
+  /// 요일별 **근력 세트 수**. 근력은 시간이 아니라 세트로 재는 운동이라, 서버가
+  /// 기록한 값을 그대로 내려준다. 비어 있으면 분에서 환산한다.
+  final List<int> strengthSets;
 
   final int totalMinutes;
   final int totalCalories;
@@ -60,11 +71,12 @@ class ClientExerciseWeek {
       cardioMinutes: ints('cardio_minutes'),
       strengthMinutes: ints('strength_minutes'),
       stretchingMinutes: ints('stretching_minutes'),
+      otherMinutes: ints('other_minutes'),
+      strengthSets: ints('strength_sets'),
       totalMinutes: (json['total_minutes'] as num?)?.toInt() ?? 0,
       totalCalories: (json['total_calories'] as num?)?.toInt() ?? 0,
       sessionCount: (json['sessions'] as List<Object?>?)?.length,
-      weeklyGoalMinutes:
-          (json['weekly_goal_minutes'] as num?)?.toInt() ?? 0,
+      weeklyGoalMinutes: (json['weekly_goal_minutes'] as num?)?.toInt() ?? 0,
     );
   }
 }

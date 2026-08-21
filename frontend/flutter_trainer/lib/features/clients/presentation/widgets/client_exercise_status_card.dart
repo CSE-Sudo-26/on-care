@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
-import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
@@ -102,25 +102,16 @@ class _Today extends StatelessWidget {
     // 유형 분해가 없으면 전부 유산소로 본다. 임의로 나누면 없는 근력 시간을
     // 지어내는 셈이다.
     final bool split = period.days.any((ClientExerciseDay d) => d.hasTypeSplit);
-    return ActivityDonut(
-      title: l.clientTrendTodayTotal,
-      segs: <ActivitySeg>[
-        ActivitySeg(
-          l.routineTypeCardio,
-          split ? period.totalCardioMinutes : period.totalMinutes,
-          AppColors.chartCardio,
-        ),
-        ActivitySeg(
-          l.routineTypeStrength,
-          split ? period.totalStrengthMinutes : 0,
-          AppColors.chartStrength,
-        ),
-        ActivitySeg(
-          l.routineTypeStretching,
-          split ? period.totalStretchingMinutes : 0,
-          AppColors.chartStretching,
-        ),
-      ],
+    return BurnDonut(
+      title: l.exBurnTodayTitle,
+      calories: period.totalCalories,
+      goal: kDailyBurnKcal,
+      split: ActivitySplit(
+        cardioMinutes: split ? period.totalCardioMinutes : period.totalMinutes,
+        strengthSets: split ? period.totalStrengthSets : 0,
+        stretchingMinutes: split ? period.totalStretchingMinutes : 0,
+        otherMinutes: period.totalOtherMinutes,
+      ),
     );
   }
 }
@@ -209,63 +200,37 @@ class _RangeState extends State<_Range> {
           },
         ),
         const SizedBox(height: AppSpacing.md),
-        ActivityBarChart(
-          title: l.clientTrendTitle,
-          // 회원이 세운 주간 목표를 하루로 나눈 값 — 회원 앱 그래프와 같은
-          // 선이 그려진다. (#1015)
-          dailyGoalMinutes: period.dailyGoalMinutes,
-          // 전체만 옆으로 밀어 본다 — 주간은 일곱 칸이 이미 한 화면이다.
-          selection: monthly ? _selection : null,
-          dates: <DateTime>[
-            for (final ClientExerciseDay d in days) d.date,
-          ],
-          bars: <ActivityBar>[
-            for (final ClientExerciseDay d in days)
-              if (d.hasTypeSplit)
-                ActivityBar(
-                  d.cardioMinutes.toDouble(),
-                  d.strengthMinutes.toDouble(),
-                  d.stretchingMinutes.toDouble(),
-                )
-              else
-                ActivityBar(d.minutes.toDouble(), 0, 0),
-          ],
-          // 한 주는 요일로, 한 달은 날짜로 읽는 편이 자연스럽다. 달은 칸이 좁아
-          // 몇 칸에 하나만 적는다.
-          dayLabels: <String>[
-            for (int i = 0; i < days.length; i++)
-              if (!monthly)
-                _weekdayLabel(l, days[i].date)
-              else if (i == 0 || i % 5 == 0 || i == days.length - 1)
-                '${days[i].date.day}'
-              else
-                '',
-          ],
-          todayIndex: _todayIndexIn(days),
-        ),
+        // 이번 주는 유형별 주간 목표를 겹친 링으로, 이번 달은 일별 소모
+        // 칼로리 막대로. 회원 앱 `운동 현황` 과 같은 규칙이다. (#1077)
+        if (!monthly)
+          BurnGoalRings(
+            title: l.exBurnWeekTitle,
+            calories: period.totalCalories,
+            split: ActivitySplit(
+              cardioMinutes: period.totalCardioMinutes,
+              strengthSets: period.totalStrengthSets,
+              stretchingMinutes: period.totalStretchingMinutes,
+              otherMinutes: period.totalOtherMinutes,
+            ),
+          )
+        else
+          BurnBarChart(
+            title: l.clientTrendTitle,
+            selection: _selection,
+            calories: <int>[for (final ClientExerciseDay d in days) d.calories],
+            splits: <ActivitySplit>[
+              for (final ClientExerciseDay d in days)
+                ActivitySplit(
+                  cardioMinutes: d.hasTypeSplit ? d.cardioMinutes : d.minutes,
+                  strengthSets: d.strengthSets,
+                  stretchingMinutes: d.stretchingMinutes,
+                  otherMinutes: d.otherMinutes,
+                ),
+            ],
+            dates: <DateTime>[for (final ClientExerciseDay d in days) d.date],
+          ),
       ],
     );
-  }
-
-  static String _weekdayLabel(AppLocalizations l, DateTime d) => <String>[
-    l.weekdayMon,
-    l.weekdayTue,
-    l.weekdayWed,
-    l.weekdayThu,
-    l.weekdayFri,
-    l.weekdaySat,
-    l.weekdaySun,
-  ][d.weekday - 1];
-
-  /// 오늘이 이 범위의 몇 번째 칸인가. 범위 밖이면 -1 — 지난 기간을 볼 때
-  /// 엉뚱한 칸이 오늘로 강조되지 않는다.
-  static int _todayIndexIn(List<ClientExerciseDay> days) {
-    final DateTime today = todayKst();
-    for (int i = 0; i < days.length; i++) {
-      final DateTime d = days[i].date;
-      if (DateTime(d.year, d.month, d.day) == today) return i;
-    }
-    return -1;
   }
 }
 

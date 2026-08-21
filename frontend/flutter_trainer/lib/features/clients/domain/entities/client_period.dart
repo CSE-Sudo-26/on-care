@@ -49,11 +49,7 @@ ClientDateRange clientRangeFor(ClientPeriod period, DateTime today) {
       // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
       // 추세를 볼 수 없다. 회원 앱 `dietRangeForTab` 과 같은 길이다. (#1018)
       return (
-        from: DateTime(
-          day.year,
-          day.month,
-          day.day - kClientAllPeriodDays + 1,
-        ),
+        from: DateTime(day.year, day.month, day.day - kClientAllPeriodDays + 1),
         to: day,
       );
   }
@@ -184,6 +180,8 @@ class ClientExerciseDay {
     this.cardioMinutes = 0,
     this.strengthMinutes = 0,
     this.stretchingMinutes = 0,
+    this.otherMinutes = 0,
+    this.strengthSets = 0,
   });
 
   final DateTime date;
@@ -194,6 +192,12 @@ class ClientExerciseDay {
   final int cardioMinutes;
   final int strengthMinutes;
   final int stretchingMinutes;
+
+  /// 목표가 없는 나머지 운동. 그래프에는 그리지 않고 분 수만 적는다.
+  final int otherMinutes;
+
+  /// 그날의 근력 **세트 수**.
+  final int strengthSets;
 
   bool get logged => minutes > 0 || calories > 0;
 
@@ -239,6 +243,12 @@ class ClientExercisePeriod {
     0,
     (int a, ClientExerciseDay d) => a + d.stretchingMinutes,
   );
+
+  int get totalOtherMinutes =>
+      days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.otherMinutes);
+
+  int get totalStrengthSets =>
+      days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.strengthSets);
 
   /// 운동한 날 수 — 기간이 길어져도 "몇 번 했나" 의 뜻이 흔들리지 않는다.
   int get workoutDays => days.where((ClientExerciseDay d) => d.logged).length;
