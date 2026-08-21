@@ -130,6 +130,28 @@ class ScheduleSession {
   bool get expandable => !isGap;
 }
 
+/// `HH:mm` 을 자정부터의 분으로. 형식이 다르면 null. (#1012)
+int? clockMinutes(String time) {
+  final parts = time.split(':');
+  if (parts.length != 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+/// 자정부터의 분을 짧은 시각으로 — `600` → `10`, `615` → `10:15`. (#1012)
+///
+/// 정각의 `:00` 은 읽는 데 보태는 것이 없다. 시간표 블록과 상세 카드가 같은
+/// 규칙을 써야 두 자리에 적힌 시각이 같은 값으로 읽힌다.
+String compactClock(int minutes) {
+  final wrapped = minutes % (24 * 60);
+  final hour = wrapped ~/ 60;
+  final minute = wrapped % 60;
+  return minute == 0 ? '$hour' : '$hour:${minute.toString().padLeft(2, '0')}';
+}
+
 /// [session] 이 지금부터 [leadMinutes] 안에 시작하는가. (#817)
 ///
 /// 이미 지난 시각과 완료·공백 슬롯은 대상이 아니다 — 강조는 "곧 해야 할 일"

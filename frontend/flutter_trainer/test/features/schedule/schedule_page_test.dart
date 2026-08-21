@@ -807,11 +807,23 @@ void main() {
 
       await openSession(tester, '박성호');
 
-      await revealInPanel(tester, find.text('일정 수정'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+      );
       expect(find.text('벤치프레스'), findsOneWidget); // planned program
-      expect(find.text('일정 수정'), findsOneWidget);
-      expect(find.text('프로그램 수정'), findsOneWidget);
-      expect(find.text('삭제'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-program-chip')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('session-delete-chip')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('session-chat-chip')),
         findsOneWidget,
@@ -832,8 +844,14 @@ void main() {
       expect(find.text('아직 남긴 메모가 없어요'), findsOneWidget);
       expect(find.text('아직 계획된 프로그램이 없어요'), findsNothing);
       // 같은 자리가 프로그램이 아니라 메모를 연다.
-      expect(find.text('메모 수정'), findsOneWidget);
-      expect(find.text('프로그램 수정'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-note-chip')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-program-chip')),
+        findsNothing,
+      );
     });
 
     testWidgets('계획이 없는 1:1 PT 는 프로그램 안내를 보여 준다', (tester) async {
@@ -852,9 +870,15 @@ void main() {
 
       await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
-      expect(find.text('프로그램 수정'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-program-chip')),
+        findsOneWidget,
+      );
       // 메모 자리는 종류와 상관없이 있다(#1011).
-      expect(find.text('메모 수정'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-note-chip')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {
@@ -883,8 +907,13 @@ void main() {
 
       await openSession(tester, '박성호');
 
-      await revealInPanel(tester, find.text('일정 수정'));
-      await tester.tap(find.text('일정 수정'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+      );
       await settle(tester);
 
       // Booking details stay inside the expanded schedule card. Program and
@@ -910,7 +939,14 @@ void main() {
       await tester.tap(find.text('저장하기'));
       await settle(tester);
 
-      expect(find.text('15:30\u201316:30'), findsOneWidget);
+      // 시각은 시간표 블록과 상세 카드 두 곳에 있다 — 카드 쪽을 잰다.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('15:30\u201316:30'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('15:00\u201316:00'), findsNothing);
     });
 
@@ -919,8 +955,13 @@ void main() {
 
       await openSession(tester, '박성호');
 
-      await revealInPanel(tester, find.text('프로그램 수정'));
-      await tester.tap(find.text('프로그램 수정'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-edit-program-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-edit-program-chip')),
+      );
       await settle(tester);
 
       expect(
@@ -979,8 +1020,13 @@ void main() {
       await openSchedule(tester);
       await openSession(tester, '박성호');
 
-      await revealInPanel(tester, find.text('메모 수정'));
-      await tester.tap(find.text('메모 수정'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-edit-note-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-edit-note-chip')),
+      );
       await settle(tester);
 
       // 운동 목록 없이 메모만 연다.
@@ -1018,8 +1064,13 @@ void main() {
 
       await openSession(tester, '윤가온(신규)');
 
-      await revealInPanel(tester, find.text('삭제'));
-      await tester.tap(find.text('삭제'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-delete-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-delete-chip')),
+      );
       await settle(tester);
       // Confirm in the dialog (its action is the last 삭제 on screen).
       await tester.tap(find.text('삭제').last);
@@ -1115,8 +1166,14 @@ void main() {
 
       // Manage actions are there, but 완료 is not — the class is in the
       // future (review PR 245).
-      expect(find.text('일정 수정'), findsOneWidget);
-      expect(find.text('프로그램 수정'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('session-edit-program-chip')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('session-chat-chip')),
         findsOneWidget,
@@ -1300,8 +1357,13 @@ void main() {
       // 윤가온 (상담, 30분) is booked but is NOT a registered client.
       await openSession(tester, '윤가온(신규)');
 
-      await revealInPanel(tester, find.text('일정 수정'));
-      await tester.tap(find.text('일정 수정'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-edit-schedule-chip')),
+      );
       await settle(tester);
 
       // Save without changing anything — the sheet must have prefilled
@@ -1430,8 +1492,13 @@ void main() {
 
       await openSession(tester, '박성호');
 
-      await revealInPanel(tester, find.text('삭제'));
-      await tester.tap(find.text('삭제'));
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-delete-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-delete-chip')),
+      );
       await settle(tester);
       await tester.tap(find.text('삭제').last); // confirm in dialog
       await settle(tester);
