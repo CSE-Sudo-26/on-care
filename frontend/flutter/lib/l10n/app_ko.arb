@@ -96,7 +96,6 @@
   "unitMinutesValue": "{count}분",
   "dietTitle": "식단",
   "dietToday": "오늘로",
-  "dietWeekLabel": "{month}월 {week}주차",
   "dietWeekdayMon": "월",
   "dietWeekdayTue": "화",
   "dietWeekdayWed": "수",

@@ -248,11 +248,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietToday => '오늘로';
 
   @override
-  String dietWeekLabel(int month, int week) {
-    return '$month월 $week주차';
-  }
-
-  @override
   String get dietWeekdayMon => '월';
 
   @override
