@@ -21,6 +21,7 @@ import 'package:oncare/features/exercise/data/repositories/mock_exercise_reposit
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
@@ -423,9 +424,7 @@ void main() {
     expect(find.text('MY'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('전체 기간 운동 현황은 스크롤 막대 그래프다 (#1018)', (
-    tester,
-  ) async {
+  testWidgets('전체 기간 운동 현황은 스크롤 막대 그래프다 (#1018)', (tester) async {
     await pumpApp(tester, locale: const Locale('en'));
 
     final exerciseDestination = find.ancestor(

@@ -282,6 +282,24 @@
   "exNearbyGymsMapLabel": "Gyms near me",
   "exWeekSummary": "This Week's Summary",
   "exActivityTitle": "Activity",
+  "exWeekOfMonthLabel": "Week {week}, {month}/",
+  "@exWeekOfMonthLabel": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "week": { "type": "int" }
+    }
+  },
+  "exBurnTodayTitle": "Burned today",
+  "exBurnWeekTitle": "Burned this week",
+  "exBurnAllTitle": "Average burned",
+  "exLoadDayTitle": "Burned",
+  "exGoalValue": "Goal {value}",
+  "@exGoalValue": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "exLoadEmpty": "No records yet.",
   "exThisWeek": "This week",
   "exPeriodAll": "All",
   "exExerciseContent": "What you did",
