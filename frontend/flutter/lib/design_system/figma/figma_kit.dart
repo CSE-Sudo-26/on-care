@@ -233,7 +233,16 @@ class HeartLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(Icons.favorite, size: size, color: color);
+    // 서비스 로고를 그대로 쓴다 — 하트 아이콘은 자리를 지키던 임시값이라,
+    // 로그인 화면과 홈 헤더가 서로 다른 그림으로 같은 서비스를 가리켰다. (#1055)
+    return Image.asset(
+      'assets/images/oncare-logo.png',
+      width: size,
+      height: size,
+      // 자산이 빠져도 헤더는 그려야 한다.
+      errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+          Icon(Icons.favorite, size: size, color: color),
+    );
   }
 }
 
@@ -383,13 +392,15 @@ class FigmaTabHeader extends StatelessWidget {
             onTap: onBell,
           ),
           const SizedBox(width: 10),
-          FigmaCircleButton(
-            icon: Icons.calendar_today_outlined,
-            tooltip: l.a11yOpenCalendar,
-            iconSize: 16,
-            onTap: onCalendar,
-          ),
-          const SizedBox(width: 10),
+          // 캘린더는 지금 쓰지 않는다. 되살릴 수 있어 지우지 않고 남겨 둔다.
+          // (#1055)
+          // FigmaCircleButton(
+          //   icon: Icons.calendar_today_outlined,
+          //   tooltip: l.a11yOpenCalendar,
+          //   iconSize: 16,
+          //   onTap: onCalendar,
+          // ),
+          // const SizedBox(width: 10),
           trailingAction,
         ],
       ),
