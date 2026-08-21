@@ -196,10 +196,22 @@ class ClientExerciseDay {
 /// 한 기간의 운동 집계.
 class ClientExercisePeriod {
   /// Creates a period from its per-day rows (오래된 → 최근).
-  const ClientExercisePeriod({required this.range, required this.days});
+  const ClientExercisePeriod({
+    required this.range,
+    required this.days,
+    this.weeklyGoalMinutes = 0,
+  });
 
   final ClientDateRange range;
   final List<ClientExerciseDay> days;
+
+  /// 회원의 주간 운동 시간 목표(분). 그래프의 목표선은 이 값을 7 로 나눠
+  /// 하루 목표로 그린다 — 식단 그래프가 하루 목표를 그리는 것과 같은 뜻이다.
+  /// (#1015)
+  final int weeklyGoalMinutes;
+
+  /// 하루 목표(분). 목표가 없으면 0 이고, 그러면 목표선을 그리지 않는다.
+  double get dailyGoalMinutes => weeklyGoalMinutes / 7;
 
   int get totalMinutes =>
       days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.minutes);

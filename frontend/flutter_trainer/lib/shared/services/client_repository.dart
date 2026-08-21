@@ -659,11 +659,14 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
       final ClientDateRange range = clientRangeFor(key.period, key.day);
       final Map<String, ClientExerciseDay> byDate =
           <String, ClientExerciseDay>{};
+      // 목표는 주마다 같다 — 마지막으로 읽은 주의 값을 쓴다. (#1015)
+      int weeklyGoalMinutes = 0;
       for (final DateTime monday in clientRangeWeekStarts(range)) {
         final ClientExerciseWeek week = await repository.fetchExerciseWeek(
           key.clientId,
           weekStart: monday,
         );
+        weeklyGoalMinutes = week.weeklyGoalMinutes;
         for (var d = 0; d < 7; d++) {
           final DateTime date = DateTime(
             monday.year,
@@ -685,6 +688,7 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
         }
       }
       return ClientExercisePeriod(
+        weeklyGoalMinutes: weeklyGoalMinutes,
         range: range,
         days: <ClientExerciseDay>[
           for (final DateTime date in clientRangeDates(range))

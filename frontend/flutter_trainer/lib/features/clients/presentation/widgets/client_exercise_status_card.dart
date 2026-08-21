@@ -162,6 +162,9 @@ class _Range extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         ActivityBarChart(
           title: l.clientTrendTitle,
+          // 회원이 세운 주간 목표를 하루로 나눈 값 — 회원 앱 그래프와 같은
+          // 선이 그려진다. (#1015)
+          dailyGoalMinutes: period.dailyGoalMinutes,
           bars: <ActivityBar>[
             for (final ClientExerciseDay d in days)
               if (d.hasTypeSplit)
