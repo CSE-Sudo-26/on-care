@@ -39,7 +39,7 @@
   "homeExerciseTrendUnavailable": "주간 운동 기록을 불러오지 못했어요.",
   "homeMetricOver": "초과",
   "homeMetricNormal": "정상",
-  "dietAmountOver": "목표보다 {amount} 많아요",
+  "dietAmountOver": "{amount} 많아요",
   "@dietAmountOver": {
     "placeholders": {
       "amount": {
@@ -47,7 +47,7 @@
       }
     }
   },
-  "dietAmountRemaining": "목표까지 {amount} 남았어요",
+  "dietAmountRemaining": "{amount} 남았어요",
   "@dietAmountRemaining": {
     "placeholders": {
       "amount": {
@@ -116,7 +116,6 @@
   "dietLoadError": "식단 정보를 불러오지 못했어요.",
   "dietPeriodAverage": "하루 평균",
   "dietPeriodTotal": "기간 합계",
-  "dietPeriodLoggedDays": "{days}일 기록",
   "dietPeriodEmpty": "이 기간에 기록된 식단이 없어요.",
   "dietPeriodRange": "{start} ~ {end}",
   "dietPeriodNoRecord": "기록 없음",
