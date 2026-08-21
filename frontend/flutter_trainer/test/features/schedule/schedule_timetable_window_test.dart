@@ -84,7 +84,7 @@ void main() {
 
     // 화면에 없는 일정은 없는 일정과 같다.
     expect(gutterLabel('06:00'), findsOneWidget);
-    expect(find.text('06:00\u201307:00 (60분)'), findsOneWidget);
+    expect(find.text('06:00\u201307:00'), findsOneWidget);
   });
 
   testWidgets('높이가 넉넉하면 스크롤 없이 하루가 통째로 보인다', (tester) async {
@@ -96,7 +96,7 @@ void main() {
       reason: '남는 높이에 맞춰 칸이 줄어 스크롤이 사라져야 한다',
     );
     // 그래도 블록은 시각과 이름 두 줄을 지킨다.
-    expect(find.text('10:00\u201311:00 (60분)'), findsWidgets);
+    expect(find.text('10:00\u201311:00'), findsWidgets);
     expect(find.text('김민수'), findsWidgets);
   });
 

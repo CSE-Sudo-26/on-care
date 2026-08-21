@@ -688,25 +688,28 @@ class _SessionBlock extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     const tone = AppColors.primary;
     final statusTone = _statusTone;
+    // 끝난 세션은 종류(파랑)가 아니라 **상세 카드와 같은 회색**으로 물러난다.
+    // 왼쪽 띠가 이미 초록(완료)으로 결과를 말하는데, 면까지 파랑이면 종류가
+    // 아직 진행 중인 것처럼 두 번 읽혔다(#1012, #1013).
+    const Color finishedTone = AppColors.disabledForeground;
     final surface = _isConsultation
         ? AppColors.card
-        : tone.withValues(alpha: session.isFinished ? 0.08 : 0.12);
+        : (session.isFinished
+              ? AppColors.inputBackground
+              : tone.withValues(alpha: 0.12));
     final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
     final end = start + session.durationMinutes;
     final type = sessionTypeLabel(l, session.type);
-    // 블록은 두 줄이다: `10–11 60분` / `김민수 1:1 PT`. 세 줄이던 때에는 30분
+    // 블록은 두 줄이다: `10–11` / `김민수 1:1 PT`. 세 줄이던 때에는 30분
     // 세션이 칸의 절반을 차지해 하루가 한 화면에 들어오지 않았다(#1010).
     //
     // 정각의 `:00` 은 읽는 데 보태는 것이 없어 뗀다. 툴팁과 시맨틱스에는 자른
     // 값이 아니라 온전한 시각을 남긴다 — 소리로 듣는 쪽은 줄일 이유가 없다.
     final range = l.schedTimeRange(session.time, _hhmm(end));
     final detail = l.sessionTypeAndDuration(type, session.durationMinutes);
-    // 시각은 자르지 않는다. `10–11` 로 줄였더니 그 자리가 무엇을 가리키는지
-    // 한 번 더 생각해야 했다 — 시간표에서 시각은 줄일 값이 아니다.
-    final timeLine = l.schedBlockTime(
-      range,
-      l.minutesShort(session.durationMinutes),
-    );
+    // 소요 시간은 첫 줄에 적지 않는다. 시각 옆 `(60분)` 은 좁은 블록에서
+    // 자리만 먹고, 종류·이름을 훑는 데 보태는 것이 없었다 — 필요하면 툴팁·
+    // 시맨틱스(`detail`)에 남아 있다.
 
     return Tooltip(
       message: '$range · $name · $detail',
@@ -739,7 +742,8 @@ class _SessionBlock extends StatelessWidget {
                       ? Border.all(
                           color: selected
                               ? statusTone
-                              : tone.withValues(alpha: 0.45),
+                              : (session.isFinished ? finishedTone : tone)
+                                    .withValues(alpha: 0.45),
                           width: selected ? 1.5 : 1,
                         )
                       : null,
@@ -761,12 +765,13 @@ class _SessionBlock extends StatelessWidget {
                         child: _BlockLines(
                           lines: <_BlockLine>[
                             _BlockLine(
-                              text: timeLine,
-                              style: const TextStyle(
-                                fontSize: 10.5,
+                              text: range,
+                              // 소요 시간을 빼며 생긴 자리만큼 조금 키운다.
+                              style: TextStyle(
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 height: 1.25,
-                                color: tone,
+                                color: session.isFinished ? finishedTone : tone,
                               ),
                             ),
                             // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는

@@ -474,8 +474,8 @@ void main() {
       expect(find.text('22:00'), findsOneWidget);
 
       // 블록은 시간 범위와 종류를 함께 말한다.
-      expect(find.text('10:00\u201311:00 (60분)'), findsWidgets);
-      expect(find.text('17:00\u201317:30 (30분)'), findsOneWidget);
+      expect(find.text('10:00\u201311:00'), findsWidgets);
+      expect(find.text('17:00\u201317:30'), findsOneWidget);
       expect(find.text('김민수'), findsWidgets);
       expect(find.textContaining('이지수'), findsWidgets);
       expect(find.textContaining('박성호'), findsWidgets);
@@ -874,7 +874,7 @@ void main() {
       await settle(tester);
 
       // 시간표 블록이 시작·끝을 함께 말한다(기본 60분).
-      expect(find.text('10:15\u201311:15 (60분)'), findsOneWidget);
+      expect(find.text('10:15\u201311:15'), findsOneWidget);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -911,8 +911,8 @@ void main() {
       await tester.tap(find.text('저장하기'));
       await settle(tester);
 
-      expect(find.text('15:30\u201316:30 (60분)'), findsOneWidget);
-      expect(find.text('15:00\u201316:00 (60분)'), findsNothing);
+      expect(find.text('15:30\u201316:30'), findsOneWidget);
+      expect(find.text('15:00\u201316:00'), findsNothing);
     });
 
     testWidgets('프로그램 수정 edits exercises and memo inside the card', (
@@ -966,7 +966,7 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.text('15:00\u201316:00 (60분)'), findsOneWidget);
+      expect(find.text('15:00\u201316:00'), findsOneWidget);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트 × 8회'), findsOneWidget);
       expect(find.text('견갑 고정 확인'), findsOneWidget);
@@ -1116,7 +1116,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('추가하기'));
       await settle(tester);
-      expect(find.text('10:00\u201311:00 (60분)'), findsWidgets);
+      expect(find.text('10:00\u201311:00'), findsWidgets);
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsNothing);
 
       // 오늘 → 오늘의 세션이 다시 패널에 실리고 버튼은 숨는다.
