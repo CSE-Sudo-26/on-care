@@ -212,7 +212,9 @@ void main() {
     // 점은 이제 **서버 미읽음을 따른다.** 예전에는 항상 켜져 있어서 읽을 것이
     // 없어도 남았다(#636).
     expect(notificationButton.showDot, isTrue);
-    expect(notificationButton.dotColor, FigmaColors.orange);
+    // 읽지 않은 알림은 `주의` 가 아니라 새 소식이다 — 주황은 같은 화면의
+    // 주의 색과 겹쳤다. 옆 채팅 버튼이 이미 쓰던 빨강으로 맞춘다. (#1060)
+    expect(notificationButton.dotColor, FigmaColors.redDot);
   });
 
   testWidgets('읽지 않은 알림이 없으면 벨에 점이 없다', (WidgetTester tester) async {
