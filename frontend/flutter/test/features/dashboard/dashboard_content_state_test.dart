@@ -273,7 +273,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.'), findsOneWidget);
-    expect(find.text('오늘 예정된 일정이 없어요.'), findsOneWidget);
+    // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055) — 빈 상태 문구도 함께 없다.
+    expect(find.text('오늘 예정된 일정이 없어요.'), findsNothing);
     expect(find.text('0g'), findsNWidgets(3));
     expect(
       find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
@@ -450,7 +451,8 @@ void main() {
       expect(find.text('소모 칼로리'), findsOneWidget);
       expect(find.text('운동 일수'), findsOneWidget);
       expect(find.text('운동 추이 (kcal)'), findsOneWidget);
-      expect(find.text('병원 정기검진'), findsOneWidget);
+      // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055).
+      expect(find.text('병원 정기검진'), findsNothing);
       expect(find.textContaining('김치찌개·배추김치'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
@@ -490,7 +492,8 @@ void main() {
       final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
       // 헤더가 줄어들지 못하면 밀려난 더보기 링크부터 넘친다.
       expect(find.text(en.homeDetails), findsWidgets);
-      expect(find.text(en.homeAiAnalysisPill), findsWidgets);
+      // `AI 분석` 필은 뗐다 (#1055) — 헤더가 줄어들 수 있는 구조인지만 본다.
+      expect(find.text(en.homeDietNutritionTitle), findsWidgets);
       expect(tester.takeException(), isNull);
     });
   }

@@ -94,9 +94,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealChickenSalad => '닭가슴살 샐러드';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI 분석';
-
-  @override
   String get homeDetails => '자세히';
 
   @override

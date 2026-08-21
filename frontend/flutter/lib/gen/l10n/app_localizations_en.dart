@@ -95,9 +95,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealChickenSalad => 'Chicken breast salad';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI analysis';
-
-  @override
   String get homeDetails => 'Details';
 
   @override

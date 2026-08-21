@@ -191,10 +191,12 @@ class _DashboardData extends StatelessWidget {
           padding: EdgeInsets.only(bottom: 20),
           child: _RecommendedMeals(),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-          child: _ScheduleCard(items: summary.todaySchedule),
-        ),
+        // 오늘의 일정은 지금 쓰지 않는다. 되살릴 수 있어 지우지 않고 남겨
+        // 둔다. (#1055)
+        // Padding(
+        //   padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        //   child: _ScheduleCard(items: summary.todaySchedule),
+        // ),
       ],
     );
   }
@@ -330,30 +332,11 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
+    // `AI 분석` 필은 뗐다 (#1055). 홈의 요약은 대부분 AI 가 만든 것이라
+    // 필이 카드를 갈라 주지 못하면서, 제목 줄만 좁혔다.
     return Row(
       children: <Widget>[
-        Expanded(
-          child: Row(
-            children: <Widget>[
-              Flexible(
-                child: _CardTitle(icon: icon, label: label),
-              ),
-              const SizedBox(width: 6),
-              // 필은 글자를 자르면 'AI ana…' 처럼 읽히지 않아 통째로 축소한다.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: AiPill(
-                    l.homeAiAnalysisPill,
-                    background: FigmaColors.primaryA(0.10),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: _CardTitle(icon: icon, label: label)),
         const SizedBox(width: 8),
         _DetailLink(onTap: onOpen),
       ],
@@ -1430,7 +1413,9 @@ class _ExerciseBarPainter extends CustomPainter {
         text: TextSpan(
           text: NumberFormat('#,###').format(v),
           style: TextStyle(
-            fontSize: 12,
+            // 막대 위 숫자는 막대보다 작아야 한다 — 그래프는 흐름을 보는
+            // 자리고, 정확한 값은 상세에서 읽는다. (#1055)
+            fontSize: 10.5,
             fontWeight: FontWeight.w800,
             color: (today ? color : const Color(0xFF9AA6B2)).withValues(
               alpha: t,
@@ -1633,10 +1618,6 @@ class _RecommendedMeals extends ConsumerWidget {
                         color: FigmaColors.ink,
                       ),
                     ),
-                    AiPill(
-                      l.homeAiAnalysisPill,
-                      background: FigmaColors.primaryA(0.10),
-                    ),
                     if (basis != null)
                       Text(
                         basis,
@@ -1796,6 +1777,9 @@ class _RecMealCard extends StatelessWidget {
 
 // ───────────────────────────────────────────────────────── schedule ──
 
+/// 홈 하단의 오늘 일정 카드. 지금은 화면에 걸지 않았다 (#1055) — 지우지 않고
+/// 남겨 둔 것이라 쓰이지 않는다는 경고를 여기서 끈다.
+// ignore: unused_element
 class _ScheduleCard extends ConsumerWidget {
   const _ScheduleCard({required this.items});
 
