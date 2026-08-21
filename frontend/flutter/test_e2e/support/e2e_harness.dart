@@ -196,6 +196,8 @@ class E2eApi {
             .substring(0, 10),
         'preferred_time_slot': 'evening',
         'message': 'E2E 예외 케이스',
+        // 동의 없이는 서버가 422 다 (#1022).
+        'data_sharing_consent': true,
       };
 
   Future<Map<String, dynamic>> createConsultation({
