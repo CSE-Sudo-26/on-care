@@ -441,6 +441,27 @@ void main() {
       expect(find.text('최근 7일 나트륨 추이'), findsNothing);
     });
 
+    testWidgets('AI 코멘트가 기간을 따라 바뀐다 (#1017)', (tester) async {
+      // 오늘 하루만 보고 쓴 문장을 이번 주 그래프 아래 그대로 두면, 화면과
+      // 조언이 서로 다른 기간을 말한다.
+      await openDiet(tester, '김민수');
+      await tester.scrollUntilVisible(
+        find.textContaining('나트륨이 목표치를'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+
+      // 오늘 문장은 사라지고, 그 자리에 이번 주를 읽은 문장이 온다.
+      expect(find.textContaining('나트륨이 목표치를'), findsNothing);
+      expect(
+        find.textContaining('이번 주 2일만 권장량을 넘었어요'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (
       tester,
     ) async {
