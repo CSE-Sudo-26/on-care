@@ -41,8 +41,9 @@ class ScheduleDateNavBar extends StatelessWidget {
   static const double _dateSlot = 186;
 
   /// `오늘` 이 앉는 자리의 폭. 버튼이 없을 때도 비워 두어야 날짜가 움직이지
-  /// 않는다.
-  static const double _todaySlot = 88;
+  /// 않는다. 자리가 고정이므로 **버튼이 그 안에서 줄어든다** — 넘치게 두면
+  /// 글자 배율이 큰 환경에서 그대로 오버플로가 된다.
+  static const double _todaySlot = 96;
 
   /// 요소 사이 간격. 화살표·날짜·`오늘` 이 서로 붙어 보이지 않을 만큼 띄운다.
   static const double _gap = AppSpacing.lg;
@@ -82,7 +83,10 @@ class ScheduleDateNavBar extends StatelessWidget {
         const SizedBox(width: _gap),
         SizedBox(
           width: _todaySlot,
-          child: Align(alignment: Alignment.centerLeft, child: trailing),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(fit: BoxFit.scaleDown, child: trailing),
+          ),
         ),
         const SizedBox(width: _gap),
         _ChevronButton(
