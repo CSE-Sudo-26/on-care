@@ -41,7 +41,11 @@ void main() {
     for (final icon in <IconData>[Icons.chevron_left, Icons.chevron_right]) {
       final drawn = circle(tester, icon);
       expect(drawn.shape, BoxShape.circle, reason: '$icon 이 원이어야 한다');
-      expect(drawn.color, AppColors.primary, reason: '색은 아이콘이 아니라 원 영역에 있다');
+      expect(
+        drawn.color,
+        AppColors.accentSurface,
+        reason: '색은 아이콘이 아니라 원 영역에 있다',
+      );
     }
 
     // 두 원의 크기가 같다 — 한쪽만 커 보이면 두 방향의 무게가 달라 보인다.
@@ -50,14 +54,14 @@ void main() {
       tester.getSize(arrow(Icons.chevron_right)),
     );
 
-    // 아이콘은 원 안에서 대비되는 색으로 남는다.
+    // 아이콘은 연한 원 위에 남색으로 남는다 — 회원 앱 식단 탭과 같은 표현이다.
     final Icon glyph = tester.widget<Icon>(
       find.descendant(
         of: arrow(Icons.chevron_right),
         matching: find.byIcon(Icons.chevron_right),
       ),
     );
-    expect(glyph.color, AppColors.primaryForeground);
+    expect(glyph.color, AppColors.primary);
   });
 
   testWidgets('눌러서 지난 주·다음 주로 오간다', (tester) async {
