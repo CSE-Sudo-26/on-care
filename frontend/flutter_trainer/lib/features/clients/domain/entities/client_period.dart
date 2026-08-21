@@ -26,6 +26,10 @@ typedef ClientDateRange = ({DateTime from, DateTime to});
 /// 서머타임이 있는 지역에서 주 전체가 하루씩 밀린다. `DateTime(y, m + 1, 0)` 은
 /// 12월이면 다음 해 1월 0일 = 12월 31일로 알아서 넘어간다. 회원 앱
 /// `dietRangeForTab` 과 같은 규칙이다.
+/// `전체` 가 거슬러 올라가는 날 수. 회원 앱과 같은 12주다 — 두 앱이 같은 기간을
+/// 보여야 나란히 놓고 이야기할 수 있다. (#1018)
+const int kClientAllPeriodDays = 84;
+
 ClientDateRange clientRangeFor(ClientPeriod period, DateTime today) {
   final DateTime day = DateTime(today.year, today.month, today.day);
   switch (period) {
@@ -42,9 +46,15 @@ ClientDateRange clientRangeFor(ClientPeriod period, DateTime today) {
         to: DateTime(monday.year, monday.month, monday.day + 6),
       );
     case ClientPeriod.month:
+      // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
+      // 추세를 볼 수 없다. 회원 앱 `dietRangeForTab` 과 같은 길이다. (#1018)
       return (
-        from: DateTime(day.year, day.month),
-        to: DateTime(day.year, day.month + 1, 0),
+        from: DateTime(
+          day.year,
+          day.month,
+          day.day - kClientAllPeriodDays + 1,
+        ),
+        to: day,
       );
   }
 }
@@ -196,10 +206,22 @@ class ClientExerciseDay {
 /// 한 기간의 운동 집계.
 class ClientExercisePeriod {
   /// Creates a period from its per-day rows (오래된 → 최근).
-  const ClientExercisePeriod({required this.range, required this.days});
+  const ClientExercisePeriod({
+    required this.range,
+    required this.days,
+    this.weeklyGoalMinutes = 0,
+  });
 
   final ClientDateRange range;
   final List<ClientExerciseDay> days;
+
+  /// 회원의 주간 운동 시간 목표(분). 그래프의 목표선은 이 값을 7 로 나눠
+  /// 하루 목표로 그린다 — 식단 그래프가 하루 목표를 그리는 것과 같은 뜻이다.
+  /// (#1015)
+  final int weeklyGoalMinutes;
+
+  /// 하루 목표(분). 목표가 없으면 0 이고, 그러면 목표선을 그리지 않는다.
+  double get dailyGoalMinutes => weeklyGoalMinutes / 7;
 
   int get totalMinutes =>
       days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.minutes);

@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 /// 시드가 읽는 것과 같은 픽스처. 사용자 앱 테스트도 같은 파일을 본다 — 두 앱의
 /// 단정이 같은 원본을 가리켜야 "같은 날짜, 같은 숫자"가 실제로 지켜진다(#757).
@@ -447,6 +448,69 @@ void main() {
           client.lastMessage,
           thread.isEmpty ? '' : thread.last.body,
           reason: '${client.name}(${client.id})의 미리보기가 스레드와 어긋난다',
+        );
+      }
+    });
+
+    test('목록 시각은 오늘이면 시각, 어제면 어제, 그 전이면 날짜다', () async {
+      // 카카오톡과 같은 규칙이다. 문구를 픽스처에 박아 두면 하루만 지나도
+      // 거짓이 되므로, 며칠 전인지만 적어 두고 심을 때마다 오늘 기준으로
+      // 다시 만든다 — 어느 날 데모를 열어도 어긋나지 않아야 한다.
+      final DateTime day = DateTime(2026, 8, 20);
+      await seedIfEmpty(db, clock: day);
+
+      final rows = <String, String>{
+        for (final c in await db.select(db.trainerClients).get())
+          c.id: c.lastTime,
+      };
+
+      // 김민수의 마지막 메시지는 오늘 18:18 이다.
+      expect(rows['seed-client-1'], '18:18');
+      // 최우진은 어제.
+      expect(rows['seed-client-5'], '어제');
+      // 박성호는 사흘 전 — 날짜로 정확히 말한다.
+      expect(rows['seed-client-3'], '2026-08-17');
+      // 문가영은 3주 전.
+      expect(rows['seed-client-12'], '2026-07-30');
+      // 임도현은 대화가 없다.
+      expect(rows['seed-client-7'], '-');
+
+      // 어떤 값도 "3일 전" 처럼 흘러간 시간을 세지 않는다.
+      for (final entry in rows.entries) {
+        expect(
+          entry.value.endsWith(' 전'),
+          isFalse,
+          reason: '${entry.key}: ${entry.value}',
+        );
+      }
+    });
+
+    test('트레이너가 마지막으로 말한 스레드는 안읽음이 없다', () async {
+      // 예전에는 `threadHandled: true` 를 고객마다 손으로 적어 뒀다. 대화를
+      // 손볼 때 한쪽만 바뀌어 이지수·박성호는 트레이너가 마지막으로 답장해
+      // 놓고도 안읽음 배지를 달고 있었다 — 아무것도 기다리는 게 없는데
+      // 목록이 "답장하세요" 라고 말했다.
+      await seedIfEmpty(db);
+
+      final unread = await DriftChatRepository(db).watchUnreadCounts().first;
+      final clients = await db.select(db.trainerClients).get();
+      expect(clients, isNotEmpty);
+
+      for (final client in clients) {
+        final thread =
+            await (db.select(db.clientChatMessages)
+                  ..where((t) => t.clientId.equals(client.id))
+                  ..orderBy(<OrderingTerm Function($ClientChatMessagesTable)>[
+                    (t) => OrderingTerm(expression: t.createdAt),
+                  ]))
+                .get();
+        final answered = thread.isEmpty || thread.last.sender == 'trainer';
+        expect(
+          (unread[client.id] ?? 0) == 0,
+          answered,
+          reason:
+              '${client.name}(${client.id}): 마지막 발신자 '
+              '${thread.isEmpty ? '(없음)' : thread.last.sender}',
         );
       }
     });

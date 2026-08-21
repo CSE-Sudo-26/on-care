@@ -629,7 +629,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exThisWeek => 'This week';
 
   @override
-  String get exThisMonth => 'This month';
+  String get exPeriodAll => 'All';
 
   @override
   String get exExerciseContent => 'What you did';
@@ -673,6 +673,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exUnitStreakDays => 'day streak';
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days days in a row!';
+  }
+
+  @override
+  String get exStreakStart => 'Start a streak with today\'s workout.';
 
   @override
   String get exToday => 'Today';
@@ -1286,6 +1294,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
 
   @override
+  String get exConsultDataSharingAgree =>
+      'I have read this and agree to share my meal and workout records and body information with this trainer';
+
+  @override
+  String get exConsultDataSharingRequired =>
+      'Please agree to sharing before requesting a consultation';
+
+  @override
+  String get coachInviteConsentTitle => 'Before you connect';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return 'Once $name becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => 'Agree and connect';
+
+  @override
   String get exExerciseGoal => 'Exercise Goal';
 
   @override
@@ -1843,6 +1870,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachRoutineDone => 'Done';
 
   @override
+  String get coachRoutineCancel => 'Cancel this workout';
+
+  @override
+  String coachRoutineCancelConfirm(String name) {
+    return 'Remove \'$name\' from the list? Anything you already logged stays.';
+  }
+
+  @override
+  String get coachRoutineCancelled => 'Workout cancelled';
+
+  @override
+  String get coachRoutineCancelFailed => 'Couldn\'t cancel the workout';
+
+  @override
   String coachRoutineMyNote(String note) {
     return 'My note: $note';
   }
@@ -1929,6 +1970,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exPtFeedbackTitle => 'Today\'s feedback';
+
+  @override
+  String exNextPtSchedule(String when) {
+    return 'Next PT · $when';
+  }
+
+  @override
+  String get exNextPtNone => 'No PT scheduled yet';
 
   @override
   String exDatedTitle(int month, int day, String title) {

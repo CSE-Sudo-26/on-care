@@ -146,34 +146,23 @@ void main() {
     expect(ink[2], greaterThan(ink[1]), reason: '막대가 끝까지 자라지 않았다');
   });
 
-  testWidgets('이번 주 ↔ 이번 달 전환은 막대 애니메이션을 다시 재생한다', (WidgetTester tester) async {
+  testWidgets('전체로 바꾸면 자라는 애니메이션 대신 스크롤 그래프가 온다 (#1018)', (
+    WidgetTester tester,
+  ) async {
     await pumpExercise(tester);
     await tester.tap(find.text('이번 주'));
     await tester.pumpAndSettle();
 
-    ChartReveal reveal() =>
-        tester.widget<ChartReveal>(find.byType(ChartReveal).first);
+    // 이번 주는 지금처럼 막대가 바닥에서 자란다.
+    expect(find.byType(ChartReveal), findsWidgets);
 
-    final Object? weekly = reveal().replayKey;
-    expect(weekly, isNotNull, reason: '기간을 재생 키로 넘기지 않고 있다');
-
-    await tester.tap(find.text('이번 달'));
-    await tester.pump();
-    expect(reveal().replayKey, isNot(weekly));
-
-    const Size size = Size(600, 150);
-    final CustomPainter atStart = chartPainter(tester);
-    await tester.pump(const Duration(milliseconds: 350));
-    final CustomPainter midway = chartPainter(tester);
-
-    final List<int> ink = (await tester.runAsync(() async {
-      return <int>[
-        await painterInk(atStart, size),
-        await painterInk(midway, size),
-      ];
-    }))!;
-    expect(ink[1], greaterThan(ink[0]), reason: '월간 막대가 다시 자라지 않았다');
-
+    await tester.tap(find.text('전체'));
     await tester.pumpAndSettle();
+
+    // 전체는 12주치를 옆으로 밀어 보는 그래프다. 스크롤하는 그래프에서 막대가
+    // 매번 자라 오르면 민 자리마다 다시 애니메이션이 돌아 읽기 어렵다 —
+    // 여기서는 자라지 않는다.
+    expect(find.byKey(const Key('exerciseAllPeriodChart')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

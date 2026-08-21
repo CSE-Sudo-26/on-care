@@ -301,7 +301,7 @@
   "exWeekSummary": "This Week's Summary",
   "exActivityTitle": "Activity",
   "exThisWeek": "This week",
-  "exThisMonth": "This month",
+  "exPeriodAll": "All",
   "exExerciseContent": "What you did",
   "exViewDetail": "View details",
   "exRegister": "Register",
@@ -329,6 +329,11 @@
   "exStatCalories": "Calories",
   "exStatStreak": "Streak",
   "exUnitStreakDays": "day streak",
+  "exStreakCheer": "{days} days in a row!",
+  "@exStreakCheer": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "exStreakStart": "Start a streak with today's workout.",
   "exToday": "Today",
   "exLoadError": "Couldn't load your exercise data.",
   "exCompletedPtTitle": "Today's completed PT",
@@ -670,6 +675,14 @@
   "exTrainerConsultType": "Trainer Consultation",
   "exAssignedTrainer": "Assigned Trainer",
   "exConsultDataSharingNotice": "Once this trainer accepts your request, they'll be able to see your diet log, exercise log, and body info and health goals.",
+  "exConsultDataSharingAgree": "I have read this and agree to share my meal and workout records and body information with this trainer",
+  "exConsultDataSharingRequired": "Please agree to sharing before requesting a consultation",
+  "coachInviteConsentTitle": "Before you connect",
+  "coachInviteConsentBody": "Once {name} becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.",
+  "@coachInviteConsentBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachInviteConsentAgree": "Agree and connect",
   "exExerciseGoal": "Exercise Goal",
   "exGoalWeightLoss": "Weight Loss",
   "exGoalStrength": "Build Strength",
@@ -1092,6 +1105,13 @@
     "description": "Shown when marking a routine done fails for an unexpected reason."
   },
   "coachRoutineDone": "Done",
+  "coachRoutineCancel": "Cancel this workout",
+  "coachRoutineCancelConfirm": "Remove '{name}' from the list? Anything you already logged stays.",
+  "@coachRoutineCancelConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineCancelled": "Workout cancelled",
+  "coachRoutineCancelFailed": "Couldn't cancel the workout",
   "@coachRoutineDone": {
     "description": "Marks a routine as completed."
   },
@@ -1210,6 +1230,11 @@
     "description": "Title of the completed PT session card."
   },
   "exPtFeedbackTitle": "Today's feedback",
+  "exNextPtSchedule": "Next PT · {when}",
+  "@exNextPtSchedule": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "exNextPtNone": "No PT scheduled yet",
   "@exPtFeedbackTitle": {
     "description": "Label above the trainer's feedback."
   },

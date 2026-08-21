@@ -102,18 +102,26 @@ def history_date_label(day: str) -> str:
 
 
 def relative_time_label(ts: datetime) -> str:
-    """채팅 최근시각 → 방금/N분 전/N시간 전/N일 전."""
-    now = datetime.now(timezone.utc)
+    """채팅 최근시각 → 오늘이면 HH:MM, 어제면 '어제', 그 전이면 YYYY-MM-DD.
+
+    카카오톡과 같은 규칙이다. 예전에는 "방금/N분 전/N시간 전/N일 전" 으로
+    흘러간 시간을 셌는데, 며칠씩 지난 대화에서 트레이너가 알고 싶은 것은
+    "얼마나 됐나" 가 아니라 **언제였나** 다 — 그건 운동·식단 기록과 맞춰
+    보려면 날짜여야 한다.
+
+    경계는 **KST 달력 날짜**로 가른다. 흘러간 초로 나누면 KST 새벽 1시에
+    받은 메시지가 23시간 전이라는 이유로 '오늘' 이 아니게 된다.
+    """
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
-    secs = (now - ts).total_seconds()
-    if secs < 60:
-        return "방금"
-    if secs < 3600:
-        return f"{int(secs // 60)}분 전"
-    if secs < 86400:
-        return f"{int(secs // 3600)}시간 전"
-    return f"{int(secs // 86400)}일 전"
+    local = clock.to_seoul(ts)
+    today = clock.to_seoul(datetime.now(timezone.utc)).date()
+    days = (today - local.date()).days
+    if days <= 0:
+        return local.strftime("%H:%M")
+    if days == 1:
+        return "어제"
+    return local.date().isoformat()
 
 
 def _local_date_iso(ts: datetime) -> str:
@@ -996,6 +1004,37 @@ def delete_routine(
     배정의 일부가 아니다.
     """
     routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    db.delete(routine)
+    db.commit()
+
+
+class RoutineNotCancellable(Exception):
+    """담당 트레이너가 배정한 루틴을 회원이 직접 지우려 했다. (#1020)"""
+
+
+def delete_own_routine(db: Session, member_id: str, routine_id: str) -> None:
+    """회원이 자기 개인 운동을 지운다. **담당 트레이너가 없을 때만.** (#1020)
+
+    트레이너가 배정한 것을 회원이 조용히 없애면, 다음 상담에서 둘이 서로 다른
+    기록을 보게 된다. 담당이 있는 회원에게는 취소가 트레이너의 일이다.
+
+    담당 없이 AI 가 직접 추천한 개인운동(#782)은 승인할 사람이 없으므로 회원이
+    스스로 물릴 수 있어야 한다 — 그러지 않으면 한 번 뜬 추천을 지울 방법이 없다.
+
+    이미 수행한 기록은 남는다. 지우는 것은 **배정**이지 한 일이 아니다.
+    """
+    if get_member_trainer_id(db, member_id) is not None:
+        raise RoutineNotCancellable(
+            "담당 트레이너가 배정한 개인운동은 회원이 직접 취소할 수 없습니다."
+        )
+    routine = db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.id == routine_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    if routine is None:
+        raise RoutineNotFound("루틴을 찾을 수 없습니다.")
     db.delete(routine)
     db.commit()
 

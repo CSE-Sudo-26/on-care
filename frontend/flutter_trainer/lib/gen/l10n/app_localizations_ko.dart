@@ -1082,7 +1082,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientPeriodWeek => '이번 주';
 
   @override
-  String get clientPeriodMonth => '이번 달';
+  String get clientPeriodMonth => '전체';
 
   @override
   String get clientPeriodAverage => '하루 평균';

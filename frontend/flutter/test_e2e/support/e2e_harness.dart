@@ -196,6 +196,8 @@ class E2eApi {
             .substring(0, 10),
         'preferred_time_slot': 'evening',
         'message': 'E2E 예외 케이스',
+        // 동의 없이는 서버가 422 다 (#1022).
+        'data_sharing_consent': true,
       };
 
   Future<Map<String, dynamic>> createConsultation({
@@ -723,6 +725,19 @@ Future<void> submitConsultation(
     await tester.tap(chip);
     await tester.pump();
   }
+
+  // 데이터 공유 동의 없이는 보낼 수 없다 (#1022) — 수락되는 순간 넘어가는 것이
+  // 회원의 건강 기록이라, 신청 화면에서 동의를 받는다.
+  //
+  // 폼을 스크롤하기 **전에** 짚는다. 폼이 지연 목록이라 아래로 내려가면 맨 위의
+  // 동의 줄은 트리에서 사라진다.
+  final Finder consent = find.descendant(
+    of: find.byKey(const Key('consult-data-sharing-notice')),
+    matching: find.byType(Checkbox),
+  );
+  await pumpUntil(tester, consent, step: '데이터 공유 동의');
+  await tester.tap(consent);
+  await tester.pump();
 
   await tapChip('consult-goal', goalIndex);
   await tapChip('consult-purpose', purposeIndex);
