@@ -125,19 +125,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load this week\'s workout history.';
 
   @override
-  String get homeMetricOver => 'Over';
-
-  @override
-  String dietAmountOver(String amount) {
-    return '$amount over the goal';
-  }
-
-  @override
-  String dietAmountRemaining(String amount) {
-    return '$amount remaining to the goal';
-  }
-
-  @override
   String get homeExerciseActiveTime => 'Active time';
 
   @override

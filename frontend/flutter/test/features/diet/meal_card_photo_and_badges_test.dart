@@ -61,12 +61,25 @@ void main() {
   /// 색이 지정된 조각이 값이다. `Text.rich` 가 스팬을 한 겹 감싸 두어 곧장
   /// `children.last` 를 보면 색이 없는 껍데기가 잡힌다.
   Color? badgeColorOf(WidgetTester tester, String text) {
-    // 끼니마다 같은 배지가 있다 — 첫 끼니 것만 본다.
+    // 끼니 카드 안으로 범위를 좁힌다. 같은 화면 위쪽의 나트륨·당류 카드도
+    // "나트륨 …" 으로 시작하는 리치 텍스트를 갖고 있어, 좁히지 않으면 그쪽이
+    // 먼저 잡힌다.
     final RichText rich = tester
         .widgetList<RichText>(
-          find.byWidgetPredicate(
-            (Widget w) =>
-                w is RichText && w.text.toPlainText().startsWith('$text '),
+          find.descendant(
+            of: find
+                .byWidgetPredicate(
+                  (Widget w) =>
+                      w.key is ValueKey<String> &&
+                      (w.key! as ValueKey<String>).value.startsWith(
+                        'mealCard-',
+                      ),
+                )
+                .first,
+            matching: find.byWidgetPredicate(
+              (Widget w) =>
+                  w is RichText && w.text.toPlainText().startsWith('$text '),
+            ),
           ),
         )
         .first;

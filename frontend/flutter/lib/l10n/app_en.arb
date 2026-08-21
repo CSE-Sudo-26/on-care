@@ -47,23 +47,6 @@
   },
   "homeWeeklyExerciseTrend": "Exercise trend",
   "homeExerciseTrendUnavailable": "Couldn't load this week's workout history.",
-  "homeMetricOver": "Over",
-  "dietAmountOver": "{amount} over the goal",
-  "@dietAmountOver": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "dietAmountRemaining": "{amount} remaining to the goal",
-  "@dietAmountRemaining": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "homeExerciseActiveTime": "Active time",
   "homeExerciseBurned": "Calories",
   "homeExerciseDays": "Workout days",

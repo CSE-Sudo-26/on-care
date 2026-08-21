@@ -193,11 +193,23 @@ void main() {
       expect(find.textContaining('2,000 kcal'), findsOneWidget);
       expect(find.textContaining('3,428'), findsOneWidget);
       expect(find.textContaining('17.8'), findsOneWidget);
-      expect(find.text('목표 초과'), findsOneWidget);
-      // 초과가 아닌 지표에는 배지가 없다 (#1070).
+      // 배지도, 차이를 설명하는 문장도 없다 — 카드마다 있고 없고가 갈려
+      // 높이를 들쭉날쭉하게 만들었다 (#1070). 초과는 라벨 옆의 작은 빨간
+      // 글씨와 수치 색으로만 말한다.
+      expect(find.text('목표 초과'), findsNothing);
       expect(find.text('정상'), findsNothing);
-      expect(find.text('목표보다 1,428mg 많아요'), findsOneWidget);
-      expect(find.text('목표까지 32.2g 남았어요'), findsOneWidget);
+      expect(find.text('목표보다 1,428mg 많아요'), findsNothing);
+      expect(find.text('목표까지 32.2g 남았어요'), findsNothing);
+      // 라벨과 한 덩어리(Text.rich)라 리치 텍스트까지 뒤져야 잡힌다.
+      expect(
+        find.textContaining('+1,428mg', findRichText: true),
+        findsOneWidget,
+      );
+      // 목표 안쪽인 당류에는 초과분 글씨가 붙지 않는다.
+      expect(
+        find.textContaining('+32.2g', findRichText: true),
+        findsNothing,
+      );
       expect(
         find.byKey(const Key('nutrition-status-vertical-progress-나트륨')),
         findsOneWidget,
@@ -483,8 +495,7 @@ void main() {
   });
 
   testWidgets('목표를 넘기면 달성률이 100% 를 넘어 적힌다 (#846)', (WidgetTester tester) async {
-    // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다 — 여기가 100% 로 적히면
-    // 같은 카드의 "목표보다 500 kcal 많아요" 와 어긋난다.
+    // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다.
     const DietDay day = DietDay(
       entries: <DietEntry>[
         DietEntry(

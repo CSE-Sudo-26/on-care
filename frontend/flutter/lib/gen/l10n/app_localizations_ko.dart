@@ -123,19 +123,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeExerciseTrendUnavailable => '주간 운동 기록을 불러오지 못했어요.';
 
   @override
-  String get homeMetricOver => '초과';
-
-  @override
-  String dietAmountOver(String amount) {
-    return '목표보다 $amount 많아요';
-  }
-
-  @override
-  String dietAmountRemaining(String amount) {
-    return '목표까지 $amount 남았어요';
-  }
-
-  @override
   String get homeExerciseActiveTime => '운동 시간';
 
   @override

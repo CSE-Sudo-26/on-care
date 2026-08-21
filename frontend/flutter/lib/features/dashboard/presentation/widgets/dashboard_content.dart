@@ -570,7 +570,6 @@ class _MetricStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     final bool over =
         indicator.overBudget ||
         (indicator.max > 0 && indicator.current > indicator.max);
@@ -608,15 +607,18 @@ class _MetricStatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
+              // 초과는 배지가 아니라 수치 자체를 빨갛게 해서 말한다. 배지는
+              // 카드마다 있고 없고가 갈려 카드 높이를 들쭉날쭉하게 만들었다
+              // (#1070). 색은 어느 카드에도 자리를 더 먹지 않는다.
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   _metricNumber(indicator.current),
                   maxLines: 1,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
+                    color: over ? FigmaColors.dangerRed : FigmaColors.ink,
                     letterSpacing: -0.5,
                     height: 1,
                   ),
@@ -642,32 +644,6 @@ class _MetricStatCard extends StatelessWidget {
                   ),
                 ),
               ),
-              // 배지는 초과일 때만 단다. 예전에는 그 외를 "정상"이라고 했는데,
-              // 1g만 먹어도 초과는 아니라서 영양이 한참 모자란 날까지 정상
-              // 배지가 붙었다(#1070). 남는 자리는 그대로 비운다 — 붙일 말이
-              // 없는 것이지, 상태가 좋다는 뜻이 아니다.
-              if (over) ...<Widget>[
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: FigmaColors.dangerRed.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    l.homeMetricOver,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.dangerRed,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
