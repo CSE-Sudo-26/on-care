@@ -755,6 +755,15 @@ Future<void> submitConsultation(
   await tester.enterText(box, message);
   await tester.pump();
 
+  // 데이터 공유 동의 없이는 보낼 수 없다 (#1022) — 수락되는 순간 넘어가는 것이
+  // 회원의 건강 기록이라, 신청 화면에서 동의를 받는다.
+  final Finder consent = await _revealInForm(
+    tester,
+    find.byKey(const Key('consultDataSharingConsent')),
+  );
+  await tester.tap(consent);
+  await tester.pump();
+
   final Finder submit = await _revealInForm(
     tester,
     find.byKey(const Key('consult-submit')),
