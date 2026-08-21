@@ -45,7 +45,7 @@ void main() {
       final avatar = tester.widget<ClientAvatar>(
         find.descendant(of: selectedTile, matching: find.byType(ClientAvatar)),
       );
-      expect(avatar.showStatus, isTrue);
+      expect(avatar.showStatus, isFalse);
       expect(avatar.size, 36);
       final surface = tester.widget<Material>(
         find
@@ -117,16 +117,25 @@ void main() {
         find.byKey(const ValueKey<String>('messages-unread-seed-client-8')),
         findsOneWidget,
       );
-      // 목록은 어느 대화를 열까를 정하는 자리다 — 상태의 자세한 내막은
-      // 대화를 연 뒤 헤더가 말한다. 활성/휴면은 아바타 점으로만 남는다.
+      // 목록은 어느 대화를 열까를 정하는 자리다 — 이름 · 시각 · 마지막
+      // 말 · 안읽음뿐이고, 목표도 상태도 없다.
       expect(
-        find.descendant(of: conversation, matching: find.text('휴면')),
+        find.descendant(of: conversation, matching: find.text('근력 향상')),
         findsNothing,
       );
       expect(
         find.descendant(of: conversation, matching: find.text('나트륨 초과')),
         findsNothing,
       );
+      // 목표 자리를 미리보기가 가져갔다 — 두 줄이면 뒤에 무엇이 붙는지까지
+      // 읽히고, 열어 볼 대화인지 목록에서 판단할 수 있다.
+      final preview = tester.widget<Text>(
+        find.descendant(
+          of: conversation,
+          matching: find.textContaining('이해해요! 대신 AI 식단 분석'),
+        ),
+      );
+      expect(preview.maxLines, 2);
     });
   });
 
@@ -217,21 +226,16 @@ void main() {
         const ValueKey<String>('messages-thread-identity'),
       );
       expect(identity, findsOneWidget);
-      // 활성/휴면 알약이 이름 줄에 선다.
+      // 활성/휴면은 메시지 탭 어디에도 없다 — 이 사람과 지금 이야기하는
+      // 데 쓰이지 않는 값이고, 바꿀 수 있는 자리도 고객 탭이다.
       expect(
-        find.descendant(
-          of: identity,
-          matching: find.byKey(
-            const ValueKey<String>('messages-thread-status'),
-          ),
-        ),
-        findsOneWidget,
+        find.byKey(const ValueKey<String>('messages-thread-status')),
+        findsNothing,
       );
-      expect(
-        find.descendant(of: identity, matching: find.text('휴면')),
-        findsOneWidget,
-      );
-      // 목록과 달리 주의 배지는 **전부** 선다 — 자세한 쪽이 여기다.
+      expect(find.text('휴면'), findsNothing);
+      expect(find.text('활성'), findsNothing);
+      // 주의 배지는 **전부** 선다 — 나트륨이 넘쳤다는 사실은 지금 이
+      // 대화에서 할 말을 바꾼다.
       expect(
         find.descendant(of: identity, matching: find.text('나트륨 초과')),
         findsOneWidget,
@@ -326,6 +330,24 @@ void main() {
       await settle(tester);
 
       expect(find.text('메모 추가됨'), findsOneWidget);
+      // 옮겨 적은 뒤에는 바탕만 비운다 — 붉은 바탕은 "아직 볼 것이 있다"
+      // 는 신호라, 처리한 배너와 안 한 배너가 똑같이 붉으면 안 된다.
+      // 윤곽선과 버튼의 붉은색은 무슨 일이 있었는지를 남긴다.
+      final banner = tester.widget<Container>(
+        find.byKey(
+          const ValueKey<String>('chat-insight-banner-seed-chat-1-16'),
+        ),
+      );
+      final decoration = banner.decoration! as BoxDecoration;
+      expect(decoration.color, AppColors.card);
+      expect(
+        (decoration.border! as Border).top.color,
+        AppColors.warning.withValues(alpha: 0.28),
+      );
+      expect(
+        tester.widget<Text>(find.text('메모 추가됨')).style?.color,
+        AppColors.warning,
+      );
       // 채팅에서 저장한 메모는 회원 상세가 읽는 것과 **같은** 메모 목록에 들어간다.
       final memos = await container
           .read(trainerMemoRepositoryProvider)

@@ -433,7 +433,16 @@ class _ChatInsightBanner extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.10),
+        // 메모로 남기고 나면 **바탕만** 하얗게 비운다. 붉은 바탕은 "여기
+        // 아직 볼 것이 있다" 는 신호인데, 옮겨 적은 뒤에도 그대로 두면
+        // 스레드를 다시 열 때마다 처리한 것과 안 한 것이 똑같이 붉다.
+        //
+        // 윤곽선과 버튼의 붉은색은 남긴다 — 무슨 일이 있었는지(부정적
+        // 피드백)는 바뀌지 않았고, 그 사실까지 회색으로 지우면 나중에
+        // 훑을 때 이 자리가 무엇이었는지 알아볼 수 없다.
+        color: saved
+            ? AppColors.card
+            : AppColors.warning.withValues(alpha: 0.10),
         borderRadius: const BorderRadius.all(AppRadius.card),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
       ),
@@ -466,10 +475,12 @@ class _ChatInsightBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
+          // 버튼은 저장 뒤에도 붉은색이다. 초록으로 뒤집었더니 빨간 배너
+          // 한가운데서 가장 밝은 것이 "메모 추가됨" 이 되어, 정작 읽어야 할
+          // 감지 내용보다 눈에 먼저 들어왔다. 상태 차이는 색이 아니라
+          // 아이콘(＋ → ✓)과 문구가 말한다.
           Material(
-            color: saved
-                ? AppColors.success.withValues(alpha: 0.10)
-                : AppColors.warning.withValues(alpha: 0.13),
+            color: AppColors.warning.withValues(alpha: 0.13),
             borderRadius: const BorderRadius.all(AppRadius.pill),
             child: InkWell(
               key: ValueKey<String>('chat-insight-add-${insight.id}'),
@@ -486,13 +497,13 @@ class _ChatInsightBanner extends StatelessWidget {
                     Icon(
                       saved ? Icons.check_rounded : Icons.add_rounded,
                       size: 15,
-                      color: saved ? AppColors.success : AppColors.warning,
+                      color: AppColors.warning,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       saved ? l.chatInsightMemoAdded : l.chatInsightAddMemo,
-                      style: TextStyle(
-                        color: saved ? AppColors.success : AppColors.warning,
+                      style: const TextStyle(
+                        color: AppColors.warning,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w800,
                       ),

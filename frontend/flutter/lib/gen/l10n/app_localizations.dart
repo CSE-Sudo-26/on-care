@@ -1298,6 +1298,18 @@ abstract class AppLocalizations {
   /// **'day streak'**
   String get exUnitStreakDays;
 
+  /// No description provided for @exStreakCheer.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days in a row!'**
+  String exStreakCheer(int days);
+
+  /// No description provided for @exStreakStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a streak with today\'s workout.'**
+  String get exStreakStart;
+
   /// No description provided for @exToday.
   ///
   /// In en, this message translates to:
@@ -3410,6 +3422,30 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get coachRoutineDone;
 
+  /// No description provided for @coachRoutineCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this workout'**
+  String get coachRoutineCancel;
+
+  /// No description provided for @coachRoutineCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove \'{name}\' from the list? Anything you already logged stays.'**
+  String coachRoutineCancelConfirm(String name);
+
+  /// No description provided for @coachRoutineCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout cancelled'**
+  String get coachRoutineCancelled;
+
+  /// No description provided for @coachRoutineCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel the workout'**
+  String get coachRoutineCancelFailed;
+
   /// The member's own note on a completed routine.
   ///
   /// In en, this message translates to:
@@ -3571,6 +3607,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today\'s feedback'**
   String get exPtFeedbackTitle;
+
+  /// No description provided for @exNextPtSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Next PT · {when}'**
+  String exNextPtSchedule(String when);
+
+  /// No description provided for @exNextPtNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No PT scheduled yet'**
+  String get exNextPtNone;
 
   /// Screen title carrying the selected date.
   ///
