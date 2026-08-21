@@ -110,21 +110,31 @@ class SessionManageRow extends StatelessWidget {
         key: const ValueKey<String>('session-edit-note-chip'),
         icon: Icons.edit_note,
         label: l.schedEditNote,
-        color: AppColors.secondary,
+        // 메모지의 색이다. `SessionNoteBox` 와 같은 주황을 써야 두 자리가 같은
+        // 것을 가리킨다 — 주의(빨강)가 아니라 적어 두는 자리다(#690, #1012).
+        color: AppColors.brandOrange,
         iconOnly: true,
         onTap: onEditNote,
       ),
     ];
 
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    // 갈래를 띄울 거라면 끝까지 띄운다 — `채팅`·`삭제` 는 오른쪽 끝에 붙여
+    // 세션을 손보는 동작들과 확실히 갈라 놓는다(#1012).
+    return Row(
       children: <Widget>[
-        ...ended,
-        if (ended.isNotEmpty) const _GroupDivider(),
-        ...edits,
-        const _GroupDivider(),
+        Expanded(
+          child: Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              ...ended,
+              if (ended.isNotEmpty) const _GroupDivider(),
+              ...edits,
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
         _ActionChip(
           key: const ValueKey<String>('session-chat-chip'),
           icon: Icons.chat_bubble_outline,
@@ -132,6 +142,7 @@ class SessionManageRow extends StatelessWidget {
           color: AppColors.accent,
           onTap: onChat,
         ),
+        const SizedBox(width: AppSpacing.xs),
         // 되돌릴 수 없는 동작이라 마지막 자리에, 채우지 않은 알약으로 둔다.
         _ActionChip(
           key: const ValueKey<String>('session-delete-chip'),

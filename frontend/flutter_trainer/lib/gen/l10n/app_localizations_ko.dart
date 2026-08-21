@@ -1281,6 +1281,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
+
+  @override
   String get schedSlots => '예약 슬롯';
 
   @override

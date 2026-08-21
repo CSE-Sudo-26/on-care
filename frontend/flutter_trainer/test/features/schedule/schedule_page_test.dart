@@ -943,7 +943,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:30'),
+          matching: find.text('15:30\u201316:30 (60분)'),
         ),
         findsOneWidget,
       );

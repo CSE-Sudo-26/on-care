@@ -2378,6 +2378,12 @@ abstract class AppLocalizations {
   /// **'{name} (new)'**
   String schedNewClientTag(String name);
 
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
+
   /// No description provided for @schedSlots.
   ///
   /// In en, this message translates to:

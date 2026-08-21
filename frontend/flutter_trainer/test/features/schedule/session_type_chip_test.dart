@@ -64,15 +64,17 @@ void main() {
       )
       .data!;
 
-  testWidgets('세션 종류·소요 시간이 첫 줄 알약으로 보인다', (tester) async {
+  testWidgets('세션 종류가 첫 줄 알약으로 보인다', (tester) async {
     await openSchedule(tester);
 
     await openSession(tester, '김민수');
 
     expect(chip(), findsWidgets);
     final Finder first = chip().first;
+    // 소요 시간은 시각 옆 괄호로 갔다 — 서로 다른 두 값을 한 덩어리로 두지
+    // 않는다(#1012).
     expect(
-      find.descendant(of: first, matching: find.textContaining('분')),
+      find.descendant(of: first, matching: find.text('1:1 PT')),
       findsOneWidget,
     );
 

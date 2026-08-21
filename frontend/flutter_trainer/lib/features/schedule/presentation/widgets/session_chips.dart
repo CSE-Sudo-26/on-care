@@ -68,16 +68,19 @@ class SessionStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 예정(파랑) · 완료(회색) · 취소/노쇼(빨강)로 갈라 둔다. 진행되지 않은
-    // 세션이 완료와 같은 회색이면 "끝난 수업" 으로 읽히고, 예정과 같은 파랑이면
+    // 예정(파랑) · 완료(초록) · 취소/노쇼(빨강)로 갈라 둔다. 진행되지 않은
+    // 세션이 완료와 같은 색이면 "끝난 수업" 으로 읽히고, 예정과 같은 파랑이면
     // 아직 할 일로 읽힌다 — 둘 다 사실이 아니다(#871).
+    //
+    // 완료를 회색으로 두었더니 시간표 블록의 초록 띠와 어긋났다. 같은 사실을
+    // 두 자리가 다른 색으로 말하면 어느 쪽을 믿어야 할지 알 수 없다(#1012).
     final Color fg = switch (status) {
-      ScheduleStatus.done => AppColors.disabledForeground,
+      ScheduleStatus.done => AppColors.success,
       ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
       _ => AppColors.accent,
     };
     final Color bg = switch (status) {
-      ScheduleStatus.done => AppColors.inputBackground,
+      ScheduleStatus.done => AppColors.success.withValues(alpha: 0.12),
       ScheduleStatus.cancelled ||
       ScheduleStatus.noShow => AppColors.warning.withValues(alpha: 0.12),
       _ => AppColors.accentSurface,

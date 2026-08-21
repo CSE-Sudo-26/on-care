@@ -1338,6 +1338,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
+
+  @override
   String get schedSlots => 'Booking slots';
 
   @override

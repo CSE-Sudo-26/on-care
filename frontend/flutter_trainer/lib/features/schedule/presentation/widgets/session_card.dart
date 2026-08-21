@@ -108,107 +108,118 @@ class SessionCard extends ConsumerWidget {
               ),
               // 머리글은 **무엇이 어떻게 됐나 → 누구인가** 순서다. (#1012)
               //
-              //   [완료]  10–11  1:1 PT · 60분
-              //   김민수  남성 · 35세
-              //   혈압 관리 · 체중 감량
+              //   [완료]  12:00–12:50 (50분)  1:1 PT
+              //   [프로필]  이지수  여성 · 32세
+              //             체지방 감량
               //
-              // 시각·아바타·이름·목표·칩 둘·화살표를 한 줄에 세우면 폭 340 짜리
-              // 패널에서 이름이 `김…`, 목표가 `혈압 관리 …` 로 잘렸다. 트레이너가
-              // 먼저 찾는 값(어떻게 끝났나·몇 시·무슨 수업)을 첫 줄로 올리고,
-              // 사람에 관한 값은 그 아래로 내린다.
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // 첫 줄은 약속에 관한 값만 담는다. 아바타를 그 줄에 세우면 사람이
+              // 먼저 눈에 들어와, 상태·시각을 먼저 찾는 훑기와 어긋난다.
+              // 소요 시간은 시각 옆 괄호에 둔다 — 종류와 묶어 `1:1 PT · 50분`
+              // 으로 두었더니 서로 다른 두 값이 한 덩어리로 읽혔다.
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  ClientAvatar(
-                    // Guard: a non-gap row with an empty name must not
-                    // crash `.characters.first`.
-                    label: s.clientName.isEmpty
-                        ? '?'
-                        : s.clientName.characters.first,
-                    size: 34,
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            SessionStatusChip(status: s.status),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
+                  Row(
+                    children: <Widget>[
+                      SessionStatusChip(status: s.status),
+                      const SizedBox(width: AppSpacing.xs),
+                      // 시각은 잘리면 안 되는 값이라 글자를 자르는 대신 통째로
+                      // 작게 그린다 — 폭 340 패널에 큰 글자 배율이 겹치면 이
+                      // 줄이 먼저 넘친다.
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            l.schedBlockTime(
                               _timeRange(l, s),
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: s.isFinished
-                                    ? AppColors.disabledForeground
-                                    : AppColors.foreground,
-                              ),
+                              l.minutesShort(s.durationMinutes),
                             ),
-                            const SizedBox(width: AppSpacing.xs),
-                            // 종류·소요 시간은 흐린 글씨가 아니라 알약으로 둔다 —
-                            // 회원의 부가 정보가 아니라 이 약속이 무엇인가를
-                            // 말하는 값이다(#938).
-                            Flexible(
-                              child: SessionTypeChip(
-                                label: l.sessionTypeAndDuration(
-                                  sessionTypeLabel(l, s.type),
-                                  s.durationMinutes,
-                                ),
-                                muted: s.isDone,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        if (client == null)
-                          // 로스터에 없는 고객은 이름 뒤에 `(신규)` 로 그
-                          // 사실을 단다(#988).
-                          Text(
-                            clientNameWithNewTag(
-                              l,
-                              roster,
-                              clientId: s.clientId,
-                              clientName: s.clientName,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.foreground,
-                            ),
-                          )
-                        else ...<Widget>[
-                          ClientIdentity(
-                            client: client,
-                            nameStyle: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.foreground,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: s.isFinished
+                                  ? AppColors.disabledForeground
+                                  : AppColors.foreground,
                             ),
                           ),
-                          // 오늘 만날 회원이 무엇을 목표로 하는 사람인지는
-                          // 세션 종류만큼 자리에서 필요하다(#898).
-                          ClientGoalLabel(client: client),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (s.expandable) ...<Widget>[
-                    const SizedBox(width: AppSpacing.xs),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Icon(
-                        expanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        size: 16,
-                        color: AppColors.disabledForeground,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.xs),
+                      // 종류는 흐린 글씨가 아니라 알약으로 둔다 — 회원의 부가
+                      // 정보가 아니라 이 약속이 무엇인가를 말하는 값이다(#938).
+                      Flexible(
+                        child: SessionTypeChip(
+                          label: sessionTypeLabel(l, s.type),
+                          muted: s.isDone,
+                        ),
+                      ),
+                      if (s.expandable) ...<Widget>[
+                        const SizedBox(width: AppSpacing.xs),
+                        Icon(
+                          expanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: AppColors.disabledForeground,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      ClientAvatar(
+                        // Guard: a non-gap row with an empty name must not
+                        // crash `.characters.first`.
+                        label: s.clientName.isEmpty
+                            ? '?'
+                            : s.clientName.characters.first,
+                        size: 34,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (client == null)
+                              // 로스터에 없는 고객은 이름 뒤에 `(신규)` 로 그
+                              // 사실을 단다(#988).
+                              Text(
+                                clientNameWithNewTag(
+                                  l,
+                                  roster,
+                                  clientId: s.clientId,
+                                  clientName: s.clientName,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.foreground,
+                                ),
+                              )
+                            else ...<Widget>[
+                              ClientIdentity(
+                                client: client,
+                                nameStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              // 오늘 만날 회원이 무엇을 목표로 하는 사람인지는
+                              // 세션 종류만큼 자리에서 필요하다(#898).
+                              ClientGoalLabel(client: client),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -289,14 +300,22 @@ class SessionCard extends ConsumerWidget {
   }
 }
 
-/// `10–11` — 시작과 끝을 짧게. 시간표 블록과 같은 규칙을 쓴다(#1012).
+/// `12:00–12:50` — 시작과 끝. 시각은 자르지 않는다(#1012).
+///
+/// `12–12:50` 으로 줄였더니 그 자리가 무엇을 가리키는지 한 번 더 생각해야
+/// 했다. 시간표 블록과 같은 규칙이다.
 String _timeRange(AppLocalizations l, ScheduleSession session) {
   final start = clockMinutes(session.time);
   if (start == null) return session.time;
-  return l.schedTimeRange(
-    compactClock(start),
-    compactClock(start + session.durationMinutes),
-  );
+  return l.schedTimeRange(session.time, _hhmm(start + session.durationMinutes));
+}
+
+/// 자정부터의 분을 `HH:mm` 으로.
+String _hhmm(int minutes) {
+  final wrapped = minutes % (24 * 60);
+  final hour = (wrapped ~/ 60).toString().padLeft(2, '0');
+  final minute = (wrapped % 60).toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 class _SendButton extends StatelessWidget {
@@ -327,8 +346,14 @@ class _SendButton extends StatelessWidget {
     final Color foreground = sent
         ? AppColors.success
         : (sending ? AppColors.disabledForeground : AppColors.primary);
+    // 배경이 그대로 회색이면 보냈는지 아닌지가 글씨에만 남는다. 보내기 전에는
+    // 연한 남색, 보낸 뒤에는 연한 초록 — 상태 칩과 같은 색 규칙이다(#1012).
     return Material(
-      color: AppColors.inputBackground,
+      color: sent
+          ? AppColors.success.withValues(alpha: 0.12)
+          : (sending
+                ? AppColors.inputBackground
+                : AppColors.primary.withValues(alpha: 0.10)),
       borderRadius: const BorderRadius.all(AppRadius.lg),
       child: InkWell(
         key: const ValueKey<String>('schedule-send-program'),
