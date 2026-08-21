@@ -102,18 +102,26 @@ def history_date_label(day: str) -> str:
 
 
 def relative_time_label(ts: datetime) -> str:
-    """채팅 최근시각 → 방금/N분 전/N시간 전/N일 전."""
-    now = datetime.now(timezone.utc)
+    """채팅 최근시각 → 오늘이면 HH:MM, 어제면 '어제', 그 전이면 YYYY-MM-DD.
+
+    카카오톡과 같은 규칙이다. 예전에는 "방금/N분 전/N시간 전/N일 전" 으로
+    흘러간 시간을 셌는데, 며칠씩 지난 대화에서 트레이너가 알고 싶은 것은
+    "얼마나 됐나" 가 아니라 **언제였나** 다 — 그건 운동·식단 기록과 맞춰
+    보려면 날짜여야 한다.
+
+    경계는 **KST 달력 날짜**로 가른다. 흘러간 초로 나누면 KST 새벽 1시에
+    받은 메시지가 23시간 전이라는 이유로 '오늘' 이 아니게 된다.
+    """
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
-    secs = (now - ts).total_seconds()
-    if secs < 60:
-        return "방금"
-    if secs < 3600:
-        return f"{int(secs // 60)}분 전"
-    if secs < 86400:
-        return f"{int(secs // 3600)}시간 전"
-    return f"{int(secs // 86400)}일 전"
+    local = clock.to_seoul(ts)
+    today = clock.to_seoul(datetime.now(timezone.utc)).date()
+    days = (today - local.date()).days
+    if days <= 0:
+        return local.strftime("%H:%M")
+    if days == 1:
+        return "어제"
+    return local.date().isoformat()
 
 
 def _local_date_iso(ts: datetime) -> str:
