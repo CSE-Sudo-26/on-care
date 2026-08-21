@@ -151,6 +151,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonSodium => '나트륨 조절에 좋아요';
 
   @override
+  String get homeMealSourceTrainer => '트레이너 추천';
+
+  @override
+  String get homeMealSourceAi => 'AI 추천';
+
+  @override
   String get homeMealTagLowSodium => '저나트륨';
 
   @override
@@ -160,7 +166,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonGlucose => '혈당 안정에 도움돼요';
 
   @override
-  String get homeMealTagLowGi => '저GI';
+  String get homeMealTagLowSugar => '저당류';
 
   @override
   String get homeMealSalmon => '연어 구이 + 나물';
@@ -169,7 +175,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonOmega => '오메가3 + 식이섬유';
 
   @override
-  String get homeMealTagHighProtein => '고단백';
+  String get homeMealTagHighProtein => '고단백질';
 
   @override
   String get homeMealTofu => '두부 채소 볶음';
@@ -187,7 +193,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonFiber => '식이섬유가 풍부해요';
 
   @override
-  String get homeMealTagHighFiber => '고식이섬유';
+  String get homeMealTagLowFat => '저지방';
 
   @override
   String homeRecBasisSodium(int days, String sodium) {

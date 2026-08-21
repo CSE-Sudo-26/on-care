@@ -368,6 +368,18 @@ abstract class AppLocalizations {
   /// **'Great for sodium control'**
   String get homeMealReasonSodium;
 
+  /// No description provided for @homeMealSourceTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer pick'**
+  String get homeMealSourceTrainer;
+
+  /// No description provided for @homeMealSourceAi.
+  ///
+  /// In en, this message translates to:
+  /// **'AI pick'**
+  String get homeMealSourceAi;
+
   /// No description provided for @homeMealTagLowSodium.
   ///
   /// In en, this message translates to:
@@ -386,11 +398,11 @@ abstract class AppLocalizations {
   /// **'Helps steady blood sugar'**
   String get homeMealReasonGlucose;
 
-  /// No description provided for @homeMealTagLowGi.
+  /// No description provided for @homeMealTagLowSugar.
   ///
   /// In en, this message translates to:
-  /// **'Low GI'**
-  String get homeMealTagLowGi;
+  /// **'Low sugar'**
+  String get homeMealTagLowSugar;
 
   /// No description provided for @homeMealSalmon.
   ///
@@ -440,11 +452,11 @@ abstract class AppLocalizations {
   /// **'Rich in dietary fiber'**
   String get homeMealReasonFiber;
 
-  /// No description provided for @homeMealTagHighFiber.
+  /// No description provided for @homeMealTagLowFat.
   ///
   /// In en, this message translates to:
-  /// **'High fiber'**
-  String get homeMealTagHighFiber;
+  /// **'Low fat'**
+  String get homeMealTagLowFat;
 
   /// No description provided for @homeRecBasisSodium.
   ///
