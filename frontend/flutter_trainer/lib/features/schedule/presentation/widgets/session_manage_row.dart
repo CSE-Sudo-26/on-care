@@ -10,7 +10,8 @@ class SessionManageRow extends StatelessWidget {
     super.key,
     required this.onEditSchedule,
     required this.onEditProgram,
-    required this.noteOnly,
+    required this.onEditNote,
+    required this.hasProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -21,10 +22,17 @@ class SessionManageRow extends StatelessWidget {
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
 
-  /// 프로그램 없이 메모만 남기는 세션인가(상담). 같은 자리가 여는 편집기와
-  /// 라벨이 함께 바뀐다 — `프로그램 수정` 이라 적혀 있으면 상담에서 누를 이유가
-  /// 없는 버튼으로 읽힌다(#988).
-  final bool noteOnly;
+  /// 운동 목록 없이 메모만 여는 자리. (#1011)
+  ///
+  /// 세션 종류와 상관없이 늘 있다. 메모가 `프로그램 수정` 안쪽, 운동 목록을 다
+  /// 지나야 나오는 자리에만 있던 때에는 1:1 PT 의 메모를 남기려면 프로그램
+  /// 편집기를 열고 스크롤해 내려가야 했다 — 매주 반복되는 세션에서 가장 자주
+  /// 손대는 값인데도.
+  final VoidCallback onEditNote;
+
+  /// 프로그램을 짜는 세션인가. 상담은 아니므로 `프로그램 수정` 이 서지 않는다 —
+  /// 누를 이유가 없는 버튼으로 읽힌다(#988).
+  final bool hasProgram;
 
   final VoidCallback onDelete;
   final VoidCallback onChat;
@@ -76,11 +84,18 @@ class SessionManageRow extends StatelessWidget {
           color: AppColors.accent,
           onTap: onEditSchedule,
         ),
+        if (hasProgram)
+          _ActionChip(
+            key: const ValueKey<String>('session-edit-program-chip'),
+            label: l.progEditTitle,
+            color: AppColors.secondary,
+            onTap: onEditProgram,
+          ),
         _ActionChip(
-          key: const ValueKey<String>('session-edit-program-chip'),
-          label: noteOnly ? l.schedEditNote : l.progEditTitle,
+          key: const ValueKey<String>('session-edit-note-chip'),
+          label: l.schedEditNote,
           color: AppColors.secondary,
-          onTap: onEditProgram,
+          onTap: onEditNote,
         ),
         _ActionChip(
           label: l.actionDelete,

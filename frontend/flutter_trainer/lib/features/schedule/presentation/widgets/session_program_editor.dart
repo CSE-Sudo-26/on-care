@@ -96,7 +96,8 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
           .updateProgram(
             widget.session.id,
             program: widget.noteOnly ? widget.session.program : program,
-            note: _note.text.trim(),
+            // 편집기가 보여 주지 않은 값은 그대로 둔다(#1011).
+            note: widget.noteOnly ? _note.text.trim() : widget.session.note,
           );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
@@ -149,24 +150,29 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
             ),
             const SizedBox(height: AppSpacing.md),
           ],
-          Text(
-            l.schedNote,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          TextField(
-            key: const ValueKey<String>('program-trainer-note'),
-            controller: _note,
-            minLines: 2,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: l.progNoteHint,
-              hintStyle: const TextStyle(color: AppColors.mutedForeground),
-              border: const OutlineInputBorder(),
-              isDense: true,
+          // 메모는 **메모 자리에서만** 고친다. 프로그램 편집기 안쪽, 운동 목록을
+          // 다 지나야 나오는 자리에도 두면 같은 값을 고치는 곳이 둘이 되어
+          // 어느 쪽이 최신인지 읽는 사람이 알 수 없다(#1011).
+          if (widget.noteOnly) ...<Widget>[
+            Text(
+              l.schedNote,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              key: const ValueKey<String>('program-trainer-note'),
+              controller: _note,
+              minLines: 2,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: l.progNoteHint,
+                hintStyle: const TextStyle(color: AppColors.mutedForeground),
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           Row(
             children: <Widget>[
               Expanded(

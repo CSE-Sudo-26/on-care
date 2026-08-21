@@ -2336,6 +2336,12 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get schedTitle;
 
+  /// No description provided for @schedDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session detail'**
+  String get schedDetailTitle;
+
   /// No description provided for @schedDeleteTitle.
   ///
   /// In en, this message translates to:
@@ -2365,6 +2371,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{start}–{end}'**
   String schedTimeRange(String start, String end);
+
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
 
   /// No description provided for @schedEmptyWeek.
   ///
