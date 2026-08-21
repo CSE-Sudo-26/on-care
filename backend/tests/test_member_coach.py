@@ -194,3 +194,68 @@ def test_cancelling_an_unknown_routine_is_404(client):
 
     missing = client.delete("/v1/me/coach/routines/nope", headers=_h(token))
     assert missing.status_code == 404, missing.text
+
+
+def test_accepting_a_coach_invite_requires_data_sharing_consent(client, db_session):
+    """동의 없이 수락하면 400 — 수락하는 순간 트레이너가 건강 기록을 읽는다. (#1022)"""
+    from app.models import models
+
+    member = _h(_member_tok(client))
+    # 시드 회원은 이미 담당이 있다. 담당이 없는 회원을 새로 만들어 초대를 건다.
+    email = f"consent-{uuid4().hex[:8]}@oncare.com"
+    created = client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": "oncare123", "name": "동의"},
+    )
+    assert created.status_code in (200, 201), created.text
+    token = client.post(
+        "/v1/auth/login", data={"username": email, "password": "oncare123"}
+    ).json()["access_token"]
+    new_member_id = client.get("/v1/users/me", headers=_h(token)).json()["id"]
+
+    # 시드 트레이너(trainer-demo)를 쓰지 않는다 — 담당이 하나 늘면 시드 로스터
+    # 개수를 검사하는 다른 테스트가 깨진다.
+    trainer_id = f"trainer-{uuid4().hex[:8]}"
+    db_session.add(
+        models.User(
+            id=trainer_id,
+            email=f"{trainer_id}@oncare.com",
+            name="동의 트레이너",
+            hashed_password="x",
+            role="trainer",
+        )
+    )
+    # 트레이너 행이 먼저 커밋돼야 초대의 외래키가 걸린다.
+    db_session.commit()
+
+    invite_id = f"invite-{uuid4().hex[:8]}"
+    db_session.add(
+        models.TrainerClientInvite(
+            id=invite_id,
+            trainer_id=trainer_id,
+            member_id=new_member_id,
+            status="pending",
+        )
+    )
+    db_session.commit()
+
+    refused = client.post(
+        f"/v1/me/coach/invites/{invite_id}/accept",
+        headers=_h(token),
+        json={"data_sharing_consent": False},
+    )
+    assert refused.status_code == 400, refused.text
+
+    # 동의하면 연결되고, 동의 시각이 링크에 남는다.
+    accepted = client.post(
+        f"/v1/me/coach/invites/{invite_id}/accept",
+        headers=_h(token),
+        json={"data_sharing_consent": True},
+    )
+    assert accepted.status_code == 200, accepted.text
+
+    link = db_session.query(models.TrainerClient).filter_by(
+        member_id=new_member_id, active=True
+    ).one()
+    assert link.data_consent_at is not None
+    assert member  # 시드 회원 토큰은 대역 준비용이다.

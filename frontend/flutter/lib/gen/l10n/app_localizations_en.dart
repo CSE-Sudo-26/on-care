@@ -1294,6 +1294,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
 
   @override
+  String get exConsultDataSharingAgree =>
+      'I have read this and agree to share my meal and workout records and body information with this trainer';
+
+  @override
+  String get exConsultDataSharingRequired =>
+      'Please agree to sharing before requesting a consultation';
+
+  @override
+  String get coachInviteConsentTitle => 'Before you connect';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return 'Once $name becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => 'Agree and connect';
+
+  @override
   String get exExerciseGoal => 'Exercise Goal';
 
   @override

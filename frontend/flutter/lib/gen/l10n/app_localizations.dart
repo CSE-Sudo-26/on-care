@@ -2390,6 +2390,36 @@ abstract class AppLocalizations {
   /// **'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.'**
   String get exConsultDataSharingNotice;
 
+  /// No description provided for @exConsultDataSharingAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read this and agree to share my meal and workout records and body information with this trainer'**
+  String get exConsultDataSharingAgree;
+
+  /// No description provided for @exConsultDataSharingRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please agree to sharing before requesting a consultation'**
+  String get exConsultDataSharingRequired;
+
+  /// No description provided for @coachInviteConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Before you connect'**
+  String get coachInviteConsentTitle;
+
+  /// No description provided for @coachInviteConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once {name} becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.'**
+  String coachInviteConsentBody(String name);
+
+  /// No description provided for @coachInviteConsentAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree and connect'**
+  String get coachInviteConsentAgree;
+
   /// No description provided for @exExerciseGoal.
   ///
   /// In en, this message translates to:
