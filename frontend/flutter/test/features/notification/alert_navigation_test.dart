@@ -100,6 +100,9 @@ class _FakeCoachRepository implements MemberCoachRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<void> deleteRoutine(String routineId) async {}
+
+  @override
   Future<void> markRead() async {}
 
   @override

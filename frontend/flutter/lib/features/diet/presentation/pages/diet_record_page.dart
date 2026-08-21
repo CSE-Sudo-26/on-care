@@ -17,6 +17,7 @@ import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/ai_advice_card.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// 식단 tab, rebuilt to match the On-Care Figma redesign. The weekly date
@@ -885,8 +886,12 @@ class _NutritionSummaryCard extends StatelessWidget {
     // 카드의 칼로리와 아래의 나트륨·당류는 이미 이렇게 갈린다 — 탄단지 바만
     // 예외였다(#890). 세 항목이 각자 판단하므로 지방만 넘긴 날은 지방 바만
     // 빨개진다.
-    Color macroColor(_NutritionSummaryItem item) =>
-        item.isOverGoal ? FigmaColors.dangerRed : FigmaColors.primaryA(0.65);
+    // 정상은 초록이다 (#1019). 바로 아래 나트륨·당류 카드가 이미 초록으로
+    // 말하는데 여기만 파랑이면, 파랑이 "정상"인지 "다른 종류의 지표"인지 알 수
+    // 없다. 위아래로 붙어 있는 카드가 같은 상태를 다른 색으로 칠할 이유가 없다.
+    Color macroColor(_NutritionSummaryItem item) => item.isOverGoal
+        ? FigmaColors.statusOver
+        : FigmaColors.statusNormal.withValues(alpha: 0.65);
     final List<_MacroProgressData> macros = <_MacroProgressData>[
       _MacroProgressData(item: carbs, color: macroColor(carbs)),
       _MacroProgressData(item: protein, color: macroColor(protein)),
@@ -894,8 +899,8 @@ class _NutritionSummaryCard extends StatelessWidget {
     ];
     final AppLocalizations l = AppLocalizations.of(context);
     final Color calorieColor = calories.isOverGoal
-        ? FigmaColors.dangerRed
-        : FigmaColors.primary;
+        ? FigmaColors.statusOver
+        : FigmaColors.statusNormal;
     final String calorieStatus = calories.isOverGoal
         ? l.dietAmountOver('$calorieDifference ${calories.unit}')
         : l.dietAmountRemaining('$calorieDifference ${calories.unit}');
@@ -1202,16 +1207,16 @@ class _NutritionStatusCards extends StatelessWidget {
       item: sodium,
       difference: sodiumDifference,
       progressColor: sodium.isOverGoal
-          ? FigmaColors.dangerRed
-          : FigmaColors.greenText,
+          ? FigmaColors.statusOver
+          : FigmaColors.statusNormal,
     );
     final Widget sugarCard = _NutritionStatusCard(
       key: const Key('nutrition-sugar-status'),
       item: sugar,
       difference: sugarDifference,
       progressColor: sugar.isOverGoal
-          ? FigmaColors.dangerRed
-          : FigmaColors.greenText,
+          ? FigmaColors.statusOver
+          : FigmaColors.statusNormal,
     );
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -1253,8 +1258,8 @@ class _NutritionStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final Color statusColor = item.isOverGoal
-        ? FigmaColors.dangerRed
-        : FigmaColors.greenText;
+        ? FigmaColors.statusOver
+        : FigmaColors.statusNormal;
     final String differenceText = item.isOverGoal
         ? l.dietAmountOver('$difference${item.unit}')
         : l.dietAmountRemaining('$difference${item.unit}');
@@ -1265,8 +1270,8 @@ class _NutritionStatusCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: item.isOverGoal
-              ? FigmaColors.dangerRed.withValues(alpha: 0.32)
-              : FigmaColors.primaryA(0.18),
+              ? FigmaColors.statusOver.withValues(alpha: 0.32)
+              : FigmaColors.statusNormal.withValues(alpha: 0.18),
         ),
         boxShadow: kCardShadow,
       ),
@@ -1426,53 +1431,14 @@ class _AiFeedback extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) {
-    if (message.trim().isEmpty) return const SizedBox.shrink();
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: FigmaColors.softBlue,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: FigmaColors.primaryA(0.15)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const OniAvatar(size: 40),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    l.dietAiFeedback,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                      color: FigmaColors.ink,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    // 운동 탭도 같은 카드를 쓴다 — 그림은 공용 위젯에 있다. (#1021)
+    child: AiAdviceCard(
+      title: AppLocalizations.of(context).dietAiFeedback,
+      message: message,
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────── meal log ──
