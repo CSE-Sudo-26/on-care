@@ -612,6 +612,18 @@ class _SentBanner extends StatelessWidget {
 class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message, required this.avatar});
 
+  /// 말풍선이 차지할 수 있는 대화 폭의 최대 비율.
+  ///
+  /// 상한이 없으면 긴 메시지가 대화 창을 가로로 다 채운다. 그러면 말풍선이
+  /// 말풍선으로 읽히지 않는다 — 누가 한 말인지는 색과 **어느 쪽으로 붙어
+  /// 있는가**가 말하는데, 양쪽 끝에 닿아 버리면 그 신호가 사라진다.
+  ///
+  /// 절대값 상한은 두지 않는다. 대화 패널이 가장 넓어지는 경우
+  /// (`wideMaxWidth` 1440 에서 `splitListWidth` 380 을 뺀 ~1000)에도 이
+  /// 비율이면 720 안쪽이라, 읽기 좋은 줄 길이의 기준으로 이미 쓰고 있는
+  /// `contentMaxWidth`(760) 를 넘지 않는다.
+  static const double _maxWidthFraction = 0.72;
+
   final ClientChatMessage message;
   final String avatar;
 
@@ -681,18 +693,30 @@ class _Bubble extends ConsumerWidget {
       ],
     );
 
-    return Row(
-      mainAxisAlignment: fromTrainer
-          ? MainAxisAlignment.end
-          : MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        if (!fromTrainer) ...<Widget>[
-          ClientAvatar(label: avatar, size: 28),
-          const SizedBox(width: AppSpacing.sm),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => Row(
+        mainAxisAlignment: fromTrainer
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          if (!fromTrainer) ...<Widget>[
+            ClientAvatar(label: avatar, size: 28),
+            const SizedBox(width: AppSpacing.sm),
+          ],
+          // `Flexible` 도 함께 둔다. 아주 좁은 폭에서는 아바타와 여백이
+          // 먼저 자리를 가져가 비율로 계산한 상한보다도 남는 폭이 적을 수
+          // 있는데, 그때는 상한이 아니라 남은 폭을 따라야 넘치지 않는다.
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth * _maxWidthFraction,
+              ),
+              child: bubble,
+            ),
+          ),
         ],
-        Flexible(child: bubble),
-      ],
+      ),
     );
   }
 
