@@ -2078,6 +2078,42 @@ abstract class AppLocalizations {
   /// **'Goal'**
   String get clientPeriodGoal;
 
+  /// No description provided for @exBurnTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned today'**
+  String get exBurnTodayTitle;
+
+  /// No description provided for @exBurnWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this week'**
+  String get exBurnWeekTitle;
+
+  /// No description provided for @exBurnMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this month'**
+  String get exBurnMonthTitle;
+
+  /// No description provided for @exBurnDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned'**
+  String get exBurnDayTitle;
+
+  /// No description provided for @exTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get exTypeOther;
+
+  /// No description provided for @exSetsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
+  String exSetsValue(int count);
+
   /// No description provided for @clientPeriodLoggedDays.
   ///
   /// In en, this message translates to:

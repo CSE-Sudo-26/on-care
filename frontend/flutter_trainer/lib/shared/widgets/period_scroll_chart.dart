@@ -178,7 +178,6 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                   height: widget.height,
                   child: Stack(
                     children: <Widget>[
-                      if (widget.goalOverlay != null) widget.goalOverlay!,
                       if (widget.selectedIndex != null)
                         _SelectionLine(
                           left: slot * widget.selectedIndex! + slot / 2,
@@ -200,6 +199,10 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                             ),
                         ],
                       ),
+                      // 목표선은 막대 **위**에 얹는다. 뒤에 깔면 목표에 가까운
+                      // 막대가 `목표 N` 라벨을 덮어, 정작 견줄 기준이 안 보인다.
+                      // 점선이라 데이터와 경쟁하지도 않는다.
+                      if (widget.goalOverlay != null) widget.goalOverlay!,
                     ],
                   ),
                 ),
