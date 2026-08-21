@@ -25,7 +25,7 @@ part of 'seed_data.dart';
 ///    걸리면 벌크업이 아니라 식습관 문제로 읽힌다. 나트륨 ÷ 칼로리는 1.5mg/kcal
 ///    을 넘지 않는다 — 그 위는 국물만 먹어야 나오는 값이다. 아래로는 제한이
 ///    없다(현미·닭가슴살 위주의 3,000kcal 는 0.6 근처가 정상이다).
-///  * `threadHandled: false` → 답장 대기.
+///  * **답장 대기는 스레드가 정한다** — 마지막 말이 회원 것이면 안읽음이다.
 ///
 /// Coverage this is meant to guarantee, by client:
 ///  1  김민수    나트륨 초과, 톱니형 이행률
@@ -57,7 +57,6 @@ const List<_Client> _clients = <_Client>[
     // 중간 토막을 잘라 써서 목록과 대화의 첫 마디가 서로 달랐다. 길이는 카드가
     // 알아서 줄임표로 자른다 — 여기서 미리 자르면 안 된다.
     lastTime: '18:18',
-    threadHandled: true,
     active: true,
     // 김민수의 수치는 **여기에 없다.** 그는 사용자 앱의 데모 계정(`user-demo`)과
     // 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 각자 만들면 같은 날짜의 숫자가
@@ -339,7 +338,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '정',
     goal: '산후 체력 회복',
     lastTime: '2시간 전',
-    threadHandled: true,
     active: true,
     calories: 1520,
     sodiumMg: 1650,
@@ -409,7 +407,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '최',
     goal: '마라톤 완주 준비',
     lastTime: '어제',
-    threadHandled: true,
     active: true,
     calories: 2600,
     sodiumMg: 1450,
@@ -488,7 +485,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '강',
     goal: '체지방 감량',
     lastTime: '5시간 전',
-    threadHandled: true,
     active: true,
     calories: 2260,
     sodiumMg: 2750,
@@ -564,7 +560,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '임',
     goal: '목표 설정 전',
     lastTime: '-',
-    threadHandled: true,
     active: true,
     calories: 0,
     sodiumMg: 0,
@@ -715,7 +710,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '신',
     goal: '재활 후 복귀',
     lastTime: '3시간 전',
-    threadHandled: true,
     active: true,
     calories: 1590,
     sodiumMg: 1720,
@@ -786,7 +780,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '한',
     goal: '현 체중 유지',
     lastTime: '어제',
-    threadHandled: true,
     active: true,
     calories: 1880,
     sodiumMg: 2010,
@@ -954,7 +947,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '백',
     goal: '식습관 개선',
     lastTime: '어제',
-    threadHandled: true,
     active: true,
     calories: 1920,
     sodiumMg: 2680,
@@ -1009,7 +1001,6 @@ const List<_Client> _clients = <_Client>[
     avatar: '노',
     goal: '운동 습관 만들기',
     lastTime: '어제',
-    threadHandled: true,
     active: true,
     calories: 1280,
     sodiumMg: 1450,

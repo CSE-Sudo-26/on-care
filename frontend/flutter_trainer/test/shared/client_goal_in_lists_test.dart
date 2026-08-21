@@ -40,19 +40,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('메시지 스레드 목록 행에 고객 목표가 보인다', (tester) async {
-    await openTab(tester, AppRoutes.messages);
+  // 메시지 탭 **목록**은 예외다. #898 이 목표를 넣었을 때는 대화 패널
+  // 머리에만 있어서 목록에서 고를 근거가 없었는데, 지금은 헤더가 목표를
+  // 말한다. 어느 대화를 열지는 마지막에 오간 말로 정하지 목표로 정하지
+  // 않으므로, 그 자리를 미리보기 두 줄에 넘겼다.
+  testWidgets('메시지 목록 행에는 목표가 없고 대화 헤더가 대신 말한다', (tester) async {
+    await openTab(tester, AppRoutes.messagesFor('goal-client'));
 
+    // 목록 타일에는 없다.
     expect(
       find.descendant(
         of: find.byKey(
           const ValueKey<String>('messages-conversation-goal-client'),
         ),
-        matching: find.byType(ClientGoalLabel),
+        matching: find.text(goal),
       ),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.text(goal), findsWidgets);
+    // 대화를 연 헤더가 대신 말한다.
+    expect(find.text(goal), findsOneWidget);
   });
 
   testWidgets('프로그램 회원 목록 행은 마지막 루틴과 함께 목표를 보여 준다', (tester) async {
@@ -108,7 +114,9 @@ void main() {
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
-      at: AppRoutes.messages,
+      // 메시지 목록은 더 이상 목표를 그리지 않는다 — 아직 그리는
+      // 목록(프로그램 회원 목록)에서 빈 목표를 확인한다.
+      at: AppRoutes.coaching,
       extraOverrides: <Override>[
         clientsProvider.overrideWith(
           (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
