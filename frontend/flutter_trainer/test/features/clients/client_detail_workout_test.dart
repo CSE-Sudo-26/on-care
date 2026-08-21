@@ -188,7 +188,13 @@ void main() {
       final DateTime now = nowKst();
       expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
       expect(history.first.completionRate, 100);
-      expect(history.first.exercises, contains('레그프레스 3세트 ✓'));
+      // 종목 이름은 픽스처가 정한다 — 여기 적으면 두 벌이 된다.
+      expect(
+        history.first.exercises,
+        contains(
+          '${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓',
+        ),
+      );
       expect(history.first.trainerNote, isNotEmpty);
       // Later entries have no trainer note (box hidden).
       expect(history[1].trainerNote, isEmpty);
