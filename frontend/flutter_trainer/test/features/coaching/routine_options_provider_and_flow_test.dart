@@ -238,6 +238,113 @@ void main() {
     );
   });
 
+  group('#1028 단계 이름 · 자연어 요청 · 데모', () {
+    const realConfig = AppConfig(
+      environment: Environment.dev,
+      apiBaseUrl: 'http://localhost/v1',
+      useMockApi: false,
+    );
+
+    Future<_CapturingOptionsRepository> pumpFlow(
+      WidgetTester tester, {
+      AppConfig config = _mockConfig,
+      RoutineOptions? response,
+    }) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final repo = _CapturingOptionsRepository(
+        response ?? _personalizedOptions(),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            appConfigProvider.overrideWithValue(config),
+            trainerRoutineOptionsRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AiRoutineOptionsFlow(client: _client),
+          ),
+        ),
+      );
+      return repo;
+    }
+
+    Future<void> generate(WidgetTester tester) async {
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('세 단계는 조건 설정 → 프로그램 선택 → 최종 검토다', (tester) async {
+      await pumpFlow(tester);
+
+      expect(find.text('조건 설정'), findsOneWidget);
+      expect(find.text('프로그램 선택'), findsOneWidget);
+      expect(find.text('최종 검토'), findsOneWidget);
+      // 예전 이름이 남아 있으면 흐름이 두 이름으로 불린다.
+      expect(find.text('후보 검토'), findsNothing);
+      expect(find.text('추천 완료'), findsNothing);
+    });
+
+    testWidgets('자연어 요청은 trainer_note 로 그대로 나가고, 직접 작성 경로는 '
+        '`직접 작성하기` 로 불린다', (tester) async {
+      final repo = await pumpFlow(tester);
+
+      const prompt = '하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘';
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('ai-natural-language-prompt')),
+        prompt,
+      );
+      await tester.pump();
+      await generate(tester);
+
+      // 지어낸 새 필드가 아니라 백엔드가 실제로 읽는 자유 텍스트로 나간다.
+      expect(repo.lastTrainerNote, prompt);
+
+      expect(find.text('직접 작성하기'), findsOneWidget);
+      expect(find.text('운동 직접 등록'), findsNothing);
+    });
+
+    testWidgets('데모에서는 목표 기반 기본 추천 안내가 보이지 않는다', (tester) async {
+      // 데모 회원은 기록이 없어 생성기가 늘 template 상태를 돌려준다.
+      await pumpFlow(tester, response: _templateOptions());
+      await generate(tester);
+
+      expect(find.text('목표 기반 기본 추천'), findsNothing);
+      expect(find.text('목표 기반 루틴 생성'), findsNothing);
+
+      // 데이터 기반 흐름의 문구만 남는다.
+      await tester.tap(find.byKey(const ValueKey<String>('routine-stage-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('맞춤 루틴 후보 생성'), findsOneWidget);
+    });
+
+    testWidgets('실 API 모드에서는 기록이 적은 회원에게 그 사실을 그대로 말한다', (
+      tester,
+    ) async {
+      await pumpFlow(
+        tester,
+        config: realConfig,
+        response: _templateOptions(),
+      );
+      await generate(tester);
+
+      expect(find.text('목표 기반 기본 추천'), findsOneWidget);
+    });
+  });
+
   group('#776 recommendation status', () {
     testWidgets(
       'first generation sends no explicit conditions, and the personalized '
@@ -418,13 +525,20 @@ void main() {
       ),
     );
 
-    // The assistant analysis is editable, while its suggestion remains a
-    // muted placeholder until the trainer types a memo.
+    // 조건 설정 단계에는 자연어 요청 칸이 있고(#1028), 예시 문구는 입력 전
+    // 참고용이라 흐린 placeholder 로 남는다.
     expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
-    final initialMemo = tester.widget<TextField>(
-      find.byKey(const ValueKey<String>('analysis-trainer-memo')),
+    final promptField = find.byKey(
+      const ValueKey<String>('ai-natural-language-prompt'),
     );
-    expect(initialMemo.decoration?.hintStyle?.color, AppColors.mutedForeground);
+    final initialPrompt = tester.widget<TextField>(promptField);
+    expect(initialPrompt.decoration?.hintStyle?.color, AppColors.mutedForeground);
+    // 서버 상한(`trainer_note`, 500자)을 화면에서 먼저 막는다.
+    expect(initialPrompt.maxLength, 500);
+    expect(
+      initialPrompt.decoration?.hintText,
+      '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘',
+    );
     final generationMinutes = find.byKey(
       const ValueKey<String>('generation-minutes'),
     );
@@ -436,10 +550,7 @@ void main() {
       find.descendant(of: generationMinutes, matching: find.text('운동 시간')),
       findsNothing,
     );
-    await tester.enterText(
-      find.byKey(const ValueKey<String>('analysis-trainer-memo')),
-      '무릎 충격 주의',
-    );
+    await tester.enterText(promptField, '무릎 부담 적게, 유산소 위주로 만들어줘');
 
     await tester.ensureVisible(
       find.byKey(const ValueKey<String>('generate-routine-options')),
@@ -517,6 +628,15 @@ void main() {
         findsOneWidget,
       );
     }
+    await tester.pump();
+
+    // 고객에게 함께 보낼 메모는 AI 요청과 **다른 칸**이다 (#1028) — 여기 적은
+    // 것만 회원이 받는 루틴 사유로 나간다.
+    final clientNote = find.byKey(
+      const ValueKey<String>('final-trainer-memo'),
+    );
+    await tester.ensureVisible(clientNote);
+    await tester.enterText(clientNote, '무릎 충격 주의');
     await tester.pump();
 
     await tester.ensureVisible(
@@ -673,6 +793,7 @@ class _CapturingOptionsRepository implements TrainerRoutineOptionsRepository {
   final RoutineOptions _response;
   int? lastAvailableMinutes;
   String? lastIntensityPreference;
+  String? lastTrainerNote;
 
   @override
   Future<RoutineOptions> generate(
@@ -683,8 +804,48 @@ class _CapturingOptionsRepository implements TrainerRoutineOptionsRepository {
   }) async {
     lastAvailableMinutes = availableMinutes;
     lastIntensityPreference = intensityPreference;
+    lastTrainerNote = trainerNote;
     return _response;
   }
+}
+
+/// 기록이 거의 없는 회원의 응답 — 서버가 [RecommendationStatus.template] 을
+/// 돌려주는 상태 (#776). 데모는 언제나 이 상태다.
+RoutineOptions _templateOptions() {
+  const analysis = MemberAnalysis(
+    goal: '체중 감량',
+    sodiumTodayMg: 1800,
+    sodiumOverTarget: false,
+    avgCompletionRate: 40,
+    latestRoutine: '-',
+    note: '',
+  );
+  return const RoutineOptions(
+    analysis: analysis,
+    planA: RoutinePlan(
+      key: 'A',
+      label: '회복·지속 중심',
+      totalMinutes: 20,
+      intensity: '낮음',
+      exercises: <RoutineExercise>[
+        RoutineExercise(name: '걷기', minutes: 20, type: '유산소'),
+      ],
+      reason: '가볍게 시작',
+      rationale: '목표 기준 기본 구성',
+    ),
+    planB: RoutinePlan(
+      key: 'B',
+      label: '강도·운동량 중심',
+      totalMinutes: 30,
+      intensity: '보통',
+      exercises: <RoutineExercise>[
+        RoutineExercise(name: '스쿼트', minutes: 30, type: '근력'),
+      ],
+      reason: '조금 더',
+      rationale: '목표 기준 기본 구성',
+    ),
+    generatedBy: 'rule',
+  );
 }
 
 /// A settled-history response: repeated squats over several weeks, so the

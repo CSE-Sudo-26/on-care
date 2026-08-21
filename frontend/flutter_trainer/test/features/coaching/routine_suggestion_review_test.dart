@@ -130,6 +130,25 @@ void main() {
 
   Finder approveButton(RoutineSuggestion s) =>
       find.byKey(ValueKey<String>('routine-suggestion-approve-${s.id}'));
+
+  /// 추천은 최종 검토 dialog 를 지나야 나간다 (#1028) — `고객에게 추천` 을 누르면
+  /// 나갈 내용이 먼저 뜨고, 거기서 확인해야 실제 mutation 이 일어난다.
+  Future<void> confirmApprove(
+    WidgetTester tester,
+    RoutineSuggestion s, {
+    bool settle = true,
+  }) async {
+    await tester.tap(approveButton(s));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('suggestion-confirm-submit')),
+    );
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
+  }
   Finder dismissButton(RoutineSuggestion s) =>
       find.byKey(ValueKey<String>('routine-suggestion-dismiss-${s.id}'));
   Finder editButton(RoutineSuggestion s) =>
@@ -206,8 +225,7 @@ void main() {
     testWidgets('검토 중에는 세 동작이 모두 잠긴다', (tester) async {
       await openProgramTab(tester, delay: const Duration(milliseconds: 300));
 
-      await tester.tap(approveButton(_shoulder));
-      await tester.pump();
+      await confirmApprove(tester, _shoulder, settle: false);
 
       expect(
         tester.widget<IconButton>(editButton(_shoulder)).onPressed,
@@ -255,8 +273,7 @@ void main() {
   ) async {
     final repo = await openProgramTab(tester);
 
-    await tester.tap(approveButton(_shoulder));
-    await tester.pumpAndSettle();
+    await confirmApprove(tester, _shoulder);
 
     expect(repo.approvals, <String>[_shoulder.id]);
     // 그대로 승인이므로 고친 값은 없다.
@@ -333,8 +350,7 @@ void main() {
       delay: const Duration(milliseconds: 300),
     );
 
-    await tester.tap(approveButton(_shoulder));
-    await tester.pump();
+    await confirmApprove(tester, _shoulder, settle: false);
     // 첫 호출이 아직 진행 중이다 — 두 번째 탭이 같은 제안을 또 보내면 안 된다.
     await tester.tap(approveButton(_shoulder), warnIfMissed: false);
     await tester.pumpAndSettle();
@@ -347,10 +363,36 @@ void main() {
   ) async {
     await openProgramTab(tester, alreadyReviewed: true);
 
-    await tester.tap(approveButton(_shoulder));
-    await tester.pumpAndSettle();
+    await confirmApprove(tester, _shoulder);
 
     expect(find.textContaining('이미 검토한 제안'), findsOneWidget);
+  });
+
+  testWidgets('최종 검토를 취소하면 회원에게 아무것도 나가지 않는다 (#1028)', (tester) async {
+    final repo = await openProgramTab(tester);
+
+    // 목록의 `고객에게 추천` 한 번으로는 mutation 이 일어나지 않는다 — 예전에는
+    // 이 탭 하나가 곧바로 승인이었다.
+    await tester.tap(approveButton(_shoulder));
+    await tester.pumpAndSettle();
+    expect(repo.approvals, isEmpty);
+
+    // 나갈 내용이 그대로 보인다 — 확인한 것과 payload 가 같다.
+    expect(
+      find.byKey(const ValueKey<String>('routine-suggestion-confirm')),
+      findsOneWidget,
+    );
+    expect(find.textContaining(_shoulder.name), findsWidgets);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('suggestion-confirm-cancel')),
+    );
+    await tester.pumpAndSettle();
+    expect(repo.approvals, isEmpty);
+
+    // 확인하면 그때 나간다.
+    await confirmApprove(tester, _shoulder);
+    expect(repo.approvals, <String>[_shoulder.id]);
   });
 
   testWidgets('switching clients loads that client\'s suggestions', (

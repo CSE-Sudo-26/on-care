@@ -53,6 +53,29 @@ class _RoutineSuggestionReviewCardState
   /// 누른 상태다.
   final Set<String> _busy = <String>{};
 
+  /// 검토 없이 곧바로 나가던 승인 앞에 **최종 검토**를 세운다 (#1028).
+  ///
+  /// 여기서 승인은 곧 전송이다 — 서버가 이 제안을 배정으로 바꾸고 회원 알림도
+  /// 그 시점에 나간다. 그런데 예전에는 목록의 `고객에게 추천` 한 번이 곧바로
+  /// mutation 이었다: 옆 카드를 누르려다 손이 미끄러지면 회원에게 이미 가 있다.
+  ///
+  /// 그렇다고 이 제안을 프로그램 편집기의 최종 검토로 보내지는 **않았다**.
+  /// 개인운동 제안은 기간 프로그램과 다른 물건이고(PT 사이를 메우는 짧은 운동),
+  /// 서버가 승인/거절 수명주기를 따로 들고 있다(`approve`/`dismiss`, 이미 처리된
+  /// 제안은 409). 프로그램 초안으로 옮겨 담으면 그 수명주기를 잃고 두 개념이
+  /// 섞인다. 그래서 **이 제안만의 최종 검토**를 둔다 — 나갈 값(이름·시간·유형·
+  /// 메모)을 그대로 보여 주고 확인을 받은 뒤에만 mutation 이 일어난다.
+  Future<void> _confirmThenApprove(RoutineSuggestion suggestion) async {
+    if (_busy.contains(suggestion.id)) return;
+    final confirmed = await showRoutineSuggestionConfirmDialog(
+      context,
+      suggestion: suggestion,
+      clientName: widget.clientName,
+    );
+    if (confirmed != true || !mounted) return;
+    await _approve(suggestion);
+  }
+
   Future<void> _approve(
     RoutineSuggestion suggestion, {
     RoutineSuggestionEdit? edit,
@@ -204,7 +227,7 @@ class _RoutineSuggestionReviewCardState
                 key: ValueKey<String>('routine-suggestion-${suggestion.id}'),
                 suggestion: suggestion,
                 busy: _busy.contains(suggestion.id),
-                onApprove: () => _approve(suggestion),
+                onApprove: () => _confirmThenApprove(suggestion),
                 onEdit: () => _editThenApprove(suggestion),
                 onDismiss: () => _dismiss(suggestion),
               ),

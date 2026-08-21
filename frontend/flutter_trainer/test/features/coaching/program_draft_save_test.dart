@@ -254,10 +254,14 @@ void main() {
     expect(find.text('저장해 둔 하체 프로그램'), findsWidgets);
     expect(find.text('레그프레스'), findsWidgets);
 
-    // 불러온 초안은 기존 배정 흐름에 그대로 쓸 수 있다 — 저장·복원이 배정
-    // 가능 여부(supportsAssignment)를 깨뜨리지 않는다.
-    final assignButton = find.widgetWithText(ActionButton, '고객에게 배정');
-    expect(tester.widget<ActionButton>(assignButton).onPressed, isNotNull);
+    // 불러온 초안은 기존 전송 흐름에 그대로 쓸 수 있다 — 저장·복원이 배정
+    // 가능 여부(supportsAssignment)를 깨뜨리지 않는다. 전송 버튼은 편집기가
+    // 아니라 최종 검토에 있으므로(#1028), 여기서는 그 단계로 넘어갈 수 있는지를
+    // 본다.
+    final reviewButton = find.byKey(
+      const ValueKey<String>('program-editor-review'),
+    );
+    expect(tester.widget<ActionButton>(reviewButton).onPressed, isNotNull);
 
     // 이제 저장은 기존 초안을 덮어쓴다 — 사본이 늘지 않는다.
     await _tapSave(tester);

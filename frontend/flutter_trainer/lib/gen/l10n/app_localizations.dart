@@ -3641,7 +3641,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAddExerciseManually.
   ///
   /// In en, this message translates to:
-  /// **'Add an exercise'**
+  /// **'Write it yourself'**
   String get aiAddExerciseManually;
 
   /// No description provided for @aiExerciseNameExample.
@@ -3707,13 +3707,13 @@ abstract class AppLocalizations {
   /// No description provided for @aiStepReview.
   ///
   /// In en, this message translates to:
-  /// **'Review'**
+  /// **'Program selection'**
   String get aiStepReview;
 
   /// No description provided for @aiStepDone.
   ///
   /// In en, this message translates to:
-  /// **'Done'**
+  /// **'Final review'**
   String get aiStepDone;
 
   /// No description provided for @aiStepperLabel.
@@ -3775,6 +3775,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit recommended conditions'**
   String get aiConditionsEditToggle;
+
+  /// No description provided for @aiPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell the AI what program you want'**
+  String get aiPromptTitle;
+
+  /// No description provided for @aiPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request (plain language)'**
+  String get aiPromptLabel;
+
+  /// No description provided for @aiPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Build a 40-minute program that goes easy on the legs and leans on cardio'**
+  String get aiPromptHint;
+
+  /// No description provided for @aiPromptBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.'**
+  String get aiPromptBlurb;
 
   /// No description provided for @aiGenerateGoalBased.
   ///
@@ -4850,6 +4874,18 @@ abstract class AppLocalizations {
   /// **'Recommend to client'**
   String get suggestionApprove;
 
+  /// No description provided for @suggestionConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Final review · recommend to client'**
+  String get suggestionConfirmTitle;
+
+  /// No description provided for @suggestionConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Exactly what you see below is what {client} receives. Once recommended it shows up in their app.'**
+  String suggestionConfirmBody(String client);
+
   /// No description provided for @suggestionDismiss.
   ///
   /// In en, this message translates to:
@@ -4963,6 +4999,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assign to client'**
   String get programEditorAssign;
+
+  /// No description provided for @programEditorReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Final review'**
+  String get programEditorReview;
+
+  /// No description provided for @programReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Final review'**
+  String get programReviewTitle;
+
+  /// No description provided for @programReviewBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Exactly what you see below is what {name} receives. Check it, then send.'**
+  String programReviewBlurb(String name);
+
+  /// No description provided for @programReviewBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the editor'**
+  String get programReviewBack;
+
+  /// No description provided for @programReviewSessionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} exercises'**
+  String programReviewSessionSummary(int count);
 
   /// No description provided for @programEditorInfo.
   ///

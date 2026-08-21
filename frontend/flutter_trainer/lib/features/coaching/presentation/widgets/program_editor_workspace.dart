@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -15,19 +14,20 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 ///
 /// Multi-session persistence remains unsupported. A one-session draft can be
 /// handed to the existing flat routine boundary through the supplied actions.
+///
+/// **이 편집기는 회원에게 아무것도 보내지 않는다 (#1028).** 예전에는 여기에
+/// `배정`·`PT 등록` 버튼이 나란히 있어, 편집 중 아무 때나 실제 전송이
+/// 일어날 수 있었다. 이제 이 화면의 마지막 동작은 [onReview] — 지금 구성의
+/// **스냅샷**을 최종 검토 단계로 넘기는 것뿐이고, 실제 배정·등록은 그
+/// 단계에서만 일어난다. 그래서 이 파일에는 repository 호출이 하나도 없다.
 class ProgramEditorWorkspace extends StatefulWidget {
   const ProgramEditorWorkspace({
     super.key,
     required this.clientGoal,
     required this.aiSuggestions,
-    required this.onAssignFlat,
-    required this.onRegisterFlat,
-    required this.registerOffset,
-    required this.onRegisterOffsetChanged,
+    required this.onReview,
     this.template,
     this.templateRevision = 0,
-    this.assigning = false,
-    this.registering = false,
     this.initialDraft,
     this.onSave,
     this.saving = false,
@@ -38,12 +38,10 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final List<AiRoutineItem> aiSuggestions;
   final ProgramTemplate? template;
   final int templateRevision;
-  final Future<void> Function(ProgramEditorState draft) onAssignFlat;
-  final Future<void> Function(ProgramEditorState draft) onRegisterFlat;
-  final int registerOffset;
-  final ValueChanged<int> onRegisterOffsetChanged;
-  final bool assigning;
-  final bool registering;
+
+  /// 지금 구성을 최종 검토 단계로 넘긴다. **전송이 아니다** — 넘어간 값이
+  /// 그대로 검토 화면에 그려지고, 전송은 거기서만 할 수 있다 (#1028).
+  final ValueChanged<ProgramEditorState> onReview;
 
   /// A saved draft to open instead of starting from the client's goal.
   ///
@@ -143,7 +141,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     final l = AppLocalizations.of(context);
     // 세션 수는 더 이상 막는 이유가 아니다 — 서버가 세션 여러 개짜리 프로그램을
     // 저장·배정·등록한다(#709). 남은 조건은 값이 계약에 맞는지뿐이다.
-    final canAssign = _draft.supportsAssignment;
+    final canReview = _draft.supportsAssignment;
     final canSave = widget.onSave != null && _draft.name.trim().isNotEmpty;
     return SectionCard(
       title: _draft.name,
@@ -163,15 +161,16 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
                   : null,
             ),
           ),
+          // 저장 옆에 있던 `고객에게 배정` 이 있던 자리다. 이제는 전송이
+          // 아니라 **최종 검토로 넘어가는** 동작이라, 저장과 나란히 있어도
+          // 둘 다 회원에게 아무것도 보내지 않는다 (#1028).
           Tooltip(
-            message: canAssign ? '' : l.programEditorAssignUnsupported,
+            message: canReview ? '' : l.programEditorAssignUnsupported,
             child: ActionButton(
-              key: const ValueKey<String>('program-editor-assign'),
-              label: l.programEditorAssign,
+              key: const ValueKey<String>('program-editor-review'),
+              label: l.programEditorReview,
               primary: true,
-              onPressed: canAssign && !widget.assigning
-                  ? () => widget.onAssignFlat(_draft)
-                  : null,
+              onPressed: canReview ? () => widget.onReview(_draft) : null,
             ),
           ),
         ],
@@ -283,49 +282,8 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: <Widget>[
-                      for (var offset = 0; offset < 7; offset++) ...<Widget>[
-                        ChoiceChip(
-                          label: Text(_dayLabel(l, offset)),
-                          selected: widget.registerOffset == offset,
-                          onSelected: (_) =>
-                              widget.onRegisterOffsetChanged(offset),
-                          showCheckmark: false,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: AppColors.card,
-                          side: const BorderSide(color: AppColors.borderStrong),
-                          shape: const StadiumBorder(),
-                          labelStyle: TextStyle(
-                            color: widget.registerOffset == offset
-                                ? AppColors.primaryForeground
-                                : AppColors.mutedForeground,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              ActionButton(
-                key: const ValueKey<String>('program-editor-register'),
-                label: l.coachRegisterOn(_dayLabel(l, widget.registerOffset)),
-                icon: Icons.calendar_today_outlined,
-                onPressed: canAssign && !widget.registering
-                    ? () => widget.onRegisterFlat(_draft)
-                    : null,
-              ),
-            ],
-          ),
+          // `오늘 PT 스케줄에 등록` 과 날짜 칩은 최종 검토 단계로 옮겼다 —
+          // 편집 도중에 일정이 잡히는 일이 더는 없다 (#1028).
         ],
       ),
     );
@@ -456,13 +414,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     }
     _draft = _draft.copyWith(sessions: sessions);
   }
-}
-
-String _dayLabel(AppLocalizations l, int offset) {
-  if (offset == 0) return l.labelToday;
-  if (offset == 1) return l.labelTomorrow;
-  final date = nowKst().add(Duration(days: offset));
-  return '${date.month}/${date.day}';
 }
 
 class _ProgramInfo extends StatelessWidget {
@@ -1144,7 +1095,7 @@ class _ExerciseSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final korean = Localizations.localeOf(context).languageCode == 'ko';
-    final metrics = _exerciseMetrics(exercise, korean: korean);
+    final metrics = programExerciseMetrics(exercise, korean: korean);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1184,7 +1135,12 @@ class _ExerciseSummary extends StatelessWidget {
   }
 }
 
-List<String> _exerciseMetrics(
+/// 운동 한 줄의 지표 요약(세트·횟수·중량·시간·거리·휴식·RPE).
+///
+/// 최종 검토 화면이 같은 함수를 쓴다 (#1028) — 검토 화면이 편집기와 다른
+/// 방식으로 값을 그리면, 트레이너가 확인한 내용과 실제로 나가는 payload 가
+/// 어긋났는지 눈으로는 알 수 없다.
+List<String> programExerciseMetrics(
   ProgramExerciseDraft exercise, {
   required bool korean,
 }) {

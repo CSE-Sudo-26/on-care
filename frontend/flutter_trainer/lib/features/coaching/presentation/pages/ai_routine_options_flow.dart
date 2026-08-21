@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -45,9 +46,19 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
 }
 
 class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
+  /// 조건 설정 단계의 자연어 요청. 그대로 `trainer_note` 로 나간다 (#1028).
+  ///
+  /// 고객에게 함께 보낼 메모([_trainerMemo])와 **다른 칸**이다 — 하나로 묶여
+  /// 있던 동안에는 "하체 부담 적은 40분으로 만들어줘" 같은 AI 지시문이 그대로
+  /// 회원이 읽는 루틴 사유로 나갔다.
+  final TextEditingController _prompt = TextEditingController();
   final TextEditingController _trainerMemo = TextEditingController();
   final TextEditingController _newExerciseName = TextEditingController();
   final ScrollController _optionScroll = ScrollController();
+
+  /// `RoutineOptionsRequest.trainer_note` 의 서버 상한(#1028). 여기서 막으면
+  /// 긴 요청이 422 왕복 없이 그 자리에서 잘린다.
+  static const int _promptMaxLength = 500;
 
   int _minutes = 30;
   String _intensity = 'moderate';
@@ -80,6 +91,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   @override
   void dispose() {
+    _prompt.dispose();
     _trainerMemo.dispose();
     _newExerciseName.dispose();
     _optionScroll.dispose();
@@ -142,7 +154,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             widget.client.id,
             availableMinutes: _minutesTouched ? _minutes : null,
             intensityPreference: _intensityTouched ? _intensity : null,
-            trainerNote: _trainerMemo.text.trim(),
+            // 자연어 요청은 백엔드가 실제로 읽는 유일한 자유 텍스트 필드로
+            // 나간다 — 새 필드를 지어내지 않는다(#1028).
+            trainerNote: _prompt.text.trim(),
           );
       if (!mounted) return;
       final analysis = options.analysis;
@@ -351,6 +365,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       if (_stage == 0) ...<Widget>[
         _assistantAnalysis(),
         const SizedBox(height: AppSpacing.lg),
+        _promptField(),
+        const SizedBox(height: AppSpacing.lg),
         _directionControls(),
         const SizedBox(height: AppSpacing.lg),
         _primaryButton(
@@ -427,22 +443,43 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             warn: client.sodiumOverBudget,
           ),
           _analysisRow(l.aiRecentRoutine, client.lastRoutine),
+        ],
+      ),
+    );
+  }
+
+  /// 조건 설정 단계의 자연어 요청 칸 (#1028).
+  ///
+  /// 슬라이더·칩으로는 표현할 수 없는 요구("무릎 부담 적게", "유산소 비중 높게")를
+  /// 트레이너가 쓰던 말 그대로 적는 자리다. 이 값은 지어낸 새 필드가 아니라
+  /// 백엔드 `RoutineOptionsRequest.trainer_note` 로 그대로 나간다 — 서버가
+  /// 실제로 읽는 유일한 자유 텍스트라 화면이 거짓말을 하지 않는다.
+  Widget _promptField() {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _surfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _AssistantLabel(text: l.aiPromptTitle),
           const SizedBox(height: AppSpacing.md),
           LabeledField(
-            label: l.aiTrainerNoteEditable,
+            label: l.aiPromptLabel,
             child: TextField(
-              key: const ValueKey<String>('analysis-trainer-memo'),
-              controller: _trainerMemo,
-              minLines: 2,
-              maxLines: 4,
+              key: const ValueKey<String>('ai-natural-language-prompt'),
+              controller: _prompt,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: _promptMaxLength,
               style: const TextStyle(color: AppColors.foreground),
-              decoration: _inputDecoration(hintText: _analysisSuggestion(l)),
+              decoration: _inputDecoration(hintText: l.aiPromptHint),
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
           Text(
-            l.aiNotePlaceholderHint,
-            style: const TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
+            l.aiPromptBlurb,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ],
       ),
@@ -484,11 +521,21 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
+  /// 데모(`USE_MOCK_API=true`)에서는 목표 기반 기본 추천 상태를 내보이지 않는다.
+  /// (#1028)
+  ///
+  /// 데모 회원은 축적된 운동 기록이 아예 없어 생성기가 늘
+  /// [RecommendationStatus.template] 을 돌려준다 — 그래서 데모를 열면 언제나
+  /// `목표 기반 루틴 생성`·`목표 기반 기본 추천`만 보였고, 정작 보여 줘야 할
+  /// **데이터 기반 맞춤 흐름**이 화면에 한 번도 나오지 않았다. 실 API 모드는
+  /// 그대로다 — 기록이 적은 실제 회원에게는 그 사실을 계속 말해야 한다.
+  bool get _hideTemplateState => ref.watch(appConfigProvider).useMockApi;
+
   /// Only known after the first generation — before that we haven't seen
   /// the member's analysis yet, so the button stays generic (#776).
   String _generateButtonLabel(AppLocalizations l) {
     final status = _options?.analysis.recommendationStatus;
-    return status == RecommendationStatus.template
+    return status == RecommendationStatus.template && !_hideTemplateState
         ? l.aiGenerateGoalBased
         : l.aiGenerateCandidates;
   }
@@ -501,8 +548,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       children: <Widget>[
         _AssistantLabel(text: l.aiCompareCandidates),
         const SizedBox(height: AppSpacing.sm),
-        _RecommendationStatusBanner(analysis: options.analysis),
-        const SizedBox(height: AppSpacing.sm),
+        // 데모에서는 목표 기반 기본 추천 안내를 띄우지 않는다 —
+        // [_hideTemplateState] 참고.
+        if (!(_hideTemplateState &&
+            options.analysis.recommendationStatus ==
+                RecommendationStatus.template)) ...<Widget>[
+          _RecommendationStatusBanner(analysis: options.analysis),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         Text(
           l.aiBasisGoalCompletion(
                 options.analysis.goal,
@@ -844,6 +897,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               maxLines: 4,
               style: const TextStyle(color: AppColors.foreground),
               decoration: _inputDecoration(hintText: _analysisSuggestion(l)),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l.aiNotePlaceholderHint,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.mutedForeground,
             ),
           ),
         ],

@@ -25,7 +25,9 @@ import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_re
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -340,6 +342,29 @@ Finder _exerciseActionMenus() => find.byWidgetPredicate((widget) {
       key is ValueKey<String> &&
       key.value.startsWith('exercise-edit-');
 });
+
+/// 편집기의 `최종 검토` 를 눌러 전송 화면을 연다 (#1028).
+///
+/// 배정·PT 등록 버튼은 더 이상 편집기에 없다 — 프로그램이 회원에게 가려면
+/// 반드시 이 단계를 지난다. 이미 검토 중이면 아무 일도 하지 않는다.
+Future<void> _openFinalReview(WidgetTester tester) async {
+  if (find
+      .byKey(const ValueKey<String>('program-final-review'))
+      .evaluate()
+      .isNotEmpty) {
+    return;
+  }
+  final review = find.byKey(const ValueKey<String>('program-editor-review'));
+  await tester.scrollUntilVisible(
+    review,
+    150,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(review);
+  await tester.pump();
+  await tester.tap(review);
+  await tester.pump();
+}
 
 Future<void> _selectExerciseAction(
   WidgetTester tester,
@@ -943,6 +968,7 @@ void main() {
 
       // The open form's TextField adds an inner Scrollable — target the
       // page ListView explicitly.
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -995,6 +1021,7 @@ void main() {
       await tester.tap(find.text('박성호'));
       await settle(tester);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('오늘 PT 스케줄에 등록'),
         150,
@@ -1023,6 +1050,7 @@ void main() {
     ) async {
       await openTab(tester);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -1052,6 +1080,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('내일'),
         150,
@@ -1086,6 +1115,7 @@ void main() {
     testWidgets('send shows confirmation then resets edits', (tester) async {
       await openTab(tester);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -1116,6 +1146,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('오늘 PT 스케줄에 등록'),
         150,
@@ -1155,6 +1186,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('오늘 PT 스케줄에 등록'),
         150,
@@ -1180,6 +1212,7 @@ void main() {
       // 이지수's card must not claim the registration, and her button
       // must not be left disabled by the previous client's guard. The
       // editor is a lazy list, so bring the button back into view first.
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('오늘 PT 스케줄에 등록'),
         150,
@@ -1205,6 +1238,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -1237,6 +1271,8 @@ void main() {
       // Matches both the idle '📅 …등록' and the in-flight/disabled
       // '✓ …등록됨' label so it works before and during a save.
       Future<void> tapRegister() async {
+        // 회원을 바꾸면 검토가 닫힌다 — 등록마다 다시 최종 검토를 연다.
+        await _openFinalReview(tester);
         final f = find.textContaining('스케줄에 등록');
         await tester.scrollUntilVisible(
           f,
@@ -1294,6 +1330,7 @@ void main() {
       await goTo(tester, AppRoutes.coaching);
 
       // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -1357,15 +1394,188 @@ void main() {
         await _selectExerciseAction(tester, 'delete');
       }
 
+      // 운동이 하나도 없으면 최종 검토 자체가 열리지 않는다 — 전송 버튼은
+      // 그 화면에만 있으므로, 여기서 막히면 회원에게 갈 길도 함께 막힌다
+      // (#1028).
+      final review = find.byKey(const ValueKey<String>('program-editor-review'));
       await tester.scrollUntilVisible(
-        find.text('오늘 PT 스케줄에 등록'),
+        review,
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
+      await tester.ensureVisible(review);
       await tester.pump();
-      final disabledAction = find.widgetWithText(ActionButton, '오늘 PT 스케줄에 등록');
-      expect(tester.widget<ActionButton>(disabledAction).onPressed, isNull);
+      expect(tester.widget<ActionButton>(review).onPressed, isNull);
+      expect(find.text('오늘 PT 스케줄에 등록'), findsNothing);
+      expect(find.text('고객에게 배정'), findsNothing);
+    });
+  });
+
+  group('CoachingPage — 전송은 최종 검토에서만 (#1028)', () {
+    Future<void> openTab(
+      WidgetTester tester, {
+      Size size = const Size(1600, 1200),
+    }) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
+    }
+
+    testWidgets('편집기 화면에는 배정·PT 등록이 아예 없다', (tester) async {
+      await openTab(tester);
+
+      // 화면 어디에도 전송 버튼이 없다 — 스크롤 밖에 숨어 있는 것이 아니라
+      // 위젯 트리에 만들어지지 않는다.
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-register')),
+        findsNothing,
+      );
+      expect(find.text('고객에게 배정'), findsNothing);
+      expect(find.text('오늘 PT 스케줄에 등록'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('최종 검토를 열면 전송 버튼이 생기고, 돌아가면 다시 사라진다', (tester) async {
+      await openTab(tester);
+
+      await _openFinalReview(tester);
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-register')),
+        findsOneWidget,
+      );
+
+      // 편집기로 돌아가면 전송 자리도 함께 닫힌다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('program-review-back')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-register')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('최종 검토 화면이 보여 주는 구성이 곧 편집기의 구성이다', (tester) async {
+      await openTab(tester);
+
+      // 편집기에서 운동 하나를 지우고 검토를 연다 — 검토 화면은 지운 뒤의
+      // 구성을 보여 줘야 한다. 화면과 payload 가 어긋나면 트레이너가 확인한
+      // 것과 다른 것이 회원에게 간다.
+      await _selectExerciseAction(tester, 'delete');
+      await _openFinalReview(tester);
+
+      final review = find.byKey(const ValueKey<String>('program-final-review'));
+      expect(
+        find.descendant(of: review, matching: find.text('저강도 유산소 (걷기)')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: review, matching: find.text('하체 스트레칭')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('회원을 바꾸면 검토가 닫힌다 — 다른 회원의 구성을 물려받지 않는다', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await _openFinalReview(tester);
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsOneWidget,
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('이지수'),
+        -150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('이지수'));
+      await tester.pump();
+      await tester.tap(find.text('이지수'));
+      await settle(tester);
+
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('프로그램 선택 화면은 AI 추천 루틴 2 · AI 개인운동 1 로 갈라진다', (
+      tester,
+    ) async {
+      // 3등분이 뜻을 가지려면 폭이 실제로 넉넉해야 한다 — 좁은 데스크톱은
+      // 아래 테스트처럼 위아래로 쌓인다.
+      await openTab(tester, size: const Size(1920, 1200));
+
+      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기').first);
+      await settle(tester);
+
+      final columns = find.byKey(
+        const ValueKey<String>('program-selection-columns'),
+      );
+      expect(columns, findsOneWidget);
+
+      final flowWidth = tester
+          .getSize(
+            find.descendant(
+              of: columns,
+              matching: find.byType(AiRoutineOptionsFlow),
+            ),
+          )
+          .width;
+      final suggestionWidth = tester
+          .getSize(
+            find.descendant(
+              of: columns,
+              matching: find.byType(RoutineSuggestionReviewCard),
+            ),
+          )
+          .width;
+      // 2:1 — 후보를 견주는 쪽이 두 몫이다.
+      expect(flowWidth, greaterThan(suggestionWidth * 1.8));
+    });
+
+    testWidgets('열을 나눌 폭이 없으면 프로그램 선택도 위아래로 쌓인다 — 제안이 사라지지 않는다', (
+      tester,
+    ) async {
+      await openTab(tester, size: const Size(800, 1600));
+
+      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기').first);
+      await settle(tester);
+
+      expect(
+        find.byKey(const ValueKey<String>('program-selection-columns')),
+        findsNothing,
+      );
+      // 좁아졌다고 개인운동 제안이 통째로 사라지면 안 된다.
+      expect(find.byType(RoutineSuggestionReviewCard), findsOneWidget);
+      expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
     });
   });
 
@@ -1467,6 +1677,7 @@ void main() {
     }
 
     Future<void> tapSend(WidgetTester tester) async {
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -1488,6 +1699,7 @@ void main() {
           captureSchedule: (repo) => scheduleRepo = repo,
         );
 
+        await _openFinalReview(tester);
         await tester.scrollUntilVisible(
           find.text('오늘 PT 스케줄에 등록'),
           150,

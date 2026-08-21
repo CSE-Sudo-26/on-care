@@ -2052,7 +2052,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Edit names, durations and structure just like the existing suggestion.';
 
   @override
-  String get aiAddExerciseManually => 'Add an exercise';
+  String get aiAddExerciseManually => 'Write it yourself';
 
   @override
   String get aiExerciseNameExample => 'e.g. leg press, 3 sets';
@@ -2091,10 +2091,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiStepConditions => 'Set up';
 
   @override
-  String get aiStepReview => 'Review';
+  String get aiStepReview => 'Program selection';
 
   @override
-  String get aiStepDone => 'Done';
+  String get aiStepDone => 'Final review';
 
   @override
   String get aiStepperLabel => 'Custom routine progress';
@@ -2129,6 +2129,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiConditionsEditToggle => 'Edit recommended conditions';
+
+  @override
+  String get aiPromptTitle => 'Tell the AI what program you want';
+
+  @override
+  String get aiPromptLabel => 'Your request (plain language)';
+
+  @override
+  String get aiPromptHint =>
+      'e.g. Build a 40-minute program that goes easy on the legs and leans on cardio';
+
+  @override
+  String get aiPromptBlurb =>
+      'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.';
 
   @override
   String get aiGenerateGoalBased => 'Generate goal-based routine';
@@ -2751,6 +2765,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get suggestionApprove => 'Recommend to client';
 
   @override
+  String get suggestionConfirmTitle => 'Final review · recommend to client';
+
+  @override
+  String suggestionConfirmBody(String client) {
+    return 'Exactly what you see below is what $client receives. Once recommended it shows up in their app.';
+  }
+
+  @override
   String get suggestionDismiss => 'Don\'t recommend';
 
   @override
@@ -2819,6 +2841,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorAssign => 'Assign to client';
+
+  @override
+  String get programEditorReview => 'Final review';
+
+  @override
+  String get programReviewTitle => 'Final review';
+
+  @override
+  String programReviewBlurb(String name) {
+    return 'Exactly what you see below is what $name receives. Check it, then send.';
+  }
+
+  @override
+  String get programReviewBack => 'Back to the editor';
+
+  @override
+  String programReviewSessionSummary(int count) {
+    return '$count exercises';
+  }
 
   @override
   String get programEditorInfo => 'Program information';

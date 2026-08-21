@@ -1974,7 +1974,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiEditBlurb => '기존 AI 추천과 같은 방식으로 운동명·시간·구성을 수정할 수 있어요.';
 
   @override
-  String get aiAddExerciseManually => '운동 직접 등록';
+  String get aiAddExerciseManually => '직접 작성하기';
 
   @override
   String get aiExerciseNameExample => '예: 레그프레스 3세트';
@@ -2011,10 +2011,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiStepConditions => '조건 설정';
 
   @override
-  String get aiStepReview => '후보 검토';
+  String get aiStepReview => '프로그램 선택';
 
   @override
-  String get aiStepDone => '추천 완료';
+  String get aiStepDone => '최종 검토';
 
   @override
   String get aiStepperLabel => '맞춤 루틴 생성 진행 단계';
@@ -2048,6 +2048,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiConditionsEditToggle => '추천 조건 수정';
+
+  @override
+  String get aiPromptTitle => 'AI에게 원하는 프로그램을 말해 주세요';
+
+  @override
+  String get aiPromptLabel => '요청 내용 (자연어)';
+
+  @override
+  String get aiPromptHint => '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘';
+
+  @override
+  String get aiPromptBlurb =>
+      '적어 둔 요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객에게 보낼 메모는 다음 단계에서 따로 적어요.';
 
   @override
   String get aiGenerateGoalBased => '목표 기반 루틴 생성';
@@ -2642,6 +2655,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get suggestionApprove => '고객에게 추천';
 
   @override
+  String get suggestionConfirmTitle => '최종 검토 · 고객에게 추천';
+
+  @override
+  String suggestionConfirmBody(String client) {
+    return '아래 내용 그대로 $client님에게 추천돼요. 추천하면 고객 앱에 바로 보여요.';
+  }
+
+  @override
   String get suggestionDismiss => '추천 안 함';
 
   @override
@@ -2703,6 +2724,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorAssign => '고객에게 배정';
+
+  @override
+  String get programEditorReview => '최종 검토';
+
+  @override
+  String get programReviewTitle => '최종 검토';
+
+  @override
+  String programReviewBlurb(String name) {
+    return '아래 구성 그대로 $name님에게 전송돼요. 확인한 뒤 전송해 주세요.';
+  }
+
+  @override
+  String get programReviewBack => '편집기로 돌아가 수정';
+
+  @override
+  String programReviewSessionSummary(int count) {
+    return '운동 $count개';
+  }
 
   @override
   String get programEditorInfo => '프로그램 정보';

@@ -29,6 +29,7 @@ import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dar
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_final_review_card.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_template_dialog.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
@@ -114,6 +115,31 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// A draft save is in flight — blocks re-entry so one click is one draft.
   bool _savingDraft = false;
 
+  /// 최종 검토 중인 구성 — 이것이 곧 **전송 게이트**다 (#1028).
+  ///
+  /// null 이면 편집 중이라는 뜻이고, 그때는 [_assignReviewedDraft] 도
+  /// [_registerReviewedDraft] 도 아무 일도 하지 않는다. 두 함수가 인자로 초안을
+  /// 받지 않고 이 값만 읽는 것이 핵심이다 — 어떤 위젯도 "임의의 초안"을 전송
+  /// 경로에 밀어 넣을 수 없고, 트레이너가 최종 검토에서 실제로 보고 있는 그
+  /// 스냅샷만 나간다. 화면에 그려진 내용과 payload 가 같은 객체다.
+  ProgramEditorState? _reviewDraft;
+
+  /// 최종 검토를 연다. **전송이 아니다** — 편집기가 넘긴 스냅샷을 붙잡아 둘 뿐.
+  void _openFinalReview(ProgramEditorState draft) {
+    setState(() {
+      _reviewDraft = draft;
+      _sent = false;
+      _registered = false;
+    });
+  }
+
+  /// 편집기로 돌아간다. 검토하던 구성이 그대로 다시 열린다 — 편집기는 검토 중
+  /// 접혀 있을 뿐 트리에 남아 있어(아래 [Offstage]) 편집 내용을 잃지 않는다.
+  void _closeFinalReview() {
+    if (_reviewDraft == null) return;
+    setState(() => _reviewDraft = null);
+  }
+
   @override
   void dispose() {
     _sentTimer?.cancel();
@@ -145,6 +171,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _appliedTemplate = null;
       _templateRevision = 0;
       _editorRevision = 0;
+      // 다른 회원의 최종 검토를 물려받지 않는다 — 검토는 늘 지금 고른
+      // 회원의 구성이어야 한다 (#1028).
+      _reviewDraft = null;
       // NOTE: _registeringClientIds is intentionally NOT cleared — writes
       // for other clients keep being tracked while the selection changes.
     });
@@ -219,6 +248,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         _appliedTemplate = null;
         _sent = false;
         _registered = false;
+        // 불러온 초안은 편집 대상이다 — 검토 중이었다면 편집기로 돌아간다.
+        _reviewDraft = null;
       });
       messenger.showSnackBar(
         SnackBar(content: Text(l.programDraftLoaded(draft.name))),
@@ -246,6 +277,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _appliedTemplate = null;
       _sent = false;
       _registered = false;
+      _reviewDraft = null;
     });
   }
 
@@ -285,10 +317,14 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     }
   }
 
-  Future<void> _assignDraft(
-    TrainerClient client,
-    ProgramEditorState draft,
-  ) async {
+  /// 최종 검토 중인 구성을 회원에게 배정한다 (#1028).
+  ///
+  /// 초안을 인자로 받지 않는다 — [_reviewDraft] 가 비어 있으면(= 최종 검토
+  /// 밖이면) 호출 자체가 아무 일도 하지 않는다. 편집기·제안 카드 등 다른
+  /// 화면에서 이 경로로 들어올 방법이 없다.
+  Future<void> _assignReviewedDraft(TrainerClient client) async {
+    final draft = _reviewDraft;
+    if (draft == null) return;
     if (_sent || _sending || !draft.supportsAssignment) return;
     final sentFor = client.id;
     if (_sendRequestId == null || _sendRequestFor != sentFor) {
@@ -325,15 +361,19 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       if (!mounted) return;
       setState(() {
         _sent = false;
+        // 보낸 뒤에는 검토를 닫고 편집기를 새로 세운다 — 이미 나간 구성이
+        // 검토 화면에 그대로 남아 있으면 한 번 더 보낼 수 있는 것처럼 읽힌다.
+        _reviewDraft = null;
         _editorRevision++;
       });
     });
   }
 
-  Future<void> _registerDraft(
-    TrainerClient client,
-    ProgramEditorState draft,
-  ) async {
+  /// 최종 검토 중인 구성을 PT 일정에 등록한다 — 게이트는
+  /// [_assignReviewedDraft] 와 같다 (#1028).
+  Future<void> _registerReviewedDraft(TrainerClient client) async {
+    final draft = _reviewDraft;
+    if (draft == null) return;
     if (!draft.supportsAssignment ||
         _registered ||
         _registeringClientIds.contains(client.id)) {
@@ -557,10 +597,14 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                                           ),
                                           const SizedBox(height: AppSpacing.lg),
                                         ],
-                                        ..._suggestionChildren(selected),
+                                        ..._suggestionChildren(
+                                          selected,
+                                          sideBySide: true,
+                                        ),
                                         ..._editorChildren(
                                           selected,
                                           showAssistant: false,
+                                          sideBySide: true,
                                         ),
                                         // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
                                         ...?_savedProgramsCard(),
@@ -662,6 +706,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     _templateRevision++;
     _registered = false;
     _sent = false;
+    // 템플릿을 얹으면 구성이 달라진다 — 이미 검토하던 스냅샷은 더 이상 지금
+    // 구성이 아니므로 편집기로 돌려보내 다시 검토하게 한다 (#1028).
+    _reviewDraft = null;
   });
 
   /// The saved-program list, or null when the trainer has saved none.
@@ -763,24 +810,31 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// 기간 전체의 계획이라, 같은 프로그램 탭 안에 두더라도 편집기에 섞지 않는다 —
   /// 여기서 하는 일은 편집이 아니라 판단(추천/수정 후 추천/추천 안 함)이다.
   ///
-  /// A/B 후보 생성 흐름을 펼친 동안에는 감춘다. 그때 트레이너는 정규 프로그램을
-  /// 만들고 있고, 화면에 판단할 것이 둘이면 어느 쪽 작업인지 흐려진다.
-  List<Widget> _suggestionChildren(TrainerClient client) {
-    if (_showOptionsFlow) return const <Widget>[];
+  /// 프로그램 선택 단계에서는 이 자리를 비운다 — 그때는 `AI 추천 루틴` 옆
+  /// 열로 옮겨 나란히 선다([_suggestionColumn], #1028). 좁은 화면에서는 옆
+  /// 열을 만들 수 없으므로 예전처럼 위아래로 쌓인다.
+  List<Widget> _suggestionChildren(
+    TrainerClient client, {
+    bool sideBySide = false,
+  }) {
+    if (_showOptionsFlow && sideBySide) return const <Widget>[];
     return <Widget>[
-      RoutineSuggestionReviewCard(
-        key: ValueKey<String>('routine-suggestions-${client.id}'),
-        clientId: client.id,
-        clientName: client.name,
-      ),
+      _suggestionColumn(client),
       const SizedBox(height: AppSpacing.lg),
     ];
   }
+
+  Widget _suggestionColumn(TrainerClient client) => RoutineSuggestionReviewCard(
+    key: ValueKey<String>('routine-suggestions-${client.id}'),
+    clientId: client.id,
+    clientName: client.name,
+  );
 
   /// The routine editor column (right column on wide).
   List<Widget> _editorChildren(
     TrainerClient client, {
     bool showAssistant = true,
+    bool sideBySide = false,
   }) {
     final AppLocalizations l = AppLocalizations.of(context);
     final routineAsync = ref.watch(
@@ -812,7 +866,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           style: const TextStyle(color: AppColors.mutedForeground),
         ),
         data: (items) => _showOptionsFlow
-            ? AiRoutineOptionsFlow(
+            ? _programSelection(
+                client,
+                sideBySide: sideBySide,
+                flow: AiRoutineOptionsFlow(
                 key: ValueKey<String>('routine-options-${client.id}'),
                 client: client,
                 embedded: true,
@@ -842,42 +899,60 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     ];
                   });
                 },
+                ),
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (showAssistant) ...<Widget>[
+                  if (showAssistant && _reviewDraft == null) ...<Widget>[
                     _AiAssistantPrompt(
                       clientName: client.name,
                       onTap: () => setState(() => _showOptionsFlow = true),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  ProgramEditorWorkspace(
-                    key: ValueKey<String>(
-                      'program-editor-${client.id}-$_editorRevision',
+                  // 최종 검토 중에는 편집기를 접어 둔다 — **트리에서 빼지
+                  // 않는 이유**는 편집 상태가 편집기 State 에 있기 때문이다.
+                  // 빼면 돌아왔을 때 트레이너가 쓴 내용이 사라진다. 접힌
+                  // 동안에는 hit test 도 되지 않아 저장·검토 버튼이 눌리지
+                  // 않는다. 애초에 이 편집기에는 전송 버튼이 없다 (#1028).
+                  Offstage(
+                    offstage: _reviewDraft != null,
+                    child: ProgramEditorWorkspace(
+                      key: ValueKey<String>(
+                        'program-editor-${client.id}-$_editorRevision',
+                      ),
+                      clientGoal: client.goal,
+                      aiSuggestions:
+                          _generatedRecommendations[client.id] ?? items,
+                      template: _appliedTemplate,
+                      templateRevision: _templateRevision,
+                      onReview: _openFinalReview,
+                      initialDraft: _openDraftSeed,
+                      onSave: _saveDraft,
+                      saving: _savingDraft,
+                      editingSaved: _openDraftId != null,
                     ),
-                    clientGoal: client.goal,
-                    aiSuggestions:
-                        _generatedRecommendations[client.id] ?? items,
-                    template: _appliedTemplate,
-                    templateRevision: _templateRevision,
-                    assigning: _sending || _sent,
-                    registering:
-                        _registered ||
-                        _registeringClientIds.contains(client.id),
-                    registerOffset: _registerOffset,
-                    onRegisterOffsetChanged: (offset) => setState(() {
-                      _registerOffset = offset;
-                      _registered = false;
-                    }),
-                    onAssignFlat: (draft) => _assignDraft(client, draft),
-                    onRegisterFlat: (draft) => _registerDraft(client, draft),
-                    initialDraft: _openDraftSeed,
-                    onSave: _saveDraft,
-                    saving: _savingDraft,
-                    editingSaved: _openDraftId != null,
                   ),
+                  // 프로그램 편집기 경로에서 회원에게 실제로 보낼 수 있는
+                  // 유일한 화면.
+                  if (_reviewDraft != null)
+                    ProgramFinalReviewCard(
+                      draft: _reviewDraft!,
+                      clientName: client.name,
+                      registerOffset: _registerOffset,
+                      onRegisterOffsetChanged: (offset) => setState(() {
+                        _registerOffset = offset;
+                        _registered = false;
+                      }),
+                      onBack: _closeFinalReview,
+                      onAssign: () => _assignReviewedDraft(client),
+                      onRegister: () => _registerReviewedDraft(client),
+                      assigning: _sending || _sent,
+                      registering:
+                          _registered ||
+                          _registeringClientIds.contains(client.id),
+                    ),
                   if (_sent)
                     Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -937,6 +1012,51 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
               ),
       ),
     ];
+  }
+
+  /// 프로그램 선택 단계의 배치 (#1028).
+  ///
+  /// 넓은 화면에서는 `AI 추천 루틴`(후보 비교·편집)이 메인 2열, `AI 개인운동
+  /// 제안`이 오른쪽 1열로 나란히 선다 — 둘 다 "무엇을 고객에게 줄지" 를 고르는
+  /// 화면이라 위아래로 쌓아 두면 아래쪽이 스크롤 밖으로 밀려 존재를 잊게 된다.
+  /// 좁은 화면에서는 열을 나눌 폭이 없어 예전처럼 위아래로 쌓는다.
+  Widget _programSelection(
+    TrainerClient client, {
+    required bool sideBySide,
+    required Widget flow,
+  }) {
+    if (!sideBySide) return flow;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 2:1 — 후보 카드 셋을 나란히 비교하는 쪽이 두 몫, 판단만 하는
+        // 제안 카드가 한 몫이다.
+        final side = (constraints.maxWidth - AppSpacing.lg) / 3;
+        // 제안 카드가 읽을 수 있는 최소 폭. 이보다 좁으면 열을 나누지 않는다 —
+        // 폭을 3등분한 결과가 `고객에게 추천` 버튼도 담지 못하는 열이면 나란히
+        // 둔 뜻이 없다. 프로그램 탭은 이미 왼쪽 고객 목록과 오른쪽 고객 데이터
+        // 열에 폭을 쓰고 있어, 가운데가 3등분을 감당하는 것은 아주 넓은 화면뿐이다.
+        if (side < 220) {
+          return Column(
+            key: const ValueKey<String>('program-selection-stacked'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _suggestionColumn(client),
+              const SizedBox(height: AppSpacing.lg),
+              flow,
+            ],
+          );
+        }
+        return Row(
+          key: const ValueKey<String>('program-selection-columns'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: flow),
+            const SizedBox(width: AppSpacing.lg),
+            SizedBox(width: side, child: _suggestionColumn(client)),
+          ],
+        );
+      },
+    );
   }
 
   Widget _sectionLabel(String text) {
