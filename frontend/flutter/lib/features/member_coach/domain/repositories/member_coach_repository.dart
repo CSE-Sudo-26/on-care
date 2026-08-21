@@ -53,7 +53,11 @@ abstract interface class MemberCoachRepository {
   Future<List<CoachInvite>> fetchInvites();
 
   /// 요청을 수락한다 — 담당 관계는 이 호출로 생긴다.
-  Future<void> acceptInvite(String inviteId);
+  /// 담당 요청을 수락한다 — 담당 링크가 여기서 생긴다.
+  ///
+  /// [dataSharingConsent] 없이는 서버가 400 으로 막는다. 수락하는 순간
+  /// 트레이너가 회원의 식단·운동·신체 정보를 읽기 때문이다. (#1022)
+  Future<void> acceptInvite(String inviteId, {required bool dataSharingConsent});
 
   /// 요청을 거절한다. 담당은 생기지 않는다.
   Future<void> rejectInvite(String inviteId);

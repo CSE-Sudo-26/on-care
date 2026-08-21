@@ -675,6 +675,14 @@
   "exTrainerConsultType": "Trainer Consultation",
   "exAssignedTrainer": "Assigned Trainer",
   "exConsultDataSharingNotice": "Once this trainer accepts your request, they'll be able to see your diet log, exercise log, and body info and health goals.",
+  "exConsultDataSharingAgree": "I have read this and agree to share my meal and workout records and body information with this trainer",
+  "exConsultDataSharingRequired": "Please agree to sharing before requesting a consultation",
+  "coachInviteConsentTitle": "Before you connect",
+  "coachInviteConsentBody": "Once {name} becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.",
+  "@coachInviteConsentBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachInviteConsentAgree": "Agree and connect",
   "exExerciseGoal": "Exercise Goal",
   "exGoalWeightLoss": "Weight Loss",
   "exGoalStrength": "Build Strength",
