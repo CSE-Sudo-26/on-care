@@ -2139,9 +2139,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiWithinTarget => ' · within target';
-
-  @override
   String get aiRecentRoutine => 'Recent routine';
 
   @override

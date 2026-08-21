@@ -314,30 +314,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load this week\'s workout history.'**
   String get homeExerciseTrendUnavailable;
 
-  /// No description provided for @homeMetricOver.
-  ///
-  /// In en, this message translates to:
-  /// **'Over'**
-  String get homeMetricOver;
-
-  /// No description provided for @homeMetricNormal.
-  ///
-  /// In en, this message translates to:
-  /// **'On track'**
-  String get homeMetricNormal;
-
-  /// No description provided for @dietAmountOver.
-  ///
-  /// In en, this message translates to:
-  /// **'{amount} over'**
-  String dietAmountOver(String amount);
-
-  /// No description provided for @dietAmountRemaining.
-  ///
-  /// In en, this message translates to:
-  /// **'{amount} to go'**
-  String dietAmountRemaining(String amount);
-
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:

@@ -836,7 +836,6 @@ class NutritionSummary extends StatelessWidget {
           ],
           _NutritionSummaryCard(
             calories: items[0],
-            calorieDifference: _formatInt((kcal - calorieGoal).abs()),
             carbs: items[5],
             protein: items[3],
             fat: items[4],
@@ -892,14 +891,12 @@ class _NutritionSummaryItem {
 class _NutritionSummaryCard extends StatelessWidget {
   const _NutritionSummaryCard({
     required this.calories,
-    required this.calorieDifference,
     required this.carbs,
     required this.protein,
     required this.fat,
   });
 
   final _NutritionSummaryItem calories;
-  final String calorieDifference;
   final _NutritionSummaryItem carbs;
   final _NutritionSummaryItem protein;
   final _NutritionSummaryItem fat;
@@ -911,12 +908,12 @@ class _NutritionSummaryCard extends StatelessWidget {
     // 카드의 칼로리와 아래의 나트륨·당류는 이미 이렇게 갈린다 — 탄단지 바만
     // 예외였다(#890). 세 항목이 각자 판단하므로 지방만 넘긴 날은 지방 바만
     // 빨개진다.
-    // 정상은 초록이다 (#1019). 바로 아래 나트륨·당류 카드가 이미 초록으로
-    // 말하는데 여기만 파랑이면, 파랑이 "정상"인지 "다른 종류의 지표"인지 알 수
-    // 없다. 위아래로 붙어 있는 카드가 같은 상태를 다른 색으로 칠할 이유가 없다.
+    // 초과가 아닌 쪽은 브랜드 파랑이다 (#1070). 예전에는 초록이었는데, 초록은
+    // "정상"으로 읽혀서 목표에 한참 못 미친 날까지 괜찮다고 말했다. 아래
+    // 나트륨·당류 카드도 같은 규칙을 쓴다.
     Color macroColor(_NutritionSummaryItem item) => item.isOverGoal
         ? FigmaColors.statusOver
-        : FigmaColors.statusNormal.withValues(alpha: 0.65);
+        : FigmaColors.statusWithinGoal.withValues(alpha: 0.65);
     final List<_MacroProgressData> macros = <_MacroProgressData>[
       _MacroProgressData(item: carbs, color: macroColor(carbs)),
       _MacroProgressData(item: protein, color: macroColor(protein)),
@@ -925,10 +922,7 @@ class _NutritionSummaryCard extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final Color calorieColor = calories.isOverGoal
         ? FigmaColors.statusOver
-        : FigmaColors.statusNormal;
-    final String calorieStatus = calories.isOverGoal
-        ? l.dietAmountOver('$calorieDifference ${calories.unit}')
-        : l.dietAmountRemaining('$calorieDifference ${calories.unit}');
+        : FigmaColors.statusWithinGoal;
     return Container(
       key: const Key('nutrition-summary-card'),
       padding: const EdgeInsets.all(16),
@@ -981,17 +975,6 @@ class _NutritionSummaryCard extends StatelessWidget {
                           ],
                         ),
                         maxLines: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      calorieStatus,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: calories.isOverGoal
-                            ? FigmaColors.dangerRed
-                            : AppColors.foreground,
                       ),
                     ),
                   ],
@@ -1225,15 +1208,15 @@ class _NutritionStatusCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 나트륨·당류는 같은 카드에 나란히 놓인 같은 성격의 지표다. "정상"을 서로
-    // 다른 색으로 말하면 안 돼서 규칙을 하나로 맞춘다 — 정상 초록, 초과 빨강.
+    // 나트륨·당류는 같은 카드에 나란히 놓인 같은 성격의 지표다. 규칙을 하나로
+    // 맞춘다 — 초과 빨강, 그 외 브랜드 파랑.
     final Widget sodiumCard = _NutritionStatusCard(
       key: const Key('nutrition-sodium-status'),
       item: sodium,
       difference: sodiumDifference,
       progressColor: sodium.isOverGoal
           ? FigmaColors.statusOver
-          : FigmaColors.statusNormal,
+          : FigmaColors.statusWithinGoal,
     );
     final Widget sugarCard = _NutritionStatusCard(
       key: const Key('nutrition-sugar-status'),
@@ -1241,7 +1224,7 @@ class _NutritionStatusCards extends StatelessWidget {
       difference: sugarDifference,
       progressColor: sugar.isOverGoal
           ? FigmaColors.statusOver
-          : FigmaColors.statusNormal,
+          : FigmaColors.statusWithinGoal,
     );
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -1281,13 +1264,9 @@ class _NutritionStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     final Color statusColor = item.isOverGoal
         ? FigmaColors.statusOver
-        : FigmaColors.statusNormal;
-    final String differenceText = item.isOverGoal
-        ? l.dietAmountOver('$difference${item.unit}')
-        : l.dietAmountRemaining('$difference${item.unit}');
+        : FigmaColors.statusWithinGoal;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1296,7 +1275,7 @@ class _NutritionStatusCard extends StatelessWidget {
         border: Border.all(
           color: item.isOverGoal
               ? FigmaColors.statusOver.withValues(alpha: 0.32)
-              : FigmaColors.statusNormal.withValues(alpha: 0.18),
+              : FigmaColors.statusWithinGoal.withValues(alpha: 0.18),
         ),
         boxShadow: kCardShadow,
       ),
@@ -1323,9 +1302,31 @@ class _NutritionStatusCard extends StatelessWidget {
                       color: statusColor,
                     ),
                     const SizedBox(width: 5),
+                    // 초과분은 라벨 바로 오른쪽에 작은 빨간 글씨로 붙인다
+                    // ("나트륨 +1,429mg"). 예전에는 카드 아래 한 줄짜리 문장
+                    // 이었는데, 초과가 아닌 카드는 그 자리를 "목표까지 남았
+                    // 어요"로 채워 부족한 날까지 안심시켰다(#1070).
+                    // 초과분은 라벨 오른쪽에 한 단계 작은 빨간 글씨로 붙는다
+                    // ("나트륨 +1,428mg"). 라벨과 한 덩어리로 흘러야 좁은
+                    // 카드에서 줄이 갈라지지 않는다.
                     Expanded(
-                      child: Text(
-                        item.label,
+                      child: Text.rich(
+                        TextSpan(
+                          children: <InlineSpan>[
+                            TextSpan(text: item.label),
+                            if (item.isOverGoal)
+                              TextSpan(
+                                text: ' +$difference${item.unit}',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: FigmaColors.dangerRed,
+                                ),
+                              ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -1363,39 +1364,6 @@ class _NutritionStatusCard extends StatelessWidget {
                       ],
                     ),
                     maxLines: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    item.isOverGoal
-                        ? '${l.homeGoal} ${l.homeMetricOver}'
-                        : l.homeMetricNormal,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  differenceText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: item.isOverGoal
-                        ? FigmaColors.dangerRed
-                        : AppColors.foreground,
-                    height: 1.3,
                   ),
                 ),
               ],
@@ -1777,26 +1745,26 @@ class _MealCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: <Widget>[
-                    // 정상은 초록이다 — 같은 탭의 기간 그래프·나트륨 카드가
-                    // 이미 초록으로 정상을 말한다. 여기만 파랑이면 한 탭 안에서
-                    // 같은 뜻이 두 색을 쓰게 된다. (#1053)
+                    // 같은 탭의 기간 그래프·나트륨 카드와 같은 색을 쓴다.
+                    // 한 탭 안에서 같은 뜻이 두 색을 쓰지 않게 한다. (#1053,
+                    // 색은 #1070 에서 초록 → 브랜드 파랑)
                     _TotalPill(
                       label: l.dietCalories,
                       value: '${_formatInt(meal.total)} ${l.unitKcal}',
-                      color: FigmaColors.statusNormal,
+                      color: FigmaColors.statusWithinGoal,
                     ),
                     _TotalPill(
                       label: l.dietSodium,
                       value: '${_formatInt(meal.sodium)} ${l.dietUnitMg}',
-                      // 정상은 초록, 나트륨이 과다하면 빨강.
+                      // 나트륨이 과다하면 빨강, 그 외는 브랜드 파랑.
                       color: meal.sodium > 1000
                           ? FigmaColors.dangerRed
-                          : FigmaColors.statusNormal,
+                          : FigmaColors.statusWithinGoal,
                     ),
                     _TotalPill(
                       label: l.dietSugar,
                       value: '${_formatG(meal.sugar)} ${l.dietUnitG}',
-                      color: FigmaColors.statusNormal,
+                      color: FigmaColors.statusWithinGoal,
                     ),
                   ],
                 ),

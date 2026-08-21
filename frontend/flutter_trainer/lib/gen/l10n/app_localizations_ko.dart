@@ -2053,9 +2053,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiWithinTarget => ' · 적정';
-
-  @override
   String get aiRecentRoutine => '최근 루틴';
 
   @override

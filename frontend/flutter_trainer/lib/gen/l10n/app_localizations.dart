@@ -3776,12 +3776,6 @@ abstract class AppLocalizations {
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
 
-  /// No description provided for @aiWithinTarget.
-  ///
-  /// In en, this message translates to:
-  /// **' · within target'**
-  String get aiWithinTarget;
-
   /// No description provided for @aiRecentRoutine.
   ///
   /// In en, this message translates to:
