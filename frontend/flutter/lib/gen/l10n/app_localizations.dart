@@ -530,12 +530,6 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get dietToday;
 
-  /// No description provided for @dietWeekLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Month {month}, Week {week}'**
-  String dietWeekLabel(int month, int week);
-
   /// No description provided for @dietWeekdayMon.
   ///
   /// In en, this message translates to:
