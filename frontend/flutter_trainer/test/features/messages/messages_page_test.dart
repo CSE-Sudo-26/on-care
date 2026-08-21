@@ -277,6 +277,43 @@ void main() {
     });
   });
 
+  testWidgets('전체는 마지막 말이 새로운 순, 관리 필요만 주의 우선', (tester) async {
+    // 두 대화의 세로 자리를 재는 단언이라 둘 다 그려져 있어야 한다 -
+    // 지연 생성 목록이 화면 밖 대화를 만들지 않으므로 목록 전체가 들어오는
+    // 높이로 띄운다.
+    await withWideSurface(tester, size: const Size(1440, 2200), () async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        seedClock: DateTime(2026, 8, 16), // 일요일 — 배지 우선순위 고정
+      );
+
+      double topOf(String id) => tester
+          .getTopLeft(find.byKey(ValueKey<String>('messages-conversation-$id')))
+          .dy;
+
+      // `전체` 는 대화 목록이다 — 방금 말이 오간 순서로 선다. 노태강은
+      // 오늘, 박성호는 사흘 전에 마지막 말이 오갔다. 예전에는 어느
+      // 필터에서든 나트륨이 넘친 박성호가 위로 올라와, 방금 답장이 온
+      // 고객이 목록 아래에 묻혔다.
+      await goTo(tester, AppRoutes.messages);
+      expect(topOf('seed-client-13'), lessThan(topOf('seed-client-3')));
+
+      // `관리 필요` 는 챙길 사람을 고르는 자리다 — 주의 신호가 앞선다.
+      // 노태강은 신호가 없어 목록에서 아예 빠진다.
+      await goTo(tester, AppRoutes.messagesFor(null, filter: 'attention'));
+      expect(
+        find.byKey(
+          const ValueKey<String>('messages-conversation-seed-client-13'),
+        ),
+        findsNothing,
+      );
+      // 나트륨이 넘친 박성호는 이행률만 낮은 고객보다 위다 — 사흘 전
+      // 대화인데도. 최신순이었다면 반대로 섰다.
+      expect(topOf('seed-client-3'), lessThan(topOf('seed-client-12')));
+    });
+  });
+
   testWidgets('client query keeps the selected member in the thread', (
     tester,
   ) async {

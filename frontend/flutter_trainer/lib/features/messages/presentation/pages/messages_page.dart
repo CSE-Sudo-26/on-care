@@ -59,10 +59,16 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final clientsAsync = ref.watch(prioritizedClientsProvider);
     final unread =
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
     final filter = _ConversationFilter.parse(widget.filter);
+    // 차례는 필터가 정한다. `전체`·`읽지 않음` 은 대화 목록이므로 **마지막
+    // 말이 새로운 순**이고, `관리 필요` 는 챙길 사람을 고르는 자리이므로
+    // 주의 신호를 앞세운다. 예전에는 어느 필터에서든 나트륨 초과가 맨 위로
+    // 올라와, 방금 답장이 온 고객이 목록 아래에 묻혔다.
+    final clientsAsync = filter == _ConversationFilter.attention
+        ? ref.watch(prioritizedClientsProvider)
+        : ref.watch(recentlyMessagedClientsProvider);
 
     return PageScaffold(
       title: l.navMessages,
