@@ -254,7 +254,10 @@ class FigmaCircleButton extends StatelessWidget {
     required this.icon,
     this.onTap,
     this.showDot = false,
-    this.dotColor = FigmaColors.orange,
+    // 읽지 않은 알림은 `주의` 가 아니라 새 소식이다 — 같은 화면의 주황(주의)과
+    // 겹치지 않도록 빨강으로 둔다. 옆의 채팅 버튼이 이미 쓰던 그 빨강이라,
+    // 헤더의 두 점이 같은 색으로 같은 뜻을 말한다. (#1060)
+    this.dotColor = FigmaColors.redDot,
     this.size = 36,
     this.iconSize = 18,
     this.enabled = true,

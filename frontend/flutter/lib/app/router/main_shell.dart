@@ -430,14 +430,15 @@ class _RecordAddSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
                   children: <Widget>[
+                    // 식단은 초록, 운동은 파랑이다 (#1060). 앱 안에서 식단
+                    // 그래프가 초록, 운동 그래프가 파랑인데 이 메뉴만 뒤집혀
+                    // 있어, 같은 두 영역이 자리마다 색이 바뀌었다.
                     Expanded(
                       child: _RecordOption(
                         icon: Icons.restaurant,
-                        iconColor: FigmaColors.primary,
-                        iconBg: FigmaColors.softBlue,
-                        borderColor: FigmaColors.primary.withValues(
-                          alpha: 0.35,
-                        ),
+                        iconColor: FigmaColors.green,
+                        iconBg: const Color(0xFFEAF8F2),
+                        borderColor: FigmaColors.green.withValues(alpha: 0.35),
                         title: l.navDiet,
                         subtitle: l.navDietOptionSub,
                         onTap: onDiet,
@@ -447,9 +448,11 @@ class _RecordAddSheet extends StatelessWidget {
                     Expanded(
                       child: _RecordOption(
                         icon: Icons.fitness_center,
-                        iconColor: FigmaColors.green,
-                        iconBg: const Color(0xFFEAF8F2),
-                        borderColor: FigmaColors.green.withValues(alpha: 0.35),
+                        iconColor: FigmaColors.primary,
+                        iconBg: FigmaColors.softBlue,
+                        borderColor: FigmaColors.primary.withValues(
+                          alpha: 0.35,
+                        ),
                         title: l.navExercise,
                         subtitle: l.navExerciseOptionSub,
                         onTap: onExercise,
