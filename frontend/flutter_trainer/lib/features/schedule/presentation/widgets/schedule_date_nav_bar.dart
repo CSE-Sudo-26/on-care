@@ -3,11 +3,15 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// 날짜 내비게이션 행 — `◀   8월 17일 – 8월 23일   오늘   ▶`. (#882, #1009)
+/// 날짜 내비게이션 행 — `◀   8월 17일 – 8월 23일   오늘   ▶` 그리고 오른쪽
+/// 끝(일요일 칸 위)의 `+ 새 일정`. (#882, #1009)
 ///
 /// **날짜는 두 화살표 사이의 한가운데에 선다.** `오늘` 이 들어설 자리를 날짜
 /// 오른쪽에만 비워 두었더니 날짜가 그만큼 왼쪽으로 치우쳐, 화살표 사이의
 /// 가운데가 아니었다. 같은 폭을 왼쪽에도 빈 자리로 두어 균형을 맞춘다.
+///
+/// `새 일정` 은 이 묶음과 떨어져 행의 맨 오른쪽에 선다 — 시간표의 일요일
+/// 칸과 같은 자리라, 일정을 어느 주에 더할지가 시선으로 이어진다.
 ///
 /// **화살표는 자리를 지킨다.** 날짜 글자 수가 달라지거나 `오늘` 이 나타났다
 /// 사라져도 두 화살표가 움직이지 않는다. 움직이면 같은 버튼을 누르려고 매번
@@ -26,6 +30,7 @@ class ScheduleDateNavBar extends StatelessWidget {
     required this.end,
     required this.onShift,
     required this.trailing,
+    this.newSession,
   });
 
   /// 보이는 창의 첫날.
@@ -39,6 +44,10 @@ class ScheduleDateNavBar extends StatelessWidget {
 
   /// 날짜와 오른쪽 화살표 사이에 서는 컨트롤(`오늘`). 비어 있어도 자리는 남는다.
   final Widget trailing;
+
+  /// 화살표·날짜 묶음과 떨어져 이 행의 맨 오른쪽(일요일 칸 위)에 서는 동작
+  /// (`+ 새 일정`). 없으면 그 자리를 비운다.
+  final Widget? newSession;
 
   /// 날짜가 앉는 자리의 폭. 한국어 `8월 17일 – 8월 23일`, 영어 `Aug 17 – Aug 23`
   /// 이 글씨 배율 1.1 에서 들어가는 값이다. 넘치면 그 안에서 작게 그린다.
@@ -56,6 +65,9 @@ class ScheduleDateNavBar extends StatelessWidget {
 
   /// 요소 사이 간격. 화살표·날짜·`오늘` 이 서로 붙어 보이지 않을 만큼 띄운다.
   static const double _gap = AppSpacing.lg;
+
+  /// `새 일정` 을 한 줄에 함께 담는 최소 폭. 아래로는 다음 줄로 내린다.
+  static const double _singleRowMinWidth = 480;
 
   @override
   Widget build(BuildContext context) {
@@ -110,14 +122,37 @@ class ScheduleDateNavBar extends StatelessWidget {
       ],
     );
 
-    // 왼쪽 정렬은 그대로 두고, 폭이 모자라면 묶음째 줄여 넣는다.
-    return Align(
+    // 화살표·날짜 묶음은 왼쪽 정렬, `새 일정` 은 오른쪽 끝(일요일 칸 위)이다.
+    // 폭이 모자라면 묶음은 그 안에서 줄어들고, 새 일정은 다음 줄로 내린다 —
+    // 둘을 한 줄에 우겨넣으면 좁은 화면에서 그대로 넘친다.
+    final left = FittedBox(
+      fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: group,
-      ),
+      child: group,
+    );
+    if (newSession == null) {
+      return Align(alignment: Alignment.centerLeft, child: left);
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _singleRowMinWidth) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              left,
+              const SizedBox(height: AppSpacing.sm),
+              Align(alignment: Alignment.centerRight, child: newSession),
+            ],
+          );
+        }
+        return Row(
+          children: <Widget>[
+            Expanded(child: left),
+            newSession!,
+          ],
+        );
+      },
     );
   }
 }

@@ -409,25 +409,20 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       subtitle: dateLabel(l, _selectedDay),
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
-        // 오늘 은 날짜를 바꾸는 컨트롤이라 날짜 행 오른쪽으로 내렸다.
-        // 비워진 이 자리에 상담 요청이 들어온다(#882).
-        if (consultationInbox)
-          ConsultationInboxAction(
-            pending: pendingConsultations,
-            onTap: _openConsultationInbox,
-          ),
         ActionButton(
           key: const ValueKey<String>('schedule-open-slots'),
           label: l.schedSlots,
           icon: Icons.event_available_outlined,
           onPressed: () => _openReservationSlotsSheet(),
         ),
-        ActionButton(
-          label: l.schedNewSession,
-          icon: Icons.add,
-          primary: true,
-          onPressed: () => _openSessionSheet(),
-        ),
+        // 상담 확인은 맨 오른쪽이다(#882, #1009). 예약 슬롯 왼쪽에 있을 때는
+        // 알림 배지가 그 버튼과 겹쳐, 몇 건 밀렸는지가 배지 색으로도 잘 읽히지
+        // 않았다.
+        if (consultationInbox)
+          ConsultationInboxAction(
+            pending: pendingConsultations,
+            onTap: _openConsultationInbox,
+          ),
       ],
       scrollable: false,
       contentPadding: EdgeInsets.zero,
@@ -464,6 +459,15 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         end: end,
         onShift: _shiftWeek,
         trailing: _todayControl(),
+        // `새 일정` 은 이 행의 오른쪽 끝, 일요일 칸 위에 선다. 예전에는 페이지
+        // 헤더의 다른 문서 액션과 섞여 있어, 무엇을 조작하는 버튼인지 시간표와
+        // 자리로 이어지지 않았다(#882 와 같은 이유).
+        newSession: ActionButton(
+          label: l.schedNewSession,
+          icon: Icons.add,
+          primary: true,
+          onPressed: () => _openSessionSheet(),
+        ),
       ),
     );
 
