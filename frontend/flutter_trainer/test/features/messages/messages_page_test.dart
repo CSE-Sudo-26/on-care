@@ -319,6 +319,24 @@ void main() {
       await settle(tester);
 
       expect(find.text('메모 추가됨'), findsOneWidget);
+      // 옮겨 적은 뒤에는 바탕만 비운다 — 붉은 바탕은 "아직 볼 것이 있다"
+      // 는 신호라, 처리한 배너와 안 한 배너가 똑같이 붉으면 안 된다.
+      // 윤곽선과 버튼의 붉은색은 무슨 일이 있었는지를 남긴다.
+      final banner = tester.widget<Container>(
+        find.byKey(
+          const ValueKey<String>('chat-insight-banner-seed-chat-1-16'),
+        ),
+      );
+      final decoration = banner.decoration! as BoxDecoration;
+      expect(decoration.color, AppColors.card);
+      expect(
+        (decoration.border! as Border).top.color,
+        AppColors.warning.withValues(alpha: 0.28),
+      );
+      expect(
+        tester.widget<Text>(find.text('메모 추가됨')).style?.color,
+        AppColors.warning,
+      );
       // 채팅에서 저장한 메모는 회원 상세가 읽는 것과 **같은** 메모 목록에 들어간다.
       final memos = await container
           .read(trainerMemoRepositoryProvider)
