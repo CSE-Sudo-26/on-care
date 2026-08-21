@@ -322,13 +322,17 @@ void main() {
       expect(find.text('고객 피드백'), findsWidgets);
       // A skipped exercise line renders (struck-through content present).
       // 어느 항목을 걸렀는지는 픽스처가 정한다 — 이름을 여기 적으면 두 벌이 된다.
+      // 기록이 여러 달치라 같은 이름의 거른 항목이 여러 번 나온다.
+      // `scrollUntilVisible` 은 대상이 **하나**일 때만 쓸 수 있으므로 직접
+      // 내려가며 찾는다.
       final String skipped = _minsuSkippedExercise();
-      await tester.scrollUntilVisible(
-        find.text(skipped),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      expect(find.text(skipped), findsOneWidget);
+      final Finder skippedLine = find.text(skipped);
+      final Finder list = detailScrollable('seed-client-1');
+      for (int i = 0; i < 40 && skippedLine.evaluate().isEmpty; i++) {
+        await tester.drag(list, const Offset(0, -150));
+        await tester.pump();
+      }
+      expect(skippedLine, findsWidgets);
     });
 
     testWidgets('a failed 운동 기록 load does not take the routines with it', (
