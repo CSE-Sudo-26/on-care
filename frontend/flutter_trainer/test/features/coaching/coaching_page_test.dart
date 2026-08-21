@@ -1010,9 +1010,11 @@ void main() {
 
       // The 스케줄 tab shows the registered plan on his 예정 session.
       await goTo(tester, AppRoutes.schedule);
-      await tester.ensureVisible(find.text('박성호'));
+      // 시간표 블록의 둘째 줄은 `이름 종류` 다(#1010).
+      final Finder block = find.textContaining('박성호').first;
+      await tester.ensureVisible(block);
       await tester.pump();
-      await tester.tap(find.text('박성호'));
+      await tester.tap(block);
       await settle(tester);
       await tester.ensureVisible(find.text('벤치프레스 4세트'));
       expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item

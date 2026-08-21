@@ -684,6 +684,28 @@
       }
     }
   },
+  "schedBlockTime": "{range} {duration}",
+  "@schedBlockTime": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "schedBlockWho": "{name} {type}",
+  "@schedBlockWho": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
   "schedEmptyWeek": "Nothing scheduled this week.",
   "schedNewClientTag": "{name} (new)",
   "@schedNewClientTag": {

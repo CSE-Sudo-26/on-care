@@ -406,6 +406,8 @@
   "schedDeleteFailed": "일정 삭제에 실패했어요. 다시 시도해 주세요",
   "schedCompleteFailed": "완료 처리에 실패했어요. 다시 시도해 주세요",
   "schedTimeRange": "{start}\u2013{end}",
+  "schedBlockTime": "{range} {duration}",
+  "schedBlockWho": "{name} {type}",
   "schedEmptyWeek": "이번 주에는 일정이 없어요.",
   "schedNewClientTag": "{name}(신규)",
   "schedSlots": "예약 슬롯",
