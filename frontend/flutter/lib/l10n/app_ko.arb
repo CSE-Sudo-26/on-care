@@ -232,6 +232,11 @@
   "exStatCalories": "칼로리",
   "exStatStreak": "연속",
   "exUnitStreakDays": "일 연속",
+  "exStreakCheer": "{days}일 연속 운동 중이에요!",
+  "@exStreakCheer": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "exStreakStart": "오늘 운동으로 연속 기록을 시작해 봐요.",
   "exToday": "오늘",
   "exLoadError": "운동 정보를 불러오지 못했어요.",
   "exCompletedPtTitle": "오늘 완료한 PT",
@@ -665,6 +670,11 @@
   "alertJustNow": "방금",
   "exPtLogTitle": "오늘 완료한 PT",
   "exPtFeedbackTitle": "오늘의 피드백",
+  "exNextPtSchedule": "다음 PT · {when}",
+  "@exNextPtSchedule": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "exNextPtNone": "다음 PT 일정이 아직 없어요",
   "exDatedTitle": "{month}월 {day}일 {title}",
   "a11yChartSummary": "{title}. {detail}",
   "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},

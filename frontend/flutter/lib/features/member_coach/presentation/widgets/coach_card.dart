@@ -132,10 +132,7 @@ class CoachCard extends ConsumerWidget {
 /// 운동**이다. 그래서 추천할 것이 없는 날은 빈 카드를 만들지 않고 코칭 포인트만
 /// 남긴다 — AI 가 매번 운동을 억지로 만들어 낼 이유가 없다.
 class AiCoachingCard extends ConsumerWidget {
-  const AiCoachingCard({required this.coachingPoint, super.key});
-
-  /// 이번 코칭 포인트. 운동 주간 데이터의 `aiCoachMessage` 가 그대로 들어온다.
-  final String coachingPoint;
+  const AiCoachingCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,11 +142,14 @@ class AiCoachingCard extends ConsumerWidget {
     final List<CoachRoutine> routines =
         ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[];
     final MemberCoach? coach = ref.watch(memberCoachProvider).valueOrNull;
-    final String point = coachingPoint.trim();
 
-    // 코칭 포인트도 추천도 없으면 카드 자체를 그리지 않는다. 빈 카드는 자리만
-    // 차지하고 아무것도 알려 주지 않는다.
-    if (point.isEmpty && routines.isEmpty) return const SizedBox.shrink();
+    // 추천이 없으면 카드 자체를 그리지 않는다. 빈 카드는 자리만 차지하고
+    // 아무것도 알려 주지 않는다.
+    //
+    // 예전에는 이 카드가 `이번 코칭 포인트` 도 함께 말했다. 지금은 화면 위쪽의
+    // AI 맞춤 조언 카드가 그 말을 하므로 여기서는 뺐다 — 같은 말이 한 화면에
+    // 두 번 있으면 안 된다. (#1021)
+    if (routines.isEmpty) return const SizedBox.shrink();
 
     return Container(
       key: const Key('aiCoachingCard'),
@@ -185,27 +185,6 @@ class AiCoachingCard extends ConsumerWidget {
               ),
             ],
           ),
-          if (point.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 12),
-            Text(
-              l.coachPointsTitle,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.primary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              point,
-              style: const TextStyle(
-                fontSize: 13.5,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: FigmaColors.ink,
-              ),
-            ),
-          ],
           if (routines.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             Text(
@@ -243,6 +222,50 @@ class AiCoachingCard extends ConsumerWidget {
             ],
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// 추천 운동을 했는지 표시하는 체크 박스. (#1021)
+///
+/// 한 번 체크하면 풀 수 없다. 수행은 기록으로 남아 주간 시간·칼로리에 더해지고
+/// 트레이너에게도 보인다 — 체크를 무르는 것은 그 기록을 지우는 일이라, 지금
+/// 구조에서 조용히 되돌릴 수 있는 동작이 아니다.
+class _RoutineCheckbox extends StatelessWidget {
+  const _RoutineCheckbox({
+    super.key,
+    required this.done,
+    required this.saving,
+    required this.onCheck,
+  });
+
+  final bool done;
+  final bool saving;
+  final VoidCallback onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    if (saving) {
+      return const Padding(
+        padding: EdgeInsets.all(9),
+        child: SizedBox.square(
+          dimension: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return Semantics(
+      checked: done,
+      label: l.coachRoutineDone,
+      child: Checkbox(
+        value: done,
+        // 다 한 것은 되돌리지 않는다 — 눌러도 아무 일이 없다는 뜻으로 비활성.
+        onChanged: done ? null : (bool? _) => onCheck(),
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        activeColor: FigmaColors.primary,
       ),
     );
   }
@@ -348,7 +371,19 @@ class _RecommendedExerciseRowState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              // 했는지 안 했는지는 체크 박스로 말한다 (#1021). 예전에는 오른쪽
+              // 아래에 `수행 완료` 버튼이 있었는데, 시간·유형 아래에 붙어 있어
+              // 무엇에 대한 버튼인지 한눈에 붙지 않았다. 체크 박스를 줄 맨
+              // 앞에 두면 "이 운동을 했다" 가 그 줄에서 바로 읽힌다.
+              _RoutineCheckbox(
+                key: Key('completeRoutine-${routine.id}'),
+                done: routine.completed,
+                saving: _saving,
+                onCheck: _complete,
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,43 +457,7 @@ class _RecommendedExerciseRowState
                         color: FigmaColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    if (routine.completed)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(child: Text(l.coachRoutineDone)),
-                        ],
-                      )
-                    else
-                      SizedBox(
-                        height: 30,
-                        child: OutlinedButton(
-                          key: Key('completeRoutine-${routine.id}'),
-                          onPressed: _saving ? null : _complete,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                          ),
-                          child: _saving
-                              ? const SizedBox.square(
-                                  dimension: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  l.coachRoutineDone,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                        ),
-                      ),
+
                   ],
                 ),
               ),

@@ -329,6 +329,11 @@
   "exStatCalories": "Calories",
   "exStatStreak": "Streak",
   "exUnitStreakDays": "day streak",
+  "exStreakCheer": "{days} days in a row!",
+  "@exStreakCheer": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "exStreakStart": "Start a streak with today's workout.",
   "exToday": "Today",
   "exLoadError": "Couldn't load your exercise data.",
   "exCompletedPtTitle": "Today's completed PT",
@@ -1210,6 +1215,11 @@
     "description": "Title of the completed PT session card."
   },
   "exPtFeedbackTitle": "Today's feedback",
+  "exNextPtSchedule": "Next PT · {when}",
+  "@exNextPtSchedule": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "exNextPtNone": "No PT scheduled yet",
   "@exPtFeedbackTitle": {
     "description": "Label above the trainer's feedback."
   },
