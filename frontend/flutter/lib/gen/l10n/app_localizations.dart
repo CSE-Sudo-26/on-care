@@ -326,12 +326,6 @@ abstract class AppLocalizations {
   /// **'Over'**
   String get homeMetricOver;
 
-  /// No description provided for @homeMetricNormal.
-  ///
-  /// In en, this message translates to:
-  /// **'On track'**
-  String get homeMetricNormal;
-
   /// No description provided for @dietAmountOver.
   ///
   /// In en, this message translates to:

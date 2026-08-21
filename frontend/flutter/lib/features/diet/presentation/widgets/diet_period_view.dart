@@ -401,6 +401,8 @@ class _PeriodBody extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
+              // 배지는 목표를 넘겼을 때만 단다. 그 외를 "정상"이라고 붙이면
+              // 1g만 먹은 날도 정상이 된다(#1070).
               ListenableBuilder(
                 listenable: selection,
                 builder: (BuildContext context, Widget? _) {
@@ -409,26 +411,24 @@ class _PeriodBody extends StatelessWidget {
                       ? (selectable ? selection.averageOf(values) : average)
                       : values[picked];
                   final bool over = goal > 0 && value > goal;
-                  final Color statusColor = over
-                      ? FigmaColors.dangerRed
-                      : FigmaColors.greenText;
+                  if (!over) {
+                    return const SizedBox.shrink();
+                  }
                   return Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
+                      color: FigmaColors.dangerRed.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      over
-                          ? '${l.homeGoal} ${l.homeMetricOver}'
-                          : l.homeMetricNormal,
-                      style: TextStyle(
+                      '${l.homeGoal} ${l.homeMetricOver}',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color: statusColor,
+                        color: FigmaColors.dangerRed,
                       ),
                     ),
                   );

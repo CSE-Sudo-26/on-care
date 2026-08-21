@@ -128,9 +128,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMetricOver => 'Over';
 
   @override
-  String get homeMetricNormal => 'On track';
-
-  @override
   String dietAmountOver(String amount) {
     return '$amount over the goal';
   }

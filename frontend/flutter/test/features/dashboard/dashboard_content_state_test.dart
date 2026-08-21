@@ -333,7 +333,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // "칼로리" - "1,860" - "/2,000kcal" - "정상" 순으로 읽혀야 한다.
+    // "칼로리" - "1,860" - "/2,000kcal" 순으로 읽혀야 한다.
     expect(find.text('/2,000kcal'), findsOneWidget);
     expect(find.text('/2,000mg'), findsOneWidget);
     expect(find.text('/50g'), findsOneWidget);

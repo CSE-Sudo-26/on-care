@@ -488,14 +488,16 @@ class _StatusCard extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Icon(
-                      item.isOverGoal
-                          ? Icons.warning_amber_rounded
-                          : Icons.check_circle_outline_rounded,
-                      size: 16,
-                      color: status,
-                    ),
-                    const SizedBox(width: 5),
+                    // 초과일 때만 경고 아이콘. 그 외에 체크 아이콘을 두면
+                    // 목표에 한참 못 미친 날도 "정상" 이라고 말한다(#1070).
+                    if (item.isOverGoal) ...<Widget>[
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: status,
+                      ),
+                      const SizedBox(width: 5),
+                    ],
                     Expanded(
                       child: Text(
                         item.label,

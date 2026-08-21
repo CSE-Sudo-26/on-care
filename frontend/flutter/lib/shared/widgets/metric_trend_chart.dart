@@ -28,13 +28,16 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 /// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
 const Color kMetricTrendLine = Color(0xFFDDE2E8);
 
-/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+/// 목표 대비 상태색: 초과(빨강) / 그 외(브랜드 파랑).
+///
+/// 그 외를 초록으로 칠하지 않는다 — 초록은 "정상"으로 읽히는데, 목표에 한참
+/// 못 미친 값도 초과는 아니기 때문이다(#1070).
 ///
 /// 목표가 0 이면 초과로 보지 않는다. `v > goal` 만 두면 목표가 없는 지표의 **모든**
 /// 기록이 빨간 점이 되어, 같은 카드의 평균 뱃지(목표가 있을 때만 초과 판정)와 서로
 /// 다른 이야기를 한다.
 Color metricStatusColor(double v, double goal) =>
-    goal > 0 && v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
+    goal > 0 && v > goal ? FigmaColors.dangerRed : FigmaColors.statusWithinGoal;
 
 /// 월→일 요일 라벨. 홈 탭과 식단 탭이 **같은 문구**를 쓰도록 여기 둔다 — 한쪽만
 /// 하드코딩하면 영어 로케일에서 한글 요일이 그대로 남는다.

@@ -48,7 +48,6 @@
   "homeWeeklyExerciseTrend": "Exercise trend",
   "homeExerciseTrendUnavailable": "Couldn't load this week's workout history.",
   "homeMetricOver": "Over",
-  "homeMetricNormal": "On track",
   "dietAmountOver": "{amount} over the goal",
   "@dietAmountOver": {
     "placeholders": {

@@ -77,6 +77,7 @@ class FigmaColors {
   // 사용자앱 화면은 대부분 [FigmaColors] 를 읽으므로, 두 앱 공통 시맨틱 토큰을
   // 여기서도 같은 이름으로 꺼내 쓴다. 값의 출처는 [AppColors] 한 곳이다.
   static const Color statusNormal = AppColors.statusNormal;
+  static const Color statusWithinGoal = AppColors.statusWithinGoal;
   static const Color statusCaution = AppColors.statusCaution;
   static const Color statusCautionFill = AppColors.statusCautionFill;
   static const Color statusDanger = AppColors.statusDanger;
