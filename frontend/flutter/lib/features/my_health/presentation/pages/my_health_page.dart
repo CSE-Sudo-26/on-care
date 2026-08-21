@@ -8,7 +8,6 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
-import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
@@ -783,101 +782,6 @@ class _TrainerGymSection extends ConsumerWidget {
   /// 연결된 헬스장이 없을 때 "헬스장 찾기"로 보낼 콜백.
   final VoidCallback onFindGym;
 
-  /// 확인 창을 띄우고, 승인되면 [disconnect] 를 실행한 뒤 연결 상태를 새로
-  /// 읽는다. 헬스장·트레이너 두 삭제가 같은 흐름을 쓴다.
-  Future<void> _confirmDisconnect(
-    BuildContext context,
-    WidgetRef ref, {
-    required String message,
-    required Future<void> Function(GymRepository repo) disconnect,
-  }) async {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final bool ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (BuildContext ctx) => AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Text(
-              l.myConnectionDeleteTitle,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: FigmaColors.ink,
-              ),
-            ),
-            content: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 14.5,
-                color: AppColors.foreground,
-                height: 1.4,
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.mutedForeground,
-                ),
-                child: Text(l.myCancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFFF3B30),
-                ),
-                child: Text(l.myDelete),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    await disconnect(ref.read(gymRepositoryProvider));
-    // 해제를 기다리는 동안 탭을 벗어났다면 ref 가 이미 폐기됐을 수 있다.
-    if (!context.mounted) return;
-    // 헬스장 해제는 트레이너까지 끊으므로 두 provider 를 함께 새로 읽는다.
-    ref.invalidate(myGymProvider);
-    ref.invalidate(myTrainerProvider);
-  }
-
-  /// 헬스장 연결 삭제. 담당 트레이너가 있으면 함께 사라진다는 것을 알린다.
-  Future<void> _removeGym(
-    BuildContext context,
-    WidgetRef ref,
-    Gym gym,
-    Trainer? trainer,
-  ) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return _confirmDisconnect(
-      context,
-      ref,
-      message: trainer == null
-          ? l.myGymDisconnectConfirm(gym.name)
-          : l.myGymDisconnectWithTrainerConfirm(gym.name, trainer.name),
-      disconnect: (GymRepository repo) => repo.disconnectMyGym(),
-    );
-  }
-
-  /// 헬스장은 그대로 두고 담당 트레이너 연결만 삭제.
-  Future<void> _removeTrainer(
-    BuildContext context,
-    WidgetRef ref,
-    Gym gym,
-    Trainer trainer,
-  ) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return _confirmDisconnect(
-      context,
-      ref,
-      message: l.myTrainerDisconnectConfirm(trainer.name, gym.name),
-      disconnect: (GymRepository repo) => repo.disconnectMyTrainer(),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -904,10 +808,13 @@ class _TrainerGymSection extends ConsumerWidget {
               : _GymSummaryCard(
                   gym: gym,
                   trainer: trainer,
-                  onRemoveGym: () => _removeGym(context, ref, gym, trainer),
-                  onRemoveTrainer: trainer == null
+                  onOpenGym: () =>
+                      context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onOpenTrainer: trainer == null
                       ? null
-                      : () => _removeTrainer(context, ref, gym, trainer),
+                      : () => context.push(
+                          AppRoutes.trainerDetailPath(trainer.id),
+                        ),
                   // 헬스장은 이미 연결돼 있고 트레이너만 없는 상태다. 헬스장을
                   // 찾는 화면이 아니라 **그 헬스장의 소속 트레이너**로 보낸다 —
                   // 예전에는 라벨이 '트레이너 찾기'인데 헬스장 탭으로 갔다(#793).
@@ -926,8 +833,8 @@ class _GymSummaryCard extends StatelessWidget {
   const _GymSummaryCard({
     required this.gym,
     required this.trainer,
-    required this.onRemoveGym,
-    required this.onRemoveTrainer,
+    required this.onOpenGym,
+    required this.onOpenTrainer,
     required this.onFindTrainer,
   });
 
@@ -935,8 +842,11 @@ class _GymSummaryCard extends StatelessWidget {
 
   /// 담당 트레이너. null 이면 "담당 트레이너 없음" 행으로 대체된다.
   final Trainer? trainer;
-  final VoidCallback onRemoveGym;
-  final VoidCallback? onRemoveTrainer;
+  /// 헬스장 상세로. 삭제는 그 화면 하단에 있다. (#1057)
+  final VoidCallback onOpenGym;
+
+  /// 담당 트레이너 상세로. 담당이 없으면 null 이다.
+  final VoidCallback? onOpenTrainer;
 
   /// 헬스장은 있는데 담당 트레이너가 없을 때 트레이너를 찾으러 보낸다.
   final VoidCallback onFindTrainer;
@@ -1001,9 +911,11 @@ class _GymSummaryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _RemoveLinkButton(
-                  tooltip: l.myGymDisconnectTooltip,
-                  onTap: onRemoveGym,
+                // 카드에서 가장 누르기 쉬운 자리가 되돌릴 수 없는 삭제였다.
+                // 그 자리는 상세로 가는 길이고, 삭제는 상세 하단에 둔다. (#1057)
+                _OpenDetailButton(
+                  tooltip: l.myGymDetailTooltip,
+                  onTap: onOpenGym,
                 ),
               ],
             ),
@@ -1031,10 +943,10 @@ class _GymSummaryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (onRemoveTrainer != null)
-                    _RemoveLinkButton(
-                      tooltip: l.myTrainerDisconnectTooltip,
-                      onTap: onRemoveTrainer!,
+                  if (onOpenTrainer != null)
+                    _OpenDetailButton(
+                      tooltip: l.myTrainerDetailTooltip,
+                      onTap: onOpenTrainer!,
                     ),
                 ],
               )
@@ -1081,10 +993,10 @@ class _GymSummaryCard extends StatelessWidget {
   }
 }
 
-/// 한 줄짜리 연결(헬스장 또는 트레이너)을 끊는 버튼. 시각적 아이콘은 20이지만
-/// 탭 영역은 접근성 최소 44×44 를 지킨다.
-class _RemoveLinkButton extends StatelessWidget {
-  const _RemoveLinkButton({required this.tooltip, required this.onTap});
+/// 한 줄짜리 연결(헬스장 또는 트레이너)의 상세로 가는 버튼. 시각적 아이콘은
+/// 20이지만 탭 영역은 접근성 최소 44×44 를 지킨다.
+class _OpenDetailButton extends StatelessWidget {
+  const _OpenDetailButton({required this.tooltip, required this.onTap});
 
   final String tooltip;
   final VoidCallback onTap;
@@ -1107,7 +1019,7 @@ class _RemoveLinkButton extends StatelessWidget {
               width: 44,
               height: 44,
               child: Icon(
-                Icons.delete_outline_rounded,
+                Icons.chevron_right_rounded,
                 size: 20,
                 color: FigmaColors.textFaint,
               ),
