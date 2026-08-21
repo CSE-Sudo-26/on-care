@@ -757,10 +757,16 @@ Future<void> submitConsultation(
 
   // 데이터 공유 동의 없이는 보낼 수 없다 (#1022) — 수락되는 순간 넘어가는 것이
   // 회원의 건강 기록이라, 신청 화면에서 동의를 받는다.
-  final Finder consent = await _revealInForm(
-    tester,
-    find.byKey(const Key('consultDataSharingConsent')),
+  //
+  // 스크롤로 찾지 않고 체크 박스를 직접 짚는다. 이 줄은 폼 맨 위(대상 카드 바로
+  // 아래)라 이미 트리에 있고, `_revealInForm` 의 스크롤 경로는 폼 안에 스크롤이
+  // 여럿일 때 흔들린다.
+  final Finder consent = find.descendant(
+    of: find.byKey(const Key('consult-data-sharing-notice')),
+    matching: find.byType(Checkbox),
   );
+  await tester.ensureVisible(consent);
+  await tester.pump();
   await tester.tap(consent);
   await tester.pump();
 
