@@ -28,7 +28,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder chip() => find.byKey(const ValueKey<String>('session-type-chip'));
+  /// 상세 카드의 알약. 시간표 블록도 같은 알약을 쓰게 되면서(#1013) 키만으로는
+  /// 어느 쪽인지 가려지지 않는다 — 이 파일이 재는 것은 카드 쪽이다.
+  Finder chip() => find.descendant(
+    of: find.byKey(const Key('week-detail')),
+    matching: find.byKey(const ValueKey<String>('session-type-chip')),
+  );
 
   /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다. 카드는 한 번에 하나만
   /// 열리므로, 완료와 예정을 견주려면 하나씩 골라야 한다(#988).
@@ -36,7 +41,7 @@ void main() {
     final Finder block = find
         .descendant(
           of: find.byType(ScheduleWeekTimetable),
-          matching: find.text(name),
+          matching: find.textContaining(name),
         )
         .first;
     await tester.ensureVisible(block);

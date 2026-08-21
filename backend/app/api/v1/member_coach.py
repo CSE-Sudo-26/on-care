@@ -20,7 +20,8 @@ from app.api.deps import CurrentUser, RequireMember
 from app.db.session import get_db
 from app.schemas.exercise_api import AssignedRoutineCompleteRequest
 from app.schemas.trainer_api import (
-    ChatMessageOut, ChatSendRequest, MemberClientInviteOut, MemberCoachOut, RoutineOut,
+    ChatMessageOut, ChatSendRequest, MemberClientInviteOut,
+    MemberCoachOut, MemberInviteAcceptRequest, RoutineOut,
     ScheduleSessionOut,
 )
 from app.services import trainer_client_invite_service, trainer_service
@@ -236,12 +237,24 @@ def my_coach_invites(
 )
 def accept_coach_invite(
     invite_id: str,
+    payload: MemberInviteAcceptRequest,
     member: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> MemberClientInviteOut:
-    """수락한다 — 담당 링크가 여기서 생긴다."""
+    """수락한다 — 담당 링크가 여기서 생긴다.
+
+    데이터 공유 동의를 함께 받는다. 수락하는 순간 트레이너가 회원의 식단·운동·
+    신체 정보를 읽으므로, 그 문을 여는 동작과 동의가 같은 요청이어야 한다. (#1022)
+    """
     try:
-        return trainer_client_invite_service.accept(db, member.id, invite_id)
+        return trainer_client_invite_service.accept(
+            db,
+            member.id,
+            invite_id,
+            data_sharing_consent=payload.data_sharing_consent,
+        )
+    except trainer_client_invite_service.DataSharingConsentRequired as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except trainer_client_invite_service.InviteNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (

@@ -17,6 +17,18 @@ from sqlalchemy import delete, select
 _JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF fake-image-bytes"
 
 
+def _h(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _member_token(client) -> str:
+    """시드 회원(지수) 토큰 — 기간 조언은 회원 자기 기록만 본다."""
+    return client.post(
+        "/v1/auth/login", data={"username": "jisu@oncare.com", "password": "oncare123"}
+    ).json()["access_token"]
+
+
+
 def test_macro_percentages_use_449_and_always_sum_correctly():
     from app.schemas.diet_api import calculate_macros
 
@@ -765,3 +777,81 @@ def test_entry_update_rejects_non_finite_sugar():
     for value in (math.nan, math.inf, -math.inf):
         with pytest.raises(ValidationError):
             DietEntryUpdate(sugar_g=value)
+
+
+def test_diet_advice_changes_with_the_period(client, db_session):
+    """기간을 바꾸면 조언도 달라진다 — 그래프만 갈아 끼우면 안 된다. (#1017)"""
+    from datetime import timedelta
+
+    from app.core import clock
+    from app.models import models
+
+    # 시드 회원(이지수)에게 기록을 더하면, 그 회원의 하루 합계를 세어 두는
+    # 트레이너 로스터 테스트가 함께 어긋난다. 이 테스트만 쓰는 회원을 만든다.
+    email = f"advice-week-{uuid4().hex[:8]}@oncare.com"
+    created = client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": "oncare123", "name": "조언"},
+    )
+    assert created.status_code in (200, 201), created.text
+    token = client.post(
+        "/v1/auth/login", data={"username": email, "password": "oncare123"}
+    ).json()["access_token"]
+    member_id = client.get("/v1/users/me", headers=_h(token)).json()["id"]
+
+    # 이번 주에 나트륨을 사흘 넘긴다 — 오늘 하루만 보는 조언과 갈려야 한다.
+    today = clock.today()
+    # 월요일부터 오늘까지 채운다 — `사흘 전` 처럼 고정된 폭으로 잡으면 주 초에
+    # 돌릴 때 지난주로 넘어가, `이번 주` 조언이 세지 않는 날이 생긴다.
+    monday = today - timedelta(days=today.weekday())
+    days = [monday + timedelta(days=i) for i in range((today - monday).days + 1)]
+    for back, day in enumerate(days):
+        db_session.add(
+            models.DietEntry(
+                id=f"diet-advice-{member_id}-{back}",
+                user_id=member_id,
+                date=day.isoformat(),
+                meal_type="lunch",
+                time_label="12:00",
+                foods_json="[]",
+                total_calories=900,
+                sodium_mg=2600,
+                sugar_g=10,
+                carbs_g=100,
+                protein_g=40,
+                fat_g=20,
+            )
+        )
+    db_session.commit()
+
+    week = client.get("/v1/diet/advice?period=week", headers=_h(token))
+    assert week.status_code == 200, week.text
+    assert week.json()["days_logged"] == len(days)
+    assert "이번 주" in week.json()["message"]
+
+    day_view = client.get("/v1/diet/advice?period=today", headers=_h(token))
+    assert day_view.status_code == 200, day_view.text
+    assert day_view.json()["message"] != week.json()["message"]
+
+    every = client.get("/v1/diet/advice?period=all", headers=_h(token))
+    assert every.status_code == 200, every.text
+    # 전체는 12주를 본다 — 이번 주와 시작일이 다르다.
+    assert every.json()["from_date"] < week.json()["from_date"]
+
+
+def test_diet_advice_says_nothing_when_there_is_nothing(client):
+    """기록이 없으면 없다고 말한다 — 없는 기록으로 조언을 지어내지 않는다. (#1017)"""
+    email = f"advice-{uuid4().hex[:8]}@oncare.com"
+    client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": "oncare123", "name": "조언"},
+    )
+    token = client.post(
+        "/v1/auth/login", data={"username": email, "password": "oncare123"}
+    ).json()["access_token"]
+
+    for period in ("today", "week", "all"):
+        response = client.get(f"/v1/diet/advice?period={period}", headers=_h(token))
+        assert response.status_code == 200, response.text
+        assert response.json()["days_logged"] == 0
+        assert response.json()["message"]

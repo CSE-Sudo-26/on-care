@@ -91,9 +91,7 @@ class DashboardPage extends ConsumerWidget {
                       const Expanded(child: TodayTimelineCard()),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(
-                        child: AttentionCard(
-                          entries: summary.attention,
-                        ),
+                        child: AttentionCard(entries: summary.attention),
                       ),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(

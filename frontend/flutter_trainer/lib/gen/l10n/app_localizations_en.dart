@@ -1309,6 +1309,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedTitle => 'Schedule';
 
   @override
+  String get schedDetailTitle => 'Session detail';
+
+  @override
   String get schedDeleteTitle => 'Delete session';
 
   @override
@@ -1327,6 +1330,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String schedTimeRange(String start, String end) {
     return '$start–$end';
+  }
+
+  @override
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
   }
 
   @override

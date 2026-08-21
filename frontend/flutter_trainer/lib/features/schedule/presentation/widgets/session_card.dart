@@ -30,6 +30,7 @@ class SessionCard extends ConsumerWidget {
     required this.onToggle,
     required this.onEditSchedule,
     required this.onEditProgram,
+    required this.onEditNote,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -46,6 +47,10 @@ class SessionCard extends ConsumerWidget {
   final VoidCallback onToggle;
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
+
+  /// 운동 목록 없이 메모만 여는 자리. 세션 종류와 상관없이 있다(#1011).
+  final VoidCallback onEditNote;
+
   final VoidCallback onDelete;
   final VoidCallback onChat;
 
@@ -220,6 +225,8 @@ class SessionCard extends ConsumerWidget {
                             s.durationMinutes,
                           ),
                           muted: s.isDone,
+                          // 시간표 블록과 같은 표현을 쓴다 — 상담은 비운다(#1013).
+                          outlined: noteOnly,
                         ),
                         SessionStatusChip(status: s.status),
                       ],
@@ -273,7 +280,8 @@ class SessionCard extends ConsumerWidget {
                     SessionManageRow(
                       onEditSchedule: onEditSchedule,
                       onEditProgram: onEditProgram,
-                      noteOnly: noteOnly,
+                      onEditNote: onEditNote,
+                      hasProgram: !noteOnly,
                       onDelete: onDelete,
                       onCancel: onCancel,
                       onNoShow: onNoShow,

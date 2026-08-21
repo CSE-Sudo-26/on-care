@@ -136,16 +136,6 @@ void main() {
     ).read(myTrainerProvider.future);
   }
 
-  /// 헬스장 행 / 트레이너 행의 삭제 버튼은 툴팁으로 구분한다.
-  Future<void> tapRemove(WidgetTester tester, String tooltip) async {
-    await tester.scrollUntilVisible(
-      gymCard(),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.byTooltip(tooltip));
-    await tester.pumpAndSettle();
-  }
 
   testWidgets('연결된 헬스장과 담당 트레이너가 트레이너 앱 시드와 같다', (WidgetTester tester) async {
     await pumpMyTab(tester);
@@ -168,8 +158,9 @@ void main() {
     );
 
     expect(find.text('My Trainer & Gym'), findsOneWidget);
-    expect(find.byTooltip('Disconnect gym'), findsOneWidget);
-    expect(find.byTooltip('Disconnect trainer'), findsOneWidget);
+    // 카드의 동작은 상세로 가는 길이다 — 삭제는 그 화면 하단에 있다. (#1057)
+    expect(find.byTooltip('Gym details'), findsOneWidget);
+    expect(find.byTooltip('Trainer details'), findsOneWidget);
     expect(find.text('내 트레이너 · 헬스장'), findsNothing);
   });
 
@@ -181,67 +172,25 @@ void main() {
     expect(find.text('아직 등록된 헬스장이 없어요'), findsNothing);
   });
 
-  testWidgets('헬스장 삭제 버튼은 트레이너도 함께 해제된다고 알린다', (WidgetTester tester) async {
+  testWidgets('카드의 동작은 삭제가 아니라 상세로 가는 길이다 (#1057)', (
+    WidgetTester tester,
+  ) async {
     await pumpMyTab(tester);
-    await tapRemove(tester, '헬스장 연결 삭제');
+    await tester.scrollUntilVisible(
+      gymCard(),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
 
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.textContaining('온케어짐 신촌점 연결을 삭제하시겠습니까?'), findsOneWidget);
-    expect(find.textContaining('김트레이너 연결도 함께 해제됩니다'), findsOneWidget);
-  });
-
-  testWidgets('취소하면 연결이 유지된다', (WidgetTester tester) async {
-    await pumpMyTab(tester);
-    await tapRemove(tester, '헬스장 연결 삭제');
-
-    await tester.tap(find.text('취소'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(gymCard(), findsOneWidget);
-    expect(await connectedGym(tester), isNotNull);
-  });
-
-  testWidgets('헬스장을 삭제하면 카드가 빈 상태로 바뀐다', (WidgetTester tester) async {
-    await pumpMyTab(tester);
-    await tapRemove(tester, '헬스장 연결 삭제');
-
-    await tester.tap(find.text('삭제'));
-    await tester.pumpAndSettle();
-
-    expect(gymCard(), findsNothing);
-    expect(find.text('아직 등록된 헬스장이 없어요'), findsOneWidget);
-    // 운동 탭도 같은 provider 를 읽으므로 그쪽에서도 연결이 사라진다.
-    expect(await connectedGym(tester), isNull);
-    expect(await connectedTrainer(tester), isNull);
-  });
-
-  testWidgets('트레이너만 삭제하면 헬스장 연결은 남는다', (WidgetTester tester) async {
-    await pumpMyTab(tester);
-    await tapRemove(tester, '트레이너 연결 삭제');
-
-    expect(find.textContaining('김트레이너 연결을 삭제하시겠습니까?'), findsOneWidget);
-    expect(find.textContaining('헬스장 연결은 유지됩니다'), findsOneWidget);
-
-    await tester.tap(find.text('삭제'));
-    await tester.pumpAndSettle();
-
-    expect(gymCard(), findsOneWidget);
-    expect(find.text('온케어짐 신촌점'), findsOneWidget);
-    expect(find.text('담당 트레이너 없음'), findsOneWidget);
-    expect(find.text('트레이너 찾기'), findsOneWidget);
-
-    expect(await connectedGym(tester), isNotNull);
-    expect(await connectedTrainer(tester), isNull);
-  });
-
-  testWidgets('트레이너를 뗀 뒤에는 트레이너 삭제 버튼이 사라진다', (WidgetTester tester) async {
-    await pumpMyTab(tester);
-    await tapRemove(tester, '트레이너 연결 삭제');
-    await tester.tap(find.text('삭제'));
-    await tester.pumpAndSettle();
-
+    // 카드에서 가장 누르기 쉬운 자리가 되돌릴 수 없는 삭제였다.
+    expect(find.byTooltip('헬스장 상세 보기'), findsOneWidget);
+    expect(find.byTooltip('트레이너 상세 보기'), findsOneWidget);
+    expect(find.byTooltip('헬스장 연결 삭제'), findsNothing);
     expect(find.byTooltip('트레이너 연결 삭제'), findsNothing);
-    expect(find.byTooltip('헬스장 연결 삭제'), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
+
+    // 연결은 그대로다 — 이 화면에서는 아무것도 지우지 않는다.
+    expect(await connectedGym(tester), isNotNull);
+    expect(await connectedTrainer(tester), isNotNull);
   });
 }

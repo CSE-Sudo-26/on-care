@@ -1254,6 +1254,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
+  String get schedDetailTitle => '상세 스케줄';
+
+  @override
   String get schedDeleteTitle => '일정 삭제';
 
   @override
@@ -1270,6 +1273,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String schedTimeRange(String start, String end) {
     return '$start–$end';
+  }
+
+  @override
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
   }
 
   @override

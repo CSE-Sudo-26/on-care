@@ -37,7 +37,6 @@ class TrainerChatHeaderButton extends ConsumerWidget {
         key: const Key('trainerChatHeaderButton'),
         icon: Icons.chat_bubble_outline_rounded,
         showDot: unread > 0,
-        dotColor: FigmaColors.redDot,
         enabled: ready,
         onTap: ready
             ? () => openTrainerChatPage(context, trainerName: coach.name)

@@ -28,7 +28,6 @@
   "homeMacroProtein": "단백질",
   "homeMacroFat": "지방",
   "homeMealChickenSalad": "닭가슴살 샐러드",
-  "homeAiAnalysisPill": "✦ AI 분석",
   "homeDetails": "자세히",
   "homeGoal": "목표",
   "homeDietNutritionTitle": "식단 · 영양",
@@ -39,7 +38,7 @@
   "homeExerciseTrendUnavailable": "주간 운동 기록을 불러오지 못했어요.",
   "homeMetricOver": "초과",
   "homeMetricNormal": "정상",
-  "dietAmountOver": "목표보다 {amount} 많아요",
+  "dietAmountOver": "{amount} 많아요",
   "@dietAmountOver": {
     "placeholders": {
       "amount": {
@@ -47,7 +46,7 @@
       }
     }
   },
-  "dietAmountRemaining": "목표까지 {amount} 남았어요",
+  "dietAmountRemaining": "{amount} 남았어요",
   "@dietAmountRemaining": {
     "placeholders": {
       "amount": {
@@ -58,20 +57,22 @@
   "homeExerciseActiveTime": "운동 시간",
   "homeExerciseBurned": "소모 칼로리",
   "homeExerciseDays": "운동 일수",
+  "homeMealSourceTrainer": "트레이너 추천",
+  "homeMealSourceAi": "AI 추천",
   "homeMealReasonSodium": "나트륨 조절에 좋아요",
   "homeMealTagLowSodium": "저나트륨",
   "homeMealBrownRiceBox": "현미 도시락",
   "homeMealReasonGlucose": "혈당 안정에 도움돼요",
-  "homeMealTagLowGi": "저GI",
+  "homeMealTagLowSugar": "저당류",
   "homeMealSalmon": "연어 구이 + 나물",
   "homeMealReasonOmega": "오메가3 + 식이섬유",
-  "homeMealTagHighProtein": "고단백",
+  "homeMealTagHighProtein": "고단백질",
   "homeMealTofu": "두부 채소 볶음",
   "homeMealReasonLowCal": "칼로리 낮고 포만감↑",
   "homeMealTagLowCal": "저칼로리",
   "homeMealNamulBibimbap": "나물 비빔밥",
   "homeMealReasonFiber": "식이섬유가 풍부해요",
-  "homeMealTagHighFiber": "고식이섬유",
+  "homeMealTagLowFat": "저지방",
   "homeRecBasisSodium": "최근 {days}일 평균 나트륨 {sodium}mg",
   "@homeRecBasisSodium": {
     "placeholders": {
@@ -95,7 +96,6 @@
   "unitMinutesValue": "{count}분",
   "dietTitle": "식단",
   "dietToday": "오늘로",
-  "dietWeekLabel": "{month}월 {week}주차",
   "dietWeekdayMon": "월",
   "dietWeekdayTue": "화",
   "dietWeekdayWed": "수",
@@ -116,7 +116,6 @@
   "dietLoadError": "식단 정보를 불러오지 못했어요.",
   "dietPeriodAverage": "하루 평균",
   "dietPeriodTotal": "기간 합계",
-  "dietPeriodLoggedDays": "{days}일 기록",
   "dietPeriodEmpty": "이 기간에 기록된 식단이 없어요.",
   "dietPeriodRange": "{start} ~ {end}",
   "dietPeriodNoRecord": "기록 없음",
@@ -385,6 +384,8 @@
       }
     }
   },
+  "myGymDetailTooltip": "헬스장 상세 보기",
+  "myTrainerDetailTooltip": "트레이너 상세 보기",
   "myGymDisconnectTooltip": "헬스장 연결 삭제",
   "myTrainerDisconnectTooltip": "트레이너 연결 삭제",
   "myNoTrainer": "담당 트레이너 없음",
@@ -471,6 +472,14 @@
   "exTrainerConsultType": "트레이너 상담",
   "exAssignedTrainer": "담당 트레이너",
   "exConsultDataSharingNotice": "요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.",
+  "exConsultDataSharingAgree": "위 내용을 확인했고, 식단·운동 기록과 신체 정보를 이 트레이너에게 공유하는 데 동의해요",
+  "exConsultDataSharingRequired": "공유에 동의해야 상담을 신청할 수 있어요",
+  "coachInviteConsentTitle": "담당 연결 전에 확인해 주세요",
+  "coachInviteConsentBody": "{name} 트레이너와 담당으로 연결되면, 회원님의 식단 기록·운동 기록·신체 정보와 건강 목표를 이 트레이너가 볼 수 있어요. 연결을 해제하면 열람 권한도 함께 사라져요.",
+  "@coachInviteConsentBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachInviteConsentAgree": "동의하고 연결",
   "exExerciseGoal": "운동 목표",
   "exGoalWeightLoss": "체중 감량",
   "exGoalStrength": "근력 향상",

@@ -1,0 +1,88 @@
+import 'package:flutter/material.dart';
+
+import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart';
+
+/// 끼니 사진 — 회원이 올린 사진, 없으면 번들 자산, 그것도 없으면 끼니 이모지.
+///
+/// 목록의 작은 썸네일과 수정 화면 상단의 큰 사진이 **같은 순서**로 고르도록
+/// 한곳에 둔다. 두 화면이 각자 고르면, 같은 끼니가 목록에서는 사진으로
+/// 보이는데 수정 화면에서는 이모지로 열리는 일이 생긴다. (#699, #1053)
+class MealPhotoView extends StatelessWidget {
+  /// Creates the photo view at [width] × [height].
+  const MealPhotoView({
+    super.key,
+    required this.photoUrl,
+    required this.photoAsset,
+    required this.emoji,
+    required this.background,
+    required this.width,
+    required this.height,
+    this.borderRadius = 12,
+    this.emojiSize = 24,
+  });
+
+  /// API path of the photo the member uploaded (`/diet/photos/<id>`).
+  final String? photoUrl;
+
+  /// Bundled demo asset — 실서버에 붙으면 늘 비어 있어 뒤로 물린다.
+  final String? photoAsset;
+
+  /// 사진이 하나도 없을 때 그리는 끼니 이모지.
+  final String emoji;
+
+  /// 이모지 칩의 배경 — 끼니 종류마다 다르다.
+  final Color background;
+
+  final double width;
+  final double height;
+  final double borderRadius;
+  final double emojiSize;
+
+  /// 실제 사진(회원이 올린 것이든 번들 자산이든)이 있는지.
+  bool get hasPhoto =>
+      (photoUrl != null && photoUrl!.isNotEmpty) || photoAsset != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? url = photoUrl;
+    if (url != null && url.isNotEmpty) {
+      return StoredMealPhoto(
+        path: url,
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+        fallback: _assetOrEmoji(),
+      );
+    }
+    return _assetOrEmoji();
+  }
+
+  Widget _assetOrEmoji() {
+    final String? asset = photoAsset;
+    if (asset != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Image.asset(
+          asset,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          // 번들 자산이 빠져 있어도 카드는 그려야 한다.
+          errorBuilder: (BuildContext _, Object _, StackTrace? _) => _emoji(),
+        ),
+      );
+    }
+    return _emoji();
+  }
+
+  Widget _emoji() => Container(
+    width: width,
+    height: height,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(borderRadius),
+    ),
+    child: Text(emoji, style: TextStyle(fontSize: emojiSize)),
+  );
+}

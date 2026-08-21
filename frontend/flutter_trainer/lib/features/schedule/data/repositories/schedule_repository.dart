@@ -129,7 +129,11 @@ abstract interface class ScheduleRepository {
   ///
   /// [source] 는 취소 주체(`CancellationSource`)다. 트레이너 사정의 취소를
   /// 회원의 미이행으로 읽지 않으려면 주체가 남아야 해서 필수로 받는다.
-  Future<void> cancelSession(String id, {required String source, String reason});
+  Future<void> cancelSession(
+    String id, {
+    required String source,
+    String reason,
+  });
 
   /// 예정 세션을 `노쇼` 로 남긴다 — 약속은 그대로였고 회원이 오지 않았다.
   Future<void> markNoShow(String id);

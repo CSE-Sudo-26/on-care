@@ -154,6 +154,7 @@ def _request_consultation(client, token: str, trainer_id: str) -> str:
             "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
             "preferred_time_slot": "morning",
             "message": "상담 부탁드립니다.",
+            "data_sharing_consent": True,
         },
     )
     assert response.status_code == 201, response.text
