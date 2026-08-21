@@ -17,6 +17,7 @@ import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/ai_advice_card.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// 식단 tab, rebuilt to match the On-Care Figma redesign. The weekly date
@@ -1430,53 +1431,14 @@ class _AiFeedback extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) {
-    if (message.trim().isEmpty) return const SizedBox.shrink();
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: FigmaColors.softBlue,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: FigmaColors.primaryA(0.15)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const OniAvatar(size: 40),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    l.dietAiFeedback,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                      color: FigmaColors.ink,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    // 운동 탭도 같은 카드를 쓴다 — 그림은 공용 위젯에 있다. (#1021)
+    child: AiAdviceCard(
+      title: AppLocalizations.of(context).dietAiFeedback,
+      message: message,
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────── meal log ──

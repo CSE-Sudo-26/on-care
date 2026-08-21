@@ -659,6 +659,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exUnitStreakDays => '일 연속';
 
   @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '오늘 운동으로 연속 기록을 시작해 봐요.';
+
+  @override
   String get exToday => '오늘';
 
   @override
@@ -1866,6 +1874,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exPtFeedbackTitle => '오늘의 피드백';
+
+  @override
+  String exNextPtSchedule(String when) {
+    return '다음 PT · $when';
+  }
+
+  @override
+  String get exNextPtNone => '다음 PT 일정이 아직 없어요';
 
   @override
   String exDatedTitle(int month, int day, String title) {

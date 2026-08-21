@@ -675,6 +675,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exUnitStreakDays => 'day streak';
 
   @override
+  String exStreakCheer(int days) {
+    return '$days days in a row!';
+  }
+
+  @override
+  String get exStreakStart => 'Start a streak with today\'s workout.';
+
+  @override
   String get exToday => 'Today';
 
   @override
@@ -1929,6 +1937,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exPtFeedbackTitle => 'Today\'s feedback';
+
+  @override
+  String exNextPtSchedule(String when) {
+    return 'Next PT · $when';
+  }
+
+  @override
+  String get exNextPtNone => 'No PT scheduled yet';
 
   @override
   String exDatedTitle(int month, int day, String title) {
