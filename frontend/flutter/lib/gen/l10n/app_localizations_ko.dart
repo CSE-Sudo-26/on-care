@@ -1261,6 +1261,24 @@ class AppLocalizationsKo extends AppLocalizations {
       '요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.';
 
   @override
+  String get exConsultDataSharingAgree =>
+      '위 내용을 확인했고, 식단·운동 기록과 신체 정보를 이 트레이너에게 공유하는 데 동의해요';
+
+  @override
+  String get exConsultDataSharingRequired => '공유에 동의해야 상담을 신청할 수 있어요';
+
+  @override
+  String get coachInviteConsentTitle => '담당 연결 전에 확인해 주세요';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return '$name 트레이너와 담당으로 연결되면, 회원님의 식단 기록·운동 기록·신체 정보와 건강 목표를 이 트레이너가 볼 수 있어요. 연결을 해제하면 열람 권한도 함께 사라져요.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => '동의하고 연결';
+
+  @override
   String get exExerciseGoal => '운동 목표';
 
   @override
