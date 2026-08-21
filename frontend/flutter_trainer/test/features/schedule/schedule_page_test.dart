@@ -831,8 +831,10 @@ void main() {
       );
       expect(find.text('아직 남긴 메모가 없어요'), findsOneWidget);
       expect(find.text('아직 계획된 프로그램이 없어요'), findsNothing);
-      // 같은 자리가 프로그램이 아니라 메모를 연다.
-      expect(find.text('메모 수정'), findsOneWidget);
+      // 같은 자리가 프로그램이 아니라 메모를 연다. 아직 적은 것이 없으므로
+      // `메모 수정` 이 아니라 `메모 추가` 다(#1011).
+      expect(find.text('메모 추가'), findsOneWidget);
+      expect(find.text('메모 수정'), findsNothing);
       expect(find.text('프로그램 수정'), findsNothing);
     });
 
@@ -854,7 +856,7 @@ void main() {
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
       expect(find.text('프로그램 수정'), findsOneWidget);
       // 메모 자리는 종류와 상관없이 있다(#1011).
-      expect(find.text('메모 수정'), findsOneWidget);
+      expect(find.text('메모 추가'), findsOneWidget);
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {
@@ -979,8 +981,8 @@ void main() {
       await openSchedule(tester);
       await openSession(tester, '박성호');
 
-      await revealInPanel(tester, find.text('메모 수정'));
-      await tester.tap(find.text('메모 수정'));
+      await revealInPanel(tester, find.text('메모 추가'));
+      await tester.tap(find.text('메모 추가'));
       await settle(tester);
 
       // 운동 목록 없이 메모만 연다.
@@ -1011,6 +1013,29 @@ void main() {
       expect(find.text('견갑 고정 확인'), findsOneWidget);
       // 저장이 프로그램을 지우지 않는다 — 편집기가 보여 주지 않은 값이다.
       expect(find.text('벤치프레스'), findsOneWidget);
+
+      // 메모를 남긴 뒤에는 같은 자리가 `메모 수정` 으로 이름을 바꾼다.
+      expect(find.text('메모 수정'), findsOneWidget);
+      expect(find.text('메모 추가'), findsNothing);
+    });
+
+    // 자리는 하나지만 하는 일이 둘이다 — 처음 적는 것과 고치는 것. 아무것도
+    // 적지 않았는데 `메모 수정` 이라고 부르면, 어딘가에 이미 메모가 있는데 못
+    // 찾고 있는 것처럼 읽힌다(#1011).
+    testWidgets('메모가 있으면 `메모 수정`, 없으면 `메모 추가` (#1011)', (tester) async {
+      await openSchedule(tester);
+
+      // 시드의 김민수 세션에는 메모가 있다.
+      await openSession(tester, '김민수');
+      await revealInPanel(tester, find.text('메모 수정'));
+      expect(find.text('메모 수정'), findsOneWidget);
+      expect(find.text('메모 추가'), findsNothing);
+
+      // 박성호 세션에는 없다.
+      await openSession(tester, '박성호');
+      await revealInPanel(tester, find.text('메모 추가'));
+      expect(find.text('메모 추가'), findsOneWidget);
+      expect(find.text('메모 수정'), findsNothing);
     });
 
     testWidgets('삭제 removes the session after confirmation', (tester) async {

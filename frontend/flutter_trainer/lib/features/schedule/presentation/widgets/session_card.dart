@@ -279,6 +279,7 @@ class SessionCard extends ConsumerWidget {
                       onEditSchedule: onEditSchedule,
                       onEditProgram: onEditProgram,
                       onEditNote: onEditNote,
+                      hasNote: s.note.trim().isNotEmpty,
                       hasProgram: !noteOnly,
                       onDelete: onDelete,
                       onCancel: onCancel,

@@ -11,6 +11,7 @@ class SessionManageRow extends StatelessWidget {
     required this.onEditSchedule,
     required this.onEditProgram,
     required this.onEditNote,
+    required this.hasNote,
     required this.hasProgram,
     required this.onDelete,
     required this.onChat,
@@ -29,6 +30,14 @@ class SessionManageRow extends StatelessWidget {
   /// 편집기를 열고 스크롤해 내려가야 했다 — 매주 반복되는 세션에서 가장 자주
   /// 손대는 값인데도.
   final VoidCallback onEditNote;
+
+  /// 이미 남긴 메모가 있는가. (#1011)
+  ///
+  /// 자리는 하나지만 **하는 일이 둘**이다 — 빈 세션에서는 처음 적는 것이고,
+  /// 적어 둔 세션에서는 고치는 것이다. 아무것도 적지 않았는데 `메모 수정` 이라고
+  /// 부르면, 어딘가에 이미 메모가 있는데 못 찾고 있는 것처럼 읽힌다. 글자와
+  /// 아이콘이 함께 갈린다 — `메모 추가`(＋)와 `메모 수정`(연필).
+  final bool hasNote;
 
   /// 프로그램을 짜는 세션인가. 상담은 아니므로 `프로그램 수정` 이 서지 않는다 —
   /// 누를 이유가 없는 버튼으로 읽힌다(#988).
@@ -93,7 +102,7 @@ class SessionManageRow extends StatelessWidget {
           ),
         _ActionChip(
           key: const ValueKey<String>('session-edit-note-chip'),
-          label: l.schedEditNote,
+          label: hasNote ? l.schedEditNote : l.schedAddNote,
           color: AppColors.secondary,
           onTap: onEditNote,
         ),

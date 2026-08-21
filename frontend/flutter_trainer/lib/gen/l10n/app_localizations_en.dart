@@ -1443,6 +1443,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEditNote => 'Edit note';
 
   @override
+  String get schedAddNote => 'Add note';
+
+  @override
   String get schedNoNote => 'No note yet';
 
   @override

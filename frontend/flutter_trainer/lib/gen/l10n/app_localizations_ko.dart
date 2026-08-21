@@ -1385,6 +1385,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEditNote => '메모 수정';
 
   @override
+  String get schedAddNote => '메모 추가';
+
+  @override
   String get schedNoNote => '아직 남긴 메모가 없어요';
 
   @override
