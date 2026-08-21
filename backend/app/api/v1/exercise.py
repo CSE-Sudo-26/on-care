@@ -17,13 +17,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import CurrentUser
 from app.core import clock
 from app.db.session import get_db
-from app.models.models import ExerciseSession
+from app.models.models import ExerciseSession, HealthProfile
 from app.schemas.exercise_api import (
     ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
 )
 from app.services import exercise_types
 from app.services.coach import personal_ingest
 from app.services.exercise_service import (
+    weekly_goals,
     WEEKDAY_LABELS, build_current_week, monday_of_str, monday_of_this_week_str,
 )
 
@@ -100,8 +101,14 @@ def current_week(
         .where(ExerciseSession.week_start == week_start)
     ).all()
     data = build_current_week(list(rows))
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == current_user.id)
+    )
+    goal_minutes, goal_calories = weekly_goals(profile)
     return ExerciseWeekResponse(
         sessions=[ExerciseSessionOut(**s) for s in data.pop("sessions")],
+        weekly_goal_minutes=goal_minutes,
+        weekly_goal_calories=goal_calories,
         **data,
     )
 

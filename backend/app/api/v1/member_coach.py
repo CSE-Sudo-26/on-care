@@ -116,6 +116,26 @@ def complete_my_routine(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.delete("/me/coach/routines/{routine_id}", status_code=204)
+def delete_my_routine(
+    routine_id: str,
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """내 개인 운동 취소. **담당 트레이너가 없을 때만.** (#1020)
+
+    담당이 있는 회원에게는 취소가 트레이너의 일이다 — 트레이너가 배정한 것을
+    회원이 조용히 없애면 다음 상담에서 둘이 서로 다른 기록을 본다. 그 경우는
+    403 이다(404 가 아니라): 루틴은 분명히 있고 회원 화면에도 보인다.
+    """
+    try:
+        trainer_service.delete_own_routine(db, member.id, routine_id)
+    except trainer_service.RoutineNotCancellable as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.get("/me/coach/sessions", response_model=list[ScheduleSessionOut])
 def my_sessions(
     current_user: CurrentUser,

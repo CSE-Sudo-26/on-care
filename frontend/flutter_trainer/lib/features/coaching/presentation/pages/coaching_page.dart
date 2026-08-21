@@ -1983,6 +1983,13 @@ class _SendHistoryCard extends ConsumerWidget {
                                 color: AppColors.primary,
                               ),
                             ),
+                      // 보낸 뒤 물리는 자리. 여기 목록이 배정된 개인운동을
+                      // 보여 주는 유일한 곳인데 취소가 없어서, 잘못 보냈을 때
+                      // 고객 탭까지 옮겨 가야 지울 수 있었다. (#1020)
+                      _CancelRoutineButton(
+                        clientId: client.id,
+                        routine: routine,
+                      ),
                     ],
                   ),
                 ),
@@ -2038,6 +2045,93 @@ class _SendHistoryCard extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// 배정한 개인운동을 물리는 버튼. (#1020)
+///
+/// 지운다고 회원이 이미 수행한 기록까지 사라지지는 않는다 — 지우는 것은
+/// **배정**이지 한 일이 아니다.
+class _CancelRoutineButton extends ConsumerStatefulWidget {
+  const _CancelRoutineButton({required this.clientId, required this.routine});
+
+  final String clientId;
+  final AssignedRoutine routine;
+
+  @override
+  ConsumerState<_CancelRoutineButton> createState() =>
+      _CancelRoutineButtonState();
+}
+
+class _CancelRoutineButtonState extends ConsumerState<_CancelRoutineButton> {
+  bool _busy = false;
+
+  Future<void> _cancel() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(l.routineDeleteTitle),
+        content: Text(l.routineDeleteBody(widget.routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          TextButton(
+            key: const ValueKey<String>('confirm-cancel-routine'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l.actionDelete,
+              style: const TextStyle(color: AppColors.destructive),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .deleteRoutine(widget.clientId, widget.routine.id);
+      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
+    } on StateError {
+      // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 목록만 다시 읽고
+      // 그 줄을 화면에서 걷어낸다.
+      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
+    } on Object {
+      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      ref.invalidate(assignedRoutinesProvider(widget.clientId));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_busy) {
+      return const Padding(
+        padding: EdgeInsets.only(left: AppSpacing.sm),
+        child: SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return IconButton(
+      key: ValueKey<String>('history-cancel-routine-${widget.routine.id}'),
+      onPressed: _cancel,
+      icon: const Icon(Icons.close_rounded, size: 15),
+      color: AppColors.mutedForeground,
+      tooltip: AppLocalizations.of(context).routineDelete,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      padding: EdgeInsets.zero,
     );
   }
 }

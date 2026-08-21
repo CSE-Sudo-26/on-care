@@ -43,6 +43,12 @@ class ExerciseWeekResponse(BaseModel):
     total_minutes: int
     total_calories: int
     streak_days: int
+    #: 이 회원의 주간 운동 목표(분)와 소모 칼로리 목표. 그래프의 목표선이 두 앱
+    #: 모두 같은 값을 쓰게 하려고 응답에 싣는다 — 트레이너 화면은 회원 프로필을
+    #: 따로 읽지 않으므로, 이게 없으면 회원과 트레이너가 서로 다른 선을 본다.
+    #: (#1015)
+    weekly_goal_minutes: int = 0
+    weekly_goal_calories: int = 0
     ai_coach_message: str
 
 

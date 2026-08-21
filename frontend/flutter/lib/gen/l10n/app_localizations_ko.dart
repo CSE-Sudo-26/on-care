@@ -613,7 +613,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exThisWeek => '이번 주';
 
   @override
-  String get exThisMonth => '이번 달';
+  String get exPeriodAll => '전체';
 
   @override
   String get exExerciseContent => '운동 내용';
@@ -657,6 +657,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exUnitStreakDays => '일 연속';
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '오늘 운동으로 연속 기록을 시작해 봐요.';
 
   @override
   String get exToday => '오늘';
@@ -1783,6 +1791,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachRoutineDone => '수행 완료';
 
   @override
+  String get coachRoutineCancel => '이 개인 운동 취소';
+
+  @override
+  String coachRoutineCancelConfirm(String name) {
+    return '\'$name\'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.';
+  }
+
+  @override
+  String get coachRoutineCancelled => '개인 운동을 취소했어요';
+
+  @override
+  String get coachRoutineCancelFailed => '개인 운동을 취소하지 못했어요';
+
+  @override
   String coachRoutineMyNote(String note) {
     return '내 메모: $note';
   }
@@ -1866,6 +1888,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exPtFeedbackTitle => '오늘의 피드백';
+
+  @override
+  String exNextPtSchedule(String when) {
+    return '다음 PT · $when';
+  }
+
+  @override
+  String get exNextPtNone => '다음 PT 일정이 아직 없어요';
 
   @override
   String exDatedTitle(int month, int day, String title) {

@@ -89,7 +89,7 @@ from app.services import (
 )
 from app.services.coach import conversation
 from app.services.exercise_service import (
-    build_current_week, monday_of_str, monday_of_this_week_str,
+    build_current_week, monday_of_str, monday_of_this_week_str, weekly_goals,
 )
 from app.services.coach.chat import answer as coach_answer
 
@@ -518,8 +518,14 @@ def trainer_client_exercise_week(
         )
     ).all()
     data = build_current_week(list(rows))
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == member_id)
+    )
+    goal_minutes, goal_calories = weekly_goals(profile)
     return ExerciseWeekResponse(
         sessions=[ExerciseSessionOut(**row) for row in data.pop("sessions")],
+        weekly_goal_minutes=goal_minutes,
+        weekly_goal_calories=goal_calories,
         **data,
     )
 

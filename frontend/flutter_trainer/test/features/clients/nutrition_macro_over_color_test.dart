@@ -59,13 +59,13 @@ void main() {
     expect(barColors(tester, '단백질'), isNot(contains(AppColors.overTarget)));
   });
 
-  testWidgets('목표 아래면 기존 남색을 유지한다', (WidgetTester tester) async {
+  testWidgets('목표 아래면 정상 초록이다 (#1019)', (WidgetTester tester) async {
     await pumpCard(tester, makeClient(carbsG: 120, proteinG: 45, fatG: 45));
 
     for (final String label in <String>['탄수화물', '단백질', '지방']) {
       expect(
         barColors(tester, label),
-        contains(AppColors.primary.withValues(alpha: 0.65)),
+        contains(AppColors.statusNormal.withValues(alpha: 0.65)),
         reason: label,
       );
       expect(barColors(tester, label), isNot(contains(AppColors.overTarget)));
