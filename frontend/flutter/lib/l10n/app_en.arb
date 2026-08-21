@@ -68,10 +68,12 @@
   "homeExerciseBurned": "Calories",
   "homeExerciseDays": "Workout days",
   "homeMealReasonSodium": "Great for sodium control",
+  "homeMealSourceTrainer": "Trainer pick",
+  "homeMealSourceAi": "AI pick",
   "homeMealTagLowSodium": "Low sodium",
   "homeMealBrownRiceBox": "Brown rice lunchbox",
   "homeMealReasonGlucose": "Helps steady blood sugar",
-  "homeMealTagLowGi": "Low GI",
+  "homeMealTagLowSugar": "Low sugar",
   "homeMealSalmon": "Grilled salmon + greens",
   "homeMealReasonOmega": "Omega-3 + fiber",
   "homeMealTagHighProtein": "High protein",
@@ -80,7 +82,7 @@
   "homeMealTagLowCal": "Low calorie",
   "homeMealNamulBibimbap": "Namul bibimbap",
   "homeMealReasonFiber": "Rich in dietary fiber",
-  "homeMealTagHighFiber": "High fiber",
+  "homeMealTagLowFat": "Low fat",
   "homeRecBasisSodium": "{days}-day avg sodium {sodium}mg",
   "@homeRecBasisSodium": {
     "placeholders": {
