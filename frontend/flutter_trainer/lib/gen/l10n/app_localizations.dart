@@ -2369,7 +2369,7 @@ abstract class AppLocalizations {
   /// No description provided for @schedBlockTime.
   ///
   /// In en, this message translates to:
-  /// **'{range} {duration}'**
+  /// **'{range} ({duration})'**
   String schedBlockTime(String range, String duration);
 
   /// No description provided for @schedBlockWho.

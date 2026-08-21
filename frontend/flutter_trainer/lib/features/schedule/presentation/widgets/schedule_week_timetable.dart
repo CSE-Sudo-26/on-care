@@ -89,7 +89,10 @@ class ScheduleWeekTimetable extends ConsumerWidget {
   /// 위에 없어 카드 경계에 잘린다. 반만 보이는 라벨은 읽히지도 않으면서 잘린
   /// 것처럼 보이므로, 그 30분을 아예 창에 넣지 않는다(#1010).
   static const int defaultStartMinute = 7 * 60 + 30;
-  static const int defaultEndMinute = 23 * 60;
+
+  /// 끝도 30분을 더 둔다. 23:00 을 창의 마지막 줄로 두면 그 라벨 아래에 여백이
+  /// 없어, 07:00 이 위에서 잘리던 것과 같은 일이 아래에서 벌어진다(#1010).
+  static const int defaultEndMinute = 23 * 60 + 30;
 
   /// 창의 양 끝을 맞추는 단위. 30분보다 잘게 맞추면 첫 눈금이 어중간한 자리에
   /// 걸려 시간축이 읽히지 않는다.
@@ -693,14 +696,14 @@ class _SessionBlock extends StatelessWidget {
     //
     // 정각의 `:00` 은 읽는 데 보태는 것이 없어 뗀다. 툴팁과 시맨틱스에는 자른
     // 값이 아니라 온전한 시각을 남긴다 — 소리로 듣는 쪽은 줄일 이유가 없다.
-    final compact = l.schedTimeRange(_compact(start), _compact(end));
     final range = l.schedTimeRange(session.time, _hhmm(end));
     final detail = l.sessionTypeAndDuration(type, session.durationMinutes);
+    // 시각은 자르지 않는다. `10–11` 로 줄였더니 그 자리가 무엇을 가리키는지
+    // 한 번 더 생각해야 했다 — 시간표에서 시각은 줄일 값이 아니다.
     final timeLine = l.schedBlockTime(
-      compact,
+      range,
       l.minutesShort(session.durationMinutes),
     );
-    final whoLine = l.schedBlockWho(name, type);
 
     return Tooltip(
       message: '$range · $name · $detail',
@@ -748,15 +751,27 @@ class _SessionBlock extends StatelessWidget {
                       color: tone,
                     ),
                   ),
+                  // 둘째 줄에서 먼저 읽혀야 하는 것은 **누구인가** 다. 종류는
+                  // 같은 줄에 붙되 한 단계 작고 흐리게 물린다 — 이름과 같은
+                  // 무게로 두면 `1:1 PT` 가 이름만큼 눈에 들어온다.
                   _BlockLine(
-                    text: whoLine,
+                    text: name,
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
                       height: 1.25,
                       color: session.isFinished
                           ? AppColors.mutedForeground
                           : AppColors.foreground,
+                    ),
+                    trailing: type,
+                    trailingStyle: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                      color: session.isFinished
+                          ? AppColors.disabledForeground
+                          : AppColors.subtleForeground,
                     ),
                   ),
                 ],
@@ -766,15 +781,6 @@ class _SessionBlock extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// `10:00` → `10`, `10:15` → `10:15`. 정각의 `:00` 은 읽는 데 보태는 것이
-  /// 없어 뗀다.
-  static String _compact(int minutes) {
-    final wrapped = minutes % (24 * 60);
-    final h = wrapped ~/ 60;
-    final m = wrapped % 60;
-    return m == 0 ? '$h' : '$h:${m.toString().padLeft(2, '0')}';
   }
 
   static String _hhmm(int minutes) {
@@ -787,10 +793,19 @@ class _SessionBlock extends StatelessWidget {
 
 /// 블록 한 줄의 글과 그 글꼴.
 class _BlockLine {
-  const _BlockLine({required this.text, required this.style});
+  const _BlockLine({
+    required this.text,
+    required this.style,
+    this.trailing,
+    this.trailingStyle,
+  });
 
   final String text;
   final TextStyle style;
+
+  /// [text] 뒤에 한 단계 물려 붙는 글. 같은 줄이지만 무게가 다르다.
+  final String? trailing;
+  final TextStyle? trailingStyle;
 
   /// 이 줄이 실제로 차지할 높이. 배율이 커지면 함께 커진다.
   double heightIn(BuildContext context) =>
@@ -822,12 +837,32 @@ class _BlockLines extends StatelessWidget {
           final needed = line.heightIn(context);
           if (drawn.isNotEmpty && used + needed > available) break;
           used += needed;
+          // 한 줄에 두 가지 무게를 그릴 때도 `Text` 두 개로 나눈다. `Text.rich`
+          // 로 묶으면 `find.text` 가 기본으로 지나쳐, 화면에 있는 글을 테스트가
+          // 못 찾는다.
           drawn.add(
-            Text(
-              line.text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: line.style,
+            Row(
+              children: <Widget>[
+                Flexible(
+                  child: Text(
+                    line.text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: line.style,
+                  ),
+                ),
+                if (line.trailing != null) ...<Widget>[
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      line.trailing!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: line.trailingStyle ?? line.style,
+                    ),
+                  ),
+                ],
+              ],
             ),
           );
         }

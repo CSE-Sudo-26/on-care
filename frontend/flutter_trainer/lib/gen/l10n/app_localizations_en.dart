@@ -1331,7 +1331,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String schedBlockTime(String range, String duration) {
-    return '$range $duration';
+    return '$range ($duration)';
   }
 
   @override
