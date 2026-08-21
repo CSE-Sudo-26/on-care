@@ -81,7 +81,10 @@ void main() {
   testWidgets('conversation list keeps unread and status information', (
     tester,
   ) async {
-    await withWideSurface(tester, () async {
+    // 목록이 최신순이라 박성호는 아래쪽에 선다. 기본 높이로는 지연 생성
+    // 목록이 그를 만들지 않아, `findsNothing` 단언이 화면 밖이라는 이유로
+    // 통과해 버린다 - 목록 전체가 한 화면에 들어오는 높이로 띄운다.
+    await withWideSurface(tester, size: const Size(1440, 2200), () async {
       // 박성호의 배지는 요일에 따라 뒤집힌다. 시드가 주간 계열을 오늘까지만
       // 채우므로, 화요일에는 그 주에 기록된 날이 33% 하루뿐이라 이행률 저조가
       // 나트륨 초과보다 급한 신호가 된다. 주가 끝난 일요일로 고정해 어느 날
