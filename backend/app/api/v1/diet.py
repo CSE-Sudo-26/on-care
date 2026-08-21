@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date as Date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy.orm import Session
@@ -25,6 +25,7 @@ from app.api.deps import CurrentUser
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.schemas.diet_api import (
+    DietAdviceResponse,
     DietAnalyzeResponse,
     DietEntryOut,
     DietEntryUpdate,
@@ -57,6 +58,38 @@ def diet_by_date(
     db: Annotated[Session, Depends(get_db)],
 ) -> DietTodayResponse:
     return diet_service.build_day(db, current_user.id, date.isoformat())
+
+
+@router.get("/diet/advice", response_model=DietAdviceResponse)
+def diet_advice(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+    period: Annotated[
+        Literal["today", "week", "all"],
+        Query(description="조언이 다룰 구간 — 화면의 기간 토글과 같은 이름"),
+    ] = "today",
+) -> DietAdviceResponse:
+    """기간에 맞는 식단 조언. (#1017)
+
+    기간을 바꾸는 것은 "무엇을 볼지" 를 바꾸는 일이다. 그래프만 갈아 끼우고
+    조언이 오늘 이야기로 남으면 지금 화면과 무관한 말이 된다.
+
+    경계는 서버가 정한다 — 앱과 트레이너웹이 각자 계산하면 같은 회원의 `이번 주`
+    가 화면마다 다른 날부터 시작한다.
+    """
+    return _advice_for(db, current_user.id, period)
+
+
+def _advice_for(db: Session, user_id: str, period: str) -> DietAdviceResponse:
+    start, end = diet_service.period_bounds(period)
+    days = diet_service.daily_totals(db, user_id, start, end)
+    return DietAdviceResponse(
+        period=period,
+        from_date=start,
+        to_date=end,
+        days_logged=len(days),
+        message=diet_service.period_coach_message(days, period),
+    )
 
 
 @router.get("/diet/recommendations", response_model=DietRecommendationsResponse)

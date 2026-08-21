@@ -75,6 +75,11 @@ abstract interface class ClientRepository {
   /// 회원 앱 식단 탭의 기간 뷰와 같은 것을 트레이너에게도 준다. 두 구현 모두
   /// **주 단위 이력**에서 만든다 — 데모는 drift 의 일별 지표에서, 실서버는
   /// 리포트 응답(`calories_week` · `sodium_week` · `sugar_week`)에서.
+  /// 기간에 맞는 식단 조언. 회원 앱과 **같은 문장**이다 — 같은 회원의 같은
+  /// 기간을 두 화면이 다르게 말하면 상담에서 둘이 다른 이야기를 들고 앉는다.
+  /// (#1017)
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period);
+
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
@@ -392,6 +397,83 @@ class DriftClientRepository implements ClientRepository {
   }
 
   @override
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period) async {
+    // 데모는 서버 규칙(`diet_service.period_coach_message`)을 로컬 데이터로
+    // 흉내 낸다. 고정 문장을 돌려주면 어느 고객을 열어도 같은 말을 해서,
+    // 기간을 바꿨을 때 조언이 따라 바뀌는지도 볼 수 없다. (#1017)
+    if (period == ClientPeriod.today) {
+      final entries = await (_db.select(
+        _db.clientDietEntries,
+      )..where((t) => t.clientId.equals(clientId))).get();
+      final int sodium = entries.fold<int>(
+        0,
+        (int sum, ClientDietEntryRow row) => sum + row.sodiumMg,
+      );
+      return sodium > sodiumTargetMg
+          ? '나트륨이 목표치를 ${sodium - sodiumTargetMg}mg 초과했어요. '
+                '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
+          : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+    }
+
+    final ClientDietPeriod window = await fetchDietPeriod(
+      clientId,
+      clientRangeNow(period),
+    );
+    final List<ClientDietDay> logged = window.days
+        .where((ClientDietDay day) => day.calories > 0)
+        .toList();
+    if (logged.isEmpty) {
+      return period == ClientPeriod.week
+          ? '이번 주 식단 기록이 아직 없어요. 한 끼만 남겨도 흐름이 보여요.'
+          : '기록이 쌓이면 나트륨·칼로리 흐름을 짚어 드릴게요.';
+    }
+    final int over = logged
+        .where((ClientDietDay day) => day.sodiumMg > sodiumTargetMg)
+        .length;
+    final bool weekendHeavy = _weekendRuns(logged);
+    if (period == ClientPeriod.week) {
+      if (over >= 3) {
+        return '이번 주 $over일이나 나트륨 권장량을 넘었어요. '
+            '국물은 건더기 위주로 먹고 남은 며칠은 담백하게 가요.';
+      }
+      if (weekendHeavy) {
+        return '주중에는 잘 지키다가 주말에 나트륨이 확 올라요. '
+            '주말 외식은 한 끼만 정해 두면 흐름이 유지돼요.';
+      }
+      if (over > 0) {
+        return '이번 주 $over일만 권장량을 넘었어요. '
+            '나머지 날의 균형은 좋았으니 이 흐름을 이어가요.';
+      }
+      return '이번 주 내내 나트륨을 권장량 안에서 지켰어요. 아주 좋아요!';
+    }
+    if (weekendHeavy) {
+      return '기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요. '
+          '주말 한 끼만 담백하게 바꿔도 평균이 내려가요.';
+    }
+    if (over * 10 >= logged.length * 4) {
+      return '기록한 날의 ${(over * 100 / logged.length).round()}%가 나트륨 권장량을 넘었어요. '
+          '국·찌개 국물을 남기는 것부터 시작해 봐요.';
+    }
+    return '기록을 통틀어 나트륨이 대체로 권장량 안이에요. 지금 흐름이 좋아요.';
+  }
+
+  /// 주말(토·일) 평균이 평일보다 뚜렷하게 높은지 — 서버와 같은 1.3배 기준.
+  bool _weekendRuns(List<ClientDietDay> days) {
+    final List<int> weekend = <int>[
+      for (final ClientDietDay day in days)
+        if (day.date.weekday >= DateTime.saturday) day.sodiumMg,
+    ];
+    final List<int> weekday = <int>[
+      for (final ClientDietDay day in days)
+        if (day.date.weekday < DateTime.saturday) day.sodiumMg,
+    ];
+    if (weekend.isEmpty || weekday.isEmpty) return false;
+    double mean(List<int> xs) =>
+        xs.fold<int>(0, (int a, int b) => a + b) / xs.length;
+    return mean(weekend) > mean(weekday) * 1.3;
+  }
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
@@ -610,6 +692,17 @@ final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
     return ref.watch(clientRepositoryProvider).watchDiet(clientId);
   },
 );
+
+/// 기간별 식단 조언. 회원 앱 `dietAdviceProvider` 와 같은 서버 문장이다. (#1017)
+final clientDietAdviceProvider =
+    FutureProvider.family<String, ({String clientId, ClientPeriod period})>((
+      ref,
+      key,
+    ) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchDietAdvice(key.clientId, key.period);
+    });
 
 /// Streams a client's workout history for the 운동 sub-tab.
 final clientHistoryProvider =
