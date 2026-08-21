@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// 두 보기가 함께 쓰는 날짜 내비게이션 행 — `◀ 8월 14일 – 8월 20일 ▶` 과
-/// 오른쪽 끝의 [trailing](`오늘`·`일|주`). (#882)
+/// 날짜 내비게이션 행 — `◀   8월 17일 – 8월 23일   오늘   ▶`. (#882, #1009)
 ///
-/// 일 보기와 주 보기가 같은 자리에 같은 것을 두어야 해서 한 곳에 모았다.
-/// 오른쪽 끝은 아래 요일 칸 그리드의 오른쪽 끝과 맞는다 — 양쪽이 같은
-/// [AppLayout.pagePadding] 안에 있기 때문이다.
+/// **화살표는 자리를 지킨다.** 날짜 글자 수가 달라지거나 `오늘` 이 나타났다
+/// 사라져도 두 화살표가 움직이지 않는다. 움직이면 같은 버튼을 누르려고 매번
+/// 다른 자리를 겨눠야 하고, 주를 연달아 넘길 때 그 차이가 그대로 손에 걸린다.
+///
+/// 그래서 날짜와 `오늘` 에 **고정 폭 자리**를 준다. `오늘` 은 보이지 않을 때도
+/// 자리를 비워 두므로, 버튼이 생겨도 날짜가 화살표 사이 한가운데에 그대로
+/// 남는다.
+///
+/// 좁은 폭에서는 줄을 가르지 않고 묶음째 작게 그린다 — 줄이 갈리면 화살표가
+/// 자리를 지킨다는 규칙이 그 순간 깨진다.
 class ScheduleDateNavBar extends StatelessWidget {
   const ScheduleDateNavBar({
     super.key,
@@ -28,68 +33,74 @@ class ScheduleDateNavBar extends StatelessWidget {
   /// -1 = 이전 주, +1 = 다음 주.
   final ValueChanged<int> onShift;
 
-  /// 오른쪽 끝에 붙는 컨트롤.
+  /// 날짜와 오른쪽 화살표 사이에 서는 컨트롤(`오늘`). 비어 있어도 자리는 남는다.
   final Widget trailing;
 
-  /// 날짜와 컨트롤이 한 줄에 함께 들어가는 최소 폭. 아래로는 컨트롤을 다음
-  /// 줄로 내린다 — 한 줄을 고집하면 좁은 화면에서 그대로 넘친다.
-  static const double _singleRowMinWidth = 440;
+  /// 날짜가 앉는 자리의 폭. 한국어 `8월 17일 – 8월 23일`, 영어 `Aug 17 – Aug 23`
+  /// 이 글씨 배율 1.1 에서 들어가는 값이다. 넘치면 그 안에서 작게 그린다.
+  static const double _dateSlot = 186;
+
+  /// `오늘` 이 앉는 자리의 폭. 버튼이 없을 때도 비워 두어야 날짜가 움직이지
+  /// 않는다.
+  static const double _todaySlot = 88;
+
+  /// 요소 사이 간격. 화살표·날짜·`오늘` 이 서로 붙어 보이지 않을 만큼 띄운다.
+  static const double _gap = AppSpacing.lg;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final nav = <Widget>[
-      _ChevronButton(
-        icon: Icons.chevron_left,
-        tooltip: l.a11yPrevDay,
-        onTap: () => onShift(-1),
-      ),
-      const SizedBox(width: AppSpacing.sm),
-      // 날짜 범위가 줄을 넘기지 않게 이쪽이 먼저 줄어든다. 화살표는 손이 닿는
-      // 크기가 있어야 해서 줄일 수 없고, 날짜는 통째로 작게 그려도 읽힌다 —
-      // 좁은 폭(360)에 큰 글자 배율(1.3)이 겹치면 그 차이가 69px 이다(#1009).
-      Flexible(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            l.dateRange(
-              l.dateMonthDay(start.month, start.day),
-              l.dateMonthDay(end.month, end.day),
-            ),
-            maxLines: 1,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: AppColors.foreground,
+    final group = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _ChevronButton(
+          icon: Icons.chevron_left,
+          tooltip: l.a11yPrevDay,
+          onTap: () => onShift(-1),
+        ),
+        const SizedBox(width: _gap),
+        SizedBox(
+          width: _dateSlot,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                l.dateRange(
+                  l.dateMonthDay(start.month, start.day),
+                  l.dateMonthDay(end.month, end.day),
+                ),
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.foreground,
+                ),
+              ),
             ),
           ),
         ),
-      ),
-      const SizedBox(width: AppSpacing.sm),
-      _ChevronButton(
-        icon: Icons.chevron_right,
-        tooltip: l.a11yNextDay,
-        onTap: () => onShift(1),
-      ),
-    ];
+        const SizedBox(width: _gap),
+        SizedBox(
+          width: _todaySlot,
+          child: Align(alignment: Alignment.centerLeft, child: trailing),
+        ),
+        const SizedBox(width: _gap),
+        _ChevronButton(
+          icon: Icons.chevron_right,
+          tooltip: l.a11yNextDay,
+          onTap: () => onShift(1),
+        ),
+      ],
+    );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < _singleRowMinWidth) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Row(children: nav),
-              const SizedBox(height: AppSpacing.sm),
-              // 줄이 갈려도 오른쪽 끝에 맞춘다는 규칙은 지킨다.
-              Align(alignment: Alignment.centerRight, child: trailing),
-            ],
-          );
-        }
-        return Row(children: <Widget>[...nav, const Spacer(), trailing]);
-      },
+    // 왼쪽 정렬은 그대로 두고, 폭이 모자라면 묶음째 줄여 넣는다.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: group,
+      ),
     );
   }
 }
