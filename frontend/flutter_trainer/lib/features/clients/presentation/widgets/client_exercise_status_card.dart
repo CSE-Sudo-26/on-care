@@ -126,8 +126,8 @@ class _Range extends StatefulWidget {
 }
 
 class _RangeState extends State<_Range> {
-  /// `전체` 그래프의 스크롤 위치와 고른 날. 위의 요약 숫자가 이걸 따라간다 —
-  /// 보이지 않는 날까지 더한 합계는 지금 화면을 설명하지 못한다. (#1018)
+  /// `전체` 그래프의 스크롤 위치와 고른 칸. 위의 요약 숫자가 이걸 따라간다 —
+  /// 보이지 않는 구간까지 더한 합계는 지금 화면을 설명하지 못한다. (#1018)
   final PeriodChartSelection _selection = PeriodChartSelection();
 
   @override
@@ -139,9 +139,17 @@ class _RangeState extends State<_Range> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final String locale = Localizations.localeOf(context).toString();
     final ClientExercisePeriod period = widget.period;
     final List<ClientExerciseDay> days = period.days;
     final bool monthly = days.length > 10;
+    // `전체` 는 **한 칸이 한 주**다. 회원 앱 운동 탭과 같은 눈금이라야 둘이
+    // 같은 그림을 보고 이야기할 수 있다 — 일별 막대는 여덟 달을 늘어놓으면
+    // 실오라기가 되고, 한 주를 잘한 것인지 한 날을 잘한 것인지도 흐려진다.
+    // (#1077)
+    final List<_WeekBucket> weeks = monthly
+        ? _weekBucketsOf(days)
+        : const <_WeekBucket>[];
     return Column(
       children: <Widget>[
         ListenableBuilder(
@@ -150,34 +158,47 @@ class _RangeState extends State<_Range> {
             // 전체가 아니면 지금까지처럼 기간 전체의 합계다.
             final int? picked = monthly ? _selection.selected : null;
             final (int first, int last) = monthly
-                ? (_selection.visible ?? (0, days.length - 1))
+                ? (_selection.visible ?? (0, weeks.length - 1))
                 : (0, days.length - 1);
-            final Iterable<ClientExerciseDay> shown = picked != null
-                ? <ClientExerciseDay>[days[picked]]
-                : days.sublist(
-                    first.clamp(0, days.length),
-                    (last + 1).clamp(0, days.length),
+            final Iterable<_WeekBucket> shownWeeks = monthly
+                ? (picked != null
+                      ? <_WeekBucket>[weeks[picked]]
+                      : weeks.sublist(
+                          first.clamp(0, weeks.length),
+                          (last + 1).clamp(0, weeks.length),
+                        ))
+                : const <_WeekBucket>[];
+            final int workoutDays = monthly
+                ? shownWeeks.fold<int>(
+                    0,
+                    (int a, _WeekBucket w) => a + w.loggedDays,
+                  )
+                : days.where((ClientExerciseDay d) => d.logged).length;
+            final int minutes = monthly
+                ? shownWeeks.fold<int>(
+                    0,
+                    (int a, _WeekBucket w) => a + w.minutes,
+                  )
+                : days.fold<int>(
+                    0,
+                    (int a, ClientExerciseDay d) => a + d.minutes,
                   );
-            final int workoutDays = shown
-                .where((ClientExerciseDay d) => d.logged)
-                .length;
-            final int minutes = shown.fold<int>(
-              0,
-              (int a, ClientExerciseDay d) => a + d.minutes,
-            );
-            final int calories = shown.fold<int>(
-              0,
-              (int a, ClientExerciseDay d) => a + d.calories,
-            );
+            final int calories = monthly
+                ? shownWeeks.fold<int>(
+                    0,
+                    (int a, _WeekBucket w) => a + w.calories,
+                  )
+                : days.fold<int>(
+                    0,
+                    (int a, ClientExerciseDay d) => a + d.calories,
+                  );
             return Row(
               children: <Widget>[
                 Expanded(
                   child: _SummaryMetric(
                     label: picked == null
                         ? l.clientTrendWorkoutDays
-                        : DateFormat.yMd(
-                            Localizations.localeOf(context).toString(),
-                          ).format(days[picked].date),
+                        : weeks[picked].rangeLabel(locale),
                     value: l.clientTrendWorkoutDaysValue(workoutDays),
                   ),
                 ),
@@ -200,8 +221,8 @@ class _RangeState extends State<_Range> {
           },
         ),
         const SizedBox(height: AppSpacing.md),
-        // 이번 주는 유형별 주간 목표를 겹친 링으로, 이번 달은 일별 소모
-        // 칼로리 막대로. 회원 앱 `운동 현황` 과 같은 규칙이다. (#1077)
+        // 이번 주는 유형별 주간 목표를 겹친 링으로, 전체는 주별 소모 칼로리
+        // 막대로. 회원 앱 `운동 현황` 과 같은 규칙이다. (#1077)
         if (!monthly)
           BurnGoalRings(
             title: l.exBurnWeekTitle,
@@ -217,21 +238,71 @@ class _RangeState extends State<_Range> {
           BurnBarChart(
             title: l.clientTrendTitle,
             selection: _selection,
-            calories: <int>[for (final ClientExerciseDay d in days) d.calories],
-            splits: <ActivitySplit>[
-              for (final ClientExerciseDay d in days)
-                ActivitySplit(
-                  cardioMinutes: d.hasTypeSplit ? d.cardioMinutes : d.minutes,
-                  strengthSets: d.strengthSets,
-                  stretchingMinutes: d.stretchingMinutes,
-                  otherMinutes: d.otherMinutes,
-                ),
-            ],
-            dates: <DateTime>[for (final ClientExerciseDay d in days) d.date],
+            goalKcal: kWeeklyBurnKcal,
+            calories: <int>[for (final _WeekBucket w in weeks) w.calories],
+            splits: <ActivitySplit>[for (final _WeekBucket w in weeks) w.split],
+            dates: <DateTime>[for (final _WeekBucket w in weeks) w.monday],
           ),
       ],
     );
   }
+}
+
+/// `전체` 그래프의 한 칸 — 한 주(월~일)의 합계.
+class _WeekBucket {
+  _WeekBucket(this.monday);
+
+  final DateTime monday;
+  int calories = 0;
+  int minutes = 0;
+
+  /// 그 주에 기록이 있는 날 수. 머리의 `운동한 날` 이 이 값을 더한다.
+  int loggedDays = 0;
+
+  int _cardioMinutes = 0;
+  int _strengthSets = 0;
+  int _stretchingMinutes = 0;
+  int _otherMinutes = 0;
+
+  ActivitySplit get split => ActivitySplit(
+    cardioMinutes: _cardioMinutes.toDouble(),
+    strengthSets: _strengthSets.toDouble(),
+    stretchingMinutes: _stretchingMinutes.toDouble(),
+    otherMinutes: _otherMinutes.toDouble(),
+  );
+
+  void add(ClientExerciseDay d) {
+    calories += d.calories;
+    minutes += d.minutes;
+    if (d.logged) loggedDays += 1;
+    // 유형 분해가 없는 날은 전부 유산소로 본다 — 임의로 나누면 없는 근력을
+    // 지어내는 셈이다.
+    _cardioMinutes += d.hasTypeSplit ? d.cardioMinutes : d.minutes;
+    _strengthSets += d.strengthSets;
+    _stretchingMinutes += d.stretchingMinutes;
+    _otherMinutes += d.otherMinutes;
+  }
+
+  /// `8/17 ~ 8/23` — 고른 칸이 덮는 기간.
+  String rangeLabel(String locale) {
+    final DateFormat f = DateFormat.Md(locale);
+    final DateTime sunday = DateTime(monday.year, monday.month, monday.day + 6);
+    return '${f.format(monday)} ~ ${f.format(sunday)}';
+  }
+}
+
+/// 날짜별 기록을 주 단위로 묶는다(오래된 → 최근).
+///
+/// 첫 주는 기간이 주 가운데에서 시작해 잘려 있을 수 있다. 그래도 그 주의
+/// 자리는 남긴다 — 없애면 달 경계가 한 칸씩 밀린다.
+List<_WeekBucket> _weekBucketsOf(List<ClientExerciseDay> days) {
+  final List<_WeekBucket> out = <_WeekBucket>[];
+  for (final ClientExerciseDay d in days) {
+    final DateTime monday = clientMondayOf(d.date);
+    if (out.isEmpty || out.last.monday != monday) out.add(_WeekBucket(monday));
+    out.last.add(d);
+  }
+  return out;
 }
 
 class _SummaryMetric extends StatelessWidget {

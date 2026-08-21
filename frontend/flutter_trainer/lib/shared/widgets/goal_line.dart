@@ -134,7 +134,18 @@ class _GoalLinePainter extends CustomPainter {
       textDirection: textDirection,
       textScaler: textScaler,
     )..layout();
-    tp.paint(canvas, Offset(size.width - tp.width, -tp.height - 2));
+    final Offset at = Offset(size.width - tp.width, -tp.height - 2);
+    // 글자 뒤에 카드 색 판을 깔아 준다 — 막대 꼭대기와 겹치는 자리에서도
+    // 숫자가 읽혀야 한다.
+    final RRect plate = RRect.fromRectAndRadius(
+      Rect.fromLTWH(at.dx - 4, at.dy - 1, tp.width + 8, tp.height + 2),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(
+      plate,
+      Paint()..color = AppColors.card.withValues(alpha: 0.9),
+    );
+    tp.paint(canvas, at);
   }
 
   @override

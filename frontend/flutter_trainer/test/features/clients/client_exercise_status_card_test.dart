@@ -146,6 +146,35 @@ void main() {
     expect(text, contains('kcal'));
   });
 
+  testWidgets('전체는 한 칸이 한 주다 (#1077)', (tester) async {
+    await pump(tester, withSplit());
+    await tester.tap(find.byKey(const Key('client-period-month')));
+    await tester.pumpAndSettle();
+
+    // 몇 칸인지는 오늘이 무슨 요일인지에 따라 12 나 13 이 된다 — 숫자를 여기
+    // 적으면 주말에만 깨지는 테스트가 된다. 기간이 걸친 **주의 수**로 잰다.
+    final int weeks = clientRangeDates(
+      clientRangeFor(ClientPeriod.month, todayKst()),
+    ).map(clientMondayOf).toSet().length;
+    final int bars = tester
+        .widgetList<Tooltip>(find.byType(Tooltip))
+        .where(
+          (Tooltip t) =>
+              (t.key as ValueKey<String>?)?.value.startsWith(
+                'client-exercise-bar-',
+              ) ??
+              false,
+        )
+        .length;
+    expect(bars, weeks);
+
+    // 한 칸이 한 주면 그 칸의 소모 칼로리도 일곱 날을 더한 값이다.
+    final Tooltip tip = tester.widget<Tooltip>(
+      find.byKey(const Key('client-exercise-bar-1')),
+    );
+    expect(tip.richMessage!.toPlainText(), contains('kcal'));
+  });
+
   testWidgets('기간을 바꿔도 토글 자리가 움직이지 않는다', (tester) async {
     await pump(tester, withSplit());
 

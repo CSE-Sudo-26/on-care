@@ -22,6 +22,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -455,7 +456,7 @@ class BurnBarChart extends StatelessWidget {
     required this.dates,
     required this.title,
     required this.selection,
-    this.dailyGoalKcal = kDailyBurnKcal,
+    this.goalKcal = kDailyBurnKcal,
   });
 
   final List<int> calories;
@@ -467,10 +468,14 @@ class BurnBarChart extends StatelessWidget {
   final String title;
   final PeriodChartSelection selection;
 
-  /// 하루 소모 목표(kcal). 0 이면 목표선을 그리지 않는다.
-  final double dailyGoalKcal;
+  /// 한 칸의 소모 목표(kcal). 칸이 하루면 하루 목표, 한 주면 주간 목표다.
+  /// 0 이면 목표선을 그리지 않는다.
+  final double goalKcal;
 
-  /// 막대 하나의 툴팁 — 소모 칼로리와 그날의 유형별 내역.
+  /// 한 화면에 보일 칸 수. 칸 하나가 한 주라, 한 화면이 대략 석 달이다.
+  static const int _slotsPerScreen = 13;
+
+  /// 막대 하나의 툴팁 — 소모 칼로리와 그 주의 유형별 내역.
   List<InlineSpan> _tipSpans(AppLocalizations l, int i) {
     final ActivitySplit s = splits[i];
     final List<String> rows = <String>[
@@ -495,11 +500,11 @@ class BurnBarChart extends StatelessWidget {
     final bool empty = calories.every((int c) => c <= 0);
     const double chartHeight = 150;
     final double peak = <double>[
-      dailyGoalKcal,
+      goalKcal,
       for (final int c in calories) c.toDouble(),
     ].fold<double>(1, (double a, double b) => math.max(a, b));
     final double max = peak * 1.15;
-    final int labelStep = (calories.length / 12).ceil().clamp(1, 7);
+    final String locale = Localizations.localeOf(context).toString();
 
     return Semantics(
       container: true,
@@ -516,15 +521,21 @@ class BurnBarChart extends StatelessWidget {
             selectedIndex: selection.selected,
             onSelected: selection.select,
             onVisibleRangeChanged: selection.setVisible,
+            daysPerScreen: _slotsPerScreen,
             goalOverlay: GoalLineOverlay(
-              visible: dailyGoalKcal > 0,
-              bottom: chartHeight * (dailyGoalKcal / max).clamp(0.0, 1.0),
+              visible: goalKcal > 0,
+              bottom: chartHeight * (goalKcal / max).clamp(0.0, 1.0),
               label:
                   '${l.clientPeriodGoal} '
-                  '${dailyGoalKcal.round()}${l.unitKcal}',
+                  '${goalKcal.round()}${l.unitKcal}',
             ),
+            // 달이 바뀌는 칸에만 적는다 — 모든 칸에 적으면 글자가 서로 겹쳐
+            // 아무것도 읽히지 않는다. 회원 앱 `전체` 그래프와 같은 규칙이다.
             labelBuilder: (int i) =>
-                i < dates.length && i % labelStep == 0 ? '${dates[i].day}' : '',
+                i < dates.length &&
+                    (i == 0 || dates[i].month != dates[i - 1].month)
+                ? DateFormat.MMM(locale).format(dates[i])
+                : '',
             calloutBuilder: (BuildContext context, int i) =>
                 const SizedBox.shrink(),
             barBuilder: (BuildContext context, int i) => Tooltip(
@@ -573,17 +584,23 @@ class _BurnBarColumn extends StatelessWidget {
   final double height;
   final bool dimmed;
 
+  /// 칸에서 막대가 차지하는 비율. 나머지가 이웃과의 사이가 된다.
+  static const double _fill = 0.56;
+
   @override
   Widget build(BuildContext context) {
     if (value <= 0) {
-      // 기록이 없는 날은 0 짜리 막대가 아니라 그루터기다.
+      // 기록이 없는 칸은 0 짜리 막대가 아니라 그루터기다.
       return Align(
         alignment: Alignment.bottomCenter,
-        child: Container(
-          height: 3,
-          decoration: BoxDecoration(
-            color: AppColors.border,
-            borderRadius: BorderRadius.circular(2),
+        child: FractionallySizedBox(
+          widthFactor: _fill,
+          child: Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
         ),
       );
@@ -592,11 +609,16 @@ class _BurnBarColumn extends StatelessWidget {
       alignment: Alignment.bottomCenter,
       child: Opacity(
         opacity: dimmed ? 0.35 : 1,
-        child: Container(
-          height: math.max((value / max).clamp(0.0, 1.0) * height, 3),
-          decoration: const BoxDecoration(
-            color: kBurnColor,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+        // 칸 폭을 다 채우면 막대가 서로 붙어 한 덩어리로 보인다 — 어디까지가
+        // 한 주인지 눈으로 셀 수 있어야 한다.
+        child: FractionallySizedBox(
+          widthFactor: _fill,
+          child: Container(
+            height: math.max((value / max).clamp(0.0, 1.0) * height, 3),
+            decoration: const BoxDecoration(
+              color: kBurnColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+            ),
           ),
         ),
       ),
