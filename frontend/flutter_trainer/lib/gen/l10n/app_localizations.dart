@@ -2372,6 +2372,12 @@ abstract class AppLocalizations {
   /// **'{start}–{end}'**
   String schedTimeRange(String start, String end);
 
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
+
   /// No description provided for @schedEmptyWeek.
   ///
   /// In en, this message translates to:

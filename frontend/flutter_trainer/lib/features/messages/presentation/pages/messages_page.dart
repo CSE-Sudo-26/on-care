@@ -20,7 +20,6 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 
 enum _ConversationFilter {
   all('all'),
@@ -60,10 +59,16 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final clientsAsync = ref.watch(prioritizedClientsProvider);
     final unread =
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
     final filter = _ConversationFilter.parse(widget.filter);
+    // 차례는 필터가 정한다. `전체`·`읽지 않음` 은 대화 목록이므로 **마지막
+    // 말이 새로운 순**이고, `관리 필요` 는 챙길 사람을 고르는 자리이므로
+    // 주의 신호를 앞세운다. 예전에는 어느 필터에서든 나트륨 초과가 맨 위로
+    // 올라와, 방금 답장이 온 고객이 목록 아래에 묻혔다.
+    final clientsAsync = filter == _ConversationFilter.attention
+        ? ref.watch(prioritizedClientsProvider)
+        : ref.watch(recentlyMessagedClientsProvider);
 
     return PageScaffold(
       title: l.navMessages,
@@ -320,12 +325,10 @@ class _ConversationTile extends StatelessWidget {
             ),
             child: Row(
               children: <Widget>[
-                ClientAvatar(
-                  label: client.avatar,
-                  size: 36,
-                  showStatus: true,
-                  active: client.active,
-                ),
+                // 활성/휴면 점은 없다. 메시지 탭은 회원을 **관리**하는
+                // 곳이 아니라 이야기하는 곳이고, 활성 여부는 어느 대화를
+                // 열지 정하는 데 쓰이지 않는다 — 그 판단은 고객 탭이 한다.
+                ClientAvatar(label: client.avatar, size: 36),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
@@ -352,31 +355,32 @@ class _ConversationTile extends StatelessWidget {
                           ),
                         ],
                       ),
-                      // 오른쪽 대화 패널 머리에는 목표가 있는데 정작 고객을
-                      // 고르는 목록에는 없었다(#898).
-                      const SizedBox(height: 2),
-                      ClientGoalLabel(client: client),
-                      // 활성/주의 배지는 여기 없다. 목록은 **어느 대화를 열까**
-                      // 를 정하는 자리라 이름 · 목표 · 마지막 말 · 안읽음이면
-                      // 충분하고, 상태의 자세한 내막은 대화를 연 뒤 헤더가
-                      // 말한다(#991). 같은 사실을 두 번 세우면 목록이 길어질
-                      // 뿐 고르는 데 도움이 되지 않는다. 활성/휴면만은 아바타
-                      // 모서리의 점으로 남는다 — 훑는 자리의 표시다.
-                      const SizedBox(height: 3),
+                      // 목표(`혈압 관리 · 체중 감량`)는 여기 없다. #898 이
+                      // 넣었을 때는 대화 패널 머리에만 있어서 목록에서 고를
+                      // 근거가 없었는데, 지금은 헤더가 목표를 말한다. 어느
+                      // 대화를 열지는 **마지막에 무슨 말이 오갔는가**로
+                      // 정하지 목표로 정하지 않는다.
+                      //
+                      // 그 자리를 미리보기에 준다 — 두 줄이면 "이번 주 일이
+                      // 너무 많아서" 뒤에 무엇이 붙는지까지 읽히고, 열어 볼
+                      // 대화인지 목록에서 판단할 수 있다.
+                      const SizedBox(height: 4),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Expanded(
                             child: Text(
                               hasPreview
                                   ? client.lastMessage
                                   : l.messagesNoPreview,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: hasPreview
                                     ? AppColors.mutedForeground
                                     : AppColors.subtleForeground,
                                 fontSize: 11.5,
+                                height: 1.35,
                                 fontStyle: hasPreview
                                     ? FontStyle.normal
                                     : FontStyle.italic,
@@ -506,11 +510,7 @@ class _Identity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final alerts = healthAlertsFor(client);
-    final statusColor = client.active
-        ? AppColors.success
-        : AppColors.disabledForeground;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -534,22 +534,11 @@ class _Identity extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                key: const ValueKey<String>('messages-thread-status'),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: const BorderRadius.all(AppRadius.pill),
-                ),
-                child: StatusDotLabel(
-                  label: client.active ? l.clientActive : l.clientDormant,
-                  filled: client.active,
-                  color: statusColor,
-                ),
-              ),
+              // 활성/휴면 알약도 없다 — 이 사람과 지금 이야기하는 데
+              // 쓰이지 않는 값이고, 바꿀 수 있는 자리도 고객 탭이다.
+              // 주의사항은 다르다: 나트륨이 넘쳤다는 사실은 **지금 이
+              // 대화에서 할 말**을 바꾼다.
+              //
               // 배지는 하나씩 `Wrap` 의 자식이다. 묶어서 넣으면 그 묶음이
               // 통째로 다음 줄로 내려가고, 묶음 안에서는 다시 접히지 않는다.
               //

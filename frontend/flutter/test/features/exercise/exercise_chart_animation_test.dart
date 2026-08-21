@@ -96,7 +96,7 @@ void main() {
 
   testWidgets('오늘 도넛은 원을 따라 점점 그려진다', (WidgetTester tester) async {
     await pumpExercise(tester);
-    await tester.tap(find.text('오늘'));
+    await tester.tap(find.byKey(const Key('exercise-period-tab-0')));
     await tester.pump();
 
     const Size size = Size.square(116);

@@ -175,13 +175,14 @@ void main() {
         )
         .first;
 
-    Future<void> openDiet(WidgetTester tester, String clientName) async {
-      await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail(seedClientIds[clientName]!, section: 'diet'),
-      );
-    }
+    Future<ProviderContainer> openDiet(
+      WidgetTester tester,
+      String clientName,
+    ) => pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clientDetail(seedClientIds[clientName]!, section: 'diet'),
+    );
 
     testWidgets('a failed diet retries in place on a narrow viewport', (
       tester,
@@ -236,7 +237,8 @@ void main() {
       final calorieProgress = tester.widget<CircularProgressIndicator>(
         find.byKey(const Key('client-nutrition-calorie-progress')),
       );
-      expect(calorieProgress.valueColor?.value, AppColors.primary);
+      // 정상은 초록이다 (#1019) — 나트륨·당류 카드와 같은 색.
+      expect(calorieProgress.valueColor?.value, AppColors.statusNormal);
       for (final String label in <String>['탄수화물', '단백질', '지방']) {
         expect(
           find.byKey(Key('client-nutrition-macro-$label')),
@@ -252,10 +254,11 @@ void main() {
                 ),
               )
               .any(
-                (box) => box.color == AppColors.primary.withValues(alpha: 0.65),
+                (box) =>
+                    box.color == AppColors.statusNormal.withValues(alpha: 0.65),
               ),
           isTrue,
-          reason: '$label 그래프가 기존 트레이너 앱 색상을 써야 합니다.',
+          reason: '$label 그래프가 정상 초록을 써야 합니다.',
         );
       }
       Finder inMacro(String label, String text) => find.descendant(
@@ -436,6 +439,40 @@ void main() {
       expect(find.textContaining('나트륨이 목표치를'), findsNothing);
       // The trend card is skipped too — there is no series to draw.
       expect(find.text('최근 7일 나트륨 추이'), findsNothing);
+    });
+
+    testWidgets('AI 코멘트가 기간을 따라 바뀐다 (#1017)', (tester) async {
+      // 오늘 하루만 보고 쓴 문장을 이번 주 그래프 아래 그대로 두면, 화면과
+      // 조언이 서로 다른 기간을 말한다.
+      final container = await openDiet(tester, '김민수');
+      await tester.scrollUntilVisible(
+        find.textContaining('나트륨이 목표치를'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+
+      // 이번 주 며칠이 넘었는지는 실행한 요일마다 달라진다 — 시드가 오늘까지만
+      // 채우기 때문이다(#826 과 같은 종류). 고정된 "2일" 을 기대하면 코드를
+      // 건드리지 않아도 요일에 따라 깨진다. `sodiumOverDays` 는 위젯이 읽는
+      // 것과 같은 이번 주 계열에서 나온 값이라, 실행한 날과 무관하게 맞는
+      // 문장을 고를 수 있다.
+      final minsu = container
+          .read(clientsProvider)
+          .value!
+          .firstWhere((c) => c.id == 'seed-client-1');
+      final over = minsu.sodiumOverDays;
+      final expectedText = over >= 3
+          ? '이번 주 $over일이나 나트륨 권장량을 넘었어요'
+          : over > 0
+          ? '이번 주 $over일만 권장량을 넘었어요'
+          : '이번 주 내내 나트륨을 권장량 안에서 지켰어요';
+
+      // 오늘 문장은 사라지고, 그 자리에 이번 주를 읽은 문장이 온다.
+      expect(find.textContaining('나트륨이 목표치를'), findsNothing);
+      expect(find.textContaining(expectedText), findsOneWidget);
     });
 
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (

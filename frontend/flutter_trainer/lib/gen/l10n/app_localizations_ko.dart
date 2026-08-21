@@ -1276,6 +1276,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
+
+  @override
   String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
 
   @override

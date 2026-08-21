@@ -55,7 +55,10 @@ void main() {
       at: AppRoutes.clientDetail('seed-client-3', section: 'diet'),
     );
 
-    expect(find.text('답장 대기'), findsOneWidget);
+    // 박성호의 스레드는 트레이너가 마지막으로 답장해 두어 `답장 대기`가
+    // 아니다. 이 테스트가 재는 것은 "배지가 탭 위에 남는가" 이므로 그가
+    // 실제로 달고 있는 건강 신호로 확인한다.
+    expect(find.text('나트륨 초과'), findsOneWidget);
     final scroll = find
         .descendant(
           of: find.byKey(const ValueKey<String>('diet-seed-client-3')),
@@ -64,7 +67,7 @@ void main() {
         .first;
     await tester.drag(scroll, const Offset(0, -500));
     await tester.pump();
-    expect(find.text('답장 대기'), findsOneWidget);
+    expect(find.text('나트륨 초과'), findsOneWidget);
   });
 
   testWidgets('diet and workout are separated into tabs', (tester) async {

@@ -12,8 +12,10 @@ import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/charts/period_scroll_chart.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
+import 'package:oncare/features/diet/presentation/widgets/week_strip_label.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -26,6 +28,7 @@ import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_h
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
+import 'package:oncare/shared/widgets/ai_advice_card.dart';
 import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -233,7 +236,6 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
       exerciseWeekViewProvider,
     );
-    final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
@@ -294,58 +296,24 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
             // "기록이 없어요"만 그려, 시드가 있는 날조차 비어 보였다(#671).
             _ExerciseSelectedDay(thisWeek: week, date: _selected)
           else ...<Widget>[
-            // 1) 이번 주 운동 요약
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-              child: Text(
-                l.exWeekSummary,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _StatCard(
-                      label: l.exStatTime,
-                      value: '${week.totalMinutes}',
-                      unit: l.unitMinutes,
-                      goal: '${goals.minutes}',
-                      accent: true,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _StatCard(
-                      label: l.exStatCalories,
-                      value: '${week.totalCalories}',
-                      unit: l.unitKcal,
-                      goal: NumberFormat('#,###').format(goals.burnCalories),
-                      accent: true,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _StatCard(
-                      label: l.exStatStreak,
-                      value: '${week.streakDays}',
-                      unit: l.exUnitStreakDays,
-                      streak: true,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // 2) 운동 현황 (오늘 / 이번 주 / 이번 달)
+            // 1) 운동 현황 — 이 화면이 먼저 답해야 하는 것은 "얼마나 했나" 다.
+            //
+            // 예전에는 위에 `이번 주 운동 요약`(시간·칼로리·연속 카드 석 장)이
+            // 있었는데, 시간과 칼로리는 바로 아래 그래프가 이미 말하고 있었다.
+            // 연속 일수만 그래프가 말하지 못하므로 카드 머리로 옮겼다. (#1021)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _ActivityStatus(week: week),
+            ),
+            const SizedBox(height: 20),
+            // 2) AI 맞춤 조언 — "얼마나 했나" 다음은 "그래서 오늘 뭘 할까" 다.
+            //    식단 탭과 같은 카드를 쓴다. (#1021)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: AiAdviceCard(
+                title: l.dietAiFeedback,
+                message: week.aiCoachMessage,
+              ),
             ),
             const SizedBox(height: 20),
             // 3) 오늘 완료한 PT 일지 (트레이너 피드백 포함)
@@ -354,22 +322,20 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
               child: _PtLogCard(),
             ),
             const SizedBox(height: 20),
-            // 4) AI 코칭 — 코칭 포인트와 추천 개인운동.
+            // 4) AI 코칭 — 추천 개인운동.
             //
             // PT 피드백 바로 다음에 둔다. `오늘 PT 에서 받은 피드백 → 그래서
-            // 어떤 관리가 필요한지 → 어떤 개인운동을 하면 되는지` 가 한 흐름으로
-            // 읽혀야 한다. 예전에는 조언이 맨 위, 추천 운동이 맨 아래라 그 사이를
-            // 회원이 직접 이어 붙여야 했다(#782).
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: AiCoachingCard(coachingPoint: week.aiCoachMessage),
+            // 어떤 개인운동을 하면 되는지` 가 한 흐름으로 읽혀야 한다. 코칭
+            // 포인트는 위의 AI 맞춤 조언 카드로 옮겼다 — 같은 말이 한 화면에 두
+            // 번 있으면 안 된다. (#1021)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: AiCoachingCard(),
             ),
             const SizedBox(height: 20),
-            // 5) 담당 트레이너 — 관계와 소통만. 추천 운동은 AI 코칭에 모였다.
-            //    받은 담당 요청은 그 바로 위에 둔다 — "내 담당은 누구인가" 와
-            //    "담당이 되겠다는 사람이 있다" 는 같은 질문의 앞뒤다. (#919)
+            // 5) 받은 담당 요청. 담당 트레이너 카드는 뺐다 — 이 화면은 기록을
+            //    보는 자리이고, 트레이너와의 관계는 MY 탭이 말한다. (#1021)
             const CoachInviteCard(),
-            const CoachCard(),
           ],
         ],
       ),
@@ -401,11 +367,6 @@ class _ExerciseWeekStrip extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback? onNext;
 
-  int _weekOfMonth(DateTime d) {
-    final DateTime first = DateTime(d.year, d.month);
-    final int offset = first.weekday - 1;
-    return ((d.day + offset - 1) / 7).floor() + 1;
-  }
 
   String _weekday(AppLocalizations l, int weekday) => switch (weekday) {
     1 => l.dietWeekdayMon,
@@ -420,9 +381,13 @@ class _ExerciseWeekStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 월요일에서 시작해 일요일로 끝난다 — 식단 탭과 같은 규칙이다. (#1059)
+    final DateTime monday = center.subtract(
+      Duration(days: center.weekday - DateTime.monday),
+    );
     final List<DateTime> days = List<DateTime>.generate(
       7,
-      (int i) => center.add(Duration(days: i - 3)),
+      (int i) => monday.add(Duration(days: i)),
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -438,7 +403,12 @@ class _ExerciseWeekStrip extends StatelessWidget {
                 // 좁은 화면에서 오늘 버튼을 밀어내며 넘친다(#766).
                 Flexible(
                   child: Text(
-                    l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                    weekStripLabel(
+                      context,
+                      l,
+                      selected: selected,
+                      today: today,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -610,7 +580,6 @@ class _ExerciseDayDetail extends StatelessWidget {
     final double minutes = _at(week.dailyMinutes, i);
     if (minutes <= 0) return const _ExerciseDayEmpty();
 
-    final double calories = _at(week.dailyCalories, i);
     final String dayLabel = i < week.dayLabels.length ? week.dayLabels[i] : '';
     final List<ExerciseSession> sessions = week.sessions
         .where((ExerciseSession s) => s.dayLabel == dayLabel)
@@ -648,29 +617,10 @@ class _ExerciseDayDetail extends StatelessWidget {
               color: FigmaColors.ink,
             ),
           ),
+          // 시간·칼로리 카드는 뺐다 — 아래 도넛과 기록 줄이 같은 값을 이미
+          // 말하고, 지난 날짜에서 제일 궁금한 것은 합계가 아니라 **무슨 운동을
+          // 했나** 다. (#1021)
           const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _StatCard(
-                  label: l.exStatTime,
-                  value: '${minutes.round()}',
-                  unit: l.unitMinutes,
-                  accent: true,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _StatCard(
-                  label: l.exStatCalories,
-                  value: NumberFormat('#,###').format(calories.round()),
-                  unit: l.unitKcal,
-                  accent: true,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
           _TodayDonut(segs: segs),
           if (sessions.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
@@ -687,27 +637,83 @@ class _ExerciseDayDetail extends StatelessWidget {
                     color: FigmaColors.softBlue,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          _exerciseTypeLabel(l, s.type),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              s.assignedRoutineName.isNotEmpty
+                                  ? s.assignedRoutineName
+                                  : _exerciseTypeLabel(l, s.type),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${s.minutes}${l.unitMinutes} · '
+                            '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // 무슨 운동을 했는지 — 유형만 적으면 `유산소 30분` 이
+                      // 러닝인지 자전거인지 알 수 없다. (#1021)
+                      if (s.items.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 6),
+                        for (final String item in s.items)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 5, right: 6),
+                                  child: SizedBox(
+                                    width: 4,
+                                    height: 4,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: FigmaColors.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    item,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.foreground,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                      if (s.memberNote.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 6),
+                        Text(
+                          s.memberNote,
                           style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: FigmaColors.ink,
+                            fontSize: 12.5,
+                            height: 1.35,
+                            color: AppColors.mutedForeground,
                           ),
                         ),
-                      ),
-                      Text(
-                        '${s.minutes}${l.unitMinutes} · '
-                        '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -828,115 +834,6 @@ class _WeekDay extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.unit,
-    this.goal,
-    this.accent = false,
-    this.streak = false,
-  });
-
-  final String label;
-  final String value;
-  final String unit;
-
-  /// Optional small "/목표" suffix shown after the value (e.g. "/150").
-  final String? goal;
-  final bool accent;
-  final bool streak;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bg = streak
-        ? FigmaColors.heartOrange
-        : accent
-        ? FigmaColors.primaryA(0.07)
-        : FigmaColors.statBg;
-    final Color valueColor = streak
-        ? Colors.white
-        : accent
-        ? FigmaColors.primary
-        : FigmaColors.ink;
-    final Color labelColor = streak
-        ? Colors.white.withValues(alpha: 0.8)
-        : AppColors.mutedForeground;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(16),
-        border: streak
-            ? null
-            : Border.all(
-                color: accent
-                    ? FigmaColors.primaryA(0.15)
-                    : FigmaColors.hairline,
-              ),
-        boxShadow: streak ? kCardShadow : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: labelColor,
-                  ),
-                ),
-              ),
-              if (streak) const Text('🔥', style: TextStyle(fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // Value with the unit inline to its right → one line shorter.
-          Text.rich(
-            TextSpan(
-              children: <InlineSpan>[
-                TextSpan(
-                  text: value,
-                  style: TextStyle(
-                    fontSize: accent ? 14 : 16,
-                    fontWeight: FontWeight.w800,
-                    color: valueColor,
-                    height: 1,
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                if (goal != null)
-                  TextSpan(text: ' /$goal$unit', style: kGoalSuffixStyle)
-                else
-                  TextSpan(
-                    text: ' $unit',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: streak
-                          ? Colors.white.withValues(alpha: 0.85)
-                          : accent
-                          ? FigmaColors.primary.withValues(alpha: 0.7)
-                          : AppColors.mutedForeground,
-                    ),
-                  ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A period of the "운동 현황" chart: the stacked bars, their x-labels, and
-/// which bar (if any) represents "now" for the highlight/label.
 class _ChartPeriod {
   const _ChartPeriod(this.bars, this.labels, this.todayIndex);
   final List<_Bar> bars;
@@ -1040,20 +937,18 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
         // 제목과 토글 **사이**로 가고, 둘 다 좁아지면 접힌다. `Spacer` 로 밀면
         // 정렬은 맞지만 접힐 자리가 없어 320px 에서 줄이 넘쳤다(#766).
         Row(
+          // 제목 줄의 오른쪽 끝을 테스트가 잴 수 있어야 한다 — 제목 안에도
+          // Row 가 생겨 바깥 줄을 이름으로 집는다. (#1058)
+          key: const ValueKey<String>('exercise-section-header'),
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: Text(
-                  l.exActivityTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.ink,
-                  ),
+                child: SectionTitle(
+                  // 트레이너웹 고객 탭 `운동 현황` 과 같은 아이콘이다. (#1058)
+                  icon: Icons.monitor_heart_outlined,
+                  label: l.exActivityTitle,
                 ),
               ),
             ),
@@ -1063,6 +958,33 @@ class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
                 labels: <String>[l.exToday, l.exThisWeek, l.exPeriodAll],
                 onChanged: (int i) =>
                     ref.read(exerciseActivityPeriodProvider.notifier).state = i,
+              ),
+            ),
+          ],
+        ),
+        // 며칠 연속인지는 그래프가 말하지 못한다 — 카드 머리에 한 줄로 둔다.
+        // 예전에는 위쪽 `이번 주 운동 요약` 의 주황 카드가 하던 말인데, 그
+        // 요약을 걷어내면서 이 자리로 옮겼다. (#1021)
+        const SizedBox(height: 8),
+        Row(
+          children: <Widget>[
+            const Icon(
+              Icons.local_fire_department_rounded,
+              size: 16,
+              color: FigmaColors.heartOrange,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                widget.week.streakDays > 0
+                    ? l.exStreakCheer(widget.week.streakDays)
+                    : l.exStreakStart,
+                maxLines: 2,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: FigmaColors.heartOrange,
+                ),
               ),
             ),
           ],
@@ -1384,13 +1306,23 @@ class _PeriodToggle extends StatelessWidget {
                 button: true,
                 selected: active == i,
                 child: GestureDetector(
+                  // 스트립 라벨도 `오늘` 이 될 수 있어(#1059) 글자로는 두
+                  // 자리가 갈리지 않는다 — 탭마다 이름을 준다.
+                  key: Key('exercise-period-tab-$i'),
                   onTap: () => onChanged(i),
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
+                    // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
+                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
+                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
+                    // (#1058)
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3
+                          ? 12
+                          : 18,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: active == i
@@ -1541,21 +1473,20 @@ class _ActivityChart extends StatelessWidget {
                         duration: AppMotion.chartGrow,
                         // 막대별 stagger 는 painter 안에서 곡선을 적용한다.
                         curve: Curves.linear,
-                        builder: (BuildContext context, double t) =>
-                            CustomPaint(
-                              painter: _StackedBarPainter(
-                                bars: bars,
-                                dayLabels: dayLabels,
-                                todayIndex: todayIndex,
-                                todayLabel: l.exToday,
-                                goal: dailyGoalMinutes,
-                                goalLabel:
-                                    '${l.homeGoal} '
-                                    '${l.unitMinutesValue(dailyGoalMinutes.round())}',
-                                textDirection: Directionality.of(context),
-                                progress: t,
-                              ),
-                            ),
+                        builder: (BuildContext context, double t) => CustomPaint(
+                          painter: _StackedBarPainter(
+                            bars: bars,
+                            dayLabels: dayLabels,
+                            todayIndex: todayIndex,
+                            todayLabel: l.exToday,
+                            goal: dailyGoalMinutes,
+                            goalLabel:
+                                '${l.homeGoal} '
+                                '${l.unitMinutesValue(dailyGoalMinutes.round())}',
+                            textDirection: Directionality.of(context),
+                            progress: t,
+                          ),
+                        ),
                       ),
                     ),
                     // Transparent per-bar hover regions aligned to the painter's
@@ -1708,13 +1639,12 @@ class _AllPeriodChart extends ConsumerWidget {
               ),
             ),
           ),
-          data: (List<ExerciseDayBar> days) =>
-              _AllPeriodBody(
-                key: const Key('exerciseAllPeriodChart'),
-                days: days,
-                dailyGoalMinutes: dailyGoalMinutes,
-                selection: selection,
-              ),
+          data: (List<ExerciseDayBar> days) => _AllPeriodBody(
+            key: const Key('exerciseAllPeriodChart'),
+            days: days,
+            dailyGoalMinutes: dailyGoalMinutes,
+            selection: selection,
+          ),
         );
   }
 }
@@ -1803,8 +1733,7 @@ class _AllPeriodBody extends StatelessWidget {
             onVisibleRangeChanged: selection.setVisible,
             goalOverlay: GoalLineOverlay(
               visible: dailyGoalMinutes > 0,
-              bottom:
-                  chartHeight * (dailyGoalMinutes / max).clamp(0.0, 1.0),
+              bottom: chartHeight * (dailyGoalMinutes / max).clamp(0.0, 1.0),
               label:
                   '${l.homeGoal} '
                   '${l.unitMinutesValue(dailyGoalMinutes.round())}',
@@ -1814,15 +1743,10 @@ class _AllPeriodBody extends StatelessWidget {
             calloutBuilder: (BuildContext context, int i) =>
                 const SizedBox.shrink(),
             barBuilder: (BuildContext context, int i) => _StackedBarColumn(
-              bar: _Bar(
-                days[i].cardio,
-                days[i].strength,
-                days[i].stretching,
-              ),
+              bar: _Bar(days[i].cardio, days[i].strength, days[i].stretching),
               max: max,
               height: chartHeight,
-              dimmed:
-                  selection.selected != null && selection.selected != i,
+              dimmed: selection.selected != null && selection.selected != i,
             ),
           ),
         ),
@@ -2281,6 +2205,9 @@ class _CompletedPtSessionCard extends StatelessWidget {
               ),
             ),
           ],
+          // 오늘 들은 말 다음은 "그럼 다음엔 언제 보나" 다. (#1021)
+          const SizedBox(height: 10),
+          const _NextPtBadge(),
         ],
       ),
     );
@@ -2467,10 +2394,60 @@ class _DemoPtLogCard extends StatelessWidget {
                     color: FigmaColors.ink,
                   ),
                 ),
+                const SizedBox(height: 10),
+                const _NextPtBadge(),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 다음 PT 가 언제인지 한 줄로. (#1021)
+///
+/// 오늘 받은 피드백 **바로 아래**에 둔다 — "오늘 이런 얘기를 들었다" 다음에
+/// 회원이 궁금해하는 것은 "그럼 다음엔 언제 보나" 다. 일정 탭까지 가서 찾게
+/// 하지 않는다.
+class _NextPtBadge extends ConsumerWidget {
+  const _NextPtBadge();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final DateTime now = nowKst();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final List<CoachSession> upcoming =
+        (ref.watch(coachSessionsProvider).valueOrNull ?? const <CoachSession>[])
+            .where((CoachSession s) {
+              final DateTime? date = s.date;
+              return s.isUpcoming &&
+                  date != null &&
+                  !DateTime(date.year, date.month, date.day).isBefore(today);
+            })
+            .toList(growable: false)
+          ..sort((CoachSession a, CoachSession b) {
+            final int byDate = a.date!.compareTo(b.date!);
+            return byDate != 0 ? byDate : a.time.compareTo(b.time);
+          });
+
+    final String when;
+    if (upcoming.isEmpty) {
+      when = '';
+    } else {
+      final CoachSession next = upcoming.first;
+      final String date = DateFormat.MMMEd(
+        Localizations.localeOf(context).toString(),
+      ).format(next.date!);
+      when = next.time.isEmpty ? date : '$date ${next.time}';
+    }
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: _MetaChip(
+        icon: Icons.event_available_rounded,
+        text: when.isEmpty ? l.exNextPtNone : l.exNextPtSchedule(when),
+        color: when.isEmpty ? AppColors.mutedForeground : FigmaColors.primary,
       ),
     );
   }

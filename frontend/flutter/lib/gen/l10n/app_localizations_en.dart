@@ -95,9 +95,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealChickenSalad => 'Chicken breast salad';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI analysis';
-
-  @override
   String get homeDetails => 'Details';
 
   @override
@@ -132,12 +129,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dietAmountOver(String amount) {
-    return '$amount over the goal';
+    return '$amount over';
   }
 
   @override
   String dietAmountRemaining(String amount) {
-    return '$amount remaining to the goal';
+    return '$amount to go';
   }
 
   @override
@@ -153,6 +150,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonSodium => 'Great for sodium control';
 
   @override
+  String get homeMealSourceTrainer => 'Trainer pick';
+
+  @override
+  String get homeMealSourceAi => 'AI pick';
+
+  @override
   String get homeMealTagLowSodium => 'Low sodium';
 
   @override
@@ -162,7 +165,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonGlucose => 'Helps steady blood sugar';
 
   @override
-  String get homeMealTagLowGi => 'Low GI';
+  String get homeMealTagLowSugar => 'Low sugar';
 
   @override
   String get homeMealSalmon => 'Grilled salmon + greens';
@@ -189,7 +192,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonFiber => 'Rich in dietary fiber';
 
   @override
-  String get homeMealTagHighFiber => 'High fiber';
+  String get homeMealTagLowFat => 'Low fat';
 
   @override
   String homeRecBasisSodium(int days, String sodium) {
@@ -245,11 +248,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietToday => 'Today';
-
-  @override
-  String dietWeekLabel(int month, int week) {
-    return 'Month $month, Week $week';
-  }
 
   @override
   String get dietWeekdayMon => 'Mon';
@@ -310,17 +308,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietPeriodTotal => 'Period total';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days days logged',
-      one: '1 day logged',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';
@@ -675,6 +662,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exUnitStreakDays => 'day streak';
 
   @override
+  String exStreakCheer(int days) {
+    return '$days days in a row!';
+  }
+
+  @override
+  String get exStreakStart => 'Start a streak with today\'s workout.';
+
+  @override
   String get exToday => 'Today';
 
   @override
@@ -1021,6 +1016,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get myGymDetailTooltip => 'Gym details';
+
+  @override
+  String get myTrainerDetailTooltip => 'Trainer details';
+
+  @override
   String get myGymDisconnectTooltip => 'Disconnect gym';
 
   @override
@@ -1284,6 +1285,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exConsultDataSharingNotice =>
       'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
+
+  @override
+  String get exConsultDataSharingAgree =>
+      'I have read this and agree to share my meal and workout records and body information with this trainer';
+
+  @override
+  String get exConsultDataSharingRequired =>
+      'Please agree to sharing before requesting a consultation';
+
+  @override
+  String get coachInviteConsentTitle => 'Before you connect';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return 'Once $name becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => 'Agree and connect';
 
   @override
   String get exExerciseGoal => 'Exercise Goal';
@@ -1843,6 +1863,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachRoutineDone => 'Done';
 
   @override
+  String get coachRoutineCancel => 'Cancel this workout';
+
+  @override
+  String coachRoutineCancelConfirm(String name) {
+    return 'Remove \'$name\' from the list? Anything you already logged stays.';
+  }
+
+  @override
+  String get coachRoutineCancelled => 'Workout cancelled';
+
+  @override
+  String get coachRoutineCancelFailed => 'Couldn\'t cancel the workout';
+
+  @override
   String coachRoutineMyNote(String note) {
     return 'My note: $note';
   }
@@ -1929,6 +1963,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exPtFeedbackTitle => 'Today\'s feedback';
+
+  @override
+  String exNextPtSchedule(String when) {
+    return 'Next PT · $when';
+  }
+
+  @override
+  String get exNextPtNone => 'No PT scheduled yet';
 
   @override
   String exDatedTitle(int month, int day, String title) {

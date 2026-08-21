@@ -510,6 +510,12 @@ class ConsultationRequest(Base):
     health_purpose_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     preferred_date: Mapped[str] = mapped_column(String(10))
     preferred_time_slot: Mapped[str] = mapped_column(String(20))
+    #: 회원이 데이터 공유에 동의한 시각. 트레이너가 수락해 담당이 생기면 이
+    #: 값이 담당 링크로 옮겨 간다 — 회원은 신청할 때 동의하고, 연결은 나중에
+    #: 트레이너가 만든다. (#1022)
+    data_consent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), default="pending", server_default="pending"
@@ -692,6 +698,14 @@ class TrainerClient(Base):
     goal: Mapped[str] = mapped_column(String(200), default="")
     #: 담당 관계가 살아 있는가(해제 여부). 트레이너 화면의 배지가 아니다.
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    #: 회원이 식단·운동·신체 정보 공유에 동의한 시각. (#1022)
+    #:
+    #: 트레이너는 담당이 되는 순간 회원의 건강 기록을 읽는다. 그 동의를 언제
+    #: 받았는지 답할 수 있어야 하므로 링크에 함께 남긴다. 비어 있는 링크는 이
+    #: 기능 이전에 만들어진 것이다.
+    data_consent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     #: 트레이너의 관리 상태 — True 면 화면에 '휴면'으로 보인다.
     dormant: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)

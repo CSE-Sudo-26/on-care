@@ -196,9 +196,12 @@ class _CalorieRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 정상은 초록이다 (#1019). 바로 옆 나트륨·당류 카드가 이미 초록으로
+    // 말하는데 여기만 파랑이면, 파랑이 "정상" 인지 "다른 종류의 지표" 인지 알 수
+    // 없다. 회원 앱 식단 탭도 같은 규칙으로 맞췄다.
     final Color color = calories.isOverGoal
-        ? AppColors.overTarget
-        : AppColors.primary;
+        ? AppColors.statusOver
+        : AppColors.statusNormal;
     return Row(
       children: <Widget>[
         Expanded(
@@ -369,8 +372,8 @@ class _MacroItem extends StatelessWidget {
         _Bar(
           progress: item.ratio,
           color: item.isOverGoal
-              ? AppColors.overTarget
-              : AppColors.primary.withValues(alpha: 0.65),
+              ? AppColors.statusOver
+              : AppColors.statusNormal.withValues(alpha: 0.65),
         ),
       ],
     );
@@ -460,8 +463,8 @@ class _StatusCard extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     // 나트륨·당류는 같은 성격의 지표다. "정상" 을 서로 다른 색으로 말하지 않는다.
     final Color status = item.isOverGoal
-        ? AppColors.overTarget
-        : AppColors.userSugarGreen;
+        ? AppColors.statusOver
+        : AppColors.statusNormal;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -469,8 +472,8 @@ class _StatusCard extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.card),
         border: Border.all(
           color: item.isOverGoal
-              ? AppColors.overTarget.withValues(alpha: 0.32)
-              : AppColors.primary.withValues(alpha: 0.18),
+              ? AppColors.statusOver.withValues(alpha: 0.32)
+              : AppColors.statusNormal.withValues(alpha: 0.18),
         ),
         boxShadow: kCardShadow,
       ),

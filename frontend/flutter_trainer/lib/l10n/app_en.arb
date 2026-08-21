@@ -685,6 +685,17 @@
       }
     }
   },
+  "schedBlockTime": "{range} ({duration})",
+  "@schedBlockTime": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "schedEmptyWeek": "Nothing scheduled this week.",
   "schedNewClientTag": "{name} (new)",
   "@schedNewClientTag": {

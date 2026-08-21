@@ -195,8 +195,12 @@ void main() {
       expect(find.textContaining('17.8'), findsOneWidget);
       expect(find.text('목표 초과'), findsOneWidget);
       expect(find.text('정상'), findsOneWidget);
-      expect(find.text('목표보다 1,428mg 많아요'), findsOneWidget);
-      expect(find.text('목표까지 32.2g 남았어요'), findsOneWidget);
+      // 목표 수치는 바로 위 줄에 이미 있다 — `목표보다`·`목표까지` 를 덧붙이면
+      // 같은 말을 두 번 한다. (#1054)
+      expect(find.text('1,428mg 많아요'), findsOneWidget);
+      expect(find.text('32.2g 남았어요'), findsOneWidget);
+      expect(find.textContaining('목표보다'), findsNothing);
+      expect(find.textContaining('목표까지'), findsNothing);
       expect(
         find.byKey(const Key('nutrition-status-vertical-progress-나트륨')),
         findsOneWidget,
@@ -295,7 +299,7 @@ void main() {
       expect(progressColors.last.color, expectedColor);
     }
 
-    final Color macroProgressColor = FigmaColors.primaryA(0.65);
+    final Color macroProgressColor = FigmaColors.statusNormal.withValues(alpha: 0.65);
     expectMacroProgressColor('탄수화물', macroProgressColor);
     expectMacroProgressColor('단백질', macroProgressColor);
     expectMacroProgressColor('지방', macroProgressColor);
@@ -481,7 +485,7 @@ void main() {
 
   testWidgets('목표를 넘기면 달성률이 100% 를 넘어 적힌다 (#846)', (WidgetTester tester) async {
     // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다 — 여기가 100% 로 적히면
-    // 같은 카드의 "목표보다 500 kcal 많아요" 와 어긋난다.
+    // 같은 카드의 "500 kcal 많아요" 와 어긋난다.
     const DietDay day = DietDay(
       entries: <DietEntry>[
         DietEntry(
