@@ -236,7 +236,8 @@ void main() {
       final calorieProgress = tester.widget<CircularProgressIndicator>(
         find.byKey(const Key('client-nutrition-calorie-progress')),
       );
-      expect(calorieProgress.valueColor?.value, AppColors.primary);
+      // 정상은 초록이다 (#1019) — 나트륨·당류 카드와 같은 색.
+      expect(calorieProgress.valueColor?.value, AppColors.statusNormal);
       for (final String label in <String>['탄수화물', '단백질', '지방']) {
         expect(
           find.byKey(Key('client-nutrition-macro-$label')),
@@ -252,10 +253,12 @@ void main() {
                 ),
               )
               .any(
-                (box) => box.color == AppColors.primary.withValues(alpha: 0.65),
+                (box) =>
+                    box.color ==
+                    AppColors.statusNormal.withValues(alpha: 0.65),
               ),
           isTrue,
-          reason: '$label 그래프가 기존 트레이너 앱 색상을 써야 합니다.',
+          reason: '$label 그래프가 정상 초록을 써야 합니다.',
         );
       }
       Finder inMacro(String label, String text) => find.descendant(
