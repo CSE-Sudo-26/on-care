@@ -84,7 +84,9 @@ void main() {
 
     // 화면에 없는 일정은 없는 일정과 같다.
     expect(gutterLabel('06:00'), findsOneWidget);
-    expect(find.text('06:00\u201307:00'), findsOneWidget);
+    // 같은 시각이 상세 카드에도 적힐 수 있다 — 여기서 재는 것은 격자가 그
+    // 시각까지 넓어졌는가다.
+    expect(find.text('06:00\u201307:00'), findsWidgets);
   });
 
   testWidgets('높이가 넉넉하면 스크롤 없이 하루가 통째로 보인다', (tester) async {
