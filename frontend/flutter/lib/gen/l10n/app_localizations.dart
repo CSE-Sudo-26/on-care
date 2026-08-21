@@ -266,12 +266,6 @@ abstract class AppLocalizations {
   /// **'Chicken breast salad'**
   String get homeMealChickenSalad;
 
-  /// No description provided for @homeAiAnalysisPill.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI analysis'**
-  String get homeAiAnalysisPill;
-
   /// No description provided for @homeDetails.
   ///
   /// In en, this message translates to:
