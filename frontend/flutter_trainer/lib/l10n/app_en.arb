@@ -684,7 +684,7 @@
       }
     }
   },
-  "schedBlockTime": "{range} {duration}",
+  "schedBlockTime": "{range} ({duration})",
   "@schedBlockTime": {
     "placeholders": {
       "range": {
@@ -695,12 +695,6 @@
       }
     }
   },
-  "schedBlockWho": "{name} {type}",
-  "@schedBlockWho": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
       "type": {
         "type": "String"
       }

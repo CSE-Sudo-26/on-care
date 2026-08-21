@@ -38,13 +38,13 @@ void main() {
     ),
   );
 
-  testWidgets('창이 07:30 에서 시작해 23:00 에서 끝난다', (tester) async {
+  testWidgets('창이 07:30 에서 시작해 23:30 에서 끝난다', (tester) async {
     await openSchedule(tester, const Size(1440, 1200));
 
     // 07:00 은 창 밖이다 — 라벨을 올릴 자리가 없어 잘리느니 넣지 않는다.
     expect(gutterLabel('07:00'), findsNothing);
     expect(gutterLabel('08:00'), findsOneWidget);
-    expect(gutterLabel('22:00'), findsOneWidget);
+    expect(gutterLabel('23:00'), findsOneWidget);
   });
 
   testWidgets('시간축의 첫·마지막 라벨이 카드 안에 온전히 들어온다', (tester) async {
@@ -64,7 +64,7 @@ void main() {
       const Offset(0, -2000),
     );
     await tester.pump();
-    final Rect last = tester.getRect(gutterLabel('22:00'));
+    final Rect last = tester.getRect(gutterLabel('23:00'));
     expect(last.top, greaterThanOrEqualTo(scroll().top - 0.5));
     expect(last.bottom, lessThanOrEqualTo(scroll().bottom + 0.5));
   });
@@ -84,7 +84,7 @@ void main() {
 
     // 화면에 없는 일정은 없는 일정과 같다.
     expect(gutterLabel('06:00'), findsOneWidget);
-    expect(find.text('6\u20137 60분'), findsOneWidget);
+    expect(find.text('06:00\u201307:00 (60분)'), findsOneWidget);
   });
 
   testWidgets('높이가 넉넉하면 스크롤 없이 하루가 통째로 보인다', (tester) async {
@@ -96,8 +96,8 @@ void main() {
       reason: '남는 높이에 맞춰 칸이 줄어 스크롤이 사라져야 한다',
     );
     // 그래도 블록은 시각과 이름 두 줄을 지킨다.
-    expect(find.text('10\u201311 60분'), findsWidgets);
-    expect(find.text('김민수 1:1 PT'), findsWidgets);
+    expect(find.text('10:00\u201311:00 (60분)'), findsWidgets);
+    expect(find.text('김민수'), findsWidgets);
   });
 
   testWidgets('최소 높이로도 모자라면 스크롤로 나머지를 본다', (tester) async {
@@ -108,6 +108,6 @@ void main() {
       greaterThan(0),
       reason: '칸을 더 줄이면 이름 줄이 사라진다 — 그 아래로는 스크롤한다',
     );
-    expect(find.text('김민수 1:1 PT'), findsWidgets);
+    expect(find.text('김민수'), findsWidgets);
   });
 }
