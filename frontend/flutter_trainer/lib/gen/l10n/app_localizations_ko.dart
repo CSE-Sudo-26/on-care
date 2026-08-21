@@ -1463,9 +1463,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
-
-  @override
   String get slotPastTime => '현재보다 이후 시간만 예약 슬롯으로 만들 수 있어요.';
 
   @override
@@ -1476,14 +1473,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get slotStartTime => '시작 시간';
-
-  @override
-  String get slotCapacity => '정원';
-
-  @override
-  String slotBookedNow(int count) {
-    return '현재 예약 $count명';
-  }
 
   @override
   String get slotUpdated => '예약 슬롯을 수정했습니다.';

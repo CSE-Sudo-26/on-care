@@ -792,20 +792,10 @@
       }
     }
   },
-  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
   "slotEditTitle": "Edit booking slot",
   "slotStartTime": "Start time",
-  "slotCapacity": "Capacity",
-  "slotBookedNow": "{count} booked",
-  "@slotBookedNow": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
   "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
