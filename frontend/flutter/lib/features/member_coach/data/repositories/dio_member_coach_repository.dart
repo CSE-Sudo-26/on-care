@@ -66,6 +66,15 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   }
 
   @override
+  Future<void> deleteRoutine(String routineId) async {
+    try {
+      await _dio.delete<void>('/me/coach/routines/$routineId');
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
   Future<List<CoachSession>> fetchSessions() =>
       _getList('/me/coach/sessions', coachSessionFromJson);
 

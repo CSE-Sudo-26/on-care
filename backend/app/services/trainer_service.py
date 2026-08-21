@@ -1008,6 +1008,37 @@ def delete_routine(
     db.commit()
 
 
+class RoutineNotCancellable(Exception):
+    """담당 트레이너가 배정한 루틴을 회원이 직접 지우려 했다. (#1020)"""
+
+
+def delete_own_routine(db: Session, member_id: str, routine_id: str) -> None:
+    """회원이 자기 개인 운동을 지운다. **담당 트레이너가 없을 때만.** (#1020)
+
+    트레이너가 배정한 것을 회원이 조용히 없애면, 다음 상담에서 둘이 서로 다른
+    기록을 보게 된다. 담당이 있는 회원에게는 취소가 트레이너의 일이다.
+
+    담당 없이 AI 가 직접 추천한 개인운동(#782)은 승인할 사람이 없으므로 회원이
+    스스로 물릴 수 있어야 한다 — 그러지 않으면 한 번 뜬 추천을 지울 방법이 없다.
+
+    이미 수행한 기록은 남는다. 지우는 것은 **배정**이지 한 일이 아니다.
+    """
+    if get_member_trainer_id(db, member_id) is not None:
+        raise RoutineNotCancellable(
+            "담당 트레이너가 배정한 개인운동은 회원이 직접 취소할 수 없습니다."
+        )
+    routine = db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.id == routine_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    if routine is None:
+        raise RoutineNotFound("루틴을 찾을 수 없습니다.")
+    db.delete(routine)
+    db.commit()
+
+
 def _routine_out(
     rt: TrainerRoutine,
     completion: ExerciseSession | None = None,

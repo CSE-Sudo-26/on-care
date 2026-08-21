@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 /// 시드가 읽는 것과 같은 픽스처. 사용자 앱 테스트도 같은 파일을 본다 — 두 앱의
 /// 단정이 같은 원본을 가리켜야 "같은 날짜, 같은 숫자"가 실제로 지켜진다(#757).
@@ -480,6 +481,36 @@ void main() {
           entry.value.endsWith(' 전'),
           isFalse,
           reason: '${entry.key}: ${entry.value}',
+        );
+      }
+    });
+
+    test('트레이너가 마지막으로 말한 스레드는 안읽음이 없다', () async {
+      // 예전에는 `threadHandled: true` 를 고객마다 손으로 적어 뒀다. 대화를
+      // 손볼 때 한쪽만 바뀌어 이지수·박성호는 트레이너가 마지막으로 답장해
+      // 놓고도 안읽음 배지를 달고 있었다 — 아무것도 기다리는 게 없는데
+      // 목록이 "답장하세요" 라고 말했다.
+      await seedIfEmpty(db);
+
+      final unread = await DriftChatRepository(db).watchUnreadCounts().first;
+      final clients = await db.select(db.trainerClients).get();
+      expect(clients, isNotEmpty);
+
+      for (final client in clients) {
+        final thread =
+            await (db.select(db.clientChatMessages)
+                  ..where((t) => t.clientId.equals(client.id))
+                  ..orderBy(<OrderingTerm Function($ClientChatMessagesTable)>[
+                    (t) => OrderingTerm(expression: t.createdAt),
+                  ]))
+                .get();
+        final answered = thread.isEmpty || thread.last.sender == 'trainer';
+        expect(
+          (unread[client.id] ?? 0) == 0,
+          answered,
+          reason:
+              '${client.name}(${client.id}): 마지막 발신자 '
+              '${thread.isEmpty ? '(없음)' : thread.last.sender}',
         );
       }
     });

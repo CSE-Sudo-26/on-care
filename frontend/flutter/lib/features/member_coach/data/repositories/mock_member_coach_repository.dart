@@ -208,6 +208,14 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     return completed;
   }
 
+  @override
+  Future<void> deleteRoutine(String routineId) async {
+    // 데모에는 담당 트레이너가 있다 — 실서버라면 403 이다. 목업에서까지 막으면
+    // 데모에서 이 동작을 보여 줄 수 없으므로 목록에서만 지운다. 화면은 담당이
+    // 없을 때만 이 버튼을 그린다. (#1020)
+    _routines.removeWhere((CoachRoutine routine) => routine.id == routineId);
+  }
+
   /// 데모에는 트레이너가 잡은 일정이 없다. (#490)
   ///
   /// 시드로 만들어 넣지 않는 이유: 데모 홈에 없던 카드가 생겨 화면이 지금과

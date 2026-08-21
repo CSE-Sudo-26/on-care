@@ -156,3 +156,41 @@ def test_inactive_link_member_has_no_current_coach(client):
     assert client.post(
         "/v1/me/coach/chat", json={"text": "안녕하세요"}, headers=_h(tok)
     ).status_code == 404
+
+
+def test_member_with_a_trainer_cannot_cancel_an_assigned_routine(client):
+    """담당이 있으면 취소는 트레이너의 일이다 — 404 가 아니라 403. (#1020)
+
+    루틴은 분명히 있고 회원 화면에도 보인다. 없는 척하면 앱이 목록에서 사라진
+    줄 알고 잘못 갱신한다.
+    """
+    member = _h(_member_tok(client))
+    routines = client.get("/v1/me/coach/routines", headers=member).json()
+    assert routines, "시드 회원에게 배정된 루틴이 있어야 한다"
+
+    routine_id = routines[0]["id"]
+    refused = client.delete(f"/v1/me/coach/routines/{routine_id}", headers=member)
+    assert refused.status_code == 403, refused.text
+
+    still_there = client.get("/v1/me/coach/routines", headers=member).json()
+    assert routine_id in [row["id"] for row in still_there]
+
+
+def test_cancelling_an_unknown_routine_is_404(client):
+    """담당이 없는 회원이 없는 루틴을 지우려 하면 404. (#1020)"""
+    solo = client.post(
+        "/v1/auth/register",
+        json={
+            "email": f"solo-{uuid4().hex[:8]}@oncare.com",
+            "password": "oncare123",
+            "name": "혼자",
+        },
+    )
+    assert solo.status_code in (200, 201), solo.text
+    token = client.post(
+        "/v1/auth/login",
+        data={"username": solo.json()["email"], "password": "oncare123"},
+    ).json()["access_token"]
+
+    missing = client.delete("/v1/me/coach/routines/nope", headers=_h(token))
+    assert missing.status_code == 404, missing.text
