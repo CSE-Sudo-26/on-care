@@ -106,8 +106,15 @@ void main() {
         ),
         findsOneWidget,
       );
+      // 박성호는 트레이너가 마지막으로 답장해 두었다 — 기다리는 것이
+      // 없으므로 안읽음 배지도 없다. 배지는 회원이 마지막으로 말한
+      // 스레드에만 붙는다.
       expect(
         find.byKey(const ValueKey<String>('messages-unread-seed-client-3')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('messages-unread-seed-client-8')),
         findsOneWidget,
       );
       // 목록은 어느 대화를 열까를 정하는 자리다 — 이름 · 시각 · 마지막

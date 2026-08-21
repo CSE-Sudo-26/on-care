@@ -277,7 +277,19 @@ Future<void> seedIfEmpty(
     // The marker is the newest client message's rowid, exactly what
     // `markThreadRead` writes — so opening the thread later is a no-op
     // rather than a second, different value.
-    for (final client in _clients.where((c) => c.threadHandled)) {
+    //
+    // **어느 스레드가 답장된 상태인가는 스레드가 정한다.** 예전에는
+    // `threadHandled: true` 를 고객마다 손으로 적어 뒀는데, 대화를 손볼 때
+    // 한쪽만 바뀌어 이지수·박성호는 트레이너가 마지막으로 답장해 놓고도
+    // 안읽음 배지를 달고 있었다 — 아무것도 기다리는 게 없는데 목록이
+    // "답장하세요" 라고 말했다.
+    //
+    // 실 API 도 같은 뜻이다: 트레이너는 채팅을 **열어야** 답장할 수 있고,
+    // 여는 순간 `read_at` 이 찍힌다. 다만 실 API 에는 코칭·리포트 탭에서
+    // 채팅을 열지 않고 루틴·PDF 를 보내는 길이 있어 "마지막이 트레이너" 가
+    // 곧 "읽었다" 는 아니다. 시드에는 그런 경로가 없으므로 여기서는 스레드의
+    // 마지막 발신자로 판정한다.
+    for (final client in _clients.where(_threadAnswered)) {
       final id = 'seed-client-${client.id}';
       final row = await db
           .customSelect(
@@ -740,7 +752,6 @@ class _Client {
     required this.aiRoutine,
     required this.history,
     required this.chat,
-    this.threadHandled = false,
   });
   final int id;
   final String name;
@@ -769,14 +780,6 @@ class _Client {
   final List<_Routine> aiRoutine;
   final List<_History> history;
   final List<_Chat> chat;
-
-  /// Whether the demo starts with this thread already answered and read.
-  ///
-  /// Unread is "client messages with no read marker", so a thread that
-  /// merely ends with a trainer message still counts every reply the
-  /// member sent. Without this flag the demo opens with all three members
-  /// waiting, which is not the state we want to show.
-  final bool threadHandled;
 }
 
 /// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
@@ -791,6 +794,18 @@ String _lastChatText(List<_Chat> chat) {
     if (chat[i].dayIndex >= chat[last].dayIndex) last = i;
   }
   return chat[last].text;
+}
+
+/// 시드 스레드가 **답장된 상태로** 시작하는가 — 마지막 말이 트레이너 것이면.
+///
+/// 순서 규칙은 [_lastChatText] 와 같다.
+bool _threadAnswered(_Client client) {
+  if (client.chat.isEmpty) return false;
+  int last = 0;
+  for (var i = 1; i < client.chat.length; i++) {
+    if (client.chat[i].dayIndex >= client.chat[last].dayIndex) last = i;
+  }
+  return client.chat[last].sender == 'trainer';
 }
 
 class _Slot {
