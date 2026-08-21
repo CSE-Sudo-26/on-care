@@ -8,7 +8,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
-    show prioritizeClients;
+    show prioritizeClients, sortByLatestMessage;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
@@ -638,6 +638,24 @@ final prioritizedClientsProvider = Provider<AsyncValue<List<TrainerClient>>>((
       .watch(clientsProvider)
       .whenData((clients) => prioritizeClients(clients, lastChatAt: lastChat));
 });
+
+/// 마지막 메시지가 새로운 순으로 정렬된 로스터 — 메시지 탭 목록이 쓴다.
+///
+/// [prioritizedClientsProvider] 와 나뉘어 있는 이유: 두 화면이 서로 다른
+/// 질문에 답한다. 고객 탭은 "누구를 먼저 챙길까"(주의 신호 우선), 메시지
+/// 탭은 "방금 무슨 말이 오갔나"(최신순)다. 한 provider 를 돌려 쓰면 둘 중
+/// 하나는 자기 화면과 맞지 않는 차례를 보게 된다.
+final recentlyMessagedClientsProvider =
+    Provider<AsyncValue<List<TrainerClient>>>((ref) {
+      final lastChat =
+          ref.watch(lastChatAtProvider).valueOrNull ??
+          const <String, DateTime>{};
+      return ref
+          .watch(clientsProvider)
+          .whenData(
+            (clients) => sortByLatestMessage(clients, lastChatAt: lastChat),
+          );
+    });
 
 /// Streams the last chat time per client (priority tiebreak).
 final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {

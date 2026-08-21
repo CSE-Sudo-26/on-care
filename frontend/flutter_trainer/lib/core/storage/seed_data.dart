@@ -269,8 +269,22 @@ Future<void> seedIfEmpty(
               // reply from a previous day — always sorts after the seed.
               // dayIndex 는 여러 날에 걸친 스레드를 실제로 날짜가 다른
               // 시각으로 만든다 — 라벨만 갈라 두면 화면이 하루로 묶는다.
+              //
+              // 스레드**끼리의** 차례는 `daysAgo` 가 정한다. 예전에는
+              // 이 값이 빠져 있어, 목록을 최신순으로 세우면 화면에 뜬
+              // 시각(`오늘 18:18` · `2026-07-30`)과 순서가 어긋났다 —
+              // 3주 전 대화가 오늘 대화보다 위에 설 수 있었다.
+              // 실제 날짜로 옮기지 않고 epoch 안에서 미는 이유는, 런타임
+              // 답장(지금 시각)이 시드 뒤에 온다는 보장을 깨지 않기
+              // 위해서다.
               createdAt: chatEpoch.add(
-                Duration(days: client.chat[i].dayIndex, minutes: i),
+                Duration(
+                  days:
+                      _chatSpreadDays -
+                      client.daysAgo +
+                      client.chat[i].dayIndex,
+                  minutes: i,
+                ),
               ),
             ),
         ]);
@@ -810,6 +824,11 @@ _Chat _lastChat(List<_Chat> chat) {
 /// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
 String _lastChatText(List<_Chat> chat) =>
     chat.isEmpty ? '' : _lastChat(chat).text;
+
+/// 시드 대화를 epoch 위에 펼칠 폭(일). `daysAgo` 를 여기서 빼서 자리를
+/// 잡으므로 가장 오래된 스레드(`daysAgo` 21)보다 넉넉해야 한다 — 음수가 되면
+/// epoch 앞으로 넘어가 스레드 차례가 뒤집힌다.
+const int _chatSpreadDays = 40;
 
 /// 목록 오른쪽 위에 뜨는 시각 — 카카오톡과 같은 규칙이다.
 ///

@@ -81,7 +81,10 @@ void main() {
   testWidgets('conversation list keeps unread and status information', (
     tester,
   ) async {
-    await withWideSurface(tester, () async {
+    // 목록이 최신순이라 박성호는 아래쪽에 선다. 기본 높이로는 지연 생성
+    // 목록이 그를 만들지 않아, `findsNothing` 단언이 화면 밖이라는 이유로
+    // 통과해 버린다 - 목록 전체가 한 화면에 들어오는 높이로 띄운다.
+    await withWideSurface(tester, size: const Size(1440, 2200), () async {
       // 박성호의 배지는 요일에 따라 뒤집힌다. 시드가 주간 계열을 오늘까지만
       // 채우므로, 화요일에는 그 주에 기록된 날이 33% 하루뿐이라 이행률 저조가
       // 나트륨 초과보다 급한 신호가 된다. 주가 끝난 일요일로 고정해 어느 날
@@ -274,6 +277,43 @@ void main() {
       expect(bubbleWidth, lessThan(threadWidth * 0.75));
       // 그렇다고 쓸데없이 좁지도 않다 — 넓은 화면에서는 상한까지 쓴다.
       expect(bubbleWidth, greaterThan(threadWidth * 0.5));
+    });
+  });
+
+  testWidgets('전체는 마지막 말이 새로운 순, 관리 필요만 주의 우선', (tester) async {
+    // 두 대화의 세로 자리를 재는 단언이라 둘 다 그려져 있어야 한다 -
+    // 지연 생성 목록이 화면 밖 대화를 만들지 않으므로 목록 전체가 들어오는
+    // 높이로 띄운다.
+    await withWideSurface(tester, size: const Size(1440, 2200), () async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        seedClock: DateTime(2026, 8, 16), // 일요일 — 배지 우선순위 고정
+      );
+
+      double topOf(String id) => tester
+          .getTopLeft(find.byKey(ValueKey<String>('messages-conversation-$id')))
+          .dy;
+
+      // `전체` 는 대화 목록이다 — 방금 말이 오간 순서로 선다. 노태강은
+      // 오늘, 박성호는 사흘 전에 마지막 말이 오갔다. 예전에는 어느
+      // 필터에서든 나트륨이 넘친 박성호가 위로 올라와, 방금 답장이 온
+      // 고객이 목록 아래에 묻혔다.
+      await goTo(tester, AppRoutes.messages);
+      expect(topOf('seed-client-13'), lessThan(topOf('seed-client-3')));
+
+      // `관리 필요` 는 챙길 사람을 고르는 자리다 — 주의 신호가 앞선다.
+      // 노태강은 신호가 없어 목록에서 아예 빠진다.
+      await goTo(tester, AppRoutes.messagesFor(null, filter: 'attention'));
+      expect(
+        find.byKey(
+          const ValueKey<String>('messages-conversation-seed-client-13'),
+        ),
+        findsNothing,
+      );
+      // 나트륨이 넘친 박성호는 이행률만 낮은 고객보다 위다 — 사흘 전
+      // 대화인데도. 최신순이었다면 반대로 섰다.
+      expect(topOf('seed-client-3'), lessThan(topOf('seed-client-12')));
     });
   });
 
