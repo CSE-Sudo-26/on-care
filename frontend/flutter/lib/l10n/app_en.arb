@@ -135,17 +135,6 @@
   },
   "dietTitle": "Diet",
   "dietToday": "Today",
-  "dietWeekLabel": "Month {month}, Week {week}",
-  "@dietWeekLabel": {
-    "placeholders": {
-      "month": {
-        "type": "int"
-      },
-      "week": {
-        "type": "int"
-      }
-    }
-  },
   "dietWeekdayMon": "Mon",
   "dietWeekdayTue": "Tue",
   "dietWeekdayWed": "Wed",

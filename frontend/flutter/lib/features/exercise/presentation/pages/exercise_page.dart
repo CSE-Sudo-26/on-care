@@ -15,6 +15,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
+import 'package:oncare/features/diet/presentation/widgets/week_strip_label.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -366,11 +367,6 @@ class _ExerciseWeekStrip extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback? onNext;
 
-  int _weekOfMonth(DateTime d) {
-    final DateTime first = DateTime(d.year, d.month);
-    final int offset = first.weekday - 1;
-    return ((d.day + offset - 1) / 7).floor() + 1;
-  }
 
   String _weekday(AppLocalizations l, int weekday) => switch (weekday) {
     1 => l.dietWeekdayMon,
@@ -385,9 +381,13 @@ class _ExerciseWeekStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 월요일에서 시작해 일요일로 끝난다 — 식단 탭과 같은 규칙이다. (#1059)
+    final DateTime monday = center.subtract(
+      Duration(days: center.weekday - DateTime.monday),
+    );
     final List<DateTime> days = List<DateTime>.generate(
       7,
-      (int i) => center.add(Duration(days: i - 3)),
+      (int i) => monday.add(Duration(days: i)),
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -403,7 +403,12 @@ class _ExerciseWeekStrip extends StatelessWidget {
                 // 좁은 화면에서 오늘 버튼을 밀어내며 넘친다(#766).
                 Flexible(
                   child: Text(
-                    l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                    weekStripLabel(
+                      context,
+                      l,
+                      selected: selected,
+                      today: today,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -1301,6 +1306,9 @@ class _PeriodToggle extends StatelessWidget {
                 button: true,
                 selected: active == i,
                 child: GestureDetector(
+                  // 스트립 라벨도 `오늘` 이 될 수 있어(#1059) 글자로는 두
+                  // 자리가 갈리지 않는다 — 탭마다 이름을 준다.
+                  key: Key('exercise-period-tab-$i'),
                   onTap: () => onChanged(i),
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(

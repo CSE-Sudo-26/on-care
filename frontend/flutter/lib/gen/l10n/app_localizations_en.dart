@@ -250,11 +250,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietToday => 'Today';
 
   @override
-  String dietWeekLabel(int month, int week) {
-    return 'Month $month, Week $week';
-  }
-
-  @override
   String get dietWeekdayMon => 'Mon';
 
   @override
