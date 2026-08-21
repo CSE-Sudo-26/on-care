@@ -107,9 +107,10 @@ class _ChevronButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  /// 원의 지름. 손가락이 닿는 최소치(44)보다 작지만, 날짜 행이 한 줄에 들어가야
-  /// 해서 이 값이 상한이다. 대신 [_tapPadding] 으로 탭 영역을 넓혀 둔다.
-  static const double _diameter = 30;
+  /// 원의 지름. 회원 앱 식단 탭의 날짜 화살표와 같은 값이다 — 두 앱이 같은
+  /// 동작에 다른 크기를 쓸 이유가 없다. 손가락이 닿는 최소치(44)보다 작으므로
+  /// [_tapPadding] 으로 탭 영역을 넓혀 둔다.
+  static const double _diameter = 28;
 
   /// 원 바깥으로 넓히는 탭 영역. 보이는 원은 30 이지만 실제로 눌리는 범위는
   /// 44 다 — 작은 원을 정확히 겨누게 만들 이유가 없다.
@@ -120,6 +121,10 @@ class _ChevronButton extends StatelessWidget {
     // 색을 아이콘이 아니라 **원 영역**에 준다. 배경 없는 회색 아이콘이던 때에는
     // 어디까지가 눌리는 범위인지 형태로 알 수 없었고, 주변 글씨와 같은 계열이라
     // "누르는 것" 으로 읽히지도 않았다(#1009).
+    //
+    // 표현은 회원 앱 식단 탭의 날짜 화살표를 그대로 따른다 — 연한 남색 원에
+    // 남색 화살표다. 채운 남색에 흰 화살표를 쓰면 그 줄에서 가장 무거운 요소가
+    // 되어, 정작 읽어야 할 날짜보다 먼저 눈에 들어온다.
     //
     // 주 이동에는 제한이 없다 — 앞뒤 어느 쪽으로든 갈 수 있어야 하므로 비활성
     // 상태를 만들지 않는다.
@@ -141,9 +146,9 @@ class _ChevronButton extends StatelessWidget {
               alignment: Alignment.center,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary,
+                color: AppColors.accentSurface,
               ),
-              child: Icon(icon, size: 18, color: AppColors.primaryForeground),
+              child: Icon(icon, size: 16, color: AppColors.primary),
             ),
           ),
         ),
