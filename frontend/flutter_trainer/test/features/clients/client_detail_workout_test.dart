@@ -10,11 +10,6 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -111,60 +106,6 @@ class _FeedbackRepository extends DriftClientRepository {
       assignedRoutineId: entry.assignedRoutineId,
     );
     return entry;
-  }
-}
-
-class _AssignedFailsOnceRepository extends MockTrainerRoutineRepository {
-  int watchAssignedCalls = 0;
-
-  @override
-  Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) {
-    watchAssignedCalls++;
-    if (watchAssignedCalls == 1) {
-      return Stream<List<AssignedRoutine>>.error(
-        Exception('routine transport detail'),
-      );
-    }
-    return Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[
-      AssignedRoutine(
-        id: 'routine-recovered',
-        name: '복구 루틴',
-        minutes: 40,
-        type: '근력',
-        reason: '재시도 검증',
-        source: 'trainer',
-      ),
-    ]);
-  }
-}
-
-class _SessionsFailsOnceRepository extends DriftScheduleRepository {
-  _SessionsFailsOnceRepository(super.db);
-
-  int watchSessionCalls = 0;
-
-  @override
-  Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client) {
-    watchSessionCalls++;
-    if (watchSessionCalls == 1) {
-      return Stream<List<ScheduleSession>>.error(
-        Exception('schedule transport detail'),
-      );
-    }
-    return Stream<List<ScheduleSession>>.value(const <ScheduleSession>[
-      ScheduleSession(
-        id: 'session-recovered',
-        date: '2026-08-11',
-        time: '10:00',
-        clientId: 'seed-client-1',
-        clientName: '김민수',
-        type: '복구 PT',
-        durationMinutes: 50,
-        status: ScheduleStatus.upcoming,
-        note: '',
-        program: <ProgramItem>[],
-      ),
-    ]);
   }
 }
 
@@ -291,15 +232,7 @@ void main() {
     testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {
       await openWorkout(tester, '김민수');
 
-      // The tab opens on the routines it absorbed from the old 루틴 tab;
-      // 이번 주는 운동 현황 카드 하나로만 요약한다 — 같은 주를 완료율 카드로
-      // 한 번 더 세던 자리는 걷어냈다.
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
+      // 운동현황이 화면 맨 위다(#1025) — 스크롤 없이 바로 보인다.
       expect(find.text('운동 현황'), findsOneWidget);
       expect(find.text('이번 주 완료율'), findsNothing);
 
@@ -311,6 +244,8 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.text(_todayHistoryLabel()), findsOneWidget);
+      // 완료 배지 — 원형 게이지가 아니라 아이콘+글자 배지로 완료율을
+      // 말한다(#1025).
       expect(find.text('100%'), findsWidgets);
       await tester.scrollUntilVisible(
         find.text('트레이너 메모'),
@@ -331,12 +266,11 @@ void main() {
       expect(find.text(skipped), findsOneWidget);
     });
 
-    testWidgets('a failed 운동 기록 load does not take the routines with it', (
+    testWidgets('a failed 운동 기록 load does not take 운동현황 with it', (
       tester,
     ) async {
-      // 배정된 루틴 and the PT sessions used to be their own tab, so they
-      // stayed reachable when the history endpoint was down. Gating the
-      // whole list on the history provider silently undid that.
+      // 운동현황(ClientExerciseStatusCard) 은 기록 목록과 다른 provider를
+      // 쓴다 — /history 가 실패해도 위 운동현황은 그대로 보여야 한다.
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -349,15 +283,7 @@ void main() {
         ],
       );
 
-      // The sections above the history still rendered — they are the
-      // first thing on the tab, so the failure did not blank it.
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      expect(find.text('PT 프로그램 이력'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
+      // 운동현황은 화면 맨 위라 실패해도 바로 보인다.
       expect(find.text('운동 현황'), findsOneWidget);
       // The failure is reported in place, where the history would be.
       await tester.scrollUntilVisible(
@@ -388,83 +314,6 @@ void main() {
               as _HistoryFailsOnceRepository;
       expect(repository.watchHistoryCalls, 2);
       expect(find.text(_todayHistoryLabel()), findsOneWidget);
-    });
-
-    testWidgets('배정 루틴 실패만 재시도해 다른 영역을 보존한다', (tester) async {
-      final repository = _AssignedFailsOnceRepository();
-      await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
-        extraOverrides: <Override>[
-          trainerRoutineRepositoryProvider.overrideWithValue(repository),
-        ],
-      );
-
-      expect(find.text('루틴을 불러오지 못했어요'), findsOneWidget);
-      expect(find.text('PT 프로그램 이력'), findsOneWidget);
-      await tester.tap(
-        find.byKey(
-          const ValueKey<String>('assigned-routines-retry-seed-client-1'),
-        ),
-      );
-      await settle(tester);
-
-      expect(repository.watchAssignedCalls, 2);
-      expect(find.text('복구 루틴'), findsOneWidget);
-      expect(find.text('PT 프로그램 이력'), findsOneWidget);
-    });
-
-    testWidgets('PT 일정 실패만 재시도해 다른 영역을 보존한다', (tester) async {
-      final container = await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
-        extraOverrides: <Override>[
-          scheduleRepositoryProvider.overrideWith(
-            (ref) =>
-                _SessionsFailsOnceRepository(ref.watch(appDatabaseProvider)),
-          ),
-        ],
-      );
-
-      expect(find.text('일정을 불러오지 못했어요'), findsOneWidget);
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      final retry = find.byKey(const ValueKey<String>('client-sessions-retry'));
-      await tester.scrollUntilVisible(
-        retry,
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      await tester.ensureVisible(retry);
-      await settle(tester);
-      await tester.tap(retry);
-      await settle(tester);
-
-      final repository =
-          container.read(scheduleRepositoryProvider)
-              as _SessionsFailsOnceRepository;
-      expect(repository.watchSessionCalls, 2);
-      final scrollable = detailScrollable('seed-client-1');
-      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.textContaining('복구 PT'),
-        150,
-        scrollable: scrollable,
-      );
-      expect(find.textContaining('복구 PT'), findsOneWidget);
-      // 운동 현황 카드는 PT 일정 **위**에 있다. 복구 PT 까지 내려온 뒤에는
-      // 위로 되짚어야 나온다 — 기간 토글이 카드 제목 줄로 들어가면서(#914)
-      // 카드가 짧아져, 내려온 자리에서 그대로 보이지는 않는다.
-      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        200,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      expect(find.text('운동 현황'), findsOneWidget);
     });
   });
 }

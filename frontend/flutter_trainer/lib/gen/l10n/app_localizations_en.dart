@@ -1037,6 +1037,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Today\'s meals are well balanced. Keep the current routine.';
 
   @override
+  String get dietPeriodSummaryTitle => 'Period summary';
+
+  @override
+  String dietPeriodSummaryLogged(int loggedDays, String avgCalories) {
+    return '$loggedDays days logged · ${avgCalories}kcal average per day';
+  }
+
+  @override
+  String dietPeriodSummaryOverBudget(int sodiumDays, int sugarDays) {
+    return 'Sodium over target on $sodiumDays days · sugar over target on $sugarDays days';
+  }
+
+  @override
   String get consultStatusRejected => 'Declined';
 
   @override

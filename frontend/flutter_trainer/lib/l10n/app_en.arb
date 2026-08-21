@@ -492,6 +492,29 @@
     }
   },
   "dietAiBalanced": "Today's meals are well balanced. Keep the current routine.",
+  "dietPeriodSummaryTitle": "Period summary",
+  "dietPeriodSummaryLogged": "{loggedDays} days logged · {avgCalories}kcal average per day",
+  "@dietPeriodSummaryLogged": {
+    "placeholders": {
+      "loggedDays": {
+        "type": "int"
+      },
+      "avgCalories": {
+        "type": "String"
+      }
+    }
+  },
+  "dietPeriodSummaryOverBudget": "Sodium over target on {sodiumDays} days · sugar over target on {sugarDays} days",
+  "@dietPeriodSummaryOverBudget": {
+    "placeholders": {
+      "sodiumDays": {
+        "type": "int"
+      },
+      "sugarDays": {
+        "type": "int"
+      }
+    }
+  },
   "consultStatusRejected": "Declined",
   "consultStatusRejectedWithNote": "Declined · {note}",
   "@consultStatusRejectedWithNote": {

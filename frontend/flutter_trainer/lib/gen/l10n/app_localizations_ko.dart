@@ -999,6 +999,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
 
   @override
+  String get dietPeriodSummaryTitle => '기간 요약';
+
+  @override
+  String dietPeriodSummaryLogged(int loggedDays, String avgCalories) {
+    return '$loggedDays일 기록 · 하루 평균 칼로리 ${avgCalories}kcal';
+  }
+
+  @override
+  String dietPeriodSummaryOverBudget(int sodiumDays, int sugarDays) {
+    return '나트륨 목표 초과 $sodiumDays일 · 당류 목표 초과 $sugarDays일';
+  }
+
+  @override
   String get consultStatusRejected => '반려됨';
 
   @override

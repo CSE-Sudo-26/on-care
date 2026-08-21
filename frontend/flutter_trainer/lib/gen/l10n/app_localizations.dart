@@ -1922,6 +1922,24 @@ abstract class AppLocalizations {
   /// **'Today\'s meals are well balanced. Keep the current routine.'**
   String get dietAiBalanced;
 
+  /// No description provided for @dietPeriodSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Period summary'**
+  String get dietPeriodSummaryTitle;
+
+  /// No description provided for @dietPeriodSummaryLogged.
+  ///
+  /// In en, this message translates to:
+  /// **'{loggedDays} days logged · {avgCalories}kcal average per day'**
+  String dietPeriodSummaryLogged(int loggedDays, String avgCalories);
+
+  /// No description provided for @dietPeriodSummaryOverBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium over target on {sodiumDays} days · sugar over target on {sugarDays} days'**
+  String dietPeriodSummaryOverBudget(int sodiumDays, int sugarDays);
+
   /// No description provided for @consultStatusRejected.
   ///
   /// In en, this message translates to:

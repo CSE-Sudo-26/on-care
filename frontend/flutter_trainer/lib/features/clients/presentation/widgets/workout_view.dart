@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
-import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -14,28 +10,21 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_period.da
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
-import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 
-/// 운동 — the whole prescription→execution loop for one client, in the
-/// order the trainer reasons about it.
+/// 운동 — 기록 확인 중심 화면. 얼마나 했나(운동 현황) → 무엇을 했나(운동
+/// 기록) 순서로 답한다(#1025).
 ///
-/// 배정된 루틴 (what this client was given) used to be its own 루틴 tab.
-/// Splitting it from the history meant the one question the tab exists to
-/// answer — "I assigned this; did they do it?" — needed two tabs and a
-/// memory of the first. They are one story, so they are one screen:
-/// what's active now, then this week at a glance, then what actually
-/// happened session by session.
+/// 배정·취소처럼 루틴을 **관리**하는 일은 프로그램 탭의 몫이다 — 배정된 루틴
+/// 목록과 배정·취소가 이미 그 화면에 있다(취소는 #1020). 여기서 같은 목록을
+/// 한 번 더 보여주면, 잘못 배정한 루틴을 어느 화면에서 고쳐야 하는지
+/// 트레이너가 매번 헷갈린다.
 class WorkoutView extends ConsumerStatefulWidget {
   /// Creates the workout view for [client].
   const WorkoutView({super.key, required this.client, this.embedded = false});
@@ -60,22 +49,11 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
     final bool embedded = widget.embedded;
     final AppLocalizations l = AppLocalizations.of(context);
     final history = ref.watch(clientHistoryProvider(client.id));
-    final assigned = ref.watch(assignedRoutinesProvider(client.id));
-    final sessionKey = (id: client.id, name: client.name);
-    final sessions = ref.watch(clientSessionsProvider(sessionKey));
 
-    // Each section owns its own async state. Gating the whole list on
-    // the history provider would mean a failing /history takes the
-    // routines and the PT sessions down with it — and those two used to
-    // be their own tab, reachable whether or not the history loaded.
+    // 운동현황이 화면 맨 위다 — "얼마나 했나" 가 "무엇을 했나" 보다 먼저
+    // 답해야 할 질문이다(#1025). 기록 목록은 자기 async 상태를 따로 들고
+    // 있어, /history 가 실패해도 운동현황은 그대로 보인다.
     final children = <Widget>[
-      _AssignedRoutinesCard(clientId: client.id, assigned: assigned),
-      const SizedBox(height: AppSpacing.md),
-      _SessionsCard(
-        sessions: sessions,
-        onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
-      ),
-      const SizedBox(height: AppSpacing.md),
       ClientPeriodSection(
         icon: Icons.monitor_heart_outlined,
         title: l.clientTrendTitle,
@@ -139,276 +117,7 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
   }
 }
 
-/// 배정된 루틴 — what the member sees in their own app (server-side, real
-/// API only). Empty in demo mode, where the mock repository has no member
-/// backend to deliver to; the history below carries the story there.
-class _AssignedRoutinesCard extends ConsumerWidget {
-  const _AssignedRoutinesCard({required this.clientId, required this.assigned});
-
-  final String clientId;
-  final AsyncValue<List<AssignedRoutine>> assigned;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return SectionCard(
-      title: l.routinesAssigned,
-      icon: Icons.assignment_turned_in_outlined,
-      dense: true,
-      trailing: CardLink(
-        label: l.routineNew,
-        onTap: () => context.go(AppRoutes.coachingFor(clientId)),
-      ),
-      child: assigned.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-        error: (e, _) => EmptyHint(
-          message: l.routinesLoadFailed,
-          icon: Icons.error_outline,
-          action: ActionButton(
-            key: ValueKey<String>('assigned-routines-retry-$clientId'),
-            label: l.actionRetry,
-            onPressed: assigned.isLoading
-                ? null
-                : () => ref.invalidate(assignedRoutinesProvider(clientId)),
-          ),
-        ),
-        data: (routines) => routines.isEmpty
-            ? EmptyHint(
-                message: l.routinesEmpty,
-                icon: Icons.assignment_outlined,
-              )
-            : Column(
-                children: <Widget>[
-                  for (final routine in routines)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Row(
-                        children: <Widget>[
-                          _TypeChip(
-                            label: routine.type,
-                            ai: routine.source == 'ai',
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  routine.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.foreground,
-                                  ),
-                                ),
-                                if (routine.reason.isNotEmpty)
-                                  Text(
-                                    routine.reason,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11.5,
-                                      color: AppColors.subtleForeground,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            l.minutesShort(routine.minutes),
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          // 배정 뒤 정정·철회. 전에는 잘못 넣어도 고칠 수 없어
-                          // 새 루틴을 하나 더 배정했고, 회원 앱에는 둘 다
-                          // 그대로 보였다. (#504)
-                          _RoutineActions(clientId: clientId, routine: routine),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-/// PT 프로그램 이력 — the sessions actually on the calendar for this
-/// client and whether a program is attached.
-///
-/// Deliberately kept apart from 운동 기록 below: this is the *schedule*
-/// (including sessions still 예정), that is the *record* of what was
-/// completed. The 스케줄 tab answers the same question by date; this is
-/// the only place it's answered per client.
-class _SessionsCard extends StatelessWidget {
-  const _SessionsCard({required this.sessions, required this.onRetry});
-
-  final AsyncValue<List<ScheduleSession>> sessions;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final today = ymd(nowKst());
-    return SectionCard(
-      title: l.ptProgramHistory,
-      icon: Icons.event_note_outlined,
-      dense: true,
-      child: sessions.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-        error: (e, _) => EmptyHint(
-          message: l.scheduleLoadFailed,
-          icon: Icons.error_outline,
-          action: ActionButton(
-            key: const ValueKey<String>('client-sessions-retry'),
-            label: l.actionRetry,
-            onPressed: sessions.isLoading ? null : onRetry,
-          ),
-        ),
-        data: (list) => list.isEmpty
-            ? EmptyHint(
-                message: l.ptSessionsEmpty,
-                icon: Icons.event_busy_outlined,
-              )
-            : Column(
-                children: <Widget>[
-                  for (final session in list.take(8))
-                    _SessionRow(session: session, today: today),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-class _SessionRow extends StatelessWidget {
-  const _SessionRow({required this.session, required this.today});
-
-  final ScheduleSession session;
-  final String today;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final date = DateTime.tryParse(session.date);
-    final label = date == null ? session.date : '${date.month}/${date.day}';
-    final exercises = session.program.map((p) => p.name).join(' · ');
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: 46,
-            child: Text(
-              session.date == today ? l.labelToday : label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: session.date == today
-                    ? AppColors.primary
-                    : AppColors.subtleForeground,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  l.sessionTypeAndDuration(
-                    sessionTypeLabel(l, session.type),
-                    session.durationMinutes,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.foreground,
-                  ),
-                ),
-                Text(
-                  exercises.isEmpty ? l.programNone : exercises,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    height: 1.4,
-                    fontWeight: FontWeight.w500,
-                    color: exercises.isEmpty
-                        ? AppColors.disabledForeground
-                        : AppColors.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            scheduleStatusLabel(l, session.status),
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-              color: session.isDone ? AppColors.success : AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// AI-generated routines carry the navy sparkle; trainer-authored ones
-/// carry the orange the rest of the app uses for trainer edits.
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({required this.label, required this.ai});
-
-  final String label;
-  final bool ai;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = ai ? AppColors.primary : AppColors.brandOrange;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-      ),
-      child: ai
-          ? IconLabel(
-              icon: Icons.auto_awesome,
-              label: label,
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            )
-          : Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-    );
-  }
-}
-
-/// Completion color scale for the per-record donuts: 100 = done (green),
-/// partial = orange, 0 = untouched (grey).
+/// 완료 상태 색 — 100% 완료(초록) / 진행 중(주황) / 미시작(회색).
 ///
 /// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
 /// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
@@ -418,8 +127,9 @@ Color _rateColor(int rate) {
   return AppColors.borderStrong;
 }
 
-/// A single workout record: date/kind, completion donut, exercise lines
-/// (skipped ones struck through), client feedback, trainer note.
+/// A single workout record, styled as a mission card: date/kind, a
+/// completion badge, exercise lines (skipped ones struck through), client
+/// feedback, trainer note.
 class _HistoryCard extends ConsumerStatefulWidget {
   const _HistoryCard({required this.clientId, required this.entry});
 
@@ -470,18 +180,28 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final RoutineHistoryEntry entry = widget.entry;
+    // 미션 카드 — 왼쪽 띠 색이 완료 상태를 한눈에 말한다. 원형 게이지는
+    // 지웠다: 몇 개 중 몇 개를 했는지는 바로 아래 줄이 이미 정확히 말하고,
+    // 카드 전체가 "이 미션을 깼는가" 를 색 하나로 답하면 충분하다(#1025).
+    //
+    // 다른 세 변에는 색을 주지 않는다 — `Border` 에 보이는 색이 두 가지면
+    // (띠 색 + 회색 테두리) `borderRadius` 와 함께 그릴 수 없어 런타임에
+    // 터진다(Flutter `BoxBorder`, 보이는 색이 하나일 때만 둥근 모서리를
+    // 그린다). `_NoteBox` 의 왼쪽 띠와 같은 규칙이다.
+    final Color statusColor = _rateColor(entry.completionRate);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
         boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.border),
+        border: Border(left: BorderSide(color: statusColor, width: 4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
                 child: Column(
@@ -495,35 +215,35 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
                         color: AppColors.foreground,
                       ),
                     ),
-                    Text(
-                      entry.label,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.subtleForeground,
-                      ),
-                    ),
-                    // 옆의 링에 적힌 67% 가 어디서 나온 값인지 — 배정한 운동
+                    const SizedBox(height: 4),
+                    // 운동 유형/분류 — 글씨를 키우고 칩으로 올려 카드에서
+                    // 눈에 먼저 들어오게 한다(#1025).
+                    _RecordTypeChip(label: entry.label),
+                    // 옆의 배지에 적힌 67% 가 어디서 나온 값인지 — 배정한 운동
                     // 중 몇 개를 했는가다. 이 한 줄이 없으면 화면 어디에도
                     // 그 분모가 없다(#754).
                     if (entry.exercises.isNotEmpty)
-                      Text(
-                        l.workoutDoneOfTotal(
-                          entry.exercises.length,
-                          entry.exercises
-                              .where((line) => !line.contains('✗'))
-                              .length,
-                        ),
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.disabledForeground,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          l.workoutDoneOfTotal(
+                            entry.exercises.length,
+                            entry.exercises
+                                .where((line) => !line.contains('✗'))
+                                .length,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.disabledForeground,
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
-              _CompletionDonut(rate: entry.completionRate),
+              const SizedBox(width: AppSpacing.sm),
+              _MissionBadge(rate: entry.completionRate),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -619,36 +339,66 @@ class _FeedbackDialogState extends State<_FeedbackDialog> {
   }
 }
 
-/// Completion ring with the % inside (green 100 / orange partial / grey 0).
-class _CompletionDonut extends StatelessWidget {
-  const _CompletionDonut({required this.rate});
+/// 완료 배지 — 원형 게이지 대신 아이콘·색·글자로 한 번에 말한다(#1025).
+///
+/// 미션을 깼는지가 중요하지, 정밀한 gauge 가 중요한 자리가 아니다. 100%는
+/// 트로피, 진행 중은 깃발, 0%는 빈 원으로 — 숫자를 안 읽어도 색과 아이콘만
+/// 으로 상태가 읽힌다.
+class _MissionBadge extends StatelessWidget {
+  const _MissionBadge({required this.rate});
 
   final int rate;
 
   @override
   Widget build(BuildContext context) {
-    final color = _rateColor(rate);
-    return SizedBox(
-      width: 36,
-      height: 36,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          CircularProgressIndicator(
-            value: rate / 100,
-            strokeWidth: 3,
-            color: color,
-            backgroundColor: AppColors.inputBackground,
-          ),
-          Text(
-            '$rate%',
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w800,
-              color: rate == 0 ? AppColors.disabledForeground : color,
-            ),
-          ),
-        ],
+    final Color color = _rateColor(rate);
+    final IconData icon = rate >= 100
+        ? Icons.emoji_events_outlined
+        : rate > 0
+        ? Icons.flag_outlined
+        : Icons.radio_button_unchecked;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+      ),
+      child: IconLabel(
+        icon: icon,
+        label: '$rate%',
+        color: color,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+/// 운동 유형/분류 칩 — 글씨를 키우고 칩으로 올려 시선이 먼저 닿게 한다
+/// (#1025). 기록 하나가 실제로 들고 오는 분류는 이 값(세션 종류) 뿐이다 —
+/// 개별 운동 항목에는 유산소/근력/유연성 같은 세부 유형이 실려 오지 않는다
+/// (#996 스키마는 확정됐지만, 기록에 세부 종목 필드가 내려오는지는 별도
+/// 확인이 필요하다).
+class _RecordTypeChip extends StatelessWidget {
+  const _RecordTypeChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: const BoxDecoration(
+        color: AppColors.accentSurface,
+        borderRadius: BorderRadius.all(AppRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: AppColors.accent,
+        ),
       ),
     );
   }
@@ -703,280 +453,6 @@ class _NoteBox extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 배정된 루틴 한 줄의 수정·삭제. (#504)
-///
-/// 목록 안에 두는 이유: 잘못 배정한 것을 발견하는 자리가 곧 고치는 자리여야
-/// 한다. 별도 편집 화면으로 보내면 어느 루틴을 고치는 중인지 다시 확인해야 한다.
-class _RoutineActions extends ConsumerStatefulWidget {
-  const _RoutineActions({required this.clientId, required this.routine});
-
-  final String clientId;
-  final AssignedRoutine routine;
-
-  @override
-  ConsumerState<_RoutineActions> createState() => _RoutineActionsState();
-}
-
-class _RoutineActionsState extends ConsumerState<_RoutineActions> {
-  /// 요청이 오가는 동안 잠근다 — 삭제를 두 번 누르면 두 번째는 404 다.
-  bool _busy = false;
-
-  Future<void> _edit() async {
-    // messenger 와 함께 await 전에 잡아 둔다 — 실패 경로가 await 뒤에 있다.
-    final messenger = ScaffoldMessenger.of(context);
-    final AppLocalizations l = AppLocalizations.of(context);
-    final result =
-        await showDialog<({String name, int minutes, String reason})>(
-          context: context,
-          builder: (_) => _RoutineEditDialog(routine: widget.routine),
-        );
-    if (result == null || !mounted) return;
-
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(trainerRoutineRepositoryProvider)
-          .updateRoutine(
-            widget.clientId,
-            widget.routine.id,
-            name: result.name,
-            minutes: result.minutes,
-            reason: result.reason,
-          );
-    } on StateError {
-      // 404 — 그 루틴이 서버에 이미 없다(다른 기기에서 먼저 지웠거나 담당이
-      // 풀렸다). 뒤처진 쪽은 화면이므로 목록을 다시 읽어 서버를 따라간다.
-      // 그대로 두면 없는 루틴이 남아 다시 눌러도 계속 실패한다.
-      if (mounted) {
-        setState(() => _busy = false);
-        ref.invalidate(assignedRoutinesProvider(widget.clientId));
-      }
-      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
-      return;
-    } catch (_) {
-      if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.routineUpdateFailed)));
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _busy = false);
-    ref.invalidate(assignedRoutinesProvider(widget.clientId));
-    messenger.showSnackBar(SnackBar(content: Text(l.routineUpdated)));
-  }
-
-  Future<void> _delete() async {
-    final AppLocalizations l = AppLocalizations.of(context);
-    // 되돌릴 수 없는 동작이라 확인을 받는다 — 회원 앱에서도 곧바로 사라진다.
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.routineDeleteTitle),
-        content: Text(l.routineDeleteBody(widget.routine.name)),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l.actionCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              l.actionDelete,
-              style: const TextStyle(color: AppColors.destructive),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(trainerRoutineRepositoryProvider)
-          .deleteRoutine(widget.clientId, widget.routine.id);
-    } on StateError {
-      // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 실패로만 알리고
-      // 끝내지 않고, 목록을 다시 읽어 그 줄을 화면에서 걷어낸다.
-      if (mounted) {
-        setState(() => _busy = false);
-        ref.invalidate(assignedRoutinesProvider(widget.clientId));
-      }
-      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
-      return;
-    } catch (_) {
-      if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _busy = false);
-    ref.invalidate(assignedRoutinesProvider(widget.clientId));
-    messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    if (_busy) {
-      return const Padding(
-        padding: EdgeInsets.only(left: AppSpacing.sm),
-        child: SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        IconButton(
-          key: ValueKey<String>('routine-edit-${widget.routine.id}'),
-          onPressed: _edit,
-          icon: const Icon(Icons.edit_outlined, size: 16),
-          color: AppColors.mutedForeground,
-          tooltip: l.routineEdit,
-          visualDensity: VisualDensity.compact,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          padding: EdgeInsets.zero,
-        ),
-        IconButton(
-          key: ValueKey<String>('routine-delete-${widget.routine.id}'),
-          onPressed: _delete,
-          icon: const Icon(Icons.delete_outline, size: 16),
-          color: AppColors.destructive,
-          tooltip: l.routineDelete,
-          visualDensity: VisualDensity.compact,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          padding: EdgeInsets.zero,
-        ),
-      ],
-    );
-  }
-}
-
-/// 루틴 수정 다이얼로그. 이름·시간·사유만 다룬다.
-///
-/// 종류(type)를 빼 둔 이유: 그 값은 서버가 Literal 로 검증하는 계약값이고,
-/// 종류를 바꾸는 것은 사실상 다른 루틴을 주는 일이라 새로 배정하는 편이 맞다.
-class _RoutineEditDialog extends StatefulWidget {
-  const _RoutineEditDialog({required this.routine});
-
-  final AssignedRoutine routine;
-
-  @override
-  State<_RoutineEditDialog> createState() => _RoutineEditDialogState();
-}
-
-class _RoutineEditDialogState extends State<_RoutineEditDialog> {
-  late final TextEditingController _name = TextEditingController(
-    text: widget.routine.name,
-  );
-  late final TextEditingController _minutes = TextEditingController(
-    text: widget.routine.minutes.toString(),
-  );
-  late final TextEditingController _reason = TextEditingController(
-    text: widget.routine.reason,
-  );
-  String? _error;
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _minutes.dispose();
-    _reason.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _name.text.trim();
-    final minutes = int.tryParse(_minutes.text.trim());
-    final reason = _reason.text.trim();
-    if (name.isEmpty) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      setState(() => _error = l.routineNameRequired);
-      return;
-    }
-    // 서버 제약(name 100자·minutes 0~600·reason 200자)과 같은 값으로 미리
-    // 거른다 — 422 를 받아 오면 "수정하지 못했어요"라는 애매한 문구만 남아,
-    // 무엇이 문제인지 트레이너가 알 수 없다.
-    //
-    // 세는 단위도 서버와 맞춘다. Pydantic 의 max_length 는 파이썬 문자(코드
-    // 포인트) 수인데 Dart 의 String.length 는 UTF-16 코드 유닛 수라, 이모지가
-    // 들어가면 서버가 받아 줄 값을 화면이 먼저 막는다. runes 로 센다.
-    if (name.runes.length > 100) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      setState(() => _error = l.routineNameTooLong);
-      return;
-    }
-    if (minutes == null || minutes < 0 || minutes > 600) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      setState(() => _error = l.routineMinutesRange);
-      return;
-    }
-    if (reason.runes.length > 200) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      setState(() => _error = l.routineReasonTooLong);
-      return;
-    }
-    Navigator.of(context).pop((name: name, minutes: minutes, reason: reason));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l.routineEdit),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          TextField(
-            key: const ValueKey<String>('routine-edit-name'),
-            controller: _name,
-            decoration: InputDecoration(labelText: l.routineFieldName),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            key: const ValueKey<String>('routine-edit-minutes'),
-            controller: _minutes,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: l.routineFieldMinutesLabel),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            key: const ValueKey<String>('routine-edit-reason'),
-            controller: _reason,
-            decoration: InputDecoration(labelText: l.routineFieldReason),
-          ),
-          if (_error != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _error!,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.destructive,
-              ),
-            ),
-          ],
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.actionCancel),
-        ),
-        TextButton(
-          key: const ValueKey<String>('routine-edit-save'),
-          onPressed: _submit,
-          child: Text(l.actionSave),
-        ),
-      ],
     );
   }
 }
