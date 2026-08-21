@@ -36,8 +36,12 @@ class ConsultationInboxAction extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  /// 배지가 네모 밖으로 나가는 양. [Padding] 과 [Badge.offset] 이 같은 값을
-  /// 써야 배지가 예약된 자리에 정확히 앉는다.
+  /// 배지가 네모 밖으로 나가는 양.
+  ///
+  /// 자리를 미리 비워 두었더니(#987) 이 버튼만 옆의 `예약 슬롯`·`새 일정` 보다
+  /// 6px 아래에 서서, 한 줄에 선 세 버튼이 서로 다른 격자를 썼다(#1013).
+  /// `Badge` 는 `Clip.none` 으로 그리므로 자리를 비우지 않아도 잘리지 않는다 —
+  /// 옆 버튼과 같은 36 높이를 지키는 편이 낫다.
   static const double _badgeOverflowTop = 6;
   static const double _badgeOverflowRight = 5;
 
@@ -55,41 +59,37 @@ class ConsultationInboxAction extends StatelessWidget {
         key: const Key('consult-inbox-entry'),
         button: true,
         label: l.consultTitle,
-        child: Padding(
-          padding: const EdgeInsets.only(
-            top: _badgeOverflowTop,
-            right: _badgeOverflowRight,
-          ),
-          child: Badge(
-            isLabelVisible: waiting,
-            alignment: Alignment.topRight,
-            offset: const Offset(_badgeOverflowRight, -_badgeOverflowTop),
-            backgroundColor: AppColors.destructive,
-            textColor: AppColors.destructiveForeground,
-            label: Text('$count'),
-            child: Material(
-              color: Colors.transparent,
+        child: Badge(
+          isLabelVisible: waiting,
+          alignment: Alignment.topRight,
+          offset: const Offset(_badgeOverflowRight, -_badgeOverflowTop),
+          backgroundColor: AppColors.destructive,
+          textColor: AppColors.destructiveForeground,
+          label: Text('$count'),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: const BorderRadius.all(AppRadius.md),
+            child: InkWell(
+              onTap: onTap,
               borderRadius: const BorderRadius.all(AppRadius.md),
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                child: Container(
-                  height: 36,
-                  width: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(AppRadius.md),
-                    border: Border.all(
-                      color: waiting
-                          ? AppColors.destructive.withValues(alpha: 0.45)
-                          : AppColors.primary.withValues(alpha: 0.45),
-                    ),
+              child: Container(
+                // 옆의 `예약 슬롯`·`새 일정`(`ActionButton`)과 같은 높이·모서리다.
+                height: 36,
+                width: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  border: Border.all(
+                    color: waiting
+                        ? AppColors.destructive.withValues(alpha: 0.45)
+                        : AppColors.sessionConsultation.withValues(alpha: 0.45),
                   ),
-                  child: const Icon(
-                    Icons.mark_email_unread_outlined,
-                    size: 17,
-                    color: AppColors.primary,
-                  ),
+                ),
+                // 상담은 상담의 색으로 — 시간표 블록·종류 알약과 같다(#1013).
+                child: const Icon(
+                  Icons.mark_email_unread_outlined,
+                  size: 17,
+                  color: AppColors.sessionConsultation,
                 ),
               ),
             ),

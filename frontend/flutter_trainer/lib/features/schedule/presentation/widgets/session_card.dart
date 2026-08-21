@@ -220,6 +220,11 @@ class SessionCard extends ConsumerWidget {
                             s.durationMinutes,
                           ),
                           muted: s.isDone,
+                          // 시간표 블록과 같은 색을 쓴다 — 두 자리가 같은 것을
+                          // 말한다(#1013).
+                          tone: noteOnly
+                              ? AppColors.sessionConsultation
+                              : AppColors.sessionPersonalTraining,
                         ),
                         SessionStatusChip(status: s.status),
                       ],

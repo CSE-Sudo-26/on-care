@@ -665,17 +665,26 @@ class _SessionBlock extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// 상태가 결과를 말한다 — 예정(남색)·완료(초록)·취소/노쇼(빨강).
-  Color get _tone => switch (session.status) {
+  /// **면의 색은 종류**를 말한다 — 1:1 PT(남색)·상담(보라). 시간표를 훑는
+  /// 동안 읽는 것은 색이라, 종류가 셋째 줄 글씨로만 있으면 둘이 똑같아
+  /// 보인다(#1013).
+  Color get _typeTone => session.type == SessionType.consultation
+      ? AppColors.sessionConsultation
+      : AppColors.sessionPersonalTraining;
+
+  /// **왼쪽 띠의 색은 상태**를 말한다 — 예정(종류색)·완료(초록)·취소/노쇼(빨강).
+  /// 면과 갈래가 달라 두 값이 서로를 덮지 않는다.
+  Color get _statusTone => switch (session.status) {
     ScheduleStatus.done => AppColors.success,
     ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
-    _ => AppColors.primary,
+    _ => _typeTone,
   };
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final tone = _tone;
+    final tone = _typeTone;
+    final statusTone = _statusTone;
     final start = ScheduleWeekTimetable.minutesOfDay(session.time) ?? 0;
     final end = start + session.durationMinutes;
     final type = sessionTypeLabel(l, session.type);
@@ -718,12 +727,12 @@ class _SessionBlock extends StatelessWidget {
                 // 프레임워크가 hairline 단정에서 걸린다.
                 border: selected
                     ? Border(
-                        left: BorderSide(color: tone, width: 4),
-                        top: BorderSide(color: tone, width: 1.5),
-                        right: BorderSide(color: tone, width: 1.5),
-                        bottom: BorderSide(color: tone, width: 1.5),
+                        left: BorderSide(color: statusTone, width: 4),
+                        top: BorderSide(color: statusTone, width: 1.5),
+                        right: BorderSide(color: statusTone, width: 1.5),
+                        bottom: BorderSide(color: statusTone, width: 1.5),
                       )
-                    : Border(left: BorderSide(color: tone, width: 2.5)),
+                    : Border(left: BorderSide(color: statusTone, width: 2.5)),
               ),
               // 남는 높이에 맞춰 **들어가는 줄만** 그린다. 잘라 내면 반 토막
               // 난 글자가 남아 읽을 수도 없고 읽으려 하게 된다 — 아예 빼는

@@ -14,12 +14,20 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 좁아지면 **이 알약이 먼저 줄어든다.** 이름과 상태는 잘리면 안 되는 값이라,
 /// 글자를 자르는 대신 `FittedBox` 로 통째로 작게 그린다.
 class SessionTypeChip extends StatelessWidget {
-  const SessionTypeChip({super.key, required this.label, required this.muted});
+  const SessionTypeChip({
+    super.key,
+    required this.label,
+    required this.muted,
+    this.tone = AppColors.sessionPersonalTraining,
+  });
 
   final String label;
 
   /// 끝난 세션인가. 상태 칩과 같은 기준으로 함께 물러난다.
   final bool muted;
+
+  /// 종류의 색. 시간표 블록과 같은 값을 써야 두 자리가 같은 것을 말한다(#1013).
+  final Color tone;
 
   @override
   Widget build(BuildContext context) {
@@ -35,12 +43,10 @@ class SessionTypeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: muted
               ? AppColors.inputBackground
-              : AppColors.primary.withValues(alpha: 0.10),
+              : tone.withValues(alpha: 0.10),
           borderRadius: const BorderRadius.all(AppRadius.pill),
           border: Border.all(
-            color: muted
-                ? AppColors.border
-                : AppColors.primary.withValues(alpha: 0.25),
+            color: muted ? AppColors.border : tone.withValues(alpha: 0.25),
           ),
         ),
         child: Text(
@@ -49,7 +55,7 @@ class SessionTypeChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
-            color: muted ? AppColors.disabledForeground : AppColors.primary,
+            color: muted ? AppColors.disabledForeground : tone,
           ),
         ),
       ),
