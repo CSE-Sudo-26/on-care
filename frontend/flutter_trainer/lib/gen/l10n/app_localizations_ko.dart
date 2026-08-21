@@ -1276,11 +1276,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name(신규)';
-  }
-
-  @override
   String schedBlockTime(String range, String duration) {
     return '$range ($duration)';
   }

@@ -1333,11 +1333,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEmptyWeek => 'Nothing scheduled this week.';
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name (new)';
-  }
-
-  @override
   String schedBlockTime(String range, String duration) {
     return '$range ($duration)';
   }

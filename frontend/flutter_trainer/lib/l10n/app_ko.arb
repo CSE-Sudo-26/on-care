@@ -408,7 +408,6 @@
   "schedTimeRange": "{start}\u2013{end}",
   "schedBlockTime": "{range} ({duration})",
   "schedEmptyWeek": "이번 주에는 일정이 없어요.",
-  "schedNewClientTag": "{name}(신규)",
   "schedSlots": "예약 슬롯",
   "schedNewSession": "새 일정",
   "schedLoadFailed": "스케줄을 불러오지 못했어요",

@@ -497,8 +497,9 @@ void main() {
       expect(find.textContaining('1:1 PT'), findsWidgets);
       expect(find.text('상담 · 30분'), findsWidgets);
 
-      // 로스터에 없는 상담 고객은 이름 뒤에 신규 표가 붙는다.
-      expect(find.text('윤가온(신규)'), findsWidgets);
+      // 로스터에 없는 상담 고객도 이름만 부른다(#1012) — 신규라는 사실은
+      // 종류 알약(`상담`)이 이미 말한다.
+      expect(find.text('윤가온'), findsWidgets);
 
       // 고른 날의 첫 세션이 상세 패널에 열려 있다.
       expect(find.byKey(const Key('week-detail')), findsOneWidget);
@@ -851,7 +852,7 @@ void main() {
     testWidgets('상담 세션은 프로그램 대신 메모 자리를 보여 준다 (#988)', (tester) async {
       await openSchedule(tester);
 
-      await openSession(tester, '윤가온(신규)');
+      await openSession(tester, '윤가온');
 
       await revealInPanel(
         tester,
@@ -1119,7 +1120,7 @@ void main() {
     testWidgets('삭제 removes the session after confirmation', (tester) async {
       await openSchedule(tester);
 
-      await openSession(tester, '윤가온(신규)');
+      await openSession(tester, '윤가온');
 
       await revealInPanel(
         tester,
@@ -1133,7 +1134,7 @@ void main() {
       await tester.tap(find.text('삭제').last);
       await settle(tester);
 
-      expect(find.text('윤가온(신규)'), findsNothing);
+      expect(find.text('윤가온'), findsNothing);
     });
 
     testWidgets('unsupported program send does not create a chat bubble', (
@@ -1412,7 +1413,7 @@ void main() {
       await goTo(tester, AppRoutes.schedule);
 
       // 윤가온 (상담, 30분) is booked but is NOT a registered client.
-      await openSession(tester, '윤가온(신규)');
+      await openSession(tester, '윤가온');
 
       await revealInPanel(
         tester,

@@ -2372,12 +2372,6 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled this week.'**
   String get schedEmptyWeek;
 
-  /// No description provided for @schedNewClientTag.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} (new)'**
-  String schedNewClientTag(String name);
-
   /// No description provided for @schedBlockTime.
   ///
   /// In en, this message translates to:
