@@ -1791,6 +1791,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachRoutineDone => '수행 완료';
 
   @override
+  String get coachRoutineCancel => '이 개인 운동 취소';
+
+  @override
+  String coachRoutineCancelConfirm(String name) {
+    return '\'$name\'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.';
+  }
+
+  @override
+  String get coachRoutineCancelled => '개인 운동을 취소했어요';
+
+  @override
+  String get coachRoutineCancelFailed => '개인 운동을 취소하지 못했어요';
+
+  @override
   String coachRoutineMyNote(String note) {
     return '내 메모: $note';
   }

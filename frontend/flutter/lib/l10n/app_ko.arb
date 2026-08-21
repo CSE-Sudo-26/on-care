@@ -643,6 +643,13 @@
   "coachRoutineNetworkError": "네트워크 연결을 확인하고 다시 시도해 주세요",
   "coachRoutineLogFailed": "완료 기록에 실패했어요.",
   "coachRoutineDone": "수행 완료",
+  "coachRoutineCancel": "이 개인 운동 취소",
+  "coachRoutineCancelConfirm": "'{name}'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.",
+  "@coachRoutineCancelConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineCancelled": "개인 운동을 취소했어요",
+  "coachRoutineCancelFailed": "개인 운동을 취소하지 못했어요",
   "coachRoutineMyNote": "내 메모: {note}",
   "coachRoutineTrainerFeedback": "트레이너 피드백: {feedback}",
   "coachRoutineCompleteTitle": "루틴 수행 완료",

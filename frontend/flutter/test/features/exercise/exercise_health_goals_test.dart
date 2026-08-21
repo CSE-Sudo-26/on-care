@@ -81,6 +81,9 @@ class _SessionMemberCoachRepository implements MemberCoachRepository {
     String intensity = 'moderate',
     String memberNote = '',
   }) async => throw UnsupportedError('not used');
+
+  @override
+  Future<void> deleteRoutine(String routineId) async {}
   @override
   Future<List<CoachSession>> fetchSessions() async => sessions;
   @override

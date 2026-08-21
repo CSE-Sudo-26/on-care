@@ -132,12 +132,13 @@ Widget _chatApp(Widget home) => MaterialApp(
 void main() {
   Future<void> pumpRecommendationCards(
     WidgetTester tester,
-    List<CoachRoutine> routines,
-  ) async {
+    List<CoachRoutine> routines, {
+    MemberCoach? coach = _trainer,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          memberCoachProvider.overrideWith((ref) async => _trainer),
+          memberCoachProvider.overrideWith((ref) async => coach),
           coachRoutinesProvider.overrideWith((ref) async => routines),
           coachUnreadProvider.overrideWith((ref) async => 0),
         ],
@@ -712,6 +713,29 @@ void main() {
     expect(repository.paths, <String>['/chat/attachments/pdf-file']);
     expect(find.text('PDF를 열지 못했어요. 다시 시도해 주세요'), findsOneWidget);
   });
+
+  testWidgets('담당 트레이너가 없으면 개인 운동을 스스로 취소할 수 있다 (#1020)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(
+      tester,
+      <CoachRoutine>[_aiRoutine],
+      coach: null,
+    );
+
+    expect(find.byKey(Key('cancelRoutine-${_aiRoutine.id}')), findsOneWidget);
+  });
+
+  testWidgets('담당 트레이너가 있으면 취소는 트레이너의 일이다 (#1020)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, <CoachRoutine>[_aiRoutine]);
+
+    // 담당이 배정한 것을 회원이 조용히 없애면 다음 상담에서 둘이 서로 다른
+    // 기록을 본다 — 버튼 자체를 그리지 않는다(서버도 403 으로 막는다).
+    expect(find.byKey(Key('cancelRoutine-${_aiRoutine.id}')), findsNothing);
+  });
+
 }
 
 /// 내려받기가 항상 실패하는 저장소. 요청된 경로를 기록해 둔다.

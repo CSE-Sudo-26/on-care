@@ -1851,6 +1851,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachRoutineDone => 'Done';
 
   @override
+  String get coachRoutineCancel => 'Cancel this workout';
+
+  @override
+  String coachRoutineCancelConfirm(String name) {
+    return 'Remove \'$name\' from the list? Anything you already logged stays.';
+  }
+
+  @override
+  String get coachRoutineCancelled => 'Workout cancelled';
+
+  @override
+  String get coachRoutineCancelFailed => 'Couldn\'t cancel the workout';
+
+  @override
   String coachRoutineMyNote(String note) {
     return 'My note: $note';
   }
