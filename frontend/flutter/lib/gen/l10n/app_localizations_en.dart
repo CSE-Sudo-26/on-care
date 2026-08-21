@@ -629,7 +629,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exThisWeek => 'This week';
 
   @override
-  String get exThisMonth => 'This month';
+  String get exPeriodAll => 'All';
 
   @override
   String get exExerciseContent => 'What you did';

@@ -349,7 +349,7 @@
   "clientTrendWorkoutDaysValue": "{days}일",
   "clientPeriodToday": "오늘",
   "clientPeriodWeek": "이번 주",
-  "clientPeriodMonth": "이번 달",
+  "clientPeriodMonth": "전체",
   "clientPeriodAverage": "하루 평균",
   "clientPeriodGoal": "목표",
   "clientPeriodLoggedDays": "{days}일 기록",

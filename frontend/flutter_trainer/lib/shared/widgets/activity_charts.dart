@@ -29,6 +29,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/goal_line.dart';
+import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 
 /// 도넛 한 조각 / 범례 한 줄.
 class ActivitySeg {
@@ -268,6 +269,8 @@ class ActivityBarChart extends StatelessWidget {
     required this.todayIndex,
     required this.title,
     this.dailyGoalMinutes = 0,
+    this.selection,
+    this.dates,
   });
 
   final List<ActivityBar> bars;
@@ -276,6 +279,13 @@ class ActivityBarChart extends StatelessWidget {
   /// 하루 목표 운동 시간(분). 0 이면 목표선을 그리지 않는다. 가로선은 이
   /// 목표선 하나뿐이다 — 눈금선은 지웠다. (#1015)
   final double dailyGoalMinutes;
+
+  /// 있으면 `전체` 모양 — 옆으로 밀어 보고 한 칸을 고를 수 있다. 없으면 이번
+  /// 주 모양(일곱 칸이 한 화면)이다. (#1018)
+  final PeriodChartSelection? selection;
+
+  /// 칸마다의 날짜. `전체` 에서 축 라벨과 고른 날 표시에 쓴다.
+  final List<DateTime>? dates;
 
   /// 그래프가 무엇을 그린 것인지 — 기록이 하나도 없는 기간에 비어 있다고
   /// 말할 때 이 이름으로 부른다(#972).
@@ -339,6 +349,29 @@ class ActivityBarChart extends StatelessWidget {
     // 한 칸도 기록이 없는 기간은 막대마다 `기록 없음` 을 서른 번 읽히는 대신
     // 비어 있다고 한 번만 말한다(#972).
     final bool empty = bars.every((ActivityBar b) => b.total <= 0);
+    final PeriodChartSelection? selection = this.selection;
+    if (selection != null) {
+      // `전체` — 12주치를 옆으로 밀어 본다. 한 화면에 30일. (#1018)
+      return Semantics(
+        container: true,
+        label: empty
+            ? chartSemanticsLabel(l, title: title, points: const <String>[])
+            : null,
+        child: ExcludeSemantics(
+          excluding: empty,
+          child: _ScrollingBars(
+            bars: bars,
+            dates: dates ?? const <DateTime>[],
+            dailyGoalMinutes: dailyGoalMinutes,
+            selection: selection,
+            tipSpans: (int i) => _tipSpans(l, i),
+            goalLabel:
+                '${l.clientPeriodGoal} '
+                '${dailyGoalMinutes.round()}${l.unitMinutes}',
+          ),
+        ),
+      );
+    }
     return Semantics(
       container: true,
       label: empty
@@ -473,6 +506,138 @@ class ActivityLegend extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// `전체` 모양의 막대 — 스크롤 안에서 칸마다 위젯으로 그린다. 주간 막대를
+/// 그리는 [_StackedBarPainter] 와 **같은 색·같은 순서**다. (#1018)
+class _ScrollingBars extends StatelessWidget {
+  const _ScrollingBars({
+    required this.bars,
+    required this.dates,
+    required this.dailyGoalMinutes,
+    required this.selection,
+    required this.tipSpans,
+    required this.goalLabel,
+  });
+
+  final List<ActivityBar> bars;
+  final List<DateTime> dates;
+  final double dailyGoalMinutes;
+  final PeriodChartSelection selection;
+  final List<InlineSpan> Function(int i) tipSpans;
+  final String goalLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    const double chartHeight = 150;
+    final double peak = <double>[
+      dailyGoalMinutes,
+      for (final ActivityBar b in bars) b.total,
+    ].fold<double>(1, (double a, double b) => math.max(a, b));
+    final double max = peak * 1.15;
+    final int labelStep = (bars.length / 12).ceil().clamp(1, 7);
+
+    return ListenableBuilder(
+      listenable: selection,
+      builder: (BuildContext context, Widget? _) => PeriodScrollChart(
+        count: bars.length,
+        height: chartHeight,
+        selectedIndex: selection.selected,
+        onSelected: selection.select,
+        onVisibleRangeChanged: selection.setVisible,
+        goalOverlay: GoalLineOverlay(
+          visible: dailyGoalMinutes > 0,
+          bottom: chartHeight * (dailyGoalMinutes / max).clamp(0.0, 1.0),
+          label: goalLabel,
+        ),
+        labelBuilder: (int i) => i < dates.length && i % labelStep == 0
+            ? '${dates[i].day}'
+            : '',
+        calloutBuilder: (BuildContext context, int i) =>
+            const SizedBox.shrink(),
+        barBuilder: (BuildContext context, int i) => Tooltip(
+          key: Key('client-exercise-bar-$i'),
+          richMessage: TextSpan(
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.foreground,
+              height: 1.35,
+            ),
+            children: tipSpans(i),
+          ),
+          child: _ActivityBarColumn(
+            bar: bars[i],
+            max: max,
+            height: chartHeight,
+            dimmed: selection.selected != null && selection.selected != i,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 한 칸 — 유연성(연) → 근력(진) → 유산소(브랜드) 순으로 아래에서 쌓는다.
+class _ActivityBarColumn extends StatelessWidget {
+  const _ActivityBarColumn({
+    required this.bar,
+    required this.max,
+    required this.height,
+    required this.dimmed,
+  });
+
+  final ActivityBar bar;
+  final double max;
+  final double height;
+  final bool dimmed;
+
+  double _h(double minutes) =>
+      max <= 0 ? 0 : (minutes / max).clamp(0.0, 1.0) * height;
+
+  @override
+  Widget build(BuildContext context) {
+    final double opacity = dimmed ? 0.35 : 1;
+    const Radius cap = Radius.circular(4);
+    Widget seg(double h, Color color, {bool top = false}) => Container(
+      height: h,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: opacity),
+        borderRadius: top
+            ? const BorderRadius.vertical(top: cap)
+            : BorderRadius.zero,
+      ),
+    );
+
+    final bool cardioTop = bar.cardio > 0;
+    final bool strengthTop = !cardioTop && bar.strength > 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          if (bar.cardio > 0)
+            seg(_h(bar.cardio), AppColors.chartCardio, top: true),
+          if (bar.strength > 0)
+            seg(_h(bar.strength), AppColors.chartStrength, top: strengthTop),
+          if (bar.stretch > 0)
+            seg(
+              _h(bar.stretch),
+              AppColors.chartStretching,
+              top: !cardioTop && !strengthTop,
+            ),
+          if (bar.total <= 0)
+            Container(
+              height: 2,
+              decoration: const BoxDecoration(
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.vertical(top: cap),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StackedBarPainter extends CustomPainter {

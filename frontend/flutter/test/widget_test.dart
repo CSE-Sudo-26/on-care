@@ -402,7 +402,7 @@ void main() {
     expect(find.text('MY'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('Monthly exercise status uses the daily bar chart', (
+  testWidgets('전체 기간 운동 현황은 스크롤 막대 그래프다 (#1018)', (
     tester,
   ) async {
     await pumpApp(tester, locale: const Locale('en'));
@@ -413,12 +413,12 @@ void main() {
     );
     await tester.tap(exerciseDestination);
     await tester.pumpAndSettle();
-    final monthlyToggle = find.text('This month');
+    final monthlyToggle = find.text('All');
     await tester.ensureVisible(monthlyToggle);
     await tester.tap(monthlyToggle);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('exerciseMonthlyDailyChart')), findsOneWidget);
+    expect(find.byKey(const Key('exerciseAllPeriodChart')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -489,12 +489,12 @@ void main() {
 
     // 회귀: '이번 달'만 하드코딩돼 있어 영어 로케일에서 "Today / This week /
     // 이번 달" 처럼 한 토글 안에 두 언어가 섞였다.
-    expect(en.exThisMonth, 'This month');
-    expect(ko.exThisMonth, '이번 달');
+    expect(en.exPeriodAll, 'All');
+    expect(ko.exPeriodAll, '전체');
     for (final String s in <String>[
       en.exToday,
       en.exThisWeek,
-      en.exThisMonth,
+      en.exPeriodAll,
     ]) {
       expect(hangul.hasMatch(s), isFalse);
     }
@@ -660,20 +660,20 @@ void main() {
     await tester.tap(exerciseDestination);
     await tester.pumpAndSettle();
 
-    // 이번 달로 바꾼다 — 이번 달 뷰에만 붙는 키로 전환 여부를 확인한다.
-    final monthlyToggle = find.text('이번 달');
+    // 전체로 바꾼다 — 전체 뷰에만 붙는 키로 전환 여부를 확인한다.
+    final monthlyToggle = find.text('전체');
     await tester.ensureVisible(monthlyToggle);
     await tester.tap(monthlyToggle);
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('exerciseMonthlyDailyChart')), findsOneWidget);
+    expect(find.byKey(const Key('exerciseAllPeriodChart')), findsOneWidget);
 
     await tester.tap(find.text('MY').first);
     await tester.pumpAndSettle();
     await tester.tap(exerciseDestination);
     await tester.pumpAndSettle();
 
-    // 기본값(이번 주)으로 복원 — 이번 달 전용 차트가 더 이상 보이지 않는다.
-    expect(find.byKey(const Key('exerciseMonthlyDailyChart')), findsNothing);
+    // 기본값(이번 주)으로 복원 — 전체 전용 차트가 더 이상 보이지 않는다.
+    expect(find.byKey(const Key('exerciseAllPeriodChart')), findsNothing);
   });
 
   testWidgets('운동 탭 재진입 후에도 저장된 운동 기록·트레이너 프로그램은 유지된다 (#861)', (tester) async {

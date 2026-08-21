@@ -377,41 +377,34 @@ void main() {
       expect(dietRangeDates(r).length, 7);
     });
 
-    test('12월은 다음 해로 넘어가지 않고 12월 31일에서 끝난다', () {
+    test('전체는 오늘로 끝나는 12주다 — 달이 바뀌어도 앞의 기록이 남는다', () {
+      // 예전에는 이번 달 1일~말일이었다. 달이 바뀌면 그 앞의 이야기가 통째로
+      // 사라져서, 추세를 보려고 연 화면이 매달 1일에 비었다. (#1018)
       final DietDateRange r = dietRangeForTab(
         DietPeriodTab.month,
         DateTime(2026, 12, 15),
       );
-      expect(r.from, DateTime(2026, 12));
-      expect(r.to, DateTime(2026, 12, 31));
-      expect(dietRangeDates(r).length, 31);
-    });
-
-    test('2월은 윤년 여부에 따라 28·29일이다', () {
-      expect(
-        dietRangeDates(
-          dietRangeForTab(DietPeriodTab.month, DateTime(2026, 2, 10)),
-        ).length,
-        28,
-      );
-      expect(
-        dietRangeDates(
-          dietRangeForTab(DietPeriodTab.month, DateTime(2028, 2, 10)),
-        ).length,
-        29,
-      );
-    });
-
-    test('서머타임이 시작하는 3월도 말일이 빠지지 않는다', () {
-      // 로컬 자정끼리 빼면 29일 23시간 → inDays 29 로 잘려 3월 31일이 빠졌다.
-      final DietDateRange r = dietRangeForTab(
-        DietPeriodTab.month,
-        DateTime(2026, 3, 15),
-      );
       final List<DateTime> dates = dietRangeDates(r);
-      expect(dates.length, 31);
-      expect(dates.last.day, 31);
+      expect(dates.length, kDietAllPeriodDays);
+      expect(dates.last, DateTime(2026, 12, 15));
+      expect(dates.first, DateTime(2026, 9, 23));
     });
+
+    test('전체는 달 경계·윤년과 상관없이 늘 같은 길이다', () {
+      for (final DateTime today in <DateTime>[
+        DateTime(2026, 2, 10),
+        DateTime(2028, 2, 10),
+        DateTime(2026, 3, 15),
+        DateTime(2026, 1, 2),
+      ]) {
+        final List<DateTime> dates = dietRangeDates(
+          dietRangeForTab(DietPeriodTab.month, today),
+        );
+        expect(dates.length, kDietAllPeriodDays, reason: '$today');
+        expect(dates.last, today, reason: '$today');
+      }
+    });
+
   });
 
   test('음식 배열이 비어 있으면 서버가 준 하루 합계로 떨어진다', () async {
@@ -567,7 +560,13 @@ void main() {
       );
       // 대역은 오늘·어제·그저께에만 기록을 둔다.
       final Tooltip todayTip = tester.widget<Tooltip>(
-        find.byKey(Key('diet-period-bar-tip-${nowKst().day - 1}')),
+        // 전체는 오늘로 끝나는 구간이라 오늘은 **마지막 칸**이다 (#1018).
+        find.byKey(
+          Key(
+            'diet-period-bar-tip-'
+            '${dietRangeDates(dietRangeForTab(DietPeriodTab.month, nowKst())).length - 1}',
+          ),
+        ),
       );
       final String text = todayTip.richMessage!.toPlainText();
       // 지표 이름과 단위가 카드 머리 숫자와 같은 말로 적혀야 한다.
@@ -600,10 +599,18 @@ void main() {
       final AppLocalizations l = AppLocalizations.of(
         tester.element(find.byType(DietRecordPage)),
       );
-      final Tooltip first = tester.widget<Tooltip>(
-        find.byKey(const Key('diet-period-bar-tip-0')),
+      // 홀수 날에 기록이 없다. 전체는 오늘로 끝나는 구간이라 0번 칸이 무슨
+      // 날인지 고정돼 있지 않으므로, 비어 있는 날을 날짜로 찾는다. (#1018)
+      final List<DateTime> dates = dietRangeDates(
+        dietRangeForTab(DietPeriodTab.month, nowKst()),
       );
-      expect(first.richMessage!.toPlainText(), contains(l.dietPeriodNoRecord));
+      final int emptyIndex = dates.indexWhere(
+        (DateTime d) => d.day.isOdd,
+      );
+      final Tooltip empty = tester.widget<Tooltip>(
+        find.byKey(Key('diet-period-bar-tip-$emptyIndex')),
+      );
+      expect(empty.richMessage!.toPlainText(), contains(l.dietPeriodNoRecord));
     });
   });
 }

@@ -1214,11 +1214,11 @@ abstract class AppLocalizations {
   /// **'This week'**
   String get exThisWeek;
 
-  /// No description provided for @exThisMonth.
+  /// No description provided for @exPeriodAll.
   ///
   /// In en, this message translates to:
-  /// **'This month'**
-  String get exThisMonth;
+  /// **'All'**
+  String get exPeriodAll;
 
   /// No description provided for @exExerciseContent.
   ///

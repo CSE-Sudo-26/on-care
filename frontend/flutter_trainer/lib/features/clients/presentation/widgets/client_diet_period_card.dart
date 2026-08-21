@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/number_format.dart';
@@ -18,6 +19,7 @@ import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
+import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 고객의 기간 영양 추이 — 회원 앱 식단 탭 기간 뷰와 **같은 것**을 트레이너에게.
@@ -49,6 +51,15 @@ enum _Metric { calories, sodium, sugar }
 
 class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
   _Metric _metric = _Metric.calories;
+
+  /// `전체` 그래프의 스크롤 위치와 고른 날. (#1018)
+  final PeriodChartSelection _selection = PeriodChartSelection();
+
+  @override
+  void dispose() {
+    _selection.dispose();
+    super.dispose();
+  }
 
   String _label(AppLocalizations l, _Metric m) => switch (m) {
     _Metric.calories => l.metricCalories,
@@ -124,9 +135,14 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
                 icon: Icons.restaurant_outlined,
               )
             : _Body(
+                selection: _selection,
                 period: period,
                 metric: _metric,
-                onMetric: (_Metric m) => setState(() => _metric = m),
+                onMetric: (_Metric m) {
+                  // 지표를 바꾸면 고른 날의 숫자는 뜻을 잃는다 — 같이 푼다.
+                  _selection.reset();
+                  setState(() => _metric = m);
+                },
                 label: _label(l, _metric),
                 unit: _unit(_metric),
                 average: _averageOf(period, _metric),
@@ -193,6 +209,7 @@ class _Body extends StatelessWidget {
     required this.metricLabel,
     required this.weekly,
     required this.ticks,
+    required this.selection,
     this.days,
   });
 
@@ -220,10 +237,15 @@ class _Body extends StatelessWidget {
   /// 어긋나지 않는다.
   final List<double> ticks;
 
+  /// `전체` 그래프의 스크롤·선택 상태. 머리의 숫자가 이걸 보고 평균과 하루
+  /// 값을 오간다. (#1018)
+  final PeriodChartSelection selection;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final bool over = goal > 0 && average > goal;
+    // 이번 주(꺾은선)는 스크롤도 선택도 없다 — 일곱 칸이 이미 한 화면이다.
+    final bool selectable = !weekly;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -246,46 +268,66 @@ class _Body extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    '${l.clientPeriodAverage} · $label',
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.subtleForeground,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text.rich(
-                      TextSpan(
-                        text: format(average),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: over
-                              ? AppColors.overTarget
-                              : AppColors.foreground,
-                        ),
-                        children: <InlineSpan>[
-                          TextSpan(
-                            text: ' / ${format(goal)} $unit',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.mutedForeground,
-                            ),
+              child: ListenableBuilder(
+                listenable: selection,
+                builder: (BuildContext context, Widget? _) {
+                  final int? picked = selectable ? selection.selected : null;
+                  // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
+                  // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
+                  // 못한다. (#1018)
+                  final double value = picked == null
+                      ? (selectable ? selection.averageOf(values) : average)
+                      : values[picked];
+                  final bool over = goal > 0 && value > goal;
+                  return PeriodChartHeadline(
+                    selected: picked != null,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          picked == null
+                              ? '${l.clientPeriodAverage} · $label'
+                              : '${DateFormat.yMd(Localizations.localeOf(context).toString()).format(dates[picked])} · $label',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.subtleForeground,
                           ),
-                        ],
-                      ),
-                      maxLines: 1,
+                        ),
+                        const SizedBox(height: 3),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text.rich(
+                            TextSpan(
+                              text: format(value),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: over
+                                    ? AppColors.overTarget
+                                    : AppColors.foreground,
+                              ),
+                              children: <InlineSpan>[
+                                TextSpan(
+                                  text: ' / ${format(goal)} $unit',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -343,6 +385,7 @@ class _Body extends StatelessWidget {
             unit: unit,
             label: label,
             format: format,
+            selection: selection,
             days: days,
           ),
           // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
@@ -404,6 +447,7 @@ class _PeriodBars extends StatelessWidget {
     required this.unit,
     required this.label,
     required this.format,
+    required this.selection,
     this.days,
   });
 
@@ -418,11 +462,29 @@ class _PeriodBars extends StatelessWidget {
   /// 칼로리를 볼 때의 원본. 탄단지가 있는 날은 막대를 셋으로 쌓는다.
   final List<ClientDietDay>? days;
 
+  /// 스크롤 위치와 고른 날. 카드 머리의 숫자가 같은 상태를 본다. (#1018)
+  final PeriodChartSelection selection;
+
   /// [i] 번째 칸의 원본. 칼로리를 보고 있지 않으면 null 이다.
   ClientDietDay? _dayAt(int i) {
     final List<ClientDietDay>? source = days;
     if (source == null || i >= source.length) return null;
     return source[i];
+  }
+
+  String _tip(AppLocalizations l, int i) {
+    final DateTime at = dates[i];
+    final String date = '${at.month}/${at.day}';
+    if (!logged[i]) return '$date · ${l.chartNoRecord}';
+    final String head = '$date · $label ${format(values[i])} $unit';
+    // 칼로리 뒤에는 그 칼로리가 어디서 왔는지를 적는다 — 숫자 하나만 보고는
+    // 같은 2,000kcal 이 밥에서 왔는지 기름에서 왔는지 알 수 없다.
+    final ClientDietDay? d = _dayAt(i);
+    if (d == null || !d.hasMacros) return head;
+    return '$head'
+        '\n${l.metricCarbs} ${format(d.carbsG)}g'
+        '  ${l.metricProtein} ${format(d.proteinG)}g'
+        '  ${l.metricFat} ${format(d.fatG)}g';
   }
 
   @override
@@ -450,99 +512,57 @@ class _PeriodBars extends StatelessWidget {
           : null,
       child: ExcludeSemantics(
         excluding: empty,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            SizedBox(
-              height: chartHeight,
-              child: Stack(
-                children: <Widget>[
-                  // 가로선은 목표선 하나뿐이다 (#1015). 실선 하나로 그리던 때는
-                  // 축처럼 보여, 목표를 넘겼는지가 선에서 읽히지 않았다.
-                  GoalLineOverlay(
-                    visible: hasGoal,
-                    bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-                    label: '${l.clientPeriodGoal} ${format(goal)}',
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      for (int i = 0; i < values.length; i++)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 1.5,
-                            ),
-                            // 툴팁은 올려야 보인다. 같은 내용을 시맨틱 라벨로도
-                            // 준다 — 막대 하나가 며칠 얼마인지는 이 노드 말고는
-                            // 음성 안내에 나올 데가 없다(#972).
-                            child: Semantics(
-                              label: _tip(l, i)
-                                  .split('\n')
-                                  .map((String s) => s.trim())
-                                  .join(', '),
-                              child: Tooltip(
-                                key: Key('client-diet-bar-$i'),
-                                message: _tip(l, i),
-                                child: _MacroBar(
-                                  height:
-                                      chartHeight *
-                                      (values[i] / maxValue).clamp(0.0, 1.0),
-                                  day: _dayAt(i),
-                                  logged: logged[i],
-                                  // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은
-                                  // 막대까지 빨갛게 물들이면 무엇이 얼마인지가
-                                  // 사라지므로, 탄단지가 있는 날은 쌓은 색을 지키고
-                                  // 초과는 목표선과 툴팁이 말한다.
-                                  over: hasGoal && values[i] > goal,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+        child: ListenableBuilder(
+          listenable: selection,
+          builder: (BuildContext context, Widget? _) => PeriodScrollChart(
+            count: values.length,
+            height: chartHeight,
+            selectedIndex: selection.selected,
+            onSelected: selection.select,
+            onVisibleRangeChanged: selection.setVisible,
+            goalOverlay: GoalLineOverlay(
+              visible: hasGoal,
+              bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
+              label: '${l.clientPeriodGoal} ${format(goal)}',
             ),
-            const SizedBox(height: 5),
-            Row(
-              children: <Widget>[
-                for (int i = 0; i < dates.length; i++)
-                  Expanded(
-                    child: Text(
-                      i % labelStep == 0 ? '${dates[i].day}' : '',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.mutedForeground,
-                      ),
+            labelBuilder: (int i) =>
+                i % labelStep == 0 ? '${dates[i].day}' : '',
+            calloutBuilder: (BuildContext context, int i) =>
+                const SizedBox.shrink(),
+            barBuilder: (BuildContext context, int i) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+              // 툴팁은 올려야 보인다. 같은 내용을 시맨틱 라벨로도 준다 — 막대
+              // 하나가 며칠 얼마인지는 이 노드 말고는 음성 안내에 나올 데가
+              // 없다(#972).
+              child: Semantics(
+                label: _tip(
+                  l,
+                  i,
+                ).split('\n').map((String s) => s.trim()).join(', '),
+                child: Tooltip(
+                  key: Key('client-diet-bar-$i'),
+                  message: _tip(l, i),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: _MacroBar(
+                      height:
+                          chartHeight *
+                          (values[i] / maxValue).clamp(0.0, 1.0),
+                      day: _dayAt(i),
+                      logged: logged[i],
+                      // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은 막대까지
+                      // 빨갛게 물들이면 무엇이 얼마인지가 사라지므로, 탄단지가
+                      // 있는 날은 쌓은 색을 지키고 초과는 목표선과 툴팁이 말한다.
+                      over: hasGoal && values[i] > goal,
                     ),
                   ),
-              ],
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  /// 막대 하나의 툴팁 — 어느 막대가 며칠인지는 x축 라벨만으로 짚을 수 없다.
-  String _tip(AppLocalizations l, int i) {
-    final DateTime at = dates[i];
-    final String date = '${at.month}/${at.day}';
-    if (!logged[i]) return '$date · ${l.chartNoRecord}';
-    final String head = '$date · $label ${format(values[i])} $unit';
-    // 칼로리 뒤에는 그 칼로리가 어디서 왔는지를 적는다 — 숫자 하나만 보고는
-    // 같은 2,000kcal 이 밥에서 왔는지 기름에서 왔는지 알 수 없다.
-    final ClientDietDay? d = _dayAt(i);
-    if (d == null || !d.hasMacros) return head;
-    return '$head'
-        '\n${l.metricCarbs} ${format(d.carbsG)}g'
-        '  ${l.metricProtein} ${format(d.proteinG)}g'
-        '  ${l.metricFat} ${format(d.fatG)}g';
   }
 }
 
