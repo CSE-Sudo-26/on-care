@@ -217,6 +217,9 @@ class AiCoachingCard extends ConsumerWidget {
               _RecommendedExerciseRow(
                 routine: routine,
                 sourceLabel: routineSourceLabel(l, routine, coach),
+                // 담당이 배정한 것을 회원이 조용히 없애면 다음 상담에서 둘이
+                // 서로 다른 기록을 본다. 담당이 없을 때만 스스로 물린다. (#1020)
+                cancellable: coach == null,
               ),
               const SizedBox(height: 10),
             ],
@@ -292,12 +295,16 @@ class _RecommendedExerciseRow extends ConsumerStatefulWidget {
   const _RecommendedExerciseRow({
     required this.routine,
     required this.sourceLabel,
+    required this.cancellable,
   });
 
   /// 회원이 읽는 출처 한 줄 — `AI 추천 · 김트레이너 확인` 처럼.
   final String sourceLabel;
 
   final CoachRoutine routine;
+
+  /// 회원이 스스로 물릴 수 있는가 — 담당 트레이너가 없을 때만 참이다. (#1020)
+  final bool cancellable;
 
   @override
   ConsumerState<_RecommendedExerciseRow> createState() =>
@@ -307,6 +314,50 @@ class _RecommendedExerciseRow extends ConsumerStatefulWidget {
 class _RecommendedExerciseRowState
     extends ConsumerState<_RecommendedExerciseRow> {
   bool _saving = false;
+
+  /// 개인 운동 취소. 담당 트레이너가 없을 때만 화면에 나타난다 — 담당이 있으면
+  /// 취소는 트레이너의 일이라 서버도 403 으로 막는다. (#1020)
+  Future<void> _cancel() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final CoachRoutine routine = widget.routine;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        content: Text(l.coachRoutineCancelConfirm(routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const Key('confirmRoutineCancel'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.coachRoutineCancel),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(memberCoachRepositoryProvider).deleteRoutine(routine.id);
+      ref.invalidate(coachRoutinesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineCancelled)));
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineCancelFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   Future<void> _complete() async {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -457,6 +508,28 @@ class _RecommendedExerciseRowState
                         color: FigmaColors.primary,
                       ),
                     ),
+                    // 아직 하지 않은 것만 물릴 수 있다 — 이미 한 운동을 목록에서
+                    // 지우면 기록과 화면이 갈린다.
+                    if (widget.cancellable && !routine.completed)
+                      TextButton(
+                        key: Key('cancelRoutine-${routine.id}'),
+                        onPressed: _saving ? null : _cancel,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          foregroundColor: AppColors.mutedForeground,
+                        ),
+                        child: Text(
+                          l.coachRoutineCancel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
 
                   ],
                 ),
