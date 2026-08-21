@@ -295,7 +295,7 @@ void main() {
       expect(progressColors.last.color, expectedColor);
     }
 
-    final Color macroProgressColor = FigmaColors.primaryA(0.65);
+    final Color macroProgressColor = FigmaColors.statusNormal.withValues(alpha: 0.65);
     expectMacroProgressColor('탄수화물', macroProgressColor);
     expectMacroProgressColor('단백질', macroProgressColor);
     expectMacroProgressColor('지방', macroProgressColor);
