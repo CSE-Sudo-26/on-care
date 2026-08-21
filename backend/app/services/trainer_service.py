@@ -45,6 +45,7 @@ from app.services import (
     exercise_types,
     notification_service,
     routine_suggestion_service,
+    schedule_parse,
 )
 from app.services.coach import personal_ingest
 
@@ -644,6 +645,65 @@ def _existing_message_out(
     return chat_message_out(message, viewer)
 
 
+#: 대화에서 읽어 낸 PT 의 종류·길이·표시. 길이는 트레이너 앱의 기본 한 시간을
+#: 따른다 — 문장에 "몇 분" 까지 적히는 일은 드물어 짐작하지 않는다.
+PT_SESSION_TYPE = "1:1 PT"
+_CHAT_SCHEDULE_MINUTES = 60
+_CHAT_SCHEDULE_NOTE = "대화에서 잡은 일정"
+
+
+def _schedule_from_chat(
+    db: Session, trainer_id: str, member_id: str, text: str, sent_at: datetime
+) -> None:
+    """트레이너가 대화에서 잡은 다음 PT 를 일정으로 남긴다. (#1061)
+
+    약속은 대화에서 잡히는데 그 말이 채팅 안에만 남아, 회원 앱의 `다음 PT
+    일정` 은 비어 있거나 지난 일정을 들고 있었다.
+
+    **트레이너가 보낸 말만** 본다. 회원이 제안한 시간은 아직 약속이 아니다 —
+    트레이너가 받아 주기 전에 일정으로 굳히면 오지 않을 시간을 잡아 둔다.
+
+    같은 날 같은 시각의 일정이 이미 있으면 아무것도 하지 않는다. 트레이너가
+    같은 약속을 두 번 말하는 것은 흔한 일이라, 그때마다 칸이 늘면 일정 화면이
+    중복으로 찬다.
+    """
+    parsed = schedule_parse.parse_schedule(
+        text, sent_on=clock.to_seoul(sent_at).date()
+    )
+    if parsed is None:
+        return
+    existing = db.scalar(
+        select(TrainerSchedule).where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.date == parsed.date,
+            TrainerSchedule.time == parsed.time,
+        )
+    )
+    if existing is not None:
+        return
+    member_name = db.scalar(select(User.name).where(User.id == member_id))
+    db.add(
+        TrainerSchedule(
+            id=f"sched-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            date=parsed.date,
+            time=parsed.time,
+            client_name=member_name or "",
+            type=PT_SESSION_TYPE,
+            duration_minutes=_CHAT_SCHEDULE_MINUTES,
+            status="예정",
+            # 어디서 온 일정인지 남긴다 — 사람이 만든 일정과 섞이면, 잘못
+            # 읽은 약속을 나중에 가려낼 수 없다.
+            note=_CHAT_SCHEDULE_NOTE,
+            program_json="[]",
+            sort_order=0,
+        )
+    )
+    db.flush()
+
+
 def send_message(
     db: Session, trainer_id: str, member_id: str, sender: str, text: str,
     viewer: str = "trainer", notify: str | None = None,
@@ -701,6 +761,9 @@ def send_message(
             if existing is not None:
                 return _existing_message_out(existing, text=text, viewer=viewer)
         raise
+
+    if sender == "trainer":
+        _schedule_from_chat(db, trainer_id, member_id, text, msg.created_at)
 
     if sender == "member":
         member_name = db.scalar(select(User.name).where(User.id == member_id))
