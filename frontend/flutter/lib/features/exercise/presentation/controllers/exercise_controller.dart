@@ -51,10 +51,10 @@ final exercisePastWeekProvider = FutureProvider.family<ExerciseWeek, DateTime>((
   return ref.watch(exerciseRepositoryProvider).fetchWeek(weekStart);
 }, name: 'exercisePastWeek');
 
-/// `전체` 기간이 거슬러 올라가는 주 수. 12주 — 데모 픽스처가 들고 있는 기간이자
-/// 식단 `전체` 와 같은 길이다. 화면에는 한 번에 30일이 보이고 나머지는 옆으로
-/// 밀어 본다. (#1018)
-const int kExerciseAllPeriodWeeks = 12;
+/// `전체` 기간이 거슬러 올라가는 주 수. 35주(약 여덟 달) — 데모 픽스처가
+/// 들고 있는 기간과 같다. 한 주가 막대 하나이고, 화면에 안 들어가는 만큼은
+/// 옆으로 밀어 본다. (#1018)
+const int kExerciseAllPeriodWeeks = 35;
 
 /// `전체` 그래프의 하루치.
 class ExerciseDayBar {
@@ -63,6 +63,7 @@ class ExerciseDayBar {
     required this.cardio,
     required this.strength,
     required this.stretching,
+    required this.other,
     required this.minutes,
     required this.calories,
   });
@@ -71,6 +72,9 @@ class ExerciseDayBar {
   final double cardio;
   final double strength;
   final double stretching;
+
+  /// 목표가 없는 나머지 운동. 그래프에는 그리지 않는다.
+  final double other;
   final double minutes;
   final double calories;
 }
@@ -84,11 +88,7 @@ class ExerciseDayBar {
 final exerciseAllPeriodProvider = FutureProvider<List<ExerciseDayBar>>((
   ref,
 ) async {
-  final DateTime today = DateTime(
-    nowKst().year,
-    nowKst().month,
-    nowKst().day,
-  );
+  final DateTime today = DateTime(nowKst().year, nowKst().month, nowKst().day);
   final DateTime thisMonday = mondayOfWeek(today);
 
   // watch 는 await 이전에 모두 걸어 둔다 — 한 주라도 바뀌면 전체도 다시
@@ -133,6 +133,7 @@ final exerciseAllPeriodProvider = FutureProvider<List<ExerciseDayBar>>((
           cardio: at(week.cardioMinutes, d),
           strength: at(week.strengthMinutes, d),
           stretching: at(week.stretchingMinutes, d),
+          other: at(week.otherMinutes, d),
           minutes: at(week.dailyMinutes, d),
           calories: at(week.dailyCalories, d),
         ),
@@ -236,6 +237,9 @@ ExerciseWeek applyTodayBonus(
     cardioMinutes: bump(week.cardioMinutes, bonus.cardioMinutes),
     strengthMinutes: week.strengthMinutes,
     stretchingMinutes: bump(week.stretchingMinutes, bonus.stretchMinutes),
+    // 추천 루틴에 `기타` 는 없다 — 그대로 넘긴다. 빠뜨리면 오늘 루틴을 체크한
+    // 순간 기타 분이 사라져, 세 유형 합과 일별 총합이 어긋난다.
+    otherMinutes: week.otherMinutes,
     dayLabels: week.dayLabels,
     totalMinutes: week.totalMinutes + bonus.minutes.round(),
     totalCalories: week.totalCalories + bonus.calories,

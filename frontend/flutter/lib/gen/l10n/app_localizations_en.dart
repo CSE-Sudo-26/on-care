@@ -613,6 +613,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exActivityTitle => 'Activity';
 
   @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return 'Week $week, $month/';
+  }
+
+  @override
+  String get exBurnTodayTitle => 'Burned today';
+
+  @override
+  String get exBurnWeekTitle => 'Burned this week';
+
+  @override
+  String get exBurnAllTitle => 'Average burned';
+
+  @override
+  String get exLoadDayTitle => 'Burned';
+
+  @override
+  String exGoalValue(String value) {
+    return 'Goal $value';
+  }
+
+  @override
+  String get exLoadEmpty => 'No records yet.';
+
+  @override
   String get exThisWeek => 'This week';
 
   @override

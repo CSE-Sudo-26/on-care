@@ -262,6 +262,7 @@ class MockExerciseRepository implements ExerciseRepository {
     final List<double> cardio = List<double>.filled(n, 0);
     final List<double> strength = List<double>.filled(n, 0);
     final List<double> stretching = List<double>.filled(n, 0);
+    final List<double> other = List<double>.filled(n, 0);
     int totalMinutes = 0;
 
     for (final ExerciseSession s in sessions) {
@@ -269,7 +270,7 @@ class MockExerciseRepository implements ExerciseRepository {
       if (i >= 0) {
         daily[i] += s.minutes;
         dailyCal[i] += s.calories;
-        _bucketFor(s.type, cardio, strength, stretching)[i] += s.minutes;
+        _bucketFor(s.type, cardio, strength, stretching, other)[i] += s.minutes;
       }
       totalMinutes += s.minutes;
     }
@@ -280,6 +281,7 @@ class MockExerciseRepository implements ExerciseRepository {
       cardioMinutes: cardio,
       strengthMinutes: strength,
       stretchingMinutes: stretching,
+      otherMinutes: other,
       dayLabels: List<String>.of(_dayLabels),
       totalMinutes: totalMinutes,
       totalCalories:
@@ -291,17 +293,21 @@ class MockExerciseRepository implements ExerciseRepository {
     );
   }
 
-  /// 스택 차트의 세 시리즈(유산소·근력·스트레칭) 중 운동 유형에 맞는 버킷.
+  /// 유형별 시리즈(유산소·근력·유연성·기타) 중 운동 유형에 맞는 버킷.
+  ///
+  /// `기타` 는 예전에 유산소에 섞어 넣었는데, 목표가 없는 운동이 유산소 달성률을
+  /// 올려 버렸다. 이제 제 버킷을 갖는다.
   List<double> _bucketFor(
     ExerciseType type,
     List<double> cardio,
     List<double> strength,
     List<double> stretching,
+    List<double> other,
   ) => switch (type) {
     ExerciseType.cardio || ExerciseType.walking => cardio,
     ExerciseType.strength => strength,
     ExerciseType.stretching || ExerciseType.yoga => stretching,
-    ExerciseType.other => cardio,
+    ExerciseType.other => other,
   };
 
   int _nonNeg(int v) => v < 0 ? 0 : v;

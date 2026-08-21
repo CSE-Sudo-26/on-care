@@ -1202,6 +1202,48 @@ abstract class AppLocalizations {
   /// **'Activity'**
   String get exActivityTitle;
 
+  /// No description provided for @exWeekOfMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}, {month}/'**
+  String exWeekOfMonthLabel(int month, int week);
+
+  /// No description provided for @exBurnTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned today'**
+  String get exBurnTodayTitle;
+
+  /// No description provided for @exBurnWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this week'**
+  String get exBurnWeekTitle;
+
+  /// No description provided for @exBurnAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Average burned'**
+  String get exBurnAllTitle;
+
+  /// No description provided for @exLoadDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned'**
+  String get exLoadDayTitle;
+
+  /// No description provided for @exGoalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal {value}'**
+  String exGoalValue(String value);
+
+  /// No description provided for @exLoadEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No records yet.'**
+  String get exLoadEmpty;
+
   /// No description provided for @exThisWeek.
   ///
   /// In en, this message translates to:

@@ -137,6 +137,7 @@ class ExerciseWeek {
     this.cardioMinutes = const <double>[],
     this.strengthMinutes = const <double>[],
     this.stretchingMinutes = const <double>[],
+    this.otherMinutes = const <double>[],
   });
 
   final List<ExerciseSession> sessions;
@@ -158,6 +159,11 @@ class ExerciseWeek {
   final List<double> cardioMinutes;
   final List<double> strengthMinutes;
   final List<double> stretchingMinutes;
+
+  /// 목표가 없는 나머지 운동(기타). 그래프에는 그리지 않고 분 수만 적는다 —
+  /// 무엇에 견줘야 할지 정해지지 않은 값을 막대로 쌓으면 다른 유형의 높이까지
+  /// 뜻을 잃는다.
+  final List<double> otherMinutes;
 
   /// Count of distinct days on which the user worked out, matching
   /// the prototype's "이번 주 N회" tile semantics. Derived from
@@ -214,6 +220,7 @@ class ExerciseWeek {
       stretchingMinutes: parseDoubleList('flexibility_minutes').isNotEmpty
           ? parseDoubleList('flexibility_minutes')
           : parseDoubleList('stretching_minutes'),
+      otherMinutes: parseDoubleList('other_minutes'),
     );
   }
 }
