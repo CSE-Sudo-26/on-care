@@ -1029,6 +1029,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get myGymDetailTooltip => 'Gym details';
+
+  @override
+  String get myTrainerDetailTooltip => 'Trainer details';
+
+  @override
   String get myGymDisconnectTooltip => 'Disconnect gym';
 
   @override

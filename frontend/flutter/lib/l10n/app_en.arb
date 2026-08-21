@@ -582,6 +582,8 @@
       }
     }
   },
+  "myGymDetailTooltip": "Gym details",
+  "myTrainerDetailTooltip": "Trainer details",
   "myGymDisconnectTooltip": "Disconnect gym",
   "myTrainerDisconnectTooltip": "Disconnect trainer",
   "myNoTrainer": "No assigned trainer",

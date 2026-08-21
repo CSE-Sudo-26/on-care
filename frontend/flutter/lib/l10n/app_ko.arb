@@ -385,6 +385,8 @@
       }
     }
   },
+  "myGymDetailTooltip": "헬스장 상세 보기",
+  "myTrainerDetailTooltip": "트레이너 상세 보기",
   "myGymDisconnectTooltip": "헬스장 연결 삭제",
   "myTrainerDisconnectTooltip": "트레이너 연결 삭제",
   "myNoTrainer": "담당 트레이너 없음",

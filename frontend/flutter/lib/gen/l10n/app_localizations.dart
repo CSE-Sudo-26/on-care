@@ -1892,6 +1892,18 @@ abstract class AppLocalizations {
   /// **'Disconnect trainer {trainer}?\nYour connection to {gym} will remain.'**
   String myTrainerDisconnectConfirm(String trainer, String gym);
 
+  /// No description provided for @myGymDetailTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym details'**
+  String get myGymDetailTooltip;
+
+  /// No description provided for @myTrainerDetailTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer details'**
+  String get myTrainerDetailTooltip;
+
   /// No description provided for @myGymDisconnectTooltip.
   ///
   /// In en, this message translates to:
