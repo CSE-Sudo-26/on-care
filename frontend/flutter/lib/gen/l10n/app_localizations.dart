@@ -329,13 +329,13 @@ abstract class AppLocalizations {
   /// No description provided for @dietAmountOver.
   ///
   /// In en, this message translates to:
-  /// **'{amount} over the goal'**
+  /// **'{amount} over'**
   String dietAmountOver(String amount);
 
   /// No description provided for @dietAmountRemaining.
   ///
   /// In en, this message translates to:
-  /// **'{amount} remaining to the goal'**
+  /// **'{amount} to go'**
   String dietAmountRemaining(String amount);
 
   /// No description provided for @homeExerciseActiveTime.
@@ -643,12 +643,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Period total'**
   String get dietPeriodTotal;
-
-  /// No description provided for @dietPeriodLoggedDays.
-  ///
-  /// In en, this message translates to:
-  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
-  String dietPeriodLoggedDays(int days);
 
   /// No description provided for @dietPeriodEmpty.
   ///
