@@ -324,7 +324,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                       return Center(
                         child: Text(
                           l.slotEmpty,
-                          style: const TextStyle(color: AppColors.mutedForeground),
+                          style: const TextStyle(
+                            color: AppColors.mutedForeground,
+                          ),
                         ),
                       );
                     }

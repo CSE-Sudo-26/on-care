@@ -13,7 +13,6 @@ import 'package:oncare_trainer/features/consultations/data/repositories/consulta
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/complete_session_dialog.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/consultation_inbox_action.dart';
@@ -121,6 +120,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   String? _editingScheduleId;
   String? _editingProgramId;
+
+  /// 메모만 고치는 편집기가 열린 세션. 프로그램 편집기와 자리를 나눠 쓰므로
+  /// 둘 중 하나만 열린다(#1011).
+  String? _editingNoteId;
 
   /// New schedules use a sheet; existing schedules are edited in their card.
   Future<void> _openSessionSheet() async {
@@ -604,10 +607,17 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           onEditSchedule: () => setState(() {
             _editingScheduleId = session.id;
             _editingProgramId = null;
+            _editingNoteId = null;
           }),
           onEditProgram: () => setState(() {
             _editingProgramId = session.id;
             _editingScheduleId = null;
+            _editingNoteId = null;
+          }),
+          onEditNote: () => setState(() {
+            _editingNoteId = session.id;
+            _editingScheduleId = null;
+            _editingProgramId = null;
           }),
           onDelete: () => _confirmDelete(session),
           onChat: () => _openChat(session),
@@ -637,10 +647,17 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ? SessionProgramEditor(
                   key: ValueKey<String>('week-program-editor-${session.id}'),
                   session: session,
-                  // 상담은 프로그램이 아니라 메모를 적는 자리다(#988).
-                  noteOnly: session.type == SessionType.consultation,
                   onSaved: () => setState(() => _editingProgramId = null),
                   onCancel: () => setState(() => _editingProgramId = null),
+                )
+              : _editingNoteId == session.id
+              ? SessionProgramEditor(
+                  key: ValueKey<String>('week-note-editor-${session.id}'),
+                  session: session,
+                  // 같은 편집기의 메모만 모드다 — 운동 목록 없이 메모만 연다.
+                  noteOnly: true,
+                  onSaved: () => setState(() => _editingNoteId = null),
+                  onCancel: () => setState(() => _editingNoteId = null),
                 )
               : null,
         ),
