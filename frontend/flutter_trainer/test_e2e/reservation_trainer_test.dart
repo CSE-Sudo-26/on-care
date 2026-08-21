@@ -25,20 +25,19 @@ import 'support/e2e_harness.dart';
 /// 있어 하루 뒤를 쓴다. 시각 선택은 `showTimePicker` 라 기본값을 그대로 쓰는 편이
 /// 다이얼을 흉내 내는 것보다 깨질 거리가 적다.
 DateTime get _slotDay => DateTime.now().add(const Duration(days: 1));
-const int _capacity = 2;
+// 슬롯은 늘 한 사람 몫이다 — 화면에 정원 입력이 없다(#1012).
+const int _capacity = 1;
 
 Future<void> _openSchedule(WidgetTester tester, DateTime day) async {
-  await tester.tap(find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')));
+  await tester.tap(
+    find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')),
+  );
   await pumpUntil(tester, find.byType(SchedulePage), step: '스케줄 화면');
 
   // 시간표는 월~일 한 주만 보여 준다(#988). 고르려는 날이 다음 주면 — 오늘이
   // 일요일이면 내일이 그렇다 — 화살표로 한 주 넘긴 뒤에야 그 요일 칸이 있다.
   final Finder cell = find.byKey(ValueKey<String>('schedule-day-${ymd(day)}'));
-  await pumpUntil(
-    tester,
-    find.byIcon(Icons.chevron_right),
-    step: '주 이동 화살표',
-  );
+  await pumpUntil(tester, find.byIcon(Icons.chevron_right), step: '주 이동 화살표');
   if (cell.evaluate().isEmpty) {
     await tester.tap(find.byIcon(Icons.chevron_right));
     await tester.pump();
@@ -72,22 +71,22 @@ void main() {
         await loginAsTrainer(tester);
         await _openSchedule(tester, _slotDay);
 
-        await tester.tap(find.byKey(const ValueKey<String>('schedule-open-slots')));
+        await tester.tap(
+          find.byKey(const ValueKey<String>('schedule-open-slots')),
+        );
         await pumpUntil(
           tester,
           find.byKey(const ValueKey<String>('slot-create')),
           step: '예약 슬롯 시트',
-        );
-        await tester.enterText(
-          find.byKey(const ValueKey<String>('slot-capacity-input')),
-          '$_capacity',
         );
         await tester.tap(find.byKey(const ValueKey<String>('slot-create')));
 
         // 서버가 만든 슬롯을 먼저 확정하고, 그 id 로 화면을 확인한다. 화면의 행만
         // 보면 "무엇이든 하나 생겼다" 까지만 알 수 있다.
         Map<String, dynamic>? created;
-        final DateTime deadline = DateTime.now().add(const Duration(seconds: 20));
+        final DateTime deadline = DateTime.now().add(
+          const Duration(seconds: 20),
+        );
         while (created == null && DateTime.now().isBefore(deadline)) {
           await tester.pump(const Duration(milliseconds: 200));
           for (final Map<String, dynamic> slot in await api.trainerSlots()) {
@@ -125,7 +124,9 @@ void main() {
           find.byType(ReservationSlotsSheet),
           step: '슬롯 시트 닫힘',
         );
-        await tester.tap(find.byKey(const ValueKey<String>('schedule-open-slots')));
+        await tester.tap(
+          find.byKey(const ValueKey<String>('schedule-open-slots')),
+        );
         await pumpUntil(
           tester,
           find.byKey(const ValueKey<String>('slot-create')),
@@ -208,11 +209,7 @@ void main() {
               in await api.reservationSessionsAt(startsAt))
             if (row['id'] == scheduleId) row,
         ];
-        expect(
-          mine,
-          hasLength(1),
-          reason: '취소 뒤에도 파생 일정이 기록으로 남아 있어야 합니다.',
-        );
+        expect(mine, hasLength(1), reason: '취소 뒤에도 파생 일정이 기록으로 남아 있어야 합니다.');
         expect(
           mine.single['status'],
           '취소',
