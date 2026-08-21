@@ -996,6 +996,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get myGymDetailTooltip => '헬스장 상세 보기';
+
+  @override
+  String get myTrainerDetailTooltip => '트레이너 상세 보기';
+
+  @override
   String get myGymDisconnectTooltip => '헬스장 연결 삭제';
 
   @override
