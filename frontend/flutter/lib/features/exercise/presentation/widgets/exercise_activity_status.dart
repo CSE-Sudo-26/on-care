@@ -904,8 +904,7 @@ class _AllPeriodView extends ConsumerWidget {
                   ),
                   strengthSets: byWeek[m]!.fold<int>(
                     0,
-                    (int a, ExerciseDayBar d) =>
-                        a + setsFromStrengthMinutes(d.strength),
+                    (int a, ExerciseDayBar d) => a + d.strengthSets.round(),
                   ),
                   flexibilityMinutes: byWeek[m]!.fold<double>(
                     0,

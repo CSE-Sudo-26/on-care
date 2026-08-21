@@ -1,5 +1,6 @@
 import 'package:demo_fixture/demo_fixture.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 
@@ -64,9 +65,10 @@ class MockExerciseRepository implements ExerciseRepository {
       _addDays(_today, -(_todayIdx + 7 * weeksAgo)),
     );
     final List<ExerciseSession> out = <ExerciseSession>[];
-    for (final FixtureDay day in _fixture.daysFor(_today).where(
-      (FixtureDay d) => d.weekStart == weekStart,
-    )) {
+    for (final FixtureDay day
+        in _fixture
+            .daysFor(_today)
+            .where((FixtureDay d) => d.weekStart == weekStart)) {
       final Map<ExerciseType, List<FixtureExercise>> byType =
           <ExerciseType, List<FixtureExercise>>{};
       for (final FixtureExercise e in day.doneExercises) {
@@ -93,6 +95,14 @@ class MockExerciseRepository implements ExerciseRepository {
             items: <String>[
               for (final FixtureExercise e in entry.value) e.name,
             ],
+            // 근력은 세트가 값이다. 이름에 적힌 `4세트` 를 화면이 다시 세지
+            // 않도록 픽스처의 수를 그대로 옮긴다.
+            sets: entry.value.any((FixtureExercise e) => e.sets != null)
+                ? entry.value.fold<int>(
+                    0,
+                    (int sum, FixtureExercise e) => sum + (e.sets ?? 0),
+                  )
+                : null,
           ),
         );
       }
@@ -263,6 +273,7 @@ class MockExerciseRepository implements ExerciseRepository {
     final List<double> strength = List<double>.filled(n, 0);
     final List<double> stretching = List<double>.filled(n, 0);
     final List<double> other = List<double>.filled(n, 0);
+    final List<double> strengthSets = List<double>.filled(n, 0);
     int totalMinutes = 0;
 
     for (final ExerciseSession s in sessions) {
@@ -271,6 +282,10 @@ class MockExerciseRepository implements ExerciseRepository {
         daily[i] += s.minutes;
         dailyCal[i] += s.calories;
         _bucketFor(s.type, cardio, strength, stretching, other)[i] += s.minutes;
+        if (s.type == ExerciseType.strength) {
+          strengthSets[i] +=
+              s.sets ?? setsFromStrengthMinutes(s.minutes.toDouble());
+        }
       }
       totalMinutes += s.minutes;
     }
@@ -282,6 +297,7 @@ class MockExerciseRepository implements ExerciseRepository {
       strengthMinutes: strength,
       stretchingMinutes: stretching,
       otherMinutes: other,
+      strengthSets: strengthSets,
       dayLabels: List<String>.of(_dayLabels),
       totalMinutes: totalMinutes,
       totalCalories:

@@ -34,7 +34,10 @@ const double kStrengthMinutesPerSetWithRest = 3.0;
 double strengthScoreOfSets(num sets) =>
     sets * kStrengthMinutesPerSet * kMetStrength;
 
-/// 분만 남은 근력 기록 → 세트 수(대략). 45분 ≈ 15세트.
+/// 세트를 **모르는** 옛 기록에서만 쓰는 환산. 45분 ≈ 15세트.
+///
+/// 기록이 세트를 들고 있으면 언제나 그 값을 쓴다 — 분에서 되짚어 계산하면
+/// 트레이너가 보낸 프로그램의 세트 수와 화면의 수가 어긋난다.
 int setsFromStrengthMinutes(double minutes) =>
     (minutes / kStrengthMinutesPerSetWithRest).round();
 
@@ -117,10 +120,12 @@ class ExerciseDayLoad {
     required double flexibility,
     double other = 0,
     double calories = 0,
+    double? sets,
   }) => ExerciseDayLoad(
     date: date,
     cardioMinutes: cardio,
-    strengthSets: setsFromStrengthMinutes(strength),
+    // 기록한 세트가 있으면 그 값이다. 없을 때만 분에서 환산한다.
+    strengthSets: (sets ?? setsFromStrengthMinutes(strength)).round(),
     flexibilityMinutes: flexibility,
     otherMinutes: other,
     calories: calories,
@@ -182,6 +187,7 @@ List<ExerciseDayLoad> dayLoadsOfWeek(ExerciseWeek week, DateTime monday) {
         flexibility: hasBreakdown ? week.stretchingMinutes[i] : 0,
         other: i < week.otherMinutes.length ? week.otherMinutes[i] : 0,
         calories: i < week.dailyCalories.length ? week.dailyCalories[i] : 0,
+        sets: i < week.strengthSets.length ? week.strengthSets[i] : null,
       ),
   ];
 }

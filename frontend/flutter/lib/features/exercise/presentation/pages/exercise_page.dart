@@ -585,6 +585,7 @@ class _ExerciseDayDetail extends StatelessWidget {
       flexibility: _at(week.stretchingMinutes, i),
       other: _at(week.otherMinutes, i),
       calories: _at(week.dailyCalories, i),
+      sets: i < week.strengthSets.length ? week.strengthSets[i] : null,
     );
 
     return Padding(
@@ -817,6 +818,10 @@ class _WeekDay extends StatelessWidget {
   }
 }
 
+/// 오늘의 요일 라벨(`월`…`일`). 픽스처 세션이 이 라벨로 붙는다.
+String _todayLabel() =>
+    const <String>['월', '화', '수', '목', '금', '토', '일'][nowKst().weekday - 1];
+
 // ───────────────────────────────────── 오늘 완료한 PT 일지 ──
 
 /// Trainer-linked card summarising today's completed PT session and the
@@ -827,7 +832,22 @@ class _PtLogCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (ref.watch(appConfigProvider).useMockApi) {
-      return const _DemoPtLogCard();
+      // 종목·세트는 픽스처가 정한다 — 카드가 제 목록을 따로 들면 같은 세션을
+      // 운동 현황과 다르게 말한다.
+      final List<String> items =
+          ref
+              .watch(exerciseWeekViewProvider)
+              .valueOrNull
+              ?.sessions
+              .where(
+                (ExerciseSession s) =>
+                    s.dayLabel == _todayLabel() &&
+                    s.type == ExerciseType.strength,
+              )
+              .expand((ExerciseSession s) => s.items)
+              .toList() ??
+          const <String>[];
+      return _DemoPtLogCard(items: items);
     }
 
     final DateTime now = nowKst();
@@ -1019,14 +1039,10 @@ class _CompletedPtSessionCard extends StatelessWidget {
 /// 이름·운동 목록·피드백)은 서버가 줬을 값을 흉내 낸 **가상의 데이터**라 그대로
 /// 둔다 — 실모드에서는 이 자리에 실제 회원의 기록이 들어온다(#847).
 class _DemoPtLogCard extends StatelessWidget {
-  const _DemoPtLogCard();
+  const _DemoPtLogCard({required this.items});
 
-  static const List<String> _items = <String>[
-    '벤치프레스 40kg · 4세트',
-    '덤벨 숄더프레스 10kg · 4세트',
-    '랫풀다운 45kg · 4세트',
-    '플랭크 60초 · 3세트',
-  ];
+  /// 오늘 세션의 종목 줄. 픽스처의 근력 기록에서 온다.
+  final List<String> items;
 
   @override
   Widget build(BuildContext context) {
@@ -1083,7 +1099,7 @@ class _DemoPtLogCard extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(height: 1, color: FigmaColors.hairline),
           const SizedBox(height: 12),
-          for (final String it in _items)
+          for (final String it in items)
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 3, 0, 3),
               child: Row(

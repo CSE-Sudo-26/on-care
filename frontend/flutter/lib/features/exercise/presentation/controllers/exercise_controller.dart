@@ -64,6 +64,7 @@ class ExerciseDayBar {
     required this.strength,
     required this.stretching,
     required this.other,
+    required this.strengthSets,
     required this.minutes,
     required this.calories,
   });
@@ -75,6 +76,9 @@ class ExerciseDayBar {
 
   /// 목표가 없는 나머지 운동. 그래프에는 그리지 않는다.
   final double other;
+
+  /// 그날의 근력 **세트 수**. 분에서 되짚어 계산하지 않는다.
+  final double strengthSets;
   final double minutes;
   final double calories;
 }
@@ -134,6 +138,7 @@ final exerciseAllPeriodProvider = FutureProvider<List<ExerciseDayBar>>((
           strength: at(week.strengthMinutes, d),
           stretching: at(week.stretchingMinutes, d),
           other: at(week.otherMinutes, d),
+          strengthSets: at(week.strengthSets, d),
           minutes: at(week.dailyMinutes, d),
           calories: at(week.dailyCalories, d),
         ),
@@ -240,6 +245,8 @@ ExerciseWeek applyTodayBonus(
     // 추천 루틴에 `기타` 는 없다 — 그대로 넘긴다. 빠뜨리면 오늘 루틴을 체크한
     // 순간 기타 분이 사라져, 세 유형 합과 일별 총합이 어긋난다.
     otherMinutes: week.otherMinutes,
+    // 추천 루틴에 근력은 없다 — 세트도 그대로 넘긴다.
+    strengthSets: week.strengthSets,
     dayLabels: week.dayLabels,
     totalMinutes: week.totalMinutes + bonus.minutes.round(),
     totalCalories: week.totalCalories + bonus.calories,

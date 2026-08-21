@@ -324,11 +324,12 @@ RECENT: list[dict] = [
         "trainerNote": "무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.",
         "dayMessage": "점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.",
         "exercises": [
-            ("레그프레스 3세트", "strength", 12, True),
-            ("레그컬 2세트", "strength", 9, True),
+            ("벤치프레스 40kg · 4세트", "strength", 12, True, 4),
+            ("덤벨 숄더프레스 10kg · 4세트", "strength", 10, True, 4),
+            ("랫풀다운 45kg · 4세트", "strength", 12, True, 4),
+            ("플랭크 60초 · 3세트", "strength", 6, True, 3),
             ("마무리 러닝머신 15분", "cardio", 15, True),
             ("하체 스트레칭 12분", "flexibility", 12, True),
-            ("점심 산책", "other", 20, True),
         ],
         "meals": [
             (B_EGG, "seed-diet-breakfast", "08:20",
@@ -406,14 +407,20 @@ def _meal_entry(
     return entry
 
 
-def _exercise(name: str, kind: str, minutes: int, done: bool) -> dict:
-    return {
+def _exercise(
+    name: str, kind: str, minutes: int, done: bool, sets: int | None = None
+) -> dict:
+    entry = {
         "name": name,
         "type": kind,
         "minutes": minutes,
         "calories": round(minutes * KCAL_PER_MIN[kind]),
         "done": done,
     }
+    # 근력만 세트를 갖는다. 유산소·스트레칭은 분이 곧 값이다.
+    if sets is not None:
+        entry["sets"] = sets
+    return entry
 
 
 def _grid_day(weekday: int, plan: list[str | None], skipped: int) -> dict:
