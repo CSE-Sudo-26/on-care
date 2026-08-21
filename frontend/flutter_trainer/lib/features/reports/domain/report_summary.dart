@@ -96,7 +96,9 @@ ReportSummary ruleReportSummary(WeeklyReport report, TrainerClient client) {
   final watch = <String>[];
   final completion = report.completionAvg;
   if (completion != null) {
-    (completion >= summaryLowCompletion ? good : watch).add('운동 이행률 $completion%');
+    (completion >= summaryLowCompletion ? good : watch).add(
+      '운동 이행률 $completion%',
+    );
   }
   final sodium = report.sodiumAvg;
   if (sodium != null) {
@@ -105,7 +107,8 @@ ReportSummary ruleReportSummary(WeeklyReport report, TrainerClient client) {
 
   final String headline;
   if (watch.isNotEmpty && good.isNotEmpty) {
-    headline = '$name 고객은 ${good.first} 로 잘 지켰고, 다음 주는 ${watch.first} 을 함께 챙기면 좋겠습니다.';
+    headline =
+        '$name 고객은 ${good.first} 로 잘 지켰고, 다음 주는 ${watch.first} 을 함께 챙기면 좋겠습니다.';
   } else if (watch.isNotEmpty) {
     headline = '$name 고객은 ${watch.first} 이 목표를 벗어나 다음 주 조정이 필요합니다.';
   } else {

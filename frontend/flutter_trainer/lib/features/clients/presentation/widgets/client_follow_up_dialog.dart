@@ -149,9 +149,7 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
       lastDate: today.add(_maxAhead),
     );
     if (picked == null || !mounted) return;
-    setState(
-      () => _dueDate = DateTime(picked.year, picked.month, picked.day),
-    );
+    setState(() => _dueDate = DateTime(picked.year, picked.month, picked.day));
   }
 
   String _contextLabel(AppLocalizations l, FollowUpContext context) =>
@@ -278,7 +276,9 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
                         children: <Widget>[
                           for (final task in list)
                             FollowUpRow(
-                              key: ValueKey<String>('client-follow-up-${task.id}'),
+                              key: ValueKey<String>(
+                                'client-follow-up-${task.id}',
+                              ),
                               task: task,
                               busy: _completing == task.id,
                               onComplete: () => _complete(task),

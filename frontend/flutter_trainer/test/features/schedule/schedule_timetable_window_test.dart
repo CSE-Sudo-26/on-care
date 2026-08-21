@@ -86,7 +86,7 @@ void main() {
     expect(gutterLabel('06:00'), findsOneWidget);
     // 같은 시각이 상세 카드에도 적힐 수 있다 — 여기서 재는 것은 격자가 그
     // 시각까지 넓어졌는가다.
-    expect(find.text('06:00\u201307:00 (60분)'), findsWidgets);
+    expect(find.text('06:00\u201307:00'), findsWidgets);
   });
 
   testWidgets('높이가 넉넉하면 스크롤 없이 하루가 통째로 보인다', (tester) async {
@@ -98,7 +98,7 @@ void main() {
       reason: '남는 높이에 맞춰 칸이 줄어 스크롤이 사라져야 한다',
     );
     // 그래도 블록은 시각과 이름 두 줄을 지킨다.
-    expect(find.text('10:00\u201311:00 (60분)'), findsWidgets);
+    expect(find.text('10:00\u201311:00'), findsWidgets);
     expect(find.text('김민수'), findsWidgets);
   });
 

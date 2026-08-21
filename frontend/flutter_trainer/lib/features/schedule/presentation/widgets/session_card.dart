@@ -225,6 +225,8 @@ class SessionCard extends ConsumerWidget {
                             s.durationMinutes,
                           ),
                           muted: s.isDone,
+                          // 시간표 블록과 같은 표현을 쓴다 — 상담은 비운다(#1013).
+                          outlined: noteOnly,
                         ),
                         SessionStatusChip(status: s.status),
                       ],

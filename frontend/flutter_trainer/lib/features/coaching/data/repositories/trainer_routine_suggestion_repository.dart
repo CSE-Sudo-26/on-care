@@ -135,7 +135,7 @@ final trainerRoutineSuggestionRepositoryProvider =
 /// 하고, 승인·거절 뒤에는 이 provider 를 invalidate 해 다시 읽는다.
 final routineSuggestionsProvider =
     FutureProvider.family<List<RoutineSuggestion>, String>((ref, memberId) {
-      return ref.watch(trainerRoutineSuggestionRepositoryProvider).pending(
-        memberId,
-      );
+      return ref
+          .watch(trainerRoutineSuggestionRepositoryProvider)
+          .pending(memberId);
     }, name: 'routineSuggestions');

@@ -3090,10 +3090,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get a11yRemoveCertification => '자격증 지우기';
 
   @override
-  String get a11yPrevDay => '이전 날';
+  String get a11yPrevWeek => '이전 주';
 
   @override
-  String get a11yNextDay => '다음 날';
+  String get a11yNextWeek => '다음 주';
 
   @override
   String get a11ySendMessage => '메시지 보내기';
