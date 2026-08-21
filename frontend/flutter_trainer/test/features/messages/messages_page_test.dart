@@ -250,6 +250,33 @@ void main() {
     });
   });
 
+  testWidgets('a long message never fills the whole thread width', (
+    tester,
+  ) async {
+    await withWideSurface(tester, () async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+      await goTo(tester, AppRoutes.messagesFor('seed-client-3'));
+
+      // 상한이 없으면 긴 메시지가 대화 창을 가로로 다 채운다. 그러면 누가
+      // 한 말인지를 말해 주던 "어느 쪽으로 붙어 있는가" 가 사라진다.
+      final thread = find.byKey(
+        const ValueKey<String>('messages-thread-seed-client-3'),
+      );
+      // 같은 문장이 목록 미리보기에도 있다 — 대화 쪽 말풍선만 잰다.
+      final message = find.descendant(
+        of: thread,
+        matching: find.textContaining('이해해요! 대신 AI 식단 분석'),
+      );
+      expect(message, findsOneWidget);
+      final threadWidth = tester.getSize(thread).width;
+      final bubbleWidth = tester.getSize(message).width;
+
+      expect(bubbleWidth, lessThan(threadWidth * 0.75));
+      // 그렇다고 쓸데없이 좁지도 않다 — 넓은 화면에서는 상한까지 쓴다.
+      expect(bubbleWidth, greaterThan(threadWidth * 0.5));
+    });
+  });
+
   testWidgets('client query keeps the selected member in the thread', (
     tester,
   ) async {
