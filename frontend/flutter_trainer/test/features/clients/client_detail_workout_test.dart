@@ -148,25 +148,36 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('returns 3 seeded workouts in order with decoded exercises', () async {
-      final history = await DriftClientRepository(
-        db,
-      ).watchHistory('seed-client-1').first;
-      expect(history.length, 3);
-      // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
-      // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
-      final DateTime now = nowKst();
-      expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
-      expect(history.first.completionRate, 100);
-      // 종목 이름은 픽스처가 정한다 — 여기 적으면 두 벌이 된다.
-      expect(
-        history.first.exercises,
-        contains('${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓'),
-      );
-      expect(history.first.trainerNote, isNotEmpty);
-      // Later entries have no trainer note (box hidden).
-      expect(history[1].trainerNote, isEmpty);
-    });
+    test(
+      'seeds every logged day, newest first, with decoded exercises',
+      () async {
+        final history = await DriftClientRepository(
+          db,
+        ).watchHistory('seed-client-1').first;
+        // 예전에는 최근 사흘만 시딩했다. 날짜별 기록이 이력을 그날에 붙이면서
+        // 사흘 밖의 날이 비어 보였다 — 픽스처가 가진 날을 모두 옮긴다(#1025).
+        // 몇 일인지는 픽스처가 정하므로 숫자를 적지 않고 그쪽에서 센다.
+        final int loggedDays = _fixture
+            .daysFor(nowKst())
+            .where((FixtureDay d) => d.exercises.isNotEmpty)
+            .length;
+        expect(history.length, loggedDays);
+        expect(history.length, greaterThan(3));
+        // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
+        // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
+        final DateTime now = nowKst();
+        expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
+        expect(history.first.completionRate, 100);
+        // 종목 이름은 픽스처가 정한다 — 여기 적으면 두 벌이 된다.
+        expect(
+          history.first.exercises,
+          contains('${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓'),
+        );
+        expect(history.first.trainerNote, isNotEmpty);
+        // Later entries have no trainer note (box hidden).
+        expect(history[1].trainerNote, isEmpty);
+      },
+    );
 
     test('returns per-client data (clients differ)', () async {
       final seongho = await DriftClientRepository(

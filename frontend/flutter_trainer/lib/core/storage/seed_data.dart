@@ -579,12 +579,20 @@ class _FixtureClient {
         ),
   ];
 
-  /// 고객 상세의 최근 운동 이력. 가까운 날부터, 운동이 있던 날만.
+  /// 고객 상세의 운동 이력. 가까운 날부터, 운동이 있던 날만.
+  ///
+  /// 예전에는 최근 사흘만 가져왔다. 그때는 이 값을 읽는 화면이 `운동 기록`
+  /// 카드 목록 하나였고 최근 몇 건만 보여 주면 됐다. 지금은 날짜별 기록이
+  /// 이력을 그날에 붙이므로(#1025), 사흘 밖의 날을 펼치면 그 자리가 비었다.
+  ///
+  /// 픽스처는 이미 이백 일치 운동을 날마다 들고 있다 — 지어내는 것이 아니라
+  /// 버리지 않는 것이다. 이행률도 그날 운동의 수행 여부에서 계산된 값이고,
+  /// 고객 피드백·트레이너 메모는 큐레이션한 사흘에만 있어 나머지 날에는 그
+  /// 상자가 뜨지 않는다(빈 값이면 그리지 않는 기존 동작 그대로).
   List<_History> get history => <_History>[
-    for (final FixtureDay day
-        in days.reversed
-            .where((FixtureDay d) => d.exercises.isNotEmpty)
-            .take(3))
+    for (final FixtureDay day in days.reversed.where(
+      (FixtureDay d) => d.exercises.isNotEmpty,
+    ))
       _History(
         // 픽스처 날짜를 오늘 기준 상대 일수로 바꾼다 — 시딩이 그 값으로
         // 날짜와 라벨을 함께 만든다.
