@@ -1091,6 +1091,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientPeriodGoal => '목표';
 
   @override
+  String get exBurnTodayTitle => '오늘 소모';
+
+  @override
+  String get exBurnWeekTitle => '이번 주 소모';
+
+  @override
+  String get exBurnMonthTitle => '이번 달 소모';
+
+  @override
+  String get exBurnDayTitle => '소모';
+
+  @override
+  String get exTypeOther => '기타';
+
+  @override
+  String exSetsValue(int count) {
+    return '$count세트';
+  }
+
+  @override
   String clientPeriodLoggedDays(int days) {
     return '$days일 기록';
   }
@@ -2018,9 +2038,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count개 · $minutes분';
   }
-
-  @override
-  String get aiWithinTarget => ' · 적정';
 
   @override
   String get aiRecentRoutine => '최근 루틴';

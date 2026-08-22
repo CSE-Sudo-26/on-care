@@ -400,40 +400,6 @@ class _PeriodBody extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(width: 10),
-              ListenableBuilder(
-                listenable: selection,
-                builder: (BuildContext context, Widget? _) {
-                  final int? picked = selectable ? selection.selected : null;
-                  final double value = picked == null
-                      ? (selectable ? selection.averageOf(values) : average)
-                      : values[picked];
-                  final bool over = goal > 0 && value > goal;
-                  final Color statusColor = over
-                      ? FigmaColors.dangerRed
-                      : FigmaColors.greenText;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      over
-                          ? '${l.homeGoal} ${l.homeMetricOver}'
-                          : l.homeMetricNormal,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: statusColor,
-                      ),
-                    ),
-                  );
-                },
-              ),
             ],
           ),
           const SizedBox(height: 10),

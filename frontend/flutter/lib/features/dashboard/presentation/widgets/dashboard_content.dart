@@ -553,13 +553,9 @@ class _MetricStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     final bool over =
         indicator.overBudget ||
         (indicator.max > 0 && indicator.current > indicator.max);
-    final Color statusColor = over
-        ? FigmaColors.dangerRed
-        : FigmaColors.greenText;
     // 선택 상태를 흰 배경·파란 테두리로만 알리면 스크린리더 사용자는 어떤
     // 지표가 켜져 있는지도, 이 카드가 누를 수 있는 요소인지도 알 수 없다.
     return Semantics(
@@ -594,15 +590,18 @@ class _MetricStatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
+              // 초과는 배지가 아니라 수치 자체를 빨갛게 해서 말한다. 배지는
+              // 카드마다 있고 없고가 갈려 카드 높이를 들쭉날쭉하게 만들었다
+              // (#1070). 색은 어느 카드에도 자리를 더 먹지 않는다.
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   _metricNumber(indicator.current),
                   maxLines: 1,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
+                    color: over ? FigmaColors.dangerRed : FigmaColors.ink,
                     letterSpacing: -0.5,
                     height: 1,
                   ),
@@ -625,23 +624,6 @@ class _MetricStatCard extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.mutedForeground,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  over ? l.homeMetricOver : l.homeMetricNormal,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
                   ),
                 ),
               ),
@@ -1181,11 +1163,11 @@ class _ExerciseStat extends StatelessWidget {
 
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
-/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+/// 목표 대비 상태색: 초과(빨강) / 그 외(브랜드 파랑).
 ///
-/// 지표 카드의 초과·정상 뱃지와 같은 두 색(dangerRed/greenText)만 쓴다 —
-/// 같은 카드 안에서 뱃지는 2단계인데 그래프만 근접(주황) 3단계라, 뱃지가
-/// "정상"인 날의 점이 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
+/// 지표 카드의 초과 표시와 같은 두 색(dangerRed/statusWithinGoal)만 쓴다 —
+/// 카드는 2단계인데 그래프만 근접(주황) 3단계라, 초과가 아닌 날의 점이
+/// 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
 /// Padded scale for the exercise bar chart. The baseline sits well below the
 /// smallest bar so the difference between days is visually pronounced.
 (double, double) _barScale(List<double> d) {

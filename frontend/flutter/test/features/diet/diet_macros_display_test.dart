@@ -193,14 +193,26 @@ void main() {
       expect(find.textContaining('2,000 kcal'), findsOneWidget);
       expect(find.textContaining('3,428'), findsOneWidget);
       expect(find.textContaining('17.8'), findsOneWidget);
-      expect(find.text('목표 초과'), findsOneWidget);
-      expect(find.text('정상'), findsOneWidget);
-      // 목표 수치는 바로 위 줄에 이미 있다 — `목표보다`·`목표까지` 를 덧붙이면
-      // 같은 말을 두 번 한다. (#1054)
-      expect(find.text('1,428mg 많아요'), findsOneWidget);
-      expect(find.text('32.2g 남았어요'), findsOneWidget);
-      expect(find.textContaining('목표보다'), findsNothing);
-      expect(find.textContaining('목표까지'), findsNothing);
+      // 배지도, 차이를 설명하는 문장도 없다 — 카드마다 있고 없고가 갈려
+      // 높이를 들쭉날쭉하게 만들었다 (#1070). 초과는 라벨 옆의 작은 빨간
+      // 글씨와 수치 색으로만 말한다.
+      expect(find.text('목표 초과'), findsNothing);
+      expect(find.text('정상'), findsNothing);
+      // #1054 에서 짧게 줄인 문구도 함께 사라졌다.
+      expect(find.text('1,428mg 많아요'), findsNothing);
+      expect(find.text('32.2g 남았어요'), findsNothing);
+      expect(find.textContaining('많아요'), findsNothing);
+      expect(find.textContaining('남았어요'), findsNothing);
+      // 라벨과 한 덩어리(Text.rich)라 리치 텍스트까지 뒤져야 잡힌다.
+      expect(
+        find.textContaining('+1,428mg', findRichText: true),
+        findsOneWidget,
+      );
+      // 목표 안쪽인 당류에는 초과분 글씨가 붙지 않는다.
+      expect(
+        find.textContaining('+32.2g', findRichText: true),
+        findsNothing,
+      );
       expect(
         find.byKey(const Key('nutrition-status-vertical-progress-나트륨')),
         findsOneWidget,
@@ -230,7 +242,7 @@ void main() {
           )
           .toList();
       expect(sodiumProgressColors.last.color, FigmaColors.dangerRed);
-      expect(sugarProgressColors.last.color, FigmaColors.greenText);
+      expect(sugarProgressColors.last.color, FigmaColors.statusWithinGoal);
 
       final Finder carbs = find.byKey(const Key('nutrition-macro-탄수화물'));
       final Finder protein = find.byKey(const Key('nutrition-macro-단백질'));
@@ -299,7 +311,9 @@ void main() {
       expect(progressColors.last.color, expectedColor);
     }
 
-    final Color macroProgressColor = FigmaColors.statusNormal.withValues(alpha: 0.65);
+    final Color macroProgressColor = FigmaColors.statusWithinGoal.withValues(
+      alpha: 0.65,
+    );
     expectMacroProgressColor('탄수화물', macroProgressColor);
     expectMacroProgressColor('단백질', macroProgressColor);
     expectMacroProgressColor('지방', macroProgressColor);
@@ -415,11 +429,11 @@ void main() {
     expect(find.textContaining('선택한 날짜에 기록된 식단'), findsNothing);
   });
 
-  testWidgets('나트륨과 당류는 같은 색 규칙을 쓴다 — 정상 초록 (#682)', (
+  testWidgets('나트륨과 당류는 같은 색 규칙을 쓴다 — 목표 안쪽은 브랜드 파랑 (#682, #1070)', (
     WidgetTester tester,
   ) async {
-    // 목표 안쪽 값. 두 지표가 같은 카드에 나란히 놓이므로 "정상"을 서로 다른
-    // 색으로 말하면 안 된다.
+    // 목표 안쪽 값. 두 지표가 같은 카드에 나란히 놓이므로 같은 상태를 서로
+    // 다른 색으로 말하면 안 된다.
     const DietDay day = DietDay(
       entries: <DietEntry>[
         DietEntry(
@@ -478,14 +492,13 @@ void main() {
     expect(
       barColor(l.dietSodium),
       barColor(l.dietSugar),
-      reason: '정상 범위의 나트륨과 당류가 다른 색이면 안 된다',
+      reason: '목표 안쪽의 나트륨과 당류가 다른 색이면 안 된다',
     );
-    expect(barColor(l.dietSodium), FigmaColors.greenText);
+    expect(barColor(l.dietSodium), FigmaColors.statusWithinGoal);
   });
 
   testWidgets('목표를 넘기면 달성률이 100% 를 넘어 적힌다 (#846)', (WidgetTester tester) async {
-    // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다 — 여기가 100% 로 적히면
-    // 같은 카드의 "500 kcal 많아요" 와 어긋난다.
+    // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다.
     const DietDay day = DietDay(
       entries: <DietEntry>[
         DietEntry(

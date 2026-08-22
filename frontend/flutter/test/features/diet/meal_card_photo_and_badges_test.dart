@@ -1,8 +1,8 @@
-/// 끼니 카드의 정상 배지 색과, 수정 화면 상단의 큰 사진 (#1053).
+/// 끼니 카드의 총량 배지 색과, 수정 화면 상단의 큰 사진 (#1053).
 ///
-/// 배지는 같은 탭 안에서 뜻이 하나여야 한다. 기간 그래프와 나트륨·당류 카드가
-/// 이미 초록으로 `정상` 을 말하는데 끼니 카드만 파랑이면, 파랑이 정상인지
-/// 다른 종류의 지표인지 화면만 보고는 알 수 없다.
+/// 배지 색은 같은 탭 안에서 뜻이 하나여야 한다. 기간 그래프와 나트륨·당류
+/// 카드가 목표 안쪽을 브랜드 파랑으로 그리므로 끼니 카드도 같은 색을 쓴다
+/// (#1070 에서 초록 → 파랑).
 ///
 /// 수정 화면은 무엇을 고치는 끼니인지부터 보여 준다 — 사진을 먼저 확인하고
 /// 숫자를 고치는 순서다.
@@ -61,12 +61,25 @@ void main() {
   /// 색이 지정된 조각이 값이다. `Text.rich` 가 스팬을 한 겹 감싸 두어 곧장
   /// `children.last` 를 보면 색이 없는 껍데기가 잡힌다.
   Color? badgeColorOf(WidgetTester tester, String text) {
-    // 끼니마다 같은 배지가 있다 — 첫 끼니 것만 본다.
+    // 끼니 카드 안으로 범위를 좁힌다. 같은 화면 위쪽의 나트륨·당류 카드도
+    // "나트륨 …" 으로 시작하는 리치 텍스트를 갖고 있어, 좁히지 않으면 그쪽이
+    // 먼저 잡힌다.
     final RichText rich = tester
         .widgetList<RichText>(
-          find.byWidgetPredicate(
-            (Widget w) =>
-                w is RichText && w.text.toPlainText().startsWith('$text '),
+          find.descendant(
+            of: find
+                .byWidgetPredicate(
+                  (Widget w) =>
+                      w.key is ValueKey<String> &&
+                      (w.key! as ValueKey<String>).value.startsWith(
+                        'mealCard-',
+                      ),
+                )
+                .first,
+            matching: find.byWidgetPredicate(
+              (Widget w) =>
+                  w is RichText && w.text.toPlainText().startsWith('$text '),
+            ),
           ),
         )
         .first;
@@ -78,16 +91,16 @@ void main() {
     return color;
   }
 
-  testWidgets('끼니 카드의 정상 배지는 기간 그래프와 같은 초록이다', (WidgetTester tester) async {
+  testWidgets('끼니 카드의 총량 배지는 기간 그래프와 같은 파랑이다', (WidgetTester tester) async {
     await pumpDiet(tester);
 
     final AppLocalizations l = AppLocalizations.of(
       tester.element(find.byType(DietRecordPage)),
     );
-    // 대역의 아침은 217kcal · 나트륨 320mg — 세 지표 모두 정상 범위다.
-    expect(badgeColorOf(tester, l.dietCalories), FigmaColors.statusNormal);
-    expect(badgeColorOf(tester, l.dietSugar), FigmaColors.statusNormal);
-    expect(badgeColorOf(tester, l.dietSodium), FigmaColors.statusNormal);
+    // 대역의 아침은 217kcal · 나트륨 320mg — 세 지표 모두 목표 안쪽이다.
+    expect(badgeColorOf(tester, l.dietCalories), FigmaColors.statusWithinGoal);
+    expect(badgeColorOf(tester, l.dietSugar), FigmaColors.statusWithinGoal);
+    expect(badgeColorOf(tester, l.dietSodium), FigmaColors.statusWithinGoal);
   });
 
   testWidgets('목록 썸네일은 정사각 52 다', (WidgetTester tester) async {

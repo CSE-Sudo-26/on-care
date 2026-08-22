@@ -582,6 +582,17 @@
   "clientPeriodMonth": "All",
   "clientPeriodAverage": "Daily average",
   "clientPeriodGoal": "Goal",
+  "exBurnTodayTitle": "Burned today",
+  "exBurnWeekTitle": "Burned this week",
+  "exBurnMonthTitle": "Burned this month",
+  "exBurnDayTitle": "Burned",
+  "exTypeOther": "Other",
+  "exSetsValue": "{count, plural, =1{1 set} other{{count} sets}}",
+  "@exSetsValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "clientPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
   "@clientPeriodLoggedDays": {
     "placeholders": {
@@ -1153,7 +1164,6 @@
       }
     }
   },
-  "aiWithinTarget": " · within target",
   "aiRecentRoutine": "Recent routine",
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",

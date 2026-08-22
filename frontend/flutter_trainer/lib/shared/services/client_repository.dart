@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
@@ -16,6 +17,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_period.da
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
@@ -331,12 +333,72 @@ class DriftClientRepository implements ClientRepository {
     return <int>[minutes - strength - stretching, strength, stretching];
   }
 
+  /// 데모 픽스처. 김민수의 운동은 이 파일 하나가 정한다.
+  static final DemoFixture _fixture = DemoFixture.load();
+
+  /// 픽스처가 들고 있는 회원의 주간 운동. 유형·분·칼로리·**세트**를 픽스처에서
+  /// 그대로 옮긴다.
+  ///
+  /// 예전에는 이행률에서 분을 되만들고 요일로 유형을 나눴다. 같은 회원인데
+  /// 회원 앱은 픽스처를, 트레이너 화면은 재구성한 값을 보여, 근력 세트도 소모
+  /// 칼로리도 두 화면이 다른 수를 말했다. (#1077)
+  ClientExerciseWeek? _fixtureWeek(String clientId, DateTime monday) {
+    if (clientId != _fixture.trainerClientId) return null;
+    final DateTime today = nowKst();
+    final String mondayYmd = ymd(monday);
+    final List<FixtureDay> days = _fixture
+        .daysFor(today)
+        .where((FixtureDay d) => d.weekStart == mondayYmd)
+        .toList();
+    if (days.isEmpty) return null;
+
+    final List<int> minutes = List<int>.filled(7, 0);
+    final List<int> calories = List<int>.filled(7, 0);
+    final List<int> cardio = List<int>.filled(7, 0);
+    final List<int> strength = List<int>.filled(7, 0);
+    final List<int> stretching = List<int>.filled(7, 0);
+    final List<int> other = List<int>.filled(7, 0);
+    final List<int> sets = List<int>.filled(7, 0);
+    for (final FixtureDay day in days) {
+      final int i = DateTime.parse(day.date).weekday - 1;
+      for (final FixtureExercise e in day.doneExercises) {
+        minutes[i] += e.minutes;
+        calories[i] += e.calories;
+        switch (e.type) {
+          case 'strength':
+            strength[i] += e.minutes;
+            sets[i] += e.sets ?? setsFromStrengthMinutes(e.minutes);
+          case 'flexibility' || 'stretching' || 'yoga':
+            stretching[i] += e.minutes;
+          case 'cardio' || 'walking':
+            cardio[i] += e.minutes;
+          default:
+            other[i] += e.minutes;
+        }
+      }
+    }
+    return ClientExerciseWeek(
+      dayLabels: const ['월', '화', '수', '목', '금', '토', '일'],
+      dailyMinutes: minutes,
+      dailyCalories: calories,
+      cardioMinutes: cardio,
+      strengthMinutes: strength,
+      stretchingMinutes: stretching,
+      otherMinutes: other,
+      strengthSets: sets,
+      totalMinutes: minutes.fold(0, (int a, int b) => a + b),
+      totalCalories: calories.fold(0, (int a, int b) => a + b),
+    );
+  }
+
   @override
   Future<ClientExerciseWeek> fetchExerciseWeek(
     String clientId, {
     DateTime? weekStart,
   }) async {
     final monday = clientMondayOf(weekStart ?? nowKst());
+    final ClientExerciseWeek? fromFixture = _fixtureWeek(clientId, monday);
+    if (fromFixture != null) return fromFixture;
     final completion = await _weekCompletion(clientId, monday);
     final minutes = completion
         .map(_minutesFromCompletion)
@@ -795,6 +857,11 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
             cardioMinutes: at(week.cardioMinutes),
             strengthMinutes: at(week.strengthMinutes),
             stretchingMinutes: at(week.stretchingMinutes),
+            otherMinutes: at(week.otherMinutes),
+            // 서버가 세트를 주면 그 값, 아니면 분에서 환산한다.
+            strengthSets: d < week.strengthSets.length
+                ? week.strengthSets[d]
+                : setsFromStrengthMinutes(at(week.strengthMinutes)),
           );
         }
       }
