@@ -180,6 +180,7 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
           itemCount: visible.length,
           separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (BuildContext context, int index) => _GymListCard(
+            key: Key('gym-card-${visible[index].id}'),
             gym: visible[index],
             onTap: () =>
                 context.push(AppRoutes.gymDetailPath(visible[index].id)),
@@ -297,7 +298,7 @@ class _ResultControls extends StatelessWidget {
 }
 
 class _GymListCard extends StatelessWidget {
-  const _GymListCard({required this.gym, required this.onTap});
+  const _GymListCard({required this.gym, required this.onTap, super.key});
 
   final Gym gym;
   final VoidCallback? onTap;
