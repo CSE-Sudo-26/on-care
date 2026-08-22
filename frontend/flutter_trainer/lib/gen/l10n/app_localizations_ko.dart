@@ -105,6 +105,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get actionSave => '저장';
 
   @override
+  String get actionSaved => '저장됨';
+
+  @override
   String get actionCancel => '취소';
 
   @override
@@ -510,9 +513,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthSaveFailed => '고객 정보를 저장하지 못했어요. 다시 시도해 주세요';
 
   @override
-  String get memberHealthTitle => '고객 신체·목표 관리';
-
-  @override
   String get memberHealthSaving => '저장 중…';
 
   @override
@@ -856,7 +856,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultEmptyHistory => '상담 요청 이력이 없어요';
 
   @override
-  String get consultEmptyHint => '고객이 헬스장이나 나를 지정해 상담을 신청하면 여기에 표시돼요';
+  String get consultEmptyHint => '고객이 나를 지정해 상담을 신청하면 여기에 표시돼요';
 
   @override
   String get consultActionFailed => '상담을 처리하지 못했어요';
@@ -867,7 +867,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get consultRejected => '상담 요청을 반려했어요';
+  String get consultRejected => '상담 요청을 거절했어요';
 
   @override
   String get consultTargetTrainer => '트레이너 지정';
@@ -891,7 +891,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultApprove => '승인';
 
   @override
-  String get consultRejectTitle => '상담 요청 반려';
+  String get consultRejectTitle => '상담 요청 거절';
 
   @override
   String get consultRejectNotice => '입력한 사유는 고객에게 알림으로 전달돼요.';
@@ -900,7 +900,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectHint => '예) 이번 달은 정원이 찼어요';
 
   @override
-  String get consultRejectAction => '반려하기';
+  String get consultRejectAction => '거절하기';
 
   @override
   String get consultStatusApproved => '담당 고객으로 등록됨';
@@ -1002,11 +1002,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
 
   @override
-  String get consultStatusRejected => '반려됨';
+  String get consultStatusRejected => '거절됨';
 
   @override
   String consultStatusRejectedWithNote(String note) {
-    return '반려됨 · $note';
+    return '거절됨 · $note';
   }
 
   @override
@@ -1164,6 +1164,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsCompletionAvg => '운동 이행률';
+
+  @override
+  String get reportsWeeklyCompletion => '주간 이행률';
 
   @override
   String get reportsCompletionByDay => '주간 운동 이행률';
@@ -2489,15 +2492,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientQuickProgram => '프로그램';
 
   @override
+  String get clientQuickReport => '리포트';
+
+  @override
   String get clientHealthGoals => '고객 신체·목표 관리';
 
   @override
-  String get clientTrainerMemo => '메모';
+  String get clientProfileSectionTitle => '신체·목표·메모';
 
   @override
-  String clientTrainerMemoTitle(String name) {
-    return '$name님 메모';
-  }
+  String get clientTrainerMemo => '메모';
 
   @override
   String get clientTrainerMemoHint => '이 고객에 대해 기억할 내용을 적어 주세요';
