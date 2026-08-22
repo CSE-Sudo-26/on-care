@@ -83,6 +83,10 @@ class _SessionMemberCoachRepository implements MemberCoachRepository {
   }) async => throw UnsupportedError('not used');
 
   @override
+  Future<CoachRoutine> uncompleteRoutine(String routineId) async =>
+      throw UnimplementedError();
+
+  @override
   Future<void> deleteRoutine(String routineId) async {}
   @override
   Future<List<CoachSession>> fetchSessions() async => sessions;

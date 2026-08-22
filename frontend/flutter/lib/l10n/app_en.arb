@@ -271,7 +271,6 @@
   "exBurnTodayTitle": "Burned today",
   "exBurnWeekTitle": "Burned this week",
   "exBurnAllTitle": "Average burned",
-  "exLoadDayTitle": "Burned",
   "exGoalValue": "Goal {value}",
   "@exGoalValue": {
     "placeholders": {
@@ -1029,10 +1028,6 @@
   "@coachAssignedTrainer": {
     "description": "Header of the assigned trainer card."
   },
-  "coachAiCoaching": "AI coaching",
-  "@coachAiCoaching": {
-    "description": "Header of the AI coaching card."
-  },
   "coachPointsTitle": "This week's coaching points",
   "@coachPointsTitle": {
     "description": "Section title in the coaching card."
@@ -1040,10 +1035,6 @@
   "coachRoutineTitle": "Recommended solo workouts",
   "@coachRoutineTitle": {
     "description": "Section title in the coaching card."
-  },
-  "coachRoutineSubtitle": "Workouts to do on your own between PT sessions",
-  "@coachRoutineSubtitle": {
-    "description": "Explains what a solo routine is."
   },
   "coachRoutineByTrainer": "Recommended by your trainer",
   "@coachRoutineByTrainer": {
@@ -1079,6 +1070,13 @@
     "description": "Shown when marking a routine done fails for an unexpected reason."
   },
   "coachRoutineDone": "Done",
+  "coachRoutineUndo": "Undo",
+  "coachRoutineUndoConfirm": "Undo completing '{name}'? It will be removed from your workout log too.",
+  "@coachRoutineUndoConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineUndone": "Completion undone",
+  "coachRoutineUndoFailed": "Could not undo the completion.",
   "coachRoutineCancel": "Cancel this workout",
   "coachRoutineCancelConfirm": "Remove '{name}' from the list? Anything you already logged stays.",
   "@coachRoutineCancelConfirm": {

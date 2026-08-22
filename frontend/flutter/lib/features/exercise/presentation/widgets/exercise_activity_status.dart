@@ -55,9 +55,10 @@ String kindValueText(AppLocalizations l, ExerciseLoadKind kind, double v) =>
       ExerciseLoadKind.strength => l.exProgramSets(v.round()),
     };
 
-/// 소모 칼로리 색. 앱의 브랜드 색을 그대로 쓴다 — 이 화면에서 주황은 `N일
-/// 연속` 한 줄에만 남겨, 눈이 그 문구를 먼저 찾게 한다.
-const Color kBurnColor = FigmaColors.primary;
+/// 소모 칼로리 색. 유산소·근력·스트레칭 세 유형과 **다른 색**이어야 한다
+/// (#1127) — 도넛과 링이 재는 것은 유형이 아니라 그 셋이 함께 만든 결과다.
+/// 트레이너 앱의 메인 색(#2E7DAB)을 빌려 온다.
+const Color kBurnColor = Color(0xFF2E7DAB);
 
 DateTime _thisMonday() {
   final DateTime n = nowKst();
@@ -166,8 +167,9 @@ class _ExerciseActivityStatusState
               child: Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: SectionTitle(
-                  // 트레이너웹 고객 탭 `운동 현황` 과 같은 아이콘이다. (#1058)
-                  icon: Icons.monitor_heart_outlined,
+                  // 하단 탭의 운동 아이콘과 같은 것을 쓴다 (#1126) — 이 화면이
+                  // 어느 탭의 것인지 제목 줄에서 바로 읽힌다.
+                  icon: Icons.fitness_center,
                   label: l.exActivityTitle,
                 ),
               ),
@@ -236,55 +238,55 @@ class ExerciseDayLoadCard extends StatelessWidget {
             _StreakLine(days: streak),
             const SizedBox(height: 6),
           ],
+          // 소모 칼로리는 도넛 **안에서** 말한다 (#1127) — 링 옆에 같은 숫자를
+          // 또 적으면 한 화면에서 같은 말이 두 번 나온다. 도넛은 오른쪽,
+          // 유형별 값은 왼쪽에 두고 라벨과 값이 멀어지지 않도록 폭을 묶는다.
           Expanded(
             child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints c) => Row(
-                children: <Widget>[
-                  _BurnDonut(
-                    calories: load.calories,
-                    goal: goals.dailyBurnKcal,
-                    size: math.min(
-                      c.maxHeight,
-                      (c.maxWidth - 170).clamp(96.0, 150.0),
-                    ),
-                    locale: locale,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        _HeadlineLine(
-                          caption: isToday
-                              ? l.exBurnTodayTitle
-                              : l.exLoadDayTitle,
-                          value: _valueOfGoal(
-                            locale,
-                            load.calories,
-                            goals.dailyBurnKcal,
+              builder: (BuildContext context, BoxConstraints c) {
+                final double donut = math.min(
+                  c.maxHeight,
+                  (c.maxWidth - 170).clamp(96.0, 150.0),
+                );
+                return Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          // 라벨과 값이 카드 양 끝으로 벌어지지 않게 묶는다.
+                          constraints: const BoxConstraints(maxWidth: 150),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              for (final ExerciseLoadKind k
+                                  in ExerciseLoadKind.values)
+                                _KindTextRow(
+                                  label: kindLabel(l, k),
+                                  value: kindValueText(l, k, load.valueOf(k)),
+                                ),
+                              if (load.otherMinutes > 0)
+                                _KindTextRow(
+                                  label: l.exTypeOtherChip,
+                                  value: l.unitMinutesValue(
+                                    load.otherMinutes.round(),
+                                  ),
+                                ),
+                            ],
                           ),
-                          unit: l.unitKcal,
                         ),
-                        const SizedBox(height: 14),
-                        for (final ExerciseLoadKind k
-                            in ExerciseLoadKind.values)
-                          _KindTextRow(
-                            label: kindLabel(l, k),
-                            value: kindValueText(l, k, load.valueOf(k)),
-                          ),
-                        if (load.otherMinutes > 0)
-                          _KindTextRow(
-                            label: l.exTypeOtherChip,
-                            value: l.unitMinutesValue(
-                              load.otherMinutes.round(),
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    _BurnDonut(
+                      calories: load.calories,
+                      goal: goals.dailyBurnKcal,
+                      size: donut,
+                      locale: locale,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -415,6 +417,46 @@ class _KindTextRow extends StatelessWidget {
   }
 }
 
+/// 링 머리에 얹는 기호 (#1128).
+///
+/// 애플 액티비티 링처럼 **어디서 시작해 어디까지 왔는지**를 12시 방향의 작은
+/// 기호로 알린다. 링이 한 바퀴를 넘겨 겹칠 때도 이 기호는 맨 위에 그려 가려지지
+/// 않는다. 기호는 링 두께 안에 들어가도록 두께에 맞춰 줄인다.
+const IconData _kBurnStartIcon = Icons.local_fire_department_rounded;
+
+IconData ringStartIcon(ExerciseLoadKind kind) => switch (kind) {
+  ExerciseLoadKind.cardio => Icons.directions_run_rounded,
+  ExerciseLoadKind.strength => Icons.fitness_center,
+  ExerciseLoadKind.flexibility => Icons.self_improvement_rounded,
+};
+
+void paintRingStartIcon(
+  Canvas canvas, {
+  required Offset center,
+  required double radius,
+  required double stroke,
+  required IconData icon,
+}) {
+  final double glyph = stroke * 0.78;
+  if (glyph < 6) return;
+  final TextPainter tp = TextPainter(
+    text: TextSpan(
+      text: String.fromCharCode(icon.codePoint),
+      style: TextStyle(
+        fontSize: glyph,
+        fontFamily: icon.fontFamily,
+        package: icon.fontPackage,
+        color: Colors.white,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  tp.paint(
+    canvas,
+    Offset(center.dx - tp.width / 2, center.dy - radius - tp.height / 2),
+  );
+}
+
 /// 소모 칼로리 도넛 하나. 목표를 넘기면 **한 바퀴를 넘어 계속 돈다**(끝이
 /// 앞으로 나가고 그 아래 그림자가 깔린다).
 class _BurnDonut extends StatelessWidget {
@@ -454,7 +496,12 @@ class _BurnDonut extends StatelessWidget {
                 center: NumberFormat.decimalPattern(
                   locale,
                 ).format(calories.round()),
-                unit: l.unitKcal,
+                // 도넛 안에서 `411` 아래 `/300kcal` 로 읽힌다 (#1127) —
+                // 목표는 한 단계 작고 흐리게.
+                unit:
+                    '/${NumberFormat.decimalPattern(locale).format(goal.round())}'
+                    '${l.unitKcal}',
+                startIcon: _kBurnStartIcon,
               ),
             ),
           ),
@@ -471,6 +518,7 @@ class _DonutPainter extends CustomPainter {
     required this.color,
     required this.center,
     required this.unit,
+    this.startIcon,
   });
 
   final double ratio;
@@ -478,6 +526,9 @@ class _DonutPainter extends CustomPainter {
   final Color color;
   final String center;
   final String unit;
+
+  /// 12시 방향 링 머리에 얹을 기호. null 이면 그리지 않는다. (#1128)
+  final IconData? startIcon;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -521,22 +572,37 @@ class _DonutPainter extends CustomPainter {
       _paintCapShadow(canvas, c, r, stroke, capAngle);
       canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * filled, false, arc);
     }
+    // 안쪽 구멍의 지름. 두 줄 다 이 폭 안에 들어간다.
+    final double inner = (r - stroke / 2) * 1.75;
     _text(
       canvas,
-      c.translate(0, -10),
+      c.translate(0, -size.width * 0.09),
       center,
-      size.width * 0.19,
+      size.width * 0.2,
       FontWeight.w800,
       FigmaColors.ink,
+      maxWidth: inner,
     );
     _text(
       canvas,
-      c.translate(0, 8),
+      c.translate(0, size.width * 0.1),
       unit,
-      size.width * 0.095,
+      size.width * 0.105,
       FontWeight.w700,
       FigmaColors.textMuted,
+      maxWidth: inner,
     );
+    // 링이 어디서 시작하는지 12시 방향에 작은 기호로 알린다 (#1128).
+    final IconData? icon = startIcon;
+    if (icon != null) {
+      paintRingStartIcon(
+        canvas,
+        center: c,
+        radius: r,
+        stroke: stroke,
+        icon: icon,
+      );
+    }
   }
 
   void _text(
@@ -545,13 +611,14 @@ class _DonutPainter extends CustomPainter {
     String s,
     double size,
     FontWeight w,
-    Color color,
-  ) {
-    final TextPainter tp = TextPainter(
+    Color color, {
+    double? maxWidth,
+  }) {
+    TextPainter layout(double fontSize) => TextPainter(
       text: TextSpan(
         text: s,
         style: TextStyle(
-          fontSize: size,
+          fontSize: fontSize,
           fontWeight: w,
           color: color,
           letterSpacing: -0.3,
@@ -559,6 +626,12 @@ class _DonutPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
+    TextPainter tp = layout(size);
+    // 도넛 **안**에 들어가야 한다. 넘치면 그만큼 글자를 줄인다 — 링 밖으로
+    // 삐져나온 글씨는 어느 링의 값인지 알려 주지 못한다. (#1127)
+    if (maxWidth != null && tp.width > maxWidth) {
+      tp = layout(size * (maxWidth / tp.width));
+    }
     tp.paint(
       canvas,
       Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
@@ -567,7 +640,10 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter old) =>
-      old.t != t || old.ratio != ratio || old.center != center;
+      old.t != t ||
+      old.ratio != ratio ||
+      old.center != center ||
+      old.unit != unit;
 }
 
 // ── 이번 주 ────────────────────────────────────────────────────────────
@@ -767,6 +843,15 @@ class _RingsPainter extends CustomPainter {
         _paintCapShadow(canvas, c, r, stroke, capAngle);
         canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * ratio, false, arc);
       }
+      // 링마다 12시 방향에 그 유형의 기호를 얹는다 (#1128) — 세 링이 어디서
+      // 출발했는지, 어느 링이 무엇인지 색만으로 재지 않아도 된다.
+      paintRingStartIcon(
+        canvas,
+        center: c,
+        radius: r,
+        stroke: stroke,
+        icon: ringStartIcon(ExerciseLoadKind.values[i]),
+      );
       r -= stroke + _gap;
     }
   }
@@ -969,6 +1054,7 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
                 flex: 6,
@@ -988,6 +1074,32 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
                   unit: l.unitKcal,
                 ),
               ),
+              // 고른 주의 내역은 kcal **오른쪽**에 붙는다 (#1129) — 그래프
+              // 아래에 따로 두면 구분선까지 필요해져 카드가 셋으로 갈렸다.
+              // 색 네모는 뺐다. 옆의 막대가 이미 색으로 말한다.
+              if (picked != null) ...<Widget>[
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      for (final ExerciseLoadKind k in ExerciseLoadKind.values)
+                        _AllPeriodDetailLine(
+                          text:
+                              '${kindLabel(l, k)} '
+                              '${kindValueText(l, k, picked.valueOf(k))}',
+                        ),
+                      if (picked.otherMinutes > 0)
+                        _AllPeriodDetailLine(
+                          text:
+                              '${l.exTypeOtherChip} '
+                              '${l.unitMinutesValue(picked.otherMinutes.round())}',
+                        ),
+                    ],
+                  ),
+                ),
+              ],
               if (picked == null && visible.isNotEmpty) ...<Widget>[
                 const SizedBox(width: 8),
                 // 평균이 어느 구간의 것인지 숫자만으로는 알 수 없다 — 밀 때마다
@@ -1032,76 +1144,38 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
               locale: locale,
             ),
           ),
-          const SizedBox(height: 8),
-          const _ThinDivider(),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 18,
-            child: picked == null
-                ? const SizedBox.shrink()
-                : Row(
-                    children: <Widget>[
-                      for (final ExerciseLoadKind k in ExerciseLoadKind.values)
-                        _AllPeriodChip(
-                          color: kindColor(k),
-                          text:
-                              '${kindLabel(l, k)} ${kindValueText(l, k, picked.valueOf(k))}',
-                        ),
-                      if (picked.otherMinutes > 0)
-                        _AllPeriodChip(
-                          color: const Color(0xFFCBD6DE),
-                          text:
-                              '${l.exTypeOtherChip} ${l.unitMinutesValue(picked.otherMinutes.round())}',
-                        ),
-                    ],
-                  ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// 고른 주의 유형별 내역 한 조각 — `▪ 유산소 195분`.
-class _AllPeriodChip extends StatelessWidget {
-  const _AllPeriodChip({required this.color, required this.text});
+/// 고른 주의 유형별 내역 한 줄 — `유산소 195분`. 색 네모 없이 글자만 쓴다
+/// (#1129) — 색은 바로 옆 막대가 이미 말하고 있다.
+class _AllPeriodDetailLine extends StatelessWidget {
+  const _AllPeriodDetailLine({required this.text});
 
-  final Color color;
   final String text;
 
   @override
-  Widget build(BuildContext context) => Expanded(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 1),
     child: FittedBox(
       fit: BoxFit.scaleDown,
-      alignment: Alignment.centerLeft,
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            maxLines: 1,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
-            ),
-          ),
-        ],
+      alignment: Alignment.centerRight,
+      child: Text(
+        text,
+        maxLines: 1,
+        style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: FigmaColors.textBody,
+        ),
       ),
     ),
   );
 }
 
-/// 주별 소모 칼로리 막대. 가로 눈금선, 달이 바뀌는 자리의 세로 점선, 그리고
-/// 달마다 한 번씩만 적는 월 라벨.
 class _WeeklyBurnChart extends StatelessWidget {
   const _WeeklyBurnChart({
     required this.controller,
@@ -1458,14 +1532,6 @@ class _HeadlineLine extends StatelessWidget {
   );
 }
 
-class _ThinDivider extends StatelessWidget {
-  const _ThinDivider();
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(height: 1, color: const Color(0xFFEDF1F4));
-}
-
 class _Muted extends StatelessWidget {
   const _Muted(this.text);
 
@@ -1518,9 +1584,14 @@ class _PeriodToggle extends StatelessWidget {
                 onTap: () => onChanged(i),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
+                  // 식단 탭 기간 토글과 **같은 크기**다 (#1126) — 같은 자리에
+                  // 놓인 같은 조작이 탭마다 다르게 보이면 안 된다. 글자를 키운
+                  // 화면에서 세 탭이 줄을 넘기지 않도록 좁히는 규칙까지 같다.
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                        ? 12
+                        : 18,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color: active == i

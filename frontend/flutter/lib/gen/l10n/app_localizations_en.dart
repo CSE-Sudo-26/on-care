@@ -602,9 +602,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exBurnAllTitle => 'Average burned';
 
   @override
-  String get exLoadDayTitle => 'Burned';
-
-  @override
   String exGoalValue(String value) {
     return 'Goal $value';
   }
@@ -1821,17 +1818,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAssignedTrainer => 'My trainer';
 
   @override
-  String get coachAiCoaching => 'AI coaching';
-
-  @override
   String get coachPointsTitle => 'This week\'s coaching points';
 
   @override
   String get coachRoutineTitle => 'Recommended solo workouts';
-
-  @override
-  String get coachRoutineSubtitle =>
-      'Workouts to do on your own between PT sessions';
 
   @override
   String get coachRoutineByTrainer => 'Recommended by your trainer';
@@ -1859,6 +1849,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachRoutineDone => 'Done';
+
+  @override
+  String get coachRoutineUndo => 'Undo';
+
+  @override
+  String coachRoutineUndoConfirm(String name) {
+    return 'Undo completing \'$name\'? It will be removed from your workout log too.';
+  }
+
+  @override
+  String get coachRoutineUndone => 'Completion undone';
+
+  @override
+  String get coachRoutineUndoFailed => 'Could not undo the completion.';
 
   @override
   String get coachRoutineCancel => 'Cancel this workout';

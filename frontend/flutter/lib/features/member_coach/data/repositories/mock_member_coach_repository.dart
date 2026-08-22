@@ -1,4 +1,7 @@
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
+import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 
@@ -6,7 +9,17 @@ import 'package:oncare/features/member_coach/domain/repositories/member_coach_re
 /// seed identity (김트레이너) so the two demo apps tell one story. Chat is
 /// stateful for the session so a sent message appears in the thread.
 class MockMemberCoachRepository implements MemberCoachRepository {
-  MockMemberCoachRepository();
+  /// [exercise] 를 주면 루틴 완료가 **운동 기록으로도 남는다** — 실서버가 하는
+  /// 일(`assigned_routine_id` 로 세션 한 건 생성)을 데모에서 대신한다. 없으면
+  /// 예전처럼 루틴 상태만 바뀐다(테스트·단독 사용). (#1131)
+  MockMemberCoachRepository({ExerciseRepository? exercise})
+    : _exercise = exercise;
+
+  final ExerciseRepository? _exercise;
+
+  /// 완료로 만들어 둔 운동 기록 — `루틴 id → 세션 id`. 되돌릴 때 무엇을 지울지
+  /// 알아야 한다.
+  final Map<String, String> _completionSessions = <String, String>{};
 
   static const _coach = MemberCoach(
     trainerId: 'seed-trainer',
@@ -205,7 +218,61 @@ class MockMemberCoachRepository implements MemberCoachRepository {
       memberNote: memberNote.trim(),
     );
     _routines[index] = completed;
+    await _logSession(completed, minutes: minutes, intensity: intensity);
     return completed;
+  }
+
+  @override
+  Future<CoachRoutine> uncompleteRoutine(String routineId) async {
+    final int index = _routines.indexWhere(
+      (CoachRoutine routine) => routine.id == routineId,
+    );
+    if (index < 0) throw StateError('Routine not found.');
+    final CoachRoutine current = _routines[index];
+    if (!current.completed) return current;
+    // 완료 흔적을 모두 지운다 — 시간·강도·메모는 그 수행에 딸린 값이라
+    // 되돌린 뒤에도 남으면 다음 완료 때 옛 값이 섞인다.
+    final CoachRoutine reverted = CoachRoutine(
+      id: current.id,
+      name: current.name,
+      minutes: current.minutes,
+      type: current.type,
+      reason: current.reason,
+      source: current.source,
+      programName: current.programName,
+      sessionName: current.sessionName,
+      sessionOrder: current.sessionOrder,
+      exercises: current.exercises,
+      trainerFeedback: current.trainerFeedback,
+    );
+    _routines[index] = reverted;
+    final String? sessionId = _completionSessions.remove(routineId);
+    if (sessionId != null) {
+      await _exercise?.deleteSession(sessionId);
+    }
+    return reverted;
+  }
+
+  /// 완료한 루틴을 이번 주 운동 기록에 남긴다. 유형·칼로리는 `운동 추가` 시트와
+  /// 같은 표를 쓴다 — 같은 운동이 화면마다 다른 칼로리로 적히면 안 된다.
+  Future<void> _logSession(
+    CoachRoutine routine, {
+    required int minutes,
+    required String intensity,
+  }) async {
+    final ExerciseRepository? exercise = _exercise;
+    if (exercise == null) return;
+    final ExerciseType type = exerciseTypeFromLabel(routine.type);
+    final ExerciseIntensity level = exerciseIntensityFromLabel(intensity);
+    final ExerciseSession session = await exercise.addSession(
+      type: type,
+      minutes: minutes,
+      calories: estimateExerciseCalories(type, minutes, intensity: level),
+      dayLabel: kWeekdayLabelsKo[(nowKst().weekday - 1).clamp(0, 6)],
+      intensity: level,
+    );
+    final String? id = session.id;
+    if (id != null) _completionSessions[routine.id] = id;
   }
 
   @override
