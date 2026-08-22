@@ -7,7 +7,7 @@
 기존 행은 전부 `1:1 PT` 로 채운다 — 이 컬럼이 생기기 전에 열린 슬롯은 실제로
 전부 1:1 PT 였다(예약 확정 로직이 그렇게 하드코딩돼 있었다).
 
-Revision ID: 0055_reservation_slot_session_type
+Revision ID: 0055_slot_session_type
 Revises: 0054_data_sharing_consent
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0055_reservation_slot_session_type"
+revision: str = "0055_slot_session_type"
 down_revision: str | Sequence[str] | None = "0054_data_sharing_consent"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
