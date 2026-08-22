@@ -104,6 +104,11 @@ class ClientRoutineHistory extends Table {
   TextColumn get trainerNote => text().withDefault(const Constant(''))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
+  /// 실제로 운동을 마친 시각. `dateLabel` 은 화면에 그릴 문자열일 뿐이라
+  /// 기간으로 거를 수 없다 — 실 API 가 주는 `completed_at` 과 같은 값을
+  /// 데모도 들고 있어야 두 모드가 같은 목록을 보여 준다(#1114).
+  DateTimeColumn get completedAt => dateTime().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
@@ -259,7 +264,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -365,6 +370,15 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.carbsG);
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.proteinG);
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.fatG);
+      }
+      // v14: 운동 기록의 실제 완료 날짜(#1114). nullable 이라 기존 행은 날짜
+      // 없이 그대로 읽히고, 화면은 날짜를 모르는 기록을 기간과 무관하게 늘
+      // 보여 준다 — 모른다고 숨기면 데이터가 사라진 것처럼 보인다.
+      if (from < 14) {
+        await m.addColumn(
+          clientRoutineHistory,
+          clientRoutineHistory.completedAt,
+        );
       }
     },
   );

@@ -2466,6 +2466,17 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2477,6 +2488,7 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
     clientFeedback,
     trainerNote,
     sortOrder,
+    completedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2565,6 +2577,15 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2613,6 +2634,10 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
     );
   }
 
@@ -2633,6 +2658,11 @@ class ClientRoutineHistoryRow extends DataClass
   final String clientFeedback;
   final String trainerNote;
   final int sortOrder;
+
+  /// 실제로 운동을 마친 시각. `dateLabel` 은 화면에 그릴 문자열일 뿐이라
+  /// 기간으로 거를 수 없다 — 실 API 가 주는 `completed_at` 과 같은 값을
+  /// 데모도 들고 있어야 두 모드가 같은 목록을 보여 준다(#1114).
+  final DateTime? completedAt;
   const ClientRoutineHistoryRow({
     required this.id,
     required this.clientId,
@@ -2643,6 +2673,7 @@ class ClientRoutineHistoryRow extends DataClass
     required this.clientFeedback,
     required this.trainerNote,
     required this.sortOrder,
+    this.completedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2656,6 +2687,9 @@ class ClientRoutineHistoryRow extends DataClass
     map['client_feedback'] = Variable<String>(clientFeedback);
     map['trainer_note'] = Variable<String>(trainerNote);
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
     return map;
   }
 
@@ -2670,6 +2704,9 @@ class ClientRoutineHistoryRow extends DataClass
       clientFeedback: Value(clientFeedback),
       trainerNote: Value(trainerNote),
       sortOrder: Value(sortOrder),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
     );
   }
 
@@ -2688,6 +2725,7 @@ class ClientRoutineHistoryRow extends DataClass
       clientFeedback: serializer.fromJson<String>(json['clientFeedback']),
       trainerNote: serializer.fromJson<String>(json['trainerNote']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
   }
   @override
@@ -2703,6 +2741,7 @@ class ClientRoutineHistoryRow extends DataClass
       'clientFeedback': serializer.toJson<String>(clientFeedback),
       'trainerNote': serializer.toJson<String>(trainerNote),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
   }
 
@@ -2716,6 +2755,7 @@ class ClientRoutineHistoryRow extends DataClass
     String? clientFeedback,
     String? trainerNote,
     int? sortOrder,
+    Value<DateTime?> completedAt = const Value.absent(),
   }) => ClientRoutineHistoryRow(
     id: id ?? this.id,
     clientId: clientId ?? this.clientId,
@@ -2726,6 +2766,7 @@ class ClientRoutineHistoryRow extends DataClass
     clientFeedback: clientFeedback ?? this.clientFeedback,
     trainerNote: trainerNote ?? this.trainerNote,
     sortOrder: sortOrder ?? this.sortOrder,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
   );
   ClientRoutineHistoryRow copyWithCompanion(
     ClientRoutineHistoryCompanion data,
@@ -2748,6 +2789,9 @@ class ClientRoutineHistoryRow extends DataClass
           ? data.trainerNote.value
           : this.trainerNote,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
     );
   }
 
@@ -2762,7 +2806,8 @@ class ClientRoutineHistoryRow extends DataClass
           ..write('exercisesJson: $exercisesJson, ')
           ..write('clientFeedback: $clientFeedback, ')
           ..write('trainerNote: $trainerNote, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
@@ -2778,6 +2823,7 @@ class ClientRoutineHistoryRow extends DataClass
     clientFeedback,
     trainerNote,
     sortOrder,
+    completedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2791,7 +2837,8 @@ class ClientRoutineHistoryRow extends DataClass
           other.exercisesJson == this.exercisesJson &&
           other.clientFeedback == this.clientFeedback &&
           other.trainerNote == this.trainerNote &&
-          other.sortOrder == this.sortOrder);
+          other.sortOrder == this.sortOrder &&
+          other.completedAt == this.completedAt);
 }
 
 class ClientRoutineHistoryCompanion
@@ -2805,6 +2852,7 @@ class ClientRoutineHistoryCompanion
   final Value<String> clientFeedback;
   final Value<String> trainerNote;
   final Value<int> sortOrder;
+  final Value<DateTime?> completedAt;
   final Value<int> rowid;
   const ClientRoutineHistoryCompanion({
     this.id = const Value.absent(),
@@ -2816,6 +2864,7 @@ class ClientRoutineHistoryCompanion
     this.clientFeedback = const Value.absent(),
     this.trainerNote = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClientRoutineHistoryCompanion.insert({
@@ -2828,6 +2877,7 @@ class ClientRoutineHistoryCompanion
     this.clientFeedback = const Value.absent(),
     this.trainerNote = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        clientId = Value(clientId),
@@ -2845,6 +2895,7 @@ class ClientRoutineHistoryCompanion
     Expression<String>? clientFeedback,
     Expression<String>? trainerNote,
     Expression<int>? sortOrder,
+    Expression<DateTime>? completedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2857,6 +2908,7 @@ class ClientRoutineHistoryCompanion
       if (clientFeedback != null) 'client_feedback': clientFeedback,
       if (trainerNote != null) 'trainer_note': trainerNote,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2871,6 +2923,7 @@ class ClientRoutineHistoryCompanion
     Value<String>? clientFeedback,
     Value<String>? trainerNote,
     Value<int>? sortOrder,
+    Value<DateTime?>? completedAt,
     Value<int>? rowid,
   }) {
     return ClientRoutineHistoryCompanion(
@@ -2883,6 +2936,7 @@ class ClientRoutineHistoryCompanion
       clientFeedback: clientFeedback ?? this.clientFeedback,
       trainerNote: trainerNote ?? this.trainerNote,
       sortOrder: sortOrder ?? this.sortOrder,
+      completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2917,6 +2971,9 @@ class ClientRoutineHistoryCompanion
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2935,6 +2992,7 @@ class ClientRoutineHistoryCompanion
           ..write('clientFeedback: $clientFeedback, ')
           ..write('trainerNote: $trainerNote, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6452,6 +6510,7 @@ typedef $$ClientRoutineHistoryTableCreateCompanionBuilder =
       Value<String> clientFeedback,
       Value<String> trainerNote,
       Value<int> sortOrder,
+      Value<DateTime?> completedAt,
       Value<int> rowid,
     });
 typedef $$ClientRoutineHistoryTableUpdateCompanionBuilder =
@@ -6465,6 +6524,7 @@ typedef $$ClientRoutineHistoryTableUpdateCompanionBuilder =
       Value<String> clientFeedback,
       Value<String> trainerNote,
       Value<int> sortOrder,
+      Value<DateTime?> completedAt,
       Value<int> rowid,
     });
 
@@ -6519,6 +6579,11 @@ class $$ClientRoutineHistoryTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6576,6 +6641,11 @@ class $$ClientRoutineHistoryTableOrderingComposer
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ClientRoutineHistoryTableAnnotationComposer
@@ -6621,6 +6691,11 @@ class $$ClientRoutineHistoryTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ClientRoutineHistoryTableTableManager
@@ -6675,6 +6750,7 @@ class $$ClientRoutineHistoryTableTableManager
                 Value<String> clientFeedback = const Value.absent(),
                 Value<String> trainerNote = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientRoutineHistoryCompanion(
                 id: id,
@@ -6686,6 +6762,7 @@ class $$ClientRoutineHistoryTableTableManager
                 clientFeedback: clientFeedback,
                 trainerNote: trainerNote,
                 sortOrder: sortOrder,
+                completedAt: completedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6699,6 +6776,7 @@ class $$ClientRoutineHistoryTableTableManager
                 Value<String> clientFeedback = const Value.absent(),
                 Value<String> trainerNote = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientRoutineHistoryCompanion.insert(
                 id: id,
@@ -6710,6 +6788,7 @@ class $$ClientRoutineHistoryTableTableManager
                 clientFeedback: clientFeedback,
                 trainerNote: trainerNote,
                 sortOrder: sortOrder,
+                completedAt: completedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -205,7 +205,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['인터벌 런닝 25분 ✓', '스쿼트 3세트 ✓', '플랭크 10분 ✓'],
@@ -213,7 +213,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '심폐지구력 향상 중. 다음 주 런닝 강도 소폭 올릴 예정.',
       ),
       _History(
-        dateLabel: '7/9',
+        daysAgo: 3,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
         exercises: <String>['데드리프트 3세트', '런지 3세트', '코어 서킷'],
@@ -221,7 +221,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '',
       ),
       _History(
-        dateLabel: '7/7',
+        daysAgo: 5,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 67,
         exercises: <String>['런닝 25분 ✓', '스쿼트 ✓', '플랭크 ✗ (피로)'],
@@ -288,7 +288,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/7',
+        daysAgo: 5,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
         exercises: <String>['벤치프레스 4세트', '인클라인 덤벨 3세트', '트라이셉스 딥'],
@@ -296,7 +296,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '벤치 중량 62.5kg → 65kg 도전 가능. 다음 PT 때 시도 예정.',
       ),
       _History(
-        dateLabel: '7/5',
+        daysAgo: 7,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['벤치프레스 ✓', '데드리프트 ✗', '유산소 ✗'],
@@ -304,7 +304,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '',
       ),
       _History(
-        dateLabel: '7/3',
+        daysAgo: 9,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['벤치프레스 ✗', '데드리프트 ✗', '유산소 ✗'],
@@ -361,7 +361,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['걷기 25분 ✓', '골반 안정화 15분 ✓', '밴드 로우 12분 ✓'],
@@ -369,7 +369,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '2주 공백 후 복귀 성공. 다음 주부터 강도 10% 상향.',
       ),
       _History(
-        dateLabel: '7/9',
+        daysAgo: 3,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 50,
         exercises: <String>['걷기 25분 ✓', '골반 안정화 ✗ (아이 컨디션)'],
@@ -377,7 +377,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '',
       ),
       _History(
-        dateLabel: '7/6',
+        daysAgo: 6,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['걷기 ✗', '골반 안정화 ✗', '밴드 로우 ✗'],
@@ -447,7 +447,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['LSD 러닝 45분 ✓', '힙 힌지 12분 ✓', '스트레칭 10분 ✓'],
@@ -455,7 +455,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '7일 연속 100%. 과훈련 신호 없는지 다음 주 확인.',
       ),
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['인터벌 8세트 ✓', '코어 서킷 ✓', '스트레칭 ✓'],
@@ -518,7 +518,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['걷기 ✗', '전신 서킷 ✗', '스트레칭 ✗'],
@@ -526,7 +526,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '평일 100% / 주말 0% 패턴 5주째. 주말용 15분 루틴으로 분리 검토.',
       ),
       _History(
-        dateLabel: '7/9',
+        daysAgo: 3,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['전신 서킷 20분 ✓', '걷기 30분 ✓', '스트레칭 10분 ✓'],
@@ -612,7 +612,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/8',
+        daysAgo: 4,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 20,
         exercises: <String>['걷기 ✓ (10분만)', '호흡 이완 ✗', '의자 스쿼트 ✗'],
@@ -620,7 +620,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '나트륨 3000 돌파 + 이행률 20%. 이번 주 안에 전화 상담 필요.',
       ),
       _History(
-        dateLabel: '7/6',
+        daysAgo: 6,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['걷기 ✓', '호흡 이완 ✗', '의자 스쿼트 ✗'],
@@ -673,7 +673,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/10',
+        daysAgo: 2,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 25,
         exercises: <String>['목·어깨 스트레칭 ✓', '걷기 ✗', '플랭크 ✗'],
@@ -681,7 +681,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '15분 루틴도 못 채우는 주가 반복. 5분 버전으로 낮춰볼 것.',
       ),
       _History(
-        dateLabel: '7/8',
+        daysAgo: 4,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['걷기 15분 ✓', '스트레칭 ✗', '플랭크 ✗'],
@@ -742,7 +742,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['실내 자전거 20분 ✓', '레그 익스텐션 12분 ✓', '가동범위 10분 ✓'],
@@ -750,7 +750,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '3주 연속 개선. 다음 주 러닝머신 걷기 추가 검토.',
       ),
       _History(
-        dateLabel: '7/10',
+        daysAgo: 2,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 67,
         exercises: <String>['실내 자전거 ✓', '레그 익스텐션 ✓', '가동범위 ✗'],
@@ -804,7 +804,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 67,
         exercises: <String>['경사 걷기 ✓', '풀업 어시스트 ✓', '스트레칭 ✗'],
@@ -849,7 +849,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '6/21',
+        daysAgo: 21,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['걷기 20분 ✓', '스트레칭 ✗', '스쿼트 ✗'],
@@ -909,7 +909,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
         exercises: <String>['스쿼트 5세트', '벤치프레스 5세트', '유산소 쿨다운'],
@@ -917,7 +917,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '하는 날과 안 하는 날 편차가 큼. 주 4회 고정 스케줄 제안.',
       ),
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['스쿼트 ✗', '벤치프레스 ✗', '쿨다운 ✗'],
@@ -971,7 +971,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['러닝머신 30분 ✓', '근력 서킷 25분 ✓', '스트레칭 10분 ✓'],
@@ -1016,7 +1016,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['걷기 20분 ✓', '맨몸 스쿼트 8분 ✓', '스트레칭 10분 ✓'],
