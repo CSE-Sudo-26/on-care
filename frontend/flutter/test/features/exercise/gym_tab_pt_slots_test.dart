@@ -16,7 +16,6 @@ import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
-import 'package:oncare/features/exercise/presentation/widgets/gym_locator_map.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -44,6 +43,7 @@ const Trainer _trainer = Trainer(
 
 final DateTime _openAt = DateTime(2026, 9, 1, 10);
 final DateTime _bookedAt = DateTime(2026, 9, 2, 10);
+final DateTime _consultAt = DateTime(2026, 9, 3, 10);
 
 List<TrainerSlot> get _slots => <TrainerSlot>[
   TrainerSlot(
@@ -59,6 +59,13 @@ List<TrainerSlot> get _slots => <TrainerSlot>[
     startsAt: _bookedAt,
     booked: true,
     sessionType: '1:1 PT',
+  ),
+  TrainerSlot(
+    id: 'slot-consultation',
+    trainerId: _trainer.id,
+    startsAt: _consultAt,
+    booked: false,
+    sessionType: '상담',
   ),
 ];
 
@@ -119,15 +126,22 @@ void main() {
   ) async {
     final AppLocalizations l = await pumpTab(tester);
 
-    // 한 사람 몫뿐인 자리라 "잔여 N자리"가 성립하지 않는다 — 빈 칩은 종류와
-    // 시각만 보인다.
+    // 한 사람 몫뿐인 자리라 "잔여 N자리"가 성립하지 않는다 — 빈 칩에는 마감
+    // 문구 자리가 비어 있을 뿐, 칩 크기는 마감된 자리와 같다 (#1136).
     expect(find.textContaining('잔여'), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('slot-chip-slot-open')),
         matching: find.byType(Text),
       ),
-      findsNWidgets(2),
+      findsNWidgets(3),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey<String>('slot-chip-slot-open'))),
+      tester.getSize(
+        find.byKey(const ValueKey<String>('slot-chip-slot-booked')),
+      ),
+      reason: '마감 문구가 붙은 칩만 크기가 달라진다',
     );
     expect(
       find.descendant(
@@ -211,5 +225,22 @@ void main() {
     expect(find.text('추천 트레이너'), findsNothing);
     // 트레이너와 채팅 버튼도 없다 (#1132) — 헤더의 채팅 버튼이 그 자리를 맡는다.
     expect(find.text('트레이너와 채팅'), findsNothing);
+  });
+
+  testWidgets('연결된 헬스장에서는 상담 자리를 내주지 않는다 (#1136)', (
+    WidgetTester tester,
+  ) async {
+    final AppLocalizations l = await pumpTab(tester);
+
+    // 이미 연결된 헬스장이라 상담은 지난 걸음이다 — 1:1 PT 자리만 남는다.
+    expect(
+      find.byKey(const ValueKey<String>('slot-chip-slot-consultation')),
+      findsNothing,
+    );
+    expect(find.text(l.exSlotTypeConsultation), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('slot-chip-slot-open')),
+      findsOneWidget,
+    );
   });
 }
