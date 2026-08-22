@@ -1,7 +1,7 @@
 /// 회원 예약 취소. (#502)
 ///
 /// 목 저장소가 실서버와 같은 결과를 내야 데모 화면과 실모드가 갈리지 않는다 —
-/// 좌석이 돌아오고, 취소한 자리는 다시 잡을 수 있고, 지난 예약과 남의 예약은
+/// 자리가 다시 열리고, 취소한 자리는 다시 잡을 수 있고, 지난 예약과 남의 예약은
 /// 거절된다.
 library;
 
@@ -16,15 +16,14 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 Future<TrainerSlot> _bookableSlot(MockGymRepository repo) async {
   final List<TrainerSlot> slots = await repo.fetchSlots('trainer-kim');
   return slots.firstWhere(
-    (TrainerSlot s) => !s.isFull && s.startsAt.isAfter(nowKst()),
+    (TrainerSlot s) => !s.booked && s.startsAt.isAfter(nowKst()),
   );
 }
 
 void main() {
-  test('취소하면 좌석이 돌아오고 내 예약에서 빠진다', () async {
+  test('취소하면 자리가 다시 열리고 내 예약에서 빠진다', () async {
     final MockGymRepository repo = MockGymRepository();
     final TrainerSlot slot = await _bookableSlot(repo);
-    final int before = slot.remaining;
 
     await repo.reserve(slot.id);
     final List<MyReservation> mine = await repo.fetchMyReservations();
@@ -36,17 +35,17 @@ void main() {
 
     final List<TrainerSlot> booked = await repo.fetchSlots('trainer-kim');
     expect(
-      booked.firstWhere((TrainerSlot s) => s.id == slot.id).remaining,
-      before - 1,
+      booked.firstWhere((TrainerSlot s) => s.id == slot.id).booked,
+      isTrue,
     );
 
     await repo.cancelReservation(reservation.id);
 
     final List<TrainerSlot> after = await repo.fetchSlots('trainer-kim');
     expect(
-      after.firstWhere((TrainerSlot s) => s.id == slot.id).remaining,
-      before,
-      reason: '취소했는데 좌석이 돌아오지 않으면 그 자리는 영영 비어 있는 채로 잠긴다',
+      after.firstWhere((TrainerSlot s) => s.id == slot.id).booked,
+      isFalse,
+      reason: '취소했는데 자리가 다시 열리지 않으면 그 시간은 영영 잠긴다',
     );
     expect(await repo.fetchMyReservations(), isEmpty);
   });

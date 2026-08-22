@@ -24,10 +24,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
   bool _saving = false;
 
-  /// 슬롯은 늘 한 사람 몫이다 — 1:1 PT 이거나 상담이고, 여럿이 함께 듣는
-  /// 자리는 없다. 정원을 고를 이유가 없으니 입력칸을 두지 않는다(#1012).
-  static const int _capacity = 1;
-
   bool _sameDay(DateTime left, DateTime right) =>
       left.year == right.year &&
       left.month == right.month &&
@@ -54,7 +50,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .create(startsAt: startsAt, capacity: _capacity);
+          .create(startsAt: startsAt);
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotOpened);
     } catch (error) {
@@ -67,7 +63,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   Future<void> _edit(ReservationSlot slot) async {
     final AppLocalizations l = AppLocalizations.of(context);
     var time = TimeOfDay.fromDateTime(slot.startsAt);
-    // 정원은 늘 1이라 고칠 것이 시각뿐이다(#1012).
+    // 자리는 늘 한 사람 몫이라 고칠 것이 시각뿐이다(#1012, #1072).
     final changed = await showDialog<TimeOfDay?>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -103,7 +99,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .update(slot.id, startsAt: _startsAt(changed), capacity: _capacity);
+          .update(slot.id, startsAt: _startsAt(changed));
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotUpdated);
     } catch (error) {
@@ -119,7 +115,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l.slotCloseTitle),
-        content: Text(l.slotCloseBody(slot.booked)),
+        content: Text(l.slotCloseBody),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -159,10 +155,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     if (error is StateError) {
       // 목 리포지토리는 코드를 던진다 — 문구는 여기서 붙인다. (#501)
       return switch (error.message.toString()) {
-        SlotErrorCodes.capacityRange => l.slotCapacityRange,
         SlotErrorCodes.futureOnly => l.slotFutureOnly,
         SlotErrorCodes.notFound => l.slotNotFound,
-        SlotErrorCodes.capacityBelowBooked => l.slotCapacityBelowBooked,
         _ => l.slotActionFailed,
       };
     }
@@ -314,12 +308,13 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
                                 child: Text(
+                                  // 1:1 PT 라 인원수를 셀 것이 없다 — 자리
+                                  // 상태만 적는다(#1072).
                                   slot.isClosed
-                                      ? l.slotClosedSummary(slot.booked)
-                                      : l.slotOpenSummary(
-                                          slot.booked,
-                                          slot.remaining,
-                                        ),
+                                      ? l.slotClosedSummary
+                                      : (slot.booked
+                                            ? l.slotBookedSummary
+                                            : l.slotOpenSummary),
                                   style: TextStyle(
                                     color: slot.isClosed
                                         ? AppColors.subtleForeground

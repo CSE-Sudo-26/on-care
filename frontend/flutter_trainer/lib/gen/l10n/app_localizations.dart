@@ -2789,8 +2789,8 @@ abstract class AppLocalizations {
   /// No description provided for @slotCloseBody.
   ///
   /// In en, this message translates to:
-  /// **'The {count} existing bookings stay; only new bookings stop.'**
-  String slotCloseBody(int count);
+  /// **'Any existing booking stays; only new bookings stop.'**
+  String get slotCloseBody;
 
   /// No description provided for @slotClosed.
   ///
@@ -2837,14 +2837,20 @@ abstract class AppLocalizations {
   /// No description provided for @slotClosedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Closed · {booked} booked'**
-  String slotClosedSummary(int booked);
+  /// **'Closed'**
+  String get slotClosedSummary;
+
+  /// No description provided for @slotBookedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked'**
+  String get slotBookedSummary;
 
   /// No description provided for @slotOpenSummary.
   ///
   /// In en, this message translates to:
-  /// **'{booked} booked · {remaining} left'**
-  String slotOpenSummary(int booked, int remaining);
+  /// **'Open'**
+  String get slotOpenSummary;
 
   /// No description provided for @slotCloseAction.
   ///
@@ -4058,12 +4064,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send your question'**
   String get coachAskFailed;
 
-  /// No description provided for @slotCapacityRange.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityRange;
-
   /// No description provided for @slotFutureOnly.
   ///
   /// In en, this message translates to:
@@ -4075,12 +4075,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Booking slot not found.'**
   String get slotNotFound;
-
-  /// No description provided for @slotCapacityBelowBooked.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity can\'t be lower than the number already booked.'**
-  String get slotCapacityBelowBooked;
 
   /// No description provided for @authErrNotTrainer.
   ///

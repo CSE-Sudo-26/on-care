@@ -238,7 +238,7 @@ void main() {
       findsNothing,
     );
 
-    expect(find.text(l.exAiSlotTitle), findsOneWidget);
+    expect(find.text(l.exTrainerAvailability(_trainer.name)), findsOneWidget);
     const double expectedBottomInset = 17; // 16px padding + 1px border.
     expect(
       tester.getBottomRight(myGymCard()).dy -
@@ -523,7 +523,7 @@ void main() {
     // 헬스장 카드는 남지만, 없는 트레이너의 빈 시간·예약 버튼은 사라진다.
     expect(myGymCard(), findsOneWidget);
     expect(reservationPanel(), findsNothing);
-    expect(find.text(l.exAiSlotTitle), findsNothing);
+    expect(find.text(l.exTrainerAvailability(_trainer.name)), findsNothing);
     // 내 카드에서만 빠질 뿐, 추천 트레이너 레일에는 그대로 남아 있어야 한다.
     expect(
       find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),

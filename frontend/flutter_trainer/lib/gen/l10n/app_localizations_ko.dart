@@ -1504,9 +1504,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotCloseTitle => '예약 슬롯 닫기';
 
   @override
-  String slotCloseBody(int count) {
-    return '이미 예약된 $count건의 일정은 유지되고, 신규 예약만 중단됩니다.';
-  }
+  String get slotCloseBody => '이미 잡힌 예약은 유지되고, 신규 예약만 중단됩니다.';
 
   @override
   String get slotClosed => '신규 예약을 닫았습니다.';
@@ -1532,14 +1530,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotEmpty => '이 날짜에 열린 예약 슬롯이 없습니다.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return '예약 닫힘 · 예약 $booked명';
-  }
+  String get slotClosedSummary => '예약 닫힘';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '예약 $booked명 · 잔여 $remaining명';
-  }
+  String get slotBookedSummary => '예약됨';
+
+  @override
+  String get slotOpenSummary => '비어 있음';
 
   @override
   String get slotCloseAction => '예약 닫기';
@@ -2195,16 +2192,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachAskFailed => '질문을 보낼 수 없어요';
 
   @override
-  String get slotCapacityRange => '정원은 1명 이상 100명 이하이어야 합니다.';
-
-  @override
   String get slotFutureOnly => '현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.';
 
   @override
   String get slotNotFound => '예약 슬롯을 찾을 수 없습니다.';
-
-  @override
-  String get slotCapacityBelowBooked => '이미 예약된 인원보다 정원을 줄일 수 없습니다.';
 
   @override
   String get authErrNotTrainer => '트레이너 계정으로 로그인해 주세요.';

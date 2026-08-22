@@ -17,11 +17,11 @@ void main() {
     repository = DioReservationSlotRepository(dio);
   });
 
-  Map<String, dynamic> slotJson({int remaining = 2}) => <String, dynamic>{
+  Map<String, dynamic> slotJson({int remaining = 1}) => <String, dynamic>{
     'id': 'slot-1',
     'trainer_id': 'trainer-1',
     'starts_at': '2026-08-10T01:00:00Z',
-    'capacity': 3,
+    'capacity': 1,
     'remaining': remaining,
     'is_closed': false,
   };
@@ -38,12 +38,23 @@ void main() {
     final result = await repository.list();
 
     expect(result.single.id, 'slot-1');
-    expect(result.single.capacity, 3);
-    expect(result.single.remaining, 2);
-    expect(result.single.booked, 1);
+    // 서버가 좌석 수로 주더라도 앱은 예약 여부만 본다(#1072).
+    expect(result.single.booked, isFalse);
   });
 
-  test('create sends UTC time and capacity', () async {
+  test('남은 좌석이 없으면 예약된 자리로 읽는다', () async {
+    when(() => dio.get<List<dynamic>>('/trainer/reservation-slots')).thenAnswer(
+      (_) async => Response<List<dynamic>>(
+        requestOptions: RequestOptions(path: '/trainer/reservation-slots'),
+        statusCode: 200,
+        data: <dynamic>[slotJson(remaining: 0)],
+      ),
+    );
+
+    expect((await repository.list()).single.booked, isTrue);
+  });
+
+  test('create sends UTC time and the fixed 1:1 capacity', () async {
     when(
       () => dio.post<Map<String, dynamic>>(
         '/trainer/reservation-slots',
@@ -59,7 +70,6 @@ void main() {
 
     await repository.create(
       startsAt: DateTime.parse('2026-08-10T10:00:00+09:00'),
-      capacity: 3,
     );
 
     final data =
@@ -72,7 +82,8 @@ void main() {
             as Map<String, dynamic>;
     expect(data, <String, dynamic>{
       'starts_at': '2026-08-10T01:00:00.000Z',
-      'capacity': 3,
+      // 1:1 PT 라 좌석 수는 화면이 고르지 않고 늘 1로 나간다(#1072).
+      'capacity': 1,
     });
   });
 
@@ -104,56 +115,49 @@ void main() {
       ),
     );
 
-    await repository.update('slot-1', capacity: 4);
+    final DateTime moved = DateTime.parse('2026-08-10T11:00:00+09:00');
+    await repository.update('slot-1', startsAt: moved);
     final closed = await repository.close('slot-1');
 
     verify(
       () => dio.put<Map<String, dynamic>>(
         '/trainer/reservation-slots/slot-1',
-        data: <String, dynamic>{'capacity': 4},
+        data: <String, dynamic>{'starts_at': '2026-08-10T02:00:00.000Z'},
       ),
     ).called(1);
     expect(closed.isClosed, isTrue);
   });
 
   group('MockReservationSlotRepository validation', () {
-    test('create rejects past times and capacities outside 1 to 100', () async {
+    test('create rejects past times', () async {
       final mockRepository = MockReservationSlotRepository();
-      final future = nowKst().add(const Duration(days: 1));
 
       await expectLater(
         mockRepository.create(
           startsAt: nowKst().subtract(const Duration(minutes: 1)),
-          capacity: 1,
         ),
-        throwsStateError,
-      );
-      await expectLater(
-        mockRepository.create(startsAt: future, capacity: 0),
-        throwsStateError,
-      );
-      await expectLater(
-        mockRepository.create(startsAt: future, capacity: 101),
         throwsStateError,
       );
       expect(await mockRepository.list(), isEmpty);
     });
 
-    test('update rejects past times and capacities outside 1 to 100', () async {
+    test('새로 연 자리는 비어 있는 상태로 시작한다', () async {
+      final mockRepository = MockReservationSlotRepository();
+
+      final slot = await mockRepository.create(
+        startsAt: nowKst().add(const Duration(days: 1)),
+      );
+
+      expect(slot.booked, isFalse);
+      expect(slot.isClosed, isFalse);
+    });
+
+    test('update rejects past times', () async {
       final mockRepository = MockReservationSlotRepository();
       final slot = await mockRepository.create(
         startsAt: nowKst().add(const Duration(days: 1)),
-        capacity: 2,
       );
 
-      await expectLater(
-        mockRepository.update(slot.id, capacity: 0),
-        throwsStateError,
-      );
-      await expectLater(
-        mockRepository.update(slot.id, capacity: 101),
-        throwsStateError,
-      );
       await expectLater(
         mockRepository.update(
           slot.id,
@@ -163,7 +167,6 @@ void main() {
       );
 
       final unchanged = (await mockRepository.list()).single;
-      expect(unchanged.capacity, 2);
       expect(unchanged.startsAt, slot.startsAt);
     });
   });

@@ -1571,9 +1571,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotCloseTitle => 'Close booking slot';
 
   @override
-  String slotCloseBody(int count) {
-    return 'The $count existing bookings stay; only new bookings stop.';
-  }
+  String get slotCloseBody =>
+      'Any existing booking stays; only new bookings stop.';
 
   @override
   String get slotClosed => 'New bookings closed.';
@@ -1600,14 +1599,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotEmpty => 'No booking slots open on this day.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return 'Closed · $booked booked';
-  }
+  String get slotClosedSummary => 'Closed';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '$booked booked · $remaining left';
-  }
+  String get slotBookedSummary => 'Booked';
+
+  @override
+  String get slotOpenSummary => 'Open';
 
   @override
   String get slotCloseAction => 'Close bookings';
@@ -2289,18 +2287,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAskFailed => 'Couldn\'t send your question';
 
   @override
-  String get slotCapacityRange => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotFutureOnly =>
       'Booking slots can only be set for future times.';
 
   @override
   String get slotNotFound => 'Booking slot not found.';
-
-  @override
-  String get slotCapacityBelowBooked =>
-      'Capacity can\'t be lower than the number already booked.';
 
   @override
   String get authErrNotTrainer => 'Please sign in with a trainer account.';

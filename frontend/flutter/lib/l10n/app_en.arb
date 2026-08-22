@@ -443,8 +443,7 @@
     }
   },
   "exTrainerDedicated": "Personal trainer",
-  "exAiSlotTitle": "✦ AI recommended times",
-  "exTrainerAvailability": "{trainer}'s openings",
+  "exTrainerAvailability": "{trainer}'s open booking times",
   "@exTrainerAvailability": {
     "placeholders": {
       "trainer": {
@@ -460,14 +459,6 @@
       },
       "time": {
         "type": "String"
-      }
-    }
-  },
-  "exSlotRemaining": "{count} left",
-  "@exSlotRemaining": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },

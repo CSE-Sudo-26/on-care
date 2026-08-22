@@ -342,82 +342,71 @@ class MockGymRepository implements GymRepository {
         id: 'slot-kim-today',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 0, 19, 0),
-        capacity: 2,
-        remaining: 1,
+        booked: false,
       ),
       TrainerSlot(
         id: 'slot-kim-1',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 1, 7, 30),
-        capacity: 2,
-        remaining: 2,
+        booked: false,
       ),
       TrainerSlot(
         id: 'slot-kim-2',
         trainerId: 'trainer-kim',
         // 마감된 자리도 남겨 두어야 "그날은 꽉 찼다"가 읽힌다.
         startsAt: _at(today, 1, 20, 0),
-        capacity: 3,
-        remaining: 0,
+        booked: true,
       ),
       TrainerSlot(
         id: 'slot-kim-3',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 2, 18, 0),
-        capacity: 2,
-        remaining: 2,
+        booked: false,
       ),
       // 박트레이너 — 재활 세션이라 1:1, 낮 시간대.
       TrainerSlot(
         id: 'slot-park-today',
         trainerId: 'trainer-park',
         startsAt: _at(today, 0, 14, 0),
-        capacity: 1,
-        remaining: 1,
+        booked: false,
       ),
       TrainerSlot(
         id: 'slot-park-1',
         trainerId: 'trainer-park',
         startsAt: _at(today, 1, 11, 0),
-        capacity: 1,
-        remaining: 1,
+        booked: false,
       ),
       TrainerSlot(
         id: 'slot-park-2',
         trainerId: 'trainer-park',
         startsAt: _at(today, 2, 15, 0),
-        capacity: 1,
-        remaining: 1,
+        booked: false,
       ),
-      // 최트레이너 — 소그룹이라 정원이 크다.
+      // 최트레이너 — 자리가 하나뿐이라 목록이 짧다.
       TrainerSlot(
         id: 'slot-choi-1',
         trainerId: 'trainer-choi',
         startsAt: _at(today, 1, 18, 30),
-        capacity: 4,
-        remaining: 3,
+        booked: false,
       ),
       // 강트레이너 — 교대근무 대응이라 이른 아침·늦은 밤.
       TrainerSlot(
         id: 'slot-kang-today',
         trainerId: 'trainer-kang',
         startsAt: _at(today, 0, 6, 0),
-        capacity: 2,
-        remaining: 2,
+        booked: false,
       ),
       TrainerSlot(
         id: 'slot-kang-1',
         trainerId: 'trainer-kang',
         startsAt: _at(today, 1, 22, 0),
-        capacity: 2,
-        remaining: 1,
+        booked: false,
       ),
       TrainerSlot(
         id: 'slot-lee-1',
         trainerId: 'trainer-lee',
         startsAt: _at(today, 2, 10, 0),
-        capacity: 2,
-        remaining: 2,
+        booked: false,
       ),
       // 윤트레이너는 슬롯이 없다 — 빈 상태를 데모에서도 볼 수 있어야 한다.
     ];
@@ -449,14 +438,14 @@ class MockGymRepository implements GymRepository {
     if (i < 0) {
       throw StateError('slot not found: $slotId');
     }
-    if (_slots[i].isFull) {
-      throw StateError('slot already full: $slotId');
+    if (_slots[i].booked) {
+      throw StateError('slot already booked: $slotId');
     }
     // 목록에서 이미 빠진 시간을 오래된 화면이 그대로 잡는 것도 막는다.
     if (!_slots[i].startsAt.isAfter(nowKst())) {
       throw StateError('slot already started: $slotId');
     }
-    _slots[i] = _slots[i].copyWith(remaining: _slots[i].remaining - 1);
+    _slots[i] = _slots[i].copyWith(booked: true);
     _reservations.add(
       MyReservation(
         // 데모는 서버가 없으니 슬롯 id 로 결정론적 id 를 만든다 — 취소가 어느
@@ -511,14 +500,12 @@ class MockGymRepository implements GymRepository {
     if (!reservation.startsAt.isAfter(nowKst())) {
       throw StateError('reservation no longer cancellable: $reservationId');
     }
-    // 좌석을 되돌린다 — 실서버와 같은 결과가 화면에 보여야 한다.
+    // 자리를 다시 연다 — 실서버와 같은 결과가 화면에 보여야 한다.
     final int s = _slots.indexWhere(
       (TrainerSlot slot) => slot.id == reservation.slotId,
     );
     if (s >= 0) {
-      _slots[s] = _slots[s].copyWith(
-        remaining: (_slots[s].remaining + 1).clamp(0, _slots[s].capacity),
-      );
+      _slots[s] = _slots[s].copyWith(booked: false);
     }
     _reservations.removeAt(i);
   }
