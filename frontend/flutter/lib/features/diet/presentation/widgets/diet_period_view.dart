@@ -79,12 +79,6 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
     setState(() => _metric = m);
   }
 
-  double _averageOf(DietPeriod p, _Metric m) => switch (m) {
-    _Metric.calories => p.avgCalories,
-    _Metric.sodium => p.avgSodiumMg,
-    _Metric.sugar => p.avgSugarG,
-  };
-
   int _goalOf(_Metric m) {
     final UserProfile? p = widget.profile;
     return switch (m) {
@@ -229,7 +223,6 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
                   // 카드 안에서 버튼(파랑 통일)과 그래프가 서로 다른 말을
                   // 한다 — 목표를 넘긴 막대만 색으로 튄다(#694).
                   color: FigmaColors.primary,
-                  average: _averageOf(period, _metric),
                   goal: _goalOf(_metric).toDouble(),
                   values: <double>[
                     for (final DietPeriodDay d in period.days)
@@ -261,7 +254,6 @@ class _PeriodBody extends StatelessWidget {
     required this.metricLabel,
     required this.unit,
     required this.color,
-    required this.average,
     required this.goal,
     required this.values,
     required this.dates,
@@ -278,7 +270,6 @@ class _PeriodBody extends StatelessWidget {
   final String metricLabel;
   final String unit;
   final Color color;
-  final double average;
   final double goal;
   final List<double> values;
   final List<DateTime> dates;
@@ -335,8 +326,6 @@ class _PeriodBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<String> labels = weekDayLabels(l);
-    // 이번 주(꺾은선)는 스크롤도 선택도 없다 — 일곱 칸이 이미 한 화면이다.
-    final bool selectable = !weekly;
     return Container(
       key: const Key('diet-period-card'),
       width: double.infinity,
@@ -356,12 +345,15 @@ class _PeriodBody extends StatelessWidget {
                 child: ListenableBuilder(
                   listenable: selection,
                   builder: (BuildContext context, Widget? _) {
-                    final int? picked = selectable ? selection.selected : null;
+                    // 이번 주도 점을 골라 그날 값을 볼 수 있다 (#1122).
+                    // 스크롤이 없을 뿐, 머리 숫자가 평균과 하루를 오가는
+                    // 규칙은 `전체` 와 같다.
+                    final int? picked = selection.selected;
                     // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
                     // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
                     // 못한다. (#1018)
                     final double value = picked == null
-                        ? (selectable ? selection.averageOf(values) : average)
+                        ? selection.averageOf(values)
                         : values[picked];
                     final bool over = goal > 0 && value > goal;
                     // 칼로리를 볼 때만 탄단지를 곁들인다 — 나트륨·당류는
@@ -449,29 +441,36 @@ class _PeriodBody extends StatelessWidget {
                   for (final DateTime d in dates) labels[d.weekday - 1],
                 ];
                 final int today = _todayIndexIn(dates);
-                return MetricTrendChart(
-                  values: values,
-                  dayLabels: days,
-                  goal: goal,
-                  ticks: ticks,
-                  // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면(지난 주를
-                  // 보고 있으면) 마지막 칸까지 전부 그린다.
-                  todayIndex: today,
-                  replayKey: replayKey,
-                  // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로 시작한다.
-                  semanticsLabel: chartSemanticsLabel(
-                    l,
-                    title: metricLabel,
-                    points: chartSeriesPoints(
-                      l,
-                      values: values,
-                      dayLabels: days,
-                      format: (double v) => '${format(v)} $unit',
-                      upTo: today,
-                    ),
-                  ),
-                  goalLabel: '${l.homeGoal}\n${format(goal)}',
-                  formatTick: (double v) => format(v),
+                return ListenableBuilder(
+                  listenable: selection,
+                  builder: (BuildContext context, Widget? _) =>
+                      MetricTrendChart(
+                        values: values,
+                        dayLabels: days,
+                        goal: goal,
+                        ticks: ticks,
+                        selectedIndex: selection.selected,
+                        onSelected: selection.select,
+                        // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면
+                        // (지난 주를 보고 있으면) 마지막 칸까지 전부 그린다.
+                        todayIndex: today,
+                        replayKey: replayKey,
+                        // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로
+                        // 시작한다.
+                        semanticsLabel: chartSemanticsLabel(
+                          l,
+                          title: metricLabel,
+                          points: chartSeriesPoints(
+                            l,
+                            values: values,
+                            dayLabels: days,
+                            format: (double v) => '${format(v)} $unit',
+                            upTo: today,
+                          ),
+                        ),
+                        goalLabel: '${l.homeGoal}\n${format(goal)}',
+                        formatTick: (double v) => format(v),
+                      ),
                 );
               },
             )
