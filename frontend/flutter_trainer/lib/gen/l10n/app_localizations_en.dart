@@ -1220,6 +1220,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsCompletionAvg => 'Workout completion';
 
   @override
+  String get reportsWeeklyCompletion => 'Weekly completion';
+
+  @override
   String get reportsCompletionByDay => 'Weekly workout completion';
 
   @override

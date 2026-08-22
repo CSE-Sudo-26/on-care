@@ -2204,6 +2204,12 @@ abstract class AppLocalizations {
   /// **'Workout completion'**
   String get reportsCompletionAvg;
 
+  /// No description provided for @reportsWeeklyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly completion'**
+  String get reportsWeeklyCompletion;
+
   /// No description provided for @reportsCompletionByDay.
   ///
   /// In en, this message translates to:
