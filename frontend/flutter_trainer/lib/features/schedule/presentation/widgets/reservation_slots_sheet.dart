@@ -47,6 +47,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       initialDate: _date,
       firstDate: DateTime(today.year, today.month, today.day),
       lastDate: DateTime(today.year + 1, today.month, today.day),
+      // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드 입력을
+      // 기본으로 띄우면 그 문제가 없다(#1109).
+      initialEntryMode: DatePickerEntryMode.input,
     );
     if (picked != null) {
       setState(() => _date = DateTime(picked.year, picked.month, picked.day));

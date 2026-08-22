@@ -147,6 +147,10 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
       // 지난 날짜로 새 할 일을 만들 이유가 없다 — 만드는 순간 '기한 지남'이다.
       firstDate: today,
       lastDate: today.add(_maxAhead),
+      // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드 입력을
+      // 기본으로 띄우면 그 문제가 없다(#1109). 달력 아이콘으로
+      // 그리드 보기로 바꿀 수 있는 길은 그대로다.
+      initialEntryMode: DatePickerEntryMode.input,
     );
     if (picked == null || !mounted) return;
     setState(() => _dueDate = DateTime(picked.year, picked.month, picked.day));
