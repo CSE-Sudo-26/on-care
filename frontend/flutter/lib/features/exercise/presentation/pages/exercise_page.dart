@@ -13,7 +13,6 @@ import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
-import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -113,7 +112,6 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                       );
                       notifier.state = notifier.state == s ? null : s;
                     },
-                    onFind: () => showGymLocatorSheet(context),
                   ),
               ],
             ),

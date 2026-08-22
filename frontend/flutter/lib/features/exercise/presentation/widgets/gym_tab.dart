@@ -12,23 +12,17 @@ import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
-import 'package:oncare/features/exercise/presentation/widgets/gym_locator_map.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymTab extends ConsumerWidget {
-  const GymTab({
-    required this.selectedSlot,
-    required this.onSlot,
-    required this.onFind,
-    super.key,
-  });
+  const GymTab({required this.selectedSlot, required this.onSlot, super.key});
 
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
-  final VoidCallback onFind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -75,6 +69,49 @@ class GymTab extends ConsumerWidget {
       );
     }
 
+    // 연결된 헬스장이 없으면 이 탭에서 할 일은 헬스장을 찾는 것뿐이다 —
+    // 지도만 든 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면을 그대로 보여
+    // 준다 (#1133). 추천 헬스장·추천 트레이너 섹션도 그 화면의 목록과 같은
+    // 말을 하므로 함께 내린다. 트레이너와 채팅 버튼도 여기서는 없다 (#1132) —
+    // 담당이 있으면 헤더의 채팅 버튼이 그 자리를 맡는다.
+    //
+    // 조회 중에는 찾기 화면을 미리 보여 주지 않는다. 잠깐 떴다 사라지면 연결이
+    // 풀린 것처럼 읽힌다.
+    if (myGymAsync.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _SectionLoading(height: 180),
+      );
+    }
+    if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
+      // 상담을 넣어 둔 상태는 그대로 보여 준다 — 헬스장이 아직 없는 회원에게
+      // 지금 진행 중인 일이 바로 그 상담이다.
+      if (displayedRequest == null) return const GymFinderView();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _RecentConsultationSection(
+                  key: recentConsultationKey,
+                  request: displayedRequest,
+                ),
+                if (pendingRequest != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _PendingConsultationButton(onTap: showRecentConsultation),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const GymFinderView(),
+        ],
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -87,7 +124,6 @@ class GymTab extends ConsumerWidget {
             trainer: ref.watch(myTrainerProvider).valueOrNull,
             selectedSlot: selectedSlot,
             onSlot: onSlot,
-            onFind: onFind,
             onRetry: () => ref.invalidate(myGymProvider),
             onPendingConsultationTap: pendingRequest == null
                 ? null
@@ -337,7 +373,6 @@ class _MyGymSection extends StatelessWidget {
     required this.trainer,
     required this.selectedSlot,
     required this.onSlot,
-    required this.onFind,
     required this.onRetry,
     required this.onPendingConsultationTap,
     required this.onTrainerChatTap,
@@ -350,7 +385,6 @@ class _MyGymSection extends StatelessWidget {
   final Trainer? trainer;
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
-  final VoidCallback onFind;
   final VoidCallback onRetry;
   final VoidCallback? onPendingConsultationTap;
   final VoidCallback? onTrainerChatTap;
@@ -361,22 +395,11 @@ class _MyGymSection extends StatelessWidget {
     return gymAsync.when(
       loading: () => const _SectionLoading(height: 180),
       error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
+      // 연결된 헬스장이 없는 경우는 이 위젯에 오지 않는다 — 탭이 찾기 화면을
+      // 대신 그린다 (#1133). 그래도 방어적으로 빈 상태를 오류처럼 다루지 않고
+      // 재시도 자리를 남긴다.
       data: (Gym? gym) => gym == null
-          ? Column(
-              children: <Widget>[
-                _EmptyMyGym(onFind: onFind),
-                if (onPendingConsultationTap != null) ...<Widget>[
-                  const SizedBox(height: 14),
-                  _PendingConsultationButton(onTap: onPendingConsultationTap!),
-                ] else if (onTrainerChatTap != null) ...<Widget>[
-                  const SizedBox(height: 14),
-                  _TrainerChatButton(
-                    unread: unreadCoachMessages,
-                    onTap: onTrainerChatTap!,
-                  ),
-                ],
-              ],
-            )
+          ? _SectionError(onRetry: onRetry)
           : _MyGymCard(
               gym: gym,
               trainer: trainer,
@@ -1433,63 +1456,6 @@ class _SlotChip extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 연결된 헬스장이 없을 때의 카드.
-///
-/// 아이콘 하나로 비어 있다고만 알리던 자리다. 헬스장이 없는 회원에게 이 탭에서
-/// 할 일은 헬스장을 찾는 것뿐이므로, 지도를 카드 맨 앞에 그대로 띄워 탭에
-/// 들어오자마자 보이게 한다(#1072).
-class _EmptyMyGym extends ConsumerWidget {
-  const _EmptyMyGym({required this.onFind});
-
-  final VoidCallback onFind;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    // 시트와 같은 목록(제휴 + 카카오)을 핀으로 쓴다. 아직 로딩 중이면 핀 없이
-    // 지도만 먼저 그려지고, 결과가 오면 다시 찍힌다.
-    final List<Gym> pinned =
-        ref.watch(gymFinderResultsProvider).valueOrNull ?? const <Gym>[];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration(),
-      child: Column(
-        children: <Widget>[
-          GymLocatorMap(gyms: pinned),
-          const SizedBox(height: 14),
-          Text(
-            l.exNoConnectedGym,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
-            ),
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: onFind,
-            style: FilledButton.styleFrom(
-              backgroundColor: FigmaColors.primary,
-              minimumSize: const Size(0, 46),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            icon: const Icon(Icons.search, size: 17),
-            label: Text(
-              l.exFindGym,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
       ),
     );
   }

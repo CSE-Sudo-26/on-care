@@ -17,6 +17,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_locator_map.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -103,11 +104,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(
-              child: GymTab(
-                selectedSlot: null,
-                onSlot: (String _) {},
-                onFind: () {},
-              ),
+              child: GymTab(selectedSlot: null, onSlot: (String _) {}),
             ),
           ),
         ),
@@ -201,14 +198,18 @@ void main() {
     );
   });
 
-  testWidgets('연결된 헬스장이 없으면 지도가 맨 앞에 온다', (WidgetTester tester) async {
-    final AppLocalizations l = await pumpTab(tester, hasMyGym: false);
+  testWidgets('연결된 헬스장이 없으면 헬스장 찾기 화면이 그대로 뜬다 (#1133)', (
+    WidgetTester tester,
+  ) async {
+    await pumpTab(tester, hasMyGym: false);
 
-    expect(find.byType(GymLocatorMap), findsOneWidget);
-    // 지도가 안내 문구·찾기 버튼보다 위에 있어야 "바로 보인다"가 성립한다.
-    expect(
-      tester.getTopLeft(find.byType(GymLocatorMap)).dy,
-      lessThan(tester.getTopLeft(find.text(l.exNoConnectedGym)).dy),
-    );
+    // 지도만 든 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면 자체가 온다.
+    expect(find.byType(GymFinderView), findsOneWidget);
+    expect(find.text('헬스장 찾기'), findsNothing);
+    // 추천 헬스장·추천 트레이너 섹션도 이 상태에서는 없다.
+    expect(find.text('추천 헬스장'), findsNothing);
+    expect(find.text('추천 트레이너'), findsNothing);
+    // 트레이너와 채팅 버튼도 없다 (#1132) — 헤더의 채팅 버튼이 그 자리를 맡는다.
+    expect(find.text('트레이너와 채팅'), findsNothing);
   });
 }

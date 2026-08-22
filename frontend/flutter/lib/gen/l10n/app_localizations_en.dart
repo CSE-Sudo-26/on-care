@@ -816,7 +816,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymSearchHint => 'Search by gym or area';
 
   @override
-  String get exNearbyGyms => 'Nearby Gyms · O2O';
+  String get exNearbyGyms => 'Nearby gyms';
 
   @override
   String get exAiAnalysis => '✦ AI analysis';
