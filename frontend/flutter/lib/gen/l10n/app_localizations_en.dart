@@ -1748,7 +1748,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalsDietSection => 'Daily diet goals';
 
   @override
-  String get myGoalsExerciseSection => 'Weekly exercise goals';
+  String get myGoalsExerciseSection => 'Exercise goals';
+
+  @override
+  String get myGoalBurnDaily => 'Daily calories burned (kcal)';
+
+  @override
+  String get myGoalCardioWeekly => 'Weekly cardio (min)';
+
+  @override
+  String get myGoalStrengthWeekly => 'Weekly strength (sets)';
+
+  @override
+  String get myGoalFlexibilityWeekly => 'Weekly stretching (min)';
+
+  @override
+  String get myGoalExerciseSuggestionNote =>
+      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week';
+
+  @override
+  String get myGoalExerciseApplySuggestion => 'Use suggested goals';
 
   @override
   String get myGoalCalories => 'Daily calorie limit (kcal)';

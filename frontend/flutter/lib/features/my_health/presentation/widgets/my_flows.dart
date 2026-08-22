@@ -12,6 +12,7 @@ import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/my_health/domain/support_links.dart';
 import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -414,7 +415,11 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   late final TextEditingController _birth = TextEditingController(
     text: widget.initial.birthDate,
   );
-  late String _gender = widget.initial.gender;
+  // 성별은 비워 두지 않는다 (#1140) — 고르지 않은 채로 두면 이 회원이 무엇을
+  // 골랐는지와 아직 안 골랐는지가 화면에서 같아 보인다.
+  late String _gender = widget.initial.gender.isEmpty
+      ? 'male'
+      : widget.initial.gender;
   late final TextEditingController _height = TextEditingController(
     text: widget.initial.heightCm?.toString() ?? '',
   );
@@ -574,13 +579,18 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     widget.initial.dailyProteinG,
   );
   late final TextEditingController _fat = _ctl(widget.initial.dailyFatG);
-  late final TextEditingController _workouts = _ctl(
-    widget.initial.weeklyWorkoutGoal,
+  // 운동 목표는 운동 탭이 견주는 축과 같다 (#1139) — 소모는 하루, 유형별은
+  // 한 주다. 주간 운동 횟수·시간은 어느 화면도 쓰지 않아 뺐다.
+  late final TextEditingController _burn = _ctl(widget.initial.dailyBurnKcal);
+  late final TextEditingController _cardio = _ctl(
+    widget.initial.weeklyCardioMinutes,
   );
-  late final TextEditingController _minutes = _ctl(
-    widget.initial.weeklyExerciseMinutesGoal,
+  late final TextEditingController _strength = _ctl(
+    widget.initial.weeklyStrengthSets,
   );
-  late final TextEditingController _burn = _ctl(widget.initial.weeklyBurnGoal);
+  late final TextEditingController _flexibility = _ctl(
+    widget.initial.weeklyFlexibilityMinutes,
+  );
   bool _saving = false;
 
   /// 칼로리 칸이 탄단지에서 계산돼 채워졌는가. 그 칸 아래 안내를 켜는 값이라,
@@ -674,6 +684,27 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     _syncCaloriesFromMacros();
   }
 
+  /// 네 칸이 이미 권장값과 같은가. 같으면 `권장 비율로 채우기` 를 띄우지
+  /// 않는다 — 눌러도 달라질 것이 없는 버튼이다.
+  bool get _exerciseGoalsMatchSuggestion =>
+      _val(_burn) == kDefaultExerciseLoadGoals.dailyBurnKcal.round() &&
+      _val(_cardio) == kDefaultExerciseLoadGoals.weeklyCardioMinutes.round() &&
+      _val(_strength) == kDefaultExerciseLoadGoals.weeklyStrengthSets.round() &&
+      _val(_flexibility) ==
+          kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round();
+
+  /// 권장 운동 목표를 네 칸에 채운다.
+  void _applySuggestedExerciseGoals() {
+    setState(() {
+      _burn.text = '${kDefaultExerciseLoadGoals.dailyBurnKcal.round()}';
+      _cardio.text = '${kDefaultExerciseLoadGoals.weeklyCardioMinutes.round()}';
+      _strength.text =
+          '${kDefaultExerciseLoadGoals.weeklyStrengthSets.round()}';
+      _flexibility.text =
+          '${kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round()}';
+    });
+  }
+
   @override
   void dispose() {
     for (final TextEditingController c in <TextEditingController>[
@@ -683,9 +714,10 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       _carbs,
       _protein,
       _fat,
-      _workouts,
-      _minutes,
       _burn,
+      _cardio,
+      _strength,
+      _flexibility,
     ]) {
       c.dispose();
     }
@@ -703,7 +735,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     try {
       final UserProfile updatedProfile = await ref
           .read(accountRepositoryProvider)
-          // 아홉 칸 모두 이 화면이 들고 있으므로 아홉 개를 다 보낸다. 빈 칸은
+          // 이 화면이 들고 있는 열 칸을 다 보낸다. 빈 칸은
           // `GoalUpdate(null)` 로 나가 서버에서 목표 해제가 된다 — 회원이 지운
           // 목표는 지워져야 한다.
           .updateHealthGoals(
@@ -713,9 +745,10 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
             dailyCarbsG: GoalUpdate(_val(_carbs)),
             dailyProteinG: GoalUpdate(_val(_protein)),
             dailyFatG: GoalUpdate(_val(_fat)),
-            weeklyWorkoutGoal: GoalUpdate(_val(_workouts)),
-            weeklyExerciseMinutesGoal: GoalUpdate(_val(_minutes)),
-            weeklyBurnGoal: GoalUpdate(_val(_burn)),
+            dailyBurnKcal: GoalUpdate(_val(_burn)),
+            weeklyCardioMinutes: GoalUpdate(_val(_cardio)),
+            weeklyStrengthSets: GoalUpdate(_val(_strength)),
+            weeklyFlexibilityMinutes: GoalUpdate(_val(_flexibility)),
           );
       if (!mounted) return;
       ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
@@ -818,6 +851,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
         if (split != null && !_macrosMatchSuggestion) ...<Widget>[
           const SizedBox(height: 10),
           _MacroSuggestionRow(
+            buttonKey: const Key('goalApplyMacroSplit'),
             note: l.myGoalMacroSuggestionNote(_kcalValue!),
             actionLabel: l.myGoalMacroApplySuggestion,
             onApply: _applySuggestedSplit,
@@ -829,28 +863,53 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       const SizedBox(height: 8),
       _card(<Widget>[
         _SheetField(
-          label: l.myGoalWorkoutCount,
-          controller: _workouts,
-          keyboardType: TextInputType.number,
-          inputFormatters: _digitsOnly,
-          hintText: '${UserProfile.defaultWeeklyWorkoutGoal}',
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          label: l.myGoalWorkoutMinutes,
-          controller: _minutes,
-          keyboardType: TextInputType.number,
-          inputFormatters: _digitsOnly,
-          hintText: '${UserProfile.defaultWeeklyExerciseMinutesGoal}',
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          label: l.myGoalWorkoutCalories,
+          key: const Key('goalDailyBurnField'),
+          label: l.myGoalBurnDaily,
           controller: _burn,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
-          hintText: '${UserProfile.defaultWeeklyBurnGoal}',
+          hintText: '${kDefaultExerciseLoadGoals.dailyBurnKcal.round()}',
         ),
+        const SizedBox(height: 12),
+        _SheetField(
+          key: const Key('goalCardioField'),
+          label: l.myGoalCardioWeekly,
+          controller: _cardio,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText: '${kDefaultExerciseLoadGoals.weeklyCardioMinutes.round()}',
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          key: const Key('goalStrengthField'),
+          label: l.myGoalStrengthWeekly,
+          controller: _strength,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText: '${kDefaultExerciseLoadGoals.weeklyStrengthSets.round()}',
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          key: const Key('goalFlexibilityField'),
+          label: l.myGoalFlexibilityWeekly,
+          controller: _flexibility,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText:
+              '${kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round()}',
+        ),
+        // 식단 목표의 `권장 비율로 채우기` 와 같은 자리·같은 모양이다 (#1139).
+        // 권장값은 WHO 권고(주 150분 중강도 유산소)를 따르는
+        // [kDefaultExerciseLoadGoals] 그대로다.
+        if (!_exerciseGoalsMatchSuggestion) ...<Widget>[
+          const SizedBox(height: 10),
+          _MacroSuggestionRow(
+            buttonKey: const Key('goalApplyExerciseGoals'),
+            note: l.myGoalExerciseSuggestionNote,
+            actionLabel: l.myGoalExerciseApplySuggestion,
+            onApply: _applySuggestedExerciseGoals,
+          ),
+        ],
       ]),
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
@@ -867,11 +926,15 @@ class _MacroSuggestionRow extends StatelessWidget {
     required this.note,
     required this.actionLabel,
     required this.onApply,
+    required this.buttonKey,
   });
 
   final String note;
   final String actionLabel;
   final VoidCallback onApply;
+
+  /// 버튼의 키. 식단·운동 두 곳이 같은 줄을 쓰므로 각자 다른 키를 준다.
+  final Key buttonKey;
 
   @override
   Widget build(BuildContext context) {
@@ -889,7 +952,7 @@ class _MacroSuggestionRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         TextButton(
-          key: const Key('goalApplyMacroSplit'),
+          key: buttonKey,
           onPressed: onApply,
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

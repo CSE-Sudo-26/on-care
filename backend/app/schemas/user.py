@@ -137,11 +137,15 @@ class ProfileView(BaseModel):
     weekly_workout_goal: Optional[int] = None
     weekly_exercise_minutes_goal: Optional[int] = None
     weekly_burn_goal: Optional[int] = None
+    daily_burn_kcal: Optional[int] = None
+    weekly_cardio_minutes: Optional[int] = None
+    weekly_strength_sets: Optional[int] = None
+    weekly_flexibility_minutes: Optional[int] = None
     onboarded: bool = False
 
 
 class HealthGoalsUpdate(BaseModel):
-    """PUT /users/me/health-goals — 식단 일일 목표(6종) + 주간 운동 목표(3종).
+    """PUT /users/me/health-goals — 식단 일일 목표(6종) + 운동 목표(7종).
 
     체중/혈압/혈당(vitals) 목표는 다루지 않는다. 모두 선택(부분 저장 허용).
 
@@ -160,6 +164,11 @@ class HealthGoalsUpdate(BaseModel):
     weekly_workout_goal: Optional[int] = None
     weekly_exercise_minutes_goal: Optional[int] = None
     weekly_burn_goal: Optional[int] = None
+    # 운동 탭이 견주는 목표 (#1139). 소모는 하루, 유형별은 한 주다.
+    daily_burn_kcal: Optional[int] = None
+    weekly_cardio_minutes: Optional[int] = None
+    weekly_strength_sets: Optional[int] = None
+    weekly_flexibility_minutes: Optional[int] = None
 
 
 class OnboardingRequest(BaseModel):
