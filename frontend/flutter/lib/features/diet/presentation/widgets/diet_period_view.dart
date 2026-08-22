@@ -326,170 +326,179 @@ class _PeriodBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<String> labels = weekDayLabels(l);
-    return Container(
-      key: const Key('diet-period-card'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: kCardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: selection,
-                  builder: (BuildContext context, Widget? _) {
-                    // 이번 주도 점을 골라 그날 값을 볼 수 있다 (#1122).
-                    // 스크롤이 없을 뿐, 머리 숫자가 평균과 하루를 오가는
-                    // 규칙은 `전체` 와 같다.
-                    final int? picked = selection.selected;
-                    // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
-                    // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
-                    // 못한다. (#1018)
-                    final double value = picked == null
-                        ? selection.averageOf(values)
-                        : values[picked];
-                    final bool over = goal > 0 && value > goal;
-                    // 칼로리를 볼 때만 탄단지를 곁들인다 — 나트륨·당류는
-                    // 탄단지로 쪼갤 수 있는 값이 아니다. 날을 고르면 그날의
-                    // 탄단지, 아니면 기록이 있는 날의 하루 평균이다. (#1121)
-                    final _Macros? macros = _macrosFor(picked);
-                    return PeriodChartHeadline(
-                      selected: picked != null,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  picked == null
-                                      ? '${l.dietPeriodAverage} · $metricLabel'
-                                      : '${_dayHeadline(context, dates[picked])} · '
-                                            '$metricLabel',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.mutedForeground,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text.rich(
-                                    TextSpan(
-                                      children: <InlineSpan>[
-                                        TextSpan(
-                                          text: format(value),
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w800,
-                                            color: over
-                                                ? FigmaColors.dangerRed
-                                                : FigmaColors.ink,
-                                            letterSpacing: -0.5,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: ' / ${format(goal)} $unit',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.mutedForeground,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+    // 카드의 빈 곳을 누르면 고른 날이 풀려 다시 하루 평균이 뜬다 (#1123).
+    // 막대·점은 자기 탭을 먼저 받으므로 이 손짓은 그 밖의 자리에만 닿는다.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => selection.select(null),
+      child: Container(
+        key: const Key('diet-period-card'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: kCardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: selection,
+                    builder: (BuildContext context, Widget? _) {
+                      // 이번 주도 점을 골라 그날 값을 볼 수 있다 (#1122).
+                      // 스크롤이 없을 뿐, 머리 숫자가 평균과 하루를 오가는
+                      // 규칙은 `전체` 와 같다.
+                      final int? picked = selection.selected;
+                      // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
+                      // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
+                      // 못한다. (#1018)
+                      final double value = picked == null
+                          ? selection.averageOf(values)
+                          : values[picked];
+                      final bool over = goal > 0 && value > goal;
+                      // 칼로리를 볼 때만 탄단지를 곁들인다 — 나트륨·당류는
+                      // 탄단지로 쪼갤 수 있는 값이 아니다. 날을 고르면 그날의
+                      // 탄단지, 아니면 기록이 있는 날의 하루 평균이다. (#1121)
+                      final _Macros? macros = _macrosFor(picked);
+                      return PeriodChartHeadline(
+                        selected: picked != null,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    picked == null
+                                        ? '${l.dietPeriodAverage} · $metricLabel'
+                                        : '${_dayHeadline(context, dates[picked])} · '
+                                              '$metricLabel',
                                     maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.mutedForeground,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 5),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: <InlineSpan>[
+                                          TextSpan(
+                                            text: format(value),
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w800,
+                                              color: over
+                                                  ? FigmaColors.dangerRed
+                                                  : FigmaColors.ink,
+                                              letterSpacing: -0.5,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: ' / ${format(goal)} $unit',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.mutedForeground,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (macros != null) ...<Widget>[
+                              const SizedBox(width: 12),
+                              _MacroDetail(macros: macros),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            // 기간 합계는 뺐다 (#1121). 주와 달은 길이가 달라 합계끼리 견줄 수
+            // 없고, 카드가 답해야 할 질문은 "하루에 얼마나" 하나다.
+            //
+            // 머리와 그래프 사이의 구분선도 뺐다 (#1123). 한 카드가 한 가지를
+            // 말하는데 선이 둘로 갈랐고, 고른 막대에서 머리 카드로 올라가는
+            // 세로선이 그 선에서 끊겼다. `전체` 는 그 빈 칸을 그래프가 들고
+            // 있어(topGap) 세로선이 머리 카드까지 닿는다.
+            SizedBox(height: weekly ? 14 : 0),
+            if (weekly)
+              Builder(
+                builder: (BuildContext context) {
+                  final AppLocalizations l = AppLocalizations.of(context);
+                  final List<String> days = <String>[
+                    for (final DateTime d in dates) labels[d.weekday - 1],
+                  ];
+                  final int today = _todayIndexIn(dates);
+                  return ListenableBuilder(
+                    listenable: selection,
+                    builder: (BuildContext context, Widget? _) =>
+                        MetricTrendChart(
+                          values: values,
+                          dayLabels: days,
+                          goal: goal,
+                          ticks: ticks,
+                          selectedIndex: selection.selected,
+                          onSelected: selection.select,
+                          // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면
+                          // (지난 주를 보고 있으면) 마지막 칸까지 전부 그린다.
+                          todayIndex: today,
+                          replayKey: replayKey,
+                          // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로
+                          // 시작한다.
+                          semanticsLabel: chartSemanticsLabel(
+                            l,
+                            title: metricLabel,
+                            points: chartSeriesPoints(
+                              l,
+                              values: values,
+                              dayLabels: days,
+                              format: (double v) => '${format(v)} $unit',
+                              upTo: today,
                             ),
                           ),
-                          if (macros != null) ...<Widget>[
-                            const SizedBox(width: 12),
-                            _MacroDetail(macros: macros),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          // 기간 합계는 뺐다 (#1121). 주와 달은 길이가 달라 합계끼리 견줄 수
-          // 없고, 카드가 답해야 할 질문은 "하루에 얼마나" 하나다.
-          const SizedBox(height: 14),
-          const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
-          const SizedBox(height: 14),
-          if (weekly)
-            Builder(
-              builder: (BuildContext context) {
-                final AppLocalizations l = AppLocalizations.of(context);
-                final List<String> days = <String>[
-                  for (final DateTime d in dates) labels[d.weekday - 1],
-                ];
-                final int today = _todayIndexIn(dates);
-                return ListenableBuilder(
-                  listenable: selection,
-                  builder: (BuildContext context, Widget? _) =>
-                      MetricTrendChart(
-                        values: values,
-                        dayLabels: days,
-                        goal: goal,
-                        ticks: ticks,
-                        selectedIndex: selection.selected,
-                        onSelected: selection.select,
-                        // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면
-                        // (지난 주를 보고 있으면) 마지막 칸까지 전부 그린다.
-                        todayIndex: today,
-                        replayKey: replayKey,
-                        // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로
-                        // 시작한다.
-                        semanticsLabel: chartSemanticsLabel(
-                          l,
-                          title: metricLabel,
-                          points: chartSeriesPoints(
-                            l,
-                            values: values,
-                            dayLabels: days,
-                            format: (double v) => '${format(v)} $unit',
-                            upTo: today,
-                          ),
+                          goalLabel: '${l.homeGoal}\n${format(goal)}',
+                          formatTick: (double v) => format(v),
                         ),
-                        goalLabel: '${l.homeGoal}\n${format(goal)}',
-                        formatTick: (double v) => format(v),
-                      ),
-                );
-              },
-            )
-          else
-            _PeriodBars(
-              values: values,
-              dates: dates,
-              goal: goal,
-              color: color,
-              replayKey: replayKey,
-              // 막대 툴팁이 "무슨 값을 얼마나" 라고 말하려면 지표 이름·단위와
-              // 숫자 서식이 카드 머리 숫자와 같아야 한다.
-              metricLabel: metricLabel,
-              unit: unit,
-              format: format,
-              selection: selection,
-              days: days,
-            ),
-        ],
+                  );
+                },
+              )
+            else
+              _PeriodBars(
+                values: values,
+                dates: dates,
+                goal: goal,
+                color: color,
+                replayKey: replayKey,
+                // 막대 툴팁이 "무슨 값을 얼마나" 라고 말하려면 지표 이름·단위와
+                // 숫자 서식이 카드 머리 숫자와 같아야 한다.
+                metricLabel: metricLabel,
+                unit: unit,
+                format: format,
+                selection: selection,
+                days: days,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -773,8 +782,13 @@ class _PeriodBars extends StatelessWidget {
                 ? chartHeight * (goal / maxValue).clamp(0.0, 1.0)
                 : null,
             goalLabel: '${l.homeGoal}\n${format(goal)}',
+            // 머리 카드와 막대 사이의 빈 칸 — 고른 날의 세로선이 여기까지
+            // 올라와 회색 카드에 닿는다 (#1123).
+            topGap: 14,
+            // 날짜만 적으면 `26`, `9` 가 무슨 날인지 알 수 없다 — 달을 함께
+            // 적는다 (#1123).
             labelBuilder: (int i) =>
-                i % labelStep == 0 ? '${dates[i].day}' : '',
+                i % labelStep == 0 ? '${dates[i].month}/${dates[i].day}' : '',
             calloutBuilder: (BuildContext context, int i) =>
                 const SizedBox.shrink(),
             barBuilder: (BuildContext context, int i) => Padding(
