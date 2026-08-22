@@ -314,23 +314,11 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load this week\'s workout history.'**
   String get homeExerciseTrendUnavailable;
 
-  /// No description provided for @homeExerciseActiveTime.
-  ///
-  /// In en, this message translates to:
-  /// **'Active time'**
-  String get homeExerciseActiveTime;
-
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
   /// **'Calories'**
   String get homeExerciseBurned;
-
-  /// No description provided for @homeExerciseDays.
-  ///
-  /// In en, this message translates to:
-  /// **'Workout days'**
-  String get homeExerciseDays;
 
   /// No description provided for @homeMealReasonSodium.
   ///
@@ -443,7 +431,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeRecMealsTitle.
   ///
   /// In en, this message translates to:
-  /// **'This week\'s AI meal picks'**
+  /// **'Recommended meals'**
   String get homeRecMealsTitle;
 
   /// No description provided for @homeViewAll.
@@ -476,11 +464,11 @@ abstract class AppLocalizations {
   /// **'min'**
   String get unitMinutes;
 
-  /// No description provided for @unitDays.
+  /// No description provided for @unitSets.
   ///
   /// In en, this message translates to:
-  /// **'days'**
-  String get unitDays;
+  /// **'sets'**
+  String get unitSets;
 
   /// No description provided for @unitKcalValue.
   ///
@@ -619,12 +607,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Daily average'**
   String get dietPeriodAverage;
-
-  /// No description provided for @dietPeriodTotal.
-  ///
-  /// In en, this message translates to:
-  /// **'Period total'**
-  String get dietPeriodTotal;
 
   /// No description provided for @dietPeriodEmpty.
   ///
@@ -1201,12 +1183,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Average burned'**
   String get exBurnAllTitle;
-
-  /// No description provided for @exLoadDayTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Burned'**
-  String get exLoadDayTitle;
 
   /// No description provided for @exGoalValue.
   ///
@@ -3404,12 +3380,6 @@ abstract class AppLocalizations {
   /// **'My trainer'**
   String get coachAssignedTrainer;
 
-  /// Header of the AI coaching card.
-  ///
-  /// In en, this message translates to:
-  /// **'AI coaching'**
-  String get coachAiCoaching;
-
   /// Section title in the coaching card.
   ///
   /// In en, this message translates to:
@@ -3421,12 +3391,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recommended solo workouts'**
   String get coachRoutineTitle;
-
-  /// Explains what a solo routine is.
-  ///
-  /// In en, this message translates to:
-  /// **'Workouts to do on your own between PT sessions'**
-  String get coachRoutineSubtitle;
 
   /// Origin of a routine.
   ///
@@ -3475,6 +3439,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get coachRoutineDone;
+
+  /// No description provided for @coachRoutineUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get coachRoutineUndo;
+
+  /// No description provided for @coachRoutineUndoConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completing \'{name}\'? It will be removed from your workout log too.'**
+  String coachRoutineUndoConfirm(String name);
+
+  /// No description provided for @coachRoutineUndone.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion undone'**
+  String get coachRoutineUndone;
+
+  /// No description provided for @coachRoutineUndoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not undo the completion.'**
+  String get coachRoutineUndoFailed;
 
   /// No description provided for @coachRoutineCancel.
   ///

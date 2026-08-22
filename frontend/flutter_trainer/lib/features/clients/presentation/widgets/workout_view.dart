@@ -113,17 +113,28 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
             ),
           ),
         ],
-        data: (entries) => <Widget>[
-          if (entries.isEmpty)
-            EmptyHint(
-              message: l.workoutEmpty,
-              icon: Icons.fitness_center_outlined,
-            ),
-          for (final entry in entries) ...<Widget>[
-            _HistoryCard(clientId: client.id, entry: entry),
-            const SizedBox(height: AppSpacing.md),
-          ],
-        ],
+        data: (entries) {
+          // 위 그래프와 **같은 기간**을 본다. 토글을 이번 주로 옮겼는데 목록만
+          // 석 달치를 그대로 늘어놓으면, 한 화면의 두 칸이 서로 다른 기간을
+          // 이야기한다(#1114).
+          final List<RoutineHistoryEntry> shown = historyInRange(
+            entries,
+            clientRangeFor(_period, todayKst()),
+          );
+          return <Widget>[
+            if (shown.isEmpty)
+              EmptyHint(
+                // 한 건도 없는 것과 이 기간에만 없는 것은 다른 말이다 —
+                // 기록이 있는데 "아직 없어요" 라고 하면 사라진 줄 안다.
+                message: entries.isEmpty ? l.workoutEmpty : l.clientPeriodEmpty,
+                icon: Icons.fitness_center_outlined,
+              ),
+            for (final entry in shown) ...<Widget>[
+              _HistoryCard(clientId: client.id, entry: entry),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ];
+        },
       ),
     ];
     if (embedded) {

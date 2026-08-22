@@ -213,61 +213,55 @@ void main() {
         find.textContaining('+32.2g', findRichText: true),
         findsNothing,
       );
+      // 나트륨·당류는 요약 카드 안 가로 바로 들어왔다 (#1120) — 따로 뗀
+      // 상태 카드와 세로 바는 없다.
       expect(
-        find.byKey(const Key('nutrition-status-vertical-progress-나트륨')),
+        find.byKey(const Key('nutrition-sodium-status')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('nutrition-macro-progress-나트륨')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('nutrition-status-vertical-progress-당류')),
+        find.byKey(const Key('nutrition-macro-progress-당류')),
         findsOneWidget,
       );
-      final List<ColoredBox> sodiumProgressColors = tester
+      Color? barColor(String label) => tester
           .widgetList<ColoredBox>(
             find.descendant(
-              of: find.byKey(
-                const Key('nutrition-status-vertical-progress-나트륨'),
-              ),
+              of: find.byKey(Key('nutrition-macro-progress-$label')),
               matching: find.byType(ColoredBox),
             ),
           )
-          .toList();
-      final List<ColoredBox> sugarProgressColors = tester
-          .widgetList<ColoredBox>(
-            find.descendant(
-              of: find.byKey(
-                const Key('nutrition-status-vertical-progress-당류'),
-              ),
-              matching: find.byType(ColoredBox),
-            ),
-          )
-          .toList();
-      expect(sodiumProgressColors.last.color, FigmaColors.dangerRed);
-      expect(sugarProgressColors.last.color, FigmaColors.statusWithinGoal);
+          .last
+          .color;
+      expect(barColor('나트륨'), FigmaColors.dangerRed);
+      expect(barColor('당류'), FigmaColors.statusWithinGoal);
 
       final Finder carbs = find.byKey(const Key('nutrition-macro-탄수화물'));
       final Finder protein = find.byKey(const Key('nutrition-macro-단백질'));
       final Finder fat = find.byKey(const Key('nutrition-macro-지방'));
-      final Finder sodiumCard = find.byKey(
-        const Key('nutrition-sodium-status'),
-      );
-      final Finder sugarCard = find.byKey(const Key('nutrition-sugar-status'));
+      final Finder sodium = find.byKey(const Key('nutrition-macro-나트륨'));
+      final Finder sugar = find.byKey(const Key('nutrition-macro-당류'));
 
       // 좁은 화면에서 각 항목이 겹치지 않고 세로로 쌓이는지 확인한다.
       expect(
         tester.getBottomLeft(carbs).dy,
-        lessThan(tester.getTopLeft(protein).dy),
+        lessThanOrEqualTo(tester.getTopLeft(protein).dy),
       );
       expect(
         tester.getBottomLeft(protein).dy,
-        lessThan(tester.getTopLeft(fat).dy),
+        lessThanOrEqualTo(tester.getTopLeft(fat).dy),
+      );
+      // 탄단지는 칼로리 아래, 나트륨·당류는 그 아래 — 한 카드 안에서 순서대로.
+      expect(
+        tester.getBottomLeft(fat).dy,
+        lessThan(tester.getTopLeft(sodium).dy),
       );
       expect(
-        tester.getBottomLeft(summaryCard).dy,
-        lessThan(tester.getTopLeft(sodiumCard).dy),
-      );
-      expect(
-        tester.getBottomLeft(sodiumCard).dy,
-        lessThan(tester.getTopLeft(sugarCard).dy),
+        tester.getBottomLeft(sodium).dy,
+        lessThan(tester.getTopLeft(sugar).dy),
       );
       expect(tester.takeException(), isNull);
     },
@@ -299,31 +293,34 @@ void main() {
     expect(find.text('지방'), findsOneWidget);
     expect(find.textContaining('지방 38%'), findsNothing);
     expect(find.textContaining('45 / 55g'), findsOneWidget); // 지방 45g
-    void expectMacroProgressColor(String label, Color expectedColor) {
-      final Finder progress = find.byKey(
-        Key('nutrition-macro-progress-$label'),
-      );
-      final List<ColoredBox> progressColors = tester
-          .widgetList<ColoredBox>(
-            find.descendant(of: progress, matching: find.byType(ColoredBox)),
+    // 탄단지는 바 없이 글자만 쓴다 (#1120) — 초과 여부는 값의 색이 말한다.
+    void expectMacroValueColor(String label, Color expectedColor) {
+      final Text value = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byKey(Key('nutrition-macro-$label')),
+              matching: find.byType(Text),
+            ),
           )
-          .toList();
-      expect(progressColors.last.color, expectedColor);
+          .last;
+      final TextSpan span = value.textSpan! as TextSpan;
+      expect((span.children!.first as TextSpan).style?.color, expectedColor);
     }
 
-    final Color macroProgressColor = FigmaColors.statusWithinGoal.withValues(
+    final Color macroValueColor = FigmaColors.statusWithinGoal.withValues(
       alpha: 0.65,
     );
-    expectMacroProgressColor('탄수화물', macroProgressColor);
-    expectMacroProgressColor('단백질', macroProgressColor);
-    expectMacroProgressColor('지방', macroProgressColor);
+    expectMacroValueColor('탄수화물', macroValueColor);
+    expectMacroValueColor('단백질', macroValueColor);
+    expectMacroValueColor('지방', macroValueColor);
+    // 칼로리 숫자 아래에 세로로 쌓인다 — 예전처럼 가로로 늘어놓지 않는다.
     expect(
-      tester.getTopLeft(find.text('탄수화물')).dx,
-      lessThan(tester.getTopLeft(find.text('단백질')).dx),
+      tester.getTopLeft(find.text('탄수화물')).dy,
+      lessThan(tester.getTopLeft(find.text('단백질')).dy),
     );
     expect(
-      tester.getTopLeft(find.text('단백질')).dx,
-      lessThan(tester.getTopLeft(find.text('지방')).dx),
+      tester.getTopLeft(find.text('단백질')).dy,
+      lessThan(tester.getTopLeft(find.text('지방')).dy),
     );
     expect(find.text('짬뽕'), findsOneWidget);
   });
@@ -478,7 +475,7 @@ void main() {
       final ColoredBox box = tester.widget<ColoredBox>(
         find
             .descendant(
-              of: find.byKey(Key('nutrition-status-vertical-progress-$label')),
+              of: find.byKey(Key('nutrition-macro-progress-$label')),
               matching: find.byType(ColoredBox),
             )
             .last,

@@ -164,16 +164,18 @@ class AiCoachingCard extends ConsumerWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
+              // 카드가 말하는 것은 `AI 코칭` 이 아니라 **추천 개인운동**이다
+              // (#1130). 제목이 곧 내용이라 아이콘도 운동 쪽으로 바꿨다.
               const Icon(
-                Icons.auto_awesome,
-                size: 16,
+                Icons.directions_run_rounded,
+                size: 18,
                 color: FigmaColors.primary,
               ),
               const SizedBox(width: 6),
               // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
               Flexible(
                 child: Text(
-                  l.coachAiCoaching,
+                  l.coachRoutineTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -186,25 +188,9 @@ class AiCoachingCard extends ConsumerWidget {
             ],
           ),
           if (routines.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 14),
-            Text(
-              l.coachRoutineTitle,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.primary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l.coachRoutineSubtitle,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: AppColors.mutedForeground,
-              ),
-            ),
-            const SizedBox(height: 10),
+            // 카드 제목이 이미 `추천 개인운동` 이라 안에 같은 말을 또 두지
+            // 않는다. `PT 와 다음 PT 사이…` 안내도 뺐다 (#1130).
+            const SizedBox(height: 12),
             for (final (int index, CoachRoutine routine)
                 in routines.indexed) ...<Widget>[
               // 여러 세션짜리 프로그램은 첫 세션 위에 프로그램 이름을 한 번
@@ -232,9 +218,9 @@ class AiCoachingCard extends ConsumerWidget {
 
 /// 추천 운동을 했는지 표시하는 체크 박스. (#1021)
 ///
-/// 한 번 체크하면 풀 수 없다. 수행은 기록으로 남아 주간 시간·칼로리에 더해지고
-/// 트레이너에게도 보인다 — 체크를 무르는 것은 그 기록을 지우는 일이라, 지금
-/// 구조에서 조용히 되돌릴 수 있는 동작이 아니다.
+/// 체크한 것을 다시 누르면 **묻고 나서** 되돌린다 (#1131). 수행은 기록으로 남아
+/// 주간 시간·칼로리에 더해지고 트레이너에게도 보이므로, 조용히 지워지면 안 되지만
+/// 잘못 누른 체크를 풀 방법이 아예 없어도 안 된다.
 class _RoutineCheckbox extends StatelessWidget {
   const _RoutineCheckbox({
     super.key,
@@ -264,8 +250,7 @@ class _RoutineCheckbox extends StatelessWidget {
       label: l.coachRoutineDone,
       child: Checkbox(
         value: done,
-        // 다 한 것은 되돌리지 않는다 — 눌러도 아무 일이 없다는 뜻으로 비활성.
-        onChanged: done ? null : (bool? _) => onCheck(),
+        onChanged: (bool? _) => onCheck(),
         visualDensity: VisualDensity.compact,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         activeColor: FigmaColors.primary,
@@ -359,6 +344,57 @@ class _RecommendedExerciseRowState
     }
   }
 
+  /// 체크를 되돌린다 — 묻고 나서 (#1131).
+  ///
+  /// 완료는 기록으로 남아 주간 시간·칼로리에 더해지고 트레이너에게도 보인다.
+  /// 잘못 누른 체크를 풀 방법이 없으면 하지 않은 운동이 그 숫자에 영원히 남아,
+  /// 회원과 트레이너가 서로 다른 기록을 보게 된다.
+  Future<void> _undoComplete() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final CoachRoutine routine = widget.routine;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        content: Text(l.coachRoutineUndoConfirm(routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const Key('confirmRoutineUndo'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.coachRoutineUndo),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(memberCoachRepositoryProvider)
+          .uncompleteRoutine(routine.id);
+      ref.invalidate(coachRoutinesProvider);
+      ref.invalidate(exerciseWeekProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineUndone)));
+      }
+    } on Object catch (error, stackTrace) {
+      debugPrint('uncompleteRoutine failed: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineUndoFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _complete() async {
     final AppLocalizations l = AppLocalizations.of(context);
     final CoachRoutine routine = widget.routine;
@@ -432,7 +468,7 @@ class _RecommendedExerciseRowState
                 key: Key('completeRoutine-${routine.id}'),
                 done: routine.completed,
                 saving: _saving,
-                onCheck: _complete,
+                onCheck: routine.completed ? _undoComplete : _complete,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -498,14 +534,22 @@ class _RecommendedExerciseRowState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[
-                    Text(
-                      '${routine.type} · '
-                      '${l.unitMinutesValue(routine.completedMinutes ?? routine.minutes)}',
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.primary,
+                    // 카드 오른쪽 끝에 한 줄로 붙인다 (#1130). 두 줄로
+                    // 접히면 첫 줄이 카드 가운데에서 끝나 어디에 걸린 값인지
+                    // 애매해진다.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${routine.type} · '
+                        '${l.unitMinutesValue(routine.completedMinutes ?? routine.minutes)}',
+                        maxLines: 1,
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.primary,
+                        ),
                       ),
                     ),
                     // 아직 하지 않은 것만 물릴 수 있다 — 이미 한 운동을 목록에서
@@ -530,7 +574,6 @@ class _RecommendedExerciseRowState
                           ),
                         ),
                       ),
-
                   ],
                 ),
               ),
@@ -623,7 +666,9 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               key: const Key('routineCompletionMinutes'),
               controller: _minutesController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: l.coachRoutineMinutesLabel),
+              decoration: InputDecoration(
+                labelText: l.coachRoutineMinutesLabel,
+              ),
               validator: (String? value) {
                 final int? minutes = int.tryParse(value ?? '');
                 return minutes == null || minutes < 1 || minutes > 600
