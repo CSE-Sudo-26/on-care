@@ -713,20 +713,6 @@
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",
   "schedEmptyDay": "Nothing scheduled for this day.\nUse New session above to add one.",
-  "schedCompleteTitle": "Mark session complete",
-  "schedCompleteBody": "This marks the {time} session with {name} complete and logs it to their workout history.",
-  "@schedCompleteBody": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "schedNoteOptional": "Trainer's note (optional)",
-  "schedCompleteAction": "Mark complete",
   "schedSaveFailed": "Couldn't save the session. Please try again",
   "schedAddTitle": "Add a session",
   "schedEditTitle": "Edit session",

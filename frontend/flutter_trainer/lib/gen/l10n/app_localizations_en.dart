@@ -1383,20 +1383,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nothing scheduled for this day.\nUse New session above to add one.';
 
   @override
-  String get schedCompleteTitle => 'Mark session complete';
-
-  @override
-  String schedCompleteBody(String time, String name) {
-    return 'This marks the $time session with $name complete and logs it to their workout history.';
-  }
-
-  @override
-  String get schedNoteOptional => 'Trainer\'s note (optional)';
-
-  @override
-  String get schedCompleteAction => 'Mark complete';
-
-  @override
   String get schedSaveFailed => 'Couldn\'t save the session. Please try again';
 
   @override

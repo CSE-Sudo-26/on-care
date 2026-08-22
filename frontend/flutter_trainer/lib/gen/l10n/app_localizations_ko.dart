@@ -1319,20 +1319,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEmptyDay => '이 날짜에는 일정이 없어요.\n위의 「새 일정」으로 추가해 보세요.';
 
   @override
-  String get schedCompleteTitle => '세션 완료 처리';
-
-  @override
-  String schedCompleteBody(String time, String name) {
-    return '$time $name님 세션을 완료로 표시하고 운동기록에 남길게요.';
-  }
-
-  @override
-  String get schedNoteOptional => '트레이너 메모 (선택)';
-
-  @override
-  String get schedCompleteAction => '완료 처리';
-
-  @override
   String get schedSaveFailed => '일정 저장에 실패했어요. 다시 시도해 주세요';
 
   @override
