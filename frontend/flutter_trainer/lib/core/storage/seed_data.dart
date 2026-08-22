@@ -14,10 +14,19 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v21']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v22']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v22` fixed a second `createdAt` bug left by `_v21`: the day offset
+/// added a thread's `dayIndex` directly, but that value is only the
+/// message's position **within its own thread**, not a real day count —
+/// so a thread spanning several days (dayIndex 0·1·2) always sorted a
+/// few days ahead of a same-`daysAgo` single-day thread, no matter what
+/// either showed on screen(#1104). The day offset now anchors purely on
+/// `daysAgo`, with `dayIndex` only shifting earlier messages further
+/// back relative to the thread's own last message.
 ///
 /// `_v21` fixed seed chat `createdAt`: the time-of-day component used to be
 /// the message's array index (`i`), unrelated to the `timeLabel` shown on
@@ -90,7 +99,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v21') == today) return;
+  if (await db.readValue('trainer_seeded_v22') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -262,6 +271,13 @@ Future<void> seedIfEmpty(
               : _dailyMetrics(client, now).toList(growable: false),
         );
 
+        // 스레드의 **마지막** 메시지가 daysAgo 를 앵커링한다 — dayIndex 는
+        // 그 스레드 안에서의 상대 순서일 뿐, 몇 번째 실제 날짜인지가
+        // 아니다. 마지막 메시지 자신의 dayIndex 를 기준(0)으로 삼아
+        // 각 메시지가 거기서 며칠 전인지로 환산한다(아래 참고).
+        final int lastDayIndex = client.chat.isEmpty
+            ? 0
+            : _lastChat(client.chat).dayIndex;
         b.insertAll(db.clientChatMessages, <ClientChatMessagesCompanion>[
           for (var i = 0; i < client.chat.length; i++)
             ClientChatMessagesCompanion.insert(
@@ -284,6 +300,16 @@ Future<void> seedIfEmpty(
               // 답장(지금 시각)이 시드 뒤에 온다는 보장을 깨지 않기
               // 위해서다.
               //
+              // `dayIndex` 를 날짜 오프셋에 그대로 더하면 안 된다 — 그 값은
+              // 실제 며칠 전이 아니라 **그 스레드 안에서** 몇 번째 날인지일
+              // 뿐이다. 그대로 더하면 여러 날짜에 걸친 스레드(dayIndex
+              // 0·1·2)의 마지막 메시지가 daysAgo 가 같은 단일 날짜 스레드보다
+              // 항상 며칠 더 "미래"로 계산돼, 화면 시각과 무관하게 최신순
+              // 맨 위로 올라왔다(#1104). 마지막 메시지의 dayIndex 를 0 으로
+              // 삼아 상대적으로 며칠 전인지로 바꾼다 — 마지막 메시지는 정확히
+              // daysAgo 로 앵커링되고, 그 전 메시지들은 더 이른 날짜로 밀려
+              // 스레드 내부 순서는 그대로 유지된다.
+              //
               // 시각 성분은 `timeLabel`에서 실제로 읽는다 — 예전에는 그
               // 대화 안에서 몇 번째 메시지인지(`i`, 0·1·2…)를 그대로 분으로
               // 썼는데, 그러면 화면에 박아둔 `'16:48'` 같은 문구와 무관한
@@ -297,8 +323,8 @@ Future<void> seedIfEmpty(
                 Duration(
                   days:
                       _chatSpreadDays -
-                      client.daysAgo +
-                      client.chat[i].dayIndex,
+                      client.daysAgo -
+                      (lastDayIndex - client.chat[i].dayIndex),
                   minutes: _minutesOfDay(client.chat[i].timeLabel),
                   seconds: i,
                 ),
@@ -364,7 +390,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v21', today);
+    await db.putValue('trainer_seeded_v22', today);
   });
 }
 
