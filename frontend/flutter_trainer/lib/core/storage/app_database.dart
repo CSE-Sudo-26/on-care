@@ -110,6 +110,14 @@ class ClientRoutineHistory extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
   TextColumn get dateLabel => text()(); // "7/12 (오늘)"
+
+  /// 이 기록이 가리키는 날(`YYYY-MM-DD`).
+  ///
+  /// [dateLabel] 은 사람이 읽는 표시용이라 날짜로 견줄 수 없다. 날짜별 기록을
+  /// 펼쳤을 때 그날의 이력을 함께 보여 주려면 견줄 수 있는 값이 필요하다
+  /// (#1025). 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로
+  /// 거르는 조회에는 걸리지 않는다.
+  TextColumn get date => text().withDefault(const Constant(''))();
   TextColumn get label => text()(); // "PT 세션 · 트레이너 지도"
   IntColumn get completionRate => integer()(); // 0..100
   TextColumn get exercisesJson => text()(); // ["레그프레스 3세트", ...]
@@ -272,7 +280,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -386,6 +394,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 14) {
         await m.addColumn(clientDietEntries, clientDietEntries.sugarG);
         await m.addColumn(clientDietEntries, clientDietEntries.date);
+      }
+      // v15: 운동 이력의 날짜(#1025). 표시용 라벨만으로는 날짜를 견줄 수 없어
+      // 날짜별 기록에 이력을 붙일 수 없었다. 기본값이 빈 문자열이라 기존 행도
+      // 그대로 읽히고, 다음 재시딩이 실제 값을 채운다.
+      if (from < 15) {
+        await m.addColumn(clientRoutineHistory, clientRoutineHistory.date);
       }
     },
   );

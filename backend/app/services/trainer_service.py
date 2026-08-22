@@ -519,6 +519,8 @@ def build_client_history(
         dated.append((r.date, clock.to_seoul(r.created_at).timestamp(), RoutineHistoryOut(
             id=r.id,
             date_label=history_date_label(r.date),
+            # 라벨과 같은 날을 견줄 수 있는 형태로도 내려보낸다(#1025).
+            date=r.date,
             label=r.kind_label,
             completion_rate=r.completion_rate,
             exercises=exercises,
@@ -1414,6 +1416,8 @@ def _assigned_history_out(row: ExerciseSession) -> RoutineHistoryOut:
     return RoutineHistoryOut(
         id=row.id,
         date_label=history_date_label(day),
+        # 라벨과 같은 날을 견줄 수 있는 형태로도 내려보낸다(#1025).
+        date=day,
         label=row.assigned_routine_name or "배정 루틴 수행",
         completion_rate=100,
         exercises=[

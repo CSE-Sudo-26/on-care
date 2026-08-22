@@ -800,6 +800,7 @@ class DriftClientRepository implements ClientRepository {
           .map(
             (row) => RoutineHistoryEntry(
               dateLabel: row.dateLabel,
+              date: DateTime.tryParse(row.date),
               label: row.label,
               completionRate: row.completionRate,
               exercises: (jsonDecode(row.exercisesJson) as List<Object?>)

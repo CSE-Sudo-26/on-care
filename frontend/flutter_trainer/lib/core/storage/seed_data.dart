@@ -249,7 +249,11 @@ Future<void> seedIfEmpty(
             ClientRoutineHistoryCompanion.insert(
               id: 'seed-history-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              dateLabel: history[i].dateLabel,
+              date: Value(ymd(_historyDateOf(now, history[i].daysAgo))),
+              dateLabel: _historyDateLabel(
+                now,
+                _historyDateOf(now, history[i].daysAgo),
+              ),
               label: history[i].label,
               completionRate: history[i].completionRate,
               exercisesJson: jsonEncode(history[i].exercises),
@@ -419,14 +423,20 @@ class _Routine {
 
 class _History {
   const _History({
-    required this.dateLabel,
+    required this.daysAgo,
     required this.label,
     required this.completionRate,
     required this.exercises,
     required this.clientFeedback,
     required this.trainerNote,
   });
-  final String dateLabel;
+
+  /// 오늘로부터 며칠 전인가(0 = 오늘).
+  ///
+  /// 예전에는 `'7/11 (어제)'` 처럼 날짜를 박아 두어, 오늘이 무슨 날이든 데모가
+  /// 7월을 말했다 — 픽스처 고객만 실제 날짜로 라벨을 만들고 있었다. 시딩이
+  /// 이 값으로 날짜와 라벨을 함께 만든다(#1025).
+  final int daysAgo;
   final String label;
   final int completionRate;
   final List<String> exercises;
@@ -576,7 +586,11 @@ class _FixtureClient {
             .where((FixtureDay d) => d.exercises.isNotEmpty)
             .take(3))
       _History(
-        dateLabel: _historyLabel(day),
+        // 픽스처 날짜를 오늘 기준 상대 일수로 바꾼다 — 시딩이 그 값으로
+        // 날짜와 라벨을 함께 만든다.
+        daysAgo: DateTime.parse(
+          today.date,
+        ).difference(DateTime.parse(day.date)).inDays,
         label: day.routineLabel,
         completionRate: day.completion,
         exercises: <String>[
@@ -586,13 +600,6 @@ class _FixtureClient {
         trainerNote: day.trainerNote,
       ),
   ];
-
-  /// 날짜 라벨. 예전에는 `'7/12 (오늘)'` 처럼 박아 두어 날이 바뀌어도 그대로였다.
-  String _historyLabel(FixtureDay day) {
-    final DateTime date = DateTime.parse(day.date);
-    final String base = '${date.month}/${date.day}';
-    return day.date == today.date ? '$base (오늘)' : base;
-  }
 
   List<int> get caloriesWeek => _week<int>(0, (FixtureDay d) => d.calories);
   List<int> get sodiumWeek => _week<int>(0, (FixtureDay d) => d.sodiumMg);
@@ -634,6 +641,18 @@ class _FixtureClient {
       );
     }
   }
+}
+
+/// 이력 항목이 가리키는 날. 시딩 시각에서 [daysAgo] 만큼 거슬러 올라간다.
+DateTime _historyDateOf(DateTime now, int daysAgo) =>
+    DateTime(now.year, now.month, now.day - daysAgo);
+
+/// `7/11`, 오늘이면 `7/12 (오늘)`. 픽스처 고객이 쓰던 규칙과 같다.
+String _historyDateLabel(DateTime now, DateTime when) {
+  final String base = '${when.month}/${when.day}';
+  final bool isToday =
+      when.year == now.year && when.month == now.month && when.day == now.day;
+  return isToday ? '$base (오늘)' : base;
 }
 
 /// 끼니 종류 → 화면에 쓰는 한국어 라벨.

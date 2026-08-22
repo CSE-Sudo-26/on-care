@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:demo_fixture/demo_fixture.dart';
@@ -30,14 +29,34 @@ final DemoFixture _fixture = DemoFixture.parse(
 );
 
 /// 운동 이력 맨 위 줄의 날짜 라벨. 오늘을 따라 움직인다.
-String _todayHistoryLabel() {
-  final DateTime now = nowKst();
-  return '${now.month}/${now.day} (오늘)';
+/// 날짜 줄이 하루를 적는 형태. 미션 카드가 날짜를 따로 적던 시절의
+/// `8/23 (오늘)` 은 사라졌다 — 카드를 펼친 줄이 그 날을 말한다(#1025).
+/// 세로로 넉넉한 화면.
+///
+/// 날짜별 기록이 한 목록으로 합쳐지면서(#1025) 기본 800×600 에서는 아래쪽
+/// 항목이 한참 밖에 있다. 이 묶음의 테스트들은 배치가 아니라 **무엇이 보이는가**
+/// 를 재므로, 스크롤 곡예 대신 화면을 키운다.
+void _useTallSurface(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(1000, 3000);
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
 }
+
+String _rowLabel(DateTime d) {
+  const List<String> weekdays = <String>['월', '화', '수', '목', '금', '토', '일'];
+  return '${d.month}월 ${d.day}일 (${weekdays[d.weekday - 1]})';
+}
+
+String _todayRowLabel() => _rowLabel(nowKst());
 
 /// 운동 이력 세 줄 안에서 김민수가 거른 항목의 이름. 화면은 ✓/✗ 표시를 떼고
 /// 취소선으로 보여 주므로 이름만 남는다.
-String _minsuSkippedExercise() {
+/// 거른 항목 하나와 그것이 있던 날. 날짜별 목록은 그 날을 펼쳐야 항목이
+/// 보이므로(#1025), 이름만으로는 어디를 펼칠지 알 수 없다.
+({DateTime day, String name}) _minsuSkipped() {
   final List<FixtureDay> recent = _fixture
       .daysFor(nowKst())
       .reversed
@@ -46,7 +65,9 @@ String _minsuSkippedExercise() {
       .toList();
   for (final FixtureDay day in recent) {
     for (final FixtureExercise exercise in day.exercises) {
-      if (!exercise.done) return exercise.name;
+      if (!exercise.done) {
+        return (day: DateTime.parse(day.date), name: exercise.name);
+      }
     }
   }
   throw StateError('최근 사흘에 거른 항목이 없다 — 취소선 렌더링을 볼 수 없다');
@@ -72,9 +93,12 @@ class _HistoryFailsOnceRepository extends DriftClientRepository {
 
 class _FeedbackRepository extends DriftClientRepository {
   _FeedbackRepository(super.db)
-    : entry = const RoutineHistoryEntry(
+    : entry = RoutineHistoryEntry(
         id: 'assigned-ex-r1',
         dateLabel: '8/13 (오늘)',
+        // 날짜별 목록은 이 값으로 날을 가른다(#1025). 오늘 것이라고 말하는
+        // 기록이므로 오늘에 놓는다.
+        date: nowKst(),
         label: '코어 운동',
         completionRate: 100,
         exercises: <String>['코어 운동 · 30분'],
@@ -100,6 +124,8 @@ class _FeedbackRepository extends DriftClientRepository {
     entry = RoutineHistoryEntry(
       id: entry.id,
       dateLabel: entry.dateLabel,
+      // 날짜를 빠뜨리면 저장한 기록이 날짜별 목록에서 통째로 사라진다(#1025).
+      date: entry.date,
       label: entry.label,
       completionRate: entry.completionRate,
       exercises: entry.exercises,
@@ -231,57 +257,39 @@ void main() {
       await settle(tester);
 
       expect(repository.updateCalls, 1);
+      // 저장한 메모는 펼친 날 안에 붙는다 — 목록이 길어 화면 밖일 수 있다.
+      await tester.ensureVisible(find.text('자세가 안정적이었어요'));
+      await settle(tester);
       expect(find.text('자세가 안정적이었어요'), findsOneWidget);
       expect(find.text('피드백 수정'), findsOneWidget);
     });
 
     testWidgets('운동 이번 주에 기간 AI 카드와 날짜별 기록이 선다 (#1025)', (tester) async {
+      _useTallSurface(tester);
       // 식단만 기간별 조언을 읽고 운동은 못 읽으면 한 화면에서 반쪽만
       // 코칭이 된다.
       await openWorkout(tester, '김민수');
       await tester.tap(find.byKey(const Key('client-period-week')));
       await settle(tester);
 
-      // 카드는 그래프 아래라 화면 밖에서 시작한다.
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey<String>('exercise-ai-analysis')),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
       expect(find.text('AI 기간 분석'), findsOneWidget);
 
-      // 화살표가 있는 줄만 펼칠 수 있다 — 쉰 날은 펼칠 것이 없다.
-      final Finder openable = find.descendant(
-        of: find.byKey(const ValueKey<String>('exercise-daily-records')),
-        matching: find.byIcon(Icons.expand_more),
+      // 오늘은 처음부터 펼쳐져 있다 — 이 목록이 예전 `운동 기록` 카드 목록을
+      // 대신하므로, 오늘 것까지 눌러야 보이면 한 번 더 손이 간다(#1025).
+      final Finder records = find.byKey(
+        const ValueKey<String>('exercise-daily-records'),
       );
-      expect(openable, findsWidgets);
-      await tester.ensureVisible(openable.first);
-      await settle(tester);
-      await tester.tap(
-        find.ancestor(of: openable.first, matching: find.byType(InkWell)).first,
-      );
-      await settle(tester);
-      // 펼친 항목은 이름표와 값을 한 알약에 담은 `Text.rich` 다 — 리치 텍스트를
-      // 켜야 잡힌다.
-      final Finder minutesPill = find.descendant(
-        of: find.byKey(const ValueKey<String>('exercise-daily-records')),
-        matching: find.textContaining('운동 시간', findRichText: true),
-      );
-      await tester.scrollUntilVisible(
-        minutesPill.first,
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      expect(minutesPill, findsWidgets);
-
-      // 알약은 "얼마나" 를 말한다. 그 숫자가 무엇으로 채워졌는지는 이름이
-      // 말해야 한다 — 식단에서 합계 아래 끼니를 펴는 것과 같은 자리다(#1025).
+      expect(records, findsOneWidget);
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey<String>('exercise-daily-records')),
-          matching: find.byType(ExerciseLine),
+          of: records,
+          matching: find.textContaining('운동 시간', findRichText: true),
         ),
+        findsWidgets,
+      );
+      // 알약은 "얼마나" 를 말한다. 무엇으로 채워졌는지는 이름이 말한다.
+      expect(
+        find.descendant(of: records, matching: find.byType(ExerciseLine)),
         findsWidgets,
       );
     });
@@ -301,44 +309,33 @@ void main() {
     });
 
     testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {
+      _useTallSurface(tester);
       await openWorkout(tester, '김민수');
 
-      // 운동현황이 화면 맨 위다(#1025) — 스크롤 없이 바로 보인다.
+      // 운동현황이 화면 맨 위다(#1025).
       expect(find.text('운동 현황'), findsOneWidget);
       expect(find.text('이번 주 완료율'), findsNothing);
 
-      // History entries with feedback + note boxes. Lower list items are
-      // built lazily — scroll each into view before asserting.
-      await tester.scrollUntilVisible(
-        find.text(_todayHistoryLabel()),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      expect(find.text(_todayHistoryLabel()), findsOneWidget);
-      // 완료 배지 — 원형 게이지가 아니라 아이콘+글자 배지로 완료율을
-      // 말한다(#1025).
+      // 오늘 줄은 처음부터 펼쳐져 있고, 그 안에 그날의 미션 카드가 선다.
+      expect(find.text(_todayRowLabel()), findsOneWidget);
+      // 완료 배지 — 원형 게이지가 아니라 아이콘+글자 배지다(#1025).
       expect(find.text('100%'), findsWidgets);
-      await tester.scrollUntilVisible(
-        find.text('트레이너 메모'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
       expect(find.text('트레이너 메모'), findsOneWidget); // 오늘 것만 메모가 있다
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
       expect(find.text('고객 피드백'), findsWidgets);
-      // A skipped exercise line renders (struck-through content present).
-      // 어느 항목을 걸렀는지는 픽스처가 정한다 — 이름을 여기 적으면 두 벌이 된다.
-      // 기록이 여러 달치라 같은 이름의 거른 항목이 여러 번 나온다.
-      // `scrollUntilVisible` 은 대상이 **하나**일 때만 쓸 수 있으므로 직접
-      // 내려가며 찾는다.
-      final String skipped = _minsuSkippedExercise();
-      final Finder skippedLine = find.text(skipped);
-      final Finder list = detailScrollable('seed-client-1');
-      for (int i = 0; i < 40 && skippedLine.evaluate().isEmpty; i++) {
-        await tester.drag(list, const Offset(0, -150));
-        await tester.pump();
+
+      // 거른 항목은 지난 날에 있다. 이 목록은 고른 기간만 다루므로(식단과
+      // 같은 규칙, #1025) 기간을 넓힌 뒤 그 날을 펼친다.
+      final ({DateTime day, String name}) skipped = _minsuSkipped();
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await settle(tester);
+      final Finder skippedRow = find.text(_rowLabel(skipped.day));
+      expect(skippedRow, findsOneWidget);
+      if (find.text(skipped.name).evaluate().isEmpty) {
+        await tester.tap(skippedRow);
+        await settle(tester);
       }
-      expect(skippedLine, findsWidgets);
+      expect(find.text(skipped.name), findsWidgets);
     });
 
     testWidgets('a failed 운동 기록 load does not take 운동현황 with it', (
@@ -379,7 +376,7 @@ void main() {
       await tester.tap(retry);
       await settle(tester);
       await tester.scrollUntilVisible(
-        find.text(_todayHistoryLabel()),
+        find.text(_todayRowLabel()),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
@@ -388,7 +385,7 @@ void main() {
           container.read(clientRepositoryProvider)
               as _HistoryFailsOnceRepository;
       expect(repository.watchHistoryCalls, 2);
-      expect(find.text(_todayHistoryLabel()), findsOneWidget);
+      expect(find.text(_todayRowLabel()), findsOneWidget);
     });
   });
 }

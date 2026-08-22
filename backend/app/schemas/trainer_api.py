@@ -205,6 +205,9 @@ class RoutineHistoryOut(BaseModel):
     """고객 운동기록 서브탭 항목 — 프론트 RoutineHistoryEntry 계약 정렬."""
     id: str = ""
     date_label: str          # "7/12 (오늘)"
+    # 표시용 라벨은 날짜로 견줄 수 없다. 날짜별 기록에 이력을 붙이려면 견줄 수
+    # 있는 값이 있어야 한다(#1025). 날짜를 알 수 없으면 빈 문자열이다.
+    date: str = ""
     label: str               # "PT 세션 · 트레이너 지도"
     completion_rate: int     # 0..100
     exercises: list[str]

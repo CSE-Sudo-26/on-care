@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
@@ -52,7 +52,6 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
     final TrainerClient client = widget.client;
     final bool embedded = widget.embedded;
     final AppLocalizations l = AppLocalizations.of(context);
-    final history = ref.watch(clientHistoryProvider(client.id));
 
     // 운동현황이 화면 맨 위다 — "얼마나 했나" 가 "무엇을 했나" 보다 먼저
     // 답해야 할 질문이다(#1025). 기록 목록은 자기 async 상태를 따로 들고
@@ -65,15 +64,10 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
         onChanged: (ClientPeriod p) => setState(() => _period = p),
         child: ClientExerciseStatusCard(clientId: client.id, period: _period),
       ),
-      // 기간을 고르면 그 기간의 날짜별 기록과 조언이 따라온다(#1025).
-      // 오늘은 아래 기록 카드가 이미 그날을 낱낱이 말하므로 겹치지 않는다.
-      if (_period != ClientPeriod.today) ...<Widget>[
-        const SizedBox(height: AppSpacing.md),
-        _DailyExerciseRecords(clientId: client.id, period: _period),
-      ],
       const SizedBox(height: AppSpacing.md),
-      _ExerciseAiComment(clientId: client.id, period: _period),
-      const SizedBox(height: AppSpacing.lg),
+      // 기록은 이 목록 하나다. 예전에는 날짜별 목록 아래에 `운동 기록` 카드
+      // 목록이 또 있어, 이번 주·전체에서 같은 날의 같은 운동이 두 벌로
+      // 나왔다(#1025). 미션 카드는 버리지 않고 이 목록의 펼친 자리로 들어왔다.
       Text(
         l.workoutRecords,
         style: const TextStyle(
@@ -83,38 +77,9 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
         ),
       ),
       const SizedBox(height: AppSpacing.sm),
-      ...history.when(
-        loading: () => const <Widget>[
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          ),
-        ],
-        error: (e, _) => <Widget>[
-          EmptyHint(
-            message: l.workoutLoadFailed,
-            icon: Icons.error_outline,
-            action: ActionButton(
-              key: ValueKey<String>('workout-history-retry-${client.id}'),
-              label: l.actionRetry,
-              onPressed: history.isLoading
-                  ? null
-                  : () => ref.invalidate(clientHistoryProvider(client.id)),
-            ),
-          ),
-        ],
-        data: (entries) => <Widget>[
-          if (entries.isEmpty)
-            EmptyHint(
-              message: l.workoutEmpty,
-              icon: Icons.fitness_center_outlined,
-            ),
-          for (final entry in entries) ...<Widget>[
-            _HistoryCard(clientId: client.id, entry: entry),
-            const SizedBox(height: AppSpacing.md),
-          ],
-        ],
-      ),
+      _DailyExerciseRecords(clientId: client.id, period: _period),
+      const SizedBox(height: AppSpacing.md),
+      _ExerciseAiComment(clientId: client.id, period: _period),
     ];
     if (embedded) {
       return Column(
@@ -204,12 +169,19 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
     // 터진다(Flutter `BoxBorder`, 보이는 색이 하나일 때만 둥근 모서리를
     // 그린다). `_NoteBox` 의 왼쪽 띠와 같은 규칙이다.
     final Color statusColor = _rateColor(entry.completionRate);
+    // 펼친 날짜 줄 안에 들어가는 판이다. 바깥 그림자와 둥근 모서리는 이미
+    // 날짜 목록 카드가 갖고 있어, 여기서 또 세우면 판 안에 판이 겹친다.
+    // 왼쪽 띠는 남긴다 — 이 미션을 깼는지를 색 하나로 말하는 자리다.
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        boxShadow: kCardShadow,
+        borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border(left: BorderSide(color: statusColor, width: 4)),
       ),
       child: Column(
@@ -222,17 +194,8 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      entry.dateLabel,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.foreground,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // 운동 유형/분류 — 글씨를 키우고 칩으로 올려 카드에서
-                    // 눈에 먼저 들어오게 한다(#1025).
+                    // 날짜는 적지 않는다 — 이 판을 펼친 줄이 바로 위에서
+                    // 이미 그 날을 말하고 있다(#1025).
                     _RecordTypeChip(label: entry.label),
                     // 옆의 배지에 적힌 67% 가 어디서 나온 값인지 — 배정한 운동
                     // 중 몇 개를 했는가다. 이 한 줄이 없으면 화면 어디에도
@@ -522,13 +485,17 @@ class _DailyExerciseRecords extends ConsumerStatefulWidget {
 
 class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
   /// 펼쳐 둔 날. 하나만 연다 — 식단과 같은 규칙이다.
-  String? _openDay;
+  ///
+  /// 오늘은 처음부터 펼쳐 둔다. 이 목록이 예전의 `운동 기록` 카드 목록을
+  /// 대신하므로(#1025), 오늘 것까지 눌러야 보이면 지금까지 바로 보이던 것이
+  /// 한 번 더 손이 가게 된다.
+  late String? _openDay = ymd(nowKst());
 
   @override
   void didUpdateWidget(_DailyExerciseRecords old) {
     super.didUpdateWidget(old);
     if (old.period != widget.period || old.clientId != widget.clientId) {
-      _openDay = null;
+      _openDay = ymd(nowKst());
     }
   }
 
@@ -542,59 +509,100 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
     final AsyncValue<ClientExercisePeriod> async = ref.watch(
       clientExercisePeriodProvider(key),
     );
+    // 이력은 고객 단위로 한 번 읽어 날짜별로 나눠 둔다 — 펼칠 때마다 다시
+    // 읽으면 같은 목록을 날 수만큼 되읽는다.
+    final AsyncValue<List<RoutineHistoryEntry>> history = ref.watch(
+      clientHistoryProvider(widget.clientId),
+    );
+    final Map<String, List<RoutineHistoryEntry>> byDate =
+        <String, List<RoutineHistoryEntry>>{};
+    for (final RoutineHistoryEntry entry
+        in history.valueOrNull ?? const <RoutineHistoryEntry>[]) {
+      final DateTime? when = entry.date;
+      if (when == null) continue;
+      (byDate[ymd(when)] ??= <RoutineHistoryEntry>[]).add(entry);
+    }
+    // 이력이 실패하면 그 자리에서 말하고 다시 시도할 수 있어야 한다. 조용히
+    // 비워 두면 "그날 아무것도 안 했다" 와 구분되지 않는다 — 위 그래프는 다른
+    // provider 라 그대로 보인다.
+    if (history.hasError) {
+      return EmptyHint(
+        message: l.workoutLoadFailed,
+        icon: Icons.error_outline,
+        action: ActionButton(
+          key: ValueKey<String>('workout-history-retry-${widget.clientId}'),
+          label: l.actionRetry,
+          onPressed: history.isLoading
+              ? null
+              : () => ref.invalidate(clientHistoryProvider(widget.clientId)),
+        ),
+      );
+    }
     return async.maybeWhen(
       data: (ClientExercisePeriod period) => ClientDayRecordCard(
         key: const ValueKey<String>('exercise-daily-records'),
         children: <Widget>[
           for (final ClientExerciseDay day in period.days.reversed)
-            ClientDayRecordTile(
-              date: day.date,
-              // 쉰 날과 적지 않은 날을 가르는 기준은 그날 움직인 시간이다.
-              logged: day.minutes > 0,
-              expanded: _openDay == ymd(day.date),
-              onToggle: () => setState(() {
-                _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
-              }),
-              emptyLabel: l.dietDayEmpty,
-              // 펼친 날에만 그날 한 운동을 읽는다 — 12주치를 미리 읽어 두면
-              // 아무도 펼치지 않은 날까지 요청이 나간다.
-              extra: _openDay == ymd(day.date) && day.minutes > 0
-                  ? _DayExercises(clientId: widget.clientId, date: day.date)
-                  : null,
-              summary:
-                  '${day.minutes}${l.unitMinutes} · '
-                  '${formatNumber(day.calories)} ${l.unitKcal}',
-              details: <({String label, String value})>[
-                (
-                  label: l.clientTrendWorkoutMinutes,
-                  value: '${day.minutes}${l.unitMinutes}',
-                ),
-                (
-                  label: l.metricCalories,
-                  value: '${formatNumber(day.calories)} ${l.unitKcal}',
-                ),
-                if (day.cardioMinutes > 0)
+            () {
+              final List<RoutineHistoryEntry> dayEntries =
+                  byDate[ymd(day.date)] ?? const <RoutineHistoryEntry>[];
+              // 집계는 0 인데 이력은 있는 날이 있다 — 스케줄에서 세션을 완료
+              // 처리하면 이력이 먼저 생기고 하루 집계는 아직 0 이다. 시간만
+              // 보고 접어 두면 방금 남긴 기록이 갈 곳을 잃는다(#1025).
+              final bool logged = day.minutes > 0 || dayEntries.isNotEmpty;
+              return ClientDayRecordTile(
+                date: day.date,
+                logged: logged,
+                expanded: _openDay == ymd(day.date),
+                onToggle: () => setState(() {
+                  _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
+                }),
+                emptyLabel: l.dietDayEmpty,
+                // 그날의 미션 카드가 펼친 자리로 들어온다 — 이행률·종류·
+                // 피드백·메모까지, 예전 `운동 기록` 카드가 하던 말 그대로다.
+                // 이력이 없는 날에는 지표에 남은 운동 이름만 보여 준다.
+                extra: _openDay == ymd(day.date) && logged
+                    ? _DayDetail(
+                        clientId: widget.clientId,
+                        date: day.date,
+                        entries: dayEntries,
+                      )
+                    : null,
+                summary:
+                    '${day.minutes}${l.unitMinutes} · '
+                    '${formatNumber(day.calories)} ${l.unitKcal}',
+                details: <({String label, String value})>[
                   (
-                    label: l.routineTypeCardio,
-                    value: '${day.cardioMinutes}${l.unitMinutes}',
+                    label: l.clientTrendWorkoutMinutes,
+                    value: '${day.minutes}${l.unitMinutes}',
                   ),
-                if (day.strengthMinutes > 0)
                   (
-                    label: l.routineTypeStrength,
-                    value: '${day.strengthMinutes}${l.unitMinutes}',
+                    label: l.metricCalories,
+                    value: '${formatNumber(day.calories)} ${l.unitKcal}',
                   ),
-                if (day.stretchingMinutes > 0)
-                  (
-                    label: l.routineTypeFlexibility,
-                    value: '${day.stretchingMinutes}${l.unitMinutes}',
-                  ),
-                if (day.otherMinutes > 0)
-                  (
-                    label: l.routineTypeOther,
-                    value: '${day.otherMinutes}${l.unitMinutes}',
-                  ),
-              ],
-            ),
+                  if (day.cardioMinutes > 0)
+                    (
+                      label: l.routineTypeCardio,
+                      value: '${day.cardioMinutes}${l.unitMinutes}',
+                    ),
+                  if (day.strengthMinutes > 0)
+                    (
+                      label: l.routineTypeStrength,
+                      value: '${day.strengthMinutes}${l.unitMinutes}',
+                    ),
+                  if (day.stretchingMinutes > 0)
+                    (
+                      label: l.routineTypeFlexibility,
+                      value: '${day.stretchingMinutes}${l.unitMinutes}',
+                    ),
+                  if (day.otherMinutes > 0)
+                    (
+                      label: l.routineTypeOther,
+                      value: '${day.otherMinutes}${l.unitMinutes}',
+                    ),
+                ],
+              );
+            }(),
         ],
       ),
       orElse: () => const SizedBox.shrink(),
@@ -610,14 +618,35 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
 ///
 /// 줄은 아래 운동 기록 카드와 같은 [ExerciseLine] 이다. 걸른 운동에 취소선이
 /// 그어지는 규칙도 그대로라, 한 화면에서 같은 표시가 다른 뜻으로 읽히지 않는다.
-class _DayExercises extends ConsumerWidget {
-  const _DayExercises({required this.clientId, required this.date});
+class _DayDetail extends ConsumerWidget {
+  const _DayDetail({
+    required this.clientId,
+    required this.date,
+    required this.entries,
+  });
 
   final String clientId;
   final DateTime date;
 
+  /// 그날의 미션 카드들. 비어 있으면 지표에 남은 운동 이름만 보여 준다.
+  final List<RoutineHistoryEntry> entries;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (entries.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (final RoutineHistoryEntry entry in entries) ...<Widget>[
+              _HistoryCard(clientId: clientId, entry: entry),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+        ),
+      );
+    }
     final AsyncValue<List<String>> async = ref.watch(
       clientExercisesOnProvider((clientId: clientId, date: date)),
     );

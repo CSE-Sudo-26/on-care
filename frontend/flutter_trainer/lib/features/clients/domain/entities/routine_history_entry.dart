@@ -6,6 +6,7 @@ class RoutineHistoryEntry {
   const RoutineHistoryEntry({
     this.id = '',
     required this.dateLabel,
+    this.date,
     required this.label,
     required this.completionRate,
     required this.exercises,
@@ -20,6 +21,11 @@ class RoutineHistoryEntry {
 
   /// Display date (e.g. "7/12 (오늘)").
   final String dateLabel;
+
+  /// 이 기록이 가리키는 날. [dateLabel] 은 사람이 읽는 표시용이라 날짜로 견줄
+  /// 수 없어, 날짜별 기록에 이력을 붙이려면 이 값이 필요하다(#1025). 날짜를
+  /// 알 수 없는 기록에서는 null 이다.
+  final DateTime? date;
 
   /// Session kind (e.g. "PT 세션 · 트레이너 지도").
   final String label;
