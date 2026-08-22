@@ -184,6 +184,96 @@ void main() {
     });
   });
 
+  testWidgets('전체 필터는 나트륨 초과가 아니라 최신 대화 순으로 정렬한다 (#1074)', (tester) async {
+    await withWideSurface(tester, () async {
+      // 나트륨 초과인 'over'가 가장 먼저 심어졌지만 가장 늦게 말했고,
+      // 'yesterday'는 그제였지만 'today-early'보다 늦은 시각(어제 밤)에
+      // 말했다 — 날짜가 갈려도 전체 타임스탬프로 비교해야 한다.
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        extraOverrides: <Override>[
+          clientsProvider.overrideWith(
+            (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+              const TrainerClient(
+                id: 'over',
+                name: '나트륨과다',
+                avatar: '나',
+                goal: '',
+                lastMessage: '옛날 메시지',
+                lastTime: '-',
+                active: true,
+                calories: 0,
+                sodiumMg: 2500,
+                sugarG: 0,
+                lastRoutine: '-',
+                weekCompletion: <int>[],
+                sodiumWeek: <int>[],
+              ),
+              const TrainerClient(
+                id: 'today-early',
+                name: '오늘아침',
+                avatar: '오',
+                goal: '',
+                lastMessage: '방금 메시지',
+                lastTime: '-',
+                active: true,
+                calories: 0,
+                sodiumMg: 100,
+                sugarG: 0,
+                lastRoutine: '-',
+                weekCompletion: <int>[],
+                sodiumWeek: <int>[],
+              ),
+              const TrainerClient(
+                id: 'yesterday-late',
+                name: '어제밤',
+                avatar: '어',
+                goal: '',
+                lastMessage: '어제 늦은 메시지',
+                lastTime: '-',
+                active: true,
+                calories: 0,
+                sodiumMg: 100,
+                sugarG: 0,
+                lastRoutine: '-',
+                weekCompletion: <int>[],
+                sodiumWeek: <int>[],
+              ),
+            ]),
+          ),
+          lastChatAtProvider.overrideWith(
+            (ref) => Stream<Map<String, DateTime>>.value(<String, DateTime>{
+              'over': DateTime.utc(2026, 8, 18, 9),
+              'today-early': DateTime.utc(2026, 8, 22, 0, 5),
+              'yesterday-late': DateTime.utc(2026, 8, 21, 23, 50),
+            }),
+          ),
+        ],
+      );
+      await goTo(tester, AppRoutes.messages);
+
+      // 화면에 그려진 실제 순서를 위→아래로 읽는다.
+      const order = <String>['over', 'today-early', 'yesterday-late'];
+      final positions = <String, double>{
+        for (final id in order)
+          id: tester
+              .getTopLeft(
+                find.byKey(ValueKey<String>('messages-conversation-$id')),
+              )
+              .dy,
+      };
+      final sortedByPosition = order.toList()
+        ..sort((a, b) => positions[a]!.compareTo(positions[b]!));
+
+      expect(sortedByPosition, <String>[
+        'today-early',
+        'yesterday-late',
+        'over',
+      ]);
+    });
+  });
+
   testWidgets(
     'narrowest desktop split keeps message and time without overflow',
     (tester) async {

@@ -97,6 +97,30 @@ List<TrainerClient> prioritizeClients(
   return <TrainerClient>[for (final d in decorated) d.$1];
 }
 
+/// Orders the roster by recency alone: who spoke most recently first,
+/// regardless of date — a chat from this morning still outranks one from
+/// three days ago. Clients with no chat signal keep the server order at
+/// the bottom. Used by the 대화 목록 for the `전체`/`읽지 않음` filters,
+/// where "무슨 말이 방금 오갔는가" is the only ordering signal — unlike
+/// [prioritizeClients], which the `관리 필요` filter and 고객 탭 use.
+List<TrainerClient> sortByLatestMessage(
+  List<TrainerClient> clients, {
+  Map<String, DateTime> lastChatAt = const <String, DateTime>{},
+}) {
+  final decorated = <(TrainerClient client, int index)>[
+    for (var i = 0; i < clients.length; i++) (clients[i], i),
+  ];
+  final epoch = DateTime.utc(1970);
+  decorated.sort((a, b) {
+    final chat = (lastChatAt[b.$1.id] ?? epoch).compareTo(
+      lastChatAt[a.$1.id] ?? epoch,
+    );
+    if (chat != 0) return chat;
+    return a.$2.compareTo(b.$2);
+  });
+  return <TrainerClient>[for (final d in decorated) d.$1];
+}
+
 String _str(Object? v) => v is String ? v : '';
 
 String? _nullableStr(Object? v) => v is String && v.isNotEmpty ? v : null;

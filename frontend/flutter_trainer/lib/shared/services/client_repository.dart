@@ -8,7 +8,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
-    show prioritizeClients;
+    show prioritizeClients, sortByLatestMessage;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
@@ -637,6 +637,21 @@ final prioritizedClientsProvider = Provider<AsyncValue<List<TrainerClient>>>((
   return ref
       .watch(clientsProvider)
       .whenData((clients) => prioritizeClients(clients, lastChatAt: lastChat));
+});
+
+/// Streams the roster ordered by recency alone — who spoke most recently
+/// first. For 메시지 탭's `전체`/`읽지 않음` filters, where the ordering
+/// question is "누가 방금 말했는가", not coaching priority(#1074).
+final latestMessageClientsProvider = Provider<AsyncValue<List<TrainerClient>>>((
+  ref,
+) {
+  final lastChat =
+      ref.watch(lastChatAtProvider).valueOrNull ?? const <String, DateTime>{};
+  return ref
+      .watch(clientsProvider)
+      .whenData(
+        (clients) => sortByLatestMessage(clients, lastChatAt: lastChat),
+      );
 });
 
 /// Streams the last chat time per client (priority tiebreak).

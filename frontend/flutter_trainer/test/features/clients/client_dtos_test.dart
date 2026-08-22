@@ -213,6 +213,62 @@ void main() {
     });
   });
 
+  group('sortByLatestMessage', () {
+    test('orders by most recent chat regardless of coaching priority', () {
+      final ordered = sortByLatestMessage(
+        <TrainerClient>[
+          _client('a', sodiumMg: 2500), // over target, but spoke earliest
+          _client('b', sodiumMg: 100),
+          _client('c', sodiumMg: 100),
+        ],
+        lastChatAt: <String, DateTime>{
+          'a': DateTime.utc(2026, 8, 20, 9),
+          'b': DateTime.utc(2026, 8, 22, 20, 10),
+          'c': DateTime.utc(2026, 8, 22, 18, 18),
+        },
+      );
+
+      expect(ordered.map((c) => c.id).toList(), <String>['b', 'c', 'a']);
+    });
+
+    test('breaks ties across different dates, not just time-of-day', () {
+      // 'today' 가 어제보다 이르게 읽히면 하루 넘어간 두 대화 사이
+      // 순서가 뒤집힌다 — 전체 타임스탬프로 비교해야 한다.
+      final ordered = sortByLatestMessage(
+        <TrainerClient>[
+          _client('yesterday-late', sodiumMg: 0),
+          _client('today-early', sodiumMg: 0),
+        ],
+        lastChatAt: <String, DateTime>{
+          'yesterday-late': DateTime.utc(2026, 8, 21, 23, 50),
+          'today-early': DateTime.utc(2026, 8, 22, 0, 5),
+        },
+      );
+
+      expect(ordered.map((c) => c.id).toList(), <String>[
+        'today-early',
+        'yesterday-late',
+      ]);
+    });
+
+    test('clients with no chat signal keep server order at the bottom', () {
+      final ordered = sortByLatestMessage(
+        <TrainerClient>[
+          _client('quiet-first', sodiumMg: 0),
+          _client('spoke', sodiumMg: 0),
+          _client('quiet-second', sodiumMg: 0),
+        ],
+        lastChatAt: <String, DateTime>{'spoke': DateTime.utc(2026, 8, 22, 9)},
+      );
+
+      expect(ordered.map((c) => c.id).toList(), <String>[
+        'spoke',
+        'quiet-first',
+        'quiet-second',
+      ]);
+    });
+  });
+
   group('sugar warning threshold', () {
     test('keeps the existing strict greater-than rule for decimal values', () {
       expect(

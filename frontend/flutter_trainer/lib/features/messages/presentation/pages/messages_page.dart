@@ -59,10 +59,14 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final clientsAsync = ref.watch(prioritizedClientsProvider);
+    final filter = _ConversationFilter.parse(widget.filter);
+    // `관리 필요`는 지금처럼 나트륨 초과 등 주의 신호를 우선한다. 나머지
+    // 필터는 대화 목록이니 "누가 방금 말했는가"만으로 줄을 세운다(#1074).
+    final clientsAsync = filter == _ConversationFilter.attention
+        ? ref.watch(prioritizedClientsProvider)
+        : ref.watch(latestMessageClientsProvider);
     final unread =
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
-    final filter = _ConversationFilter.parse(widget.filter);
 
     return PageScaffold(
       title: l.navMessages,
