@@ -70,11 +70,13 @@ void main() {
       expect(out.strengthMinutes, base.strengthMinutes);
       // 다른 요일은 손대지 않는다.
       expect(out.dailyMinutes[3], base.dailyMinutes[3]);
-      // 유형별 합 == 일별 총합 불변식 유지.
+      // 유형별 합 == 일별 총합 불변식 유지(목표 없는 `기타` 포함).
       for (int i = 0; i < out.dailyMinutes.length; i++) {
         expect(
-          out.cardioMinutes[i] + out.strengthMinutes[i] +
-              out.stretchingMinutes[i],
+          out.cardioMinutes[i] +
+              out.strengthMinutes[i] +
+              out.stretchingMinutes[i] +
+              (i < out.otherMinutes.length ? out.otherMinutes[i] : 0),
           out.dailyMinutes[i],
           reason: '요일 index $i 유형 합이 일별 총합과 어긋납니다.',
         );

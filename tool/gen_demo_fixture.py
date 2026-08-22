@@ -41,7 +41,10 @@ OUT_BACKEND = _ROOT / "backend/app/db/demo_fixture_data.json"
 #: 읽기가 동기라 그 함정이 없고, 새 테스트를 쓰는 사람이 밟을 일도 없다.
 OUT_DART = _ROOT / "shared/demo_fixture/lib/src/fixture_json.g.dart"
 
-HISTORY_WEEKS = 12
+# 여덟 달치. `전체` 그래프가 1월까지 거슬러 가야 해서 — 넓은 화면(웹)에서도
+# 한 화면에 다 들어가지 않아 옆으로 밀 거리가 남는다. 주별 이야기 일곱 가지가
+# 그대로 돌며 채운다.
+HISTORY_WEEKS = 35
 
 # ── 음식 ───────────────────────────────────────────────────────────────────
 # (이름, 칼로리, 나트륨mg, 당류g, 탄수g, 단백g, 지방g)
@@ -173,7 +176,9 @@ ROUTINE: dict[int, list[tuple[str, str, int]]] = {
 #: `exercise_service._KCAL_PER_MIN`). 예전에는 여기만 7.5·5 로 낮아, 데모의 30분
 #: 유산소는 225kcal 인데 같은 운동을 회원이 직접 기록하면 270kcal 이 나왔다.
 #: 같은 사람의 같은 운동이 기록 경로에 따라 다른 숫자가 되는 셈이다. (#997)
-KCAL_PER_MIN = {"cardio": 9, "strength": 6, "flexibility": 3}
+# `other` 는 목표가 없는 나머지 운동(탁구·등산 같은 것)이다. 화면의
+# 그래프에는 그리지 않고 분 수만 적는다.
+KCAL_PER_MIN = {"cardio": 9, "strength": 6, "flexibility": 3, "other": 5}
 
 # ── 주별 이야기 ────────────────────────────────────────────────────────────
 # 12주를 7가지 주로 돌려 채운다. 예전에는 주마다 계수 하나를 곱해 흔들었는데,
@@ -319,9 +324,12 @@ RECENT: list[dict] = [
         "trainerNote": "무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.",
         "dayMessage": "점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.",
         "exercises": [
-            ("레그프레스 3세트", "strength", 25, True),
-            ("레그컬 3세트", "strength", 20, True),
-            ("하체 스트레칭 15분", "flexibility", 15, True),
+            ("벤치프레스 40kg · 4세트", "strength", 12, True, 4),
+            ("덤벨 숄더프레스 10kg · 4세트", "strength", 10, True, 4),
+            ("랫풀다운 45kg · 4세트", "strength", 12, True, 4),
+            ("플랭크 60초 · 3세트", "strength", 6, True, 3),
+            ("마무리 러닝머신 15분", "cardio", 15, True),
+            ("하체 스트레칭 12분", "flexibility", 12, True),
         ],
         "meals": [
             (B_EGG, "seed-diet-breakfast", "08:20",
@@ -399,14 +407,20 @@ def _meal_entry(
     return entry
 
 
-def _exercise(name: str, kind: str, minutes: int, done: bool) -> dict:
-    return {
+def _exercise(
+    name: str, kind: str, minutes: int, done: bool, sets: int | None = None
+) -> dict:
+    entry = {
         "name": name,
         "type": kind,
         "minutes": minutes,
         "calories": round(minutes * KCAL_PER_MIN[kind]),
         "done": done,
     }
+    # 근력만 세트를 갖는다. 유산소·스트레칭은 분이 곧 값이다.
+    if sets is not None:
+        entry["sets"] = sets
+    return entry
 
 
 def _grid_day(weekday: int, plan: list[str | None], skipped: int) -> dict:

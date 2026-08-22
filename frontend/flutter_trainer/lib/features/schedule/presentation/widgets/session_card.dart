@@ -205,10 +205,15 @@ class SessionCard extends ConsumerWidget {
                     const SizedBox(width: AppSpacing.sm),
                     // 종류는 흐린 글씨가 아니라 알약으로 둔다 — 회원의 부가
                     // 정보가 아니라 이 약속이 무엇인가를 말하는 값이다(#938).
+                    // 상태는 첫 줄의 SessionStatusChip 이 이미 말하므로 여기서
+                    // 되풀이하지 않는다. 소요 시간도 위 시각 줄이 이미 말해
+                    // 다시 붙이지 않는다(#1012).
                     SessionTypeChip(
                       label: sessionTypeLabel(l, s.type),
                       muted: s.isDone,
                       prominent: true,
+                      // 시간표 블록과 같은 표현 — 상담은 비운다(#1013).
+                      outlined: noteOnly,
                     ),
                   ],
                 ),

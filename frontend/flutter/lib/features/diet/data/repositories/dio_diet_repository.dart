@@ -47,6 +47,15 @@ class DioDietRepository implements DietRepository {
   }
 
   @override
+  Future<String> fetchAdvice(String period) async {
+    final res = await _dio.get<Map<String, Object?>>(
+      '/diet/advice',
+      queryParameters: <String, Object?>{'period': period},
+    );
+    return (res.data?['message'] as String?) ?? '';
+  }
+
+  @override
   Future<DietAnalysisResult> analyze({
     required MealPhoto photo,
     required String mealType,

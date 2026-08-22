@@ -197,7 +197,17 @@ def list_for_member(db: Session, member_id: str) -> list[MemberClientInviteOut]:
     return _to_member_out(db, rows)
 
 
-def accept(db: Session, member_id: str, invite_id: str) -> MemberClientInviteOut:
+class DataSharingConsentRequired(Exception):
+    """동의 없이 담당 요청을 수락하려 했다. (#1022)"""
+
+
+def accept(
+    db: Session,
+    member_id: str,
+    invite_id: str,
+    *,
+    data_sharing_consent: bool = False,
+) -> MemberClientInviteOut:
     """회원이 수락한다 — 담당 링크가 **여기서** 생긴다.
 
     상태 전이·링크 생성·헬스장 연결·알림을 한 트랜잭션으로 커밋한다. 나눠 커밋하면
@@ -206,6 +216,13 @@ def accept(db: Session, member_id: str, invite_id: str) -> MemberClientInviteOut
     수락하는 사이에 다른 트레이너의 담당이 생겼으면 [MemberAlreadyCoached] 다.
     회원당 활성 담당 1명이라는 불변식을 IntegrityError 로 만나기 전에 막는다.
     """
+    if not data_sharing_consent:
+        # 수락하는 순간 트레이너가 회원의 식단·운동·신체 정보를 읽는다. 동의를
+        # 받지 않고 그 문을 열 수는 없다. (#1022)
+        raise DataSharingConsentRequired(
+            "식단·운동 기록 공유에 동의해야 담당 요청을 수락할 수 있습니다."
+        )
+
     row = _require_member_row(db, member_id, invite_id)
 
     existing = db.scalar(
@@ -218,7 +235,12 @@ def accept(db: Session, member_id: str, invite_id: str) -> MemberClientInviteOut
         raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중이에요.")
 
     if existing is None:
-        consultation_service.attach_member_to_trainer(db, row.trainer_id, member_id)
+        consultation_service.attach_member_to_trainer(
+            db,
+            row.trainer_id,
+            member_id,
+            consented_at=_now(),
+        )
     consultation_service.link_member_gym(
         db, member_id, consultation_service.trainer_gym_id(db, row.trainer_id)
     )

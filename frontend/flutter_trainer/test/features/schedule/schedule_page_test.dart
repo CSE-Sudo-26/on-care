@@ -425,10 +425,11 @@ void main() {
 
     /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
     Future<void> openSession(WidgetTester tester, String name) async {
+      // 블록의 둘째 줄은 `이름 종류` 라 이름만으로는 정확히 맞지 않는다(#1010).
       final block = find
           .descendant(
             of: find.byType(ScheduleWeekTimetable),
-            matching: find.text(name),
+            matching: find.textContaining(name),
           )
           .first;
       await tester.ensureVisible(block);
@@ -483,19 +484,19 @@ void main() {
       // 왼쪽 시간축 — 일정이 없는 시간대도 눈금으로 남는다. 이것이 없던 때에는
       // 10시 세션과 17시 세션이 세로로 붙어 그 사이가 비었다는 사실이 화면에
       // 없었다.
-      expect(find.text('07:00'), findsOneWidget);
+      expect(find.text('08:00'), findsOneWidget);
       expect(find.text('13:00'), findsOneWidget);
-      expect(find.text('21:00'), findsOneWidget);
+      expect(find.text('22:00'), findsOneWidget);
 
       // 블록은 시간 범위와 종류를 함께 말한다.
       expect(find.text('10:00\u201311:00'), findsWidgets);
       expect(find.text('17:00\u201317:30'), findsOneWidget);
       expect(find.text('김민수'), findsWidgets);
-      expect(find.text('이지수'), findsWidgets);
-      expect(find.text('박성호'), findsWidgets);
+      expect(find.textContaining('이지수'), findsWidgets);
+      expect(find.textContaining('박성호'), findsWidgets);
       // 소요 시간은 시각 옆 괄호로 갔다(#1012) — 종류만 본다.
       expect(find.textContaining('1:1 PT'), findsWidgets);
-      expect(find.text('상담 · 30분'), findsWidgets);
+      expect(find.text('상담'), findsWidgets);
 
       // 로스터에 없는 상담 고객도 이름만 부른다(#1012) — 신규라는 사실은
       // 종류 알약(`상담`)이 이미 말한다.
@@ -527,7 +528,7 @@ void main() {
         find
             .descendant(
               of: find.byType(ScheduleWeekTimetable),
-              matching: find.text('김민수'),
+              matching: find.textContaining('김민수'),
             )
             .first,
       );
@@ -555,7 +556,7 @@ void main() {
         find
             .descendant(
               of: find.byType(ScheduleWeekTimetable),
-              matching: find.text('김민수'),
+              matching: find.textContaining('김민수'),
             )
             .first,
       );
@@ -570,7 +571,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('김민수'),
+          matching: find.textContaining('김민수'),
         ),
         findsNothing,
       );
@@ -1259,7 +1260,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(ScheduleWeekTimetable),
-          matching: find.text('김민수'),
+          matching: find.textContaining('김민수'),
         ),
         findsWidgets,
         reason: '같은 주라 오늘의 블록은 그대로 있다',

@@ -53,12 +53,16 @@ def test_completion_comes_from_the_routine_items():
         assert day.completion == round(done * 100 / len(day.exercises))
 
 
-def test_the_fixture_covers_twelve_weeks_without_gaps():
+def test_the_fixture_covers_its_history_without_gaps():
+    """몇 주를 들고 있는지는 픽스처가 정한다.
+
+    여기 숫자를 적으면 기간을 늘릴 때마다 두 곳을 고쳐야 한다.
+    """
     fixture = load_fixture()
-    days = fixture.days_for(date(2026, 8, 16))  # 일요일 → 12주가 꽉 찬다
-    assert fixture.history_weeks == 12
-    assert len(days) == 84
-    assert len({d.iso for d in days}) == 84
+    days = fixture.days_for(date(2026, 8, 16))  # 일요일 → 기간이 꽉 찬다
+    expected = fixture.history_weeks * 7
+    assert len(days) == expected
+    assert len({d.iso for d in days}) == expected
 
 
 def test_exercise_calories_match_the_app_estimate():

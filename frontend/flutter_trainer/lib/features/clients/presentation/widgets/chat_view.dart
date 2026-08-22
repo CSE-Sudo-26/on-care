@@ -433,7 +433,16 @@ class _ChatInsightBanner extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.10),
+        // 메모로 남기고 나면 **바탕만** 하얗게 비운다. 붉은 바탕은 "여기
+        // 아직 볼 것이 있다" 는 신호인데, 옮겨 적은 뒤에도 그대로 두면
+        // 스레드를 다시 열 때마다 처리한 것과 안 한 것이 똑같이 붉다.
+        //
+        // 윤곽선과 버튼의 붉은색은 남긴다 — 무슨 일이 있었는지(부정적
+        // 피드백)는 바뀌지 않았고, 그 사실까지 회색으로 지우면 나중에
+        // 훑을 때 이 자리가 무엇이었는지 알아볼 수 없다.
+        color: saved
+            ? AppColors.card
+            : AppColors.warning.withValues(alpha: 0.10),
         borderRadius: const BorderRadius.all(AppRadius.card),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
       ),
@@ -466,10 +475,12 @@ class _ChatInsightBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
+          // 버튼은 저장 뒤에도 붉은색이다. 초록으로 뒤집었더니 빨간 배너
+          // 한가운데서 가장 밝은 것이 "메모 추가됨" 이 되어, 정작 읽어야 할
+          // 감지 내용보다 눈에 먼저 들어왔다. 상태 차이는 색이 아니라
+          // 아이콘(＋ → ✓)과 문구가 말한다.
           Material(
-            color: saved
-                ? AppColors.success.withValues(alpha: 0.10)
-                : AppColors.warning.withValues(alpha: 0.13),
+            color: AppColors.warning.withValues(alpha: 0.13),
             borderRadius: const BorderRadius.all(AppRadius.pill),
             child: InkWell(
               key: ValueKey<String>('chat-insight-add-${insight.id}'),
@@ -486,13 +497,13 @@ class _ChatInsightBanner extends StatelessWidget {
                     Icon(
                       saved ? Icons.check_rounded : Icons.add_rounded,
                       size: 15,
-                      color: saved ? AppColors.success : AppColors.warning,
+                      color: AppColors.warning,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       saved ? l.chatInsightMemoAdded : l.chatInsightAddMemo,
-                      style: TextStyle(
-                        color: saved ? AppColors.success : AppColors.warning,
+                      style: const TextStyle(
+                        color: AppColors.warning,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w800,
                       ),
@@ -601,6 +612,18 @@ class _SentBanner extends StatelessWidget {
 class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message, required this.avatar});
 
+  /// 말풍선이 차지할 수 있는 대화 폭의 최대 비율.
+  ///
+  /// 상한이 없으면 긴 메시지가 대화 창을 가로로 다 채운다. 그러면 말풍선이
+  /// 말풍선으로 읽히지 않는다 — 누가 한 말인지는 색과 **어느 쪽으로 붙어
+  /// 있는가**가 말하는데, 양쪽 끝에 닿아 버리면 그 신호가 사라진다.
+  ///
+  /// 절대값 상한은 두지 않는다. 대화 패널이 가장 넓어지는 경우
+  /// (`wideMaxWidth` 1440 에서 `splitListWidth` 380 을 뺀 ~1000)에도 이
+  /// 비율이면 720 안쪽이라, 읽기 좋은 줄 길이의 기준으로 이미 쓰고 있는
+  /// `contentMaxWidth`(760) 를 넘지 않는다.
+  static const double _maxWidthFraction = 0.72;
+
   final ClientChatMessage message;
   final String avatar;
 
@@ -670,18 +693,30 @@ class _Bubble extends ConsumerWidget {
       ],
     );
 
-    return Row(
-      mainAxisAlignment: fromTrainer
-          ? MainAxisAlignment.end
-          : MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        if (!fromTrainer) ...<Widget>[
-          ClientAvatar(label: avatar, size: 28),
-          const SizedBox(width: AppSpacing.sm),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => Row(
+        mainAxisAlignment: fromTrainer
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          if (!fromTrainer) ...<Widget>[
+            ClientAvatar(label: avatar, size: 28),
+            const SizedBox(width: AppSpacing.sm),
+          ],
+          // `Flexible` 도 함께 둔다. 아주 좁은 폭에서는 아바타와 여백이
+          // 먼저 자리를 가져가 비율로 계산한 상한보다도 남는 폭이 적을 수
+          // 있는데, 그때는 상한이 아니라 남은 폭을 따라야 넘치지 않는다.
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth * _maxWidthFraction,
+              ),
+              child: bubble,
+            ),
+          ),
         ],
-        Flexible(child: bubble),
-      ],
+      ),
     );
   }
 

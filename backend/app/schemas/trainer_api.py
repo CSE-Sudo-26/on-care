@@ -1198,6 +1198,16 @@ class TrainerClientInviteOut(BaseModel):
     decided_at: _datetime | None = None
 
 
+class MemberInviteAcceptRequest(BaseModel):
+    """담당 요청 수락 — 데이터 공유 동의를 함께 받는다. (#1022)
+
+    기본값을 두지 않는다. 빠뜨리면 422 다 — 동의는 "안 보냈으니 승낙" 이 될 수
+    없다.
+    """
+
+    data_sharing_consent: bool
+
+
 class MemberClientInviteOut(BaseModel):
     """회원이 보고 있는 '받은 요청' 카드.
 

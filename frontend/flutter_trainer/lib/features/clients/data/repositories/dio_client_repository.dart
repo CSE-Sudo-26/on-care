@@ -122,6 +122,24 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   /// 리포트는 한 주의 일별 칼로리·나트륨·당류를 한 번에 주므로, 한 달이라도
   /// 요청은 다섯 번 남짓이다. 두 경로 모두 같은 `diet_entries` 를 읽는다.
   @override
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period) async {
+    final String wire = switch (period) {
+      ClientPeriod.today => 'today',
+      ClientPeriod.week => 'week',
+      ClientPeriod.month => 'all',
+    };
+    try {
+      final response = await _dio.get<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/diet-advice',
+        queryParameters: <String, Object?>{'period': wire},
+      );
+      return (response.data?['message'] as String?) ?? '';
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,

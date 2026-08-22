@@ -412,25 +412,20 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       subtitle: dateLabel(l, _selectedDay),
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
-        // 오늘 은 날짜를 바꾸는 컨트롤이라 날짜 행 오른쪽으로 내렸다.
-        // 비워진 이 자리에 상담 요청이 들어온다(#882).
-        if (consultationInbox)
-          ConsultationInboxAction(
-            pending: pendingConsultations,
-            onTap: _openConsultationInbox,
-          ),
         ActionButton(
           key: const ValueKey<String>('schedule-open-slots'),
           label: l.schedSlots,
           icon: Icons.event_available_outlined,
           onPressed: () => _openReservationSlotsSheet(),
         ),
-        ActionButton(
-          label: l.schedNewSession,
-          icon: Icons.add,
-          primary: true,
-          onPressed: () => _openSessionSheet(),
-        ),
+        // 상담 확인은 맨 오른쪽이다(#882, #1009). 예약 슬롯 왼쪽에 있을 때는
+        // 알림 배지가 그 버튼과 겹쳐, 몇 건 밀렸는지가 배지 색으로도 잘 읽히지
+        // 않았다.
+        if (consultationInbox)
+          ConsultationInboxAction(
+            pending: pendingConsultations,
+            onTap: _openConsultationInbox,
+          ),
       ],
       scrollable: false,
       contentPadding: EdgeInsets.zero,
@@ -467,6 +462,15 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         end: end,
         onShift: _shiftWeek,
         trailing: _todayControl(),
+        // `새 일정` 은 이 행의 오른쪽 끝, 일요일 칸 위에 선다. 예전에는 페이지
+        // 헤더의 다른 문서 액션과 섞여 있어, 무엇을 조작하는 버튼인지 시간표와
+        // 자리로 이어지지 않았다(#882 와 같은 이유).
+        newSession: ActionButton(
+          label: l.schedNewSession,
+          icon: Icons.add,
+          primary: true,
+          onPressed: () => _openSessionSheet(),
+        ),
       ),
     );
 
@@ -508,34 +512,33 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           }
         }
 
-        final timetable = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            navBar,
-            Expanded(
-              child: ScheduleWeekTimetable(
-                weekStart: start,
-                sessions: sessions,
-                selectedDay: _selectedDay,
-                selectedSessionId: selected?.id,
-                bodyOverride: bodyOverride,
-                onPickDay: _selectDay,
-                onPickSession: (session) {
-                  final day = DateTime.tryParse(session.date);
-                  if (day == null) return;
-                  setState(() {
-                    _selectedDay = _dateOnly(day);
-                    _selectedSessionId = session.id;
-                  });
-                  context.go(AppRoutes.scheduleAt(date: session.date));
-                },
-              ),
-            ),
-          ],
+        final grid = ScheduleWeekTimetable(
+          weekStart: start,
+          sessions: sessions,
+          selectedDay: _selectedDay,
+          selectedSessionId: selected?.id,
+          bodyOverride: bodyOverride,
+          onPickDay: _selectDay,
+          onPickSession: (session) {
+            final day = DateTime.tryParse(session.date);
+            if (day == null) return;
+            setState(() {
+              _selectedDay = _dateOnly(day);
+              _selectedSessionId = session.id;
+            });
+            context.go(AppRoutes.scheduleAt(date: session.date));
+          },
         );
 
         return LayoutBuilder(
           builder: (context, constraints) {
+            final stacked = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                navBar,
+                Expanded(child: grid),
+              ],
+            );
             if (constraints.maxWidth < 980) {
               // 좁은 화면에는 오른쪽에 패널을 둘 폭이 없다. 예전에는
               // 패널을 통째로 버렸는데, 탭 핸들러는 그대로 살아 있어서
@@ -544,22 +547,50 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               //
               // 같은 패널을 시간표 아래로 쌓는다. 표현을 바꾸지 않으므로
               // 넓은 화면에서 익힌 것이 좁은 화면에서도 그대로 통한다.
-              if (selected == null) return timetable;
+              if (selected == null) return stacked;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Expanded(flex: 3, child: timetable),
+                  Expanded(flex: 3, child: stacked),
                   const Divider(height: 1, color: AppColors.borderStrong),
                   Expanded(flex: 2, child: _buildWeekDetail(selected)),
                 ],
               );
             }
-            return Row(
+            // 머리(날짜 행 · 패널 제목)를 **한 줄에** 세우고 몸(격자 · 카드)을
+            // 그 아래 한 줄에 세운다. 날짜 행을 시간표 열 안에만 두었더니
+            // 왼쪽은 그 높이만큼 내려가고 오른쪽은 맨 위에서 시작해, 두 열의
+            // 머리가 어긋났다 — 가로로 훑을 때 눈이 한 번 더 움직인다(#1008).
+            //
+            // 같은 `Row` 에 넣으면 높이가 저절로 맞는다. 어느 한쪽의 높이를
+            // 상수로 베껴 두면 그 값이 바뀌는 순간 조용히 어긋난다.
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Expanded(child: timetable),
-                const VerticalDivider(width: 1, color: AppColors.borderStrong),
-                SizedBox(width: 340, child: _buildWeekDetail(selected)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Expanded(child: navBar),
+                    const SizedBox(width: 1),
+                    SizedBox(width: _panelWidth, child: _panelHeader()),
+                  ],
+                ),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Expanded(child: grid),
+                      const VerticalDivider(
+                        width: 1,
+                        color: AppColors.borderStrong,
+                      ),
+                      SizedBox(
+                        width: _panelWidth,
+                        child: _buildWeekDetail(selected, withTitle: false),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             );
           },
@@ -568,7 +599,34 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
   }
 
-  Widget _buildWeekDetail(ScheduleSession? session) {
+  /// 상세 패널의 폭. 날짜 행과 패널 머리글이 같은 값을 써야 두 열의 경계가
+  /// 위아래로 이어진다.
+  static const double _panelWidth = 340;
+
+  /// 날짜 행과 한 줄에 서는 패널 머리글. (#1008)
+  ///
+  /// 문구가 `스케줄` 이던 때에는 페이지 제목과 같은 말이라 그 자리가 무엇인지
+  /// 말하지 못했다 — 왼쪽 격자도 스케줄이고 오른쪽 카드도 스케줄이다.
+  Widget _panelHeader() {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppLayout.pagePadding,
+        AppLayout.pagePadding,
+        AppSpacing.sm,
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          l.schedDetailTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeekDetail(ScheduleSession? session, {bool withTitle = true}) {
     final l = AppLocalizations.of(context);
     if (session == null) {
       return Center(
@@ -595,11 +653,14 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       key: const Key('week-detail'),
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: <Widget>[
-        Text(
-          l.schedTitle,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: AppSpacing.md),
+        // 넓은 화면에서는 제목이 날짜 행과 한 줄에 서므로 여기서는 빼둔다.
+        if (withTitle) ...<Widget>[
+          Text(
+            l.schedDetailTitle,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         SessionCard(
           session: session,
           onEditSchedule: () => setState(() {

@@ -659,6 +659,7 @@
   "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your routine and send it over.",
   "reportBodyNoRecords": "There's nothing logged this week, so nothing to sum up. Let's plan next week's start together.",
   "schedTitle": "Schedule",
+  "schedDetailTitle": "Session detail",
   "schedDeleteTitle": "Delete session",
   "schedDeleteConfirm": "Delete the {time} session with {name}?",
   "@schedDeleteConfirm": {
@@ -680,6 +681,17 @@
         "type": "String"
       },
       "end": {
+        "type": "String"
+      }
+    }
+  },
+  "schedBlockTime": "{range} ({duration})",
+  "@schedBlockTime": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      },
+      "duration": {
         "type": "String"
       }
     }
@@ -1632,7 +1644,7 @@
   "unitGram": "g",
   "a11yRemoveExercise": "Remove exercise",
   "a11yRemoveCertification": "Remove certification",
-  "a11yPrevDay": "Previous day",
-  "a11yNextDay": "Next day",
+  "a11yPrevWeek": "Previous week",
+  "a11yNextWeek": "Next week",
   "a11ySendMessage": "Send message"
 }

@@ -57,7 +57,16 @@ class _DietViewState extends ConsumerState<DietView> {
 
     if (_period != ClientPeriod.today) {
       return section(
-        ClientDietPeriodCard(clientId: client.id, period: _period),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            ClientDietPeriodCard(clientId: client.id, period: _period),
+            // 기간을 고르면 그 기간의 조언을 함께 읽는다 — 그래프만 바뀌고
+            // 조언이 오늘 이야기로 남으면 화면과 무관한 말이 된다. (#1017)
+            const SizedBox(height: AppSpacing.md),
+            _AiComment(client: client, period: _period),
+          ],
+        ),
       );
     }
     return _TodayDiet(client: client, section: section);
@@ -132,7 +141,7 @@ class _TodayDiet extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.sm),
               ],
               const SizedBox(height: AppSpacing.xs),
-              _AiComment(client: client),
+              _AiComment(client: client, period: ClientPeriod.today),
             ],
           ],
         ),
@@ -259,17 +268,33 @@ String _grams(double value) => value == value.roundToDouble()
     ? value.toInt().toString()
     : value.toStringAsFixed(1);
 
-/// "✦ AI 분석" comment — flips wording on the sodium target.
-class _AiComment extends StatelessWidget {
-  const _AiComment({required this.client});
+/// "✦ AI 분석" — 서버가 기간에 맞춰 만든 문장을 그대로 보여 준다. (#1017)
+///
+/// 예전에는 이 카드가 나트륨 목표만 보고 문구를 골랐다. 회원 앱은 서버 문장을
+/// 쓰는데 여기만 따로 계산하면, 같은 회원의 같은 날을 두 화면이 다르게 말한다.
+/// 서버 응답이 오기 전에는 지금까지 쓰던 문구를 그대로 둔다 — 카드가 비었다가
+/// 채워지면 화면이 흔들린다.
+class _AiComment extends ConsumerWidget {
+  const _AiComment({required this.client, required this.period});
 
   final TrainerClient client;
+  final ClientPeriod period;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final over = client.sodiumOverBudget;
     final sodiumMg = client.sodiumMg;
+    final String fallback = over
+        ? l.dietAiOverSodium(sodiumMg - sodiumTargetMg)
+        : l.dietAiBalanced;
+    final String message =
+        ref
+            .watch(
+              clientDietAdviceProvider((clientId: client.id, period: period)),
+            )
+            .valueOrNull ??
+        fallback;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -288,9 +313,7 @@ class _AiComment extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            over
-                ? l.dietAiOverSodium(sodiumMg - sodiumTargetMg)
-                : l.dietAiBalanced,
+            message,
             style: const TextStyle(
               fontSize: 13,
               height: 1.55,
