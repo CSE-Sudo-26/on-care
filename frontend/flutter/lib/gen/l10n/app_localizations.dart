@@ -314,23 +314,11 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load this week\'s workout history.'**
   String get homeExerciseTrendUnavailable;
 
-  /// No description provided for @homeExerciseActiveTime.
-  ///
-  /// In en, this message translates to:
-  /// **'Active time'**
-  String get homeExerciseActiveTime;
-
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
   /// **'Calories'**
   String get homeExerciseBurned;
-
-  /// No description provided for @homeExerciseDays.
-  ///
-  /// In en, this message translates to:
-  /// **'Workout days'**
-  String get homeExerciseDays;
 
   /// No description provided for @homeMealReasonSodium.
   ///
@@ -443,7 +431,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeRecMealsTitle.
   ///
   /// In en, this message translates to:
-  /// **'This week\'s AI meal picks'**
+  /// **'Recommended meals'**
   String get homeRecMealsTitle;
 
   /// No description provided for @homeViewAll.
@@ -476,11 +464,11 @@ abstract class AppLocalizations {
   /// **'min'**
   String get unitMinutes;
 
-  /// No description provided for @unitDays.
+  /// No description provided for @unitSets.
   ///
   /// In en, this message translates to:
-  /// **'days'**
-  String get unitDays;
+  /// **'sets'**
+  String get unitSets;
 
   /// No description provided for @unitKcalValue.
   ///

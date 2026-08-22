@@ -277,7 +277,9 @@ void main() {
     expect(find.text('아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.'), findsOneWidget);
     // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055) — 빈 상태 문구도 함께 없다.
     expect(find.text('오늘 예정된 일정이 없어요.'), findsNothing);
-    expect(find.text('0g'), findsNWidgets(3));
+    // 탄단지는 홈 식단 카드에서 뺐다 (#1117) — 식단 탭이 말한다.
+    expect(find.text('0g'), findsNothing);
+    expect(find.text('탄수화물'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
       findsNothing,
@@ -392,7 +394,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('운동 카드는 프로필의 운동 목표 3종을 쓴다', (WidgetTester tester) async {
+  testWidgets('운동 카드는 운동 탭과 같은 유형별 주간 목표를 쓴다', (WidgetTester tester) async {
     await pumpDashboard(
       tester,
       load: () async => const DashboardSummary(
@@ -423,10 +425,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text(' /5일'), findsOneWidget);
-    expect(find.text(' /240분'), findsOneWidget);
-    expect(find.text(' /900kcal'), findsOneWidget);
-    expect(find.text(' /800kcal'), findsNothing);
+    // 홈은 운동 탭 `운동 현황 - 이번 주` 와 같은 네 지표·같은 목표를 쓴다
+    // (#1119). 프로필에 저장된 주 3회·240분·900kcal 은 더 이상 이 카드의
+    // 기준이 아니다 — MY 목표를 이 값에 연결하는 것은 #1139 이 다룬다.
+    expect(find.text(' /2,100kcal'), findsOneWidget);
+    expect(find.text(' /150분'), findsOneWidget);
+    expect(find.text(' /21세트'), findsOneWidget);
+    expect(find.text(' /60분'), findsOneWidget);
+    expect(find.text(' /5일'), findsNothing);
+    expect(find.text(' /900kcal'), findsNothing);
   });
 
   for (final width in <double>[360, 480, 800]) {
@@ -442,16 +449,18 @@ void main() {
 
       expect(find.text('식단 · 영양'), findsOneWidget);
       expect(find.text('1,860'), findsWidgets);
-      expect(find.text('203.6g'), findsOneWidget);
-      expect(find.text('109.3g'), findsOneWidget);
-      expect(find.text('66.5g'), findsOneWidget);
-      expect(find.text('45'), findsOneWidget);
-      expect(find.text('520'), findsWidgets);
-      expect(find.text('4'), findsWidgets);
+      // 탄단지는 홈에서 뺐다 (#1117).
+      expect(find.text('203.6g'), findsNothing);
+      expect(find.text('109.3g'), findsNothing);
+      expect(find.text('66.5g'), findsNothing);
       expect(find.text('주간 운동'), findsOneWidget);
-      expect(find.text('운동 시간'), findsOneWidget);
+      // 운동 카드 지표는 운동 탭과 같은 네 가지다 (#1119).
       expect(find.text('소모 칼로리'), findsOneWidget);
-      expect(find.text('운동 일수'), findsOneWidget);
+      expect(find.text('유산소'), findsOneWidget);
+      expect(find.text('근력'), findsOneWidget);
+      expect(find.text('스트레칭'), findsOneWidget);
+      expect(find.text('운동 시간'), findsNothing);
+      expect(find.text('운동 일수'), findsNothing);
       expect(find.text('운동 추이 (kcal)'), findsOneWidget);
       // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055).
       expect(find.text('병원 정기검진'), findsNothing);
