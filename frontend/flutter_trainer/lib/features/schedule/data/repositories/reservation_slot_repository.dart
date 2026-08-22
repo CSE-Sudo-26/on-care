@@ -8,15 +8,19 @@ import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slo
 abstract interface class ReservationSlotRepository {
   Future<List<ReservationSlot>> list();
 
-  Future<ReservationSlot> create({required DateTime startsAt});
+  Future<ReservationSlot> create({
+    required DateTime startsAt,
+    required String sessionType,
+  });
 
-  Future<ReservationSlot> update(String id, {DateTime? startsAt});
+  Future<ReservationSlot> update(
+    String id, {
+    DateTime? startsAt,
+    String? sessionType,
+  });
 
   Future<ReservationSlot> close(String id);
 }
-
-/// 서버에 보내는 좌석 수. 1:1 PT 라 늘 한 자리다(#1072).
-const int _ptCapacity = 1;
 
 class DioReservationSlotRepository implements ReservationSlotRepository {
   const DioReservationSlotRepository(this._dio);
@@ -34,25 +38,31 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
   }
 
   @override
-  Future<ReservationSlot> create({required DateTime startsAt}) async {
+  Future<ReservationSlot> create({
+    required DateTime startsAt,
+    required String sessionType,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/trainer/reservation-slots',
       data: <String, dynamic>{
         'starts_at': startsAt.toUtc().toIso8601String(),
-        // 서버 계약은 아직 좌석 수를 받는다. 1:1 PT 라 값은 늘 1이고, 트레이너가
-        // 고를 것이 없으므로 화면까지 올리지 않는다(#1072).
-        'capacity': _ptCapacity,
+        'session_type': sessionType,
       },
     );
     return ReservationSlot.fromJson(response.data!);
   }
 
   @override
-  Future<ReservationSlot> update(String id, {DateTime? startsAt}) async {
+  Future<ReservationSlot> update(
+    String id, {
+    DateTime? startsAt,
+    String? sessionType,
+  }) async {
     final response = await _dio.put<Map<String, dynamic>>(
       '/trainer/reservation-slots/$id',
       data: <String, dynamic>{
         'starts_at': ?startsAt?.toUtc().toIso8601String(),
+        'session_type': ?sessionType,
       },
     );
     return ReservationSlot.fromJson(response.data!);
@@ -72,6 +82,9 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
 class SlotErrorCodes {
   static const String futureOnly = 'future_only';
   static const String notFound = 'not_found';
+
+  /// 이미 예약이 걸린 자리의 종류를 바꾸려 했다(#1083).
+  static const String typeLockedByBooking = 'type_locked_by_booking';
 }
 
 class MockReservationSlotRepository implements ReservationSlotRepository {
@@ -91,29 +104,43 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   }
 
   @override
-  Future<ReservationSlot> create({required DateTime startsAt}) async {
+  Future<ReservationSlot> create({
+    required DateTime startsAt,
+    required String sessionType,
+  }) async {
     _validateFuture(startsAt);
+    // 슬롯은 늘 한 사람 몫이라 새로 연 자리는 비어 있는 상태로 시작한다
+    // (#1012, #1072).
     final slot = ReservationSlot(
       id: 'slot-${DateTime.now().microsecondsSinceEpoch}',
       startsAt: startsAt,
       booked: false,
       isClosed: false,
+      sessionType: sessionType,
     );
     _slots.add(slot);
     return slot;
   }
 
   @override
-  Future<ReservationSlot> update(String id, {DateTime? startsAt}) async {
+  Future<ReservationSlot> update(
+    String id, {
+    DateTime? startsAt,
+    String? sessionType,
+  }) async {
     final index = _slots.indexWhere((slot) => slot.id == id);
     if (index < 0) throw StateError('not_found');
     final old = _slots[index];
     if (startsAt != null) _validateFuture(startsAt);
+    if (sessionType != null && sessionType != old.sessionType && old.booked) {
+      throw StateError('type_locked_by_booking');
+    }
     final updated = ReservationSlot(
       id: old.id,
       startsAt: startsAt ?? old.startsAt,
       booked: old.booked,
       isClosed: old.isClosed,
+      sessionType: sessionType ?? old.sessionType,
     );
     _slots[index] = updated;
     return updated;
@@ -129,6 +156,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
       startsAt: old.startsAt,
       booked: old.booked,
       isClosed: true,
+      sessionType: old.sessionType,
     );
     _slots[index] = closed;
     return closed;

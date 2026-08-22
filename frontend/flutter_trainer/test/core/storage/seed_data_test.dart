@@ -10,6 +10,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 /// 시드가 읽는 것과 같은 픽스처. 사용자 앱 테스트도 같은 파일을 본다 — 두 앱의
 /// 단정이 같은 원본을 가리켜야 "같은 날짜, 같은 숫자"가 실제로 지켜진다(#757).
@@ -63,7 +64,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v20'), _todayString());
+      expect(await db.readValue('trainer_seeded_v22'), _todayString());
     });
 
     test(
@@ -295,13 +296,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v20', '2020-01-01');
+      await db.putValue('trainer_seeded_v22', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v20'), _todayString());
+      expect(await db.readValue('trainer_seeded_v22'), _todayString());
     });
 
     test(
@@ -342,6 +343,48 @@ void main() {
         expect(thread.last.id, 'chat-runtime-order');
       },
     );
+
+    test('seed chat createdAt order matches the displayed timeLabel, not '
+        'array position (#1087)', () async {
+      // 강서연(6, '16:48') · 하윤(4, '14:31') · 유나(10, '13:25') ·
+      // 태경(13, '11:49') 은 모두 오늘(daysAgo: 0) 이고, 넷 다 대화의
+      // 마지막 메시지가 "3개 중 세 번째"다 — 예전 방식(배열 인덱스를
+      // 분으로 씀)이면 넷의 정렬 키가 완전히 같아져, 최신순 목록이
+      // 화면 시각과 무관하게 시드 선언 순서로 나왔다.
+      await seedIfEmpty(db);
+
+      final lastChatAt = await DriftClientRepository(
+        db,
+      ).watchLastChatAt().first;
+
+      DateTime at(int id) => lastChatAt['seed-client-$id']!;
+
+      // 16:48 > 14:31 > 13:25 > 11:49 — 화면에 보이는 시각 그대로다.
+      expect(at(6).isAfter(at(4)), isTrue, reason: '16:48 은 14:31 보다 최신');
+      expect(at(4).isAfter(at(10)), isTrue, reason: '14:31 은 13:25 보다 최신');
+      expect(at(10).isAfter(at(13)), isTrue, reason: '13:25 은 11:49 보다 최신');
+    });
+
+    test('a multi-day thread does not outrank a same-day thread with a '
+        'later clock time (#1104)', () async {
+      // 김민수(1, 마지막 메시지 '18:18', 여러 날에 걸친 스레드로 마지막
+      // 메시지의 dayIndex=2)와 이지수(2, '20:10', 단일 날짜 스레드로
+      // dayIndex=0)는 둘 다 daysAgo: 0(오늘)이다. dayIndex 를 날짜
+      // 오프셋에 그대로 더하던 예전 방식이면 김민수가 이지수보다
+      // "이틀 더 미래"로 계산돼, 20:10 보다 이른 18:18 이 최신순에서
+      // 위로 올라왔다.
+      await seedIfEmpty(db);
+
+      final lastChatAt = await DriftClientRepository(
+        db,
+      ).watchLastChatAt().first;
+
+      expect(
+        lastChatAt['seed-client-2']!.isAfter(lastChatAt['seed-client-1']!),
+        isTrue,
+        reason: '20:10(단일 날짜)이 18:18(다일 스레드)보다 최신이어야 한다',
+      );
+    });
 
     test('per-meal sums match each client\'s daily totals', () async {
       // The diet summary tiles read the client row's totals while the
@@ -424,7 +467,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v20'), today);
+        expect(await db.readValue('trainer_seeded_v22'), today);
       },
     );
 
@@ -533,7 +576,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v20', '2020-01-01');
+      await db.putValue('trainer_seeded_v22', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

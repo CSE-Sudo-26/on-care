@@ -855,6 +855,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSlotFull => '예약 마감';
 
   @override
+  String get exSlotTypePersonalTraining => '1:1 PT';
+
+  @override
+  String get exSlotTypeConsultation => '상담';
+
+  @override
   String get exSlotsEmpty => '예약 가능한 시간이 없어요';
 
   @override

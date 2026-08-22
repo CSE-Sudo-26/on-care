@@ -139,6 +139,12 @@ void main() {
     expect(find.text('상담 요청'), findsWidgets);
     expect(find.text('김민수'), findsOneWidget);
     expect(find.text('체중 감량'), findsOneWidget);
+    // "건강관리 목적" 은 "관리 목적" 으로 줄었다(#1092) — 다른 항목(운동
+    // 목표·희망 일시)과 같은 두세 글자 라벨 길이로 맞춘다.
+    expect(find.text('관리 목적'), findsOneWidget);
+    expect(find.text('건강관리 목적'), findsNothing);
+    // 문의 내용도 다른 항목처럼 라벨을 달아 무엇을 보여주는 값인지 밝힌다.
+    expect(find.text(_ko.consultMessage), findsOneWidget);
     expect(find.text('상담 부탁드립니다.'), findsOneWidget);
     expect(find.text('승인'), findsOneWidget);
     expect(find.text('거절'), findsOneWidget);

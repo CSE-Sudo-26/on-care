@@ -14,10 +14,25 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v20']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v22']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v22` fixed a second `createdAt` bug left by `_v21`: the day offset
+/// added a thread's `dayIndex` directly, but that value is only the
+/// message's position **within its own thread**, not a real day count —
+/// so a thread spanning several days (dayIndex 0·1·2) always sorted a
+/// few days ahead of a same-`daysAgo` single-day thread, no matter what
+/// either showed on screen(#1104). The day offset now anchors purely on
+/// `daysAgo`, with `dayIndex` only shifting earlier messages further
+/// back relative to the thread's own last message.
+///
+/// `_v21` fixed seed chat `createdAt`: the time-of-day component used to be
+/// the message's array index (`i`), unrelated to the `timeLabel` shown on
+/// screen (`'18:18'` 등) — 대화마다 메시지 수가 달라, 화면 시각이 전혀
+/// 다른 두 고객의 정렬 키가 같아지는 일이 흔했다(#1087). 이제 `timeLabel`을
+/// 실제로 읽어 분 단위로 쓴다.
 ///
 /// Behaviour mirrors the user app's date-aware seeder (see the user
 /// app's `seed_data.dart`):
@@ -84,7 +99,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v20') == today) return;
+  if (await db.readValue('trainer_seeded_v22') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -256,6 +271,13 @@ Future<void> seedIfEmpty(
               : _dailyMetrics(client, now).toList(growable: false),
         );
 
+        // 스레드의 **마지막** 메시지가 daysAgo 를 앵커링한다 — dayIndex 는
+        // 그 스레드 안에서의 상대 순서일 뿐, 몇 번째 실제 날짜인지가
+        // 아니다. 마지막 메시지 자신의 dayIndex 를 기준(0)으로 삼아
+        // 각 메시지가 거기서 며칠 전인지로 환산한다(아래 참고).
+        final int lastDayIndex = client.chat.isEmpty
+            ? 0
+            : _lastChat(client.chat).dayIndex;
         b.insertAll(db.clientChatMessages, <ClientChatMessagesCompanion>[
           for (var i = 0; i < client.chat.length; i++)
             ClientChatMessagesCompanion.insert(
@@ -264,11 +286,11 @@ Future<void> seedIfEmpty(
               sender: client.chat[i].sender,
               body: client.chat[i].text,
               timeLabel: client.chat[i].timeLabel,
-              // Anchored at the fixed ancient epoch (oldest first, a
-              // minute apart) so any runtime reply — and any preserved
-              // reply from a previous day — always sorts after the seed.
-              // dayIndex 는 여러 날에 걸친 스레드를 실제로 날짜가 다른
-              // 시각으로 만든다 — 라벨만 갈라 두면 화면이 하루로 묶는다.
+              // Anchored at the fixed ancient epoch (oldest first) so any
+              // runtime reply — and any preserved reply from a previous
+              // day — always sorts after the seed. dayIndex 는 여러 날에
+              // 걸친 스레드를 실제로 날짜가 다른 시각으로 만든다 — 라벨만
+              // 갈라 두면 화면이 하루로 묶는다.
               //
               // 스레드**끼리의** 차례는 `daysAgo` 가 정한다. 예전에는
               // 이 값이 빠져 있어, 목록을 최신순으로 세우면 화면에 뜬
@@ -277,13 +299,34 @@ Future<void> seedIfEmpty(
               // 실제 날짜로 옮기지 않고 epoch 안에서 미는 이유는, 런타임
               // 답장(지금 시각)이 시드 뒤에 온다는 보장을 깨지 않기
               // 위해서다.
+              //
+              // `dayIndex` 를 날짜 오프셋에 그대로 더하면 안 된다 — 그 값은
+              // 실제 며칠 전이 아니라 **그 스레드 안에서** 몇 번째 날인지일
+              // 뿐이다. 그대로 더하면 여러 날짜에 걸친 스레드(dayIndex
+              // 0·1·2)의 마지막 메시지가 daysAgo 가 같은 단일 날짜 스레드보다
+              // 항상 며칠 더 "미래"로 계산돼, 화면 시각과 무관하게 최신순
+              // 맨 위로 올라왔다(#1104). 마지막 메시지의 dayIndex 를 0 으로
+              // 삼아 상대적으로 며칠 전인지로 바꾼다 — 마지막 메시지는 정확히
+              // daysAgo 로 앵커링되고, 그 전 메시지들은 더 이른 날짜로 밀려
+              // 스레드 내부 순서는 그대로 유지된다.
+              //
+              // 시각 성분은 `timeLabel`에서 실제로 읽는다 — 예전에는 그
+              // 대화 안에서 몇 번째 메시지인지(`i`, 0·1·2…)를 그대로 분으로
+              // 썼는데, 그러면 화면에 박아둔 `'16:48'` 같은 문구와 무관한
+              // 값이 된다. 대화마다 메시지 수가 다르니, 예를 들어 `daysAgo`가
+              // 같고 마지막 메시지가 똑같이 "3개 중 세 번째"인 두 고객은
+              // 화면 시각이 전혀 달라도 정렬 키가 완전히 같아져, 최신순 목록이
+              // 시드에 적힌 순서 그대로 뒤섞여 나왔다(#1087). 초는 그 안에서만
+              // 배열 순서로 미세 조정한다 — 한 대화 안의 메시지는 이미
+              // 시간순으로 적혀 있어 순서가 그대로 유지된다.
               createdAt: chatEpoch.add(
                 Duration(
                   days:
                       _chatSpreadDays -
-                      client.daysAgo +
-                      client.chat[i].dayIndex,
-                  minutes: i,
+                      client.daysAgo -
+                      (lastDayIndex - client.chat[i].dayIndex),
+                  minutes: _minutesOfDay(client.chat[i].timeLabel),
+                  seconds: i,
                 ),
               ),
             ),
@@ -347,7 +390,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v20', today);
+    await db.putValue('trainer_seeded_v22', today);
   });
 }
 
@@ -856,6 +899,20 @@ String _clockOf(String timeLabel) {
     r'(\d{1,2}:\d{2})$',
   ).firstMatch(timeLabel.trim());
   return match?.group(1) ?? timeLabel;
+}
+
+/// `timeLabel` 의 `HH:MM` 을 자정 기준 분으로 읽는다 — 시드 메시지의
+/// `createdAt` 이 화면에 보이는 시각과 어긋나지 않게 하는 데 쓴다(#1087).
+/// 못 읽으면 0 — 그런 라벨은 시드 데이터에 없어야 하니 조용히 자정으로
+/// 미는 편이, 파싱 실패를 감추는 것보다 눈에 띈다(시간이 뭉친다).
+int _minutesOfDay(String timeLabel) {
+  final RegExpMatch? match = RegExp(
+    r'(\d{1,2}):(\d{2})$',
+  ).firstMatch(_clockOf(timeLabel).trim());
+  if (match == null) return 0;
+  final int hour = int.parse(match.group(1)!);
+  final int minute = int.parse(match.group(2)!);
+  return hour * 60 + minute;
 }
 
 /// 시드 스레드가 **답장된 상태로** 시작하는가 — 마지막 말이 트레이너 것이면.

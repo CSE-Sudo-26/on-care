@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get actionSave;
 
+  /// No description provided for @actionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get actionSaved;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:
@@ -1010,12 +1016,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the member profile. Please try again'**
   String get memberHealthSaveFailed;
 
-  /// No description provided for @memberHealthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Body and goals'**
-  String get memberHealthTitle;
-
   /// No description provided for @memberHealthSaving.
   ///
   /// In en, this message translates to:
@@ -1712,6 +1712,12 @@ abstract class AppLocalizations {
   /// **'Preferred time'**
   String get consultPreferredTime;
 
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
+
   /// No description provided for @consultReject.
   ///
   /// In en, this message translates to:
@@ -2209,6 +2215,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Workout completion'**
   String get reportsCompletionAvg;
+
+  /// No description provided for @reportsWeeklyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly completion'**
+  String get reportsWeeklyCompletion;
 
   /// No description provided for @reportsCompletionByDay.
   ///
@@ -4076,6 +4088,18 @@ abstract class AppLocalizations {
   /// **'Booking slot not found.'**
   String get slotNotFound;
 
+  /// No description provided for @slotTypeLockedByBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t change the type of a slot that\'s already booked.'**
+  String get slotTypeLockedByBooking;
+
+  /// No description provided for @slotSessionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get slotSessionType;
+
   /// No description provided for @authErrNotTrainer.
   ///
   /// In en, this message translates to:
@@ -4568,23 +4592,29 @@ abstract class AppLocalizations {
   /// **'Program'**
   String get clientQuickProgram;
 
+  /// No description provided for @clientQuickReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get clientQuickReport;
+
   /// No description provided for @clientHealthGoals.
   ///
   /// In en, this message translates to:
   /// **'Body profile & goals'**
   String get clientHealthGoals;
 
+  /// No description provided for @clientProfileSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Body, goals & memo'**
+  String get clientProfileSectionTitle;
+
   /// No description provided for @clientTrainerMemo.
   ///
   /// In en, this message translates to:
   /// **'Memo'**
   String get clientTrainerMemo;
-
-  /// No description provided for @clientTrainerMemoTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Memos on {name}'**
-  String clientTrainerMemoTitle(String name);
 
   /// No description provided for @clientTrainerMemoHint.
   ///

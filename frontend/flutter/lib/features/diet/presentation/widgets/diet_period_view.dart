@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/core/utils/clock.dart';
-import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/charts/period_scroll_chart.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -711,13 +710,12 @@ class _PeriodBars extends StatelessWidget {
             selectedIndex: selection.selected,
             onSelected: selection.select,
             onVisibleRangeChanged: selection.setVisible,
-            // 목표선은 스크롤 안쪽에 얹는다 — 밀어도 막대와 같은 자리에서
-            // 같은 높이로 따라간다. (#1015)
-            goalOverlay: GoalLineOverlay(
-              visible: hasGoal,
-              bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-              label: '${l.homeGoal} ${format(goal)}',
-            ),
+            // 목표선은 스크롤 안쪽에 얹혀 밀어도 막대와 같은 높이를 따라가고
+            // (#1015), 목표치는 왼쪽 칸에 두 줄로 적힌다 (#1071).
+            goalBottom: hasGoal
+                ? chartHeight * (goal / maxValue).clamp(0.0, 1.0)
+                : null,
+            goalLabel: '${l.homeGoal}\n${format(goal)}',
             labelBuilder: (int i) =>
                 i % labelStep == 0 ? '${dates[i].day}' : '',
             calloutBuilder: (BuildContext context, int i) =>

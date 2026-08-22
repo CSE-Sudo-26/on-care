@@ -50,12 +50,14 @@ List<TrainerSlot> get _slots => <TrainerSlot>[
     trainerId: _trainer.id,
     startsAt: _openAt,
     booked: false,
+    sessionType: '1:1 PT',
   ),
   TrainerSlot(
     id: 'slot-booked',
     trainerId: _trainer.id,
     startsAt: _bookedAt,
     booked: true,
+    sessionType: '1:1 PT',
   ),
 ];
 
@@ -120,12 +122,20 @@ void main() {
   ) async {
     final AppLocalizations l = await pumpTab(tester);
 
-    // 1:1 PT 라 "잔여 N자리"가 성립하지 않는다 — 빈 칩은 시각만 보인다.
+    // 한 사람 몫뿐인 자리라 "잔여 N자리"가 성립하지 않는다 — 빈 칩은 종류와
+    // 시각만 보인다.
     expect(find.textContaining('잔여'), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('slot-chip-slot-open')),
         matching: find.byType(Text),
+      ),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('slot-chip-slot-open')),
+        matching: find.text(l.exSlotTypePersonalTraining),
       ),
       findsOneWidget,
     );

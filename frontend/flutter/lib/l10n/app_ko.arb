@@ -289,6 +289,8 @@
     }
   },
   "exSlotFull": "예약 마감",
+  "exSlotTypePersonalTraining": "1:1 PT",
+  "exSlotTypeConsultation": "상담",
   "exSlotsEmpty": "예약 가능한 시간이 없어요",
   "exSlotsAllBooked": "예약 가능한 시간이 모두 찼어요",
   "exSlotsLoadError": "예약 시간을 불러오지 못했어요.",
