@@ -412,6 +412,7 @@
   "consultExerciseGoal": "Training goal",
   "consultHealthPurpose": "Health purpose",
   "consultPreferredTime": "Preferred time",
+  "consultMessage": "Message",
   "consultReject": "Decline",
   "consultApprove": "Approve",
   "consultRejectTitle": "Decline request",
