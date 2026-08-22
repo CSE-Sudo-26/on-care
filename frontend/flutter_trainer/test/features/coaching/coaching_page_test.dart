@@ -561,8 +561,8 @@ void main() {
         final overview = find.byKey(
           const ValueKey<String>('coaching-wide-client-overview'),
         );
-        final summary = find.byKey(
-          const ValueKey<String>('program-client-summary'),
+        final switcher = find.byKey(
+          const ValueKey<String>('program-client-data-switcher'),
         );
         final nutrition = find.byKey(
           const Key('client-nutrition-summary-card'),
@@ -585,22 +585,13 @@ void main() {
           tester.getCenter(overview).dx,
           greaterThan(tester.getCenter(mainColumn).dx),
         );
-        expect(summary, findsOneWidget);
+        // 고객 요약 카드는 없어졌고(#1027), 그 자리를 식단·운동 영역이
+        // 가져갔다 — 오른쪽 열의 **맨 위**다.
+        expect(find.text('고객 요약'), findsNothing);
+        expect(switcher, findsOneWidget);
         expect(
-          find.descendant(of: summary, matching: find.text('주의 고객')),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: summary, matching: find.text('운동')),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(of: summary, matching: find.text('운동 시간')),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(of: summary, matching: find.text('나트륨 초과')),
-          findsOneWidget,
+          tester.getTopLeft(switcher).dy,
+          closeTo(tester.getTopLeft(overview).dy, 1),
         );
         expect(
           find.byKey(const ValueKey<String>('program-member-completion-chart')),
@@ -616,7 +607,13 @@ void main() {
           lessThan(tester.getTopLeft(sugar).dx),
         );
         _expectNutritionStatusCardsInBounds(tester);
+        // 전송 이력은 편집기 아래가 아니라 오른쪽 열이다 — 이 고객에게 이미
+        // 무엇이 나갔는지는 편집을 다 읽고 나서야 알 일이 아니다. (#1027)
         expect(find.text('전송 이력'), findsOneWidget);
+        expect(
+          find.descendant(of: overview, matching: find.text('전송 이력')),
+          findsOneWidget,
+        );
         expect(
           tester.getBottomRight(sugar).dy,
           lessThanOrEqualTo(tester.view.physicalSize.height),
@@ -694,6 +691,82 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('고객 목록 행에 상대시간이 남아 있지 않다 (#1027)', (tester) async {
+      await openTab(tester);
+      await tester.pumpAndSettle();
+
+      // 씨앗 로스터의 `마지막 루틴` 은 `오늘`/`어제`/`5일 전` 같은 상대시간
+      // 문자열이다. 완료율보다 시선을 먼저 가져가서 지웠다.
+      final row = find.byKey(
+        const ValueKey<String>('program-client-seed-client-1'),
+      );
+      expect(row, findsOneWidget);
+      for (final String stale in <String>['오늘', '어제', '5일 전', '3주 전']) {
+        expect(
+          find.descendant(of: row, matching: find.text(stale)),
+          findsNothing,
+          reason: '$stale 이 아직 줄에 남아 있다',
+        );
+      }
+      // 지운 것은 상대시간뿐이다 — 목표와 이행률은 그대로 있어야 한다.
+      expect(
+        find.descendant(of: row, matching: find.text('운동 이행률')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('운동 쪽에 세트·횟수까지 적힌 상세 내역이 있다 (#1027)', (tester) async {
+      await openTab(tester);
+      await tester.pumpAndSettle();
+
+      final tabs = find.byKey(
+        const ValueKey<String>('program-client-data-tabs'),
+      );
+      await tester.tap(find.descendant(of: tabs, matching: find.text('운동')));
+      await tester.pumpAndSettle();
+
+      // 그래프는 `얼마나 오래` 만 말한다. 다음 프로그램을 짜려면 `무엇을 몇
+      // 세트` 가 함께 있어야 한다.
+      final detail = find.byKey(
+        const ValueKey<String>('client-exercise-detail'),
+      );
+      expect(detail, findsOneWidget);
+      expect(
+        find.descendant(of: detail, matching: find.text('운동 기록')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('오른쪽 고객 데이터 열은 편집기와 따로 스크롤한다 (#1027)', (tester) async {
+      await openTab(tester, size: const Size(1600, 900));
+      await tester.pumpAndSettle();
+
+      final rail = find.byKey(
+        const ValueKey<String>('coaching-wide-client-overview'),
+      );
+      final railScroll = find.byKey(
+        const ValueKey<String>('coaching-client-rail-scroll'),
+      );
+      final pageScroll = find.byKey(
+        const ValueKey<String>('coaching-program-page-scroll'),
+      );
+      expect(rail, findsOneWidget);
+      // 열이 가운데 스크롤 **밖**에 있어야 편집기를 내려도 제자리에 남는다.
+      expect(
+        find.descendant(of: pageScroll, matching: railScroll),
+        findsNothing,
+      );
+
+      final double before = tester.getTopLeft(rail).dy;
+      await tester.drag(pageScroll, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(tester.getTopLeft(rail).dy, closeTo(before, 0.5));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('wide breakpoint keeps nutrition status cards in bounds', (
       tester,
     ) async {
@@ -727,12 +800,12 @@ void main() {
         const ValueKey<String>('program-client-list-scroll'),
       );
       expect(listFinder, findsOneWidget);
-      // 한 줄에 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
-      // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐고(#898), 브라우저 글꼴에서
-      // 마지막 줄이 1px 넘쳐 104 가 됐다(#958). 앱 기본 글씨 배율이 올라가면
-      // 줄 높이도 함께 늘어난다 — 화면과 같은 식으로 기대값을 잡는다. (#995)
+      // 한 줄에 이름 · 목표 · 이행률 세 줄이 들어간다 — `오늘`/`5일 전` 같은
+      // 상대시간 줄을 지우면서 104 에서 88 로 내려왔다(#1027). 앱 기본 글씨
+      // 배율이 올라가면 줄 높이도 함께 늘어난다 — 화면과 같은 식으로 기대값을
+      // 잡는다. (#995)
       final double expectedRow =
-          104 + 84 * (AppTypography.textScale - 1).clamp(0.0, 2.0);
+          88 + 84 * (AppTypography.textScale - 1).clamp(0.0, 2.0);
       expect(tester.getSize(listFinder).height, expectedRow * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);

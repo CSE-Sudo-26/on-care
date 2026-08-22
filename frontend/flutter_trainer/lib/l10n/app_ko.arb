@@ -286,6 +286,8 @@
   "consultRejectAction": "거절하기",
   "consultStatusApproved": "담당 고객으로 등록됨",
   "workoutRecords": "운동 기록",
+  "workoutRecordsShowMore": "더보기",
+  "workoutRecordsShowLess": "접기",
   "workoutLoadFailed": "운동 기록을 불러오지 못했어요",
   "workoutEmpty": "아직 운동 기록이 없어요",
   "routinesAssigned": "배정된 루틴",

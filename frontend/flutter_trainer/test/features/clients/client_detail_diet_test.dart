@@ -360,9 +360,9 @@ void main() {
                   matching: find.byType(ColoredBox),
                 ),
               )
-              .any((box) => box.color == AppColors.userSugarGreen),
+              .any((box) => box.color == AppColors.statusNormal),
           isTrue,
-          reason: '$key 정상 그래프가 사용자 앱 당류 초록색을 써야 합니다.',
+          reason: '$key 정상 그래프가 공용 `정상` 초록을 써야 합니다. (#1027)',
         );
       }
     });

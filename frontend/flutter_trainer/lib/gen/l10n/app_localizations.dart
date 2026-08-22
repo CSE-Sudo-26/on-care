@@ -1766,6 +1766,18 @@ abstract class AppLocalizations {
   /// **'Workout log'**
   String get workoutRecords;
 
+  /// No description provided for @workoutRecordsShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get workoutRecordsShowMore;
+
+  /// No description provided for @workoutRecordsShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get workoutRecordsShowLess;
+
   /// No description provided for @workoutLoadFailed.
   ///
   /// In en, this message translates to:

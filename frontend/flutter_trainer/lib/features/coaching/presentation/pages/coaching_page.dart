@@ -41,7 +41,6 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
-import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
@@ -457,10 +456,12 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   ],
                 );
               }
-              // 넓은 화면은 왼쪽 열(고객 · 프로그램 템플릿)을 고정하고
-              // 오른쪽 카드들만 스크롤한다 — 편집기를 아래로 읽는 동안
-              // 다른 고객으로 넘어가거나 템플릿을 집으려면 왼쪽이 늘 보여야
-              // 한다. 리포트 탭이 이미 같은 구조다. (#958)
+              // 넓은 화면은 **세 열이 각자 스크롤한다.** 왼쪽(고객 · 템플릿)은
+              // #958 이후로 이미 그랬고, 이번에는 오른쪽 고객 데이터 열도
+              // 가운데 편집기 스크롤에서 떼어 냈다(#1027) — 편집기를 아래로
+              // 읽는 동안 지금 고른 고객의 식단·운동이 함께 밀려 올라가면,
+              // 정작 그 데이터를 근거로 짜야 할 프로그램을 쓰면서 근거를 볼
+              // 수 없다. 열을 나누면 오른쪽 열은 제자리에 머무른다.
               return Padding(
                 padding: const EdgeInsets.all(AppLayout.pagePadding),
                 child: Column(
@@ -505,97 +506,85 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                               key: const ValueKey<String>(
                                 'coaching-program-page-scroll',
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Column(
+                                key: const ValueKey<String>(
+                                  'coaching-wide-main-column',
+                                ),
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: <Widget>[
-                                  Expanded(
-                                    child: Column(
-                                      key: const ValueKey<String>(
-                                        'coaching-wide-main-column',
-                                      ),
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: <Widget>[
-                                        if (!_showOptionsFlow) ...<Widget>[
-                                          _AiAssistantPrompt(
-                                            key: const ValueKey<String>(
-                                              'coaching-wide-ai-prompt',
-                                            ),
-                                            clientName: selected.name,
-                                            onTap: () => setState(
-                                              () => _showOptionsFlow = true,
-                                            ),
-                                          ),
-                                          const SizedBox(height: AppSpacing.lg),
-                                        ],
-                                        if (!fullWidth) ...<Widget>[
-                                          Row(
-                                            key: const ValueKey<String>(
-                                              'coaching-wide-client-overview',
-                                            ),
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: <Widget>[
-                                              SizedBox(
-                                                width: 300,
-                                                child: _ProgramMemberSummary(
-                                                  key: const ValueKey<String>(
-                                                    'program-client-summary',
-                                                  ),
-                                                  client: selected,
-                                                ),
-                                              ),
-                                              const SizedBox(
-                                                width: AppSpacing.lg,
-                                              ),
-                                              Expanded(
-                                                child: _ClientDataSwitcher(
-                                                  client: selected,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: AppSpacing.lg),
-                                        ],
-                                        ..._suggestionChildren(selected),
-                                        ..._editorChildren(
-                                          selected,
-                                          showAssistant: false,
-                                        ),
-                                        // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
-                                        ...?_savedProgramsCard(),
-                                        const SizedBox(height: AppSpacing.lg),
-                                        _SendHistoryCard(client: selected),
-                                      ],
-                                    ),
-                                  ),
-                                  if (fullWidth) ...<Widget>[
-                                    const SizedBox(width: AppSpacing.lg),
-                                    SizedBox(
+                                  // 오른쪽 열을 세울 만큼 넓지 않은 창에서는
+                                  // 식단·운동이 가운데 열 **맨 위**에 온다 —
+                                  // 넓은 화면의 오른쪽 열 맨 위와 같은 자리다.
+                                  // 예전에는 고객 요약 카드가 그 자리를 차지하고
+                                  // 데이터는 그 옆(또는 아래)이었다. 좁은 화면
+                                  // (`_contextChildren`)도 이미 이 순서다.
+                                  if (!fullWidth) ...<Widget>[
+                                    _ClientDataSwitcher(
                                       key: const ValueKey<String>(
                                         'coaching-wide-client-overview',
                                       ),
-                                      width: 360,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: <Widget>[
-                                          _ProgramMemberSummary(
-                                            key: const ValueKey<String>(
-                                              'program-client-summary',
-                                            ),
-                                            client: selected,
-                                          ),
-                                          const SizedBox(height: AppSpacing.lg),
-                                          _ClientDataSwitcher(client: selected),
-                                        ],
+                                      client: selected,
+                                    ),
+                                    const SizedBox(height: AppSpacing.lg),
+                                  ],
+                                  if (!_showOptionsFlow) ...<Widget>[
+                                    _AiAssistantPrompt(
+                                      key: const ValueKey<String>(
+                                        'coaching-wide-ai-prompt',
+                                      ),
+                                      clientName: selected.name,
+                                      onTap: () => setState(
+                                        () => _showOptionsFlow = true,
                                       ),
                                     ),
+                                    const SizedBox(height: AppSpacing.lg),
+                                  ],
+                                  ..._suggestionChildren(selected),
+                                  ..._editorChildren(
+                                    selected,
+                                    showAssistant: false,
+                                  ),
+                                  // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
+                                  ...?_savedProgramsCard(),
+                                  // 전송 이력은 오른쪽 열이 있으면 그쪽이 든다.
+                                  // 열이 없는 폭에서만 여기 아래에 남는다.
+                                  if (!fullWidth) ...<Widget>[
+                                    const SizedBox(height: AppSpacing.lg),
+                                    _SendHistoryCard(client: selected),
                                   ],
                                 ],
                               ),
                             ),
                           ),
+                          if (fullWidth) ...<Widget>[
+                            const SizedBox(width: AppSpacing.lg),
+                            SizedBox(
+                              key: const ValueKey<String>(
+                                'coaching-wide-client-overview',
+                              ),
+                              width: 360,
+                              // 가운데 열과 **다른 스크롤**이다 — 편집기를 아래로
+                              // 읽어도 이 열은 제자리에 머문다. 열 자체가 화면보다
+                              // 길어질 때만 이 안에서 따로 움직인다.
+                              child: SingleChildScrollView(
+                                key: const ValueKey<String>(
+                                  'coaching-client-rail-scroll',
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    // 식단·운동이 열의 맨 위다. 고객을 고른 뒤
+                                    // 가장 자주 보는 값이 가장 먼저 온다.
+                                    _ClientDataSwitcher(client: selected),
+                                    const SizedBox(height: AppSpacing.lg),
+                                    _SendHistoryCard(client: selected),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -640,7 +629,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         ),
       ),
       const SizedBox(height: AppSpacing.lg),
-      NutritionSummaryCard(client: client),
+      // 좁은 화면도 넓은 화면과 같은 것을 본다 — 오늘의 영양 카드 하나만
+      // 붙여 두면 이 폭에서는 운동 데이터를 볼 길이 아예 없었다.
+      _ClientDataSwitcher(client: client),
     ];
   }
 
@@ -967,13 +958,15 @@ class _MemberProgramList extends StatefulWidget {
 }
 
 class _MemberProgramListState extends State<_MemberProgramList> {
-  /// 한 줄 높이. 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
-  /// 목표가 `lastRoutine` 과 자리를 다투지 않고 늘 보이게 되면서(#898)
-  /// 한 줄만큼 높아졌다.
+  /// 한 줄 높이. 이름 · 목표 · 이행률 세 줄이 들어간다.
   ///
-  /// 웹에서는 이 값이 100 일 때 줄 안의 글이 1px 넘쳐 줄무늬가 떴다 — 브라우저
-  /// 기본 글꼴의 줄 높이가 테스트 글꼴보다 살짝 크다. 넘치는 만큼만 올린다.
-  static const double _baseRowHeight = 104;
+  /// 예전에는 `오늘`/`5일 전` 같은 마지막 루틴 시각이 한 줄 더 있었다. 지웠다
+  /// (#1027) — 목록을 훑는 이유는 누가 처지는지 견주려는 것이고, 그 답은
+  /// 이행률 막대가 한다. 상대시간은 그 옆에서 시선만 가져갔다.
+  ///
+  /// 웹에서는 줄 안의 글이 브라우저 기본 글꼴로 몇 px 넘쳐 줄무늬가 뜬 적이
+  /// 있다(#958) — 테스트 글꼴보다 줄 높이가 살짝 크다. 그만큼 여유를 둔다.
+  static const double _baseRowHeight = 88;
   static const int _visibleRows = 5;
 
   final ScrollController _scroll = ScrollController();
@@ -1079,16 +1072,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                 // 비었을 때만 그 자리를 빌려 써서, 루틴을 한
                                 // 번이라도 보낸 고객은 목표가 사라졌다(#898).
                                 ClientGoalLabel(client: client),
-                                const SizedBox(height: 2),
-                                Text(
-                                  client.lastRoutine,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppColors.mutedForeground,
-                                    fontSize: 11.5,
-                                  ),
-                                ),
                                 const SizedBox(height: 4),
                                 // 이행률은 막대로 그린다 — 숫자만 적혀 있으면
                                 // 목록을 훑으며 누가 처지는지 견주려고 다섯
@@ -1147,96 +1130,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   }
 }
 
-class _ProgramMemberSummary extends ConsumerWidget {
-  const _ProgramMemberSummary({super.key, required this.client});
-
-  final TrainerClient client;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final sessions = ref
-        .watch(clientSessionsProvider((id: client.id, name: client.name)))
-        .valueOrNull;
-    final completed = sessions?.where((session) => session.isDone);
-    final latest = completed == null || completed.isEmpty
-        ? null
-        : completed.first;
-    final exercises = latest?.program
-        .map((exercise) => exercise.name)
-        .where((name) => name.isNotEmpty)
-        .toList(growable: false);
-    final workout = exercises == null || exercises.isEmpty
-        ? '-'
-        : exercises.take(2).join(' · ');
-    final minutes = latest?.durationMinutes;
-    final dietAlerts = <ClientAlert>[
-      if (client.sodiumOverBudget) ClientAlert.sodiumOver,
-      if (client.sugarOverBudget) ClientAlert.sugarOver,
-    ];
-    return SectionCard(
-      title: l.coachMemberSummary,
-      dense: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              ClientAvatar(label: client.avatar, size: 42),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    ClientIdentity(
-                      client: client,
-                      nameStyle: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.foreground,
-                      ),
-                    ),
-                    Text(
-                      client.goal,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.mutedForeground,
-                        fontSize: 11.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (dietAlerts.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              key: const ValueKey<String>('program-client-health-alerts'),
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: <Widget>[
-                for (final alert in dietAlerts) AlertBadge(alert: alert),
-              ],
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          _SummaryLine(label: l.clientTabWorkout, value: workout),
-          _SummaryLine(
-            label: l.routineFieldMinutes,
-            value: minutes == null || minutes == 0
-                ? '-'
-                : l.minutesShort(minutes),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _WeekCompletionBars(client: client),
-        ],
-      ),
-    );
-  }
-}
-
 /// 요일별 운동 이행률(월→일). (#899)
 ///
 /// 프로그램을 짜는 화면인데 이 회원의 한 주가 어떻게 흘렀는지가 없었다 —
@@ -1244,6 +1137,9 @@ class _ProgramMemberSummary extends ConsumerWidget {
 ///
 /// 리포트 탭이 쓰는 [BarSeriesChart] 를 그대로 쓴다. 두 탭이 같은 그림으로
 /// 말해야 트레이너가 같은 값을 두 번 읽지 않는다.
+///
+/// 요약 카드가 사라진 뒤로는 `운동` 쪽 아래에 선다(#1027). 제목은 카드가
+/// 들므로 그래프 위에 같은 문구를 한 번 더 적지 않는다.
 class _WeekCompletionBars extends StatelessWidget {
   const _WeekCompletionBars({required this.client});
 
@@ -1253,21 +1149,13 @@ class _WeekCompletionBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final week = client.weekCompletion;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Text(
-          l.reportsCompletionByDay,
-          style: const TextStyle(
-            color: AppColors.subtleForeground,
-            fontSize: 10.5,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        if (week.length != weekdayCount)
-          EmptyHint(message: l.reportsNoWorkoutsThisWeek)
-        else
-          BarSeriesChart(
+    return SectionCard(
+      title: l.reportsCompletionByDay,
+      icon: Icons.calendar_view_week_outlined,
+      dense: true,
+      child: week.length != weekdayCount
+          ? EmptyHint(message: l.reportsNoWorkoutsThisWeek)
+          : BarSeriesChart(
             key: const ValueKey<String>('program-week-completion-chart'),
             title: l.reportsCompletionByDay,
             values: week,
@@ -1285,15 +1173,21 @@ class _WeekCompletionBars extends StatelessWidget {
                 if (i < week.length && week[i] == 0) i,
             },
           ),
-      ],
     );
   }
 }
 
 enum _ClientDataView { diet, workout }
 
+/// 고른 고객의 식단 · 운동 — 프로그램 탭에서 가장 자주 보는 값이다.
+///
+/// 넓은 화면에서는 오른쪽 열의 맨 위, 좁은 화면에서는 페이지 맨 위에 온다.
+/// 예전에는 고객 요약 카드가 그 자리를 차지하고 이 영역이 그 아래(또는
+/// 옆)였다 — 요약 카드가 말하던 것(이름 · 목표 · 최근 세션 · 초과 배지)은
+/// 왼쪽 고객 목록과 아래 카드들이 이미 하고 있어, 카드를 지우고 자리를
+/// 넘겼다(#1027).
 class _ClientDataSwitcher extends ConsumerStatefulWidget {
-  const _ClientDataSwitcher({required this.client});
+  const _ClientDataSwitcher({super.key, required this.client});
 
   final TrainerClient client;
 
@@ -1344,32 +1238,42 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          child: _view == _ClientDataView.diet
-              ? _period == ClientPeriod.today
-                    ? NutritionSummaryCard(
-                        key: ValueKey<String>(
-                          'program-diet-${widget.client.id}',
-                        ),
-                        client: widget.client,
-                      )
-                    : ClientDietPeriodCard(
-                        // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길
-                        // 때마다 카드가 새로 만들어져, 나트륨을 보다 기간만
-                        // 넓힌 트레이너가 지표를 다시 골라야 했다.
-                        key: ValueKey<String>(
-                          'program-diet-period-${widget.client.id}',
-                        ),
-                        clientId: widget.client.id,
-                        period: _period,
-                      )
-              : ClientExerciseStatusCard(
-                  key: ValueKey<String>('program-workout-${widget.client.id}'),
-                  clientId: widget.client.id,
-                  period: _period,
-                ),
-        ),
+        // 전환에 애니메이션을 두지 않는다(#1027). 식단 그래프는 움직이지 않는
+        // 그림이어야 한다는 것이 이번 결정이고, 카드를 페이드로 바꾸면 기간을
+        // 옮길 때마다 그 그래프가 다시 떠오른다.
+        if (_view == _ClientDataView.diet)
+          if (_period == ClientPeriod.today)
+            NutritionSummaryCard(
+              key: ValueKey<String>('program-diet-${widget.client.id}'),
+              client: widget.client,
+            )
+          else
+            ClientDietPeriodCard(
+              // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길 때마다 카드가
+              // 새로 만들어져, 나트륨을 보다 기간만 넓힌 트레이너가 지표를
+              // 다시 골라야 했다.
+              key: ValueKey<String>(
+                'program-diet-period-${widget.client.id}',
+              ),
+              clientId: widget.client.id,
+              period: _period,
+            )
+        else ...<Widget>[
+          ClientExerciseStatusCard(
+            key: ValueKey<String>('program-workout-${widget.client.id}'),
+            clientId: widget.client.id,
+            period: _period,
+            // 운동 그래프 아래에 세트 · 횟수 · 시간을 붙인다. 그래프는 "얼마나
+            // 오래" 만 말해서, 다음 프로그램을 짤 때 정작 필요한 "무엇을 몇
+            // 세트" 가 화면 밖에 있었다.
+            clientName: widget.client.name,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // 요약 카드가 들고 있던 그림이다. 카드는 지웠지만 이 그래프는
+          // 운동 데이터라 운동 쪽으로 옮겼다 — 어느 요일이 비었는지가 다음
+          // 주 프로그램을 정하는 자료다.
+          _WeekCompletionBars(client: widget.client),
+        ],
       ],
     );
   }
@@ -1477,43 +1381,6 @@ class _ClientDataTab extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SummaryLine extends StatelessWidget {
-  const _SummaryLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.subtleForeground,
-              fontSize: 10.5,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.foreground,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ),
     );
   }

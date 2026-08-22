@@ -9,6 +9,10 @@
 ///    않도록. x 좌표는 7칸 기준 그대로라 주끼리 정렬된다.
 ///  * 점 색은 그날이 목표를 넘겼는지만 말한다(초과=빨강, 그 외=초록).
 ///  * 목표선은 그리지 않는다. 눈금과 겹치면 선이 두꺼워 보였다.
+///  * **진입 애니메이션이 없다.** 이 그래프는 식단 지표(칼로리·나트륨·당류)만
+///    그리는데, 트레이너는 고객을 바꾸고 기간을 바꾸며 하루에도 여러 번 다시
+///    읽는다. 그때마다 선이 처음부터 그려지면 값을 읽기까지 기다려야 했다.
+///    (#1027 — #653 에서 넣었던 것을 되돌린다)
 library;
 
 import 'dart:math' as math;
@@ -27,8 +31,13 @@ const Color kMetricTrendLine = Color(0xFFDDE2E8);
 ///
 /// 목표가 0 이면 초과로 보지 않는다 — 목표 없는 지표의 모든 기록이 빨간 점이
 /// 되어 버린다.
+///
+/// 정상 초록은 [AppColors.statusNormal] 이다. 예전에는 `완료` 초록
+/// ([AppColors.success], `#34C759`)이라 같은 화면의 나트륨·당류 카드가 말하는
+/// `정상`(`#22A882`)과 초록이 두 가지였다 — 카드에서 정상인 날이 그래프에서는
+/// 다른 초록으로 찍혔다. (#1027)
 Color metricStatusColor(double v, double goal) =>
-    goal > 0 && v > goal ? AppColors.overTarget : AppColors.success;
+    goal > 0 && v > goal ? AppColors.overTarget : AppColors.statusNormal;
 
 /// 소수 첫째 자리까지만 남기고 정수는 콤마만. 당류 17.8 이 18 로 반올림돼
 /// 요약 수치와 어긋나지 않도록.
@@ -64,7 +73,6 @@ class MetricTrendChart extends StatelessWidget {
     required this.goal,
     required this.ticks,
     required this.todayIndex,
-    required this.replayKey,
     required this.semanticsLabel,
     this.goalLabel,
     required this.formatTick,
@@ -93,9 +101,6 @@ class MetricTrendChart extends StatelessWidget {
   /// 오늘인 것처럼 읽힌다(#752).
   final bool markToday;
 
-  /// 바뀌면 진입 애니메이션을 처음부터 다시 그린다.
-  final Object replayKey;
-
   /// 그래프가 말하는 내용 한 문장. `CustomPaint` 는 시맨틱 트리에 아무 노드도
   /// 남기지 않아, 이게 없으면 그래프가 음성 안내에서 통째로 사라진다(#972).
   /// `chartSemanticsLabel` 로 만든다 — 지표 이름과 단위는 부르는 쪽만 안다.
@@ -113,8 +118,11 @@ class MetricTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (lo, hi) = metricTrendScale(values: values, ticks: ticks, goal: goal);
-    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final (lo, hi) = metricTrendScale(
+      values: values,
+      ticks: ticks,
+      goal: goal,
+    );
     // 눈금·요일 라벨은 낱개로 읽어 봐야 `월` `화` 뿐이라 그래프가 무슨 값을
     // 말하는지 알 수 없다. 한 덩어리로 묶고 요약 한 문장만 읽힌다.
     return Semantics(
@@ -145,19 +153,7 @@ class MetricTrendChart extends StatelessWidget {
             Expanded(
               child: Column(
                 children: <Widget>[
-                  SizedBox(
-                    height: height,
-                    child: still
-                        ? _paint(1, lo, hi)
-                        : TweenAnimationBuilder<double>(
-                            // 키가 바뀌면 tween 이 0부터 다시 시작한다.
-                            key: ValueKey<Object>(replayKey),
-                            tween: Tween<double>(begin: 0, end: 1),
-                            duration: const Duration(milliseconds: 620),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, t, _) => _paint(t, lo, hi),
-                          ),
-                  ),
+                  SizedBox(height: height, child: _paint(lo, hi)),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,7 +198,7 @@ class MetricTrendChart extends StatelessWidget {
     );
   }
 
-  Widget _paint(double t, double lo, double hi) => CustomPaint(
+  Widget _paint(double lo, double hi) => CustomPaint(
     size: Size.infinite,
     painter: MetricTrendPainter(
       cur: values,
@@ -211,7 +207,6 @@ class MetricTrendChart extends StatelessWidget {
       lo: lo,
       hi: hi,
       todayIndex: todayIndex,
-      progress: t,
     ),
   );
 }
@@ -229,7 +224,6 @@ class MetricTrendPainter extends CustomPainter {
     required this.lo,
     required this.hi,
     required this.todayIndex,
-    this.progress = 1,
   });
 
   /// 요일별 값(월→일).
@@ -249,10 +243,6 @@ class MetricTrendPainter extends CustomPainter {
 
   /// 선을 여기까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
   final int todayIndex;
-
-  /// 0 → 1 진입 애니메이션 진행도. 선은 월요일부터 오늘 쪽으로 이어지고,
-  /// 각 데이터 포인트와 값 라벨은 선이 도달하는 순간 나타난다.
-  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -276,17 +266,10 @@ class MetricTrendPainter extends CustomPainter {
       for (var i = 0; i <= lastIdx; i++) Offset(dx(i), dy(cur[i])),
     ];
 
-    final p = progress.clamp(0.0, 1.0);
-    final drawn = lastIdx * p;
     if (lastIdx > 0) {
       final line = Path()..moveTo(pts.first.dx, pts.first.dy);
-      final whole = drawn.floor().clamp(0, lastIdx);
-      for (var i = 1; i <= whole; i++) {
+      for (var i = 1; i <= lastIdx; i++) {
         line.lineTo(pts[i].dx, pts[i].dy);
-      }
-      if (whole < lastIdx) {
-        final tip = Offset.lerp(pts[whole], pts[whole + 1], drawn - whole)!;
-        line.lineTo(tip.dx, tip.dy);
       }
       canvas.drawPath(
         line,
@@ -300,45 +283,25 @@ class MetricTrendPainter extends CustomPainter {
     }
 
     for (var i = 0; i <= lastIdx; i++) {
-      // 선이 이 점에 닿기 직전부터 짧게 페이드인한다.
-      final a = lastIdx == 0 ? p : ((drawn - i) / 0.35 + 1).clamp(0.0, 1.0);
-      if (a <= 0) continue;
       final sc = metricStatusColor(cur[i], goal);
-      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2, alpha: a);
-      _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc, alpha: a);
+      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
+      _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc);
     }
   }
 
-  void _dot(
-    Canvas c,
-    Offset o,
-    Color color, {
-    double r = 3.0,
-    double alpha = 1,
-  }) {
-    c.drawCircle(
-      o,
-      r + 1.3,
-      Paint()..color = AppColors.card.withValues(alpha: alpha),
-    );
-    c.drawCircle(o, r, Paint()..color = color.withValues(alpha: alpha));
+  void _dot(Canvas c, Offset o, Color color, {double r = 3.0}) {
+    c.drawCircle(o, r + 1.3, Paint()..color = AppColors.card);
+    c.drawCircle(o, r, Paint()..color = color);
   }
 
-  void _text(
-    Canvas c,
-    String s,
-    Offset at,
-    double w,
-    Color color, {
-    double alpha = 1,
-  }) {
+  void _text(Canvas c, String s, Offset at, double w, Color color) {
     final tp = TextPainter(
       text: TextSpan(
         text: s,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: color.withValues(alpha: alpha),
+          color: color,
         ),
       ),
       textDirection: ui.TextDirection.ltr,
@@ -356,6 +319,5 @@ class MetricTrendPainter extends CustomPainter {
       old.ticks != ticks ||
       old.lo != lo ||
       old.hi != hi ||
-      old.todayIndex != todayIndex ||
-      old.progress != progress;
+      old.todayIndex != todayIndex;
 }
