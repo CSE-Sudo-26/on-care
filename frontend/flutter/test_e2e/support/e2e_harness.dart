@@ -39,6 +39,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String memberEmail = 'minsu@oncare.com';
 const String otherMemberEmail = 'jisu@oncare.com';
+
 /// 픽스처 전용. 정원 1 짜리 경쟁용 슬롯을 여는 데만 쓴다.
 const String trainerEmail = 'trainer@oncare.com';
 const String trainerId = 'trainer-demo';
@@ -185,20 +186,17 @@ class E2eApi {
 
   /// 상담을 API 로 만든다. **UI 검증용이 아니라** 예외 케이스(중복·권한)용이다 —
   /// 그쪽은 화면이 아니라 서버 규칙을 보는 자리다.
-  Map<String, Object?> _consultationBody(String trainerId) =>
-      <String, Object?>{
-        'target_type': 'trainer',
-        'trainer_id': trainerId,
-        'exercise_goal': 'strength',
-        'health_purpose_type': 'rehab',
-        'preferred_date': DateTime.now()
-            .toIso8601String()
-            .substring(0, 10),
-        'preferred_time_slot': 'evening',
-        'message': 'E2E 예외 케이스',
-        // 동의 없이는 서버가 422 다 (#1022).
-        'data_sharing_consent': true,
-      };
+  Map<String, Object?> _consultationBody(String trainerId) => <String, Object?>{
+    'target_type': 'trainer',
+    'trainer_id': trainerId,
+    'exercise_goal': 'strength',
+    'health_purpose_type': 'rehab',
+    'preferred_date': DateTime.now().toIso8601String().substring(0, 10),
+    'preferred_time_slot': 'evening',
+    'message': 'E2E 예외 케이스',
+    // 동의 없이는 서버가 422 다 (#1022).
+    'data_sharing_consent': true,
+  };
 
   Future<Map<String, dynamic>> createConsultation({
     required String trainerId,
@@ -268,10 +266,7 @@ class E2eApi {
   }
 
   Future<void> deleteTrainerSession(String sessionId) async {
-    await _dio.delete<Object?>(
-      '/trainer/schedule/$sessionId',
-      options: _auth,
-    );
+    await _dio.delete<Object?>('/trainer/schedule/$sessionId', options: _auth);
   }
 
   Future<List<Map<String, dynamic>>> myReservations() =>
@@ -357,21 +352,19 @@ class E2eApi {
   Future<List<Map<String, dynamic>>> trainerThread(String memberId) =>
       _list('/trainer/clients/$memberId/chat');
 
-  /// 픽스처용 — 트레이너 계정으로 정원 [capacity] 짜리 슬롯을 연다.
-  ///
-  /// 마지막 좌석 경쟁은 **정원이 1 인 자리**에서만 정직하게 재현된다. 담당 회원 계정이
-  /// 둘뿐이라, 정원 2 짜리 자리에서는 한쪽이 먼저 자리를 채우는 순간 다른 쪽의 두 번째
-  /// 요청이 '중복' 으로 걸려 경쟁이 아니게 된다.
+  /// 픽스처용 — 트레이너 계정으로 슬롯을 연다. 정원은 늘 1이다(#1012) — 서버가
+  /// 무엇을 보내든 그렇게 만든다. [sessionType] 만 고른다(`1:1 PT`/`상담`,
+  /// #1083).
   Future<Map<String, dynamic>> createSlotAsTrainer({
     required DateTime startsAt,
-    required int capacity,
+    String sessionType = '1:1 PT',
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
           '/trainer/reservation-slots',
           data: <String, Object?>{
             'starts_at': startsAt.toUtc().toIso8601String(),
-            'capacity': capacity,
+            'session_type': sessionType,
           },
           options: _auth,
         );
@@ -545,7 +538,9 @@ String _describeOverflow(FlutterErrorDetails details) {
 void _watchForOverflow() {
   final void Function(FlutterErrorDetails)? logging = FlutterError.onError;
   FlutterError.onError = (FlutterErrorDetails details) {
-    if (_isRenderOverflow(details)) _renderOverflows.add(_describeOverflow(details));
+    if (_isRenderOverflow(details)) {
+      _renderOverflows.add(_describeOverflow(details));
+    }
     logging?.call(details);
   };
 

@@ -2292,9 +2292,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAskFailed => 'Couldn\'t send your question';
 
   @override
-  String get slotCapacityRange => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotFutureOnly =>
       'Booking slots can only be set for future times.';
 
@@ -2302,8 +2299,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotNotFound => 'Booking slot not found.';
 
   @override
-  String get slotCapacityBelowBooked =>
-      'Capacity can\'t be lower than the number already booked.';
+  String get slotTypeLockedByBooking =>
+      'Can\'t change the type of a slot that\'s already booked.';
+
+  @override
+  String get slotSessionType => 'Type';
 
   @override
   String get authErrNotTrainer => 'Please sign in with a trainer account.';

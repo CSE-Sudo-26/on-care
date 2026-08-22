@@ -2198,16 +2198,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachAskFailed => '질문을 보낼 수 없어요';
 
   @override
-  String get slotCapacityRange => '정원은 1명 이상 100명 이하이어야 합니다.';
-
-  @override
   String get slotFutureOnly => '현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.';
 
   @override
   String get slotNotFound => '예약 슬롯을 찾을 수 없습니다.';
 
   @override
-  String get slotCapacityBelowBooked => '이미 예약된 인원보다 정원을 줄일 수 없습니다.';
+  String get slotTypeLockedByBooking => '이미 예약된 자리의 종류는 바꿀 수 없습니다.';
+
+  @override
+  String get slotSessionType => '종류';
 
   @override
   String get authErrNotTrainer => '트레이너 계정으로 로그인해 주세요.';
