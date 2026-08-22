@@ -86,9 +86,12 @@ void main() {
     clientExercisePeriodProvider.overrideWith(
       (ref, key) async => _fixture(
         key,
-        cardio: const <int>[20, 0, 30, 0, 10, 0, 0],
-        strength: const <int>[25, 0, 15, 0, 30, 0, 0],
-        stretch: const <int>[15, 0, 0, 0, 20, 0, 0],
+        // `전체`의 두 번째 주가 실행 요일과 무관하게 기록을 갖도록 2주치다.
+        // 7일치뿐이면 84일 범위가 월요일에 시작하는 날에는 두 번째 막대가
+        // 비어, 주말에만 테스트가 깨진다.
+        cardio: const <int>[20, 0, 30, 0, 10, 0, 0, 20, 0, 30, 0, 10, 0, 0],
+        strength: const <int>[25, 0, 15, 0, 30, 0, 0, 25, 0, 15, 0, 30, 0, 0],
+        stretch: const <int>[15, 0, 0, 0, 20, 0, 0, 15, 0, 0, 0, 20, 0, 0],
       ),
     ),
   ];
