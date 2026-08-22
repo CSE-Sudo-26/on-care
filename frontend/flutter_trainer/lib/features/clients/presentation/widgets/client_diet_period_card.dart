@@ -356,7 +356,6 @@ class _Body extends StatelessWidget {
                 // 선은 오늘까지만 잇는다. 아직 오지 않은 요일의 0 이 급락처럼
                 // 보이면 안 된다.
                 todayIndex: today,
-                replayKey: label,
                 // 카드 머리의 지표 이름으로 시작한다 — 음성 안내에서도 이
                 // 그래프가 무엇의 것인지가 먼저 들린다(#972).
                 semanticsLabel: chartSemanticsLabel(
@@ -595,8 +594,10 @@ class _MacroBar extends StatelessWidget {
         ? 0
         : d.carbsKcal + d.proteinKcal + d.fatKcal;
     if (d == null || !d.hasMacros || total <= 0) {
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+      // 높이가 바뀔 때 애니메이션하지 않는다 — 기간을 옮길 때마다 서른 칸이
+      // 함께 자라나면, 값을 읽으려는 사람이 그림이 멈추기를 기다려야
+      // 한다. (#1027)
+      return Container(
         height: height,
         decoration: BoxDecoration(
           color: !logged
@@ -605,7 +606,11 @@ class _MacroBar extends StatelessWidget {
               ? AppColors.border
               : over
               ? AppColors.overTarget.withValues(alpha: 0.85)
-              : AppColors.primary.withValues(alpha: 0.85),
+              // 식단 그래프의 정상 막대는 카드가 말하는 `정상` 과 같은
+              // 초록이다([AppColors.dietChart] = statusNormal). 예전에는 브랜드
+              // 남색이라, 같은 날이 카드에서는 초록 · 그래프에서는 남색이었다.
+              // (#1027)
+              : AppColors.dietChart.withValues(alpha: 0.85),
           borderRadius: radius,
         ),
       );

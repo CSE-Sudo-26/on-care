@@ -946,6 +946,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutRecords => 'Workout log';
 
   @override
+  String get workoutRecordsShowMore => 'Show more';
+
+  @override
+  String get workoutRecordsShowLess => 'Show less';
+
+  @override
   String get workoutLoadFailed => 'Couldn\'t load the workout log';
 
   @override

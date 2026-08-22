@@ -421,6 +421,8 @@
   "consultRejectAction": "Decline",
   "consultStatusApproved": "Added as a client",
   "workoutRecords": "Workout log",
+  "workoutRecordsShowMore": "Show more",
+  "workoutRecordsShowLess": "Show less",
   "workoutLoadFailed": "Couldn't load the workout log",
   "workoutEmpty": "No workouts logged yet",
   "routinesAssigned": "Assigned routines",

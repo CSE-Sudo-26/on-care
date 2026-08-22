@@ -909,6 +909,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get workoutRecords => '운동 기록';
 
   @override
+  String get workoutRecordsShowMore => '더보기';
+
+  @override
+  String get workoutRecordsShowLess => '접기';
+
+  @override
   String get workoutLoadFailed => '운동 기록을 불러오지 못했어요';
 
   @override

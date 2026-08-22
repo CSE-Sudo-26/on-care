@@ -39,6 +39,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// 요일별 이행률 그래프는 이제 `운동` 쪽에 있다(#1027) — 요약 카드가
+  /// 사라지면서 운동 데이터끼리 모였다.
+  Future<void> openWorkout(WidgetTester tester) async {
+    final tabs = find.byKey(const ValueKey<String>('program-client-data-tabs'));
+    expect(tabs, findsOneWidget);
+    await tester.tap(find.descendant(of: tabs, matching: find.text('운동')));
+    await tester.pumpAndSettle();
+  }
+
   Finder rowBar(String id) => find.descendant(
     of: find.byKey(ValueKey<String>('program-client-$id')),
     matching: find.byType(InlineBarValue),
@@ -138,11 +147,12 @@ void main() {
     expect(colorOf('운동 이행률'), AppColors.disabledForeground);
   });
 
-  testWidgets('회원 요약 카드에 요일별 이행률 막대그래프가 보인다', (tester) async {
+  testWidgets('운동 쪽에 요일별 이행률 막대그래프가 보인다', (tester) async {
     const week = <int>[80, 0, 90, 70, 60, 50, 40];
     await openCoaching(tester, <TrainerClient>[
       makeClient(id: 'week', name: '주간고객', weekCompletion: week),
     ]);
+    await openWorkout(tester);
 
     final chart = tester.widget<BarSeriesChart>(
       find.byKey(const ValueKey<String>('program-week-completion-chart')),
@@ -161,6 +171,7 @@ void main() {
     await openCoaching(tester, <TrainerClient>[
       makeClient(id: 'short', name: '짧은계열', weekCompletion: const <int>[80]),
     ]);
+    await openWorkout(tester);
 
     expect(
       find.byKey(const ValueKey<String>('program-week-completion-chart')),
