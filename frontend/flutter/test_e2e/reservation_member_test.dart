@@ -34,11 +34,7 @@ void main() {
 
         // 트레이너가 만든 자리가 담당 회원에게 실제로 보이는가.
         final Map<String, dynamic>? before = await api.slotById(slotId);
-        expect(
-          before,
-          isNotNull,
-          reason: '트레이너가 연 슬롯이 회원 조회에 나오지 않습니다.',
-        );
+        expect(before, isNotNull, reason: '트레이너가 연 슬롯이 회원 조회에 나오지 않습니다.');
         expect(before!['remaining'], capacity);
 
         await bootSignedOut(tester);
@@ -152,11 +148,12 @@ void main() {
         // 계정의 예약은 거절되는 것이 아니라 두 번째 좌석을 정상적으로 가져간다.
         final String slotId = state.require('slotId');
         final int capacity = state.requireInt('slotCapacity');
-        expect(capacity, 2, reason: '이 단계는 정원 2 를 전제로 합니다.');
 
         final E2eApi other = await E2eApi.login(otherMemberEmail);
+        final E2eApi trainer = await E2eApi.login(trainerEmail);
 
-        // 1) 같은 회원이 같은 자리를 두 번 잡으면 좌석이 두 번 빠진다.
+        // 1) 같은 회원이 같은 자리를 두 번 잡으면 좌석이 두 번 빠진다. 화면이
+        //    만든 슬롯(정원 1, #1012)으로 충분하다 — 정원 크기와 무관한 계약이다.
         expect((await api.reserveRaw(slotId)).statusCode, 201);
         expect(
           (await api.reserveRaw(slotId)).statusCode,
@@ -165,20 +162,30 @@ void main() {
         );
         expect((await api.slotById(slotId))!['remaining'], capacity - 1);
 
-        // 2) 정원까지는 다른 담당 회원이 채울 수 있고, 그 다음은 막혀야 한다.
-        expect((await other.reserveRaw(slotId)).statusCode, 201);
-        expect((await api.slotById(slotId))!['remaining'], 0);
+        // 2) 정원이 여럿인 자리는 서버 계약으로는 여전히 지원된다 — 화면은 늘
+        //    정원 1 짜리만 만들지만(#1012), 다른 경로로 연 자리는 담당 회원
+        //    둘이 하나씩 채우고 그 다음은 막혀야 한다. 이 단계 전용으로 새로
+        //    연다 — 화면이 만든 슬롯에 기댈 수 없다.
+        final Map<String, dynamic> capacitySlot = await trainer
+            .createSlotAsTrainer(
+              startsAt: DateTime.now().add(const Duration(days: 2)),
+              capacity: 2,
+            );
+        final String capacitySlotId = capacitySlot['id'] as String;
+        expect((await api.reserveRaw(capacitySlotId)).statusCode, 201);
+        expect((await api.slotById(capacitySlotId))!['remaining'], 1);
+        expect((await other.reserveRaw(capacitySlotId)).statusCode, 201);
+        expect((await api.slotById(capacitySlotId))!['remaining'], 0);
         expect(
-          (await other.reserveRaw(slotId)).statusCode,
+          (await other.reserveRaw(capacitySlotId)).statusCode,
           409,
           reason: '정원이 찬 자리에 예약이 더 들어갔습니다.',
         );
 
         // 3) 마지막 좌석 경쟁. 정원 1 짜리 자리에서만 정직하게 재현된다 — 정원 2 에서는
         //    한쪽이 첫 좌석을 채우는 순간 다른 요청이 '중복' 으로 걸려 경쟁이 아니게 된다.
-        final E2eApi trainer = await E2eApi.login(trainerEmail);
         final Map<String, dynamic> raceSlot = await trainer.createSlotAsTrainer(
-          startsAt: DateTime.now().add(const Duration(days: 2)),
+          startsAt: DateTime.now().add(const Duration(days: 3)),
           capacity: 1,
         );
         final String raceSlotId = raceSlot['id'] as String;
@@ -199,14 +206,21 @@ void main() {
           reason: '경쟁 후 잔여 좌석이 0 이 아닙니다.',
         );
 
-        // 4) 정리 — 이 단계가 만든 예약을 모두 되돌리고 경쟁용 슬롯을 닫는다.
+        // 4) 정리 — 이 단계가 만든 예약을 모두 되돌리고 임시 슬롯들을 닫는다.
         for (final E2eApi client in <E2eApi>[api, other]) {
-          for (final String id in <String>[slotId, raceSlotId]) {
+          for (final String id in <String>[
+            slotId,
+            capacitySlotId,
+            raceSlotId,
+          ]) {
             final Map<String, dynamic>? row = await client.reservationForSlot(
               id,
             );
             if (row != null) {
-              expect((await client.cancelRaw(row['id'] as String)).statusCode, 200);
+              expect(
+                (await client.cancelRaw(row['id'] as String)).statusCode,
+                200,
+              );
             }
           }
         }
@@ -215,6 +229,7 @@ void main() {
           capacity,
           reason: '정리 후 좌석이 정원까지 복구되지 않았습니다.',
         );
+        await trainer.closeSlotAsTrainer(capacitySlotId);
         await trainer.closeSlotAsTrainer(raceSlotId);
 
         // 5) 없는(이미 취소된) 예약의 취소는 존재조차 드러내지 않는다.

@@ -1367,11 +1367,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEmptyWeek => 'Nothing scheduled this week.';
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name (new)';
-  }
-
-  @override
   String get schedSlots => 'Booking slots';
 
   @override
@@ -1477,6 +1472,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEditNote => 'Edit note';
 
   @override
+  String get schedAddNote => 'Add note';
+
+  @override
   String get schedNoNote => 'No note yet';
 
   @override
@@ -1554,9 +1552,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotPastTime =>
       'Booking slots can only be opened for future times.';
 
@@ -1568,14 +1563,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get slotStartTime => 'Start time';
-
-  @override
-  String get slotCapacity => 'Capacity';
-
-  @override
-  String slotBookedNow(int count) {
-    return '$count booked';
-  }
 
   @override
   String get slotUpdated => 'Booking slot updated.';

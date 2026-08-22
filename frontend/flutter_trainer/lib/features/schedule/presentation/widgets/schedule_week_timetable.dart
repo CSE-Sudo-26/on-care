@@ -144,12 +144,13 @@ class ScheduleWeekTimetable extends ConsumerWidget {
         ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
     final names = <String, String>{
       for (final s in sessions)
-        s.id: clientNameWithNewTag(
-          l,
-          roster,
-          clientId: s.clientId,
-          clientName: s.clientName,
-        ),
+        s.id:
+            findClientIdentity(
+              roster,
+              clientId: s.clientId,
+              clientName: s.clientName,
+            )?.name ??
+            s.clientName,
     };
     final window = visibleWindow(sessions);
     final byDate = <String, List<ScheduleSession>>{};
@@ -388,7 +389,7 @@ class _DayColumn extends StatelessWidget {
   final List<ScheduleSession> sessions;
   final String? selectedSessionId;
 
-  /// 세션 id → 화면이 부를 이름. 로스터에 없는 고객이면 `(신규)` 가 붙어 있다.
+  /// 세션 id → 화면이 부를 이름.
   final Map<String, String> names;
 
   final ValueChanged<ScheduleSession> onPickSession;
@@ -663,7 +664,7 @@ class _SessionBlock extends StatelessWidget {
 
   final ScheduleSession session;
 
-  /// 화면이 부를 이름. 로스터에 없는 고객이면 `(신규)` 가 붙어 있다.
+  /// 화면이 부를 이름.
   final String name;
 
   final bool selected;

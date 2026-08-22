@@ -2420,12 +2420,6 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled this week.'**
   String get schedEmptyWeek;
 
-  /// No description provided for @schedNewClientTag.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} (new)'**
-  String schedNewClientTag(String name);
-
   /// No description provided for @schedSlots.
   ///
   /// In en, this message translates to:
@@ -2612,6 +2606,12 @@ abstract class AppLocalizations {
   /// **'Edit note'**
   String get schedEditNote;
 
+  /// No description provided for @schedAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get schedAddNote;
+
   /// No description provided for @schedNoNote.
   ///
   /// In en, this message translates to:
@@ -2750,12 +2750,6 @@ abstract class AppLocalizations {
   /// **'Sent {name} the PT program for {date}'**
   String schedSentProgramTo(String name, String date);
 
-  /// No description provided for @slotCapacityInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityInvalid;
-
   /// No description provided for @slotPastTime.
   ///
   /// In en, this message translates to:
@@ -2779,18 +2773,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start time'**
   String get slotStartTime;
-
-  /// No description provided for @slotCapacity.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity'**
-  String get slotCapacity;
-
-  /// No description provided for @slotBookedNow.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} booked'**
-  String slotBookedNow(int count);
 
   /// No description provided for @slotUpdated.
   ///

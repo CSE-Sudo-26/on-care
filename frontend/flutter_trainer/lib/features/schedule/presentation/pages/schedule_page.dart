@@ -663,8 +663,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ],
         SessionCard(
           session: session,
-          expanded: true,
-          onToggle: () {},
           onEditSchedule: () => setState(() {
             _editingScheduleId = session.id;
             _editingProgramId = null;

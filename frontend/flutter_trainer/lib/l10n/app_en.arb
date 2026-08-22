@@ -708,14 +708,6 @@
     }
   },
   "schedEmptyWeek": "Nothing scheduled this week.",
-  "schedNewClientTag": "{name} (new)",
-  "@schedNewClientTag": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "schedSlots": "Booking slots",
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",
@@ -761,6 +753,7 @@
   "schedRepeatConflictHint": "Nothing was created. Change the time, or clear the sessions that clash.",
   "schedNote": "Trainer's note",
   "schedEditNote": "Edit note",
+  "schedAddNote": "Add note",
   "schedNoNote": "No note yet",
   "schedNoteOnlyHint": "A consultation is recorded as a note, not a program.",
   "schedNoteHint": "Anything to prepare, or notes about this client",
@@ -811,20 +804,10 @@
       }
     }
   },
-  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
   "slotEditTitle": "Edit booking slot",
   "slotStartTime": "Start time",
-  "slotCapacity": "Capacity",
-  "slotBookedNow": "{count} booked",
-  "@slotBookedNow": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
   "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",

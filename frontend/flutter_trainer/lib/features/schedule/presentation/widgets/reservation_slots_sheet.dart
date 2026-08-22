@@ -22,14 +22,11 @@ class ReservationSlotsSheet extends ConsumerStatefulWidget {
 
 class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
-  final TextEditingController _capacity = TextEditingController(text: '1');
   bool _saving = false;
 
-  @override
-  void dispose() {
-    _capacity.dispose();
-    super.dispose();
-  }
+  /// 슬롯은 늘 한 사람 몫이다 — 1:1 PT 이거나 상담이고, 여럿이 함께 듣는
+  /// 자리는 없다. 정원을 고를 이유가 없으니 입력칸을 두지 않는다(#1012).
+  static const int _capacity = 1;
 
   bool _sameDay(DateTime left, DateTime right) =>
       left.year == right.year &&
@@ -48,11 +45,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     // await 전에 한 번만 잡아 둔다 — 뒤에서 context 를 다시 만지면 async gap 을
     // 건너 쓰게 된다.
     final AppLocalizations l = AppLocalizations.of(context);
-    final capacity = int.tryParse(_capacity.text);
-    if (capacity == null || capacity < 1 || capacity > 100) {
-      _showMessage(l.slotCapacityInvalid);
-      return;
-    }
     final startsAt = _startsAt(_time);
     if (!startsAt.isAfter(nowKst())) {
       _showMessage(l.slotPastTime);
@@ -62,7 +54,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .create(startsAt: startsAt, capacity: capacity);
+          .create(startsAt: startsAt, capacity: _capacity);
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotOpened);
     } catch (error) {
@@ -75,36 +67,23 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   Future<void> _edit(ReservationSlot slot) async {
     final AppLocalizations l = AppLocalizations.of(context);
     var time = TimeOfDay.fromDateTime(slot.startsAt);
-    final controller = TextEditingController(text: '${slot.capacity}');
-    final changed = await showDialog<(TimeOfDay, int)?>(
+    // 정원은 늘 1이라 고칠 것이 시각뿐이다(#1012).
+    final changed = await showDialog<TimeOfDay?>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(l.slotEditTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.slotStartTime),
-                trailing: Text(time.format(context)),
-                onTap: () async {
-                  final picked = await showTimePicker(
-                    context: context,
-                    initialTime: time,
-                  );
-                  if (picked != null) setDialogState(() => time = picked);
-                },
-              ),
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: l.slotCapacity,
-                  helperText: l.slotBookedNow(slot.booked),
-                ),
-              ),
-            ],
+          content: ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l.slotStartTime),
+            trailing: Text(time.format(context)),
+            onTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: time,
+              );
+              if (picked != null) setDialogState(() => time = picked);
+            },
           ),
           actions: <Widget>[
             TextButton(
@@ -112,33 +91,19 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               child: Text(l.actionCancel),
             ),
             FilledButton(
-              onPressed: () {
-                final capacity = int.tryParse(controller.text);
-                if (capacity == null ||
-                    capacity < 1 ||
-                    capacity < slot.booked ||
-                    capacity > 100) {
-                  return;
-                }
-                Navigator.pop(dialogContext, (time, capacity));
-              },
+              onPressed: () => Navigator.pop(dialogContext, time),
               child: Text(l.actionSave),
             ),
           ],
         ),
       ),
     );
-    controller.dispose();
     if (changed == null || !mounted) return;
     setState(() => _saving = true);
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .update(
-            slot.id,
-            startsAt: _startsAt(changed.$1),
-            capacity: changed.$2,
-          );
+          .update(slot.id, startsAt: _startsAt(changed), capacity: _capacity);
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotUpdated);
     } catch (error) {
@@ -275,20 +240,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                             },
                       icon: const Icon(Icons.schedule),
                       label: Text(_time.format(context)),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  SizedBox(
-                    width: 100,
-                    child: TextField(
-                      key: const ValueKey<String>('slot-capacity-input'),
-                      controller: _capacity,
-                      enabled: !_saving,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l.slotCapacity,
-                        suffixText: l.dashUnitPeople,
-                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

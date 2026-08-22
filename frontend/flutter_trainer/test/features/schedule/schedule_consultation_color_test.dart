@@ -53,7 +53,7 @@ void main() {
       reason: '1:1 PT 는 연한 남색으로 채운다',
     );
     expect(
-      surfaceOf(tester, '윤가온(신규)'),
+      surfaceOf(tester, '윤가온'),
       AppColors.card,
       reason: '상담은 흰 바탕에 윤곽선으로 — `예약 슬롯` 과 같은 표현이다',
     );
@@ -96,7 +96,7 @@ void main() {
       reason: '1:1 PT 는 채운 알약이다',
     );
     expect(
-      chipOf(tester, '윤가온(신규)').color,
+      chipOf(tester, '윤가온').color,
       AppColors.card,
       reason: '상담은 비운 알약이다 — 블록의 면과 같은 규칙',
     );

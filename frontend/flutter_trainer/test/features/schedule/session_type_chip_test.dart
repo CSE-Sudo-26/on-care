@@ -8,10 +8,10 @@ import 'package:oncare_trainer/features/schedule/presentation/widgets/session_ch
 
 import '../../helpers/pump_app.dart';
 
-/// 일정 카드의 `1:1 PT · 60분` 은 **이 약속이 무엇인가**를 말한다. (#938)
+/// 일정 카드의 `1:1 PT` 알약은 **이 약속이 무엇인가**를 말한다. (#938)
 ///
 /// 프로필 열 세 번째 줄에 가장 흐린 색으로 두었더니 회원의 부가 정보처럼
-/// 읽혔다. 비어 있던 오른쪽 여백으로 옮겨 상태 칩 옆에 세운다.
+/// 읽혔다. 프로필 줄(이름) 오른쪽으로 옮긴다 — 그 자리가 비어 있었다(#1012).
 void main() {
   Future<void> openSchedule(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1;
@@ -69,21 +69,24 @@ void main() {
       )
       .data!;
 
-  testWidgets('세션 종류·소요 시간이 이름 아래 알약으로 보인다', (tester) async {
+  testWidgets('세션 종류가 첫 줄 알약으로 보인다', (tester) async {
     await openSchedule(tester);
 
     await openSession(tester, '김민수');
 
     expect(chip(), findsWidgets);
     final Finder first = chip().first;
+    // 소요 시간은 시각 옆 괄호로 갔다 — 서로 다른 두 값을 한 덩어리로 두지
+    // 않는다(#1012).
     expect(
-      find.descendant(of: first, matching: find.textContaining('분')),
+      find.descendant(of: first, matching: find.text('1:1 PT')),
       findsOneWidget,
     );
 
-    // 이름과 같은 줄에 서기에는 상세 패널(폭 340)이 좁다 — 붙여 두면 이름이
-    // `김…` 으로 잘린다(#988). 아랫줄로 내리되 흐린 글씨가 아니라 알약으로
-    // 두어, 회원의 부가 정보가 아니라 상태와 같은 위계로 읽히게 한다(#938).
+    // 머리글 첫 줄은 **이 약속이 어떻게 됐나 · 언제** 다. 무엇인가(종류)는
+    // 프로필 줄로 내려, 이름과 나란히 오른쪽 끝에 선다(#1012). 흐린 글씨가
+    // 아니라 알약으로 두어 회원의 부가 정보가 아니라 상태와 같은 위계로
+    // 읽히게 한다(#938).
     final Finder name = find
         .descendant(
           of: find.byKey(const Key('week-detail')),
@@ -91,11 +94,17 @@ void main() {
         )
         .first;
     expect(
-      tester.getRect(first).top,
-      greaterThan(tester.getRect(name).bottom),
-      reason: '이름 아래 줄에 선다',
+      tester.getRect(first).left,
+      greaterThanOrEqualTo(tester.getRect(name).right),
+      reason: '이름 오른쪽에 선다',
     );
-    // 이름이 잘리지 않는다 — 아랫줄로 내린 이유가 그것이다.
+    // 프로필 줄과 같은 높이다 — 아래로 내려앉지 않는다.
+    expect(
+      tester.getRect(first).top,
+      lessThan(tester.getRect(name).bottom),
+      reason: '이름과 같은 줄에서 겹치는 높이로 선다',
+    );
+    // 이름이 잘리지 않는다.
     expect(
       tester.widget<Text>(name).data,
       '김민수',

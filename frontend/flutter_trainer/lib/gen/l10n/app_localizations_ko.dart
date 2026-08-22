@@ -1304,11 +1304,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name(신규)';
-  }
-
-  @override
   String get schedSlots => '예약 슬롯';
 
   @override
@@ -1413,6 +1408,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEditNote => '메모 수정';
 
   @override
+  String get schedAddNote => '메모 추가';
+
+  @override
   String get schedNoNote => '아직 남긴 메모가 없어요';
 
   @override
@@ -1488,9 +1486,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
-
-  @override
   String get slotPastTime => '현재보다 이후 시간만 예약 슬롯으로 만들 수 있어요.';
 
   @override
@@ -1501,14 +1496,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get slotStartTime => '시작 시간';
-
-  @override
-  String get slotCapacity => '정원';
-
-  @override
-  String slotBookedNow(int count) {
-    return '현재 예약 $count명';
-  }
 
   @override
   String get slotUpdated => '예약 슬롯을 수정했습니다.';

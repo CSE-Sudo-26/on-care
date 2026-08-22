@@ -268,7 +268,7 @@ void main() {
     testWidgets('삭제 확인 문구가 취소·노쇼를 가리킨다', (tester) async {
       await openSchedule(tester);
       await openSession(tester, '박성호');
-      final delete = find.text('삭제');
+      final delete = find.byKey(const ValueKey<String>('session-delete-chip'));
       await revealInPanel(tester, delete.first);
       await tester.tap(delete.first);
       await settle(tester);
