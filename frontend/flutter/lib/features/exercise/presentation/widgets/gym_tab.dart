@@ -839,6 +839,12 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                       for (final TrainerSlot slot in slots)
                         _SlotChip(
                           key: ValueKey<String>('slot-chip-${slot.id}'),
+                          // 종류(1:1 PT/상담)를 시각 앞에 둔다 — 트레이너가
+                          // 상담으로 연 자리도 여기서 회원의 희망 시간대로
+                          // 고를 수 있어야 한다(#1083).
+                          type: slot.sessionType == '상담'
+                              ? l.exSlotTypeConsultation
+                              : l.exSlotTypePersonalTraining,
                           label: _when(context, l, slot.startsAt),
                           sub: slot.isFull
                               ? l.exSlotFull
@@ -1336,11 +1342,16 @@ class _TagChip extends StatelessWidget {
 class _SlotChip extends StatelessWidget {
   const _SlotChip({
     super.key,
+    required this.type,
     required this.label,
     required this.sub,
     required this.selected,
     required this.onTap,
   });
+
+  /// `1:1 PT` 또는 `상담` — 이 자리가 무엇인지. 트레이너 스케줄 탭의 종류
+  /// 알약과 같은 값이라, 상담으로 연 자리도 그대로 알아볼 수 있다(#1083).
+  final String type;
 
   final String label;
   final String sub;
@@ -1372,6 +1383,18 @@ class _SlotChip extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
+              Text(
+                type,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.8)
+                      : (disabled
+                            ? FigmaColors.textFaint
+                            : FigmaColors.primary),
+                ),
+              ),
               Text(
                 label,
                 style: TextStyle(
