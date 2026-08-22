@@ -624,6 +624,7 @@
     }
   },
   "reportsCompletionAvg": "Workout completion",
+  "reportsWeeklyCompletion": "Weekly completion",
   "reportsCompletionByDay": "Weekly workout completion",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
   "reportsMetricTrend": "{metric} trend",

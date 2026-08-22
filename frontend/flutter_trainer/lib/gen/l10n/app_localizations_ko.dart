@@ -1166,6 +1166,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsCompletionAvg => '운동 이행률';
 
   @override
+  String get reportsWeeklyCompletion => '주간 이행률';
+
+  @override
   String get reportsCompletionByDay => '주간 운동 이행률';
 
   @override

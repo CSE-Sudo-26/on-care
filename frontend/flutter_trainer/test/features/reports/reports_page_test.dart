@@ -550,6 +550,67 @@ void main() {
     expect(find.text('이지수님 주간 리포트'), findsOneWidget);
   });
 
+  testWidgets('고객 목록에 공용 주간 이행률을 막대로 비교한다 (#1097)', (tester) async {
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith(
+          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+            makeClient(
+              id: 'measured',
+              name: '기록고객',
+              weekCompletion: const <int>[80, 0, 60, 0, 0, 0, 0],
+            ),
+            makeClient(
+              id: 'empty',
+              name: '미기록고객',
+              weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0],
+            ),
+          ]),
+        ),
+      ],
+    );
+
+    InlineBarValue completionOf(String id) => tester.widget<InlineBarValue>(
+      find.byKey(ValueKey<String>('report-client-completion-$id')),
+    );
+
+    final measured = completionOf('measured');
+    expect(measured.label, '주간 이행률');
+    expect(measured.fraction, 0.7);
+    expect(measured.text, '70%');
+
+    final empty = completionOf('empty');
+    expect(empty.fraction, isNull);
+    expect(empty.text, '데이터 부족');
+    expect(find.text('0%'), findsNothing);
+  });
+
+  testWidgets('좁은 리포트 고객 목록에서 이행률 막대가 overflow 나지 않는다 (#1097)', (tester) async {
+    await openReports(
+      tester,
+      size: const Size(700, 760),
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith(
+          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+            makeClient(
+              id: 'narrow',
+              name: '매우긴이름의고객',
+              goal: '체중 감량과 근력 향상을 함께 관리하는 목표',
+              weekCompletion: const <int>[100, 100, 100, 100, 100, 100, 100],
+            ),
+          ]),
+        ),
+      ],
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('report-client-completion-narrow')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the report previews exactly what the member will receive', (
     tester,
   ) async {
