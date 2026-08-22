@@ -621,10 +621,8 @@
   "myPointsAiExercise": "AI 추천 운동 완료",
   "myPointsExerciseAdd": "운동 직접 추가",
   "coachAssignedTrainer": "담당 트레이너",
-  "coachAiCoaching": "AI 코칭",
   "coachPointsTitle": "이번 코칭 포인트",
   "coachRoutineTitle": "추천 개인운동",
-  "coachRoutineSubtitle": "PT 와 다음 PT 사이에 스스로 하는 운동이에요",
   "coachRoutineByTrainer": "트레이너 직접 추천",
   "coachRoutineAiChecked": "AI 추천 · {name} 확인",
   "coachRoutineAiAuto": "AI 자동 추천",
@@ -633,6 +631,13 @@
   "coachRoutineNetworkError": "네트워크 연결을 확인하고 다시 시도해 주세요",
   "coachRoutineLogFailed": "완료 기록에 실패했어요.",
   "coachRoutineDone": "수행 완료",
+  "coachRoutineUndo": "완료 취소",
+  "coachRoutineUndoConfirm": "'{name}' 완료를 취소할까요? 운동 기록에서도 빠져요.",
+  "@coachRoutineUndoConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineUndone": "완료를 취소했어요",
+  "coachRoutineUndoFailed": "완료 취소에 실패했어요.",
   "coachRoutineCancel": "이 개인 운동 취소",
   "coachRoutineCancelConfirm": "'{name}'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.",
   "@coachRoutineCancelConfirm": {

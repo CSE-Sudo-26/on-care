@@ -6,6 +6,7 @@ import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
@@ -14,8 +15,6 @@ import 'package:oncare/features/exercise/presentation/widgets/gym_locator_map.da
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 // Backend value sent as `dayLabel` — DO NOT localize (persisted to the server).
-const List<String> _weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];
-
 /// The "운동 종류" chip display labels, kept index-1:1 with [ExerciseType] so a
 /// saved type round-trips losslessly into the edit sheet (mirrors `_typeLabel`).
 /// Only the display strings are localized — the index→type mapping is fixed.
@@ -56,25 +55,21 @@ int _indexFromType(ExerciseType t) => switch (t) {
   ExerciseType.other => 5,
 };
 
-/// Per-intensity multiplier for [_levelLabels] (가벼움 / 보통 / 높음).
-const List<double> _intensityFactor = <double>[0.85, 1.0, 1.2];
+/// 칩 index → 강도. `_levelLabels` 와 1:1 이다.
+ExerciseIntensity _intensityFromIndex(int level) => switch (level) {
+  0 => ExerciseIntensity.light,
+  2 => ExerciseIntensity.high,
+  _ => ExerciseIntensity.moderate,
+};
 
-/// Rough kcal/min per type scaled by intensity, used to estimate burn when the
-/// user logs a duration (matches the prototype's estimate ranges).
-int _estimateCalories(ExerciseType type, int minutes, int level) {
-  final double perMin = switch (type) {
-    ExerciseType.cardio => 9,
-    ExerciseType.strength => 6,
-    ExerciseType.walking => 4,
-    ExerciseType.stretching => 3,
-    ExerciseType.yoga => 3,
-    ExerciseType.other => 5,
-  };
-  final double factor = (level >= 0 && level < _intensityFactor.length)
-      ? _intensityFactor[level]
-      : 1.0;
-  return (perMin * minutes * factor).round();
-}
+/// 어림 칼로리. 표는 [estimateExerciseCalories] 한 곳에 있다 — 추천 개인운동
+/// 체크(#1131)도 같은 값을 써야 같은 운동이 화면마다 다른 칼로리로 적히지 않는다.
+int _estimateCalories(ExerciseType type, int minutes, int level) =>
+    estimateExerciseCalories(
+      type,
+      minutes,
+      intensity: _intensityFromIndex(level),
+    );
 
 Widget _shell(BuildContext context, Widget child) => ConstrainedBox(
   constraints: BoxConstraints(
@@ -187,7 +182,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               minutes: minutes,
               calories: calories,
               intensity: intensity,
-              dayLabel: _weekdayLabels[nowKst().weekday - 1],
+              dayLabel: kWeekdayLabelsKo[nowKst().weekday - 1],
             );
       }
       // Sheet dismissed mid-save → don't pop the page below.

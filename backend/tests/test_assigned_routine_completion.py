@@ -265,3 +265,61 @@ def test_only_owner_can_complete_or_write_feedback(
         db_session.delete(link)
         db_session.delete(other_trainer)
         db_session.commit()
+
+
+def test_member_can_undo_a_completion(client, assigned_routine):
+    """체크를 잘못 눌렀으면 되돌릴 수 있다 — 운동 기록도 함께 빠진다. (#1131)"""
+    _, routine = assigned_routine
+    member_headers = _headers(_login(client, "jisu@oncare.com"))
+
+    before = client.get(
+        "/v1/exercise/weeks/current", headers=member_headers
+    ).json()["total_minutes"]
+
+    completed = client.post(
+        f"/v1/me/coach/routines/{routine['id']}/complete",
+        headers=member_headers,
+        json={"minutes": 25, "intensity": "moderate", "member_note": ""},
+    )
+    assert completed.status_code == 200, completed.text
+    assert (
+        client.get("/v1/exercise/weeks/current", headers=member_headers).json()[
+            "total_minutes"
+        ]
+        == before + 25
+    )
+
+    undone = client.delete(
+        f"/v1/me/coach/routines/{routine['id']}/complete",
+        headers=member_headers,
+    )
+    assert undone.status_code == 200, undone.text
+    assert undone.json()["completed"] is False
+    assert undone.json()["completed_at"] is None
+
+    week = client.get("/v1/exercise/weeks/current", headers=member_headers).json()
+    assert week["total_minutes"] == before
+    assert all(
+        row["assigned_routine_id"] != routine["id"] for row in week["sessions"]
+    )
+
+    # 배정 자체는 남는다 — 되돌린 것은 `수행`이지 `할 일`이 아니다.
+    listed = client.get("/v1/me/coach/routines", headers=member_headers).json()
+    assert any(row["id"] == routine["id"] for row in listed)
+
+    # 같은 요청을 두 번 보내도 결과가 같다.
+    again = client.delete(
+        f"/v1/me/coach/routines/{routine['id']}/complete",
+        headers=member_headers,
+    )
+    assert again.status_code == 200, again.text
+    assert again.json()["completed"] is False
+
+    # 되돌린 뒤에는 다시 완료할 수 있다.
+    redone = client.post(
+        f"/v1/me/coach/routines/{routine['id']}/complete",
+        headers=member_headers,
+        json={"minutes": 12, "intensity": "light", "member_note": "다시"},
+    )
+    assert redone.status_code == 200, redone.text
+    assert redone.json()["completed_minutes"] == 12

@@ -3398,12 +3398,6 @@ abstract class AppLocalizations {
   /// **'My trainer'**
   String get coachAssignedTrainer;
 
-  /// Header of the AI coaching card.
-  ///
-  /// In en, this message translates to:
-  /// **'AI coaching'**
-  String get coachAiCoaching;
-
   /// Section title in the coaching card.
   ///
   /// In en, this message translates to:
@@ -3415,12 +3409,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recommended solo workouts'**
   String get coachRoutineTitle;
-
-  /// Explains what a solo routine is.
-  ///
-  /// In en, this message translates to:
-  /// **'Workouts to do on your own between PT sessions'**
-  String get coachRoutineSubtitle;
 
   /// Origin of a routine.
   ///
@@ -3469,6 +3457,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get coachRoutineDone;
+
+  /// No description provided for @coachRoutineUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get coachRoutineUndo;
+
+  /// No description provided for @coachRoutineUndoConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completing \'{name}\'? It will be removed from your workout log too.'**
+  String coachRoutineUndoConfirm(String name);
+
+  /// No description provided for @coachRoutineUndone.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion undone'**
+  String get coachRoutineUndone;
+
+  /// No description provided for @coachRoutineUndoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not undo the completion.'**
+  String get coachRoutineUndoFailed;
 
   /// No description provided for @coachRoutineCancel.
   ///
