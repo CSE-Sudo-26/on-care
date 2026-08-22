@@ -87,8 +87,7 @@ class MealRecommendations {
   final int sodiumLimitMg;
 
   /// 나트륨이 권장치를 넘겼는지 — 근거 문구에 "권장 초과"를 붙일지 결정한다.
-  bool get sodiumOverLimit =>
-      sodiumLimitMg > 0 && avgSodiumMg > sodiumLimitMg;
+  bool get sodiumOverLimit => sodiumLimitMg > 0 && avgSodiumMg > sodiumLimitMg;
 
   /// 서버를 아직 못 받았거나 실패했을 때 그리는 기본 추천.
   ///

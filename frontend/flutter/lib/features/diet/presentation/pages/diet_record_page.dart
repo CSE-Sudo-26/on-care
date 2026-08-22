@@ -950,6 +950,10 @@ class _NutritionSummaryCard extends StatelessWidget {
         : FigmaColors.statusWithinGoal;
     return Container(
       key: const Key('nutrition-summary-card'),
+      // 오늘·이번 주·전체가 같은 크기여야 토글을 눌러도 화면이 튀지 않는다
+      // (#1124). 글자 배율이 커지면 셋 다 함께 커진다 — 최소 높이라 넘치지
+      // 않는다.
+      constraints: const BoxConstraints(minHeight: kDietSummaryCardHeight),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,

@@ -17,6 +17,11 @@ import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 /// 식단 탭의 기간 뷰(이번 주 / 이번 달).
 ///
 /// 홈은 식단을 주간으로도 보여주는데 식단 탭에는 하루치밖에 없었다(#670). 운동
+/// 영양 요약 카드의 기준 높이. 오늘·이번 주·전체 세 화면이 함께 쓴다 — 기간
+/// 토글을 눌렀을 때 카드가 커졌다 작아지면 그 아래 내용이 그때마다 뛴다.
+/// 최소 높이라 글자 배율이 커지면 셋이 함께 커진다. (#1124)
+const double kDietSummaryCardHeight = 240;
+
 /// 탭의 `운동 현황` 과 같은 기간 토글 아래에서, 고른 지표(칼로리·나트륨·당류)의
 /// 일별 막대와 **하루 평균**을 보여준다. 합계가 아니라 평균을 머리 숫자로 두는
 /// 이유는 주(7일)와 달(30일)의 길이가 달라 합계끼리는 견줄 수 없기 때문이다.
@@ -334,6 +339,9 @@ class _PeriodBody extends StatelessWidget {
       child: Container(
         key: const Key('diet-period-card'),
         width: double.infinity,
+        // 오늘 카드와 같은 높이 (#1124) — 기간 토글을 눌러도 카드가 커졌다
+        // 작아지지 않는다.
+        constraints: const BoxConstraints(minHeight: kDietSummaryCardHeight),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -478,6 +486,9 @@ class _PeriodBody extends StatelessWidget {
                           ),
                           goalLabel: '${l.homeGoal}\n${format(goal)}',
                           formatTick: (double v) => format(v),
+                          // 남는 자리는 그래프가 쓴다 — 세 화면의 카드 높이를
+                          // 같게 두면서(#1124) 빈 칸을 만들지 않는다.
+                          height: 105,
                         ),
                   );
                 },
@@ -744,7 +755,9 @@ class _PeriodBars extends StatelessWidget {
     final DateFormat dayFormat = DateFormat.MMMEd(
       Localizations.localeOf(context).toString(),
     );
-    const double chartHeight = 120;
+    // 카드 높이를 오늘·이번 주와 같게 맞추기 위한 값이다 (#1124) —
+    // 여기서 1px 을 바꾸면 `전체` 카드 높이가 그만큼 달라진다.
+    const double chartHeight = 109;
     // 축 위쪽에 여유를 둔다. 목표를 넘은 날이 없으면 목표가 곧 최댓값이 되어
     // 목표선이 차트 맨 위(=바깥)에 놓여 잘려 보이지 않았다.
     final double peak = <double>[
