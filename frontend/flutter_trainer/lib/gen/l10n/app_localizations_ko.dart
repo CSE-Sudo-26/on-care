@@ -510,9 +510,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthSaveFailed => '고객 정보를 저장하지 못했어요. 다시 시도해 주세요';
 
   @override
-  String get memberHealthTitle => '고객 신체·목표 관리';
-
-  @override
   String get memberHealthSaving => '저장 중…';
 
   @override
@@ -2484,11 +2481,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientTrainerMemo => '메모';
-
-  @override
-  String clientTrainerMemoTitle(String name) {
-    return '$name님 메모';
-  }
 
   @override
   String get clientTrainerMemoHint => '이 고객에 대해 기억할 내용을 적어 주세요';

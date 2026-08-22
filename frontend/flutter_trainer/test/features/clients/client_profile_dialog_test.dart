@@ -1,12 +1,18 @@
+import 'dart:async';
+
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_memo_dialog.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_profile_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -75,26 +81,69 @@ class _FakeMemoRepository implements TrainerMemoRepository {
   }
 }
 
+/// Holds `fetchHealthProfile` open until the test completes it — the only
+/// way to look at the form while it is still loading.
+class _DelayedClientRepository extends DriftClientRepository {
+  _DelayedClientRepository(super.db);
+
+  final profile = Completer<MemberHealthProfile>();
+
+  @override
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId) =>
+      profile.future;
+}
+
+/// Pumps the merged dialog on its own.
+///
+/// 신체·목표와 메모가 한 창에 있으므로 두 저장소를 모두 갈아 끼운다 —
+/// 하나만 바꾸면 다른 절반이 진짜 저장소를 찾아간다.
 Future<void> _pumpDialog(
   WidgetTester tester,
-  TrainerMemoRepository repository,
-) async {
+  TrainerMemoRepository memos, {
+  ClientRepository? clients,
+  String fallbackGender = '',
+  bool settle = true,
+}) async {
+  // 신체·목표와 메모가 한 창에 쌓이므로 기본 800×600 에서는 아래쪽 버튼이
+  // 화면 밖으로 밀려 탭이 빗나간다. 창 전체가 들어오는 높이를 준다.
+  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = const Size(900, 1600);
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  ClientRepository resolved;
+  if (clients != null) {
+    resolved = clients;
+  } else {
+    // 메모만 보는 테스트도 신체·목표 절반이 함께 뜬다 — 빈 메모리 DB 를 물려
+    // 진짜 저장소로 새어 나가지 않게 한다.
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    resolved = DriftClientRepository(db);
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
-        trainerMemoRepositoryProvider.overrideWithValue(repository),
+        trainerMemoRepositoryProvider.overrideWithValue(memos),
+        clientRepositoryProvider.overrideWithValue(resolved),
       ],
-      child: const MaterialApp(
-        locale: Locale('ko'),
+      child: MaterialApp(
+        locale: const Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: ClientMemoDialog(clientId: 'm1', clientName: '이지수'),
+          body: ClientProfileDialog(
+            clientId: 'm1',
+            clientName: '이지수',
+            fallbackGender: fallbackGender,
+          ),
         ),
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) await tester.pumpAndSettle();
 }
 
 void main() {
@@ -198,7 +247,7 @@ void main() {
     expect(find.text('채팅에서 감지'), findsOneWidget);
   });
 
-  testWidgets('the client detail memo action expands the inline memo panel (#1024)', (
+  testWidgets('the client detail memo action opens the merged dialog (#1024)', (
     tester,
   ) async {
     final repository = _FakeMemoRepository();
@@ -211,14 +260,15 @@ void main() {
       ],
     );
 
-    // 메모는 더 이상 모달을 열지 않는다 — 신체·목표와 합쳐진 인라인 패널을
-    // 펼치고 그 자리로 스크롤한다(#1024).
+    // 메모 하나로 신체·목표까지 함께 열린다 — 예전에는 버튼도 창도 둘이라
+    // 하나를 닫아야 다른 하나를 볼 수 있었다(#1024).
     await tester.tap(
       find.byKey(const ValueKey<String>('client-detail-open-memo')),
     );
     await settle(tester);
 
-    expect(find.byType(ClientMemoDialog), findsNothing);
+    expect(find.byType(ClientProfileDialog), findsOneWidget);
+    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
     expect(find.text('아직 남긴 메모가 없어요.'), findsOneWidget);
   });
 
@@ -253,5 +303,71 @@ void main() {
       expect(find.text('무릎이 가볍게 당기긴 했는데 괜찮아요'), findsOneWidget);
       expect(find.text('채팅에서 감지'), findsOneWidget);
     });
+  });
+
+  // 아래 둘은 예전 `MemberHealthProfileDialog` 의 테스트다. 그 창이 메모와
+  // 합쳐지면서(#1024) 검증 대상만 이 대화상자로 옮겨 왔다 — 규칙은 그대로다.
+  testWidgets('프로필을 읽는 동안은 저장할 수 없고, 소수 목표는 되돌려보낸다', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final clients = _DelayedClientRepository(db);
+
+    await _pumpDialog(
+      tester,
+      _FakeMemoRepository(),
+      clients: clients,
+      // 프로필이 아직 안 왔다 — settle 하면 완료를 기다리다 멈춘다.
+      settle: false,
+    );
+    await tester.pump();
+
+    // 예전 모달은 저장 버튼을 폼 밖(`AlertDialog.actions`)에 두고 비활성으로
+    // 세워 두었다. 합쳐진 창에서는 폼 자체가 아직 없다 — 눌릴 버튼이 없는
+    // 편이 비활성 버튼보다 확실하다.
+    final save = find.byKey(const ValueKey<String>('client-profile-save'));
+    expect(save, findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+
+    clients.profile.complete(
+      const MemberHealthProfile(memberId: 'm1', memberName: '회원'),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+
+    await tester.enterText(find.widgetWithText(TextFormField, '횟수'), '3.5');
+    await tester.tap(save);
+    await tester.pump();
+
+    expect(find.text('0.0~14.0 범위로 입력해 주세요.'), findsOneWidget);
+    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
+  });
+
+  testWidgets('저장된 성별이 없으면 로스터가 말하는 성별로 열린다 (#960)', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final clients = _DelayedClientRepository(db);
+
+    await _pumpDialog(
+      tester,
+      _FakeMemoRepository(),
+      clients: clients,
+      fallbackGender: 'female',
+      settle: false,
+    );
+    await tester.pump();
+    // 서버가 성별을 저장한 적이 없는 회원 — 실 API 는 빈 문자열을 내려준다.
+    clients.profile.complete(
+      const MemberHealthProfile(memberId: 'm1', memberName: '오세라'),
+    );
+    await tester.pumpAndSettle();
+
+    // 헤더가 '여성'이라고 적어 둔 회원의 대화상자가 빈 칸으로 열리면 화면 두
+    // 곳이 서로 다른 말을 한다.
+    expect(
+      tester.widget<DropdownButtonFormField<String>>(
+        find.byType(DropdownButtonFormField<String>),
+      ).initialValue,
+      'female',
+    );
   });
 }

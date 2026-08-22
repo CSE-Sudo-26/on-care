@@ -532,9 +532,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the member profile. Please try again';
 
   @override
-  String get memberHealthTitle => 'Body and goals';
-
-  @override
   String get memberHealthSaving => 'Saving…';
 
   @override
@@ -2584,11 +2581,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientTrainerMemo => 'Memo';
-
-  @override
-  String clientTrainerMemoTitle(String name) {
-    return 'Memos on $name';
-  }
 
   @override
   String get clientTrainerMemoHint =>

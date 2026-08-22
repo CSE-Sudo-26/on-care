@@ -1010,12 +1010,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the member profile. Please try again'**
   String get memberHealthSaveFailed;
 
-  /// No description provided for @memberHealthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Body and goals'**
-  String get memberHealthTitle;
-
   /// No description provided for @memberHealthSaving.
   ///
   /// In en, this message translates to:
@@ -4573,12 +4567,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Memo'**
   String get clientTrainerMemo;
-
-  /// No description provided for @clientTrainerMemoTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Memos on {name}'**
-  String clientTrainerMemoTitle(String name);
 
   /// No description provided for @clientTrainerMemoHint.
   ///
