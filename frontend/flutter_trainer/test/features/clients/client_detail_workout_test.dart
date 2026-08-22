@@ -9,6 +9,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
@@ -336,6 +337,39 @@ void main() {
         await settle(tester);
       }
       expect(find.text(skipped.name), findsWidgets);
+    });
+
+    testWidgets('기록 카드는 색 띠 없는 흰 판이다 (#1025)', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
+
+      // 배포된 화면과 같은 판이다 — 네 변이 같은 머리카락 테두리이고, 완료
+      // 상태를 판 자체가 색으로 말하지 않는다. 색은 오른쪽 배지에만 있다.
+      //
+      // 그림자를 가진 판만 고른다. 안쪽의 메모 상자도 왼쪽에 색 띠가 있지만
+      // 그건 배포본에도 있는 것이고 그림자가 없다.
+      final Iterable<Container> cards = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byKey(const ValueKey<String>('exercise-daily-records')),
+              matching: find.byType(Container),
+            ),
+          )
+          .where(
+            (Container c) =>
+                c.decoration is BoxDecoration &&
+                (c.decoration! as BoxDecoration).boxShadow != null,
+          );
+      expect(cards, isNotEmpty);
+      for (final Container card in cards) {
+        final BoxDecoration decoration = card.decoration! as BoxDecoration;
+        expect(decoration.color, AppColors.card);
+        expect(
+          decoration.border,
+          Border.all(color: AppColors.border),
+          reason: '기록 카드에 색 띠가 다시 붙었습니다.',
+        );
+      }
     });
 
     testWidgets('a failed 운동 기록 load does not take 운동현황 with it', (

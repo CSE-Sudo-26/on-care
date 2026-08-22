@@ -105,7 +105,10 @@ Color _rateColor(int rate) {
   // 보인다(#1025).
   if (rate >= 100) return AppColors.statusNormal;
   if (rate > 0) return AppColors.brandOrange;
-  return AppColors.borderStrong;
+  // 미시작은 `borderStrong`(#DEE8F1) 이었다. 4px 띠일 때는 옅어도 보였지만,
+  // 색 띠를 걷어낸 지금은 이 색이 배지의 글자색이라 판에 거의 묻힌다.
+  // 비활성이되 읽히는 회색으로 내린다 — 뜻은 그대로다(#1025).
+  return AppColors.disabledForeground;
 }
 
 /// A single workout record, styled as a mission card: date/kind, a
@@ -169,14 +172,16 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
     // (띠 색 + 회색 테두리) `borderRadius` 와 함께 그릴 수 없어 런타임에
     // 터진다(Flutter `BoxBorder`, 보이는 색이 하나일 때만 둥근 모서리를
     // 그린다). `_NoteBox` 의 왼쪽 띠와 같은 규칙이다.
-    final Color statusColor = _rateColor(entry.completionRate);
+    // 배포된 화면과 같은 흰 판이다 — 색 띠를 두르지 않는다. 완료 상태는
+    // 오른쪽 배지가 색과 숫자로 말하고, 판까지 그 색을 입으면 한 카드가
+    // 같은 말을 두 번 한다(#1025).
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
         boxShadow: kCardShadow,
-        border: Border(left: BorderSide(color: statusColor, width: 4)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,10 +209,12 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
                                 .where((line) => !line.contains('✗'))
                                 .length,
                           ),
+                          // 배지의 `67%` 가 어디서 나온 값인지 받쳐 주는 줄이라
+                          // 배지가 커진 만큼 이쪽도 읽혀야 한다(#754, #1025).
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.disabledForeground,
+                            color: AppColors.subtleForeground,
                           ),
                         ),
                       ),
@@ -329,8 +336,11 @@ class _MissionBadge extends StatelessWidget {
         : rate > 0
         ? Icons.flag_outlined
         : Icons.radio_button_unchecked;
+    // 판에서 색 띠를 걷어낸 뒤로 완료 상태를 말하는 것은 이 배지뿐이다.
+    // 예전에는 오른쪽 원형 게이지가 그만한 자리를 차지했으니(배포된 화면),
+    // 그 자리를 이어받을 만큼은 읽혀야 한다(#1025).
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: const BorderRadius.all(AppRadius.pill),
@@ -339,7 +349,7 @@ class _MissionBadge extends StatelessWidget {
         icon: icon,
         label: '$rate%',
         color: color,
-        fontSize: 11.5,
+        fontSize: 13,
         fontWeight: FontWeight.w800,
       ),
     );
