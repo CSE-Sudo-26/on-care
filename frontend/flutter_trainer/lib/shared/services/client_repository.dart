@@ -607,6 +607,7 @@ class DriftClientRepository implements ClientRepository {
       (rows) => rows
           .map(
             (row) => RoutineHistoryEntry(
+              id: row.id,
               dateLabel: row.dateLabel,
               label: row.label,
               completionRate: row.completionRate,
@@ -615,6 +616,7 @@ class DriftClientRepository implements ClientRepository {
                   .toList(),
               clientFeedback: row.clientFeedback,
               trainerNote: row.trainerNote,
+              completedAt: row.completedAt,
             ),
           )
           .toList(),
