@@ -311,6 +311,11 @@ void main() {
       expect(topOf('seed-client-4'), lessThan(topOf('seed-client-10')));
       expect(topOf('seed-client-10'), lessThan(topOf('seed-client-13')));
 
+      // 여러 날에 걸친 스레드가 같은 날짜 스레드를 부당하게 앞서면 안
+      // 된다(#1104). 김민수(1, '18:18', 다일 스레드)는 이지수(2,
+      // '20:10', 단일 날짜)보다 이른 시각이니 아래에 서야 한다.
+      expect(topOf('seed-client-2'), lessThan(topOf('seed-client-1')));
+
       // `관리 필요` 는 챙길 사람을 고르는 자리다 — 주의 신호가 앞선다.
       // 노태강은 신호가 없어 목록에서 아예 빠진다.
       await goTo(tester, AppRoutes.messagesFor(null, filter: 'attention'));
