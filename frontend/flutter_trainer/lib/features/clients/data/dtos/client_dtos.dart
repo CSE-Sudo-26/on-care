@@ -97,6 +97,34 @@ List<TrainerClient> prioritizeClients(
   return <TrainerClient>[for (final d in decorated) d.$1];
 }
 
+/// 마지막 메시지가 새로운 순. 메시지 탭 목록의 기본 차례다.
+///
+/// 대화 목록에서 먼저 보여야 하는 것은 **방금 무슨 말이 오갔는가** 다 —
+/// 나트륨이 넘쳤는지는 그 대화를 열지 말지를 정하는 기준이 아니고, 그
+/// 판단이 필요한 사람은 `관리 필요` 로 좁혀 본다([prioritizeClients]).
+///
+/// [lastChatAt] 이 없는 고객은 뒤로 간다(대화가 없다는 뜻이다). 값이 같으면
+/// 들어온 차례를 지킨다 — 정렬이 흔들리면 목록이 매번 다시 배열된다.
+/// 실 API 의 로스터 엔드포인트는 아직 채팅 시각을 주지 않아 그 모드에서는
+/// 들어온 차례 그대로다([prioritizeClients] 와 같은 한계다).
+List<TrainerClient> sortByLatestMessage(
+  List<TrainerClient> clients, {
+  Map<String, DateTime> lastChatAt = const <String, DateTime>{},
+}) {
+  final decorated = <(TrainerClient client, int index)>[
+    for (var i = 0; i < clients.length; i++) (clients[i], i),
+  ];
+  final epoch = DateTime.utc(1970);
+  decorated.sort((a, b) {
+    final chat = (lastChatAt[b.$1.id] ?? epoch).compareTo(
+      lastChatAt[a.$1.id] ?? epoch,
+    );
+    if (chat != 0) return chat;
+    return a.$2.compareTo(b.$2);
+  });
+  return <TrainerClient>[for (final d in decorated) d.$1];
+}
+
 String _str(Object? v) => v is String ? v : '';
 
 String? _nullableStr(Object? v) => v is String && v.isNotEmpty ? v : null;

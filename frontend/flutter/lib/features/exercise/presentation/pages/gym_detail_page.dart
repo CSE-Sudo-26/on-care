@@ -8,8 +8,10 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/connection_disconnect.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymDetailPage extends ConsumerWidget {
@@ -80,14 +82,36 @@ class GymDetailPage extends ConsumerWidget {
   }
 }
 
-class _GymDetails extends StatelessWidget {
+class _GymDetails extends ConsumerWidget {
   const _GymDetails({required this.gym, required this.isMyGym});
 
   final Gym gym;
   final bool isMyGym;
 
+  /// 연결을 끊고, 끊었으면 이 화면을 닫는다 — 지운 대상의 상세에 그대로
+  /// 남아 있으면 방금 무엇을 했는지 화면이 말해 주지 못한다. (#1057)
+  Future<void> _disconnect(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    // 아직 읽는 중이면 `valueOrNull` 은 null 이다 — 담당이 있는데도 없다고
+    // 보고 "트레이너도 함께 해제됩니다" 를 빠뜨린다.
+    final Trainer? trainer = await ref.read(myTrainerProvider.future);
+    if (!context.mounted) return;
+    final bool removed = await confirmDisconnect(
+      context,
+      ref,
+      // 담당 트레이너가 있으면 함께 사라진다는 것을 알린다.
+      message: trainer == null
+          ? l.myGymDisconnectConfirm(gym.name)
+          : l.myGymDisconnectWithTrainerConfirm(gym.name, trainer.name),
+      disconnect: (GymRepository repo) => repo.disconnectMyGym(),
+    );
+    // go_router 의 pop 을 쓴다 — 상세는 라우터가 쌓은 화면이라, 그 안의
+    // Navigator 로는 돌아갈 곳이 없다고 나온다.
+    if (removed && context.mounted && context.canPop()) context.pop();
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Center(
       child: ConstrainedBox(
@@ -203,6 +227,15 @@ class _GymDetails extends StatelessWidget {
             ],
             const SizedBox(height: 12),
             _AffiliatedTrainers(gymId: gym.id),
+            if (isMyGym) ...<Widget>[
+              const SizedBox(height: 24),
+              // 목록 카드에서 삭제를 여기로 옮겼다 (#1057). 상세에 지울 자리가
+              // 없으면 연결을 끊을 방법이 화면에서 사라진다.
+              DisconnectButton(
+                label: l.myGymDisconnectTooltip,
+                onTap: () => _disconnect(context, ref),
+              ),
+            ],
             if (!isMyGym) ...<Widget>[
               const SizedBox(height: 24),
               FilledButton(
@@ -245,8 +278,7 @@ Future<void> _pickTrainerForConsultation(BuildContext context, Gym gym) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (BuildContext sheetContext) =>
-        _TrainerPickerSheet(gym: gym),
+    builder: (BuildContext sheetContext) => _TrainerPickerSheet(gym: gym),
   );
 }
 

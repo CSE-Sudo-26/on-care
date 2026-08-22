@@ -184,7 +184,10 @@ void main() {
       await settle(tester);
 
       // 기본은 반복 없음 — 지금까지의 동작 그대로다.
-      expect(find.byKey(const ValueKey<String>('repeat-preview')), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('repeat-preview')),
+        findsNothing,
+      );
 
       await tester.tap(find.byKey(const ValueKey<String>('repeat-weekly')));
       await settle(tester);
@@ -200,7 +203,10 @@ void main() {
       // 다시 끄면 미리보기도 사라진다 — `반복 없음` 이 지금까지의 동작이다.
       await tester.tap(find.byKey(const ValueKey<String>('repeat-none')));
       await settle(tester);
-      expect(find.byKey(const ValueKey<String>('repeat-preview')), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('repeat-preview')),
+        findsNothing,
+      );
     });
   });
 }

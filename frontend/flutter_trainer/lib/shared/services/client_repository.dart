@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
@@ -8,7 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
-    show prioritizeClients;
+    show prioritizeClients, sortByLatestMessage;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
@@ -16,6 +17,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_period.da
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
@@ -75,6 +77,11 @@ abstract interface class ClientRepository {
   /// 회원 앱 식단 탭의 기간 뷰와 같은 것을 트레이너에게도 준다. 두 구현 모두
   /// **주 단위 이력**에서 만든다 — 데모는 drift 의 일별 지표에서, 실서버는
   /// 리포트 응답(`calories_week` · `sodium_week` · `sugar_week`)에서.
+  /// 기간에 맞는 식단 조언. 회원 앱과 **같은 문장**이다 — 같은 회원의 같은
+  /// 기간을 두 화면이 다르게 말하면 상담에서 둘이 다른 이야기를 들고 앉는다.
+  /// (#1017)
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period);
+
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
@@ -326,12 +333,72 @@ class DriftClientRepository implements ClientRepository {
     return <int>[minutes - strength - stretching, strength, stretching];
   }
 
+  /// 데모 픽스처. 김민수의 운동은 이 파일 하나가 정한다.
+  static final DemoFixture _fixture = DemoFixture.load();
+
+  /// 픽스처가 들고 있는 회원의 주간 운동. 유형·분·칼로리·**세트**를 픽스처에서
+  /// 그대로 옮긴다.
+  ///
+  /// 예전에는 이행률에서 분을 되만들고 요일로 유형을 나눴다. 같은 회원인데
+  /// 회원 앱은 픽스처를, 트레이너 화면은 재구성한 값을 보여, 근력 세트도 소모
+  /// 칼로리도 두 화면이 다른 수를 말했다. (#1077)
+  ClientExerciseWeek? _fixtureWeek(String clientId, DateTime monday) {
+    if (clientId != _fixture.trainerClientId) return null;
+    final DateTime today = nowKst();
+    final String mondayYmd = ymd(monday);
+    final List<FixtureDay> days = _fixture
+        .daysFor(today)
+        .where((FixtureDay d) => d.weekStart == mondayYmd)
+        .toList();
+    if (days.isEmpty) return null;
+
+    final List<int> minutes = List<int>.filled(7, 0);
+    final List<int> calories = List<int>.filled(7, 0);
+    final List<int> cardio = List<int>.filled(7, 0);
+    final List<int> strength = List<int>.filled(7, 0);
+    final List<int> stretching = List<int>.filled(7, 0);
+    final List<int> other = List<int>.filled(7, 0);
+    final List<int> sets = List<int>.filled(7, 0);
+    for (final FixtureDay day in days) {
+      final int i = DateTime.parse(day.date).weekday - 1;
+      for (final FixtureExercise e in day.doneExercises) {
+        minutes[i] += e.minutes;
+        calories[i] += e.calories;
+        switch (e.type) {
+          case 'strength':
+            strength[i] += e.minutes;
+            sets[i] += e.sets ?? setsFromStrengthMinutes(e.minutes);
+          case 'flexibility' || 'stretching' || 'yoga':
+            stretching[i] += e.minutes;
+          case 'cardio' || 'walking':
+            cardio[i] += e.minutes;
+          default:
+            other[i] += e.minutes;
+        }
+      }
+    }
+    return ClientExerciseWeek(
+      dayLabels: const ['월', '화', '수', '목', '금', '토', '일'],
+      dailyMinutes: minutes,
+      dailyCalories: calories,
+      cardioMinutes: cardio,
+      strengthMinutes: strength,
+      stretchingMinutes: stretching,
+      otherMinutes: other,
+      strengthSets: sets,
+      totalMinutes: minutes.fold(0, (int a, int b) => a + b),
+      totalCalories: calories.fold(0, (int a, int b) => a + b),
+    );
+  }
+
   @override
   Future<ClientExerciseWeek> fetchExerciseWeek(
     String clientId, {
     DateTime? weekStart,
   }) async {
     final monday = clientMondayOf(weekStart ?? nowKst());
+    final ClientExerciseWeek? fromFixture = _fixtureWeek(clientId, monday);
+    if (fromFixture != null) return fromFixture;
     final completion = await _weekCompletion(clientId, monday);
     final minutes = completion
         .map(_minutesFromCompletion)
@@ -389,6 +456,83 @@ class DriftClientRepository implements ClientRepository {
                 ?.completion ??
             0,
     ];
+  }
+
+  @override
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period) async {
+    // 데모는 서버 규칙(`diet_service.period_coach_message`)을 로컬 데이터로
+    // 흉내 낸다. 고정 문장을 돌려주면 어느 고객을 열어도 같은 말을 해서,
+    // 기간을 바꿨을 때 조언이 따라 바뀌는지도 볼 수 없다. (#1017)
+    if (period == ClientPeriod.today) {
+      final entries = await (_db.select(
+        _db.clientDietEntries,
+      )..where((t) => t.clientId.equals(clientId))).get();
+      final int sodium = entries.fold<int>(
+        0,
+        (int sum, ClientDietEntryRow row) => sum + row.sodiumMg,
+      );
+      return sodium > sodiumTargetMg
+          ? '나트륨이 목표치를 ${sodium - sodiumTargetMg}mg 초과했어요. '
+                '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
+          : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+    }
+
+    final ClientDietPeriod window = await fetchDietPeriod(
+      clientId,
+      clientRangeNow(period),
+    );
+    final List<ClientDietDay> logged = window.days
+        .where((ClientDietDay day) => day.calories > 0)
+        .toList();
+    if (logged.isEmpty) {
+      return period == ClientPeriod.week
+          ? '이번 주 식단 기록이 아직 없어요. 한 끼만 남겨도 흐름이 보여요.'
+          : '기록이 쌓이면 나트륨·칼로리 흐름을 짚어 드릴게요.';
+    }
+    final int over = logged
+        .where((ClientDietDay day) => day.sodiumMg > sodiumTargetMg)
+        .length;
+    final bool weekendHeavy = _weekendRuns(logged);
+    if (period == ClientPeriod.week) {
+      if (over >= 3) {
+        return '이번 주 $over일이나 나트륨 권장량을 넘었어요. '
+            '국물은 건더기 위주로 먹고 남은 며칠은 담백하게 가요.';
+      }
+      if (weekendHeavy) {
+        return '주중에는 잘 지키다가 주말에 나트륨이 확 올라요. '
+            '주말 외식은 한 끼만 정해 두면 흐름이 유지돼요.';
+      }
+      if (over > 0) {
+        return '이번 주 $over일만 권장량을 넘었어요. '
+            '나머지 날의 균형은 좋았으니 이 흐름을 이어가요.';
+      }
+      return '이번 주 내내 나트륨을 권장량 안에서 지켰어요. 아주 좋아요!';
+    }
+    if (weekendHeavy) {
+      return '기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요. '
+          '주말 한 끼만 담백하게 바꿔도 평균이 내려가요.';
+    }
+    if (over * 10 >= logged.length * 4) {
+      return '기록한 날의 ${(over * 100 / logged.length).round()}%가 나트륨 권장량을 넘었어요. '
+          '국·찌개 국물을 남기는 것부터 시작해 봐요.';
+    }
+    return '기록을 통틀어 나트륨이 대체로 권장량 안이에요. 지금 흐름이 좋아요.';
+  }
+
+  /// 주말(토·일) 평균이 평일보다 뚜렷하게 높은지 — 서버와 같은 1.3배 기준.
+  bool _weekendRuns(List<ClientDietDay> days) {
+    final List<int> weekend = <int>[
+      for (final ClientDietDay day in days)
+        if (day.date.weekday >= DateTime.saturday) day.sodiumMg,
+    ];
+    final List<int> weekday = <int>[
+      for (final ClientDietDay day in days)
+        if (day.date.weekday < DateTime.saturday) day.sodiumMg,
+    ];
+    if (weekend.isEmpty || weekday.isEmpty) return false;
+    double mean(List<int> xs) =>
+        xs.fold<int>(0, (int a, int b) => a + b) / xs.length;
+    return mean(weekend) > mean(weekday) * 1.3;
   }
 
   @override
@@ -557,6 +701,24 @@ final prioritizedClientsProvider = Provider<AsyncValue<List<TrainerClient>>>((
       .whenData((clients) => prioritizeClients(clients, lastChatAt: lastChat));
 });
 
+/// 마지막 메시지가 새로운 순으로 정렬된 로스터 — 메시지 탭 목록이 쓴다.
+///
+/// [prioritizedClientsProvider] 와 나뉘어 있는 이유: 두 화면이 서로 다른
+/// 질문에 답한다. 고객 탭은 "누구를 먼저 챙길까"(주의 신호 우선), 메시지
+/// 탭은 "방금 무슨 말이 오갔나"(최신순)다. 한 provider 를 돌려 쓰면 둘 중
+/// 하나는 자기 화면과 맞지 않는 차례를 보게 된다.
+final recentlyMessagedClientsProvider =
+    Provider<AsyncValue<List<TrainerClient>>>((ref) {
+      final lastChat =
+          ref.watch(lastChatAtProvider).valueOrNull ??
+          const <String, DateTime>{};
+      return ref
+          .watch(clientsProvider)
+          .whenData(
+            (clients) => sortByLatestMessage(clients, lastChatAt: lastChat),
+          );
+    });
+
 /// Streams the last chat time per client (priority tiebreak).
 final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
   return ref.watch(clientRepositoryProvider).watchLastChatAt();
@@ -610,6 +772,17 @@ final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
     return ref.watch(clientRepositoryProvider).watchDiet(clientId);
   },
 );
+
+/// 기간별 식단 조언. 회원 앱 `dietAdviceProvider` 와 같은 서버 문장이다. (#1017)
+final clientDietAdviceProvider =
+    FutureProvider.family<String, ({String clientId, ClientPeriod period})>((
+      ref,
+      key,
+    ) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchDietAdvice(key.clientId, key.period);
+    });
 
 /// Streams a client's workout history for the 운동 sub-tab.
 final clientHistoryProvider =
@@ -684,6 +857,11 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
             cardioMinutes: at(week.cardioMinutes),
             strengthMinutes: at(week.strengthMinutes),
             stretchingMinutes: at(week.stretchingMinutes),
+            otherMinutes: at(week.otherMinutes),
+            // 서버가 세트를 주면 그 값, 아니면 분에서 환산한다.
+            strengthSets: d < week.strengthSets.length
+                ? week.strengthSets[d]
+                : setsFromStrengthMinutes(at(week.strengthMinutes)),
           );
         }
       }

@@ -145,9 +145,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         )),
       );
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.reportsFeedbackSaved)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.reportsFeedbackSaved)));
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -248,11 +246,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Future<void> _sendSelected(WeeklyReport report) {
     return _send(
       report,
-      _messageFor(
-        AppLocalizations.of(context),
-        report,
-        _savedDraftOf(report),
-      ),
+      _messageFor(AppLocalizations.of(context), report, _savedDraftOf(report)),
     );
   }
 

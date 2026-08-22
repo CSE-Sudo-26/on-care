@@ -36,6 +36,7 @@ class DioGymRepository implements GymRepository {
     startsAt: DateTime.parse(j['starts_at']! as String).toLocal(),
     capacity: ((j['capacity'] as num?) ?? 0).toInt(),
     remaining: ((j['remaining'] as num?) ?? 0).toInt(),
+    sessionType: (j['session_type'] as String?) ?? '1:1 PT',
   );
 
   static Trainer _trainer(Map<String, Object?> j) => Trainer(

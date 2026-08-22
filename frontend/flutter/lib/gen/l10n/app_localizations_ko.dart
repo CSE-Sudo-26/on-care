@@ -94,9 +94,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealChickenSalad => '닭가슴살 샐러드';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI 분석';
-
-  @override
   String get homeDetails => '자세히';
 
   @override
@@ -123,22 +120,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeExerciseTrendUnavailable => '주간 운동 기록을 불러오지 못했어요.';
 
   @override
-  String get homeMetricOver => '초과';
-
-  @override
-  String get homeMetricNormal => '정상';
-
-  @override
-  String dietAmountOver(String amount) {
-    return '목표보다 $amount 많아요';
-  }
-
-  @override
-  String dietAmountRemaining(String amount) {
-    return '목표까지 $amount 남았어요';
-  }
-
-  @override
   String get homeExerciseActiveTime => '운동 시간';
 
   @override
@@ -151,6 +132,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonSodium => '나트륨 조절에 좋아요';
 
   @override
+  String get homeMealSourceTrainer => '트레이너 추천';
+
+  @override
+  String get homeMealSourceAi => 'AI 추천';
+
+  @override
   String get homeMealTagLowSodium => '저나트륨';
 
   @override
@@ -160,7 +147,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonGlucose => '혈당 안정에 도움돼요';
 
   @override
-  String get homeMealTagLowGi => '저GI';
+  String get homeMealTagLowSugar => '저당류';
 
   @override
   String get homeMealSalmon => '연어 구이 + 나물';
@@ -169,7 +156,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonOmega => '오메가3 + 식이섬유';
 
   @override
-  String get homeMealTagHighProtein => '고단백';
+  String get homeMealTagHighProtein => '고단백질';
 
   @override
   String get homeMealTofu => '두부 채소 볶음';
@@ -187,7 +174,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealReasonFiber => '식이섬유가 풍부해요';
 
   @override
-  String get homeMealTagHighFiber => '고식이섬유';
+  String get homeMealTagLowFat => '저지방';
 
   @override
   String homeRecBasisSodium(int days, String sodium) {
@@ -243,11 +230,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietToday => '오늘로';
-
-  @override
-  String dietWeekLabel(int month, int week) {
-    return '$month월 $week주차';
-  }
 
   @override
   String get dietWeekdayMon => '월';
@@ -308,11 +290,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietPeriodTotal => '기간 합계';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    return '$days일 기록';
-  }
 
   @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';
@@ -610,6 +587,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exActivityTitle => '운동 현황';
 
   @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return '$month월 $week주차';
+  }
+
+  @override
+  String get exBurnTodayTitle => '오늘 소모';
+
+  @override
+  String get exBurnWeekTitle => '이번 주 소모';
+
+  @override
+  String get exBurnAllTitle => '평균 소모';
+
+  @override
+  String get exLoadDayTitle => '소모';
+
+  @override
+  String exGoalValue(String value) {
+    return '목표 $value';
+  }
+
+  @override
+  String get exLoadEmpty => '아직 기록이 없어요.';
+
+  @override
   String get exThisWeek => '이번 주';
 
   @override
@@ -861,6 +863,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSlotFull => '예약 마감';
 
   @override
+  String get exSlotTypePersonalTraining => '1:1 PT';
+
+  @override
+  String get exSlotTypeConsultation => '상담';
+
+  @override
   String get exSlotsEmpty => '예약 가능한 시간이 없어요';
 
   @override
@@ -996,6 +1004,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String myTrainerDisconnectConfirm(String trainer, String gym) {
     return '담당 트레이너 $trainer 연결을 삭제하시겠습니까?\n$gym 헬스장 연결은 유지됩니다.';
   }
+
+  @override
+  String get myGymDetailTooltip => '헬스장 상세 보기';
+
+  @override
+  String get myTrainerDetailTooltip => '트레이너 상세 보기';
 
   @override
   String get myGymDisconnectTooltip => '헬스장 연결 삭제';
@@ -1259,6 +1273,24 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get exConsultDataSharingNotice =>
       '요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.';
+
+  @override
+  String get exConsultDataSharingAgree =>
+      '위 내용을 확인했고, 식단·운동 기록과 신체 정보를 이 트레이너에게 공유하는 데 동의해요';
+
+  @override
+  String get exConsultDataSharingRequired => '공유에 동의해야 상담을 신청할 수 있어요';
+
+  @override
+  String get coachInviteConsentTitle => '담당 연결 전에 확인해 주세요';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return '$name 트레이너와 담당으로 연결되면, 회원님의 식단 기록·운동 기록·신체 정보와 건강 목표를 이 트레이너가 볼 수 있어요. 연결을 해제하면 열람 권한도 함께 사라져요.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => '동의하고 연결';
 
   @override
   String get exExerciseGoal => '운동 목표';

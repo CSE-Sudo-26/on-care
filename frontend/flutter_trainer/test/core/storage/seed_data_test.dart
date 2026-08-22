@@ -63,7 +63,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v18'), _todayString());
+      expect(await db.readValue('trainer_seeded_v20'), _todayString());
     });
 
     test(
@@ -295,13 +295,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v18', '2020-01-01');
+      await db.putValue('trainer_seeded_v20', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v18'), _todayString());
+      expect(await db.readValue('trainer_seeded_v20'), _todayString());
     });
 
     test(
@@ -424,7 +424,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v18'), today);
+        expect(await db.readValue('trainer_seeded_v20'), today);
       },
     );
 
@@ -448,6 +448,39 @@ void main() {
           client.lastMessage,
           thread.isEmpty ? '' : thread.last.body,
           reason: '${client.name}(${client.id})의 미리보기가 스레드와 어긋난다',
+        );
+      }
+    });
+
+    test('목록 시각은 오늘이면 시각, 어제면 어제, 그 전이면 날짜다', () async {
+      // 카카오톡과 같은 규칙이다. 문구를 픽스처에 박아 두면 하루만 지나도
+      // 거짓이 되므로, 며칠 전인지만 적어 두고 심을 때마다 오늘 기준으로
+      // 다시 만든다 — 어느 날 데모를 열어도 어긋나지 않아야 한다.
+      final DateTime day = DateTime(2026, 8, 20);
+      await seedIfEmpty(db, clock: day);
+
+      final rows = <String, String>{
+        for (final c in await db.select(db.trainerClients).get())
+          c.id: c.lastTime,
+      };
+
+      // 김민수의 마지막 메시지는 오늘 18:18 이다.
+      expect(rows['seed-client-1'], '18:18');
+      // 최우진은 어제.
+      expect(rows['seed-client-5'], '어제');
+      // 박성호는 사흘 전 — 날짜로 정확히 말한다.
+      expect(rows['seed-client-3'], '2026-08-17');
+      // 문가영은 3주 전.
+      expect(rows['seed-client-12'], '2026-07-30');
+      // 임도현은 대화가 없다.
+      expect(rows['seed-client-7'], '-');
+
+      // 어떤 값도 "3일 전" 처럼 흘러간 시간을 세지 않는다.
+      for (final entry in rows.entries) {
+        expect(
+          entry.value.endsWith(' 전'),
+          isFalse,
+          reason: '${entry.key}: ${entry.value}',
         );
       }
     });
@@ -500,7 +533,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v18', '2020-01-01');
+      await db.putValue('trainer_seeded_v20', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

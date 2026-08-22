@@ -279,6 +279,12 @@ void main() {
     );
     final AppLocalizations l = _localizations(tester);
 
+    // 데이터 공유 동의 없이는 보낼 수 없다 (#1022) — 수락되는 순간 넘어가는
+    // 것이 회원의 건강 기록이라 신청 화면에서 동의를 받는다. 동의 줄은 대상
+    // 카드 바로 아래(=화면 위쪽)에 있다.
+    await tester.tap(find.byKey(const Key('consultDataSharingConsent')));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text(l.exGoalWeightLoss));
     await _revealInForm(tester, find.text(l.exPurposeNone), 180);
     await tester.tap(find.text(l.exPurposeNone));
@@ -310,6 +316,7 @@ void main() {
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
     await _revealInForm(tester, find.text(l.exTimeAfternoon), 180);
     await tester.tap(find.text(l.exTimeAfternoon));
+
     await _revealInForm(tester, find.text(l.exSendConsultRequest), 220);
     await tester.tap(find.text(l.exSendConsultRequest));
     await tester.pumpAndSettle();

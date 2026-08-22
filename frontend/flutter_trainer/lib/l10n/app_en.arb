@@ -581,6 +581,17 @@
   "clientPeriodMonth": "All",
   "clientPeriodAverage": "Daily average",
   "clientPeriodGoal": "Goal",
+  "exBurnTodayTitle": "Burned today",
+  "exBurnWeekTitle": "Burned this week",
+  "exBurnMonthTitle": "Burned this month",
+  "exBurnDayTitle": "Burned",
+  "exTypeOther": "Other",
+  "exSetsValue": "{count, plural, =1{1 set} other{{count} sets}}",
+  "@exSetsValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "clientPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
   "@clientPeriodLoggedDays": {
     "placeholders": {
@@ -658,6 +669,7 @@
   "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your routine and send it over.",
   "reportBodyNoRecords": "There's nothing logged this week, so nothing to sum up. Let's plan next week's start together.",
   "schedTitle": "Schedule",
+  "schedDetailTitle": "Session detail",
   "schedDeleteTitle": "Delete session",
   "schedDeleteConfirm": "Delete the {time} session with {name}?",
   "@schedDeleteConfirm": {
@@ -683,15 +695,18 @@
       }
     }
   },
-  "schedEmptyWeek": "Nothing scheduled this week.",
-  "schedNewClientTag": "{name} (new)",
-  "@schedNewClientTag": {
+  "schedBlockTime": "{range} ({duration})",
+  "@schedBlockTime": {
     "placeholders": {
-      "name": {
+      "range": {
+        "type": "String"
+      },
+      "duration": {
         "type": "String"
       }
     }
   },
+  "schedEmptyWeek": "Nothing scheduled this week.",
   "schedSlots": "Booking slots",
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",
@@ -737,6 +752,7 @@
   "schedRepeatConflictHint": "Nothing was created. Change the time, or clear the sessions that clash.",
   "schedNote": "Trainer's note",
   "schedEditNote": "Edit note",
+  "schedAddNote": "Add note",
   "schedNoNote": "No note yet",
   "schedNoteOnlyHint": "A consultation is recorded as a note, not a program.",
   "schedNoteHint": "Anything to prepare, or notes about this client",
@@ -787,20 +803,10 @@
       }
     }
   },
-  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
   "slotEditTitle": "Edit booking slot",
   "slotStartTime": "Start time",
-  "slotCapacity": "Capacity",
-  "slotBookedNow": "{count} booked",
-  "@slotBookedNow": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
   "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
@@ -1157,7 +1163,6 @@
       }
     }
   },
-  "aiWithinTarget": " · within target",
   "aiRecentRoutine": "Recent routine",
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
@@ -1225,10 +1230,10 @@
   "coachDemoUnavailable": "AI coaching isn't available in demo mode",
   "coachNotMyClient": "That isn't one of your clients",
   "coachAskFailed": "Couldn't send your question",
-  "slotCapacityRange": "Capacity must be between 1 and 100.",
   "slotFutureOnly": "Booking slots can only be set for future times.",
   "slotNotFound": "Booking slot not found.",
-  "slotCapacityBelowBooked": "Capacity can't be lower than the number already booked.",
+  "slotTypeLockedByBooking": "Can't change the type of a slot that's already booked.",
+  "slotSessionType": "Type",
   "authErrNotTrainer": "Please sign in with a trainer account.",
   "aiBasisGoalCompletion": "{goal} · based on {rate}% completion",
   "@aiBasisGoalCompletion": {
@@ -1648,7 +1653,7 @@
   "unitGram": "g",
   "a11yRemoveExercise": "Remove exercise",
   "a11yRemoveCertification": "Remove certification",
-  "a11yPrevDay": "Previous day",
-  "a11yNextDay": "Next day",
+  "a11yPrevWeek": "Previous week",
+  "a11yNextWeek": "Next week",
   "a11ySendMessage": "Send message"
 }

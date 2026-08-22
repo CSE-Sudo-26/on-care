@@ -1135,6 +1135,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientPeriodGoal => 'Goal';
 
   @override
+  String get exBurnTodayTitle => 'Burned today';
+
+  @override
+  String get exBurnWeekTitle => 'Burned this week';
+
+  @override
+  String get exBurnMonthTitle => 'Burned this month';
+
+  @override
+  String get exBurnDayTitle => 'Burned';
+
+  @override
+  String get exTypeOther => 'Other';
+
+  @override
+  String exSetsValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String clientPeriodLoggedDays(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,
@@ -1306,6 +1332,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedTitle => 'Schedule';
 
   @override
+  String get schedDetailTitle => 'Session detail';
+
+  @override
   String get schedDeleteTitle => 'Delete session';
 
   @override
@@ -1327,12 +1356,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get schedEmptyWeek => 'Nothing scheduled this week.';
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name (new)';
-  }
+  String get schedEmptyWeek => 'Nothing scheduled this week.';
 
   @override
   String get schedSlots => 'Booking slots';
@@ -1440,6 +1469,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEditNote => 'Edit note';
 
   @override
+  String get schedAddNote => 'Add note';
+
+  @override
   String get schedNoNote => 'No note yet';
 
   @override
@@ -1517,9 +1549,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotPastTime =>
       'Booking slots can only be opened for future times.';
 
@@ -1531,14 +1560,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get slotStartTime => 'Start time';
-
-  @override
-  String get slotCapacity => 'Capacity';
-
-  @override
-  String slotBookedNow(int count) {
-    return '$count booked';
-  }
 
   @override
   String get slotUpdated => 'Booking slot updated.';
@@ -2102,9 +2123,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiWithinTarget => ' · within target';
-
-  @override
   String get aiRecentRoutine => 'Recent routine';
 
   @override
@@ -2268,9 +2286,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAskFailed => 'Couldn\'t send your question';
 
   @override
-  String get slotCapacityRange => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotFutureOnly =>
       'Booking slots can only be set for future times.';
 
@@ -2278,8 +2293,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotNotFound => 'Booking slot not found.';
 
   @override
-  String get slotCapacityBelowBooked =>
-      'Capacity can\'t be lower than the number already booked.';
+  String get slotTypeLockedByBooking =>
+      'Can\'t change the type of a slot that\'s already booked.';
+
+  @override
+  String get slotSessionType => 'Type';
 
   @override
   String get authErrNotTrainer => 'Please sign in with a trainer account.';
@@ -3182,10 +3200,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get a11yRemoveCertification => 'Remove certification';
 
   @override
-  String get a11yPrevDay => 'Previous day';
+  String get a11yPrevWeek => 'Previous week';
 
   @override
-  String get a11yNextDay => 'Next day';
+  String get a11yNextWeek => 'Next week';
 
   @override
   String get a11ySendMessage => 'Send message';

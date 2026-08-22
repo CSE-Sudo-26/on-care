@@ -114,19 +114,19 @@ void main() {
     expect(barColor(tester, '지방'), FigmaColors.dangerRed);
     expect(
       barColor(tester, '탄수화물'),
-      FigmaColors.statusNormal.withValues(alpha: 0.65),
+      FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
       reason: '탄수화물은 목표 아래인데 빨강이 됐습니다.',
     );
-    expect(barColor(tester, '단백질'), FigmaColors.statusNormal.withValues(alpha: 0.65));
+    expect(barColor(tester, '단백질'), FigmaColors.statusWithinGoal.withValues(alpha: 0.65));
   });
 
-  testWidgets('목표 아래면 정상 초록이다 (#1019)', (WidgetTester tester) async {
+  testWidgets('목표 아래면 브랜드 파랑이다 (#1070)', (WidgetTester tester) async {
     await pumpDiet(tester, carbsG: 120, proteinG: 45, fatG: 45);
 
     for (final String label in <String>['탄수화물', '단백질', '지방']) {
       expect(
         barColor(tester, label),
-        FigmaColors.statusNormal.withValues(alpha: 0.65),
+        FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
         reason: label,
       );
     }
@@ -139,7 +139,7 @@ void main() {
     for (final String label in <String>['탄수화물', '단백질', '지방']) {
       expect(
         barColor(tester, label),
-        FigmaColors.statusNormal.withValues(alpha: 0.65),
+        FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
         reason: label,
       );
     }

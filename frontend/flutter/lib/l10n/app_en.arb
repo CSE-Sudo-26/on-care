@@ -31,7 +31,6 @@
   "homeMacroProtein": "Protein",
   "homeMacroFat": "Fat",
   "homeMealChickenSalad": "Chicken breast salad",
-  "homeAiAnalysisPill": "✦ AI analysis",
   "homeDetails": "Details",
   "homeGoal": "Goal",
   "homeDietNutritionTitle": "Diet & nutrition",
@@ -47,32 +46,16 @@
   },
   "homeWeeklyExerciseTrend": "Exercise trend",
   "homeExerciseTrendUnavailable": "Couldn't load this week's workout history.",
-  "homeMetricOver": "Over",
-  "homeMetricNormal": "On track",
-  "dietAmountOver": "{amount} over the goal",
-  "@dietAmountOver": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "dietAmountRemaining": "{amount} remaining to the goal",
-  "@dietAmountRemaining": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "homeExerciseActiveTime": "Active time",
   "homeExerciseBurned": "Calories",
   "homeExerciseDays": "Workout days",
   "homeMealReasonSodium": "Great for sodium control",
+  "homeMealSourceTrainer": "Trainer pick",
+  "homeMealSourceAi": "AI pick",
   "homeMealTagLowSodium": "Low sodium",
   "homeMealBrownRiceBox": "Brown rice lunchbox",
   "homeMealReasonGlucose": "Helps steady blood sugar",
-  "homeMealTagLowGi": "Low GI",
+  "homeMealTagLowSugar": "Low sugar",
   "homeMealSalmon": "Grilled salmon + greens",
   "homeMealReasonOmega": "Omega-3 + fiber",
   "homeMealTagHighProtein": "High protein",
@@ -81,7 +64,7 @@
   "homeMealTagLowCal": "Low calorie",
   "homeMealNamulBibimbap": "Namul bibimbap",
   "homeMealReasonFiber": "Rich in dietary fiber",
-  "homeMealTagHighFiber": "High fiber",
+  "homeMealTagLowFat": "Low fat",
   "homeRecBasisSodium": "{days}-day avg sodium {sodium}mg",
   "@homeRecBasisSodium": {
     "placeholders": {
@@ -134,17 +117,6 @@
   },
   "dietTitle": "Diet",
   "dietToday": "Today",
-  "dietWeekLabel": "Month {month}, Week {week}",
-  "@dietWeekLabel": {
-    "placeholders": {
-      "month": {
-        "type": "int"
-      },
-      "week": {
-        "type": "int"
-      }
-    }
-  },
   "dietWeekdayMon": "Mon",
   "dietWeekdayTue": "Tue",
   "dietWeekdayWed": "Wed",
@@ -165,14 +137,6 @@
   "dietLoadError": "Couldn't load your diet.",
   "dietPeriodAverage": "Daily average",
   "dietPeriodTotal": "Period total",
-  "dietPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
-  "@dietPeriodLoggedDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
   "dietPeriodEmpty": "No meals were logged in this period.",
   "dietPeriodRange": "{start} - {end}",
   "@dietPeriodRange": {
@@ -300,6 +264,24 @@
   "exNearbyGymsMapLabel": "Gyms near me",
   "exWeekSummary": "This Week's Summary",
   "exActivityTitle": "Activity",
+  "exWeekOfMonthLabel": "Week {week}, {month}/",
+  "@exWeekOfMonthLabel": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "week": { "type": "int" }
+    }
+  },
+  "exBurnTodayTitle": "Burned today",
+  "exBurnWeekTitle": "Burned this week",
+  "exBurnAllTitle": "Average burned",
+  "exLoadDayTitle": "Burned",
+  "exGoalValue": "Goal {value}",
+  "@exGoalValue": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "exLoadEmpty": "No records yet.",
   "exThisWeek": "This week",
   "exPeriodAll": "All",
   "exExerciseContent": "What you did",
@@ -490,6 +472,8 @@
     }
   },
   "exSlotFull": "Fully booked",
+  "exSlotTypePersonalTraining": "1:1 PT",
+  "exSlotTypeConsultation": "Consultation",
   "exSlotsEmpty": "No times available",
   "exSlotsAllBooked": "All available times are fully booked",
   "exSlotsLoadError": "Could not load available times.",
@@ -582,6 +566,8 @@
       }
     }
   },
+  "myGymDetailTooltip": "Gym details",
+  "myTrainerDetailTooltip": "Trainer details",
   "myGymDisconnectTooltip": "Disconnect gym",
   "myTrainerDisconnectTooltip": "Disconnect trainer",
   "myNoTrainer": "No assigned trainer",
@@ -675,6 +661,14 @@
   "exTrainerConsultType": "Trainer Consultation",
   "exAssignedTrainer": "Assigned Trainer",
   "exConsultDataSharingNotice": "Once this trainer accepts your request, they'll be able to see your diet log, exercise log, and body info and health goals.",
+  "exConsultDataSharingAgree": "I have read this and agree to share my meal and workout records and body information with this trainer",
+  "exConsultDataSharingRequired": "Please agree to sharing before requesting a consultation",
+  "coachInviteConsentTitle": "Before you connect",
+  "coachInviteConsentBody": "Once {name} becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.",
+  "@coachInviteConsentBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachInviteConsentAgree": "Agree and connect",
   "exExerciseGoal": "Exercise Goal",
   "exGoalWeightLoss": "Weight Loss",
   "exGoalStrength": "Build Strength",

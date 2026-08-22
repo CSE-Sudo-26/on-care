@@ -350,10 +350,11 @@ WeeklyReport weeklyReportFromJson(
   TrainerClient client,
 ) {
   int? optInt(String key) => (json[key] as num?)?.toInt();
-  List<int> ints(String key) => (json[key] as List<Object?>? ?? const <Object?>[])
-      .whereType<num>()
-      .map((n) => n.toInt())
-      .toList(growable: false);
+  List<int> ints(String key) =>
+      (json[key] as List<Object?>? ?? const <Object?>[])
+          .whereType<num>()
+          .map((n) => n.toInt())
+          .toList(growable: false);
   List<double> doubles(String key) =>
       (json[key] as List<Object?>? ?? const <Object?>[])
           .whereType<num>()
@@ -380,10 +381,9 @@ WeeklyReport weeklyReportFromJson(
         if (day is Map<String, dynamic>)
           ReportDay(
             completion: (day['completion'] as num?)?.toInt() ?? 0,
-            exercises:
-                (day['exercises'] as List<Object?>? ?? const <Object?>[])
-                    .whereType<String>()
-                    .toList(growable: false),
+            exercises: (day['exercises'] as List<Object?>? ?? const <Object?>[])
+                .whereType<String>()
+                .toList(growable: false),
           ),
     ],
   );
@@ -422,11 +422,8 @@ final weeklyReportProvider = StreamProvider.family<WeeklyReport, ReportKey>((
 /// `autoDispose` 인 이유는 요약과 같다 — 고객·주를 옮겨 다니는 화면이라
 /// 남겨 두면 본 적 있는 모든 주의 초안이 메모리에 쌓인다. 저장 뒤에는 이
 /// provider 를 무효화해 다음 조회가 새 값을 읽게 한다.
-final reportFeedbackDraftProvider =
-    FutureProvider.autoDispose.family<ReportFeedbackDraft, ReportKey>((
-      ref,
-      key,
-    ) {
+final reportFeedbackDraftProvider = FutureProvider.autoDispose
+    .family<ReportFeedbackDraft, ReportKey>((ref, key) {
       return ref
           .watch(reportRepositoryProvider)
           .feedbackDraft(client: key.client, weekStart: key.weekStart);
@@ -436,8 +433,8 @@ final reportFeedbackDraftProvider =
 ///
 /// `autoDispose` 다 — 고객·주를 옮겨 다니는 화면이라 남겨 두면 본 적 있는 모든
 /// 주의 요약이 메모리에 쌓인다. 다시 생성하려면 이 provider 를 무효화한다.
-final reportSummaryProvider =
-    FutureProvider.autoDispose.family<ReportSummary, ReportKey>((ref, key) {
+final reportSummaryProvider = FutureProvider.autoDispose
+    .family<ReportSummary, ReportKey>((ref, key) {
       return ref
           .watch(reportRepositoryProvider)
           .summary(client: key.client, weekStart: key.weekStart);

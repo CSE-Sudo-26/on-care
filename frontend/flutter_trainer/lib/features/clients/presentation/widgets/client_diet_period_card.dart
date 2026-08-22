@@ -17,7 +17,6 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
-import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -520,11 +519,11 @@ class _PeriodBars extends StatelessWidget {
             selectedIndex: selection.selected,
             onSelected: selection.select,
             onVisibleRangeChanged: selection.setVisible,
-            goalOverlay: GoalLineOverlay(
-              visible: hasGoal,
-              bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-              label: '${l.clientPeriodGoal} ${format(goal)}',
-            ),
+            // 목표치는 왼쪽 칸에 두 줄로 적는다 (#1071).
+            goalBottom: hasGoal
+                ? chartHeight * (goal / maxValue).clamp(0.0, 1.0)
+                : null,
+            goalLabel: '${l.clientPeriodGoal}\n${format(goal)}',
             labelBuilder: (int i) =>
                 i % labelStep == 0 ? '${dates[i].day}' : '',
             calloutBuilder: (BuildContext context, int i) =>
@@ -631,8 +630,7 @@ class _MacroBar extends StatelessWidget {
         <({Color color, double kcal})>[
           // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
           // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
-          if (rest / basis > 0.01)
-            (color: AppColors.borderStrong, kcal: rest),
+          if (rest / basis > 0.01) (color: AppColors.borderStrong, kcal: rest),
           if (d.fatKcal > 0) (color: AppColors.macroFat, kcal: d.fatKcal),
           if (d.proteinKcal > 0)
             (color: AppColors.macroProtein, kcal: d.proteinKcal),

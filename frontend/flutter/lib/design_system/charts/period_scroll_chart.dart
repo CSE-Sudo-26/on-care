@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 
 /// `전체` 그래프의 선택·보이는 구간 상태. (#1018)
@@ -77,7 +79,9 @@ class PeriodScrollChart extends StatefulWidget {
     required this.calloutBuilder,
     this.selectedIndex,
     this.onSelected,
-    this.goalOverlay,
+    this.goalBottom,
+    this.goalLabel,
+    this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
   });
 
@@ -104,8 +108,16 @@ class PeriodScrollChart extends StatefulWidget {
   final int? selectedIndex;
   final void Function(int? i)? onSelected;
 
-  /// 목표선. 칸 전체 폭에 걸쳐 그려지도록 스크롤 안쪽에 얹는다.
-  final Widget? goalOverlay;
+  /// 그래프 바닥에서 목표선까지의 거리. null 이면 목표선을 긋지 않는다.
+  /// 선은 칸 전체 폭에 걸쳐야 하므로 스크롤 **안쪽**에 얹고, 목표치 라벨은
+  /// 밀려도 늘 보이도록 스크롤 **바깥** 왼쪽 칸에 앉힌다. (#1071)
+  final double? goalBottom;
+
+  /// 왼쪽 칸에 앉는 두 줄 라벨(`목표` / 목표치).
+  final String? goalLabel;
+
+  /// 목표치 글씨 모양. 자리는 모든 그래프가 같고 색·굵기만 화면을 따른다.
+  final TextStyle goalLabelStyle;
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
@@ -143,6 +155,24 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
   @override
   Widget build(BuildContext context) {
     if (widget.count == 0) return SizedBox(height: widget.height);
+    // 목표치 칸은 스크롤 바깥에 둔다 — 안에 두면 옆으로 밀 때 같이 흘러가
+    // 화면에서 사라진다.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        ChartGoalAxis(
+          height: widget.height,
+          label: widget.goalLabel,
+          lineBottom: widget.goalBottom,
+          style: widget.goalLabelStyle,
+        ),
+        const SizedBox(width: chartGoalAxisGap),
+        Expanded(child: _scroller(context)),
+      ],
+    );
+  }
+
+  Widget _scroller(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double viewport = constraints.maxWidth;
@@ -175,27 +205,49 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                   height: widget.height,
                   child: Stack(
                     children: <Widget>[
-                      if (widget.goalOverlay != null) widget.goalOverlay!,
+                      if (widget.goalBottom != null)
+                        GoalLineOverlay(bottom: widget.goalBottom!),
                       if (widget.selectedIndex != null)
                         _SelectionLine(
                           left: slot * widget.selectedIndex! + slot / 2,
                           height: widget.height,
                         ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: <Widget>[
-                          for (int i = 0; i < widget.count; i++)
-                            SizedBox(
-                              width: slot,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => widget.onSelected?.call(
-                                  widget.selectedIndex == i ? null : i,
+                      // 막대는 바닥에서 자라 오른다 (#1058). 기간을 바꿔 들어온
+                      // 그림이 그냥 나타나면, 다른 기간에서 넘어왔는지 처음부터
+                      // 그랬는지 구분되지 않는다.
+                      //
+                      // 되감기는 칸 수가 바뀔 때만 한다 — 막대를 고를 때마다
+                      // 다시 자라면 눌러 읽는 동작을 방해한다.
+                      ChartReveal(
+                        replayKey: widget.count,
+                        builder: (BuildContext context, double t) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: <Widget>[
+                            for (int i = 0; i < widget.count; i++)
+                              SizedBox(
+                                width: slot,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => widget.onSelected?.call(
+                                    widget.selectedIndex == i ? null : i,
+                                  ),
+                                  // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
+                                  // 자르지 않으면 막대가 줄어든 상자 밖으로
+                                  // 삐져나와 그대로 다 보인다.
+                                  child: ClipRect(
+                                    key: ValueKey<String>(
+                                      'period-bar-reveal-$i',
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.bottomCenter,
+                                      heightFactor: t,
+                                      child: widget.barBuilder(context, i),
+                                    ),
+                                  ),
                                 ),
-                                child: widget.barBuilder(context, i),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
