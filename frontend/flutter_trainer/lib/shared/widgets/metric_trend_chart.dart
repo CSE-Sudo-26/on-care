@@ -284,7 +284,7 @@ class MetricTrendPainter extends CustomPainter {
 
     for (var i = 0; i <= lastIdx; i++) {
       final sc = metricStatusColor(cur[i], goal);
-      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
+      _dot(canvas, pts[i], sc, r: i == lastIdx ? 5.0 : 4.2);
       _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc);
     }
   }

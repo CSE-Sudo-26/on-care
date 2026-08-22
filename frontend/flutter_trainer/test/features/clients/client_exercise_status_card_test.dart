@@ -383,6 +383,7 @@ void main() {
 
       expect(find.textContaining('오늘 기록'), findsOneWidget);
       expect(find.textContaining('어제 기록'), findsNothing);
+      expect(find.text('레그프레스 3세트 × 12회 · 80kg'), findsOneWidget);
       expect(toggle, findsOneWidget);
       expect(find.byIcon(Icons.expand_more), findsOneWidget);
     });
@@ -396,6 +397,7 @@ void main() {
 
       expect(find.textContaining('오늘 기록'), findsOneWidget);
       expect(find.textContaining('어제 기록'), findsOneWidget);
+      expect(find.text('데드리프트 4세트 × 8회 · 55kg'), findsOneWidget);
       expect(find.byIcon(Icons.expand_less), findsOneWidget);
 
       await tester.tap(toggle);

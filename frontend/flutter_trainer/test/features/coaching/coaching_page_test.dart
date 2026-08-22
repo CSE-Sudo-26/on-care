@@ -736,6 +736,10 @@ void main() {
         find.descendant(of: detail, matching: find.text('운동 기록')),
         findsOneWidget,
       );
+      expect(
+        find.descendant(of: detail, matching: find.text('벤치프레스 40kg · 4세트')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
 
