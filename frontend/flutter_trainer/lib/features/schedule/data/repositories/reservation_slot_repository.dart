@@ -10,13 +10,13 @@ abstract interface class ReservationSlotRepository {
 
   Future<ReservationSlot> create({
     required DateTime startsAt,
-    required int capacity,
+    required String sessionType,
   });
 
   Future<ReservationSlot> update(
     String id, {
     DateTime? startsAt,
-    int? capacity,
+    String? sessionType,
   });
 
   Future<ReservationSlot> close(String id);
@@ -40,13 +40,13 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
   @override
   Future<ReservationSlot> create({
     required DateTime startsAt,
-    required int capacity,
+    required String sessionType,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/trainer/reservation-slots',
       data: <String, dynamic>{
         'starts_at': startsAt.toUtc().toIso8601String(),
-        'capacity': capacity,
+        'session_type': sessionType,
       },
     );
     return ReservationSlot.fromJson(response.data!);
@@ -56,13 +56,13 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
   Future<ReservationSlot> update(
     String id, {
     DateTime? startsAt,
-    int? capacity,
+    String? sessionType,
   }) async {
     final response = await _dio.put<Map<String, dynamic>>(
       '/trainer/reservation-slots/$id',
       data: <String, dynamic>{
         'starts_at': ?startsAt?.toUtc().toIso8601String(),
-        'capacity': ?capacity,
+        'session_type': ?sessionType,
       },
     );
     return ReservationSlot.fromJson(response.data!);
@@ -80,20 +80,15 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
 /// 목 리포지토리가 던지는 검증 코드. **문구가 아니다** — 리포지토리는 로케일을
 /// 모르므로 화면이 이 코드로 자기 언어의 문구를 고른다. (#501)
 class SlotErrorCodes {
-  static const String capacityRange = 'capacity_range';
   static const String futureOnly = 'future_only';
   static const String notFound = 'not_found';
-  static const String capacityBelowBooked = 'capacity_below_booked';
+
+  /// 이미 예약이 걸린 자리의 종류를 바꾸려 했다(#1083).
+  static const String typeLockedByBooking = 'type_locked_by_booking';
 }
 
 class MockReservationSlotRepository implements ReservationSlotRepository {
   final List<ReservationSlot> _slots = <ReservationSlot>[];
-
-  void _validateCapacity(int capacity) {
-    if (capacity < 1 || capacity > 100) {
-      throw StateError('capacity_range');
-    }
-  }
 
   void _validateFuture(DateTime startsAt) {
     if (!startsAt.isAfter(nowKst())) {
@@ -111,16 +106,17 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   @override
   Future<ReservationSlot> create({
     required DateTime startsAt,
-    required int capacity,
+    required String sessionType,
   }) async {
     _validateFuture(startsAt);
-    _validateCapacity(capacity);
+    // 슬롯은 늘 한 사람 몫이다(#1012) — 정원은 늘 1.
     final slot = ReservationSlot(
       id: 'slot-${DateTime.now().microsecondsSinceEpoch}',
       startsAt: startsAt,
-      capacity: capacity,
-      remaining: capacity,
+      capacity: 1,
+      remaining: 1,
       isClosed: false,
+      sessionType: sessionType,
     );
     _slots.add(slot);
     return slot;
@@ -130,23 +126,24 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   Future<ReservationSlot> update(
     String id, {
     DateTime? startsAt,
-    int? capacity,
+    String? sessionType,
   }) async {
     final index = _slots.indexWhere((slot) => slot.id == id);
     if (index < 0) throw StateError('not_found');
     final old = _slots[index];
-    final nextCapacity = capacity ?? old.capacity;
-    _validateCapacity(nextCapacity);
     if (startsAt != null) _validateFuture(startsAt);
-    if (nextCapacity < old.booked) {
-      throw StateError('capacity_below_booked');
+    if (sessionType != null &&
+        sessionType != old.sessionType &&
+        old.booked > 0) {
+      throw StateError('type_locked_by_booking');
     }
     final updated = ReservationSlot(
       id: old.id,
       startsAt: startsAt ?? old.startsAt,
-      capacity: nextCapacity,
-      remaining: nextCapacity - old.booked,
+      capacity: old.capacity,
+      remaining: old.remaining,
       isClosed: old.isClosed,
+      sessionType: sessionType ?? old.sessionType,
     );
     _slots[index] = updated;
     return updated;
@@ -163,6 +160,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
       capacity: old.capacity,
       remaining: old.remaining,
       isClosed: true,
+      sessionType: old.sessionType,
     );
     _slots[index] = closed;
     return closed;
