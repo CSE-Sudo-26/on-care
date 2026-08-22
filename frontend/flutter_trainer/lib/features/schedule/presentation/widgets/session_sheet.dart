@@ -41,13 +41,13 @@ class SessionSheet extends ConsumerStatefulWidget {
 
 class _SessionSheetState extends ConsumerState<SessionSheet> {
   static const List<String> _types = SessionType.all;
-  static const List<int> _durations = <int>[30, 45, 60, 90];
 
   late String _client;
   late String _type;
   late int _hour;
   late int _minute;
-  late int _duration;
+  late int _endHour;
+  late int _endMinute;
   bool _saving = false;
   late final TextEditingController _note;
 
@@ -74,7 +74,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   late List<String> _typeOptions;
   late List<int> _hourOptions;
   late List<int> _minuteOptions;
-  late List<int> _durationOptions;
+  late List<int> _endHourOptions;
 
   /// [base] plus [current] when it isn't already offered.
   static List<T> _withCurrent<T>(List<T> base, T? current) {
@@ -105,8 +105,31 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       ..sort();
     _minuteOptions = _withCurrent(const <int>[0, 15, 30, 45], _minute)..sort();
 
-    _duration = e?.durationMinutes ?? 60;
-    _durationOptions = _withCurrent(_durations, _duration)..sort();
+    // 종료 시간은 시작 시간 + 소요 시간에서 거꾸로 구한다 — 기존 세션은
+    // 소요 시간(`durationMinutes`)만 들고 있어 화면에 보일 종료 시간이
+    // 저장돼 있지 않다(#1090).
+    final endTotal = _hour * 60 + _minute + (e?.durationMinutes ?? 60);
+    _endHour = endTotal ~/ 60;
+    _endMinute = endTotal % 60;
+    _endHourOptions = _withCurrent(<int>[
+      for (var h = 6; h <= 23; h++) h,
+    ], _endHour)..sort();
+  }
+
+  int get _startTotalMinutes => _hour * 60 + _minute;
+  int get _endTotalMinutes => _endHour * 60 + _endMinute;
+
+  /// 시작을 옮기면 소요 시간은 그대로 두고 종료를 따라 민다 — 그러지
+  /// 않으면 시작 시간을 15분 늦췄을 뿐인데 세션이 15분 짧아진다.
+  void _shiftStart({int? hour, int? minute}) {
+    final int duration = _endTotalMinutes - _startTotalMinutes;
+    setState(() {
+      if (hour != null) _hour = hour;
+      if (minute != null) _minute = minute;
+      final int endTotal = _startTotalMinutes + duration;
+      _endHour = endTotal ~/ 60;
+      _endMinute = endTotal % 60;
+    });
   }
 
   @override
@@ -137,11 +160,18 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final int duration = _endTotalMinutes - _startTotalMinutes;
+    if (duration <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.schedEndBeforeStart)));
+      return;
+    }
     setState(() => _saving = true);
     final repo = ref.read(scheduleRepositoryProvider);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final AppLocalizations l = AppLocalizations.of(context);
     try {
       final e = widget.existing;
       if (e == null && _repeatDays.isNotEmpty) {
@@ -169,7 +199,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           rule: rule,
           clientName: _client,
           type: _type,
-          durationMinutes: _duration,
+          durationMinutes: duration,
           note: _note.text.trim(),
           clientRequestId: _requestId,
         );
@@ -179,7 +209,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           clientName: _client,
           time: _time,
           type: _type,
-          durationMinutes: _duration,
+          durationMinutes: duration,
           note: _note.text.trim(),
         );
       } else {
@@ -188,7 +218,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           clientName: _client,
           time: _time,
           type: _type,
-          durationMinutes: _duration,
+          durationMinutes: duration,
           note: _note.text.trim(),
         );
       }
@@ -269,96 +299,175 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _sheetField(
-                label: l.schedFieldClient,
-                child: DropdownButton<String>(
-                  value: _client,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<String>>[
-                    for (final name in _clientOptions)
-                      DropdownMenuItem<String>(value: name, child: Text(name)),
-                  ],
-                  onChanged: (v) => setState(() => _client = v ?? _client),
-                ),
-              ),
-              _sheetField(
-                label: l.schedFieldType,
-                child: DropdownButton<String>(
-                  value: _type,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<String>>[
-                    for (final t in _typeOptions)
-                      // 값은 계약값 그대로, 보이는 문구만 로케일에서 가져온다.
-                      DropdownMenuItem<String>(
-                        value: t,
-                        child: Text(sessionTypeLabel(l, t)),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _type = v ?? _type),
-                ),
-              ),
-              _sheetField(
-                label: l.schedFieldTime,
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: DropdownButton<int>(
-                        value: _hour,
+              // 고객·유형은 같은 층위의 선택이라 한 줄에 묶는다 — 세로로
+              // 나란한 두 드롭다운이 각자 한 줄을 다 쓸 이유가 없다(#1090).
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldClient,
+                      child: DropdownButton<String>(
+                        value: _client,
                         isExpanded: true,
                         underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<int>>[
-                          for (final h in _hourOptions)
-                            DropdownMenuItem<int>(
-                              value: h,
-                              child: Text(
-                                l.schedHourLabel(h.toString().padLeft(2, '0')),
-                              ),
-                            ),
-                        ],
-                        onChanged: (v) => setState(() => _hour = v ?? _hour),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: DropdownButton<int>(
-                        value: _minute,
-                        isExpanded: true,
-                        underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<int>>[
-                          for (final m in _minuteOptions)
-                            DropdownMenuItem<int>(
-                              value: m,
-                              child: Text(
-                                l.schedMinuteLabel(
-                                  m.toString().padLeft(2, '0'),
-                                ),
-                              ),
+                        items: <DropdownMenuItem<String>>[
+                          for (final name in _clientOptions)
+                            DropdownMenuItem<String>(
+                              value: name,
+                              child: Text(name),
                             ),
                         ],
                         onChanged: (v) =>
-                            setState(() => _minute = v ?? _minute),
+                            setState(() => _client = v ?? _client),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              _sheetField(
-                label: l.schedFieldDuration,
-                child: DropdownButton<int>(
-                  value: _duration,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<int>>[
-                    for (final d in _durationOptions)
-                      DropdownMenuItem<int>(
-                        value: d,
-                        child: Text(l.minutesShort(d)),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldType,
+                      child: DropdownButton<String>(
+                        value: _type,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: <DropdownMenuItem<String>>[
+                          for (final t in _typeOptions)
+                            // 값은 계약값 그대로, 보이는 문구만 로케일에서
+                            // 가져온다.
+                            DropdownMenuItem<String>(
+                              value: t,
+                              child: Text(sessionTypeLabel(l, t)),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _type = v ?? _type),
                       ),
-                  ],
-                  onChanged: (v) => setState(() => _duration = v ?? _duration),
-                ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              // 소요 시간 대신 시작·종료 시간을 직접 고른다 — 시간표에
+              // 뜨는 것도, 예약 슬롯이 세션을 만들 때 넘기는 것도 결국
+              // "언제부터 언제까지"라 그 형태로 바로 고르는 편이 낫다(#1090).
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldStart,
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: DropdownButton<int>(
+                              key: const ValueKey<String>('session-start-hour'),
+                              value: _hour,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: <DropdownMenuItem<int>>[
+                                for (final h in _hourOptions)
+                                  DropdownMenuItem<int>(
+                                    value: h,
+                                    child: Text(
+                                      l.schedHourLabel(
+                                        h.toString().padLeft(2, '0'),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (v) => _shiftStart(hour: v),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: DropdownButton<int>(
+                              key: const ValueKey<String>(
+                                'session-start-minute',
+                              ),
+                              value: _minute,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: <DropdownMenuItem<int>>[
+                                for (final m in _minuteOptions)
+                                  DropdownMenuItem<int>(
+                                    value: m,
+                                    child: Text(
+                                      l.schedMinuteLabel(
+                                        m.toString().padLeft(2, '0'),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (v) => _shiftStart(minute: v),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(
+                      left: AppSpacing.xs,
+                      right: AppSpacing.xs,
+                      top: 30,
+                    ),
+                    child: Text(
+                      '–',
+                      style: TextStyle(color: AppColors.subtleForeground),
+                    ),
+                  ),
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldEnd,
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: DropdownButton<int>(
+                              key: const ValueKey<String>('session-end-hour'),
+                              value: _endHour,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: <DropdownMenuItem<int>>[
+                                for (final h in _endHourOptions)
+                                  DropdownMenuItem<int>(
+                                    value: h,
+                                    child: Text(
+                                      l.schedHourLabel(
+                                        h.toString().padLeft(2, '0'),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _endHour = v ?? _endHour),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: DropdownButton<int>(
+                              key: const ValueKey<String>('session-end-minute'),
+                              value: _endMinute,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: <DropdownMenuItem<int>>[
+                                for (final m in _minuteOptions)
+                                  DropdownMenuItem<int>(
+                                    value: m,
+                                    child: Text(
+                                      l.schedMinuteLabel(
+                                        m.toString().padLeft(2, '0'),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _endMinute = v ?? _endMinute),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               // 반복은 새 일정에만 있다(#870). 이미 잡힌 회차를 고치는 일은 그
               // 회차 하나의 일이고, 여기서 규칙을 다시 받으면 나머지 회차까지
@@ -597,6 +706,35 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                 Expanded(child: child),
               ],
             ),
+    );
+  }
+
+  /// 위에 작은 라벨, 아래 옅은 채움(inputBackground) 카드 — 예약 슬롯
+  /// 시트가 쓰는 것과 같은 언어다(#1090). 짙은 `OutlinedButton` 윤곽선
+  /// 대신 이 카드로 통일해, 한 시트 안에서 필드마다 다른 무게로 서던
+  /// 것을 정리한다.
+  Widget _pillField({required String label, required Widget child}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          decoration: const BoxDecoration(
+            color: AppColors.inputBackground,
+            borderRadius: BorderRadius.all(AppRadius.sm),
+          ),
+          child: child,
+        ),
+      ],
     );
   }
 }
