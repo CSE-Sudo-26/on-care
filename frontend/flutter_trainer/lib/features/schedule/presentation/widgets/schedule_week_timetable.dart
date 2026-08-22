@@ -420,13 +420,6 @@ class _DayColumn extends StatelessWidget {
                   right: 0,
                   child: const Divider(height: 1, color: AppColors.border),
                 ),
-              // 오늘 열에만 현재 시각 선을 얹는다. 위치를 정하는 시각은 선
-              // 안에서 읽는다 — 여기서 읽으면 1분마다 이 열이 통째로 다시
-              // 그려지고, 그 안의 세션 블록까지 따라 온다(#1006).
-              if (isToday)
-                Positioned.fill(
-                  child: _NowLine(window: window, hourHeight: hourHeight),
-                ),
               for (final p in placed)
                 Positioned(
                   top:
@@ -459,6 +452,17 @@ class _DayColumn extends StatelessWidget {
                     selected: p.session.id == selectedSessionId,
                     onTap: () => onPickSession(p.session),
                   ),
+                ),
+              // 오늘 열에만 현재 시각 선을 얹는다. 위치를 정하는 시각은 선
+              // 안에서 읽는다 — 여기서 읽으면 1분마다 이 열이 통째로 다시
+              // 그려지고, 그 안의 세션 블록까지 따라 온다(#1006).
+              //
+              // 세션 블록 **뒤에** 둔다 — `Stack` 은 나중에 그려지는 자식이
+              // 위에 앉는다. 블록보다 먼저 그렸을 때는 그 시간대에 일정이
+              // 있으면 선이 블록에 가려 카드 안쪽에서 보이지 않았다(#1081).
+              if (isToday)
+                Positioned.fill(
+                  child: _NowLine(window: window, hourHeight: hourHeight),
                 ),
             ],
           );
