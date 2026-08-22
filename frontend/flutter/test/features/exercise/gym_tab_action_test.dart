@@ -247,7 +247,7 @@ void main() {
     );
   });
 
-  testWidgets('gym finder result leads to the gym detail, not a fake send', (
+  testWidgets('연결된 헬스장이 없으면 찾기 화면이 그 자리에 있다 (#1133)', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(tester, hasMyGym: false);
@@ -255,14 +255,13 @@ void main() {
       tester.element(find.byType(Scaffold).first),
     );
 
-    await tester.tap(find.text(l.exFindGym));
-    await tester.pumpAndSettle();
-
-    expect(find.text('트레이너 채팅'), findsNothing);
+    // 찾기 버튼을 눌러 시트를 여는 단계가 없다 — 화면이 곧 찾기다.
+    expect(find.text(l.exFindGym), findsNothing);
+    expect(find.text(l.exNearbyGyms), findsOneWidget);
     // '건강 요약 전달' 은 보내는 곳 없이 성공 스낵바만 띄웠다 — 실제로 동작하는
     // 다음 걸음(헬스장 상세 → 상담 신청)으로 바꿨다(#787).
     expect(find.textContaining('건강 요약'), findsNothing);
-    expect(find.text(l.exGymDetailHint), findsWidgets);
+    expect(find.text('트레이너 채팅'), findsNothing);
   });
 
   testWidgets('pending consultation shows one action and reuses status UI', (
@@ -315,12 +314,14 @@ void main() {
     expect(find.text(_coach.name), findsOneWidget);
   });
 
-  testWidgets('connected trainer can open chat without a member gym link', (
+  testWidgets('연결 헬스장이 없으면 탭 안에 채팅 버튼을 두지 않는다 (#1132)', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(tester, hasMyGym: false, coach: _coach);
 
-    expect(find.byKey(const Key('gymTrainerChatButton')), findsOneWidget);
+    // 이 상태에서 할 일은 헬스장을 찾는 것이다. 담당 트레이너와의 채팅은
+    // 모든 탭 헤더에 있는 채팅 버튼이 맡는다.
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
   });
 
   testWidgets(
