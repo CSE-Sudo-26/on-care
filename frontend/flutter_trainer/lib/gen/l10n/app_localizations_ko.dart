@@ -1496,9 +1496,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotCloseTitle => '예약 슬롯 닫기';
 
   @override
-  String slotCloseBody(int count) {
-    return '이미 예약된 $count건의 일정은 유지되고, 신규 예약만 중단됩니다.';
-  }
+  String get slotCloseBody => '이미 잡힌 예약은 유지되고, 신규 예약만 중단됩니다.';
 
   @override
   String get slotClosed => '신규 예약을 닫았습니다.';
@@ -1524,14 +1522,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotEmpty => '이 날짜에 열린 예약 슬롯이 없습니다.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return '예약 닫힘 · 예약 $booked명';
-  }
+  String get slotClosedSummary => '예약 닫힘';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '예약 $booked명 · 잔여 $remaining명';
-  }
+  String get slotBookedSummary => '예약됨';
+
+  @override
+  String get slotOpenSummary => '비어 있음';
 
   @override
   String get slotCloseAction => '예약 닫기';

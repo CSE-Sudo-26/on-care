@@ -865,21 +865,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTrainerDedicated => 'Personal trainer';
 
   @override
-  String get exAiSlotTitle => '✦ AI recommended times';
-
-  @override
   String exTrainerAvailability(String trainer) {
-    return '$trainer\'s openings';
+    return '$trainer\'s open booking times';
   }
 
   @override
   String exSlotWhen(String date, String time) {
     return '$date $time';
-  }
-
-  @override
-  String exSlotRemaining(int count) {
-    return '$count left';
   }
 
   @override

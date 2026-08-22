@@ -82,7 +82,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     var type = slot.sessionType;
     // 이미 예약이 걸린 자리는 종류를 고칠 수 없다 — 서버가 409 로 막는
     // 동작을 아예 내놓지 않는다(#871 과 같은 규약).
-    final typeLocked = slot.booked > 0;
+    final typeLocked = slot.booked;
     final changed = await showDialog<(TimeOfDay, String)?>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -162,7 +162,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l.slotCloseTitle),
-        content: Text(l.slotCloseBody(slot.booked)),
+        content: Text(l.slotCloseBody),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -449,12 +449,13 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                                       ),
                                     ),
                                     Text(
+                                      // 한 사람 몫뿐인 자리라 인원수를 셀
+                                      // 것이 없다 — 상태만 적는다(#1072).
                                       slot.isClosed
-                                          ? l.slotClosedSummary(slot.booked)
-                                          : l.slotOpenSummary(
-                                              slot.booked,
-                                              slot.remaining,
-                                            ),
+                                          ? l.slotClosedSummary
+                                          : (slot.booked
+                                                ? l.slotBookedSummary
+                                                : l.slotOpenSummary),
                                       style: TextStyle(
                                         color: slot.isClosed
                                             ? AppColors.subtleForeground

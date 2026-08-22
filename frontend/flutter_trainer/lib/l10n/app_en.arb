@@ -798,14 +798,7 @@
   "slotStartTime": "Start time",
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
-  "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
-  "@slotCloseBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "slotCloseBody": "Any existing booking stays; only new bookings stop.",
   "slotClosed": "New bookings closed.",
   "slotActionFailed": "Couldn't complete the request. Please try again in a moment.",
   "slotManageTitle": "Manage booking slots",
@@ -820,25 +813,9 @@
   "slotOpenAction": "Open",
   "slotReload": "Reload",
   "slotEmpty": "No booking slots open on this day.",
-  "slotClosedSummary": "Closed · {booked} booked",
-  "@slotClosedSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      }
-    }
-  },
-  "slotOpenSummary": "{booked} booked · {remaining} left",
-  "@slotOpenSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "slotClosedSummary": "Closed",
+  "slotBookedSummary": "Booked",
+  "slotOpenSummary": "Open",
   "slotCloseAction": "Close bookings",
   "myCareerInvalid": "Enter years of experience between 0 and 80.",
   "myProfileSaveFailed": "Couldn't save your profile.",

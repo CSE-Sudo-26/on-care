@@ -1563,9 +1563,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotCloseTitle => 'Close booking slot';
 
   @override
-  String slotCloseBody(int count) {
-    return 'The $count existing bookings stay; only new bookings stop.';
-  }
+  String get slotCloseBody =>
+      'Any existing booking stays; only new bookings stop.';
 
   @override
   String get slotClosed => 'New bookings closed.';
@@ -1592,14 +1591,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotEmpty => 'No booking slots open on this day.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return 'Closed · $booked booked';
-  }
+  String get slotClosedSummary => 'Closed';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '$booked booked · $remaining left';
-  }
+  String get slotBookedSummary => 'Booked';
+
+  @override
+  String get slotOpenSummary => 'Open';
 
   @override
   String get slotCloseAction => 'Close bookings';
