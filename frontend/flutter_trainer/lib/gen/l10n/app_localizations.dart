@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get actionSave;
 
+  /// No description provided for @actionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get actionSaved;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:
@@ -1705,6 +1711,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preferred time'**
   String get consultPreferredTime;
+
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
 
   /// No description provided for @consultReject.
   ///

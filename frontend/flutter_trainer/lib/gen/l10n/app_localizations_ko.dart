@@ -105,6 +105,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get actionSave => '저장';
 
   @override
+  String get actionSaved => '저장됨';
+
+  @override
   String get actionCancel => '취소';
 
   @override
@@ -873,10 +876,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
-  String get consultHealthPurpose => '건강관리 목적';
+  String get consultHealthPurpose => '관리 목적';
 
   @override
   String get consultPreferredTime => '희망 일시';
+
+  @override
+  String get consultMessage => '문의 내용';
 
   @override
   String get consultReject => '거절';

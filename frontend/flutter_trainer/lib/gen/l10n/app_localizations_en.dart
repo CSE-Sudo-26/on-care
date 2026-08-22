@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSave => 'Save';
 
   @override
+  String get actionSaved => 'Saved';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -913,6 +916,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get consultPreferredTime => 'Preferred time';
+
+  @override
+  String get consultMessage => 'Message';
 
   @override
   String get consultReject => 'Decline';

@@ -22,6 +22,7 @@ class ReservationSlotsSheet extends ConsumerStatefulWidget {
 }
 
 class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
+  late DateTime _date = widget.selectedDay;
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
   bool _saving = false;
 
@@ -34,13 +35,23 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       left.month == right.month &&
       left.day == right.day;
 
-  DateTime _startsAt(TimeOfDay time) => DateTime(
-    widget.selectedDay.year,
-    widget.selectedDay.month,
-    widget.selectedDay.day,
-    time.hour,
-    time.minute,
-  );
+  DateTime _startsAt(TimeOfDay time) =>
+      DateTime(_date.year, _date.month, _date.day, time.hour, time.minute);
+
+  /// 시트를 연 날짜만 볼 수 있던 것을 고친다 — 다른 날짜에 슬롯을 열려면
+  /// 시트를 닫고 캘린더에서 날짜를 옮긴 뒤 다시 열어야 했다(#1090).
+  Future<void> _pickDate() async {
+    final today = nowKst();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(today.year, today.month, today.day),
+      lastDate: DateTime(today.year + 1, today.month, today.day),
+    );
+    if (picked != null) {
+      setState(() => _date = DateTime(picked.year, picked.month, picked.day));
+    }
+  }
 
   Future<void> _create() async {
     // await 전에 한 번만 잡아 둔다 — 뒤에서 context 를 다시 만지면 async gap 을
@@ -207,6 +218,57 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// 종류·날짜·시간 세 필드가 한 줄에서 같은 무게로 보이도록 쓰는 옅은
+  /// 채움 칩. `OutlinedButton` 의 짙은 윤곽선 대신 트레이너 웹 다른 곳
+  /// (필터 칩 등)과 같은 `inputBackground` 채움을 쓴다(#1090).
+  Widget _compactField({required IconData icon, required String label}) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      decoration: const BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.all(AppRadius.sm),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(icon, size: 17, color: AppColors.mutedForeground),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.foreground,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// [_compactField] 를 누를 수 있게 감싼다 — 날짜·시간처럼 다이얼로그를
+  /// 여는 자리에 쓴다. 종류는 [PopupMenuButton] 이 자기 탭 처리를 이미
+  /// 하므로 이 래퍼를 쓰지 않는다.
+  Widget _tappableField({
+    required Widget child,
+    required VoidCallback? onTap,
+    Key? key,
+  }) {
+    return Material(
+      key: key,
+      color: Colors.transparent,
+      borderRadius: const BorderRadius.all(AppRadius.sm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(AppRadius.sm),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -245,47 +307,51 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                l.slotIntro(
-                  l.dateMonthDay(
-                    widget.selectedDay.month,
-                    widget.selectedDay.day,
-                  ),
-                ),
+                l.slotIntro(l.dateMonthDay(_date.month, _date.day)),
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
-              // 종류(1:1 PT/상담)를 먼저 고른다 — 정원이 없어진 자리다(#1083).
-              // 회원 예약이 만드는 일정이 이 종류를 그대로 물려받는다.
-              Row(
-                children: <Widget>[
-                  Text(
-                    l.slotSessionType,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  DropdownButton<String>(
-                    key: const ValueKey<String>('slot-session-type'),
-                    value: _type,
-                    underline: const SizedBox.shrink(),
-                    items: <DropdownMenuItem<String>>[
-                      for (final t in SessionType.all)
-                        DropdownMenuItem<String>(
-                          value: t,
-                          child: Text(sessionTypeLabel(l, t)),
-                        ),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (v) => setState(() => _type = v ?? _type),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
+              // 종류·날짜·시간을 한 줄에 둔다 — 셋 다 "언제·누구 자리를
+              // 열까"를 정하는 같은 층위의 선택이라, 종류만 위에 따로 서고
+              // 나머지가 아래에 서면 무엇이 먼저인지 자리로 오해된다.
+              // 옅은 채움만 쓰고 테두리를 넣지 않는다 — 기본
+              // `OutlinedButton` 의 짙은 윤곽선은 이 시트에서 유일하게
+              // 선을 두른 요소라 눈에 튀었다(#1090).
               Row(
                 children: <Widget>[
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _saving
+                    child: PopupMenuButton<String>(
+                      key: const ValueKey<String>('slot-session-type'),
+                      enabled: !_saving,
+                      itemBuilder: (context) => <PopupMenuEntry<String>>[
+                        for (final t in SessionType.all)
+                          PopupMenuItem<String>(
+                            value: t,
+                            child: Text(sessionTypeLabel(l, t)),
+                          ),
+                      ],
+                      onSelected: (v) => setState(() => _type = v),
+                      child: _compactField(
+                        icon: Icons.badge_outlined,
+                        label: sessionTypeLabel(l, _type),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _tappableField(
+                      key: const ValueKey<String>('slot-date'),
+                      onTap: _saving ? null : _pickDate,
+                      child: _compactField(
+                        icon: Icons.calendar_today_outlined,
+                        label: l.dateMonthDay(_date.month, _date.day),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _tappableField(
+                      onTap: _saving
                           ? null
                           : () async {
                               final picked = await showTimePicker(
@@ -296,8 +362,10 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                                 setState(() => _time = picked);
                               }
                             },
-                      icon: const Icon(Icons.schedule),
-                      label: Text(_time.format(context)),
+                      child: _compactField(
+                        icon: Icons.schedule_outlined,
+                        label: _time.format(context),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -325,9 +393,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   ),
                   data: (allSlots) {
                     final daySlots = allSlots
-                        .where(
-                          (slot) => _sameDay(slot.startsAt, widget.selectedDay),
-                        )
+                        .where((slot) => _sameDay(slot.startsAt, _date))
                         .toList();
                     if (daySlots.isEmpty) {
                       return Center(

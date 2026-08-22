@@ -422,8 +422,8 @@ void main() {
       await settle(tester);
 
       // Detail opened — both evidence tabs and the quick actions are
-      // unique to it. 신체·목표 is now an inline panel, not a button
-      // (#1024), and 메모 is icon-only.
+      // unique to it. 신체·목표 now lives in the merged dialog, not a
+      // button of its own (#1024), and 메모 is icon-only.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
       expect(find.text('리포트'), findsOneWidget);
