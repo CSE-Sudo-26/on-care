@@ -7,11 +7,16 @@ version: 0.1.0+1
 
 environment:
   sdk: ^3.12.0
-  # `Color.withValues` (used across the design system) landed in Flutter
-  # 3.27. The Dart constraint above already implies a much newer Flutter,
-  # but stating it means a wrong toolchain fails at `pub get` rather than
-  # at some random widget's compile error.
-  flutter: '>=3.27.0'
+  # `DropdownButtonFormField.initialValue` (성별·시각·기간 선택 등 다섯 곳이
+  # 쓴다) 는 Flutter 3.35 에서 `value` 를 대신해 들어왔다. 그전에는 `3.27` 로
+  # 적혀 있었는데(`Color.withValues` 기준), 그 사이 세 앱이 3.35 API 를 쓰기
+  # 시작하면서 선언이 사실과 어긋났다 — 3.27 툴체인은 `pub get` 을 통과한 뒤
+  # 위젯 다섯 개에서 컴파일이 깨진다. 이 줄이 있는 이유가 바로 그걸 막는
+  # 것이라(아래 참고) 실제로 필요한 값으로 맞춘다.
+  #
+  # 잘못된 툴체인이 `pub get` 에서 걸리게 하려는 선언이다. CI 는 3.44.9 로
+  # 고정돼 있어 이 값보다 위다.
+  flutter: '>=3.35.0'
 
 dependencies:
   flutter:

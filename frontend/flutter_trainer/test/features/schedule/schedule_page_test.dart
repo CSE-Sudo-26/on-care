@@ -1186,16 +1186,15 @@ void main() {
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'workout'),
       );
+      // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
+      // 패널과 하나의 스크롤을 공유하도록 `embedded: true` 로 그려진다. 그
+      // 공유 스크롤(`ListView`) 자체가 `client-detail-tabs-$clientId` 키를
+      // 달고 있다.
       final workoutScroll = find
           .descendant(
-            of: find
-                .descendant(
-                  of: find.byKey(
-                    const ValueKey<String>('workout-seed-client-3'),
-                  ),
-                  matching: find.byType(ListView),
-                )
-                .first,
+            of: find.byKey(
+              const ValueKey<String>('client-detail-tabs-seed-client-3'),
+            ),
             matching: find.byType(Scrollable),
           )
           .first;
