@@ -543,9 +543,8 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
       clientExercisePeriodProvider(key),
     );
     return async.maybeWhen(
-      data: (ClientExercisePeriod period) => Column(
+      data: (ClientExercisePeriod period) => ClientDayRecordCard(
         key: const ValueKey<String>('exercise-daily-records'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           for (final ClientExerciseDay day in period.days.reversed)
             ClientDayRecordTile(

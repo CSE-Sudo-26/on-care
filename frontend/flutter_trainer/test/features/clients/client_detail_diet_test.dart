@@ -526,9 +526,53 @@ void main() {
       await tester.tap(row);
       await tester.pumpAndSettle();
 
-      // 펼친 줄에는 그날의 항목이 라벨과 함께 선다.
-      expect(find.text('칼로리'), findsWidgets);
-      expect(find.text('나트륨'), findsWidgets);
+      // 펼친 줄에는 그날의 항목이 이름표와 값을 한 알약에 담아 선다.
+      // 이 목록 안에서만 찾는다 — 위 영양 요약 카드에도 같은 낱말이 있다.
+      Finder pill(String label) => find.descendant(
+        of: records,
+        matching: find.textContaining(label, findRichText: true),
+      );
+      expect(pill('칼로리'), findsWidgets);
+      expect(pill('나트륨'), findsWidgets);
+    });
+
+    testWidgets('좁은 화면·큰 글씨에서도 날짜 줄이 넘치지 않는다 (#1025)', (tester) async {
+      // 날짜 칸의 폭이 고정이라 글씨 배율이 커지면 가장 먼저 깨질 자리다.
+      // 480 폭은 분할 패널의 좁은 쪽, 1.3 배는 접근성 검사(#1004)가 쓰는 값이다.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(480, 900);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await openDiet(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+
+      final Finder records = find.byKey(
+        const ValueKey<String>('diet-daily-records'),
+      );
+      await tester.scrollUntilVisible(
+        records,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      final Finder openable = find.descendant(
+        of: records,
+        matching: find.byIcon(Icons.expand_more),
+      );
+      await tester.ensureVisible(openable.first);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.ancestor(of: openable.first, matching: find.byType(InkWell)).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (

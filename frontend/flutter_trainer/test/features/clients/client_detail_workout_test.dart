@@ -260,12 +260,18 @@ void main() {
         find.ancestor(of: openable.first, matching: find.byType(InkWell)).first,
       );
       await settle(tester);
+      // 펼친 항목은 이름표와 값을 한 알약에 담은 `Text.rich` 다 — 리치 텍스트를
+      // 켜야 잡힌다.
+      final Finder minutesPill = find.descendant(
+        of: find.byKey(const ValueKey<String>('exercise-daily-records')),
+        matching: find.textContaining('운동 시간', findRichText: true),
+      );
       await tester.scrollUntilVisible(
-        find.text('운동 시간').first,
+        minutesPill.first,
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('운동 시간'), findsWidgets);
+      expect(minutesPill, findsWidgets);
     });
 
     testWidgets('운동 전체 AI 카드는 전체 기간을 제목으로 말한다 (#1025)', (tester) async {

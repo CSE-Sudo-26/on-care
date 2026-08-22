@@ -357,9 +357,8 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
       clientDietPeriodProvider(key),
     );
     return async.maybeWhen(
-      data: (ClientDietPeriod period) => Column(
+      data: (ClientDietPeriod period) => ClientDayRecordCard(
         key: const ValueKey<String>('diet-daily-records'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           // 최근 날이 위다 — 트레이너가 먼저 궁금해하는 것은 어제와 오늘이다.
           for (final ClientDietDay day in period.days.reversed)
@@ -430,26 +429,17 @@ class _DayMeals extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SizedBox(height: AppSpacing.xs),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             for (final ClientDietEntry meal in meals)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    SizedBox(
-                      width: 88,
-                      child: Text(
-                        meal.meal,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.accent,
-                        ),
-                      ),
-                    ),
+                    // 끼니 이름은 알약이다 — 운동 기록 카드의 종류 알약과
+                    // 같은 모양이라, 두 탭에서 같은 성격의 값이 같게 읽힌다.
+                    _MealChip(label: meal.meal),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,9 +449,11 @@ class _DayMeals extends ConsumerWidget {
                             style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
+                              height: 1.35,
                               color: AppColors.foreground,
                             ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             '${formatNumber(meal.calories)} ${l.unitKcal} · '
                             '${l.dietSodiumValue(meal.sodiumMg)} · '
@@ -484,4 +476,37 @@ class _DayMeals extends ConsumerWidget {
       orElse: () => const SizedBox.shrink(),
     );
   }
+}
+
+/// 끼니 이름 알약(아침·점심·저녁·간식).
+///
+/// 운동 기록 카드의 종류 알약과 같은 모양이다. 폭을 고정해 여러 끼니가
+/// 세로로 설 때 음식 이름의 시작점이 가지런하다.
+class _MealChip extends StatelessWidget {
+  const _MealChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 48,
+    alignment: Alignment.center,
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    decoration: const BoxDecoration(
+      color: AppColors.accentSurface,
+      borderRadius: BorderRadius.all(AppRadius.pill),
+    ),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        label,
+        maxLines: 1,
+        style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: AppColors.accent,
+        ),
+      ),
+    ),
+  );
 }
