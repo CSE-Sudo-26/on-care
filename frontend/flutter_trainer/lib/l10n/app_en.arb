@@ -1326,6 +1326,8 @@
     }
   },
   "routineAlreadyGone": "That routine is already gone",
+  "workoutPendingTitle": "Not done yet",
+  "workoutPendingCancel": "Cancel assignment",
   "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
   "routineUpdated": "Routine updated",
   "routineDeleteTitle": "Delete this routine?",

@@ -729,6 +729,8 @@
   "myDeleteFailed": "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요",
   "myDeleteConfirmPrompt": "계속하려면 이름({name})을 입력해 주세요",
   "routineAlreadyGone": "이미 삭제된 루틴이에요",
+  "workoutPendingTitle": "아직 하지 않은 개인 운동",
+  "workoutPendingCancel": "배정 취소",
   "routineUpdateFailed": "루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요",
   "routineUpdated": "루틴을 수정했어요",
   "routineDeleteTitle": "루틴을 삭제할까요?",

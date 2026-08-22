@@ -4262,6 +4262,18 @@ abstract class AppLocalizations {
   /// **'That routine is already gone'**
   String get routineAlreadyGone;
 
+  /// No description provided for @workoutPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not done yet'**
+  String get workoutPendingTitle;
+
+  /// No description provided for @workoutPendingCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel assignment'**
+  String get workoutPendingCancel;
+
   /// No description provided for @routineUpdateFailed.
   ///
   /// In en, this message translates to:

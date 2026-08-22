@@ -11,6 +11,8 @@ import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 
@@ -90,6 +92,60 @@ class _HistoryFailsOnceRepository extends DriftClientRepository {
     }
     return super.watchHistory(clientId);
   }
+}
+
+/// 수행을 마친 배정 하나와 아직 안 한 배정 하나를 들고 있는 저장소.
+///
+/// 데모 시드에는 완료된 배정이 없어, "완료한 것에는 취소가 없다" 를 시드만으로는
+/// 볼 수 없다(#1020).
+class _MixedRoutineRepository implements TrainerRoutineRepository {
+  @override
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {}
+
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {}
+
+  @override
+  Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
+      Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[
+        AssignedRoutine(
+          id: 'done-1',
+          name: '이미 한 루틴',
+          minutes: 30,
+          type: '근력',
+          reason: '',
+          source: 'trainer',
+          completed: true,
+        ),
+        AssignedRoutine(
+          id: 'todo-1',
+          name: '아직 안 한 루틴',
+          minutes: 20,
+          type: '유산소',
+          reason: '',
+          source: 'ai',
+        ),
+      ]);
+
+  @override
+  Future<void> updateRoutine(
+    String memberId,
+    String routineId, {
+    String? name,
+    int? minutes,
+    String? type,
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> deleteRoutine(String memberId, String routineId) async {}
 }
 
 class _FeedbackRepository extends DriftClientRepository {
@@ -348,6 +404,97 @@ void main() {
         await settle(tester);
       }
       expect(find.text(skipped.name), findsWidgets);
+    });
+
+    testWidgets('아직 하지 않은 개인 운동을 이 화면에서 취소한다 (#1020)', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
+
+      // 배정된 루틴 목록·PT 이력을 되살린 것이 아니다 — 물릴 수 있는 것만
+      // 온다(#1025 는 그 목록을 걷어낸 채로 둔다).
+      final Finder pending = find.byKey(
+        const ValueKey<String>('workout-pending-routines'),
+      );
+      expect(pending, findsOneWidget);
+      expect(find.text('저강도 유산소 · 20분'), findsOneWidget);
+
+      final Finder cancel = find.byKey(
+        const ValueKey<String>('workout-cancel-routine-demo-routine-1'),
+      );
+      expect(cancel, findsOneWidget);
+
+      // 확인 없이 지우지 않는다.
+      await tester.tap(cancel);
+      await settle(tester);
+      expect(find.text('루틴을 삭제할까요?'), findsOneWidget);
+      await tester.tap(find.text('취소'));
+      await settle(tester);
+      expect(find.text('저강도 유산소 · 20분'), findsOneWidget);
+
+      // 확인하면 실제로 사라진다 — 데모 저장소가 배정을 들고 있어 취소가
+      // 목록에 반영된다(#1020).
+      await tester.tap(cancel);
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('confirm-cancel-pending-routine')),
+      );
+      await settle(tester);
+      expect(find.text('저강도 유산소 · 20분'), findsNothing);
+      // 나머지 배정은 그대로다.
+      expect(find.text('코어 서킷 · 15분'), findsOneWidget);
+    });
+
+    testWidgets('취소는 이미 완료한 운동 기록을 건드리지 않는다 (#1020)', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
+
+      // 오늘 줄은 처음부터 펼쳐져 있고 그 안에 완료한 기록이 있다.
+      expect(find.text('트레이너 메모'), findsOneWidget);
+      final int linesBefore = find.byType(ExerciseLine).evaluate().length;
+      expect(linesBefore, greaterThan(0));
+
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>('workout-cancel-routine-demo-routine-1'),
+        ),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('confirm-cancel-pending-routine')),
+      );
+      await settle(tester);
+
+      // 배정만 사라지고 기록은 그대로다 — 한 일이 없던 일이 되지 않는다.
+      expect(find.text('저강도 유산소 · 20분'), findsNothing);
+      expect(find.text('트레이너 메모'), findsOneWidget);
+      expect(find.byType(ExerciseLine).evaluate().length, linesBefore);
+    });
+
+    testWidgets('이미 수행한 배정에는 취소가 없다 (#1020)', (tester) async {
+      _useTallSurface(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+        extraOverrides: <Override>[
+          trainerRoutineRepositoryProvider.overrideWithValue(
+            _MixedRoutineRepository(),
+          ),
+        ],
+      );
+
+      // 안 한 것만 이 자리에 온다. 이미 한 운동의 배정을 지운다고 그 기록이
+      // 없던 일이 되지 않으므로, 취소 버튼을 걸어 두면 오해를 만든다.
+      expect(find.text('아직 안 한 루틴 · 20분'), findsOneWidget);
+      expect(find.text('이미 한 루틴 · 30분'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('workout-cancel-routine-todo-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('workout-cancel-routine-done-1')),
+        findsNothing,
+      );
     });
 
     testWidgets('기록 카드는 색 띠 없는 흰 판이다 (#1025)', (tester) async {

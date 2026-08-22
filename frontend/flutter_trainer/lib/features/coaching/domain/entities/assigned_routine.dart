@@ -9,6 +9,7 @@ class AssignedRoutine {
     required this.type,
     required this.reason,
     required this.source,
+    this.completed = false,
   });
 
   /// Server id (empty before assignment).
@@ -28,4 +29,11 @@ class AssignedRoutine {
 
   /// `ai` (AI-suggested) or `trainer` (hand-assigned).
   final String source;
+
+  /// 회원이 이 배정을 이미 수행했는가. 서버가 `completed` 로 함께 내려준다.
+  ///
+  /// 취소는 **아직 하지 않은** 것만 물릴 수 있다 — 이미 한 운동을 배정 목록에서
+  /// 지운다고 그 기록이 없던 일이 되지는 않으므로, 취소 버튼을 걸어 두면
+  /// 트레이너가 기록까지 지운다고 오해한다(#1020).
+  final bool completed;
 }

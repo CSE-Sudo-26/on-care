@@ -15,6 +15,8 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/client_ai_a
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_day_record_tile.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -26,10 +28,12 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 /// 운동 — 기록 확인 중심 화면. 얼마나 했나(운동 현황) → 무엇을 했나(운동
 /// 기록) 순서로 답한다(#1025).
 ///
-/// 배정·취소처럼 루틴을 **관리**하는 일은 프로그램 탭의 몫이다 — 배정된 루틴
-/// 목록과 배정·취소가 이미 그 화면에 있다(취소는 #1020). 여기서 같은 목록을
-/// 한 번 더 보여주면, 잘못 배정한 루틴을 어느 화면에서 고쳐야 하는지
-/// 트레이너가 매번 헷갈린다.
+/// 루틴을 **짜고 배정하는** 일은 프로그램 탭의 몫이다. 배정된 루틴 목록과 PT
+/// 프로그램 이력을 여기서 한 번 더 늘어놓지 않는 이유다(#1025).
+///
+/// 다만 **아직 하지 않은 개인 운동을 물리는 것**은 여기 남는다. 고객의 운동을
+/// 보다가 잘못 보낸 것을 발견하는 자리가 여기이고, 그때 프로그램 탭으로
+/// 건너가야 하면 보던 맥락을 잃는다(#1020).
 class WorkoutView extends ConsumerStatefulWidget {
   /// Creates the workout view for [client].
   const WorkoutView({super.key, required this.client, this.embedded = false});
@@ -65,6 +69,10 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
         onChanged: (ClientPeriod p) => setState(() => _period = p),
         child: ClientExerciseStatusCard(clientId: client.id, period: _period),
       ),
+      // 아직 하지 않은 개인 운동. 지난 기록보다 먼저 온다 — 앞으로 할 일이
+      // 지나간 일보다 급하고, 잘못 보낸 배정을 여기서 바로 물릴 수 있어야
+      // 한다(#1020). 물릴 것이 없으면 이 자리는 통째로 비어 있다.
+      _PendingRoutines(clientId: client.id),
       const SizedBox(height: AppSpacing.md),
       // 기록은 이 목록 하나다. 예전에는 날짜별 목록 아래에 `운동 기록` 카드
       // 목록이 또 있어, 이번 주·전체에서 같은 날의 같은 운동이 두 벌로
@@ -671,6 +679,195 @@ class _DayDetail extends ConsumerWidget {
         );
       },
       orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// 아직 하지 않은 개인 운동과 그 취소. (#1020)
+///
+/// 배정된 루틴 **목록**을 되살리는 것이 아니다. 지난 배정·PT 이력은 프로그램
+/// 탭이 맡고, 여기에는 물릴 수 있는 것만 온다 — 아직 수행하지 않은 개인 운동.
+/// 이미 한 운동은 여기 오지 않는다: 배정을 지운다고 한 일이 없던 일이 되지
+/// 않으므로, 취소 버튼을 걸어 두면 기록까지 지운다고 오해하게 된다.
+class _PendingRoutines extends ConsumerWidget {
+  const _PendingRoutines({required this.clientId});
+
+  final String clientId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<AssignedRoutine> pending =
+        (ref.watch(assignedRoutinesProvider(clientId)).valueOrNull ??
+                const <AssignedRoutine>[])
+            .where((AssignedRoutine r) => !r.completed)
+            .toList();
+    // 물릴 것이 없으면 제목도 두지 않는다 — 늘 있는 빈 카드는 자리만 먹는다.
+    if (pending.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const ValueKey<String>('workout-pending-routines'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          l.workoutPendingTitle,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        for (final AssignedRoutine routine in pending)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _PendingRoutineRow(clientId: clientId, routine: routine),
+          ),
+      ],
+    );
+  }
+}
+
+/// 물릴 수 있는 개인 운동 한 줄 — 이름·시간과 취소.
+class _PendingRoutineRow extends ConsumerStatefulWidget {
+  const _PendingRoutineRow({required this.clientId, required this.routine});
+
+  final String clientId;
+  final AssignedRoutine routine;
+
+  @override
+  ConsumerState<_PendingRoutineRow> createState() => _PendingRoutineRowState();
+}
+
+class _PendingRoutineRowState extends ConsumerState<_PendingRoutineRow> {
+  bool _busy = false;
+
+  Future<void> _cancel() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    // 되돌릴 수 없는 일이라 한 번 묻는다 — 프로그램 탭의 취소와 같은 문구다.
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(l.routineDeleteTitle),
+        content: Text(l.routineDeleteBody(widget.routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          TextButton(
+            key: const ValueKey<String>('confirm-cancel-pending-routine'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l.actionDelete,
+              style: const TextStyle(color: AppColors.destructive),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      // 프로그램 탭이 쓰는 것과 **같은** mutation 이다(#504, #1020).
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .deleteRoutine(widget.clientId, widget.routine.id);
+      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
+    } on StateError {
+      // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 목록만 다시 읽고
+      // 그 줄을 화면에서 걷어낸다.
+      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
+    } on Object {
+      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      ref.invalidate(assignedRoutinesProvider(widget.clientId));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AssignedRoutine routine = widget.routine;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  l.coachRoutineSummary(routine.name, routine.minutes),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                if (routine.reason.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    routine.reason,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.subtleForeground,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          // 누가 보낸 것인지 — AI 추천과 트레이너 배정은 물릴 때의 무게가 다르다.
+          routine.source == 'ai'
+              ? const IconLabel(
+                  icon: Icons.auto_awesome,
+                  label: 'AI',
+                  color: AppColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                )
+              : Text(
+                  l.coachTrainer,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+          const SizedBox(width: AppSpacing.xs),
+          if (_busy)
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            IconButton(
+              key: ValueKey<String>('workout-cancel-routine-${routine.id}'),
+              onPressed: _cancel,
+              icon: const Icon(Icons.close_rounded, size: 16),
+              color: AppColors.mutedForeground,
+              tooltip: l.workoutPendingCancel,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+              padding: EdgeInsets.zero,
+            ),
+        ],
+      ),
     );
   }
 }

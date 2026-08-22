@@ -2410,6 +2410,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineAlreadyGone => 'That routine is already gone';
 
   @override
+  String get workoutPendingTitle => 'Not done yet';
+
+  @override
+  String get workoutPendingCancel => 'Cancel assignment';
+
+  @override
   String get routineUpdateFailed =>
       'Couldn\'t update the routine. Please try again in a moment';
 

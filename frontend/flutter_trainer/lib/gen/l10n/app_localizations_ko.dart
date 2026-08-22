@@ -2312,6 +2312,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineAlreadyGone => '이미 삭제된 루틴이에요';
 
   @override
+  String get workoutPendingTitle => '아직 하지 않은 개인 운동';
+
+  @override
+  String get workoutPendingCancel => '배정 취소';
+
+  @override
   String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
