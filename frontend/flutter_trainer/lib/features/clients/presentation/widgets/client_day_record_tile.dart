@@ -188,11 +188,9 @@ class ClientDayRecordTile extends StatelessWidget {
           ),
         ),
         if (logged && expanded)
-          Container(
-            width: double.infinity,
-            // 펼친 속은 옅은 남색 판 위에 둔다. 접힌 줄들과 바탕이 갈려야
-            // 어디까지가 펼친 하루인지 눈으로 잡힌다.
-            color: AppColors.accentSurface.withValues(alpha: 0.45),
+          Padding(
+            // 펼친 속에 색을 깔지 않는다. 이 판은 이미 흰 카드이고, 안에서
+            // 바탕색이 한 번 더 갈리면 카드 안에 카드가 있는 것처럼 읽힌다.
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.sm,

@@ -6,6 +6,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
@@ -169,19 +170,12 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
     // 터진다(Flutter `BoxBorder`, 보이는 색이 하나일 때만 둥근 모서리를
     // 그린다). `_NoteBox` 의 왼쪽 띠와 같은 규칙이다.
     final Color statusColor = _rateColor(entry.completionRate);
-    // 펼친 날짜 줄 안에 들어가는 판이다. 바깥 그림자와 둥근 모서리는 이미
-    // 날짜 목록 카드가 갖고 있어, 여기서 또 세우면 판 안에 판이 겹친다.
-    // 왼쪽 띠는 남긴다 — 이 미션을 깼는지를 색 하나로 말하는 자리다.
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.md),
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border(left: BorderSide(color: statusColor, width: 4)),
       ),
       child: Column(
