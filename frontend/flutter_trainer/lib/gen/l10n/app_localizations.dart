@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get actionSave;
 
+  /// No description provided for @actionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get actionSaved;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:

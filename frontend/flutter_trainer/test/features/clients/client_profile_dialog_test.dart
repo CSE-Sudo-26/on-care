@@ -23,14 +23,14 @@ import '../../helpers/pump_app.dart';
 class _FakeMemoRepository implements TrainerMemoRepository {
   _FakeMemoRepository();
 
-  final Map<String, List<TrainerMemo>> _byClient = <String, List<TrainerMemo>>{};
+  final Map<String, List<TrainerMemo>> _byClient =
+      <String, List<TrainerMemo>>{};
   bool failWrites = false;
 
   @override
   Future<List<TrainerMemo>> fetch(String clientId) async =>
-      List<TrainerMemo>.from(
-        _byClient[clientId] ?? const <TrainerMemo>[],
-      )..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      List<TrainerMemo>.from(_byClient[clientId] ?? const <TrainerMemo>[])
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   @override
   Future<TrainerMemo> create(
@@ -103,11 +103,14 @@ Future<void> _pumpDialog(
   ClientRepository? clients,
   String fallbackGender = '',
   bool settle = true,
-}) async {
   // 신체·목표와 메모가 한 창에 쌓이므로 기본 800×600 에서는 아래쪽 버튼이
-  // 화면 밖으로 밀려 탭이 빗나간다. 창 전체가 들어오는 높이를 준다.
+  // 화면 밖으로 밀려 탭이 빗나간다. 창 전체가 들어오는 높이를 기본값으로
+  // 주고, 좁은 화면 검사만 자기 크기를 건넨다.
+  Size size = const Size(900, 1600),
+  double textScale = 1.0,
+}) async {
   tester.view.devicePixelRatio = 1.0;
-  tester.view.physicalSize = const Size(900, 1600);
+  tester.view.physicalSize = size;
   addTearDown(() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
@@ -133,6 +136,11 @@ Future<void> _pumpDialog(
         locale: const Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery.withClampedTextScaling(
+          minScaleFactor: textScale,
+          maxScaleFactor: textScale,
+          child: child!,
+        ),
         home: Scaffold(
           body: ClientProfileDialog(
             clientId: 'm1',
@@ -305,6 +313,71 @@ void main() {
     });
   });
 
+  testWidgets('메모를 고치는 중에는 다른 메모의 수정·삭제가 잠긴다', (tester) async {
+    final repository = _FakeMemoRepository();
+    await repository.create('m1', body: '첫 번째 메모');
+    await repository.create('m1', body: '두 번째 메모');
+    await _pumpDialog(tester, repository);
+
+    // 편집 상태와 입력 컨트롤러가 하나씩뿐이라, 열어 둔 편집을 두고 다른
+    // 메모를 열면 쓰던 글이 확인 없이 사라진다. 아예 못 열게 막는다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-memo-edit-open-memo-1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('client-memo-edit-memo-1')),
+      '아직 저장하지 않은 글',
+    );
+    await tester.pump();
+
+    for (final String key in <String>[
+      'client-memo-edit-open-memo-2',
+      'client-memo-delete-memo-2',
+    ]) {
+      expect(
+        tester.widget<TextButton>(find.byKey(ValueKey<String>(key))).onPressed,
+        isNull,
+        reason: '$key 이 편집 중에도 눌린다',
+      );
+    }
+
+    // 편집을 끝내면 다시 열린다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-memo-save-memo-1')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextButton>(
+            find.byKey(const ValueKey<String>('client-memo-edit-open-memo-2')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(find.text('아직 저장하지 않은 글'), findsOneWidget);
+  });
+
+  testWidgets('좁은 화면·큰 글씨에서도 창이 넘치지 않는다', (tester) async {
+    final repository = _FakeMemoRepository();
+    await repository.create('m1', body: '무릎이 아파요');
+    // 폭 360 은 이 앱이 감당해야 하는 가장 좁은 쪽이고, 1.3 배는 접근성
+    // 검사(#1004)가 쓰는 배율이다. 창 폭은 520 으로 적혀 있지만 `SizedBox`
+    // 는 부모 제약 안으로 접히므로 좁은 화면에서도 넘치지 않아야 한다.
+    await _pumpDialog(
+      tester,
+      repository,
+      size: const Size(360, 780),
+      textScale: 1.3,
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey<String>('client-profile-dialog')),
+      findsOneWidget,
+    );
+  });
+
   // 아래 둘은 예전 `MemberHealthProfileDialog` 의 테스트다. 그 창이 메모와
   // 합쳐지면서(#1024) 검증 대상만 이 대화상자로 옮겨 왔다 — 규칙은 그대로다.
   testWidgets('프로필을 읽는 동안은 저장할 수 없고, 소수 목표는 되돌려보낸다', (tester) async {
@@ -364,9 +437,11 @@ void main() {
     // 헤더가 '여성'이라고 적어 둔 회원의 대화상자가 빈 칸으로 열리면 화면 두
     // 곳이 서로 다른 말을 한다.
     expect(
-      tester.widget<DropdownButtonFormField<String>>(
-        find.byType(DropdownButtonFormField<String>),
-      ).initialValue,
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byType(DropdownButtonFormField<String>),
+          )
+          .initialValue,
       'female',
     );
   });

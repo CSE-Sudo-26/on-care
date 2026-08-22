@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSave => 'Save';
 
   @override
+  String get actionSaved => 'Saved';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override

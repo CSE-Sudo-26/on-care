@@ -105,6 +105,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get actionSave => '저장';
 
   @override
+  String get actionSaved => '저장됨';
+
+  @override
   String get actionCancel => '취소';
 
   @override

@@ -33,6 +33,7 @@
   "navReports": "리포트",
   "navConsultations": "상담 요청",
   "actionSave": "저장",
+  "actionSaved": "저장됨",
   "actionCancel": "취소",
   "actionEdit": "수정",
   "actionDelete": "삭제",

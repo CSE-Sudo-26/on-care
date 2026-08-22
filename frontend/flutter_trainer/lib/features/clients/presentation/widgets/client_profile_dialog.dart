@@ -367,13 +367,8 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
                       controller: _weeklyCount,
                       decoration: _decoration(l.memberHealthWeeklyCount),
                       keyboardType: TextInputType.number,
-                      validator: (value) => _validate(
-                        l,
-                        value,
-                        min: 0,
-                        max: 14,
-                        integer: true,
-                      ),
+                      validator: (value) =>
+                          _validate(l, value, min: 0, max: 14, integer: true),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
@@ -414,11 +409,13 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
+                    // 저장이 끝났다는 표시. 버튼과 같은 `저장` 이면 어느 쪽이
+                    // 결과인지 읽히지 않아 완료 전용 문구를 쓴다.
                     if (_saved)
                       Padding(
                         padding: const EdgeInsets.only(right: AppSpacing.sm),
                         child: Text(
-                          l.actionSave,
+                          l.actionSaved,
                           style: const TextStyle(
                             color: AppColors.statusNormal,
                             fontSize: 12,
@@ -599,16 +596,18 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
           ),
           error: (error, _) => _LoadFailed(
             message: error is AppError
-                ? serverDetailOr(l, error.message, l.clientTrainerMemoLoadFailed)
+                ? serverDetailOr(
+                    l,
+                    error.message,
+                    l.clientTrainerMemoLoadFailed,
+                  )
                 : l.clientTrainerMemoLoadFailed,
             onRetry: () =>
                 ref.invalidate(trainerMemosProvider(widget.clientId)),
           ),
           data: (list) => list.isEmpty
               ? Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.xl,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
                   child: Text(
                     l.clientTrainerMemoEmpty,
                     textAlign: TextAlign.center,
@@ -699,9 +698,12 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
                   child: Text(l.actionSave),
                 ),
               ] else ...<Widget>[
+                // 편집 중에는 다른 메모의 `수정` 을 잠근다. 편집 상태와
+                // 입력 컨트롤러가 하나씩뿐이라, 열려 있는 편집을 두고 다른
+                // 메모를 열면 쓰던 글이 확인도 없이 사라진다.
                 TextButton(
                   key: ValueKey<String>('client-memo-edit-open-${memo.id}'),
-                  onPressed: _busy
+                  onPressed: _busy || _editingId != null
                       ? null
                       : () => setState(() {
                           _editingId = memo.id;
@@ -711,7 +713,9 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
                 ),
                 TextButton(
                   key: ValueKey<String>('client-memo-delete-${memo.id}'),
-                  onPressed: _busy ? null : () => _delete(memo),
+                  onPressed: _busy || _editingId != null
+                      ? null
+                      : () => _delete(memo),
                   child: Text(l.actionDelete),
                 ),
               ],

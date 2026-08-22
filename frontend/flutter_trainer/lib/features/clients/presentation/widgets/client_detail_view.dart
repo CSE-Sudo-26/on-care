@@ -488,8 +488,8 @@ class _Header extends StatelessWidget {
                     // 이름만 — 성별·나이는 더 이상 여기 없다(#1024). 목록
                     // 카드가 같은 화면에 늘 함께 떠 있는 분할 보기에서, 그
                     // 정보는 고객 카드가 이미 말하고 있었다. 좁은 화면에서
-                    // 목록이 가려질 때는 아래 인라인 신체·목표 패널의 성별
-                    // 항목이 그 자리를 대신한다.
+                    // 목록이 가려질 때는 메모 아이콘으로 여는 통합 대화상자의
+                    // 성별 항목이 그 자리를 대신한다.
                     //
                     // 이름만은 줄 폭 안에서 말줄임한다 — `Wrap` 의 자식은 폭이
                     // 무제한이라 기대는 곳이 없으면 긴 이름이 그대로 뻗는다.
@@ -569,7 +569,9 @@ class _Header extends StatelessWidget {
           key: const ValueKey<String>('client-detail-open-memo'),
           icon: const Icon(Icons.edit_note_outlined, size: 18),
           color: AppColors.subtleForeground,
-          tooltip: l.clientTrainerMemo,
+          // 이 버튼이 여는 것은 메모만이 아니다 — 신체·목표가 같은 창 위쪽에
+          // 있다. 툴팁도 창 제목과 같은 말을 한다.
+          tooltip: l.clientProfileSectionTitle,
           onPressed: onOpenProfile,
         ),
         IconButton(

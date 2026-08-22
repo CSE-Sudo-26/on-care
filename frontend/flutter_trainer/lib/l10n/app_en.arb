@@ -51,6 +51,7 @@
   "navReports": "Reports",
   "navConsultations": "Requests",
   "actionSave": "Save",
+  "actionSaved": "Saved",
   "actionCancel": "Cancel",
   "actionEdit": "Edit",
   "actionDelete": "Delete",
