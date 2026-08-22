@@ -122,13 +122,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load this week\'s workout history.';
 
   @override
-  String get homeExerciseActiveTime => 'Active time';
-
-  @override
   String get homeExerciseBurned => 'Calories';
-
-  @override
-  String get homeExerciseDays => 'Workout days';
 
   @override
   String get homeMealReasonSodium => 'Great for sodium control';
@@ -187,7 +181,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecBasisOverLimit => 'over the daily limit';
 
   @override
-  String get homeRecMealsTitle => 'This week\'s AI meal picks';
+  String get homeRecMealsTitle => 'Recommended meals';
 
   @override
   String get homeViewAll => 'View all';
@@ -207,7 +201,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitMinutes => 'min';
 
   @override
-  String get unitDays => 'days';
+  String get unitSets => 'sets';
 
   @override
   String unitKcalValue(int count) {
@@ -289,9 +283,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietPeriodAverage => 'Daily average';
-
-  @override
-  String get dietPeriodTotal => 'Period total';
 
   @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';

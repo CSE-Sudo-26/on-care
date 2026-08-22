@@ -81,6 +81,7 @@ class PeriodScrollChart extends StatefulWidget {
     this.onSelected,
     this.goalBottom,
     this.goalLabel,
+    this.topGap = 0,
     this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
   });
@@ -121,6 +122,11 @@ class PeriodScrollChart extends StatefulWidget {
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
+
+  /// 그래프 위에 얹을 빈 칸. 고른 날의 세로선이 이 칸까지 올라와 **위의 머리
+  /// 카드에 닿는다** — 선이 중간에서 끊기면 그 카드가 어느 막대의 것인지
+  /// 말해 주지 못한다. (#1123)
+  final double topGap;
 
   @override
   State<PeriodScrollChart> createState() => _PeriodScrollChartState();
@@ -202,7 +208,7 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 SizedBox(
-                  height: widget.height,
+                  height: widget.height + widget.topGap,
                   child: Stack(
                     children: <Widget>[
                       if (widget.goalBottom != null)
@@ -210,7 +216,7 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                       if (widget.selectedIndex != null)
                         _SelectionLine(
                           left: slot * widget.selectedIndex! + slot / 2,
-                          height: widget.height,
+                          height: widget.height + widget.topGap,
                         ),
                       // 막대는 바닥에서 자라 오른다 (#1058). 기간을 바꿔 들어온
                       // 그림이 그냥 나타나면, 다른 기간에서 넘어왔는지 처음부터
@@ -218,35 +224,40 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                       //
                       // 되감기는 칸 수가 바뀔 때만 한다 — 막대를 고를 때마다
                       // 다시 자라면 눌러 읽는 동작을 방해한다.
-                      ChartReveal(
-                        replayKey: widget.count,
-                        builder: (BuildContext context, double t) => Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: <Widget>[
-                            for (int i = 0; i < widget.count; i++)
-                              SizedBox(
-                                width: slot,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () => widget.onSelected?.call(
-                                    widget.selectedIndex == i ? null : i,
-                                  ),
-                                  // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
-                                  // 자르지 않으면 막대가 줄어든 상자 밖으로
-                                  // 삐져나와 그대로 다 보인다.
-                                  child: ClipRect(
-                                    key: ValueKey<String>(
-                                      'period-bar-reveal-$i',
+                      // 막대는 빈 칸 아래에서만 자란다 — 빈 칸은 세로선이
+                      // 머리 카드까지 올라갈 자리다.
+                      Padding(
+                        padding: EdgeInsets.only(top: widget.topGap),
+                        child: ChartReveal(
+                          replayKey: widget.count,
+                          builder: (BuildContext context, double t) => Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: <Widget>[
+                              for (int i = 0; i < widget.count; i++)
+                                SizedBox(
+                                  width: slot,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () => widget.onSelected?.call(
+                                      widget.selectedIndex == i ? null : i,
                                     ),
-                                    child: Align(
-                                      alignment: Alignment.bottomCenter,
-                                      heightFactor: t,
-                                      child: widget.barBuilder(context, i),
+                                    // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
+                                    // 자르지 않으면 막대가 줄어든 상자 밖으로
+                                    // 삐져나와 그대로 다 보인다.
+                                    child: ClipRect(
+                                      key: ValueKey<String>(
+                                        'period-bar-reveal-$i',
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.bottomCenter,
+                                        heightFactor: t,
+                                        child: widget.barBuilder(context, i),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],

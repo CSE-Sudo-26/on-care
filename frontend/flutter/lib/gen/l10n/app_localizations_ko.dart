@@ -120,13 +120,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeExerciseTrendUnavailable => '주간 운동 기록을 불러오지 못했어요.';
 
   @override
-  String get homeExerciseActiveTime => '운동 시간';
-
-  @override
   String get homeExerciseBurned => '소모 칼로리';
-
-  @override
-  String get homeExerciseDays => '운동 일수';
 
   @override
   String get homeMealReasonSodium => '나트륨 조절에 좋아요';
@@ -185,7 +179,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeRecBasisOverLimit => '권장 초과';
 
   @override
-  String get homeRecMealsTitle => '이번 주 AI 추천 식단';
+  String get homeRecMealsTitle => '추천 식단';
 
   @override
   String get homeViewAll => '전체 보기';
@@ -205,7 +199,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitMinutes => '분';
 
   @override
-  String get unitDays => '일';
+  String get unitSets => '세트';
 
   @override
   String unitKcalValue(int count) {
@@ -287,9 +281,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietPeriodAverage => '하루 평균';
-
-  @override
-  String get dietPeriodTotal => '기간 합계';
 
   @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';

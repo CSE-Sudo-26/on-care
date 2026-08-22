@@ -52,9 +52,10 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('식단 · 영양'), findsOneWidget);
-    // 수치는 식단 하루치에서 온다 — 칼로리 1,067kcal, 탄수화물 120g (저녁 제외, #548).
+    // 수치는 식단 하루치에서 온다 — 칼로리 1,067kcal (저녁 제외, #548).
     expect(find.text('1,067'), findsWidgets);
-    expect(find.text('120g'), findsOneWidget);
+    // 탄단지는 홈 카드에서 뺐다 (#1117).
+    expect(find.text('120g'), findsNothing);
     // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055).
     expect(find.text('오늘의 일정'), findsNothing);
   });
