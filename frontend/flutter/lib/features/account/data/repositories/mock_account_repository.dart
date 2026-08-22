@@ -23,9 +23,12 @@ class MockAccountRepository implements AccountRepository {
     dailyCarbsG: 275,
     dailyProteinG: 100,
     dailyFatG: 55,
-    weeklyWorkoutGoal: UserProfile.defaultWeeklyWorkoutGoal,
-    weeklyExerciseMinutesGoal: UserProfile.defaultWeeklyExerciseMinutesGoal,
-    weeklyBurnGoal: UserProfile.defaultWeeklyBurnGoal,
+    // 데모 회원의 운동 목표는 권장값 그대로 둔다 — 화면은 이 값을 쓰지 않고
+    // (#1139) 트레이너 앱이 읽는 자리라, 비워 두면 로스터에서 목표가 없다고
+    // 읽힌다.
+    weeklyWorkoutGoal: 3,
+    weeklyExerciseMinutesGoal: 150,
+    weeklyBurnGoal: 500,
   );
 
   UserProfile _profile;

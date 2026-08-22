@@ -14,7 +14,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
-import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
+import 'package:oncare/shared/services/exercise_goals_provider.dart';
 
 /// `운동 현황` 의 기본 기간 — 0 = 오늘, 1 = 이번 주, 2 = 전체.
 const int kExerciseActivityPeriodDefault = 0;
