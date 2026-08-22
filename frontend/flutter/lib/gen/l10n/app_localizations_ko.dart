@@ -289,9 +289,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietPeriodAverage => '하루 평균';
 
   @override
-  String get dietPeriodTotal => '기간 합계';
-
-  @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';
 
   @override

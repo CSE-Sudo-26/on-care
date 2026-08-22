@@ -291,9 +291,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietPeriodAverage => 'Daily average';
 
   @override
-  String get dietPeriodTotal => 'Period total';
-
-  @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';
 
   @override
