@@ -197,6 +197,12 @@ class _FixedClientRepository implements ClientRepository {
   ) async => '';
 
   @override
+  Future<List<ClientDietEntry>> fetchDietOn(
+    String clientId,
+    DateTime date,
+  ) async => const <ClientDietEntry>[];
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,

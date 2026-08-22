@@ -248,8 +248,11 @@ class _MealCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
+                // 나트륨과 당류는 나란히 읽는 값이다 — 여기만 나트륨뿐이라
+                // 끼니별 당류는 하루 합계로만 볼 수 있었다(#1025).
                 Text(
-                  l.dietSodiumValue(entry.sodiumMg),
+                  '${l.dietSodiumValue(entry.sodiumMg)} · '
+                  '${l.metricSugar} ${_grams(entry.sugarG)}g',
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: AppColors.subtleForeground,
@@ -368,6 +371,11 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
                 _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
               }),
               emptyLabel: l.dietDayEmpty,
+              // 펼친 날에만 그날 끼니를 읽는다 — 12주치를 미리 읽어 두면
+              // 아무도 펼치지 않은 날까지 요청이 나간다.
+              extra: _openDay == ymd(day.date) && day.logged
+                  ? _DayMeals(clientId: widget.clientId, date: day.date)
+                  : null,
               summary:
                   '${formatNumber(day.calories)} ${l.unitKcal} · '
                   '${l.dietSodiumValue(day.sodiumMg)}',
@@ -392,6 +400,87 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
       ),
       // 로딩·실패는 위 그래프 카드가 이미 말한다 — 같은 상태를 두 번 그리지
       // 않는다.
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// 펼친 날의 끼니 — 아침·점심·저녁·간식. (#1025)
+///
+/// 하루 합계는 위 상세가 이미 말한다. 여기서는 그 합계가 **무엇으로**
+/// 이루어졌는지를 끼니 단위로 보여 준다.
+class _DayMeals extends ConsumerWidget {
+  const _DayMeals({required this.clientId, required this.date});
+
+  final String clientId;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AsyncValue<List<ClientDietEntry>> async = ref.watch(
+      clientDietOnProvider((clientId: clientId, date: date)),
+    );
+    return async.maybeWhen(
+      data: (List<ClientDietEntry> meals) {
+        // 하루 합계는 있는데 끼니가 안 오는 날이 있다 — 데모 픽스처가 끼니를
+        // 들고 있는 날이 며칠뿐이라서다. 그럴 때는 아무 말도 하지 않는다:
+        // 위 상세가 이미 그날의 합계를 말했다.
+        if (meals.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: AppSpacing.sm),
+            for (final ClientDietEntry meal in meals)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 88,
+                      child: Text(
+                        meal.meal,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            meal.items,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.foreground,
+                            ),
+                          ),
+                          Text(
+                            '${formatNumber(meal.calories)} ${l.unitKcal} · '
+                            '${l.dietSodiumValue(meal.sodiumMg)} · '
+                            '${l.metricSugar} ${_grams(meal.sugarG)}g',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.subtleForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+      // 읽는 동안·실패했을 때는 위 상세만 남는다 — 펼친 자리가 흔들리지 않는다.
       orElse: () => const SizedBox.shrink(),
     );
   }

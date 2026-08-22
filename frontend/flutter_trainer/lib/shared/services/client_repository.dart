@@ -49,7 +49,12 @@ abstract interface class ClientRepository {
   /// [prioritizeClients]. Sources without a chat signal emit `{}`.
   Stream<Map<String, DateTime>> watchLastChatAt();
 
+  /// [clientId] 의 **오늘** 끼니.
   Stream<List<ClientDietEntry>> watchDiet(String clientId);
+
+  /// [clientId] 가 [date] 에 먹은 끼니. 기간 뷰에서 날짜를 눌러 그날을 펼칠
+  /// 때 쓴다(#1025). 기록이 없으면 빈 목록이다.
+  Future<List<ClientDietEntry>> fetchDietOn(String clientId, DateTime date);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
   Future<RoutineHistoryEntry> updateHistoryFeedback(
     String clientId,
@@ -467,9 +472,13 @@ class DriftClientRepository implements ClientRepository {
     // 흉내 낸다. 고정 문장을 돌려주면 어느 고객을 열어도 같은 말을 해서,
     // 기간을 바꿨을 때 조언이 따라 바뀌는지도 볼 수 없다. (#1017)
     if (period == ClientPeriod.today) {
-      final entries = await (_db.select(
-        _db.clientDietEntries,
-      )..where((t) => t.clientId.equals(clientId))).get();
+      // 오늘 것만 합친다. 이 표는 이제 지난 날의 끼니도 담으므로(#1025),
+      // 거르지 않으면 여러 달치 나트륨을 오늘 하루로 말하게 된다.
+      final entries =
+          await (_db.select(_db.clientDietEntries)
+                ..where((t) => t.clientId.equals(clientId))
+                ..where((t) => t.date.equals(ymd(nowKst()))))
+              .get();
       final int sodium = entries.fold<int>(
         0,
         (int sum, ClientDietEntryRow row) => sum + row.sodiumMg,
@@ -722,28 +731,41 @@ class DriftClientRepository implements ClientRepository {
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
   @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) {
+    // 오늘 것만. 이 표는 이제 지난 날의 끼니도 담으므로(#1025), 거르지 않으면
+    // 오늘 화면이 사흘치를 한 번에 늘어놓는다.
+    final String todayYmd = ymd(nowKst());
     final query = _db.select(_db.clientDietEntries)
-      ..where((t) => t.clientId.equals(clientId))
+      ..where((t) => t.clientId.equals(clientId) & t.date.equals(todayYmd))
       ..orderBy(<OrderingTerm Function($ClientDietEntriesTable)>[
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
-    return query.watch().map(
-      (rows) => rows
-          .map(
-            (row) => ClientDietEntry(
-              meal: row.meal,
-              items: row.items,
-              calories: row.calories,
-              sodiumMg: row.sodiumMg,
-              carbsG: row.carbsG,
-              proteinG: row.proteinG,
-              fatG: row.fatG,
-              photoAsset: row.photoAsset,
-            ),
-          )
-          .toList(),
-    );
+    return query.watch().map((rows) => rows.map(_toDietEntry).toList());
   }
+
+  @override
+  Future<List<ClientDietEntry>> fetchDietOn(
+    String clientId,
+    DateTime date,
+  ) async {
+    final query = _db.select(_db.clientDietEntries)
+      ..where((t) => t.clientId.equals(clientId) & t.date.equals(ymd(date)))
+      ..orderBy(<OrderingTerm Function($ClientDietEntriesTable)>[
+        (t) => OrderingTerm(expression: t.sortOrder),
+      ]);
+    return (await query.get()).map(_toDietEntry).toList();
+  }
+
+  ClientDietEntry _toDietEntry(ClientDietEntryRow row) => ClientDietEntry(
+    meal: row.meal,
+    items: row.items,
+    calories: row.calories,
+    sodiumMg: row.sodiumMg,
+    sugarG: row.sugarG,
+    carbsG: row.carbsG,
+    proteinG: row.proteinG,
+    fatG: row.fatG,
+    photoAsset: row.photoAsset,
+  );
 
   /// A client's workout history for the 운동기록 sub-tab, newest first
   /// (seeded order).
@@ -933,6 +955,20 @@ final clientDietAdviceProvider =
       return ref
           .watch(clientRepositoryProvider)
           .fetchDietAdvice(key.clientId, key.period);
+    });
+
+/// 한 고객이 [date] 에 먹은 끼니. 기간 뷰에서 펼친 날에만 읽는다(#1025).
+///
+/// `autoDispose` 다 — 날짜를 접으면 구독이 끝나고, 12주를 훑는 동안 읽은 날이
+/// 메모리에 쌓이지 않는다.
+final clientDietOnProvider = FutureProvider.autoDispose
+    .family<List<ClientDietEntry>, ({String clientId, DateTime date})>((
+      ref,
+      key,
+    ) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchDietOn(key.clientId, key.date);
     });
 
 /// 기간에 맞는 운동 조언. 식단(`clientDietAdviceProvider`)과 같은 모양이다.

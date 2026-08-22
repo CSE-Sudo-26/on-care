@@ -256,6 +256,15 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
     clientDietEntryFromJson,
   );
 
+  @override
+  Future<List<ClientDietEntry>> fetchDietOn(String clientId, DateTime date) =>
+      // 같은 엔드포인트가 `date` 를 받는다 — 날짜를 주지 않으면 오늘이다.
+      _getList(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/diet',
+        clientDietEntryFromJson,
+        query: <String, String>{'date': ymd(date)},
+      );
+
   Future<List<RoutineHistoryEntry>> _fetchHistory(String clientId) => _getList(
     '/trainer/clients/${Uri.encodeComponent(clientId)}/history',
     routineHistoryEntryFromJson,

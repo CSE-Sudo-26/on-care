@@ -26,6 +26,7 @@ class ClientDayRecordTile extends StatelessWidget {
     required this.expanded,
     required this.onToggle,
     this.emptyLabel,
+    this.extra,
   });
 
   /// 이 줄이 말하는 날.
@@ -49,6 +50,9 @@ class ClientDayRecordTile extends StatelessWidget {
 
   /// 기록이 없을 때 요약 자리에 적을 말.
   final String? emptyLabel;
+
+  /// 펼쳤을 때 [details] 아래에 덧붙일 것. 식단은 여기에 끼니를 늘어놓는다.
+  final Widget? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +169,7 @@ class ClientDayRecordTile extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ?extra,
                 ],
               ),
             ),

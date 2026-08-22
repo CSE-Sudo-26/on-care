@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
@@ -373,9 +374,14 @@ void main() {
       final clients = await db.select(db.trainerClients).get();
       expect(clients, isNotEmpty);
       for (final client in clients) {
-        final meals = await (db.select(
-          db.clientDietEntries,
-        )..where((t) => t.clientId.equals(client.id))).get();
+        // 이 표는 이제 지난 날의 끼니도 담는다(#1025). 고객 행의 합계는
+        // **오늘** 것이므로 오늘 끼니만 골라 견준다.
+        // where 를 두 번 걸면 drift 가 AND 로 잇는다.
+        final meals =
+            await (db.select(db.clientDietEntries)
+                  ..where((t) => t.clientId.equals(client.id))
+                  ..where((t) => t.date.equals(ymd(nowKst()))))
+                .get();
         final sodiumSum = meals.fold<int>(0, (s, m) => s + m.sodiumMg);
         final kcalSum = meals.fold<int>(0, (s, m) => s + m.calories);
         final carbsSum = meals.fold<double>(0, (s, m) => s + m.carbsG);

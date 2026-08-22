@@ -462,6 +462,7 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
             items=items,
             calories=r.total_calories,
             sodium_mg=r.sodium_mg,
+            sugar_g=r.sugar_g,
             carbs_g=r.carbs_g,
             protein_g=r.protein_g,
             fat_g=r.fat_g,

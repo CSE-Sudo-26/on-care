@@ -40,6 +40,7 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
     items: _str(json['items']),
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
+    sugarG: _double(json['sugar_g']),
     carbsG: _double(json['carbs_g']),
     proteinG: _double(json['protein_g']),
     fatG: _double(json['fat_g']),

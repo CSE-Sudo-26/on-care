@@ -216,6 +216,10 @@ Future<void> seedIfEmpty(
               items: diet[i].items,
               calories: diet[i].calories,
               sodiumMg: diet[i].sodiumMg,
+              sugarG: Value(diet[i].sugarG),
+              // 날짜가 없는 끼니는 오늘 것이다 — 픽스처가 아닌 고객들은
+              // 오늘 하루치만 갖고 있다(#1025).
+              date: Value(diet[i].date ?? today),
               carbsG: Value(diet[i].carbsG),
               proteinG: Value(diet[i].proteinG),
               fatG: Value(diet[i].fatG),
@@ -379,18 +383,27 @@ class _Meal {
     this.items,
     this.calories,
     this.sodiumMg, {
+    this.sugarG = 0,
     this.carbsG = 0,
     this.proteinG = 0,
     this.fatG = 0,
     this.photoAsset,
+    this.date,
   });
   final String meal;
   final String items;
   final int calories;
   final int sodiumMg;
+
+  /// 그 끼니의 당류(g) — 나트륨과 나란히 읽는 값이다(#1025).
+  final double sugarG;
   final double carbsG;
   final double proteinG;
   final double fatG;
+
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`). 비우면 시딩이 오늘로 채운다 — 픽스처가
+  /// 아닌 고객들은 오늘 하루치만 갖고 있다(#1025).
+  final String? date;
 
   /// 데모에서 이 끼니로 보여 줄 번들 이미지. 없으면 사진 없이 그린다. (#819)
   final String? photoAsset;
@@ -531,21 +544,29 @@ class _FixtureClient {
     return (total * 10).round() / 10;
   }
 
-  /// 오늘 끼니. 트레이너 화면은 끼니 이름과 음식 목록을 한 줄로 읽는다.
+  /// 픽스처가 가진 **모든 날**의 끼니. 트레이너 화면은 끼니 이름과 음식
+  /// 목록을 한 줄로 읽는다.
+  ///
+  /// 예전에는 오늘 것만 옮겼다. 기간 뷰에서 날짜를 눌러 그날 끼니를 펼치려면
+  /// 지난 날도 있어야 한다(#1025) — 픽스처는 이미 날마다 끼니를 들고 있었고,
+  /// 시딩만 오늘 하나를 집어 오고 있었다.
   List<_Meal> get diet => <_Meal>[
-    for (final FixtureMeal meal in today.meals)
-      _Meal(
-        _mealLabel(meal.mealType),
-        meal.foods.map((FixtureFood f) => f.name).join(', '),
-        meal.calories,
-        meal.sodiumMg,
-        carbsG: meal.carbsG,
-        proteinG: meal.proteinG,
-        fatG: meal.fatG,
-        // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
-        // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
-        photoAsset: meal.photoAsset,
-      ),
+    for (final FixtureDay day in days)
+      for (final FixtureMeal meal in day.meals)
+        _Meal(
+          _mealLabel(meal.mealType),
+          meal.foods.map((FixtureFood f) => f.name).join(', '),
+          meal.calories,
+          meal.sodiumMg,
+          date: day.date,
+          sugarG: meal.sugarG,
+          carbsG: meal.carbsG,
+          proteinG: meal.proteinG,
+          fatG: meal.fatG,
+          // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
+          // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
+          photoAsset: meal.photoAsset,
+        ),
   ];
 
   /// 고객 상세의 최근 운동 이력. 가까운 날부터, 운동이 있던 날만.
