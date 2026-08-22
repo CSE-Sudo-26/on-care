@@ -1712,6 +1712,12 @@ abstract class AppLocalizations {
   /// **'Preferred time'**
   String get consultPreferredTime;
 
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
+
   /// No description provided for @consultReject.
   ///
   /// In en, this message translates to:
@@ -1922,24 +1928,6 @@ abstract class AppLocalizations {
   /// **'Today\'s meals are well balanced. Keep the current routine.'**
   String get dietAiBalanced;
 
-  /// No description provided for @dietPeriodSummaryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Period summary'**
-  String get dietPeriodSummaryTitle;
-
-  /// No description provided for @dietPeriodSummaryLogged.
-  ///
-  /// In en, this message translates to:
-  /// **'{loggedDays} days logged · {avgCalories}kcal average per day'**
-  String dietPeriodSummaryLogged(int loggedDays, String avgCalories);
-
-  /// No description provided for @dietPeriodSummaryOverBudget.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium over target on {sodiumDays} days · sugar over target on {sugarDays} days'**
-  String dietPeriodSummaryOverBudget(int sodiumDays, int sugarDays);
-
   /// No description provided for @consultStatusRejected.
   ///
   /// In en, this message translates to:
@@ -2095,6 +2083,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Goal'**
   String get clientPeriodGoal;
+
+  /// No description provided for @exBurnTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned today'**
+  String get exBurnTodayTitle;
+
+  /// No description provided for @exBurnWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this week'**
+  String get exBurnWeekTitle;
+
+  /// No description provided for @exBurnMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this month'**
+  String get exBurnMonthTitle;
+
+  /// No description provided for @exBurnDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned'**
+  String get exBurnDayTitle;
+
+  /// No description provided for @exTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get exTypeOther;
+
+  /// No description provided for @exSetsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
+  String exSetsValue(int count);
 
   /// No description provided for @clientPeriodLoggedDays.
   ///
@@ -2354,6 +2378,12 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get schedTitle;
 
+  /// No description provided for @schedDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session detail'**
+  String get schedDetailTitle;
+
   /// No description provided for @schedDeleteTitle.
   ///
   /// In en, this message translates to:
@@ -2384,17 +2414,17 @@ abstract class AppLocalizations {
   /// **'{start}–{end}'**
   String schedTimeRange(String start, String end);
 
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
+
   /// No description provided for @schedEmptyWeek.
   ///
   /// In en, this message translates to:
   /// **'Nothing scheduled this week.'**
   String get schedEmptyWeek;
-
-  /// No description provided for @schedNewClientTag.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} (new)'**
-  String schedNewClientTag(String name);
 
   /// No description provided for @schedSlots.
   ///
@@ -2582,6 +2612,12 @@ abstract class AppLocalizations {
   /// **'Edit note'**
   String get schedEditNote;
 
+  /// No description provided for @schedAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get schedAddNote;
+
   /// No description provided for @schedNoNote.
   ///
   /// In en, this message translates to:
@@ -2720,12 +2756,6 @@ abstract class AppLocalizations {
   /// **'Sent {name} the PT program for {date}'**
   String schedSentProgramTo(String name, String date);
 
-  /// No description provided for @slotCapacityInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityInvalid;
-
   /// No description provided for @slotPastTime.
   ///
   /// In en, this message translates to:
@@ -2749,18 +2779,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start time'**
   String get slotStartTime;
-
-  /// No description provided for @slotCapacity.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity'**
-  String get slotCapacity;
-
-  /// No description provided for @slotBookedNow.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} booked'**
-  String slotBookedNow(int count);
 
   /// No description provided for @slotUpdated.
   ///
@@ -3746,12 +3764,6 @@ abstract class AppLocalizations {
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
 
-  /// No description provided for @aiWithinTarget.
-  ///
-  /// In en, this message translates to:
-  /// **' · within target'**
-  String get aiWithinTarget;
-
   /// No description provided for @aiRecentRoutine.
   ///
   /// In en, this message translates to:
@@ -4052,12 +4064,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send your question'**
   String get coachAskFailed;
 
-  /// No description provided for @slotCapacityRange.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityRange;
-
   /// No description provided for @slotFutureOnly.
   ///
   /// In en, this message translates to:
@@ -4070,11 +4076,17 @@ abstract class AppLocalizations {
   /// **'Booking slot not found.'**
   String get slotNotFound;
 
-  /// No description provided for @slotCapacityBelowBooked.
+  /// No description provided for @slotTypeLockedByBooking.
   ///
   /// In en, this message translates to:
-  /// **'Capacity can\'t be lower than the number already booked.'**
-  String get slotCapacityBelowBooked;
+  /// **'Can\'t change the type of a slot that\'s already booked.'**
+  String get slotTypeLockedByBooking;
+
+  /// No description provided for @slotSessionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get slotSessionType;
 
   /// No description provided for @authErrNotTrainer.
   ///
@@ -5606,17 +5618,17 @@ abstract class AppLocalizations {
   /// **'Remove certification'**
   String get a11yRemoveCertification;
 
-  /// No description provided for @a11yPrevDay.
+  /// No description provided for @a11yPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous day'**
-  String get a11yPrevDay;
+  /// **'Previous week'**
+  String get a11yPrevWeek;
 
-  /// No description provided for @a11yNextDay.
+  /// No description provided for @a11yNextWeek.
   ///
   /// In en, this message translates to:
-  /// **'Next day'**
-  String get a11yNextDay;
+  /// **'Next week'**
+  String get a11yNextWeek;
 
   /// No description provided for @a11ySendMessage.
   ///

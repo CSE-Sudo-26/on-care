@@ -165,11 +165,11 @@ void main() {
       find.text('${target.month}월 ${target.day}일 ${l.pageExerciseTitle}'),
       findsOneWidget,
     );
-    // 유형별 비중은 `운동 현황 > 오늘` 과 같은 도넛으로 그린다(#682) —
-    // 도넛 가운데의 총 시간과 범례의 유산소 시간이 함께 보인다.
-    expect(find.text(l.exTodayTotalTime), findsOneWidget);
+    // 유형별 값은 `운동 현황 > 오늘` 과 같은 카드로 그린다(#682) — 소모
+    // 칼로리 머리와 유형별 줄이 함께 보인다.
+    expect(find.text(l.exLoadDayTitle), findsOneWidget);
     expect(find.text(l.exTypeCardio), findsWidgets);
-    expect(find.text('40'), findsWidgets);
+    expect(find.text(l.unitMinutesValue(40)), findsWidgets);
   });
 
   testWidgets('정말 기록이 없는 날에는 빈 문구가 그대로 나온다', (WidgetTester tester) async {

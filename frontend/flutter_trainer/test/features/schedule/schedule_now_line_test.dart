@@ -50,6 +50,18 @@ void main() {
 
   Finder nowLine() => find.byKey(const Key('schedule-now-line'));
 
+  /// 한 시간 칸의 높이. 남는 높이에 맞춰 정해지므로(#1010) 상수로 잡을 수 없다
+  /// — 시간축의 이웃한 두 라벨 사이가 곧 그 값이다.
+  double hourHeight(WidgetTester tester) {
+    Rect label(String at) => tester.getRect(
+      find.descendant(
+        of: find.byType(ScheduleWeekTimetable),
+        matching: find.text(at),
+      ),
+    );
+    return label('10:00').top - label('09:00').top;
+  }
+
   testWidgets('시각이 흐르면 현재 시각 선이 그만큼 내려온다', (tester) async {
     final clock = await openSchedule(tester);
     final double at9 = tester.getRect(nowLine()).top;
@@ -60,7 +72,7 @@ void main() {
 
     expect(
       tester.getRect(nowLine()).top - at9,
-      closeTo(ScheduleWeekTimetable.hourHeight / 2, 0.5),
+      closeTo(hourHeight(tester) / 2, 0.5),
       reason: '30분이 지나면 한 칸의 절반만큼 내려와야 한다',
     );
   });
@@ -96,7 +108,7 @@ void main() {
     final Finder block = find
         .descendant(
           of: find.byType(ScheduleWeekTimetable),
-          matching: find.text('김민수'),
+          matching: find.textContaining('김민수'),
         )
         .first;
     final Element before = tester.element(block);

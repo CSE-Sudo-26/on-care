@@ -221,7 +221,8 @@ def test_accepting_creates_the_link_and_the_roster_row(client, db_session):
     invite_id = _invite(client, trainer_token, member_id)
 
     response = client.post(
-        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     assert response.status_code == 200, response.text
@@ -240,7 +241,8 @@ def test_accepting_links_the_member_to_the_trainer_gym(client, db_session):
     invite_id = _invite(client, trainer_token, member_id)
 
     client.post(
-        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     gym_id = (
@@ -271,7 +273,8 @@ def test_a_decided_invite_cannot_be_decided_again(client, db_session):
     member_id, _, member_token = _member(client)
     invite_id = _invite(client, trainer_token, member_id)
     client.post(
-        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     again = client.post(
@@ -301,7 +304,8 @@ def test_a_member_who_already_has_a_trainer_cannot_be_invited(client, db_session
     member_id, _, member_token = _member(client)
     invite_id = _invite(client, first_token, member_id)
     client.post(
-        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     response = client.post(
@@ -329,11 +333,13 @@ def test_an_invite_accepted_after_another_trainer_took_the_member_is_refused(
     stale_invite = _invite(client, first_token, member_id)
     other_invite = _invite(client, second_token, member_id)
     client.post(
-        f"/v1/me/coach/invites/{other_invite}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{other_invite}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     response = client.post(
-        f"/v1/me/coach/invites/{stale_invite}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{stale_invite}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     assert response.status_code == 409
@@ -373,7 +379,8 @@ def test_a_member_cannot_decide_someone_elses_invite(client, db_session):
     invite_id = _invite(client, trainer_token, member_id)
 
     response = client.post(
-        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(stranger_token)
+        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(stranger_token),
+        json={"data_sharing_consent": True},
     )
 
     assert response.status_code == 404
@@ -397,7 +404,8 @@ def test_the_sent_list_shows_what_happened(client, db_session):
     member_id, _, member_token = _member(client, name="정수락")
     invite_id = _invite(client, trainer_token, member_id)
     client.post(
-        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token)
+        f"/v1/me/coach/invites/{invite_id}/accept", headers=_auth(member_token),
+        json={"data_sharing_consent": True},
     )
 
     pending = client.get(

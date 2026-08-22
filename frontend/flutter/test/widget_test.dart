@@ -10,6 +10,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
+import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -20,6 +21,7 @@ import 'package:oncare/features/exercise/data/repositories/mock_exercise_reposit
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
@@ -144,6 +146,26 @@ void main() {
     await tester.tap(exerciseOption);
     await tester.pumpAndSettle();
   }
+
+  testWidgets('추가 메뉴는 식단이 초록, 운동이 파랑이다 (#1060)', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+
+    Color? iconColorOf(IconData icon) => tester
+        .widget<Icon>(
+          find.descendant(
+            of: find.byKey(const Key('recordOptions')),
+            matching: find.byIcon(icon),
+          ),
+        )
+        .color;
+
+    // 앱 안에서 식단 그래프가 초록, 운동 그래프가 파랑이다. 이 메뉴만 뒤집혀
+    // 있으면 같은 두 영역이 자리마다 색이 바뀐다.
+    expect(iconColorOf(Icons.restaurant), FigmaColors.green);
+    expect(iconColorOf(Icons.fitness_center), FigmaColors.primary);
+  });
 
   testWidgets('Enters the Home tab in English after demo', (tester) async {
     await pumpApp(tester, locale: const Locale('en'));
@@ -402,9 +424,7 @@ void main() {
     expect(find.text('MY'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('전체 기간 운동 현황은 스크롤 막대 그래프다 (#1018)', (
-    tester,
-  ) async {
+  testWidgets('전체 기간 운동 현황은 스크롤 막대 그래프다 (#1018)', (tester) async {
     await pumpApp(tester, locale: const Locale('en'));
 
     final exerciseDestination = find.ancestor(

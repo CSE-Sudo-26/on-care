@@ -15,6 +15,7 @@ import 'package:oncare/features/diet/domain/entities/diet_analysis_failure.dart'
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1133,6 +1134,18 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     }
   }
 
+  /// 수정 화면 상단의 큰 끼니 사진.
+  MealPhotoView get _photo => MealPhotoView(
+    photoUrl: widget.meal.photoUrl,
+    photoAsset: widget.meal.photoAsset,
+    emoji: widget.meal.emoji,
+    background: widget.meal.thumbBg,
+    width: double.infinity,
+    height: 200,
+    borderRadius: 16,
+    emojiSize: 64,
+  );
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -1178,6 +1191,13 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
               children: <Widget>[
+                // 무엇을 고치는 끼니인지 사진으로 먼저 알아본다 — 숫자를
+                // 고치기 전에 눈으로 확인하는 순서가 자연스럽다. 사진이 없는
+                // 끼니는 큰 이모지 자리를 만들지 않고 지금까지처럼 연다. (#1053)
+                if (_photo.hasPhoto) ...<Widget>[
+                  _photo,
+                  const SizedBox(height: 12),
+                ],
                 _card(<Widget>[
                   _FieldLabel(l.dietMealInfo),
                   const SizedBox(height: 10),

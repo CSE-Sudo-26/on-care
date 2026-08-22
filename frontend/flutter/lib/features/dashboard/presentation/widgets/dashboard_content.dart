@@ -191,10 +191,12 @@ class _DashboardData extends StatelessWidget {
           padding: EdgeInsets.only(bottom: 20),
           child: _RecommendedMeals(),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-          child: _ScheduleCard(items: summary.todaySchedule),
-        ),
+        // 오늘의 일정은 지금 쓰지 않는다. 되살릴 수 있어 지우지 않고 남겨
+        // 둔다. (#1055)
+        // Padding(
+        //   padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        //   child: _ScheduleCard(items: summary.todaySchedule),
+        // ),
       ],
     );
   }
@@ -330,30 +332,11 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
+    // `AI 분석` 필은 뗐다 (#1055). 홈의 요약은 대부분 AI 가 만든 것이라
+    // 필이 카드를 갈라 주지 못하면서, 제목 줄만 좁혔다.
     return Row(
       children: <Widget>[
-        Expanded(
-          child: Row(
-            children: <Widget>[
-              Flexible(
-                child: _CardTitle(icon: icon, label: label),
-              ),
-              const SizedBox(width: 6),
-              // 필은 글자를 자르면 'AI ana…' 처럼 읽히지 않아 통째로 축소한다.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: AiPill(
-                    l.homeAiAnalysisPill,
-                    background: FigmaColors.primaryA(0.10),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        Expanded(child: _CardTitle(icon: icon, label: label)),
         const SizedBox(width: 8),
         _DetailLink(onTap: onOpen),
       ],
@@ -570,13 +553,9 @@ class _MetricStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     final bool over =
         indicator.overBudget ||
         (indicator.max > 0 && indicator.current > indicator.max);
-    final Color statusColor = over
-        ? FigmaColors.dangerRed
-        : FigmaColors.greenText;
     // 선택 상태를 흰 배경·파란 테두리로만 알리면 스크린리더 사용자는 어떤
     // 지표가 켜져 있는지도, 이 카드가 누를 수 있는 요소인지도 알 수 없다.
     return Semantics(
@@ -611,15 +590,18 @@ class _MetricStatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
+              // 초과는 배지가 아니라 수치 자체를 빨갛게 해서 말한다. 배지는
+              // 카드마다 있고 없고가 갈려 카드 높이를 들쭉날쭉하게 만들었다
+              // (#1070). 색은 어느 카드에도 자리를 더 먹지 않는다.
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   _metricNumber(indicator.current),
                   maxLines: 1,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
+                    color: over ? FigmaColors.dangerRed : FigmaColors.ink,
                     letterSpacing: -0.5,
                     height: 1,
                   ),
@@ -642,23 +624,6 @@ class _MetricStatCard extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.mutedForeground,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  over ? l.homeMetricOver : l.homeMetricNormal,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
                   ),
                 ),
               ),
@@ -971,72 +936,89 @@ class _ExerciseTrend extends StatelessWidget {
         ),
       ),
       child: ExcludeSemantics(
-        child: Column(
+        // 목표치는 왼쪽 칸에 두 줄로 적는다 — 홈 탭 식단 영양 그래프와 같은
+        // 자리다 (#1071). 요일 라벨도 같은 만큼 밀려야 막대와 줄이 맞는다.
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            SizedBox(
-              key: const ValueKey<String>('dashboard-exercise-chart'),
+            ChartGoalAxis(
               height: _chartHeight,
-              child: ChartReveal(
-                duration: AppMotion.chartGrow,
-                // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
-                // 마스터 진행도는 선형으로 받는다.
-                curve: Curves.linear,
-                builder: (BuildContext context, double t) => CustomPaint(
-                  size: Size.infinite,
-                  painter: _ExerciseBarPainter(
-                    data: week,
-                    lo: lo,
-                    hi: hi,
-                    todayIndex: todayIndex,
-                    color: FigmaColors.primary,
-                    goal: dailyGoalCalories,
-                    goalLabel:
-                        '${l.homeGoal} '
-                        '${NumberFormat('#,###').format(dailyGoalCalories.round())}',
-                    textDirection: Directionality.of(context),
-                    progress: t,
-                  ),
-                ),
-              ),
+              label:
+                  '${l.homeGoal}\n'
+                  '${NumberFormat('#,###').format(dailyGoalCalories.round())}',
+              lineBottom: dailyGoalCalories > lo && dailyGoalCalories < hi
+                  ? ((dailyGoalCalories - lo) /
+                            ((hi - lo) <= 0 ? 1 : (hi - lo))) *
+                        (_chartHeight - kExerciseBarLabelGap)
+                  : null,
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: <Widget>[
-                for (int i = 0; i < days.length; i++)
-                  Expanded(
-                    child: Center(
-                      // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
-                      // 원형 안에 흰색 요일 글씨로 표기한다.
-                      child: i == todayIndex
-                          ? Container(
-                              width: 18,
-                              height: 18,
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                color: FigmaColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                days[i],
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              days[i],
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
+            const SizedBox(width: chartGoalAxisGap),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(
+                    key: const ValueKey<String>('dashboard-exercise-chart'),
+                    height: _chartHeight,
+                    child: ChartReveal(
+                      duration: AppMotion.chartGrow,
+                      // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
+                      // 마스터 진행도는 선형으로 받는다.
+                      curve: Curves.linear,
+                      builder: (BuildContext context, double t) => CustomPaint(
+                        size: Size.infinite,
+                        painter: _ExerciseBarPainter(
+                          data: week,
+                          lo: lo,
+                          hi: hi,
+                          todayIndex: todayIndex,
+                          color: FigmaColors.primary,
+                          goal: dailyGoalCalories,
+                          progress: t,
+                        ),
+                      ),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 6),
+                  Row(
+                    children: <Widget>[
+                      for (int i = 0; i < days.length; i++)
+                        Expanded(
+                          child: Center(
+                            // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
+                            // 원형 안에 흰색 요일 글씨로 표기한다.
+                            child: i == todayIndex
+                                ? Container(
+                                    width: 18,
+                                    height: 18,
+                                    alignment: Alignment.center,
+                                    decoration: const BoxDecoration(
+                                      color: FigmaColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      days[i],
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    days[i],
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.mutedForeground,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1198,11 +1180,11 @@ class _ExerciseStat extends StatelessWidget {
 
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
-/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+/// 목표 대비 상태색: 초과(빨강) / 그 외(브랜드 파랑).
 ///
-/// 지표 카드의 초과·정상 뱃지와 같은 두 색(dangerRed/greenText)만 쓴다 —
-/// 같은 카드 안에서 뱃지는 2단계인데 그래프만 근접(주황) 3단계라, 뱃지가
-/// "정상"인 날의 점이 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
+/// 지표 카드의 초과 표시와 같은 두 색(dangerRed/statusWithinGoal)만 쓴다 —
+/// 카드는 2단계인데 그래프만 근접(주황) 3단계라, 초과가 아닌 날의 점이
+/// 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
 /// Padded scale for the exercise bar chart. The baseline sits well below the
 /// smallest bar so the difference between days is visually pronounced.
 (double, double) _barScale(List<double> d) {
@@ -1353,6 +1335,10 @@ HealthIndicator _indicatorFor(DashboardSummary s, _NutTabKind key) =>
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
 /// is pushed below the smallest value so day-to-day variation is pronounced;
 /// each bar carries its kcal value label, and today's bar is highlighted.
+/// 막대 꼭대기의 값 라벨이 차지하는 위쪽 여백. 목표선 높이 계산도 이 값을
+/// 빼야 왼쪽 칸의 목표치가 선과 같은 높이에 앉는다.
+const double kExerciseBarLabelGap = 20;
+
 class _ExerciseBarPainter extends CustomPainter {
   _ExerciseBarPainter({
     required this.data,
@@ -1361,8 +1347,6 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.todayIndex,
     required this.color,
     required this.goal,
-    required this.goalLabel,
-    required this.textDirection,
     this.progress = 1,
   });
 
@@ -1374,10 +1358,8 @@ class _ExerciseBarPainter extends CustomPainter {
   final int todayIndex;
   final Color color;
 
-  /// 하루 목표 소모 칼로리와 라벨. 가로선은 이 목표선 하나뿐이다 (#1015).
+  /// 하루 목표 소모 칼로리. 가로선은 이 목표선 하나뿐이다 (#1015).
   final double goal;
-  final String goalLabel;
-  final ui.TextDirection textDirection;
 
   /// 0 → 1 진입 애니메이션 진행도(선형). 막대는 월요일부터 차례로 바닥에서
   /// 자라 오르고, 값 라벨은 해당 막대와 함께 페이드인한다.
@@ -1391,21 +1373,16 @@ class _ExerciseBarPainter extends CustomPainter {
     final int n = data.length;
     final double slot = w / n;
     final double barW = math.min(slot * 0.5, 22);
-    const double labelGap = 20;
+    const double labelGap = kExerciseBarLabelGap;
 
     // 가로선은 목표선 하나다 (#1015). 바닥에 긋던 축선은 지운다 — 막대가
     // 이미 바닥을 그리고, 두 선이 같은 굵기라 어느 쪽이 목표인지 헷갈렸다.
     final double span2 = span;
     final double goalY = h - ((goal - lo) / span2) * (h - labelGap);
+    // 목표치는 그래프 왼쪽 칸(`ChartGoalAxis`)이 적는다 — 선 위 오른쪽 끝에
+    // 얹던 시절에는 목표에 가까운 막대의 꼭대기와 겹쳤다. (#1071)
     if (goal > lo && goal < hi) {
       ChartGoalLine.paint(canvas, y: goalY, left: 0, right: w);
-      ChartGoalLine.paintLabel(
-        canvas,
-        y: goalY,
-        right: w,
-        text: goalLabel,
-        textDirection: textDirection,
-      );
     }
 
     for (int i = 0; i < n; i++) {
@@ -1430,7 +1407,9 @@ class _ExerciseBarPainter extends CustomPainter {
         text: TextSpan(
           text: NumberFormat('#,###').format(v),
           style: TextStyle(
-            fontSize: 12,
+            // 막대 위 숫자는 막대보다 작아야 한다 — 그래프는 흐름을 보는
+            // 자리고, 정확한 값은 상세에서 읽는다. (#1055)
+            fontSize: 10.5,
             fontWeight: FontWeight.w800,
             color: (today ? color : const Color(0xFF9AA6B2)).withValues(
               alpha: t,
@@ -1457,6 +1436,10 @@ class _ExerciseBarPainter extends CustomPainter {
 
 // ───────────────────────────────────────────────────── recommended meals ──
 
+/// 추천을 누가 골랐는지. 트레이너가 짚어 준 식단과 AI 가 고른 식단은 회원이
+/// 받아들이는 무게가 다르다 — 카드에 적어 둔다. (#1056)
+enum _RecSource { trainer, ai }
+
 class _RecMeal {
   const _RecMeal(
     this.photo,
@@ -1464,9 +1447,9 @@ class _RecMeal {
     this.name,
     this.reason,
     this.bg,
-    this.tag,
-    this.tagColor,
-  );
+    this.tag, {
+    this.source = _RecSource.ai,
+  });
 
   /// Bundled dish photo shown on the card. [emoji] over [bg] is the fallback
   /// when the asset is missing, so the section still renders end-to-end.
@@ -1475,13 +1458,21 @@ class _RecMeal {
   final String name;
   final String reason;
   final Color bg;
-  final String tag;
-  final Color tagColor;
 
-  /// 사진·태그·색은 그대로 두고 추천 이유 문구만 바꾼 사본.
+  /// 영양 특성 배지. 어휘는 여섯 가지로 고정한다 — 같은 뜻을 화면마다 다른
+  /// 말로 부르지 않기 위해서다. (#1056)
+  final String tag;
+
+  final _RecSource source;
+
+  /// 사진·태그는 그대로 두고 추천 이유 문구만 바꾼 사본.
   /// 서버가 개인화 문구를 보냈을 때 쓴다.
   _RecMeal withReason(String newReason) =>
-      _RecMeal(photo, emoji, name, newReason, bg, tag, tagColor);
+      _RecMeal(photo, emoji, name, newReason, bg, tag, source: source);
+
+  /// 출처만 바꾼 사본.
+  _RecMeal withSource(_RecSource newSource) =>
+      _RecMeal(photo, emoji, name, reason, bg, tag, source: newSource);
 }
 
 /// 서버 카탈로그 key → 화면 표시(사진·이모지·문구·색).
@@ -1498,7 +1489,6 @@ Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
     l.homeMealReasonSodium,
     const Color(0xFFE8F5E9),
     l.homeMealTagLowSodium,
-    FigmaColors.greenText,
   ),
   'brown_rice_box': _RecMeal(
     'assets/images/rec-brown-rice-box.jpg',
@@ -1506,8 +1496,8 @@ Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
     l.homeMealBrownRiceBox,
     l.homeMealReasonGlucose,
     const Color(0xFFFFF8E1),
-    l.homeMealTagLowGi,
-    FigmaColors.orangeText,
+    // 혈당을 가리키던 `저GI` 는 이 앱이 다른 곳에서 쓰지 않는 말이었다.
+    l.homeMealTagLowSugar,
   ),
   'salmon': _RecMeal(
     'assets/images/rec-salmon-steak.jpg',
@@ -1516,7 +1506,6 @@ Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
     l.homeMealReasonOmega,
     const Color(0xFFE3F2FD),
     l.homeMealTagHighProtein,
-    FigmaColors.primary,
   ),
   'tofu': _RecMeal(
     'assets/images/rec-tofu-broccoli.png',
@@ -1525,7 +1514,6 @@ Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
     l.homeMealReasonLowCal,
     const Color(0xFFF3E5F5),
     l.homeMealTagLowCal,
-    FigmaColors.sugarPurple,
   ),
   'namul_bibimbap': _RecMeal(
     'assets/images/rec-namul-bibimbap.png',
@@ -1533,8 +1521,8 @@ Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
     l.homeMealNamulBibimbap,
     l.homeMealReasonFiber,
     const Color(0xFFEFF7ED),
-    l.homeMealTagHighFiber,
-    FigmaColors.greenText,
+    // 나물 위주라 지방이 적다 — `고식이섬유` 는 정해 둔 여섯 어휘 밖이다.
+    l.homeMealTagLowFat,
   ),
 };
 
@@ -1608,7 +1596,14 @@ class _RecommendedMeals extends ConsumerWidget {
     final MealRecommendations recs =
         ref.watch(dietRecommendationsProvider).valueOrNull ??
         MealRecommendations.fallback;
-    final List<_RecMeal> meals = _cardsFor(l, recs);
+    // 담당 트레이너가 있는 회원의 첫 장은 트레이너가 짚어 준 자리다. 담당이
+    // 없으면 그 배지를 달지 않는다 — 없는 사람의 추천이라고 말하게 된다.
+    final bool hasCoach =
+        ref.watch(memberCoachProvider).valueOrNull != null;
+    final List<_RecMeal> meals = <_RecMeal>[
+      for (final (int i, _RecMeal meal) in _cardsFor(l, recs).indexed)
+        i == 0 && hasCoach ? meal.withSource(_RecSource.trainer) : meal,
+    ];
     // 개인화된 응답일 때만 근거를 보여준다. 목업/데모 모드와 신규 가입자는
     // personalized=false 라 이 줄이 아예 나타나지 않는다(화면 불변).
     final String? basis = _basisTextFor(l, recs);
@@ -1632,10 +1627,6 @@ class _RecommendedMeals extends ConsumerWidget {
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
-                    ),
-                    AiPill(
-                      l.homeAiAnalysisPill,
-                      background: FigmaColors.primaryA(0.10),
                     ),
                     if (basis != null)
                       Text(
@@ -1688,6 +1679,42 @@ double _recMealCardHeight(BuildContext context) {
       2; // 반올림 여유
 }
 
+/// 카드 좌측 상단의 추천 출처 배지.
+class _RecSourceBadge extends StatelessWidget {
+  const _RecSourceBadge({required this.source});
+
+  final _RecSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool trainer = source == _RecSource.trainer;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        // 사진 위에 얹히므로 배경은 불투명해야 글자가 읽힌다.
+        color: trainer ? FigmaColors.primary : Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: trainer ? FigmaColors.primary : FigmaColors.hairline,
+        ),
+      ),
+      child: Text(
+        trainer ? l.homeMealSourceTrainer : l.homeMealSourceAi,
+        key: const Key('rec-meal-source'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          height: 1.2,
+          color: trainer ? Colors.white : FigmaColors.primary,
+        ),
+      ),
+    );
+  }
+}
+
 class _RecMealCard extends StatelessWidget {
   const _RecMealCard({required this.meal});
   final _RecMeal meal;
@@ -1705,14 +1732,25 @@ class _RecMealCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Image.asset(
-            meal.photo,
-            height: 72,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            // Fall back to the emoji tile if the bundled photo is missing.
-            errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
-                _emojiHeader(),
+          Stack(
+            children: <Widget>[
+              Image.asset(
+                meal.photo,
+                height: 72,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                // Fall back to the emoji tile if the bundled photo is missing.
+                errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+                    _emojiHeader(),
+              ),
+              // 누가 고른 추천인지 사진 위에 얹는다 — 카드가 130px 로 좁아
+              // 아래 글자 자리를 더 쓰면 이름이나 이유가 밀린다. (#1056)
+              Positioned(
+                left: 6,
+                top: 6,
+                child: _RecSourceBadge(source: meal.source),
+              ),
+            ],
           ),
           Expanded(
             child: Padding(
@@ -1757,22 +1795,25 @@ class _RecMealCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: meal.tagColor.withValues(alpha: 0.12),
+                      // 배지 색은 하나다 (#1056). 요리마다 색이 달라지면 색이
+                      // 영양 특성을 뜻하는지 요리 종류를 뜻하는지 알 수 없다.
+                      color: FigmaColors.primaryA(0.12),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       meal.tag,
+                      key: const Key('rec-meal-tag'),
                       // 영어 태그는 길어서 두 줄이 되고, 그만큼 설명이 눌려
                       // 사라진다 — 태그는 한 줄로 못 박는다. (#1004)
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         // 줄 높이를 못 박아 둔다 — 서체를 바꾸면 폰트 자체의
                         // 줄 간격이 달라져 카드 높이 계산이 어긋난다. (#995)
                         height: 1.2,
-                        color: meal.tagColor,
+                        color: FigmaColors.primary,
                       ),
                     ),
                   ),
@@ -1796,6 +1837,9 @@ class _RecMealCard extends StatelessWidget {
 
 // ───────────────────────────────────────────────────────── schedule ──
 
+/// 홈 하단의 오늘 일정 카드. 지금은 화면에 걸지 않았다 (#1055) — 지우지 않고
+/// 남겨 둔 것이라 쓰이지 않는다는 경고를 여기서 끈다.
+// ignore: unused_element
 class _ScheduleCard extends ConsumerWidget {
   const _ScheduleCard({required this.items});
 

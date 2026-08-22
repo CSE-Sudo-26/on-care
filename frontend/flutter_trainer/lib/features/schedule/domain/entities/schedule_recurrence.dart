@@ -5,11 +5,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 /// 월 N번째 요일 같은 규칙은 넣지 않는다. 화면과 검증이 함께 커지는 데 비해
 /// PT 운영에서 쓰이는 일이 드물다.
 class WeeklyRecurrence {
-  const WeeklyRecurrence({
-    required this.weekdays,
-    this.count,
-    this.until,
-  });
+  const WeeklyRecurrence({required this.weekdays, this.count, this.until});
 
   /// 반복할 요일(ISO: 월=1 … 일=7).
   final Set<int> weekdays;
@@ -22,8 +18,7 @@ class WeeklyRecurrence {
   final DateTime? until;
 
   /// 서버가 받는 형태인가. 요일이 있고 종료 기준이 정확히 하나여야 한다.
-  bool get isValid =>
-      weekdays.isNotEmpty && (count == null) != (until == null);
+  bool get isValid => weekdays.isNotEmpty && (count == null) != (until == null);
 }
 
 /// 한 번의 반복 설정으로 만들 수 있는 최대 회차. 백엔드의

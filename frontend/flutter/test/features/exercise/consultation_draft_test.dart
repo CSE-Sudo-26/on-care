@@ -6,6 +6,7 @@ ConsultationDraft _draft({
   String trainerId = 'trainer-1',
   HealthPurposeType purpose = HealthPurposeType.general,
   String? detail,
+  bool consent = true,
 }) => ConsultationDraft(
   trainerId: trainerId,
   exerciseGoal: ExerciseGoal.fitness,
@@ -14,6 +15,8 @@ ConsultationDraft _draft({
   preferredDate: DateTime(2026, 8, 20),
   preferredTimeSlot: PreferredTimeSlot.morning,
   message: null,
+  // 동의 없이는 보낼 수 없다(#1022) — 기본 대역은 동의한 상태로 둔다.
+  dataSharingConsent: consent,
 );
 
 void main() {
@@ -51,5 +54,18 @@ void main() {
           .toJson()['health_purpose_detail'],
       '허리 통증',
     );
+  });
+
+  test('동의하지 않으면 보내지 못한다 (#1022)', () {
+    // 서버도 400 으로 막지만, 동의 없이 만든 요청이 트레이너 인박스에 남았다가
+    // 수락되면 회원이 동의한 적 없는 기록이 넘어간다.
+    expect(
+      () => _draft(consent: false).toJson(),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('동의 여부를 함께 보낸다 (#1022)', () {
+    expect(_draft().toJson()['data_sharing_consent'], isTrue);
   });
 }

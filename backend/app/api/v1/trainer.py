@@ -14,7 +14,7 @@ import re
 from datetime import date as _date
 from datetime import datetime
 from pathlib import PurePath
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy import func, select, update
@@ -35,6 +35,7 @@ from app.models.models import (
     TrainerProfile,
     User,
 )
+from app.schemas.diet_api import DietAdviceResponse
 from app.schemas.exercise_api import ExerciseSessionOut, ExerciseWeekResponse
 from app.schemas.consultation_api import (
     ConsultationAccept,
@@ -75,6 +76,7 @@ from app.schemas.trainer_api import (
     TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import (
+    diet_service,
     chat_image_storage,
     consultation_service,
     trainer_client_invite_service,
@@ -479,6 +481,36 @@ def trainer_update_routine_feedback(
         )
     except trainer_service.RoutineNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/trainer/clients/{member_id}/diet-advice",
+    response_model=DietAdviceResponse,
+)
+def trainer_client_diet_advice(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    period: Annotated[
+        Literal["today", "week", "all"],
+        Query(description="조언이 다룰 구간 — 회원 앱 기간 토글과 같은 이름"),
+    ] = "today",
+) -> DietAdviceResponse:
+    """담당 고객의 기간별 식단 조언. 회원 앱과 **같은 문장**이다. (#1017)
+
+    같은 회원의 같은 기간을 두 화면이 다르게 말하면, 상담에서 둘이 서로 다른
+    이야기를 들고 앉게 된다.
+    """
+    _require_client(db, trainer.id, member_id)
+    start, end = diet_service.period_bounds(period)
+    days = diet_service.daily_totals(db, member_id, start, end)
+    return DietAdviceResponse(
+        period=period,
+        from_date=start,
+        to_date=end,
+        days_logged=len(days),
+        message=diet_service.period_coach_message(days, period),
+    )
 
 
 @router.get(

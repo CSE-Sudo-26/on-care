@@ -12,16 +12,16 @@ void main() {
   group('metricStatusColor', () {
     test('목표를 넘긴 날만 초과색이다', () {
       expect(metricStatusColor(2100, 2000), FigmaColors.dangerRed);
-      expect(metricStatusColor(1900, 2000), FigmaColors.greenText);
+      expect(metricStatusColor(1900, 2000), FigmaColors.statusWithinGoal);
       // 경계는 초과가 아니다.
-      expect(metricStatusColor(2000, 2000), FigmaColors.greenText);
+      expect(metricStatusColor(2000, 2000), FigmaColors.statusWithinGoal);
     });
 
     test('목표가 0 이면 어떤 값도 초과가 아니다', () {
       // `v > goal` 만 두면 목표 없는 지표의 **모든** 기록이 빨간 점이 되어,
       // 같은 카드의 평균 뱃지(목표가 있을 때만 초과 판정)와 어긋난다.
-      expect(metricStatusColor(1, 0), FigmaColors.greenText);
-      expect(metricStatusColor(9999, 0), FigmaColors.greenText);
+      expect(metricStatusColor(1, 0), FigmaColors.statusWithinGoal);
+      expect(metricStatusColor(9999, 0), FigmaColors.statusWithinGoal);
     });
   });
 

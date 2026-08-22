@@ -65,19 +65,15 @@ class _DietViewState extends ConsumerState<DietView> {
           children: <Widget>[
             ClientDietPeriodCard(clientId: client.id, period: period),
             // 이번 주만 — 요일별로 그날 기록을 바로 확인할 수 있게 카드를
-            // 덧붙인다. 지금까지는 주간 그래프만 있어 "그날 뭘 먹었는지"를
-            // 보려면 회원 앱으로 건너가야 했다(#1025). 전체(84일)까지 카드로
-            // 늘어놓으면 스크롤이 감당 못 하므로 한 주만이다.
+            // 덧붙인다(#1025).
             if (period == ClientPeriod.week) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
               _WeekDailyCards(clientId: client.id),
             ],
+            // 기간을 고르면 그 기간의 조언을 함께 읽는다 — 그래프만 바뀌고
+            // 조언이 오늘 이야기로 남으면 화면과 무관한 말이 된다. (#1017)
             const SizedBox(height: AppSpacing.md),
-            // 이번 주/전체에서도 AI 코멘트 자리가 사라지지 않는다(#1025). 다만
-            // 기간별 조언 **문구·집계 정책**은 #1017 이 정할 몫이라, 여기서는
-            // 그 정책을 앞질러 짓지 않고 위 카드가 이미 계산해 둔 값만
-            // 사실 그대로 요약한다.
-            _PeriodDietSummary(clientId: client.id, period: period),
+            _AiComment(client: client, period: period),
           ],
         ),
       );
@@ -154,7 +150,7 @@ class _TodayDiet extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.sm),
               ],
               const SizedBox(height: AppSpacing.xs),
-              _AiComment(client: client),
+              _AiComment(client: client, period: ClientPeriod.today),
             ],
           ],
         ),
@@ -281,17 +277,33 @@ String _grams(double value) => value == value.roundToDouble()
     ? value.toInt().toString()
     : value.toStringAsFixed(1);
 
-/// "✦ AI 분석" comment — flips wording on the sodium target.
-class _AiComment extends StatelessWidget {
-  const _AiComment({required this.client});
+/// "✦ AI 분석" — 서버가 기간에 맞춰 만든 문장을 그대로 보여 준다. (#1017)
+///
+/// 예전에는 이 카드가 나트륨 목표만 보고 문구를 골랐다. 회원 앱은 서버 문장을
+/// 쓰는데 여기만 따로 계산하면, 같은 회원의 같은 날을 두 화면이 다르게 말한다.
+/// 서버 응답이 오기 전에는 지금까지 쓰던 문구를 그대로 둔다 — 카드가 비었다가
+/// 채워지면 화면이 흔들린다.
+class _AiComment extends ConsumerWidget {
+  const _AiComment({required this.client, required this.period});
 
   final TrainerClient client;
+  final ClientPeriod period;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final over = client.sodiumOverBudget;
     final sodiumMg = client.sodiumMg;
+    final String fallback = over
+        ? l.dietAiOverSodium(sodiumMg - sodiumTargetMg)
+        : l.dietAiBalanced;
+    final String message =
+        ref
+            .watch(
+              clientDietAdviceProvider((clientId: client.id, period: period)),
+            )
+            .valueOrNull ??
+        fallback;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -310,9 +322,7 @@ class _AiComment extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            over
-                ? l.dietAiOverSodium(sodiumMg - sodiumTargetMg)
-                : l.dietAiBalanced,
+            message,
             style: const TextStyle(
               fontSize: 13,
               height: 1.55,
@@ -450,84 +460,3 @@ class _DietDayCard extends StatelessWidget {
   }
 }
 
-/// 이번 주/전체를 골랐을 때의 AI 코멘트 자리 — 사라지지 않고 무언가를
-/// 보여준다(#1025).
-///
-/// **AI 가 지어낸 조언이 아니다.** 위 기간 카드가 이미 계산해 둔 평균·초과
-/// 일수를 그대로 요약한다. 기간별 AI 조언의 문구·집계 정책은 #1017 이 정할
-/// 몫이라 여기서 앞질러 짓지 않는다 — 이 카드는 그 정책이 정해지기 전까지
-/// 자리가 비어 있지 않도록만 잇는다.
-class _PeriodDietSummary extends ConsumerWidget {
-  const _PeriodDietSummary({required this.clientId, required this.period});
-
-  final String clientId;
-  final ClientPeriod period;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final ClientPeriodKey key = clientPeriodKeyNow(clientId, period);
-    final AsyncValue<ClientDietPeriod> async = ref.watch(
-      clientDietPeriodProvider(key),
-    );
-    return async.maybeWhen(
-      data: (ClientDietPeriod p) {
-        // 기록이 없으면 위 그래프 카드가 이미 "이 기간에 기록이 없어요"를
-        // 말한다 — 같은 뜻을 여기서 다시 말하지 않는다.
-        if (p.isEmpty) return const SizedBox.shrink();
-        final int overSodiumDays = p.days
-            .where((ClientDietDay d) => d.logged && d.sodiumMg > sodiumTargetMg)
-            .length;
-        final int overSugarDays = p.days
-            .where((ClientDietDay d) => d.logged && d.sugarG > sugarTargetG)
-            .length;
-        return Container(
-          key: const ValueKey<String>('diet-period-summary'),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: AppColors.accentSurface,
-            borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(color: AppColors.borderStrong),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              IconLabel(
-                icon: Icons.insights_outlined,
-                label: l.dietPeriodSummaryTitle,
-                color: AppColors.accent,
-                fontSize: 11,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                l.dietPeriodSummaryLogged(
-                  p.loggedDays,
-                  formatNumber(p.avgCalories),
-                ),
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.55,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.foreground,
-                ),
-              ),
-              if (overSodiumDays > 0 || overSugarDays > 0) ...<Widget>[
-                const SizedBox(height: 2),
-                Text(
-                  l.dietPeriodSummaryOverBudget(overSodiumDays, overSugarDays),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.55,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.overTarget,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
-    );
-  }
-}

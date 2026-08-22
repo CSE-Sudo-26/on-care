@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/core/utils/clock.dart';
-import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/charts/period_scroll_chart.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -400,54 +399,13 @@ class _PeriodBody extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(width: 10),
-              ListenableBuilder(
-                listenable: selection,
-                builder: (BuildContext context, Widget? _) {
-                  final int? picked = selectable ? selection.selected : null;
-                  final double value = picked == null
-                      ? (selectable ? selection.averageOf(values) : average)
-                      : values[picked];
-                  final bool over = goal > 0 && value > goal;
-                  final Color statusColor = over
-                      ? FigmaColors.dangerRed
-                      : FigmaColors.greenText;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      over
-                          ? '${l.homeGoal} ${l.homeMetricOver}'
-                          : l.homeMetricNormal,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: statusColor,
-                      ),
-                    ),
-                  );
-                },
-              ),
             ],
           ),
           const SizedBox(height: 10),
+          // 기록한 날 수는 막대 개수가 곧 말해 준다 — 같은 것을 글자로 한 번 더
+          // 적으면 카드 위쪽이 숫자로 붐빈다. (#1054)
           Row(
             children: <Widget>[
-              Text(
-                l.dietPeriodLoggedDays(period.loggedDays),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.foreground,
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   '${l.dietPeriodTotal} ${format(total)} $unit',
@@ -752,13 +710,12 @@ class _PeriodBars extends StatelessWidget {
             selectedIndex: selection.selected,
             onSelected: selection.select,
             onVisibleRangeChanged: selection.setVisible,
-            // 목표선은 스크롤 안쪽에 얹는다 — 밀어도 막대와 같은 자리에서
-            // 같은 높이로 따라간다. (#1015)
-            goalOverlay: GoalLineOverlay(
-              visible: hasGoal,
-              bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-              label: '${l.homeGoal} ${format(goal)}',
-            ),
+            // 목표선은 스크롤 안쪽에 얹혀 밀어도 막대와 같은 높이를 따라가고
+            // (#1015), 목표치는 왼쪽 칸에 두 줄로 적힌다 (#1071).
+            goalBottom: hasGoal
+                ? chartHeight * (goal / maxValue).clamp(0.0, 1.0)
+                : null,
+            goalLabel: '${l.homeGoal}\n${format(goal)}',
             labelBuilder: (int i) =>
                 i % labelStep == 0 ? '${dates[i].day}' : '',
             calloutBuilder: (BuildContext context, int i) =>

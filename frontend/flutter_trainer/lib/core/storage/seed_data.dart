@@ -14,10 +14,16 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v18']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v21']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v21` fixed seed chat `createdAt`: the time-of-day component used to be
+/// the message's array index (`i`), unrelated to the `timeLabel` shown on
+/// screen (`'18:18'` 등) — 대화마다 메시지 수가 달라, 화면 시각이 전혀
+/// 다른 두 고객의 정렬 키가 같아지는 일이 흔했다(#1087). 이제 `timeLabel`을
+/// 실제로 읽어 분 단위로 쓴다.
 ///
 /// Behaviour mirrors the user app's date-aware seeder (see the user
 /// app's `seed_data.dart`):
@@ -84,7 +90,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v18') == today) return;
+  if (await db.readValue('trainer_seeded_v21') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -147,7 +153,11 @@ Future<void> seedIfEmpty(
               // 한쪽만 바뀌었다 — 김민수는 우연히 맞고 박성호는 회원이
               // 보낸 옛 메시지가 떠서, 목록이 고객마다 다른 말을 했다.
               lastMessage: _lastChatText(client.chat),
-              lastTime: client.lastTime,
+              // 시각도 같다 — 카카오톡처럼 오늘이면 시각, 어제는 `어제`,
+              // 그 전이면 날짜다. 문구를 픽스처에 적어 두면 하루만
+              // 지나도 거짓이 되므로, 며칠 전인지만 적고 심을 때마다
+              // 오늘 기준으로 다시 만든다.
+              lastTime: _lastTimeLabel(client, now),
               active: Value(client.active),
               caloriesToday: fromFixture
                   ? fixtureClient.today.calories
@@ -260,13 +270,38 @@ Future<void> seedIfEmpty(
               sender: client.chat[i].sender,
               body: client.chat[i].text,
               timeLabel: client.chat[i].timeLabel,
-              // Anchored at the fixed ancient epoch (oldest first, a
-              // minute apart) so any runtime reply — and any preserved
-              // reply from a previous day — always sorts after the seed.
-              // dayIndex 는 여러 날에 걸친 스레드를 실제로 날짜가 다른
-              // 시각으로 만든다 — 라벨만 갈라 두면 화면이 하루로 묶는다.
+              // Anchored at the fixed ancient epoch (oldest first) so any
+              // runtime reply — and any preserved reply from a previous
+              // day — always sorts after the seed. dayIndex 는 여러 날에
+              // 걸친 스레드를 실제로 날짜가 다른 시각으로 만든다 — 라벨만
+              // 갈라 두면 화면이 하루로 묶는다.
+              //
+              // 스레드**끼리의** 차례는 `daysAgo` 가 정한다. 예전에는
+              // 이 값이 빠져 있어, 목록을 최신순으로 세우면 화면에 뜬
+              // 시각(`오늘 18:18` · `2026-07-30`)과 순서가 어긋났다 —
+              // 3주 전 대화가 오늘 대화보다 위에 설 수 있었다.
+              // 실제 날짜로 옮기지 않고 epoch 안에서 미는 이유는, 런타임
+              // 답장(지금 시각)이 시드 뒤에 온다는 보장을 깨지 않기
+              // 위해서다.
+              //
+              // 시각 성분은 `timeLabel`에서 실제로 읽는다 — 예전에는 그
+              // 대화 안에서 몇 번째 메시지인지(`i`, 0·1·2…)를 그대로 분으로
+              // 썼는데, 그러면 화면에 박아둔 `'16:48'` 같은 문구와 무관한
+              // 값이 된다. 대화마다 메시지 수가 다르니, 예를 들어 `daysAgo`가
+              // 같고 마지막 메시지가 똑같이 "3개 중 세 번째"인 두 고객은
+              // 화면 시각이 전혀 달라도 정렬 키가 완전히 같아져, 최신순 목록이
+              // 시드에 적힌 순서 그대로 뒤섞여 나왔다(#1087). 초는 그 안에서만
+              // 배열 순서로 미세 조정한다 — 한 대화 안의 메시지는 이미
+              // 시간순으로 적혀 있어 순서가 그대로 유지된다.
               createdAt: chatEpoch.add(
-                Duration(days: client.chat[i].dayIndex, minutes: i),
+                Duration(
+                  days:
+                      _chatSpreadDays -
+                      client.daysAgo +
+                      client.chat[i].dayIndex,
+                  minutes: _minutesOfDay(client.chat[i].timeLabel),
+                  seconds: i,
+                ),
               ),
             ),
         ]);
@@ -329,7 +364,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v18', today);
+    await db.putValue('trainer_seeded_v21', today);
   });
 }
 
@@ -738,7 +773,7 @@ class _Client {
     required this.name,
     required this.avatar,
     required this.goal,
-    required this.lastTime,
+    required this.daysAgo,
     required this.active,
     required this.calories,
     required this.sodiumMg,
@@ -758,10 +793,17 @@ class _Client {
   final String avatar;
   final String goal;
 
-  /// 목록에 뜨는 상대 시각. 대화는 고정된 옛 epoch 위에 심으므로
-  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 계산하면 "9500일 전" 이 된다 —
-  /// 이 스레드가 며칠 전 이야기인지는 픽스처가 정한다.
-  final String lastTime;
+  /// 스레드의 마지막 메시지가 **며칠 전**인가. 0 은 오늘이다.
+  ///
+  /// 문구(`2026-08-15`)를 그대로 적지 않는 이유: 데모는 날짜가 바뀔 때마다
+  /// 다시 심으므로 박아 둔 날짜는 하루만 지나도 거짓이 된다. 며칠 전인지만
+  /// 적어 두면 문구는 심을 때마다 오늘 기준으로 다시 만들어진다
+  /// ([_lastTimeLabel]).
+  ///
+  /// 대화 자체는 고정된 옛 epoch 위에 심으므로
+  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 날짜를
+  /// 되읽을 수는 없다 — 그 값은 런타임 답장이 시드 뒤에 오도록 하는 용도다.
+  final int daysAgo;
   final bool active;
   final int calories;
   final int sodiumMg;
@@ -782,31 +824,76 @@ class _Client {
   final List<_Chat> chat;
 }
 
-/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
-/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+/// 스레드의 **마지막** 메시지.
 ///
-/// 순서는 목록 순서가 아니라 심는 시각 순이다(`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
+/// 순서는 목록 순서가 아니라 심는 시각 순이다
+/// (`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
 /// 날짜(`dayIndex`)가 먼저고, 같은 날 안에서는 목록 순서가 늦은 쪽이 뒤다.
-String _lastChatText(List<_Chat> chat) {
-  if (chat.isEmpty) return '';
+_Chat _lastChat(List<_Chat> chat) {
   int last = 0;
   for (var i = 1; i < chat.length; i++) {
     if (chat[i].dayIndex >= chat[last].dayIndex) last = i;
   }
-  return chat[last].text;
+  return chat[last];
+}
+
+/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
+/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+String _lastChatText(List<_Chat> chat) =>
+    chat.isEmpty ? '' : _lastChat(chat).text;
+
+/// 시드 대화를 epoch 위에 펼칠 폭(일). `daysAgo` 를 여기서 빼서 자리를
+/// 잡으므로 가장 오래된 스레드(`daysAgo` 21)보다 넉넉해야 한다 — 음수가 되면
+/// epoch 앞으로 넘어가 스레드 차례가 뒤집힌다.
+const int _chatSpreadDays = 40;
+
+/// 목록 오른쪽 위에 뜨는 시각 — 카카오톡과 같은 규칙이다.
+///
+///  * 오늘  → 그 메시지의 시각(`18:18`)
+///  * 어제  → `어제`
+///  * 그 전 → 날짜(`2026-08-15`)
+///
+/// "3일 전" 처럼 흘러간 시간을 세지 않는다. 며칠씩 지난 대화에서 트레이너가
+/// 알고 싶은 것은 "얼마나 됐나" 가 아니라 **언제였나** 이고, 그건 운동·식단
+/// 기록과 맞춰 보려면 날짜여야 한다.
+///
+/// 백엔드 `trainer_service.relative_time_label` 과 같은 규칙이다 — 데모와 실
+/// API 가 같은 자리에 다른 모양을 그리면 안 된다.
+String _lastTimeLabel(_Client client, DateTime now) {
+  if (client.chat.isEmpty) return '-';
+  if (client.daysAgo == 0) return _clockOf(_lastChat(client.chat).timeLabel);
+  if (client.daysAgo == 1) return '어제';
+  return ymd(now.subtract(Duration(days: client.daysAgo)));
+}
+
+/// `'화 10:26'` · `'6/21 12:40'` · `'18:18'` 에서 `HH:MM` 만 남긴다 — 라벨은
+/// 말풍선 옆에 그리려고 요일·날짜를 앞에 달고 있을 수 있다.
+String _clockOf(String timeLabel) {
+  final RegExpMatch? match = RegExp(
+    r'(\d{1,2}:\d{2})$',
+  ).firstMatch(timeLabel.trim());
+  return match?.group(1) ?? timeLabel;
+}
+
+/// `timeLabel` 의 `HH:MM` 을 자정 기준 분으로 읽는다 — 시드 메시지의
+/// `createdAt` 이 화면에 보이는 시각과 어긋나지 않게 하는 데 쓴다(#1087).
+/// 못 읽으면 0 — 그런 라벨은 시드 데이터에 없어야 하니 조용히 자정으로
+/// 미는 편이, 파싱 실패를 감추는 것보다 눈에 띈다(시간이 뭉친다).
+int _minutesOfDay(String timeLabel) {
+  final RegExpMatch? match = RegExp(
+    r'(\d{1,2}):(\d{2})$',
+  ).firstMatch(_clockOf(timeLabel).trim());
+  if (match == null) return 0;
+  final int hour = int.parse(match.group(1)!);
+  final int minute = int.parse(match.group(2)!);
+  return hour * 60 + minute;
 }
 
 /// 시드 스레드가 **답장된 상태로** 시작하는가 — 마지막 말이 트레이너 것이면.
 ///
-/// 순서 규칙은 [_lastChatText] 와 같다.
-bool _threadAnswered(_Client client) {
-  if (client.chat.isEmpty) return false;
-  int last = 0;
-  for (var i = 1; i < client.chat.length; i++) {
-    if (client.chat[i].dayIndex >= client.chat[last].dayIndex) last = i;
-  }
-  return client.chat[last].sender == 'trainer';
-}
+/// 순서 규칙은 [_lastChat] 이 정한다 — 미리보기·시각과 같은 "마지막" 을 본다.
+bool _threadAnswered(_Client client) =>
+    client.chat.isNotEmpty && _lastChat(client.chat).sender == 'trainer';
 
 class _Slot {
   const _Slot({

@@ -125,9 +125,7 @@ WeeklyReport buildWeeklyReport({
   final isThisWeek = start == weekStartOf(today ?? nowKst());
   final series = week ?? (isThisWeek ? WeekSeries.of(client) : null);
   // Same "recorded days only" rule the 주의 badge and 고객 검색 use.
-  final mean = series == null
-      ? null
-      : recordedMean(series.completion)?.round();
+  final mean = series == null ? null : recordedMean(series.completion)?.round();
 
   return WeeklyReport(
     isCurrentWeek: isThisWeek,
@@ -149,7 +147,10 @@ WeeklyReport buildWeeklyReport({
 /// 리포트의 하루 — 이행률과 그날 배정된 운동.
 class ReportDay {
   /// Creates a day.
-  const ReportDay({required this.completion, this.exercises = const <String>[]});
+  const ReportDay({
+    required this.completion,
+    this.exercises = const <String>[],
+  });
 
   /// 그날 이행률(%). 0 은 기록이 없다는 뜻이다.
   final int completion;
@@ -240,7 +241,9 @@ String reportMessage(AppLocalizations l, WeeklyReport report) {
     );
   }
   if (report.sessionsBooked > 0) {
-    workout.add(l.reportBodySessions(report.sessionsDone, report.sessionsBooked));
+    workout.add(
+      l.reportBodySessions(report.sessionsDone, report.sessionsBooked),
+    );
   }
   final skipped = _skippedNames(report);
   if (skipped.isNotEmpty) {
@@ -299,7 +302,6 @@ String _topicParticle(String word) {
   final hasBatchim = isHangul && (last - 0xAC00) % 28 != 0;
   return '$word${hasBatchim ? '은' : '는'}';
 }
-
 
 /// The trainer's own week — the numbers that answer "how am I doing?".
 class TrainerWeekStats {

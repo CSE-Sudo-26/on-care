@@ -876,10 +876,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
-  String get consultHealthPurpose => '건강관리 목적';
+  String get consultHealthPurpose => '관리 목적';
 
   @override
   String get consultPreferredTime => '희망 일시';
+
+  @override
+  String get consultMessage => '문의 내용';
 
   @override
   String get consultReject => '거절';
@@ -999,19 +1002,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
 
   @override
-  String get dietPeriodSummaryTitle => '기간 요약';
-
-  @override
-  String dietPeriodSummaryLogged(int loggedDays, String avgCalories) {
-    return '$loggedDays일 기록 · 하루 평균 칼로리 ${avgCalories}kcal';
-  }
-
-  @override
-  String dietPeriodSummaryOverBudget(int sodiumDays, int sugarDays) {
-    return '나트륨 목표 초과 $sodiumDays일 · 당류 목표 초과 $sugarDays일';
-  }
-
-  @override
   String get consultStatusRejected => '반려됨';
 
   @override
@@ -1102,6 +1092,26 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientPeriodGoal => '목표';
+
+  @override
+  String get exBurnTodayTitle => '오늘 소모';
+
+  @override
+  String get exBurnWeekTitle => '이번 주 소모';
+
+  @override
+  String get exBurnMonthTitle => '이번 달 소모';
+
+  @override
+  String get exBurnDayTitle => '소모';
+
+  @override
+  String get exTypeOther => '기타';
+
+  @override
+  String exSetsValue(int count) {
+    return '$count세트';
+  }
 
   @override
   String clientPeriodLoggedDays(int days) {
@@ -1267,6 +1277,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
+  String get schedDetailTitle => '상세 스케줄';
+
+  @override
   String get schedDeleteTitle => '일정 삭제';
 
   @override
@@ -1286,12 +1299,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name(신규)';
-  }
+  String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
 
   @override
   String get schedSlots => '예약 슬롯';
@@ -1398,6 +1411,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEditNote => '메모 수정';
 
   @override
+  String get schedAddNote => '메모 추가';
+
+  @override
   String get schedNoNote => '아직 남긴 메모가 없어요';
 
   @override
@@ -1473,9 +1489,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
-
-  @override
   String get slotPastTime => '현재보다 이후 시간만 예약 슬롯으로 만들 수 있어요.';
 
   @override
@@ -1486,14 +1499,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get slotStartTime => '시작 시간';
-
-  @override
-  String get slotCapacity => '정원';
-
-  @override
-  String slotBookedNow(int count) {
-    return '현재 예약 $count명';
-  }
 
   @override
   String get slotUpdated => '예약 슬롯을 수정했습니다.';
@@ -2038,9 +2043,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiWithinTarget => ' · 적정';
-
-  @override
   String get aiRecentRoutine => '최근 루틴';
 
   @override
@@ -2196,16 +2198,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachAskFailed => '질문을 보낼 수 없어요';
 
   @override
-  String get slotCapacityRange => '정원은 1명 이상 100명 이하이어야 합니다.';
-
-  @override
   String get slotFutureOnly => '현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.';
 
   @override
   String get slotNotFound => '예약 슬롯을 찾을 수 없습니다.';
 
   @override
-  String get slotCapacityBelowBooked => '이미 예약된 인원보다 정원을 줄일 수 없습니다.';
+  String get slotTypeLockedByBooking => '이미 예약된 자리의 종류는 바꿀 수 없습니다.';
+
+  @override
+  String get slotSessionType => '종류';
 
   @override
   String get authErrNotTrainer => '트레이너 계정으로 로그인해 주세요.';
@@ -3075,10 +3077,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get a11yRemoveCertification => '자격증 지우기';
 
   @override
-  String get a11yPrevDay => '이전 날';
+  String get a11yPrevWeek => '이전 주';
 
   @override
-  String get a11yNextDay => '다음 날';
+  String get a11yNextWeek => '다음 주';
 
   @override
   String get a11ySendMessage => '메시지 보내기';

@@ -2,8 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_config.dart';
 import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_platform_stub.dart'
-    if (dart.library.js_interop)
-        'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_platform_web.dart'
+    if (dart.library.js_interop) 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_platform_web.dart'
     as platform;
 
 export 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_config.dart'

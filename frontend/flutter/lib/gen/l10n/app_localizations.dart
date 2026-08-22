@@ -266,12 +266,6 @@ abstract class AppLocalizations {
   /// **'Chicken breast salad'**
   String get homeMealChickenSalad;
 
-  /// No description provided for @homeAiAnalysisPill.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI analysis'**
-  String get homeAiAnalysisPill;
-
   /// No description provided for @homeDetails.
   ///
   /// In en, this message translates to:
@@ -320,30 +314,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load this week\'s workout history.'**
   String get homeExerciseTrendUnavailable;
 
-  /// No description provided for @homeMetricOver.
-  ///
-  /// In en, this message translates to:
-  /// **'Over'**
-  String get homeMetricOver;
-
-  /// No description provided for @homeMetricNormal.
-  ///
-  /// In en, this message translates to:
-  /// **'On track'**
-  String get homeMetricNormal;
-
-  /// No description provided for @dietAmountOver.
-  ///
-  /// In en, this message translates to:
-  /// **'{amount} over the goal'**
-  String dietAmountOver(String amount);
-
-  /// No description provided for @dietAmountRemaining.
-  ///
-  /// In en, this message translates to:
-  /// **'{amount} remaining to the goal'**
-  String dietAmountRemaining(String amount);
-
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:
@@ -368,6 +338,18 @@ abstract class AppLocalizations {
   /// **'Great for sodium control'**
   String get homeMealReasonSodium;
 
+  /// No description provided for @homeMealSourceTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer pick'**
+  String get homeMealSourceTrainer;
+
+  /// No description provided for @homeMealSourceAi.
+  ///
+  /// In en, this message translates to:
+  /// **'AI pick'**
+  String get homeMealSourceAi;
+
   /// No description provided for @homeMealTagLowSodium.
   ///
   /// In en, this message translates to:
@@ -386,11 +368,11 @@ abstract class AppLocalizations {
   /// **'Helps steady blood sugar'**
   String get homeMealReasonGlucose;
 
-  /// No description provided for @homeMealTagLowGi.
+  /// No description provided for @homeMealTagLowSugar.
   ///
   /// In en, this message translates to:
-  /// **'Low GI'**
-  String get homeMealTagLowGi;
+  /// **'Low sugar'**
+  String get homeMealTagLowSugar;
 
   /// No description provided for @homeMealSalmon.
   ///
@@ -440,11 +422,11 @@ abstract class AppLocalizations {
   /// **'Rich in dietary fiber'**
   String get homeMealReasonFiber;
 
-  /// No description provided for @homeMealTagHighFiber.
+  /// No description provided for @homeMealTagLowFat.
   ///
   /// In en, this message translates to:
-  /// **'High fiber'**
-  String get homeMealTagHighFiber;
+  /// **'Low fat'**
+  String get homeMealTagLowFat;
 
   /// No description provided for @homeRecBasisSodium.
   ///
@@ -523,12 +505,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today'**
   String get dietToday;
-
-  /// No description provided for @dietWeekLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Month {month}, Week {week}'**
-  String dietWeekLabel(int month, int week);
 
   /// No description provided for @dietWeekdayMon.
   ///
@@ -649,12 +625,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Period total'**
   String get dietPeriodTotal;
-
-  /// No description provided for @dietPeriodLoggedDays.
-  ///
-  /// In en, this message translates to:
-  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
-  String dietPeriodLoggedDays(int days);
 
   /// No description provided for @dietPeriodEmpty.
   ///
@@ -1208,6 +1178,48 @@ abstract class AppLocalizations {
   /// **'Activity'**
   String get exActivityTitle;
 
+  /// No description provided for @exWeekOfMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}, {month}/'**
+  String exWeekOfMonthLabel(int month, int week);
+
+  /// No description provided for @exBurnTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned today'**
+  String get exBurnTodayTitle;
+
+  /// No description provided for @exBurnWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this week'**
+  String get exBurnWeekTitle;
+
+  /// No description provided for @exBurnAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Average burned'**
+  String get exBurnAllTitle;
+
+  /// No description provided for @exLoadDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned'**
+  String get exLoadDayTitle;
+
+  /// No description provided for @exGoalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal {value}'**
+  String exGoalValue(String value);
+
+  /// No description provided for @exLoadEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No records yet.'**
+  String get exLoadEmpty;
+
   /// No description provided for @exThisWeek.
   ///
   /// In en, this message translates to:
@@ -1646,6 +1658,18 @@ abstract class AppLocalizations {
   /// **'Fully booked'**
   String get exSlotFull;
 
+  /// No description provided for @exSlotTypePersonalTraining.
+  ///
+  /// In en, this message translates to:
+  /// **'1:1 PT'**
+  String get exSlotTypePersonalTraining;
+
+  /// No description provided for @exSlotTypeConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation'**
+  String get exSlotTypeConsultation;
+
   /// No description provided for @exSlotsEmpty.
   ///
   /// In en, this message translates to:
@@ -1891,6 +1915,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect trainer {trainer}?\nYour connection to {gym} will remain.'**
   String myTrainerDisconnectConfirm(String trainer, String gym);
+
+  /// No description provided for @myGymDetailTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym details'**
+  String get myGymDetailTooltip;
+
+  /// No description provided for @myTrainerDetailTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer details'**
+  String get myTrainerDetailTooltip;
 
   /// No description provided for @myGymDisconnectTooltip.
   ///
@@ -2389,6 +2425,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.'**
   String get exConsultDataSharingNotice;
+
+  /// No description provided for @exConsultDataSharingAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read this and agree to share my meal and workout records and body information with this trainer'**
+  String get exConsultDataSharingAgree;
+
+  /// No description provided for @exConsultDataSharingRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please agree to sharing before requesting a consultation'**
+  String get exConsultDataSharingRequired;
+
+  /// No description provided for @coachInviteConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Before you connect'**
+  String get coachInviteConsentTitle;
+
+  /// No description provided for @coachInviteConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once {name} becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.'**
+  String coachInviteConsentBody(String name);
+
+  /// No description provided for @coachInviteConsentAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree and connect'**
+  String get coachInviteConsentAgree;
 
   /// No description provided for @exExerciseGoal.
   ///
