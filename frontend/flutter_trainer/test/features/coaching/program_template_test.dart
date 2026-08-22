@@ -107,9 +107,14 @@ void main() {
       expect(find.text('트레이너 추가'), findsWidgets);
     });
 
-    testWidgets('회원 요약과 전송 이력을 각각 한 번만 보여 준다', (tester) async {
+    testWidgets('식단·운동 영역과 전송 이력을 각각 한 번만 보여 준다', (tester) async {
       await openCoaching(tester);
-      expect(find.text('고객 요약'), findsOneWidget);
+      // 고객 요약 카드는 사라지고 그 자리를 식단·운동 영역이 가져갔다(#1027).
+      expect(find.text('고객 요약'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('program-client-data-switcher')),
+        findsOneWidget,
+      );
       expect(find.text('전송 이력'), findsOneWidget);
     });
   });
