@@ -126,44 +126,22 @@ class MetricTrendChart extends StatelessWidget {
           children: <Widget>[
             // 목표선의 실제 높이에 맞춰 라벨 하나. 칸은 목표가 없어도 자리를
             // 지킨다 — 지표를 바꿀 때 그래프 폭이 흔들리지 않는다.
-            //
-            // 폭은 눈금 라벨이 쓰던 38 그대로다. `목표 2,000` 을 한 줄로 두면 이
-            // 칸이 넓어져야 하는데, 그러면 360px 영어 로케일에서 요일 라벨 줄이
-            // 넘친다. 두 줄로 접어 폭을 지킨다.
-            Builder(
-              builder: (BuildContext context) {
-                // 칸도 글씨 배율을 따라간다 (#1004). 38·26 으로 박아 두면 배율이
-                // 올라간 순간 `목표` 아래 줄(`2,000`)이 상자에 눌려 반만 보인다.
-                final TextScaler ts = MediaQuery.textScalerOf(context);
-                final double labelWidth = 38 * ts.scale(1);
-                final double labelHeight = ts.scale(_axisLabelSize) * 1.35 * 2;
-                return SizedBox(
-                  width: labelWidth,
-                  height: height,
-                  child: Stack(
-                    children: <Widget>[
-                      if (goalLabel != null &&
-                          goal > 0 &&
-                          goal >= lo &&
-                          goal <= hi)
-                        Positioned(
-                          right: 0,
-                          top:
-                              (height -
-                                      ((goal - lo) / (hi - lo)) * height -
-                                      labelHeight / 2)
-                                  .clamp(0.0, height - labelHeight),
-                          child: SizedBox(
-                            height: labelHeight,
-                            child: Center(child: _AxisLabel(goalLabel!)),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
+            // 목표치 칸 — 두 앱의 모든 그래프가 같은 칸을 쓴다. (#1071)
+            ChartGoalAxis(
+              height: height,
+              label: goalLabel,
+              lineBottom:
+                  goalLabel != null && goal > 0 && goal >= lo && goal <= hi
+                  ? ((goal - lo) / ((hi - lo) <= 0 ? 1 : (hi - lo))) * height
+                  : null,
+              style: const TextStyle(
+                fontSize: _axisLabelSize,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+                color: AppColors.mutedForeground,
+              ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: chartGoalAxisGap),
             Expanded(
               child: Column(
                 children: <Widget>[
@@ -240,25 +218,6 @@ class MetricTrendChart extends StatelessWidget {
 
 /// 축 라벨 글씨 크기. 라벨 칸 높이를 이 값에서 재므로 한 곳에 둔다. (#1004)
 const double _axisLabelSize = 10;
-
-class _AxisLabel extends StatelessWidget {
-  const _AxisLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    textAlign: TextAlign.right,
-    maxLines: 2,
-    style: const TextStyle(
-      fontSize: _axisLabelSize,
-      height: 1.35,
-      fontWeight: FontWeight.w600,
-      color: AppColors.mutedForeground,
-    ),
-  );
-}
 
 /// 꺾은선 본체.
 class MetricTrendPainter extends CustomPainter {

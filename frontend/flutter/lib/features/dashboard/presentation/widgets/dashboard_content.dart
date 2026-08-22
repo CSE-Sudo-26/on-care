@@ -936,72 +936,89 @@ class _ExerciseTrend extends StatelessWidget {
         ),
       ),
       child: ExcludeSemantics(
-        child: Column(
+        // 목표치는 왼쪽 칸에 두 줄로 적는다 — 홈 탭 식단 영양 그래프와 같은
+        // 자리다 (#1071). 요일 라벨도 같은 만큼 밀려야 막대와 줄이 맞는다.
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            SizedBox(
-              key: const ValueKey<String>('dashboard-exercise-chart'),
+            ChartGoalAxis(
               height: _chartHeight,
-              child: ChartReveal(
-                duration: AppMotion.chartGrow,
-                // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
-                // 마스터 진행도는 선형으로 받는다.
-                curve: Curves.linear,
-                builder: (BuildContext context, double t) => CustomPaint(
-                  size: Size.infinite,
-                  painter: _ExerciseBarPainter(
-                    data: week,
-                    lo: lo,
-                    hi: hi,
-                    todayIndex: todayIndex,
-                    color: FigmaColors.primary,
-                    goal: dailyGoalCalories,
-                    goalLabel:
-                        '${l.homeGoal} '
-                        '${NumberFormat('#,###').format(dailyGoalCalories.round())}',
-                    textDirection: Directionality.of(context),
-                    progress: t,
-                  ),
-                ),
-              ),
+              label:
+                  '${l.homeGoal}\n'
+                  '${NumberFormat('#,###').format(dailyGoalCalories.round())}',
+              lineBottom: dailyGoalCalories > lo && dailyGoalCalories < hi
+                  ? ((dailyGoalCalories - lo) /
+                            ((hi - lo) <= 0 ? 1 : (hi - lo))) *
+                        (_chartHeight - kExerciseBarLabelGap)
+                  : null,
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: <Widget>[
-                for (int i = 0; i < days.length; i++)
-                  Expanded(
-                    child: Center(
-                      // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
-                      // 원형 안에 흰색 요일 글씨로 표기한다.
-                      child: i == todayIndex
-                          ? Container(
-                              width: 18,
-                              height: 18,
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                color: FigmaColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                days[i],
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              days[i],
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
+            const SizedBox(width: chartGoalAxisGap),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(
+                    key: const ValueKey<String>('dashboard-exercise-chart'),
+                    height: _chartHeight,
+                    child: ChartReveal(
+                      duration: AppMotion.chartGrow,
+                      // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
+                      // 마스터 진행도는 선형으로 받는다.
+                      curve: Curves.linear,
+                      builder: (BuildContext context, double t) => CustomPaint(
+                        size: Size.infinite,
+                        painter: _ExerciseBarPainter(
+                          data: week,
+                          lo: lo,
+                          hi: hi,
+                          todayIndex: todayIndex,
+                          color: FigmaColors.primary,
+                          goal: dailyGoalCalories,
+                          progress: t,
+                        ),
+                      ),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 6),
+                  Row(
+                    children: <Widget>[
+                      for (int i = 0; i < days.length; i++)
+                        Expanded(
+                          child: Center(
+                            // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
+                            // 원형 안에 흰색 요일 글씨로 표기한다.
+                            child: i == todayIndex
+                                ? Container(
+                                    width: 18,
+                                    height: 18,
+                                    alignment: Alignment.center,
+                                    decoration: const BoxDecoration(
+                                      color: FigmaColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      days[i],
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    days[i],
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.mutedForeground,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1318,6 +1335,10 @@ HealthIndicator _indicatorFor(DashboardSummary s, _NutTabKind key) =>
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
 /// is pushed below the smallest value so day-to-day variation is pronounced;
 /// each bar carries its kcal value label, and today's bar is highlighted.
+/// 막대 꼭대기의 값 라벨이 차지하는 위쪽 여백. 목표선 높이 계산도 이 값을
+/// 빼야 왼쪽 칸의 목표치가 선과 같은 높이에 앉는다.
+const double kExerciseBarLabelGap = 20;
+
 class _ExerciseBarPainter extends CustomPainter {
   _ExerciseBarPainter({
     required this.data,
@@ -1326,8 +1347,6 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.todayIndex,
     required this.color,
     required this.goal,
-    required this.goalLabel,
-    required this.textDirection,
     this.progress = 1,
   });
 
@@ -1339,10 +1358,8 @@ class _ExerciseBarPainter extends CustomPainter {
   final int todayIndex;
   final Color color;
 
-  /// 하루 목표 소모 칼로리와 라벨. 가로선은 이 목표선 하나뿐이다 (#1015).
+  /// 하루 목표 소모 칼로리. 가로선은 이 목표선 하나뿐이다 (#1015).
   final double goal;
-  final String goalLabel;
-  final ui.TextDirection textDirection;
 
   /// 0 → 1 진입 애니메이션 진행도(선형). 막대는 월요일부터 차례로 바닥에서
   /// 자라 오르고, 값 라벨은 해당 막대와 함께 페이드인한다.
@@ -1356,21 +1373,16 @@ class _ExerciseBarPainter extends CustomPainter {
     final int n = data.length;
     final double slot = w / n;
     final double barW = math.min(slot * 0.5, 22);
-    const double labelGap = 20;
+    const double labelGap = kExerciseBarLabelGap;
 
     // 가로선은 목표선 하나다 (#1015). 바닥에 긋던 축선은 지운다 — 막대가
     // 이미 바닥을 그리고, 두 선이 같은 굵기라 어느 쪽이 목표인지 헷갈렸다.
     final double span2 = span;
     final double goalY = h - ((goal - lo) / span2) * (h - labelGap);
+    // 목표치는 그래프 왼쪽 칸(`ChartGoalAxis`)이 적는다 — 선 위 오른쪽 끝에
+    // 얹던 시절에는 목표에 가까운 막대의 꼭대기와 겹쳤다. (#1071)
     if (goal > lo && goal < hi) {
       ChartGoalLine.paint(canvas, y: goalY, left: 0, right: w);
-      ChartGoalLine.paintLabel(
-        canvas,
-        y: goalY,
-        right: w,
-        text: goalLabel,
-        textDirection: textDirection,
-      );
     }
 
     for (int i = 0; i < n; i++) {
