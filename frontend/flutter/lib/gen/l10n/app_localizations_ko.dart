@@ -283,9 +283,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietPeriodAverage => '하루 평균';
 
   @override
-  String get dietPeriodTotal => '기간 합계';
-
-  @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';
 
   @override
@@ -593,9 +590,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exBurnAllTitle => '평균 소모';
-
-  @override
-  String get exLoadDayTitle => '소모';
 
   @override
   String exGoalValue(String value) {
@@ -1771,16 +1765,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachAssignedTrainer => '담당 트레이너';
 
   @override
-  String get coachAiCoaching => 'AI 코칭';
-
-  @override
   String get coachPointsTitle => '이번 코칭 포인트';
 
   @override
   String get coachRoutineTitle => '추천 개인운동';
-
-  @override
-  String get coachRoutineSubtitle => 'PT 와 다음 PT 사이에 스스로 하는 운동이에요';
 
   @override
   String get coachRoutineByTrainer => '트레이너 직접 추천';
@@ -1807,6 +1795,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachRoutineDone => '수행 완료';
+
+  @override
+  String get coachRoutineUndo => '완료 취소';
+
+  @override
+  String coachRoutineUndoConfirm(String name) {
+    return '\'$name\' 완료를 취소할까요? 운동 기록에서도 빠져요.';
+  }
+
+  @override
+  String get coachRoutineUndone => '완료를 취소했어요';
+
+  @override
+  String get coachRoutineUndoFailed => '완료 취소에 실패했어요.';
 
   @override
   String get coachRoutineCancel => '이 개인 운동 취소';

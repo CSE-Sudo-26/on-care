@@ -45,7 +45,8 @@ class DietAnalysisResult {
 
   factory DietAnalysisResult.fromResponse(Map<String, Object?> json) {
     final analysis =
-        (json['analysis'] as Map<String, Object?>?) ?? const <String, Object?>{};
+        (json['analysis'] as Map<String, Object?>?) ??
+        const <String, Object?>{};
     return DietAnalysisResult(
       entryId: (json['entry_id'] as String?) ?? '',
       foods: ((analysis['foods'] as List<Object?>?) ?? const <Object?>[])

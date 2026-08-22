@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/dio_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
@@ -12,7 +13,12 @@ import 'package:oncare/features/member_coach/domain/repositories/member_coach_re
 /// provider lifetime so demo chat sends persist for the session.
 final memberCoachRepositoryProvider = Provider<MemberCoachRepository>((ref) {
   if (ref.watch(appConfigProvider).useMockApi) {
-    return MockMemberCoachRepository();
+    // 데모에는 서버가 없다. 실서버는 루틴 완료를 받으면 회원 운동 기록 한 건을
+    // 함께 만들고 취소하면 지우는데(#1131), 그 일을 이 대역이 대신하도록 운동
+    // 저장소를 건네준다 — 그러지 않으면 체크해도 `운동 현황` 이 꿈쩍하지 않는다.
+    return MockMemberCoachRepository(
+      exercise: ref.watch(exerciseRepositoryProvider),
+    );
   }
   return DioMemberCoachRepository(ref.watch(dioProvider));
 }, name: 'memberCoachRepository');

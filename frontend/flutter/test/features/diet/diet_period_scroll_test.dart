@@ -172,4 +172,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining(l.dietPeriodAverage), findsWidgets);
   });
+
+  testWidgets('카드의 빈 곳을 누르면 고른 날이 풀린다 (#1123)', (WidgetTester tester) async {
+    await openAll(tester);
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(DietRecordPage)),
+    );
+
+    final List<DateTime> dates = dietRangeDates(
+      dietRangeForTab(DietPeriodTab.month, nowKst()),
+    );
+    await tester.tap(find.byKey(Key('diet-period-bar-${dates.length - 1}')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(l.dietPeriodAverage), findsNothing);
+
+    // 카드 왼쪽 위 빈 자리 — 막대도 점도 아닌 곳.
+    final Rect card = tester.getRect(find.byKey(const Key('diet-period-card')));
+    await tester.tapAt(Offset(card.left + 6, card.top + 6));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(l.dietPeriodAverage), findsWidgets);
+  });
 }

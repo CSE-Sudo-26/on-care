@@ -88,6 +88,8 @@ class MetricTrendChart extends StatelessWidget {
     this.goalLabel,
     required this.formatTick,
     this.height = 68,
+    this.selectedIndex,
+    this.onSelected,
     super.key,
   });
 
@@ -117,6 +119,14 @@ class MetricTrendChart extends StatelessWidget {
 
   final String Function(double) formatTick;
   final double height;
+
+  /// 고른 점. [onSelected] 를 준 화면에서만 뜻이 있다 — 고른 점은 굵은 고리로
+  /// 표시하고, 부르는 쪽은 머리 숫자를 그날 값으로 바꾼다. (#1122)
+  final int? selectedIndex;
+
+  /// 점을 누르면 그 index 로, 점에서 먼 곳을 누르면 null 로 부른다. null 이면
+  /// 그래프는 예전처럼 만질 수 없는 그림이다.
+  final ValueChanged<int?>? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -156,20 +166,34 @@ class MetricTrendChart extends StatelessWidget {
                 children: <Widget>[
                   SizedBox(
                     height: height,
-                    child: ChartReveal(
-                      replayKey: replayKey,
-                      builder: (BuildContext context, double t) => CustomPaint(
-                        size: Size.infinite,
-                        painter: MetricTrendPainter(
-                          cur: values,
-                          goal: goal,
-                          ticks: ticks,
-                          lo: lo,
-                          hi: hi,
-                          todayIndex: todayIndex,
-                          progress: t,
-                        ),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints c) {
+                        final Widget chart = ChartReveal(
+                          replayKey: replayKey,
+                          builder: (BuildContext context, double t) =>
+                              CustomPaint(
+                                size: Size.infinite,
+                                painter: MetricTrendPainter(
+                                  cur: values,
+                                  goal: goal,
+                                  ticks: ticks,
+                                  lo: lo,
+                                  hi: hi,
+                                  todayIndex: todayIndex,
+                                  progress: t,
+                                  selectedIndex: selectedIndex,
+                                ),
+                              ),
+                        );
+                        final ValueChanged<int?>? onSelected = this.onSelected;
+                        if (onSelected == null) return chart;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (TapUpDetails d) =>
+                              onSelected(_hit(d.localPosition.dx, c.maxWidth)),
+                          child: chart,
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -217,6 +241,24 @@ class MetricTrendChart extends StatelessWidget {
   }
 }
 
+/// 누른 x 좌표에서 가장 가까운 점의 index. 점에서 멀면 null 이라 선택이 풀린다
+/// — 그래프 아무 데나 누르면 다시 평균으로 돌아온다. (#1122)
+extension on MetricTrendChart {
+  int? _hit(double dx, double width) {
+    if (values.length < 2 || width <= 0) return null;
+    final double step = width / (values.length - 1);
+    final int i = (dx / step).round().clamp(0, values.length - 1);
+    // 점에서 18px 안쪽만 그 점을 누른 것으로 본다. 반 칸까지 넓히면 그래프
+    // 어디를 눌러도 어느 점엔가 붙어, 선택을 풀 자리가 없어진다. (#1122)
+    if ((dx - i * step).abs() > 18) return null;
+    // 아직 그리지 않은(오늘 이후) 점은 고를 수 없다 — 0 을 그날 값이라고
+    // 말하게 된다.
+    if (i > todayIndex.clamp(0, values.length - 1)) return null;
+    // 고른 점을 다시 누르면 풀린다.
+    return i == selectedIndex ? null : i;
+  }
+}
+
 /// 축 라벨 글씨 크기. 라벨 칸 높이를 이 값에서 재므로 한 곳에 둔다. (#1004)
 const double _axisLabelSize = 10;
 
@@ -230,6 +272,7 @@ class MetricTrendPainter extends CustomPainter {
     required this.hi,
     required this.todayIndex,
     this.progress = 1,
+    this.selectedIndex,
   });
 
   final List<double> cur;
@@ -244,6 +287,9 @@ class MetricTrendPainter extends CustomPainter {
   /// 0 → 1 진입 애니메이션 진행도. 선은 월요일부터 오늘 쪽으로 이어지고,
   /// 각 데이터 포인트와 값 라벨은 선이 도달하는 순간 나타난다.
   final double progress;
+
+  /// 고른 점. 그 점만 고리를 둘러 어느 날을 보고 있는지 알린다. (#1122)
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -300,6 +346,16 @@ class MetricTrendPainter extends CustomPainter {
           : ((drawn - i) / 0.35 + 1).clamp(0.0, 1.0);
       if (a <= 0) continue;
       final Color sc = metricStatusColor(cur[i], goal);
+      if (i == selectedIndex) {
+        canvas.drawCircle(
+          pts[i],
+          8.5,
+          Paint()
+            ..color = sc.withValues(alpha: 0.45 * a)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
       _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2, alpha: a);
       _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc, alpha: a);
     }
@@ -353,5 +409,6 @@ class MetricTrendPainter extends CustomPainter {
       old.lo != lo ||
       old.hi != hi ||
       old.todayIndex != todayIndex ||
-      old.progress != progress;
+      old.progress != progress ||
+      old.selectedIndex != selectedIndex;
 }
