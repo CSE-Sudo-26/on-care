@@ -186,7 +186,6 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     _selected = _today;
   }
 
-
   DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
       dietRangeForTab(tab, today);
 
@@ -834,14 +833,13 @@ class NutritionSummary extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
+          // 카드는 하나다 (#1120). 나트륨·당류를 따로 뗀 카드에 두었더니
+          // 같은 하루를 세 장이 나눠 말했고, 탄단지 자리가 그만큼 비었다.
           _NutritionSummaryCard(
             calories: items[0],
             carbs: items[5],
             protein: items[3],
             fat: items[4],
-          ),
-          const SizedBox(height: 12),
-          _NutritionStatusCards(
             sodium: items[1],
             sodiumDifference: _formatInt((sodium - sodiumGoal).abs()),
             sugar: items[2],
@@ -894,12 +892,22 @@ class _NutritionSummaryCard extends StatelessWidget {
     required this.carbs,
     required this.protein,
     required this.fat,
+    required this.sodium,
+    required this.sodiumDifference,
+    required this.sugar,
+    required this.sugarDifference,
   });
 
   final _NutritionSummaryItem calories;
   final _NutritionSummaryItem carbs;
   final _NutritionSummaryItem protein;
   final _NutritionSummaryItem fat;
+  final _NutritionSummaryItem sodium;
+
+  /// 목표를 넘긴 만큼(절대값). 라벨 오른쪽에 `+1,429mg` 로 붙는다.
+  final String sodiumDifference;
+  final _NutritionSummaryItem sugar;
+  final String sugarDifference;
 
   @override
   Widget build(BuildContext context) {
@@ -914,10 +922,27 @@ class _NutritionSummaryCard extends StatelessWidget {
     Color macroColor(_NutritionSummaryItem item) => item.isOverGoal
         ? FigmaColors.statusOver
         : FigmaColors.statusWithinGoal.withValues(alpha: 0.65);
-    final List<_MacroProgressData> macros = <_MacroProgressData>[
-      _MacroProgressData(item: carbs, color: macroColor(carbs)),
-      _MacroProgressData(item: protein, color: macroColor(protein)),
-      _MacroProgressData(item: fat, color: macroColor(fat)),
+    final List<_NutritionSummaryItem> macros = <_NutritionSummaryItem>[
+      carbs,
+      protein,
+      fat,
+    ];
+    // 아래 줄은 이제 나트륨·당류가 쓴다 (#1120) — 탄단지가 있던 자리다.
+    // 나트륨·당류는 옅게 두지 않는다 — 탄단지와 달리 그 자체가 경고 지표라
+    // 목표 안쪽일 때도 색이 또렷해야 한다(예전 상태 카드와 같은 값).
+    Color mineralColor(_NutritionSummaryItem item) =>
+        item.isOverGoal ? FigmaColors.statusOver : FigmaColors.statusWithinGoal;
+    final List<_MacroProgressData> minerals = <_MacroProgressData>[
+      _MacroProgressData(
+        item: sodium,
+        color: mineralColor(sodium),
+        difference: sodiumDifference,
+      ),
+      _MacroProgressData(
+        item: sugar,
+        color: mineralColor(sugar),
+        difference: sugarDifference,
+      ),
     ];
     final AppLocalizations l = AppLocalizations.of(context);
     final Color calorieColor = calories.isOverGoal
@@ -977,6 +1002,15 @@ class _NutritionSummaryCard extends StatelessWidget {
                         maxLines: 1,
                       ),
                     ),
+                    // 탄단지는 칼로리 숫자와 도넛 사이에 놓는다 (#1120) —
+                    // 칼로리가 무엇으로 채워졌는지가 그 숫자 바로 아래에서
+                    // 읽혀야 한다. 바는 두지 않는다. 옆의 도넛이 이미 달성률을
+                    // 그리고 있어, 좁은 왼쪽 칸에 바까지 넣으면 읽을 것만 는다.
+                    const SizedBox(height: 10),
+                    for (final _NutritionSummaryItem m in macros) ...<Widget>[
+                      _MacroTextLine(item: m, color: macroColor(m)),
+                      if (m != macros.last) const SizedBox(height: 4),
+                    ],
                   ],
                 ),
               ),
@@ -992,9 +1026,9 @@ class _NutritionSummaryCard extends StatelessWidget {
               if (constraints.maxWidth < 280) {
                 return Column(
                   children: <Widget>[
-                    for (final _MacroProgressData macro in macros) ...<Widget>[
-                      _MacroProgressItem(macro: macro),
-                      if (macro != macros.last) const SizedBox(height: 12),
+                    for (final _MacroProgressData m in minerals) ...<Widget>[
+                      _MacroProgressItem(macro: m),
+                      if (m != minerals.last) const SizedBox(height: 12),
                     ],
                   ],
                 );
@@ -1004,11 +1038,11 @@ class _NutritionSummaryCard extends StatelessWidget {
                 children: <Widget>[
                   for (
                     int index = 0;
-                    index < macros.length;
+                    index < minerals.length;
                     index++
                   ) ...<Widget>[
-                    Expanded(child: _MacroProgressItem(macro: macros[index])),
-                    if (index < macros.length - 1) const SizedBox(width: 10),
+                    Expanded(child: _MacroProgressItem(macro: minerals[index])),
+                    if (index < minerals.length - 1) const SizedBox(width: 10),
                   ],
                 ],
               );
@@ -1083,10 +1117,75 @@ class _CalorieCircularProgress extends StatelessWidget {
 }
 
 class _MacroProgressData {
-  const _MacroProgressData({required this.item, required this.color});
+  const _MacroProgressData({
+    required this.item,
+    required this.color,
+    this.difference,
+  });
 
   final _NutritionSummaryItem item;
   final Color color;
+
+  /// 목표를 넘긴 만큼. 있으면 라벨 오른쪽에 `+1,429mg` 로 붙는다 (#1070).
+  final String? difference;
+}
+
+/// 카드 머리의 탄단지 한 줄 — `탄수화물 204 /275g`. 바 없이 글자만 쓴다.
+class _MacroTextLine extends StatelessWidget {
+  const _MacroTextLine({required this.item, required this.color});
+
+  final _NutritionSummaryItem item;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      key: Key('nutrition-macro-${item.label}'),
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        // 글자 배율이 커지면 값부터 줄인다 — 라벨은 이미 말줄임이고, 이 줄이
+        // 넘치면 카드 오른쪽의 도넛을 밀어낸다.
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
+                  TextSpan(
+                    text: item.value,
+                    // 초과면 빨강 — 바가 없으니 색이 그 말을 대신한다 (#890).
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / ${item.goal}${item.unit}',
+                    style: kGoalSuffixStyle,
+                  ),
+                ],
+              ),
+              maxLines: 1,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _MacroProgressItem extends StatelessWidget {
@@ -1100,8 +1199,22 @@ class _MacroProgressItem extends StatelessWidget {
       key: Key('nutrition-macro-${macro.item.label}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          macro.item.label,
+        Text.rich(
+          TextSpan(
+            children: <InlineSpan>[
+              TextSpan(text: macro.item.label),
+              // 초과분은 라벨 오른쪽에 한 단계 작은 빨간 글씨로 (#1070).
+              if (macro.item.isOverGoal && macro.difference != null)
+                TextSpan(
+                  text: ' +${macro.difference}${macro.item.unit}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.dangerRed,
+                  ),
+                ),
+            ],
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -1189,229 +1302,6 @@ class _NutritionProgressBar extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _NutritionStatusCards extends StatelessWidget {
-  const _NutritionStatusCards({
-    required this.sodium,
-    required this.sodiumDifference,
-    required this.sugar,
-    required this.sugarDifference,
-  });
-
-  final _NutritionSummaryItem sodium;
-  final String sodiumDifference;
-  final _NutritionSummaryItem sugar;
-  final String sugarDifference;
-
-  @override
-  Widget build(BuildContext context) {
-    // 나트륨·당류는 같은 카드에 나란히 놓인 같은 성격의 지표다. 규칙을 하나로
-    // 맞춘다 — 초과 빨강, 그 외 브랜드 파랑.
-    final Widget sodiumCard = _NutritionStatusCard(
-      key: const Key('nutrition-sodium-status'),
-      item: sodium,
-      difference: sodiumDifference,
-      progressColor: sodium.isOverGoal
-          ? FigmaColors.statusOver
-          : FigmaColors.statusWithinGoal,
-    );
-    final Widget sugarCard = _NutritionStatusCard(
-      key: const Key('nutrition-sugar-status'),
-      item: sugar,
-      difference: sugarDifference,
-      progressColor: sugar.isOverGoal
-          ? FigmaColors.statusOver
-          : FigmaColors.statusWithinGoal,
-    );
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        if (constraints.maxWidth < 310) {
-          return Column(
-            children: <Widget>[
-              sodiumCard,
-              const SizedBox(height: 10),
-              sugarCard,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(child: sodiumCard),
-            const SizedBox(width: 10),
-            Expanded(child: sugarCard),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _NutritionStatusCard extends StatelessWidget {
-  const _NutritionStatusCard({
-    required this.item,
-    required this.difference,
-    required this.progressColor,
-    super.key,
-  });
-
-  final _NutritionSummaryItem item;
-  final String difference;
-  final Color progressColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color statusColor = item.isOverGoal
-        ? FigmaColors.statusOver
-        : FigmaColors.statusWithinGoal;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: item.isOverGoal
-              ? FigmaColors.statusOver.withValues(alpha: 0.32)
-              : FigmaColors.statusWithinGoal.withValues(alpha: 0.18),
-        ),
-        boxShadow: kCardShadow,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _VerticalNutritionProgressBar(
-            key: Key('nutrition-status-vertical-progress-${item.label}'),
-            progress: item.gaugeValue,
-            color: progressColor,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Icon(
-                      item.isOverGoal
-                          ? Icons.warning_amber_rounded
-                          : Icons.check_circle_outline_rounded,
-                      size: 16,
-                      color: statusColor,
-                    ),
-                    const SizedBox(width: 5),
-                    // 초과분은 라벨 바로 오른쪽에 작은 빨간 글씨로 붙인다
-                    // ("나트륨 +1,429mg"). 예전에는 카드 아래 한 줄짜리 문장
-                    // 이었는데, 초과가 아닌 카드는 그 자리를 "목표까지 남았
-                    // 어요"로 채워 부족한 날까지 안심시켰다(#1070).
-                    // 초과분은 라벨 오른쪽에 한 단계 작은 빨간 글씨로 붙는다
-                    // ("나트륨 +1,428mg"). 라벨과 한 덩어리로 흘러야 좁은
-                    // 카드에서 줄이 갈라지지 않는다.
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          children: <InlineSpan>[
-                            TextSpan(text: item.label),
-                            if (item.isOverGoal)
-                              TextSpan(
-                                text: ' +$difference${item.unit}',
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: FigmaColors.dangerRed,
-                                ),
-                              ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.foreground,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(
-                          text: item.value,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: item.isOverGoal
-                                ? FigmaColors.dangerRed
-                                : FigmaColors.ink,
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' / ${item.goal}${item.unit}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VerticalNutritionProgressBar extends StatelessWidget {
-  const _VerticalNutritionProgressBar({
-    required this.progress,
-    required this.color,
-    super.key,
-  });
-
-  final double progress;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    const double barWidth = 8;
-    const double barHeight = 104;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        width: barWidth,
-        height: barHeight,
-        child: Stack(
-          children: <Widget>[
-            const Positioned.fill(child: ColoredBox(color: FigmaColors.track)),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: ChartReveal(
-                duration: AppMotion.meterFill,
-                replayKey: progress,
-                builder: (BuildContext context, double t) => SizedBox(
-                  width: barWidth,
-                  height: barHeight * progress.clamp(0.0, 1.0) * t,
-                  child: ColoredBox(color: color),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
