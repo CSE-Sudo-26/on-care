@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSave => 'Save';
 
   @override
+  String get actionSaved => 'Saved';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -532,9 +535,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the member profile. Please try again';
 
   @override
-  String get memberHealthTitle => 'Body and goals';
-
-  @override
   String get memberHealthSaving => 'Saving…';
 
   @override
@@ -918,6 +918,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultPreferredTime => 'Preferred time';
 
   @override
+  String get consultMessage => 'Message';
+
+  @override
   String get consultReject => 'Decline';
 
   @override
@@ -1223,6 +1226,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsCompletionAvg => 'Workout completion';
 
   @override
+  String get reportsWeeklyCompletion => 'Weekly completion';
+
+  @override
   String get reportsCompletionByDay => 'Weekly workout completion';
 
   @override
@@ -1367,11 +1373,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEmptyWeek => 'Nothing scheduled this week.';
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name (new)';
-  }
-
-  @override
   String get schedSlots => 'Booking slots';
 
   @override
@@ -1383,20 +1384,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schedEmptyDay =>
       'Nothing scheduled for this day.\nUse New session above to add one.';
-
-  @override
-  String get schedCompleteTitle => 'Mark session complete';
-
-  @override
-  String schedCompleteBody(String time, String name) {
-    return 'This marks the $time session with $name complete and logs it to their workout history.';
-  }
-
-  @override
-  String get schedNoteOptional => 'Trainer\'s note (optional)';
-
-  @override
-  String get schedCompleteAction => 'Mark complete';
 
   @override
   String get schedSaveFailed => 'Couldn\'t save the session. Please try again';
@@ -1477,6 +1464,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEditNote => 'Edit note';
 
   @override
+  String get schedAddNote => 'Add note';
+
+  @override
   String get schedNoNote => 'No note yet';
 
   @override
@@ -1554,9 +1544,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotPastTime =>
       'Booking slots can only be opened for future times.';
 
@@ -1570,23 +1557,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotStartTime => 'Start time';
 
   @override
-  String get slotCapacity => 'Capacity';
-
-  @override
-  String slotBookedNow(int count) {
-    return '$count booked';
-  }
-
-  @override
   String get slotUpdated => 'Booking slot updated.';
 
   @override
   String get slotCloseTitle => 'Close booking slot';
 
   @override
-  String slotCloseBody(int count) {
-    return 'The $count existing bookings stay; only new bookings stop.';
-  }
+  String get slotCloseBody =>
+      'Any existing booking stays; only new bookings stop.';
 
   @override
   String get slotClosed => 'New bookings closed.';
@@ -1613,14 +1591,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotEmpty => 'No booking slots open on this day.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return 'Closed · $booked booked';
-  }
+  String get slotClosedSummary => 'Closed';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '$booked booked · $remaining left';
-  }
+  String get slotBookedSummary => 'Booked';
+
+  @override
+  String get slotOpenSummary => 'Open';
 
   @override
   String get slotCloseAction => 'Close bookings';
@@ -2302,9 +2279,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAskFailed => 'Couldn\'t send your question';
 
   @override
-  String get slotCapacityRange => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotFutureOnly =>
       'Booking slots can only be set for future times.';
 
@@ -2312,8 +2286,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotNotFound => 'Booking slot not found.';
 
   @override
-  String get slotCapacityBelowBooked =>
-      'Capacity can\'t be lower than the number already booked.';
+  String get slotTypeLockedByBooking =>
+      'Can\'t change the type of a slot that\'s already booked.';
+
+  @override
+  String get slotSessionType => 'Type';
 
   @override
   String get authErrNotTrainer => 'Please sign in with a trainer account.';
@@ -2605,15 +2582,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientQuickProgram => 'Program';
 
   @override
+  String get clientQuickReport => 'Report';
+
+  @override
   String get clientHealthGoals => 'Body profile & goals';
 
   @override
-  String get clientTrainerMemo => 'Memo';
+  String get clientProfileSectionTitle => 'Body, goals & memo';
 
   @override
-  String clientTrainerMemoTitle(String name) {
-    return 'Memos on $name';
-  }
+  String get clientTrainerMemo => 'Memo';
 
   @override
   String get clientTrainerMemoHint =>

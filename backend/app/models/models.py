@@ -1295,6 +1295,14 @@ class TrainerReservationSlot(Base):
             "remaining >= 0 AND remaining <= capacity",
             name="ck_reservation_slot_remaining_range",
         ),
+        # 스케줄 탭의 `TrainerSchedule.type` 과 같은 계약값이다(#1083). 슬롯은
+        # 늘 한 사람 몫이라 정원을 고를 이유가 없어졌지만, 무슨 약속인지는
+        # 여전히 골라야 한다 — 회원 예약이 만드는 일정이 그 종류를 그대로
+        # 물려받는다.
+        CheckConstraint(
+            "session_type IN ('1:1 PT', '상담')",
+            name="ck_reservation_slot_session_type",
+        ),
         Index("ix_reservation_slots_trainer_starts", "trainer_id", "starts_at"),
     )
 
@@ -1305,6 +1313,9 @@ class TrainerReservationSlot(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     capacity: Mapped[int] = mapped_column(Integer)
     remaining: Mapped[int] = mapped_column(Integer)
+    session_type: Mapped[str] = mapped_column(
+        String(16), server_default="1:1 PT", default="1:1 PT"
+    )
     is_closed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=false(), default=False
     )

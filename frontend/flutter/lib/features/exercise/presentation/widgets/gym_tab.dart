@@ -12,6 +12,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/gym_locator_map.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
@@ -750,6 +751,10 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                 ? a.startsAt.compareTo(b.startsAt)
                 : b.startsAt.compareTo(a.startsAt);
           });
+    // 다가오는 예약이 이미 있으면 빈 자리를 더 고르게 하지 않는다 — 1:1 PT 라
+    // 다음 일정은 하나면 충분하고, 자리를 옮기려면 먼저 취소하는 흐름이다(#1072).
+    // 취소 가능 여부(`cancellable`)가 곧 '다음 일정' 판단이다.
+    final bool hasUpcoming = mine.any((MyReservation r) => r.cancellable);
     final bool busy = _reserving != null || _cancelling != null;
     return Container(
       width: double.infinity,
@@ -766,27 +771,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            l.exAiSlotTitle,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.primary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            l.exTrainerAvailability(widget.trainer.name),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.mutedForeground,
-            ),
-          ),
           if (mine.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 10),
             _MyReservations(
               reservations: mine,
               label: (DateTime at) => _when(context, l, at),
@@ -794,96 +779,127 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
               disabled: busy,
               onCancel: (MyReservation r) => _cancel(l, r),
             ),
+            const SizedBox(height: 10),
           ],
-          const SizedBox(height: 10),
-          slotsAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
+          if (!hasUpcoming) ...<Widget>[
+            Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.event_available_outlined,
+                  size: 14,
+                  color: FigmaColors.primary,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    l.exTrainerAvailability(widget.trainer.name),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: FigmaColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            slotsAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
                 ),
               ),
-            ),
-            error: (Object _, StackTrace _) => _SlotNotice(
-              message: l.exSlotsLoadError,
-              onRetry: () =>
-                  ref.invalidate(trainerSlotsProvider(widget.trainer.id)),
-            ),
-            data: (List<TrainerSlot> slots) {
-              if (slots.isEmpty) {
-                return _SlotNotice(message: l.exSlotsEmpty);
-              }
-              final bool allBooked = slots.every(
-                (TrainerSlot slot) => slot.isFull,
-              );
-              final TrainerSlot? picked = slots
-                  .where(
-                    (TrainerSlot slot) =>
-                        slot.id == widget.selectedSlot && !slot.isFull,
-                  )
-                  .firstOrNull;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (allBooked) ...<Widget>[
-                    _SlotNotice(message: l.exSlotsAllBooked),
-                    const SizedBox(height: 10),
-                  ],
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      for (final TrainerSlot slot in slots)
-                        _SlotChip(
-                          key: ValueKey<String>('slot-chip-${slot.id}'),
-                          label: _when(context, l, slot.startsAt),
-                          sub: slot.isFull
-                              ? l.exSlotFull
-                              : l.exSlotRemaining(slot.remaining),
-                          selected: picked?.id == slot.id,
-                          // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
-                          // 선택도 잠근다.
-                          onTap: slot.isFull || busy
-                              ? null
-                              : () => widget.onSlot(slot.id),
-                        ),
+              error: (Object _, StackTrace _) => _SlotNotice(
+                message: l.exSlotsLoadError,
+                onRetry: () =>
+                    ref.invalidate(trainerSlotsProvider(widget.trainer.id)),
+              ),
+              data: (List<TrainerSlot> slots) {
+                if (slots.isEmpty) {
+                  return _SlotNotice(message: l.exSlotsEmpty);
+                }
+                final bool allBooked = slots.every(
+                  (TrainerSlot slot) => slot.booked,
+                );
+                final TrainerSlot? picked = slots
+                    .where(
+                      (TrainerSlot slot) =>
+                          slot.id == widget.selectedSlot && !slot.booked,
+                    )
+                    .firstOrNull;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (allBooked) ...<Widget>[
+                      _SlotNotice(message: l.exSlotsAllBooked),
+                      const SizedBox(height: 10),
                     ],
-                  ),
-                  if (picked != null) ...<Widget>[
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        key: const ValueKey<String>('reserve-confirm'),
-                        onPressed: busy ? null : () => _reserve(l, picked),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: FigmaColors.primary,
-                          minimumSize: const Size(0, 42),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        for (final TrainerSlot slot in slots)
+                          _SlotChip(
+                            key: ValueKey<String>('slot-chip-${slot.id}'),
+                            // 종류(1:1 PT/상담)를 시각 앞에 둔다 — 트레이너가
+                            // 상담으로 연 자리도 여기서 회원의 희망 시간대로
+                            // 고를 수 있어야 한다(#1083).
+                            type: slot.sessionType == '상담'
+                                ? l.exSlotTypeConsultation
+                                : l.exSlotTypePersonalTraining,
+                            label: _when(context, l, slot.startsAt),
+                            // 한 사람 몫뿐인 자리라 빈 자리에는 덧붙일 수가
+                            // 없다 — 마감된 자리만 그 사실을 적는다(#1072).
+                            sub: slot.booked ? l.exSlotFull : null,
+                            selected: picked?.id == slot.id,
+                            // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
+                            // 선택도 잠근다.
+                            onTap: slot.booked || busy
+                                ? null
+                                : () => widget.onSlot(slot.id),
                           ),
-                        ),
-                        child: Text(
-                          l.exReserveConfirm(
-                            _when(context, l, picked.startsAt),
+                      ],
+                    ),
+                    if (picked != null) ...<Widget>[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          key: const ValueKey<String>('reserve-confirm'),
+                          onPressed: busy ? null : () => _reserve(l, picked),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: FigmaColors.primary,
+                            minimumSize: const Size(0, 42),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
+                          child: Text(
+                            l.exReserveConfirm(
+                              _when(context, l, picked.startsAt),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              );
-            },
-          ),
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -1336,14 +1352,21 @@ class _TagChip extends StatelessWidget {
 class _SlotChip extends StatelessWidget {
   const _SlotChip({
     super.key,
+    required this.type,
     required this.label,
     required this.sub,
     required this.selected,
     required this.onTap,
   });
 
+  /// `1:1 PT` 또는 `상담` — 이 자리가 무엇인지. 트레이너 스케줄 탭의 종류
+  /// 알약과 같은 값이라, 상담으로 연 자리도 그대로 알아볼 수 있다(#1083).
+  final String type;
+
   final String label;
-  final String sub;
+
+  /// 라벨 아래 한 줄. 마감된 자리에만 붙고, 빈 자리는 시각만 보인다.
+  final String? sub;
   final bool selected;
 
   /// null 이면 마감된 자리다 — 눌리지 않고 흐리게 그려진다.
@@ -1373,6 +1396,18 @@ class _SlotChip extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Text(
+                type,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.8)
+                      : (disabled
+                            ? FigmaColors.textFaint
+                            : FigmaColors.primary),
+                ),
+              ),
+              Text(
                 label,
                 style: TextStyle(
                   fontSize: 12.5,
@@ -1382,18 +1417,19 @@ class _SlotChip extends StatelessWidget {
                       : (disabled ? FigmaColors.textFaint : FigmaColors.ink),
                 ),
               ),
-              Text(
-                sub,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.8)
-                      : (disabled
-                            ? FigmaColors.textFaint
-                            : AppColors.mutedForeground),
+              if (sub != null)
+                Text(
+                  sub!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: selected
+                        ? Colors.white.withValues(alpha: 0.8)
+                        : (disabled
+                              ? FigmaColors.textFaint
+                              : AppColors.mutedForeground),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1402,35 +1438,31 @@ class _SlotChip extends StatelessWidget {
   }
 }
 
-class _EmptyMyGym extends StatelessWidget {
+/// 연결된 헬스장이 없을 때의 카드.
+///
+/// 아이콘 하나로 비어 있다고만 알리던 자리다. 헬스장이 없는 회원에게 이 탭에서
+/// 할 일은 헬스장을 찾는 것뿐이므로, 지도를 카드 맨 앞에 그대로 띄워 탭에
+/// 들어오자마자 보이게 한다(#1072).
+class _EmptyMyGym extends ConsumerWidget {
   const _EmptyMyGym({required this.onFind});
 
   final VoidCallback onFind;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 시트와 같은 목록(제휴 + 카카오)을 핀으로 쓴다. 아직 로딩 중이면 핀 없이
+    // 지도만 먼저 그려지고, 결과가 오면 다시 찍힌다.
+    final List<Gym> pinned =
+        ref.watch(gymFinderResultsProvider).valueOrNull ?? const <Gym>[];
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 18),
+      padding: const EdgeInsets.all(16),
       decoration: _cardDecoration(),
       child: Column(
         children: <Widget>[
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: FigmaColors.primaryA(0.10),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.fitness_center,
-              size: 23,
-              color: FigmaColors.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
+          GymLocatorMap(gyms: pinned),
+          const SizedBox(height: 14),
           Text(
             l.exNoConnectedGym,
             textAlign: TextAlign.center,

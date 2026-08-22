@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Returns the localized demographic label used to distinguish clients who
@@ -55,24 +54,6 @@ bool isProspectClient(
     if (client.name.trim() == name) return false;
   }
   return true;
-}
-
-/// 로스터에 없는 고객의 이름 뒤에 `(신규)` 를 붙인다. (#988)
-///
-/// 전에는 그런 일정의 **이름 자리에 `신규 고객` 이라는 분류명**이 들어가 있었다.
-/// 상담이 두 건 잡히면 둘 다 같은 글자라 서로 구분되지 않았고, 이름을 알면서도
-/// 화면이 부르지 않는 셈이었다. 이름을 그대로 부르고 신규라는 사실은 표로 단다.
-String clientNameWithNewTag(
-  AppLocalizations l,
-  List<TrainerClient> clients, {
-  required String? clientId,
-  required String clientName,
-}) {
-  final name = clientName.trim();
-  if (name.isEmpty) return name;
-  return isProspectClient(clients, clientId: clientId, clientName: clientName)
-      ? l.schedNewClientTag(name)
-      : name;
 }
 
 /// 고객 목록 행에 붙는 목표 한 줄. (#898)

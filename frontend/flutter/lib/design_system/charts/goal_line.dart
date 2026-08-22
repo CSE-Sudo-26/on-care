@@ -42,46 +42,20 @@ class ChartGoalLine {
       );
     }
   }
-
-  /// 선 위에 붙는 `목표 N` 라벨을 그린다. 오른쪽 끝에 붙이고, 선 위로 띄운다 —
-  /// 아래에 두면 목표에 가까운 막대의 꼭대기와 겹친다.
-  static void paintLabel(
-    Canvas canvas, {
-    required double y,
-    required double right,
-    required String text,
-    required TextDirection textDirection,
-  }) {
-    final TextPainter tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          fontSize: labelFontSize,
-          height: 1.2,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-      textDirection: textDirection,
-    )..layout();
-    tp.paint(canvas, Offset(right - tp.width, y - tp.height - 2));
-  }
 }
 
 /// Stack 위에 얹는 목표선. 막대를 위젯으로 그리는 그래프(식단 기간 뷰)가 쓴다.
 ///
 /// [bottom] 은 그래프 바닥에서 목표선까지의 거리다 — 호출부가 자기 축 계산으로
 /// 넘긴다. 목표가 축 밖이면(0 이하거나 최댓값을 넘으면) 아무것도 그리지 않는다.
+///
+/// **선만 긋는다.** 목표치는 그래프 왼쪽 [ChartGoalAxis] 칸이 적는다 — 선 위
+/// 오른쪽 끝에 얹던 시절에는 그래프마다 라벨이 다른 자리에 앉았고, 목표 근처의
+/// 막대 꼭대기와 겹쳤다. (#1071)
 class GoalLineOverlay extends StatelessWidget {
-  const GoalLineOverlay({
-    super.key,
-    required this.bottom,
-    required this.label,
-    this.visible = true,
-  });
+  const GoalLineOverlay({super.key, required this.bottom, this.visible = true});
 
   final double bottom;
-  final String label;
   final bool visible;
 
   @override
@@ -91,50 +65,111 @@ class GoalLineOverlay extends StatelessWidget {
       left: 0,
       right: 0,
       bottom: bottom,
-      child: CustomPaint(
-        painter: _GoalLinePainter(
-          label: label,
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
+      child: const IgnorePointer(
+        child: CustomPaint(
+          painter: _GoalLinePainter(),
+          // 선 자체는 높이가 없다. 칸만 잡아 둔다.
+          child: SizedBox(height: 0, width: double.infinity),
         ),
-        // 선 자체는 높이가 없다. 라벨이 선 위로 올라가야 해서 칸만 잡아 둔다.
-        child: const SizedBox(height: 0, width: double.infinity),
       ),
     );
   }
 }
 
 class _GoalLinePainter extends CustomPainter {
-  const _GoalLinePainter({
-    required this.label,
-    required this.textDirection,
-    required this.textScaler,
-  });
-
-  final String label;
-  final TextDirection textDirection;
-  final TextScaler textScaler;
+  const _GoalLinePainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     ChartGoalLine.paint(canvas, y: 0, left: 0, right: size.width);
-    final TextPainter tp = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: const TextStyle(
-          fontSize: ChartGoalLine.labelFontSize,
-          height: 1.2,
-          fontWeight: FontWeight.w600,
-          color: ChartGoalLine.color,
-        ),
-      ),
-      textDirection: textDirection,
-      textScaler: textScaler,
-    )..layout();
-    tp.paint(canvas, Offset(size.width - tp.width, -tp.height - 2));
   }
 
   @override
-  bool shouldRepaint(_GoalLinePainter old) =>
-      old.label != label || old.textScaler != textScaler;
+  bool shouldRepaint(_GoalLinePainter old) => false;
 }
+
+/// 그래프 왼쪽의 목표치 칸. **모든 그래프가 이 칸 하나로 목표치를 적는다.**
+///
+/// 홈 탭 식단 영양 그래프가 쓰던 배치를 그대로 옮겼다 — 폭은 눈금 라벨이 쓰던
+/// 38(글씨 배율을 따라간다), 라벨은 목표선 높이에 맞춰 오른쪽 정렬 두 줄
+/// (`목표` / 목표치)로 앉는다. 한 줄로 두면 칸이 넓어져야 하는데, 그러면 360px
+/// 영어 로케일에서 축 라벨 줄이 넘친다. (#1004, #1071)
+///
+/// 목표가 없어도 칸은 자리를 지킨다 — 지표를 바꿀 때 그래프 폭이 흔들리지
+/// 않게 하려는 것이다.
+class ChartGoalAxis extends StatelessWidget {
+  const ChartGoalAxis({
+    super.key,
+    required this.height,
+    this.label,
+    this.lineBottom,
+    this.style = defaultStyle,
+  });
+
+  /// 그래프(막대·꺾은선)가 그려지는 높이. 축 라벨 줄은 뺀 값이다.
+  final double height;
+
+  /// 두 줄 라벨 — 첫 줄 `목표`, 둘째 줄 목표치. null 이면 칸만 지킨다.
+  final String? label;
+
+  /// 그래프 바닥에서 목표선까지의 거리. null 이면 라벨을 앉히지 않는다.
+  final double? lineBottom;
+
+  /// 글씨 모양. 자리와 두 줄 구성은 모든 그래프가 같지만, 색·굵기는 각 화면이
+  /// 쓰던 값을 그대로 둔다. (#1071)
+  final TextStyle style;
+
+  static const TextStyle defaultStyle = TextStyle(
+    fontSize: ChartGoalLine.labelFontSize,
+    height: 1.35,
+    fontWeight: FontWeight.w600,
+    color: ChartGoalLine.color,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    // 칸도 글씨 배율을 따라간다 (#1004). 상수로 박아 두면 배율이 올라간 순간
+    // `목표` 아래 줄이 상자에 눌려 반만 보인다.
+    final TextScaler ts = MediaQuery.textScalerOf(context);
+    final double width = chartGoalAxisWidth * ts.scale(1);
+    final double labelHeight = ts.scale(style.fontSize ?? 10) * 1.35 * 2;
+    final double? bottom = lineBottom;
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        children: <Widget>[
+          if (label != null && bottom != null)
+            Positioned(
+              right: 0,
+              top: (height - bottom - labelHeight / 2).clamp(
+                0.0,
+                math.max(0, height - labelHeight),
+              ),
+              child: SizedBox(
+                key: chartGoalLabelKey,
+                height: labelHeight,
+                child: Center(
+                  child: Text(
+                    label!,
+                    textAlign: TextAlign.right,
+                    maxLines: 2,
+                    style: style,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 목표치 칸의 폭(글씨 배율 1 기준).
+const double chartGoalAxisWidth = 38;
+
+/// 목표치 라벨을 집는 키. 화면마다 그래프가 여러 개면 여러 번 나온다.
+const Key chartGoalLabelKey = ValueKey<String>('chart-goal-label');
+
+/// 그래프와 목표치 칸 사이 간격.
+const double chartGoalAxisGap = 6;

@@ -1628,16 +1628,10 @@ abstract class AppLocalizations {
   /// **'Personal trainer'**
   String get exTrainerDedicated;
 
-  /// No description provided for @exAiSlotTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI recommended times'**
-  String get exAiSlotTitle;
-
   /// No description provided for @exTrainerAvailability.
   ///
   /// In en, this message translates to:
-  /// **'{trainer}\'s openings'**
+  /// **'{trainer}\'s open booking times'**
   String exTrainerAvailability(String trainer);
 
   /// No description provided for @exSlotWhen.
@@ -1646,17 +1640,23 @@ abstract class AppLocalizations {
   /// **'{date} {time}'**
   String exSlotWhen(String date, String time);
 
-  /// No description provided for @exSlotRemaining.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} left'**
-  String exSlotRemaining(int count);
-
   /// No description provided for @exSlotFull.
   ///
   /// In en, this message translates to:
   /// **'Fully booked'**
   String get exSlotFull;
+
+  /// No description provided for @exSlotTypePersonalTraining.
+  ///
+  /// In en, this message translates to:
+  /// **'1:1 PT'**
+  String get exSlotTypePersonalTraining;
+
+  /// No description provided for @exSlotTypeConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation'**
+  String get exSlotTypeConsultation;
 
   /// No description provided for @exSlotsEmpty.
   ///

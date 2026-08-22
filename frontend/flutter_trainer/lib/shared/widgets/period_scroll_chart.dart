@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 
 /// `전체` 그래프의 선택·보이는 구간 상태. (#1018)
 ///
@@ -80,7 +81,9 @@ class PeriodScrollChart extends StatefulWidget {
     required this.calloutBuilder,
     this.selectedIndex,
     this.onSelected,
-    this.goalOverlay,
+    this.goalBottom,
+    this.goalLabel,
+    this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
   });
 
@@ -108,7 +111,13 @@ class PeriodScrollChart extends StatefulWidget {
   final void Function(int? i)? onSelected;
 
   /// 목표선. 칸 전체 폭에 걸쳐 그려지도록 스크롤 안쪽에 얹는다.
-  final Widget? goalOverlay;
+  final double? goalBottom;
+
+  /// 왼쪽 칸에 앉는 두 줄 라벨(`목표` / 목표치).
+  final String? goalLabel;
+
+  /// 목표치 글씨 모양. 자리는 모든 그래프가 같고 색·굵기만 화면을 따른다.
+  final TextStyle goalLabelStyle;
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
@@ -146,6 +155,24 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
   @override
   Widget build(BuildContext context) {
     if (widget.count == 0) return SizedBox(height: widget.height);
+    // 목표치 칸은 스크롤 바깥에 둔다 — 안에 두면 옆으로 밀 때 같이 흘러가
+    // 화면에서 사라진다. (#1071)
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        ChartGoalAxis(
+          height: widget.height,
+          label: widget.goalLabel,
+          lineBottom: widget.goalBottom,
+          style: widget.goalLabelStyle,
+        ),
+        const SizedBox(width: chartGoalAxisGap),
+        Expanded(child: _scroller(context)),
+      ],
+    );
+  }
+
+  Widget _scroller(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double viewport = constraints.maxWidth;
@@ -202,7 +229,8 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                       // 목표선은 막대 **위**에 얹는다. 뒤에 깔면 목표에 가까운
                       // 막대가 `목표 N` 라벨을 덮어, 정작 견줄 기준이 안 보인다.
                       // 점선이라 데이터와 경쟁하지도 않는다.
-                      if (widget.goalOverlay != null) widget.goalOverlay!,
+                      if (widget.goalBottom != null)
+                        GoalLineOverlay(bottom: widget.goalBottom!),
                     ],
                   ),
                 ),

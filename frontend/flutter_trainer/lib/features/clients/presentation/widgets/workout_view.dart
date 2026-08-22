@@ -372,7 +372,9 @@ class _SessionRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
-              color: session.isDone ? AppColors.success : AppColors.primary,
+              color: session.isDone
+                  ? AppColors.statusNormal
+                  : AppColors.primary,
             ),
           ),
         ],
@@ -424,7 +426,7 @@ class _TypeChip extends StatelessWidget {
 /// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
 /// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
 Color _rateColor(int rate) {
-  if (rate >= 100) return AppColors.success;
+  if (rate >= 100) return AppColors.statusNormal;
   if (rate > 0) return AppColors.brandOrange;
   return AppColors.borderStrong;
 }

@@ -443,8 +443,7 @@
     }
   },
   "exTrainerDedicated": "Personal trainer",
-  "exAiSlotTitle": "✦ AI recommended times",
-  "exTrainerAvailability": "{trainer}'s openings",
+  "exTrainerAvailability": "{trainer}'s open booking times",
   "@exTrainerAvailability": {
     "placeholders": {
       "trainer": {
@@ -463,15 +462,9 @@
       }
     }
   },
-  "exSlotRemaining": "{count} left",
-  "@exSlotRemaining": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "exSlotFull": "Fully booked",
+  "exSlotTypePersonalTraining": "1:1 PT",
+  "exSlotTypeConsultation": "Consultation",
   "exSlotsEmpty": "No times available",
   "exSlotsAllBooked": "All available times are fully booked",
   "exSlotsLoadError": "Could not load available times.",

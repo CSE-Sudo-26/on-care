@@ -865,11 +865,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTrainerDedicated => 'Personal trainer';
 
   @override
-  String get exAiSlotTitle => '✦ AI recommended times';
-
-  @override
   String exTrainerAvailability(String trainer) {
-    return '$trainer\'s openings';
+    return '$trainer\'s open booking times';
   }
 
   @override
@@ -878,12 +875,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String exSlotRemaining(int count) {
-    return '$count left';
-  }
+  String get exSlotFull => 'Fully booked';
 
   @override
-  String get exSlotFull => 'Fully booked';
+  String get exSlotTypePersonalTraining => '1:1 PT';
+
+  @override
+  String get exSlotTypeConsultation => 'Consultation';
 
   @override
   String get exSlotsEmpty => 'No times available';

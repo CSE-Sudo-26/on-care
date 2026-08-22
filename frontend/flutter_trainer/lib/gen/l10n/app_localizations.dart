@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get actionSave;
 
+  /// No description provided for @actionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get actionSaved;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:
@@ -1010,12 +1016,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the member profile. Please try again'**
   String get memberHealthSaveFailed;
 
-  /// No description provided for @memberHealthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Body and goals'**
-  String get memberHealthTitle;
-
   /// No description provided for @memberHealthSaving.
   ///
   /// In en, this message translates to:
@@ -1712,6 +1712,12 @@ abstract class AppLocalizations {
   /// **'Preferred time'**
   String get consultPreferredTime;
 
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
+
   /// No description provided for @consultReject.
   ///
   /// In en, this message translates to:
@@ -2210,6 +2216,12 @@ abstract class AppLocalizations {
   /// **'Workout completion'**
   String get reportsCompletionAvg;
 
+  /// No description provided for @reportsWeeklyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly completion'**
+  String get reportsWeeklyCompletion;
+
   /// No description provided for @reportsCompletionByDay.
   ///
   /// In en, this message translates to:
@@ -2420,12 +2432,6 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled this week.'**
   String get schedEmptyWeek;
 
-  /// No description provided for @schedNewClientTag.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} (new)'**
-  String schedNewClientTag(String name);
-
   /// No description provided for @schedSlots.
   ///
   /// In en, this message translates to:
@@ -2449,30 +2455,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing scheduled for this day.\nUse New session above to add one.'**
   String get schedEmptyDay;
-
-  /// No description provided for @schedCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark session complete'**
-  String get schedCompleteTitle;
-
-  /// No description provided for @schedCompleteBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This marks the {time} session with {name} complete and logs it to their workout history.'**
-  String schedCompleteBody(String time, String name);
-
-  /// No description provided for @schedNoteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer\'s note (optional)'**
-  String get schedNoteOptional;
-
-  /// No description provided for @schedCompleteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark complete'**
-  String get schedCompleteAction;
 
   /// No description provided for @schedSaveFailed.
   ///
@@ -2612,6 +2594,12 @@ abstract class AppLocalizations {
   /// **'Edit note'**
   String get schedEditNote;
 
+  /// No description provided for @schedAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get schedAddNote;
+
   /// No description provided for @schedNoNote.
   ///
   /// In en, this message translates to:
@@ -2750,12 +2738,6 @@ abstract class AppLocalizations {
   /// **'Sent {name} the PT program for {date}'**
   String schedSentProgramTo(String name, String date);
 
-  /// No description provided for @slotCapacityInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityInvalid;
-
   /// No description provided for @slotPastTime.
   ///
   /// In en, this message translates to:
@@ -2780,18 +2762,6 @@ abstract class AppLocalizations {
   /// **'Start time'**
   String get slotStartTime;
 
-  /// No description provided for @slotCapacity.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity'**
-  String get slotCapacity;
-
-  /// No description provided for @slotBookedNow.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} booked'**
-  String slotBookedNow(int count);
-
   /// No description provided for @slotUpdated.
   ///
   /// In en, this message translates to:
@@ -2807,8 +2777,8 @@ abstract class AppLocalizations {
   /// No description provided for @slotCloseBody.
   ///
   /// In en, this message translates to:
-  /// **'The {count} existing bookings stay; only new bookings stop.'**
-  String slotCloseBody(int count);
+  /// **'Any existing booking stays; only new bookings stop.'**
+  String get slotCloseBody;
 
   /// No description provided for @slotClosed.
   ///
@@ -2855,14 +2825,20 @@ abstract class AppLocalizations {
   /// No description provided for @slotClosedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Closed · {booked} booked'**
-  String slotClosedSummary(int booked);
+  /// **'Closed'**
+  String get slotClosedSummary;
+
+  /// No description provided for @slotBookedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked'**
+  String get slotBookedSummary;
 
   /// No description provided for @slotOpenSummary.
   ///
   /// In en, this message translates to:
-  /// **'{booked} booked · {remaining} left'**
-  String slotOpenSummary(int booked, int remaining);
+  /// **'Open'**
+  String get slotOpenSummary;
 
   /// No description provided for @slotCloseAction.
   ///
@@ -4076,12 +4052,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send your question'**
   String get coachAskFailed;
 
-  /// No description provided for @slotCapacityRange.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityRange;
-
   /// No description provided for @slotFutureOnly.
   ///
   /// In en, this message translates to:
@@ -4094,11 +4064,17 @@ abstract class AppLocalizations {
   /// **'Booking slot not found.'**
   String get slotNotFound;
 
-  /// No description provided for @slotCapacityBelowBooked.
+  /// No description provided for @slotTypeLockedByBooking.
   ///
   /// In en, this message translates to:
-  /// **'Capacity can\'t be lower than the number already booked.'**
-  String get slotCapacityBelowBooked;
+  /// **'Can\'t change the type of a slot that\'s already booked.'**
+  String get slotTypeLockedByBooking;
+
+  /// No description provided for @slotSessionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get slotSessionType;
 
   /// No description provided for @authErrNotTrainer.
   ///
@@ -4592,23 +4568,29 @@ abstract class AppLocalizations {
   /// **'Program'**
   String get clientQuickProgram;
 
+  /// No description provided for @clientQuickReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get clientQuickReport;
+
   /// No description provided for @clientHealthGoals.
   ///
   /// In en, this message translates to:
   /// **'Body profile & goals'**
   String get clientHealthGoals;
 
+  /// No description provided for @clientProfileSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Body, goals & memo'**
+  String get clientProfileSectionTitle;
+
   /// No description provided for @clientTrainerMemo.
   ///
   /// In en, this message translates to:
   /// **'Memo'**
   String get clientTrainerMemo;
-
-  /// No description provided for @clientTrainerMemoTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Memos on {name}'**
-  String clientTrainerMemoTitle(String name);
 
   /// No description provided for @clientTrainerMemoHint.
   ///

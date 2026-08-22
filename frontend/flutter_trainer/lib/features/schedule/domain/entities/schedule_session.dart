@@ -130,6 +130,17 @@ class ScheduleSession {
   bool get expandable => !isGap;
 }
 
+/// `HH:mm` 을 자정부터의 분으로. 형식이 다르면 null. (#1012)
+int? clockMinutes(String time) {
+  final parts = time.split(':');
+  if (parts.length != 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
 /// [session] 이 지금부터 [leadMinutes] 안에 시작하는가. (#817)
 ///
 /// 이미 지난 시각과 완료·공백 슬롯은 대상이 아니다 — 강조는 "곧 해야 할 일"

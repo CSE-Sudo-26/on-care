@@ -273,14 +273,13 @@ void main() {
   });
 
   group('WorkoutView', () {
+    // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
+    // 패널과 하나의 스크롤을 공유하도록 `embedded: true` 로 그려진다. 그
+    // 공유 스크롤(`ListView`) 자체가 `client-detail-tabs-$clientId` 키를
+    // 달고 있다.
     Finder detailScrollable(String clientId) => find
         .descendant(
-          of: find
-              .descendant(
-                of: find.byKey(ValueKey<String>('workout-$clientId')),
-                matching: find.byType(ListView),
-              )
-              .first,
+          of: find.byKey(ValueKey<String>('client-detail-tabs-$clientId')),
           matching: find.byType(Scrollable),
         )
         .first;
@@ -353,7 +352,11 @@ void main() {
 
       // 목록은 이제 고른 기간만 보여 준다(#1114). 이 테스트가 확인하려는
       // 카드 구성(날짜·이행률·메모·취소선)은 오늘 하루에 다 있지 않으므로
-      // 전체로 넓혀 둔다 — 토글은 `운동 현황` 과 같은 줄에 있어 지금 보인다.
+      // 전체로 넓혀 둔다 — 토글은 `운동 현황` 과 같은 줄에 있다.
+      // `scrollUntilVisible` 은 위젯이 **지어지면** 멈추므로 캐시에만 있고
+      // 화면 밖일 수 있다. 누르기 전에 실제로 보이는 자리까지 끌어온다.
+      await tester.ensureVisible(find.byKey(const Key('client-period-month')));
+      await tester.pump();
       await tester.tap(find.byKey(const Key('client-period-month')));
       await settle(tester);
 
@@ -378,7 +381,8 @@ void main() {
       // 어느 항목을 걸렀는지는 픽스처가 정한다 — 이름을 여기 적으면 두 벌이 된다.
       // 기록이 여러 달치라 같은 이름의 거른 항목이 여러 번 나온다.
       // `scrollUntilVisible` 은 대상이 **하나**일 때만 쓸 수 있으므로 직접
-      // 내려가며 찾는다.
+      // 내려가며 찾는다. (#1024 로 기록 카드가 한 스크롤에 함께 마운트되면서
+      // 중복이 더 흔해졌다 — 이 방식은 그때도 그대로 통한다.)
       final String skipped = _minsuSkippedExercise();
       final Finder skippedLine = find.text(skipped);
       final Finder list = detailScrollable('seed-client-1');

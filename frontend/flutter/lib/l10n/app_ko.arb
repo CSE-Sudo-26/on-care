@@ -276,8 +276,7 @@
   "exGymWeekdayHours": "평일 {hours}",
   "exGymWeekendHours": "주말 {hours}",
   "exTrainerDedicated": "전담 트레이너",
-  "exAiSlotTitle": "✦ AI 추천 예약 시간",
-  "exTrainerAvailability": "{trainer} 빈 시간",
+  "exTrainerAvailability": "{trainer} 빈 예약 시간",
   "exSlotWhen": "{date} {time}",
   "@exSlotWhen": {
     "placeholders": {
@@ -289,15 +288,9 @@
       }
     }
   },
-  "exSlotRemaining": "잔여 {count}자리",
-  "@exSlotRemaining": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "exSlotFull": "예약 마감",
+  "exSlotTypePersonalTraining": "1:1 PT",
+  "exSlotTypeConsultation": "상담",
   "exSlotsEmpty": "예약 가능한 시간이 없어요",
   "exSlotsAllBooked": "예약 가능한 시간이 모두 찼어요",
   "exSlotsLoadError": "예약 시간을 불러오지 못했어요.",

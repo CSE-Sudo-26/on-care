@@ -51,6 +51,7 @@
   "navReports": "Reports",
   "navConsultations": "Requests",
   "actionSave": "Save",
+  "actionSaved": "Saved",
   "actionCancel": "Cancel",
   "actionEdit": "Edit",
   "actionDelete": "Delete",
@@ -256,7 +257,6 @@
   "clientsAddFailed": "Couldn't add the client. Please try again",
   "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
   "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
-  "memberHealthTitle": "Body and goals",
   "memberHealthSaving": "Saving…",
   "memberHealthGender": "Gender",
   "memberHealthGenderUnset": "Not set",
@@ -412,6 +412,7 @@
   "consultExerciseGoal": "Training goal",
   "consultHealthPurpose": "Health purpose",
   "consultPreferredTime": "Preferred time",
+  "consultMessage": "Message",
   "consultReject": "Decline",
   "consultApprove": "Approve",
   "consultRejectTitle": "Decline request",
@@ -623,6 +624,7 @@
     }
   },
   "reportsCompletionAvg": "Workout completion",
+  "reportsWeeklyCompletion": "Weekly completion",
   "reportsCompletionByDay": "Weekly workout completion",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
   "reportsMetricTrend": "{metric} trend",
@@ -708,32 +710,10 @@
     }
   },
   "schedEmptyWeek": "Nothing scheduled this week.",
-  "schedNewClientTag": "{name} (new)",
-  "@schedNewClientTag": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "schedSlots": "Booking slots",
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",
   "schedEmptyDay": "Nothing scheduled for this day.\nUse New session above to add one.",
-  "schedCompleteTitle": "Mark session complete",
-  "schedCompleteBody": "This marks the {time} session with {name} complete and logs it to their workout history.",
-  "@schedCompleteBody": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "schedNoteOptional": "Trainer's note (optional)",
-  "schedCompleteAction": "Mark complete",
   "schedSaveFailed": "Couldn't save the session. Please try again",
   "schedAddTitle": "Add a session",
   "schedEditTitle": "Edit session",
@@ -761,6 +741,7 @@
   "schedRepeatConflictHint": "Nothing was created. Change the time, or clear the sessions that clash.",
   "schedNote": "Trainer's note",
   "schedEditNote": "Edit note",
+  "schedAddNote": "Add note",
   "schedNoNote": "No note yet",
   "schedNoteOnlyHint": "A consultation is recorded as a note, not a program.",
   "schedNoteHint": "Anything to prepare, or notes about this client",
@@ -811,30 +792,13 @@
       }
     }
   },
-  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
   "slotEditTitle": "Edit booking slot",
   "slotStartTime": "Start time",
-  "slotCapacity": "Capacity",
-  "slotBookedNow": "{count} booked",
-  "@slotBookedNow": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
-  "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
-  "@slotCloseBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "slotCloseBody": "Any existing booking stays; only new bookings stop.",
   "slotClosed": "New bookings closed.",
   "slotActionFailed": "Couldn't complete the request. Please try again in a moment.",
   "slotManageTitle": "Manage booking slots",
@@ -849,25 +813,9 @@
   "slotOpenAction": "Open",
   "slotReload": "Reload",
   "slotEmpty": "No booking slots open on this day.",
-  "slotClosedSummary": "Closed · {booked} booked",
-  "@slotClosedSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      }
-    }
-  },
-  "slotOpenSummary": "{booked} booked · {remaining} left",
-  "@slotOpenSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "slotClosedSummary": "Closed",
+  "slotBookedSummary": "Booked",
+  "slotOpenSummary": "Open",
   "slotCloseAction": "Close bookings",
   "myCareerInvalid": "Enter years of experience between 0 and 80.",
   "myProfileSaveFailed": "Couldn't save your profile.",
@@ -1248,10 +1196,10 @@
   "coachDemoUnavailable": "AI coaching isn't available in demo mode",
   "coachNotMyClient": "That isn't one of your clients",
   "coachAskFailed": "Couldn't send your question",
-  "slotCapacityRange": "Capacity must be between 1 and 100.",
   "slotFutureOnly": "Booking slots can only be set for future times.",
   "slotNotFound": "Booking slot not found.",
-  "slotCapacityBelowBooked": "Capacity can't be lower than the number already booked.",
+  "slotTypeLockedByBooking": "Can't change the type of a slot that's already booked.",
+  "slotSessionType": "Type",
   "authErrNotTrainer": "Please sign in with a trainer account.",
   "aiBasisGoalCompletion": "{goal} · based on {rate}% completion",
   "@aiBasisGoalCompletion": {
@@ -1462,10 +1410,10 @@
   "messagesSelectPrompt": "Select a client from the list to start a conversation.",
   "clientQuickMessages": "Messages",
   "clientQuickProgram": "Program",
+  "clientQuickReport": "Report",
   "clientHealthGoals": "Body profile & goals",
+  "clientProfileSectionTitle": "Body, goals & memo",
   "clientTrainerMemo": "Memo",
-  "clientTrainerMemoTitle": "Memos on {name}",
-  "@clientTrainerMemoTitle": {"placeholders": {"name": {"type": "String"}}},
   "clientTrainerMemoHint": "Note what you want to remember about this member",
   "clientTrainerMemoAdd": "Add memo",
   "clientTrainerMemoEmpty": "No memos yet.",

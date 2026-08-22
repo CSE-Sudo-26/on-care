@@ -842,11 +842,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTrainerDedicated => '전담 트레이너';
 
   @override
-  String get exAiSlotTitle => '✦ AI 추천 예약 시간';
-
-  @override
   String exTrainerAvailability(String trainer) {
-    return '$trainer 빈 시간';
+    return '$trainer 빈 예약 시간';
   }
 
   @override
@@ -855,12 +852,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String exSlotRemaining(int count) {
-    return '잔여 $count자리';
-  }
+  String get exSlotFull => '예약 마감';
 
   @override
-  String get exSlotFull => '예약 마감';
+  String get exSlotTypePersonalTraining => '1:1 PT';
+
+  @override
+  String get exSlotTypeConsultation => '상담';
 
   @override
   String get exSlotsEmpty => '예약 가능한 시간이 없어요';
