@@ -886,6 +886,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exSlotFull => 'Fully booked';
 
   @override
+  String get exSlotTypePersonalTraining => '1:1 PT';
+
+  @override
+  String get exSlotTypeConsultation => 'Consultation';
+
+  @override
   String get exSlotsEmpty => 'No times available';
 
   @override

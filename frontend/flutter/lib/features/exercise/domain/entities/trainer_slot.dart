@@ -10,6 +10,7 @@ class TrainerSlot {
     required this.startsAt,
     required this.capacity,
     required this.remaining,
+    required this.sessionType,
   });
 
   final String id;
@@ -26,6 +27,11 @@ class TrainerSlot {
   /// selectable, so the trainer's day still reads as full rather than empty.
   final int remaining;
 
+  /// `'1:1 PT'` 또는 `'상담'` — 트레이너 앱 스케줄 탭의 세션 종류와 같은
+  /// 계약값이다. 회원이 이 시간을 예약하면 만들어지는 일정이 이 종류를
+  /// 그대로 물려받는다.
+  final String sessionType;
+
   bool get isFull => remaining <= 0;
 
   TrainerSlot copyWith({int? remaining}) {
@@ -35,6 +41,7 @@ class TrainerSlot {
       startsAt: startsAt,
       capacity: capacity,
       remaining: remaining ?? this.remaining,
+      sessionType: sessionType,
     );
   }
 }
