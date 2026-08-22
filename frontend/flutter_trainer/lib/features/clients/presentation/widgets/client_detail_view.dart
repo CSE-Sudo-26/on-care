@@ -8,7 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_profile_panel.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_profile_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -69,27 +69,16 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
   /// land in whatever order the network decides.
   bool _statusSaving = false;
 
-  /// Expands the merged 신체·목표·메모 panel from the header's 메모 quick
-  /// action — one control instead of a second popup (#1024).
-  final ExpansibleController _profileController = ExpansibleController();
-
-  /// Scrolled into view once [_profileController] expands, so the header
-  /// button actually brings the panel on screen instead of just opening it
-  /// off the bottom of a long page.
-  final GlobalKey _profileKey = GlobalKey();
-
-  void _openProfilePanel() {
-    _profileController.expand();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final BuildContext? panelContext = _profileKey.currentContext;
-      if (panelContext == null || !panelContext.mounted) return;
-      Scrollable.ensureVisible(
-        panelContext,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
-    });
-  }
+  /// Opens the merged 신체·목표·메모 popup from the header's 메모 quick
+  /// action — one button for what used to be two dialogs (#1024).
+  void _openProfileDialog(TrainerClient client) => showClientProfileDialog(
+    context,
+    clientId: client.id,
+    clientName: client.name,
+    // 서버에 성별이 없으면 로스터가 보여 주는 값으로 연다 — 헤더와
+    // 대화상자가 다른 말을 하지 않도록(#960).
+    fallbackGender: client.rosterGender,
+  );
 
   /// Moves the client between 활성 and 휴면. (#707)
   ///
@@ -164,9 +153,9 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
 
         // 식단/운동은 라우트가 곧 선택 상태다 — 별도 `TabController` 없이
         // 현재 섹션 하나로 어느 쪽을 그릴지 결정한다(#1024). 두 뷰 모두
-        // `embedded: true` 로 자기 `ListView` 를 만들지 않는다 — 아래
-        // 신체·목표·메모 패널과 같은 스크롤 하나를 공유해야, 패널이 얼마나
-        // 펼쳐지든(메모가 아무리 쌓여도) 좁은 화면에서도 절대 넘치지 않는다.
+        // `embedded: true` 로 자기 `ListView` 를 만들지 않는다 — 위의 전환
+        // 스트립과 같은 스크롤 하나를 공유해야, 좁은 화면에서 탭이 내용과
+        // 따로 놀거나 스크롤이 둘로 갈리지 않는다.
         final Widget content = section == 'workout'
             ? WorkoutView(
                 key: ValueKey<String>('workout-${widget.clientId}'),
@@ -186,7 +175,7 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
               showBack: widget.showBack,
               onClose: widget.onClose,
-              onOpenProfile: _openProfilePanel,
+              onOpenProfile: () => _openProfileDialog(client),
               onRefresh: () {
                 final ClientRepository repository = ref.read(
                   clientRepositoryProvider,
@@ -204,16 +193,6 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
                 key: ValueKey<String>('client-detail-tabs-${widget.clientId}'),
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: <Widget>[
-                  ClientProfilePanel(
-                    key: _profileKey,
-                    controller: _profileController,
-                    clientId: client.id,
-                    clientName: client.name,
-                    // 서버에 성별이 없으면 로스터가 보여 주는 값으로 연다 —
-                    // 헤더와 패널이 다른 말을 하지 않도록(#960).
-                    fallbackGender: client.rosterGender,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                   _sectionTabs(l, section),
                   const SizedBox(height: AppSpacing.sm),
                   content,
@@ -400,7 +379,7 @@ class _Header extends StatelessWidget {
   /// Flips the client between 활성 and 휴면.
   final VoidCallback? onToggleActive;
 
-  /// Expands the merged 신체·목표·메모 panel and scrolls it into view (#1024).
+  /// Opens the merged 신체·목표·메모 popup (#1024).
   final VoidCallback onOpenProfile;
 
   @override
@@ -434,10 +413,10 @@ class _Header extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             // 메시지 · 프로그램 · 리포트는 모두 흰 배경이다 — 이 회원의 다른
-            // 화면으로 넘어가는 동등한 세 자리라, 하나만 남색으로 튀면 그중
-            // 하나가 특별해 보인다. 남색은 메모 하나에만 남겨 둔다 — 모달
-            // 두 개를 인라인 패널 하나로 합친 뒤(#1024)에도, 지금 보던
-            // 화면을 나가지 않고 그 패널로 뛰어내리는 유일한 동작이라서다.
+            // 화면으로 넘어가는 동등한 세 자리라, 하나만 색이 다르면 그중
+            // 하나가 특별해 보인다. 이 줄은 '나가는 동작'만 모은 자리이고,
+            // 이 화면에서 끝나는 메모·새로고침·닫기는 위 프로필 줄의 아이콘
+            // 버튼으로 갈라 두었다(#1024).
             children: <Widget>[
               // 이 회원을 보다가 바로 이어지는 자리들. 예전에는 식단·운동을
               // 다 읽고도 메시지 탭·프로그램 탭으로 건너가 같은 사람을 목록에서
@@ -462,11 +441,8 @@ class _Header extends StatelessWidget {
                 icon: Icons.bar_chart_outlined,
                 onPressed: () => context.go(AppRoutes.reportFor(client.id)),
               ),
-              // 신체·목표 관리와 후속 관리 버튼은 사라졌다 — 전자는 아래
-              // 인라인 패널이 되었고(#1024), 후자는 이 줄에서 걷어냈다. 메모는
-              // 아이콘만 남기고 그 패널을 펼친다 — 같은 인라인 영역을 여는
-              // 동작이 버튼마다 다른 말을 하지 않도록.
-              _MemoQuickAction(onPressed: onOpenProfile),
+              // 신체·목표 관리와 후속 관리 버튼은 사라졌다 — 전자는 메모와
+              // 한 대화상자로 합쳐졌고(#1024), 후자는 이 줄에서 걷어냈다.
             ],
           ),
         ],
@@ -586,6 +562,16 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
+        // 메모는 새로고침·닫기와 같은 아이콘 버튼이다. 이 셋은 화면을
+        // 떠나지 않고 이 자리에서 끝나는 동작이라, 다른 화면으로 건너가는
+        // 아래 줄(메시지·프로그램·리포트)과 생김새로 갈라 둔다(#1024).
+        IconButton(
+          key: const ValueKey<String>('client-detail-open-memo'),
+          icon: const Icon(Icons.edit_note_outlined, size: 18),
+          color: AppColors.subtleForeground,
+          tooltip: l.clientTrainerMemo,
+          onPressed: onOpenProfile,
+        ),
         IconButton(
           key: const ValueKey<String>('client-data-refresh'),
           icon: const Icon(Icons.refresh, size: 18),
@@ -601,46 +587,6 @@ class _Header extends StatelessWidget {
             onPressed: onClose,
           ),
       ],
-    );
-  }
-}
-
-/// The header's 메모 quick action — icon only, navy-filled. (#1024)
-///
-/// Text used to be here (`ActionButton(label: l.clientTrainerMemo, ...)`),
-/// but the merged inline panel already carries the same word as its own
-/// section heading a few pixels below; keeping it on the button too just
-/// repeated it. The icon plus a tooltip is enough once there's only one
-/// navy action left in the row.
-class _MemoQuickAction extends StatelessWidget {
-  const _MemoQuickAction({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Material(
-      key: const ValueKey<String>('client-detail-open-memo'),
-      color: AppColors.primary,
-      borderRadius: const BorderRadius.all(AppRadius.md),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        child: Container(
-          height: 36,
-          width: 36,
-          alignment: Alignment.center,
-          child: Tooltip(
-            message: l.clientTrainerMemo,
-            child: const Icon(
-              Icons.edit_note_outlined,
-              size: 18,
-              color: AppColors.primaryForeground,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

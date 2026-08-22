@@ -102,23 +102,23 @@ void main() {
   testWidgets('빠른 버튼 줄이 #1024 정리 이후의 구성이다', (tester) async {
     await open(tester, <TrainerClient>[over()]);
 
-    // 신체·목표 관리와 후속 관리는 이 줄을 떠났다 — 전자는 아래 인라인
-    // 패널이 되었고, 후자는 걷어냈다. 리포트가 새로 생겼다.
+    // 신체·목표 관리와 후속 관리는 이 줄을 떠났다 — 전자는 메모와 한
+    // 대화상자로 합쳐졌고, 후자는 걷어냈다. 리포트가 새로 생겼다.
     expect(find.text('메시지'), findsOneWidget);
     expect(find.text('프로그램'), findsOneWidget);
     expect(find.text('리포트'), findsOneWidget);
     expect(find.text('고객 신체·목표 관리'), findsNothing);
     expect(find.text('후속 관리'), findsNothing);
-    // 메모는 아이콘만 남았다 — 텍스트가 아니라 키로 찾는다.
+    // 메모도 이 줄을 떠나 프로필 줄의 아이콘 버튼이 되었다 — 텍스트가 아니라
+    // 키로 찾고, 빠른 동작 줄 밖(위)에 있는지까지 확인한다.
     expect(find.text('메모'), findsNothing);
     final memoButton = find.byKey(
       const ValueKey<String>('client-detail-open-memo'),
     );
     expect(memoButton, findsOneWidget);
-    // 메모가 줄의 오른쪽 끝을 계속 지킨다(#729).
     expect(
-      tester.getRect(memoButton).right,
-      lessThanOrEqualTo(tester.getRect(quickActions()).right + 0.5),
+      tester.getRect(memoButton).bottom,
+      lessThanOrEqualTo(tester.getRect(quickActions()).top),
     );
     expect(tester.takeException(), isNull);
   });

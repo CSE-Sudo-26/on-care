@@ -329,7 +329,8 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('나트륨 초과'), findsWidgets);
-    // 신체·목표는 인라인 패널이 되었고 메모는 아이콘만 남았다(#1024).
+    // 신체·목표는 메모와 한 대화상자로 합쳐졌고, 메모 버튼은 프로필 줄의
+    // 아이콘 버튼으로 옮겨 갔다(#1024).
     expect(find.text('리포트'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('client-detail-open-memo')),

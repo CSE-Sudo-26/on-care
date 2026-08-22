@@ -12,94 +12,90 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 
-/// Inline merge of the old 신체·목표 and 메모 modal dialogs (#1024).
+/// Opens the merged 신체·목표·메모 dialog for [clientId].
+///
+/// The header's 메모 quick action is the only way in — one button, one
+/// popup, the way 신체·목표 and 메모 each had their own before (#1024).
+Future<void> showClientProfileDialog(
+  BuildContext context, {
+  required String clientId,
+  required String clientName,
+  String fallbackGender = '',
+}) => showDialog<void>(
+  context: context,
+  builder: (_) => ClientProfileDialog(
+    clientId: clientId,
+    clientName: clientName,
+    fallbackGender: fallbackGender,
+  ),
+);
+
+/// Merge of the old 신체·목표 and 메모 modal dialogs (#1024).
 ///
 /// A trainer used to close one popup to open the other — body info, a
 /// goal, and a memo about the same visit lived in places that could never
-/// be on screen together. This collapses both into one section on the
-/// client detail page itself: 상단 신체정보·목표, 하단 메모.
-class ClientProfilePanel extends StatelessWidget {
-  /// Creates the panel for [clientId].
-  const ClientProfilePanel({
+/// be on screen together. Both now share one popup: 상단 신체정보·목표,
+/// 하단 메모.
+///
+/// The merged content first landed as an inline `ExpansionTile` on the
+/// detail page. Trainers asked for the popup back — editing a memo is a
+/// short errand you leave again, and folding the page open pushed 식단·운동
+/// off screen to do it. The merge stays; the toggle is gone.
+class ClientProfileDialog extends StatelessWidget {
+  /// Creates the dialog body for [clientId].
+  const ClientProfileDialog({
     super.key,
     required this.clientId,
     required this.clientName,
     this.fallbackGender = '',
-    this.controller,
   });
 
   /// The client whose profile and memos are shown.
   final String clientId;
 
-  /// Used in the memo dialog title equivalent (memo section heading).
+  /// Named in the memo section heading.
   final String clientName;
 
   /// 저장된 성별이 없을 때 열어 둘 값 — 로스터가 이미 말하고 있는 성별이다(#960).
   final String fallbackGender;
 
-  /// Lets the header's 메모 quick action expand this panel and scroll to it
-  /// without duplicating the merged content in a second place.
-  final ExpansibleController? controller;
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    // `Material`, not a plain `DecoratedBox` — `ExpansionTile` paints its
-    // `ListTile` background and tap ripple on the nearest `Material`
-    // ancestor. An opaque `DecoratedBox` in between hides both and trips a
-    // framework assertion in debug/test builds.
-    return Material(
-      color: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(AppRadius.card),
-        side: BorderSide(color: AppColors.borderStrong),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Theme(
-        // The tile draws its own divider between title and children; a
-        // second one from the ambient theme would double the line.
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          key: const ValueKey<String>('client-profile-panel'),
-          controller: controller,
-          tilePadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: 2,
+    return AlertDialog(
+      key: const ValueKey<String>('client-profile-dialog'),
+      title: Text(l.clientProfileSectionTitle),
+      content: SizedBox(
+        // Same width as the two dialogs this replaces, so the form fields
+        // keep the proportions trainers already know.
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // 상단: 신체정보와 목표.
+              _HealthProfileSection(
+                clientId: clientId,
+                fallbackGender: fallbackGender,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const Divider(color: AppColors.borderStrong, height: 1),
+              const SizedBox(height: AppSpacing.lg),
+              // 하단: 메모. 이 열 전체가 하나의 스크롤 안에 있어, 메모가 아무리
+              // 쌓여도 대화상자가 화면을 넘치지 않는다.
+              _MemoSection(clientId: clientId, clientName: clientName),
+            ],
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          leading: const Icon(
-            Icons.badge_outlined,
-            color: AppColors.accent,
-            size: 20,
-          ),
-          title: Text(
-            l.clientProfileSectionTitle,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.foreground,
-            ),
-          ),
-          children: <Widget>[
-            // 상단: 신체정보와 목표.
-            _HealthProfileSection(
-              clientId: clientId,
-              fallbackGender: fallbackGender,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Divider(color: AppColors.borderStrong, height: 1),
-            const SizedBox(height: AppSpacing.lg),
-            // 하단: 메모. 페이지 전체가 하나의 스크롤을 공유하므로(위 참고),
-            // 메모가 아무리 쌓여도 이 패널이 화면을 넘치게 하지 않는다.
-            _MemoSection(clientId: clientId, clientName: clientName),
-          ],
         ),
       ),
+      actions: <Widget>[
+        TextButton(
+          key: const ValueKey<String>('client-profile-dialog-close'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.actionClose),
+        ),
+      ],
     );
   }
 }
