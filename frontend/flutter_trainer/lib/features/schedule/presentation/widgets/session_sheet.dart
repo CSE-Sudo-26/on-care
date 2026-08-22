@@ -226,6 +226,9 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       // 시작일 이전으로는 갈 수 없다 — 그러면 회차가 하나도 없다.
       firstDate: start,
       lastDate: start.add(const Duration(days: 7 * maxSeriesOccurrences)),
+      // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드 입력을
+      // 기본으로 띄우면 그 문제가 없다(#1109).
+      initialEntryMode: DatePickerEntryMode.input,
     );
     if (picked == null || !mounted) return;
     setState(

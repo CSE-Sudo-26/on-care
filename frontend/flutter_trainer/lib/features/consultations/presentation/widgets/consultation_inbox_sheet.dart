@@ -391,6 +391,9 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
                 initialDate: _clampDate(_date, today, lastDate),
                 firstDate: today,
                 lastDate: lastDate,
+                // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드
+                // 입력을 기본으로 띄우면 그 문제가 없다(#1109).
+                initialEntryMode: DatePickerEntryMode.input,
               );
               if (picked != null) setState(() => _date = picked);
             },

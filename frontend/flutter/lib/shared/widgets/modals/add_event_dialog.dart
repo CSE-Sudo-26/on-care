@@ -30,7 +30,10 @@ const List<ScheduleCategory> _categories = <ScheduleCategory>[
 /// 눌러 들어오는 흐름이 쓴다.
 ///
 /// 저장에 성공하면 `true` 로 닫힌다. 부른 쪽이 목록을 다시 읽을지 판단한다.
-Future<bool?> showAddEventDialog(BuildContext context, {DateTime? initialDate}) {
+Future<bool?> showAddEventDialog(
+  BuildContext context, {
+  DateTime? initialDate,
+}) {
   return showDialog<bool>(
     context: context,
     barrierColor: Colors.black54,
@@ -128,6 +131,9 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
       // 지난 일정도 기록할 수 있어야 하고, 앞으로도 넉넉히 잡을 수 있어야 한다.
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 2, 12, 31),
+      // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드 입력을
+      // 기본으로 띄우면 그 문제가 없다(#1109).
+      initialEntryMode: DatePickerEntryMode.input,
     );
     if (picked != null) setState(() => _date = picked);
   }
@@ -181,11 +187,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEdit ? l.eventEditFailed : l.eventAddFailed,
-          ),
-        ),
+        SnackBar(content: Text(_isEdit ? l.eventEditFailed : l.eventAddFailed)),
       );
     }
   }
@@ -254,7 +256,9 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
               _PickerField(
                 key: const Key('addEventDate'),
                 label: l.eventDateLabel,
-                value: MaterialLocalizations.of(context).formatMediumDate(_date),
+                value: MaterialLocalizations.of(
+                  context,
+                ).formatMediumDate(_date),
                 icon: Icons.calendar_today_outlined,
                 onTap: _saving ? null : _pickDate,
               ),
@@ -266,9 +270,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
                 // 그대로 말해 준다.
                 value: _time == null
                     ? l.eventTimeNone
-                    : MaterialLocalizations.of(
-                        context,
-                      ).formatTimeOfDay(_time!),
+                    : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
                 muted: _time == null,
                 icon: Icons.schedule_outlined,
                 onTap: _saving ? null : _pickTime,
