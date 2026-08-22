@@ -4,7 +4,6 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
@@ -148,7 +147,6 @@ class _CompactClientContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completion = recordedCompletionMean(client)?.round();
     return Row(
       children: <Widget>[
         ClientAvatar(
@@ -177,39 +175,6 @@ class _CompactClientContent extends StatelessWidget {
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                 ),
-              ),
-              const SizedBox(height: 7),
-              Row(
-                children: <Widget>[
-                  const Text(
-                    '주간 이행률',
-                    style: TextStyle(
-                      color: AppColors.subtleForeground,
-                      fontSize: 10.5,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.all(AppRadius.pill),
-                      child: LinearProgressIndicator(
-                        minHeight: 5,
-                        value: completion == null ? 0 : completion / 100,
-                        backgroundColor: AppColors.inputBackground,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    completion == null ? '-' : '$completion%',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

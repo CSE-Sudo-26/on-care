@@ -105,6 +105,20 @@ class HealthProfile(Base):
     )
     weekly_burn_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # 운동 탭이 실제로 견주는 목표 (#1139) — 소모는 하루, 유형별은 한 주다.
+    # 근력을 주 7 로 나누면 "2.3세트" 라는 뜻 없는 수가 되어, 유형별은 주간을
+    # 원본으로 둔다.
+    daily_burn_kcal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_cardio_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    weekly_strength_sets: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    weekly_flexibility_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+
     # 온보딩 완료 여부(프론트 온보딩 게이팅용)
     onboarded: Mapped[bool] = mapped_column(Boolean, default=False)
 

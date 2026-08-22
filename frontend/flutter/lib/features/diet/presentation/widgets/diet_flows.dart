@@ -1134,16 +1134,17 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     }
   }
 
-  /// 수정 화면 상단의 큰 끼니 사진.
+  /// 수정 화면 상단의 큰 끼니 사진. 200 → 300 으로 키웠다 (#1125) — 이 화면에
+  /// 들어온 이유가 대개 "무엇을 먹었는지 다시 보려고" 라, 사진이 주인공이다.
   MealPhotoView get _photo => MealPhotoView(
     photoUrl: widget.meal.photoUrl,
     photoAsset: widget.meal.photoAsset,
     emoji: widget.meal.emoji,
     background: widget.meal.thumbBg,
     width: double.infinity,
-    height: 200,
+    height: 300,
     borderRadius: 16,
-    emojiSize: 64,
+    emojiSize: 96,
   );
 
   @override

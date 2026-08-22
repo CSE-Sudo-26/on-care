@@ -1460,11 +1460,14 @@ class LocalApiInterceptor extends Interceptor {
     'email': 'minsu@oncare.com',
     'phone': '010-1234-5678',
     'birth_date': '1990-01-15',
-    'gender': '',
+    // 데모 회원은 남성이다 — 트레이너 앱의 김민수와 같은 사람이라 두 앱이
+    // 같은 값을 말해야 한다 (#1140).
+    'gender': 'male',
     'height_cm': 175.0,
     'weight_kg': 72.0,
     'conditions': '',
-    'goals': '',
+    // 트레이너 앱이 이 회원의 목표로 보여 주는 값과 같다 (#1140).
+    'goals': '혈압 관리 · 체중 감량',
     'daily_calories': 2000,
     'daily_sodium_mg': 2000,
     'daily_sugar_g': 50,
@@ -1474,6 +1477,11 @@ class LocalApiInterceptor extends Interceptor {
     'weekly_workout_goal': null,
     'weekly_exercise_minutes_goal': null,
     'weekly_burn_goal': null,
+    // 운동 탭이 견주는 목표 (#1139) — 비워 두면 앱이 권장값을 쓴다.
+    'daily_burn_kcal': null,
+    'weekly_cardio_minutes': null,
+    'weekly_strength_sets': null,
+    'weekly_flexibility_minutes': null,
     'onboarded': true,
   };
 
@@ -1528,7 +1536,7 @@ class LocalApiInterceptor extends Interceptor {
     return _ok(options, await _mergedProfile());
   }
 
-  /// PUT /users/me/health-goals — 식단 일일 목표(6종) + 주간 운동 목표(3종)를
+  /// PUT /users/me/health-goals — 식단 일일 목표(6종) + 운동 목표(7종)를
   /// 프로필 오버레이에 병합한다(체중/혈압/혈당 목표는 다루지 않음).
   Future<Response<Object?>> _usersMeHealthGoals(RequestOptions options) async {
     final body = _jsonBody(options);
@@ -1543,6 +1551,10 @@ class LocalApiInterceptor extends Interceptor {
       'weekly_workout_goal',
       'weekly_exercise_minutes_goal',
       'weekly_burn_goal',
+      'daily_burn_kcal',
+      'weekly_cardio_minutes',
+      'weekly_strength_sets',
+      'weekly_flexibility_minutes',
     ]) {
       // 값이 아니라 **키가 있는지**를 본다. 명시적 null 은 목표 해제라
       // 오버레이에도 null 로 남아야 한다 — 건너뛰면 지운 목표가 되살아난다.

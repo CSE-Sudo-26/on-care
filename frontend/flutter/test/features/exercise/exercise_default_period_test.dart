@@ -16,6 +16,7 @@ import 'package:oncare/features/account/presentation/controllers/account_control
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -79,8 +80,9 @@ void main() {
     await pumpExercise(tester);
     await tester.pumpAndSettle();
 
-    // 세 기간이 같은 카드 자리를 쓰므로, 오늘에만 있는 머리말로 가른다.
-    expect(find.text('오늘 소모'), findsOneWidget);
+    // 세 기간이 같은 카드 자리를 쓰므로 카드 종류로 가른다. 소모 칼로리
+    // 머리말은 도넛 안으로 들어갔다 (#1127).
+    expect(find.byType(ExerciseDayLoadCard), findsOneWidget);
   });
 
   testWidgets('이번 주를 고르면 주간 화면이 나온다', (WidgetTester tester) async {
@@ -89,11 +91,11 @@ void main() {
 
     await tester.tap(find.text('이번 주'));
     await tester.pumpAndSettle();
-    expect(find.text('오늘 소모'), findsNothing);
+    expect(find.byType(ExerciseDayLoadCard), findsNothing);
 
     // 오늘 ↔ 이번 주 왕복이 상태를 망가뜨리지 않는다.
     await tester.tap(find.byKey(const Key('exercise-period-tab-0')));
     await tester.pumpAndSettle();
-    expect(find.text('오늘 소모'), findsOneWidget);
+    expect(find.byType(ExerciseDayLoadCard), findsOneWidget);
   });
 }

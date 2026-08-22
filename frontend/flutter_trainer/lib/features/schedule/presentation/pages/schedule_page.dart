@@ -14,7 +14,6 @@ import 'package:oncare_trainer/features/consultations/presentation/widgets/consu
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
-import 'package:oncare_trainer/features/schedule/presentation/widgets/complete_session_dialog.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/consultation_inbox_action.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_date_nav_bar.dart';
@@ -243,21 +242,17 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     }
   }
 
-  /// 완료 처리 — asks for an optional trainer memo, then flips the
-  /// session to 완료 and logs it to the client's 운동기록. The dialog
-  /// pops `null` on cancel, or the (possibly empty) memo on confirm.
+  /// 완료 처리 — flips the session to 완료 and logs it to the client's
+  /// 운동기록. 확인 다이얼로그 없이 바로 처리한다 — 메모는 완료 뒤에도
+  /// 상세 패널에서 언제든 남길 수 있어, 누르는 순간 매번 빈 메모란을
+  /// 보여줄 이유가 없다(#1106).
   Future<void> _confirmComplete(ScheduleSession s) async {
-    final note = await showDialog<String>(
-      context: context,
-      builder: (context) => CompleteSessionDialog(session: s),
-    );
-    if (note == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref
           .read(scheduleRepositoryProvider)
-          .completeSession(s.id, note: note);
+          .completeSession(s.id, note: '');
     } catch (_) {
       // A DB or programJson-decode failure must not escape to the UI —
       // the session stays 예정 and the trainer is told (review PR 237).

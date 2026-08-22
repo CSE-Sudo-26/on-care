@@ -519,13 +519,16 @@ def build_client_history(
         dated.append((r.date, clock.to_seoul(r.created_at).timestamp(), RoutineHistoryOut(
             id=r.id,
             date_label=history_date_label(r.date),
-            # 라벨과 같은 날을 견줄 수 있는 형태로도 내려보낸다(#1025).
-            date=r.date,
             label=r.kind_label,
             completion_rate=r.completion_rate,
             exercises=exercises,
             client_feedback=r.client_feedback,
             trainer_note=r.trainer_note,
+            # 배정 수행(`_assigned_history_out`)은 완료 시각을 함께 내려보내는데
+            # 이 갈래만 비워 두고 있었다. 받는 쪽은 그 값으로 기록을 날짜에
+            # 붙이므로, 비어 오면 화면에서 통째로 빠진다 — 이 표는 날짜를
+            # 갖고 있으니(`date`) 그날로 채운다. (#1114, #1025)
+            completed_at=_day_start(r.date),
         )))
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
@@ -1009,6 +1012,18 @@ class RoutineNotFound(Exception):
     """루틴이 없거나 이 트레이너·회원의 것이 아니다."""
 
 
+def _day_start(day: str) -> datetime | None:
+    """`YYYY-MM-DD` → 그날 0시. 형식이 틀리면 None.
+
+    이 표는 시각 없이 날짜만 들고 있다. 받는 쪽은 시각을 버리고 날짜만 보므로
+    (`historyInRange`) 0시로 세워도 뜻이 달라지지 않는다.
+    """
+    try:
+        return datetime.fromisoformat(f"{day}T00:00:00")
+    except ValueError:
+        return None
+
+
 def _owned_routine(
     db: Session, trainer_id: str | None, member_id: str, routine_id: str
 ) -> TrainerRoutine:
@@ -1381,6 +1396,38 @@ def complete_assigned_routine(
     return _routine_out(routine, row)
 
 
+def uncomplete_assigned_routine(
+    db: Session,
+    trainer_id: str | None,
+    member_id: str,
+    routine_id: str,
+) -> RoutineOut:
+    """완료 표시를 되돌린다 — 그 배정으로 만들어진 운동 기록을 지운다. (#1131)
+
+    회원이 체크를 잘못 눌렀을 때 되돌릴 방법이 없으면, 하지 않은 운동이 주간
+    시간·칼로리에 영원히 남는다. 완료는 배정 하나당 기록 하나(`assigned_routine_id`
+    unique)라 지울 대상도 하나다.
+
+    아직 완료하지 않은 배정에 대해서는 아무 일도 하지 않고 현재 상태를 돌려준다 —
+    같은 요청을 두 번 보내도 결과가 같다.
+    """
+    routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    row = db.scalar(
+        select(ExerciseSession).where(
+            ExerciseSession.assigned_routine_id == routine_id,
+            ExerciseSession.user_id == member_id,
+        )
+    )
+    if row is None:
+        return _routine_out(routine, None)
+    session_id = row.id
+    db.delete(row)
+    db.commit()
+    # 근거 문서도 함께 지운다 — 행이 사라지면 `_load` 가 None 을 돌려준다.
+    personal_ingest.refresh_exercise(db, member_id, session_id=session_id)
+    return _routine_out(routine, None)
+
+
 def update_assigned_routine_feedback(
     db: Session,
     trainer_id: str,
@@ -1416,8 +1463,6 @@ def _assigned_history_out(row: ExerciseSession) -> RoutineHistoryOut:
     return RoutineHistoryOut(
         id=row.id,
         date_label=history_date_label(day),
-        # 라벨과 같은 날을 견줄 수 있는 형태로도 내려보낸다(#1025).
-        date=day,
         label=row.assigned_routine_name or "배정 루틴 수행",
         completion_rate=100,
         exercises=[

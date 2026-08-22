@@ -532,10 +532,17 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
     );
     final Map<String, List<RoutineHistoryEntry>> byDate =
         <String, List<RoutineHistoryEntry>>{};
+    final List<RoutineHistoryEntry> undated = <RoutineHistoryEntry>[];
     for (final RoutineHistoryEntry entry
         in history.valueOrNull ?? const <RoutineHistoryEntry>[]) {
-      final DateTime? when = entry.date;
-      if (when == null) continue;
+      final DateTime? when = entry.completedAt;
+      // 날짜를 모르는 기록은 버리지 않고 따로 모은다. 어느 날 줄에도 붙일 수
+      // 없지만, 모른다고 숨기면 트레이너 눈에는 기록이 사라진 것으로
+      // 보인다(#1114 가 목록에서 지킨 규칙이다).
+      if (when == null) {
+        undated.add(entry);
+        continue;
+      }
       (byDate[ymd(when)] ??= <RoutineHistoryEntry>[]).add(entry);
     }
     // 이력이 실패하면 그 자리에서 말하고 다시 시도할 수 있어야 한다. 조용히
@@ -554,72 +561,100 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
         ),
       );
     }
-    return async.maybeWhen(
-      data: (ClientExercisePeriod period) => ClientDayRecordCard(
-        key: const ValueKey<String>('exercise-daily-records'),
+    Widget withUndated(Widget days) {
+      // 평소에는 비어 있다 — 시딩도 실 API 도 완료 날짜를 채운다. 옛 행이나
+      // 날짜를 잃은 기록이 있을 때만 이 자리가 생긴다.
+      if (undated.isEmpty) return days;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          for (final ClientExerciseDay day in period.days.reversed)
-            () {
-              final List<RoutineHistoryEntry> dayEntries =
-                  byDate[ymd(day.date)] ?? const <RoutineHistoryEntry>[];
-              // 집계는 0 인데 이력은 있는 날이 있다 — 스케줄에서 세션을 완료
-              // 처리하면 이력이 먼저 생기고 하루 집계는 아직 0 이다. 시간만
-              // 보고 접어 두면 방금 남긴 기록이 갈 곳을 잃는다(#1025).
-              final bool logged = day.minutes > 0 || dayEntries.isNotEmpty;
-              return ClientDayRecordTile(
-                date: day.date,
-                logged: logged,
-                expanded: _openDay == ymd(day.date),
-                onToggle: () => setState(() {
-                  _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
-                }),
-                emptyLabel: l.dietDayEmpty,
-                // 그날의 미션 카드가 펼친 자리로 들어온다 — 이행률·종류·
-                // 피드백·메모까지, 예전 `운동 기록` 카드가 하던 말 그대로다.
-                // 이력이 없는 날에는 지표에 남은 운동 이름만 보여 준다.
-                extra: _openDay == ymd(day.date) && logged
-                    ? _DayDetail(
-                        clientId: widget.clientId,
-                        date: day.date,
-                        entries: dayEntries,
-                      )
-                    : null,
-                summary:
-                    '${day.minutes}${l.unitMinutes} · '
-                    '${formatNumber(day.calories)} ${l.unitKcal}',
-                details: <({String label, String value})>[
-                  (
-                    label: l.clientTrendWorkoutMinutes,
-                    value: '${day.minutes}${l.unitMinutes}',
-                  ),
-                  (
-                    label: l.metricCalories,
-                    value: '${formatNumber(day.calories)} ${l.unitKcal}',
-                  ),
-                  if (day.cardioMinutes > 0)
-                    (
-                      label: l.routineTypeCardio,
-                      value: '${day.cardioMinutes}${l.unitMinutes}',
-                    ),
-                  if (day.strengthMinutes > 0)
-                    (
-                      label: l.routineTypeStrength,
-                      value: '${day.strengthMinutes}${l.unitMinutes}',
-                    ),
-                  if (day.stretchingMinutes > 0)
-                    (
-                      label: l.routineTypeFlexibility,
-                      value: '${day.stretchingMinutes}${l.unitMinutes}',
-                    ),
-                  if (day.otherMinutes > 0)
-                    (
-                      label: l.routineTypeOther,
-                      value: '${day.otherMinutes}${l.unitMinutes}',
-                    ),
-                ],
-              );
-            }(),
+          days,
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            l.workoutUndatedTitle,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.subtleForeground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final RoutineHistoryEntry entry in undated) ...<Widget>[
+            _HistoryCard(clientId: widget.clientId, entry: entry),
+            const SizedBox(height: AppSpacing.sm),
+          ],
         ],
+      );
+    }
+
+    return async.maybeWhen(
+      data: (ClientExercisePeriod period) => withUndated(
+        ClientDayRecordCard(
+          key: const ValueKey<String>('exercise-daily-records'),
+          children: <Widget>[
+            for (final ClientExerciseDay day in period.days.reversed)
+              () {
+                final List<RoutineHistoryEntry> dayEntries =
+                    byDate[ymd(day.date)] ?? const <RoutineHistoryEntry>[];
+                // 집계는 0 인데 이력은 있는 날이 있다 — 스케줄에서 세션을 완료
+                // 처리하면 이력이 먼저 생기고 하루 집계는 아직 0 이다. 시간만
+                // 보고 접어 두면 방금 남긴 기록이 갈 곳을 잃는다(#1025).
+                final bool logged = day.minutes > 0 || dayEntries.isNotEmpty;
+                return ClientDayRecordTile(
+                  date: day.date,
+                  logged: logged,
+                  expanded: _openDay == ymd(day.date),
+                  onToggle: () => setState(() {
+                    _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
+                  }),
+                  emptyLabel: l.dietDayEmpty,
+                  // 그날의 미션 카드가 펼친 자리로 들어온다 — 이행률·종류·
+                  // 피드백·메모까지, 예전 `운동 기록` 카드가 하던 말 그대로다.
+                  // 이력이 없는 날에는 지표에 남은 운동 이름만 보여 준다.
+                  extra: _openDay == ymd(day.date) && logged
+                      ? _DayDetail(
+                          clientId: widget.clientId,
+                          date: day.date,
+                          entries: dayEntries,
+                        )
+                      : null,
+                  summary:
+                      '${day.minutes}${l.unitMinutes} · '
+                      '${formatNumber(day.calories)} ${l.unitKcal}',
+                  details: <({String label, String value})>[
+                    (
+                      label: l.clientTrendWorkoutMinutes,
+                      value: '${day.minutes}${l.unitMinutes}',
+                    ),
+                    (
+                      label: l.metricCalories,
+                      value: '${formatNumber(day.calories)} ${l.unitKcal}',
+                    ),
+                    if (day.cardioMinutes > 0)
+                      (
+                        label: l.routineTypeCardio,
+                        value: '${day.cardioMinutes}${l.unitMinutes}',
+                      ),
+                    if (day.strengthMinutes > 0)
+                      (
+                        label: l.routineTypeStrength,
+                        value: '${day.strengthMinutes}${l.unitMinutes}',
+                      ),
+                    if (day.stretchingMinutes > 0)
+                      (
+                        label: l.routineTypeFlexibility,
+                        value: '${day.stretchingMinutes}${l.unitMinutes}',
+                      ),
+                    if (day.otherMinutes > 0)
+                      (
+                        label: l.routineTypeOther,
+                        value: '${day.otherMinutes}${l.unitMinutes}',
+                      ),
+                  ],
+                );
+              }(),
+          ],
+        ),
       ),
       orElse: () => const SizedBox.shrink(),
     );

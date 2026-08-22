@@ -2498,16 +2498,6 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _dateMeta = const VerificationMeta('date');
-  @override
-  late final GeneratedColumn<String> date = GeneratedColumn<String>(
-    'date',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(''),
-  );
   static const VerificationMeta _labelMeta = const VerificationMeta('label');
   @override
   late final GeneratedColumn<String> label = GeneratedColumn<String>(
@@ -2575,18 +2565,29 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     clientId,
     dateLabel,
-    date,
     label,
     completionRate,
     exercisesJson,
     clientFeedback,
     trainerNote,
     sortOrder,
+    completedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2620,12 +2621,6 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
       );
     } else if (isInserting) {
       context.missing(_dateLabelMeta);
-    }
-    if (data.containsKey('date')) {
-      context.handle(
-        _dateMeta,
-        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
-      );
     }
     if (data.containsKey('label')) {
       context.handle(
@@ -2681,6 +2676,15 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2704,10 +2708,6 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
       dateLabel: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}date_label'],
-      )!,
-      date: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}date'],
       )!,
       label: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2733,6 +2733,10 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
     );
   }
 
@@ -2747,31 +2751,28 @@ class ClientRoutineHistoryRow extends DataClass
   final String id;
   final String clientId;
   final String dateLabel;
-
-  /// 이 기록이 가리키는 날(`YYYY-MM-DD`).
-  ///
-  /// [dateLabel] 은 사람이 읽는 표시용이라 날짜로 견줄 수 없다. 날짜별 기록을
-  /// 펼쳤을 때 그날의 이력을 함께 보여 주려면 견줄 수 있는 값이 필요하다
-  /// (#1025). 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로
-  /// 거르는 조회에는 걸리지 않는다.
-  final String date;
   final String label;
   final int completionRate;
   final String exercisesJson;
   final String clientFeedback;
   final String trainerNote;
   final int sortOrder;
+
+  /// 실제로 운동을 마친 시각. `dateLabel` 은 화면에 그릴 문자열일 뿐이라
+  /// 기간으로 거를 수 없다 — 실 API 가 주는 `completed_at` 과 같은 값을
+  /// 데모도 들고 있어야 두 모드가 같은 목록을 보여 준다(#1114).
+  final DateTime? completedAt;
   const ClientRoutineHistoryRow({
     required this.id,
     required this.clientId,
     required this.dateLabel,
-    required this.date,
     required this.label,
     required this.completionRate,
     required this.exercisesJson,
     required this.clientFeedback,
     required this.trainerNote,
     required this.sortOrder,
+    this.completedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2779,13 +2780,15 @@ class ClientRoutineHistoryRow extends DataClass
     map['id'] = Variable<String>(id);
     map['client_id'] = Variable<String>(clientId);
     map['date_label'] = Variable<String>(dateLabel);
-    map['date'] = Variable<String>(date);
     map['label'] = Variable<String>(label);
     map['completion_rate'] = Variable<int>(completionRate);
     map['exercises_json'] = Variable<String>(exercisesJson);
     map['client_feedback'] = Variable<String>(clientFeedback);
     map['trainer_note'] = Variable<String>(trainerNote);
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
     return map;
   }
 
@@ -2794,13 +2797,15 @@ class ClientRoutineHistoryRow extends DataClass
       id: Value(id),
       clientId: Value(clientId),
       dateLabel: Value(dateLabel),
-      date: Value(date),
       label: Value(label),
       completionRate: Value(completionRate),
       exercisesJson: Value(exercisesJson),
       clientFeedback: Value(clientFeedback),
       trainerNote: Value(trainerNote),
       sortOrder: Value(sortOrder),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
     );
   }
 
@@ -2813,13 +2818,13 @@ class ClientRoutineHistoryRow extends DataClass
       id: serializer.fromJson<String>(json['id']),
       clientId: serializer.fromJson<String>(json['clientId']),
       dateLabel: serializer.fromJson<String>(json['dateLabel']),
-      date: serializer.fromJson<String>(json['date']),
       label: serializer.fromJson<String>(json['label']),
       completionRate: serializer.fromJson<int>(json['completionRate']),
       exercisesJson: serializer.fromJson<String>(json['exercisesJson']),
       clientFeedback: serializer.fromJson<String>(json['clientFeedback']),
       trainerNote: serializer.fromJson<String>(json['trainerNote']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
   }
   @override
@@ -2829,13 +2834,13 @@ class ClientRoutineHistoryRow extends DataClass
       'id': serializer.toJson<String>(id),
       'clientId': serializer.toJson<String>(clientId),
       'dateLabel': serializer.toJson<String>(dateLabel),
-      'date': serializer.toJson<String>(date),
       'label': serializer.toJson<String>(label),
       'completionRate': serializer.toJson<int>(completionRate),
       'exercisesJson': serializer.toJson<String>(exercisesJson),
       'clientFeedback': serializer.toJson<String>(clientFeedback),
       'trainerNote': serializer.toJson<String>(trainerNote),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
   }
 
@@ -2843,24 +2848,24 @@ class ClientRoutineHistoryRow extends DataClass
     String? id,
     String? clientId,
     String? dateLabel,
-    String? date,
     String? label,
     int? completionRate,
     String? exercisesJson,
     String? clientFeedback,
     String? trainerNote,
     int? sortOrder,
+    Value<DateTime?> completedAt = const Value.absent(),
   }) => ClientRoutineHistoryRow(
     id: id ?? this.id,
     clientId: clientId ?? this.clientId,
     dateLabel: dateLabel ?? this.dateLabel,
-    date: date ?? this.date,
     label: label ?? this.label,
     completionRate: completionRate ?? this.completionRate,
     exercisesJson: exercisesJson ?? this.exercisesJson,
     clientFeedback: clientFeedback ?? this.clientFeedback,
     trainerNote: trainerNote ?? this.trainerNote,
     sortOrder: sortOrder ?? this.sortOrder,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
   );
   ClientRoutineHistoryRow copyWithCompanion(
     ClientRoutineHistoryCompanion data,
@@ -2869,7 +2874,6 @@ class ClientRoutineHistoryRow extends DataClass
       id: data.id.present ? data.id.value : this.id,
       clientId: data.clientId.present ? data.clientId.value : this.clientId,
       dateLabel: data.dateLabel.present ? data.dateLabel.value : this.dateLabel,
-      date: data.date.present ? data.date.value : this.date,
       label: data.label.present ? data.label.value : this.label,
       completionRate: data.completionRate.present
           ? data.completionRate.value
@@ -2884,6 +2888,9 @@ class ClientRoutineHistoryRow extends DataClass
           ? data.trainerNote.value
           : this.trainerNote,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
     );
   }
 
@@ -2893,13 +2900,13 @@ class ClientRoutineHistoryRow extends DataClass
           ..write('id: $id, ')
           ..write('clientId: $clientId, ')
           ..write('dateLabel: $dateLabel, ')
-          ..write('date: $date, ')
           ..write('label: $label, ')
           ..write('completionRate: $completionRate, ')
           ..write('exercisesJson: $exercisesJson, ')
           ..write('clientFeedback: $clientFeedback, ')
           ..write('trainerNote: $trainerNote, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
@@ -2909,13 +2916,13 @@ class ClientRoutineHistoryRow extends DataClass
     id,
     clientId,
     dateLabel,
-    date,
     label,
     completionRate,
     exercisesJson,
     clientFeedback,
     trainerNote,
     sortOrder,
+    completedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2924,13 +2931,13 @@ class ClientRoutineHistoryRow extends DataClass
           other.id == this.id &&
           other.clientId == this.clientId &&
           other.dateLabel == this.dateLabel &&
-          other.date == this.date &&
           other.label == this.label &&
           other.completionRate == this.completionRate &&
           other.exercisesJson == this.exercisesJson &&
           other.clientFeedback == this.clientFeedback &&
           other.trainerNote == this.trainerNote &&
-          other.sortOrder == this.sortOrder);
+          other.sortOrder == this.sortOrder &&
+          other.completedAt == this.completedAt);
 }
 
 class ClientRoutineHistoryCompanion
@@ -2938,38 +2945,38 @@ class ClientRoutineHistoryCompanion
   final Value<String> id;
   final Value<String> clientId;
   final Value<String> dateLabel;
-  final Value<String> date;
   final Value<String> label;
   final Value<int> completionRate;
   final Value<String> exercisesJson;
   final Value<String> clientFeedback;
   final Value<String> trainerNote;
   final Value<int> sortOrder;
+  final Value<DateTime?> completedAt;
   final Value<int> rowid;
   const ClientRoutineHistoryCompanion({
     this.id = const Value.absent(),
     this.clientId = const Value.absent(),
     this.dateLabel = const Value.absent(),
-    this.date = const Value.absent(),
     this.label = const Value.absent(),
     this.completionRate = const Value.absent(),
     this.exercisesJson = const Value.absent(),
     this.clientFeedback = const Value.absent(),
     this.trainerNote = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClientRoutineHistoryCompanion.insert({
     required String id,
     required String clientId,
     required String dateLabel,
-    this.date = const Value.absent(),
     required String label,
     required int completionRate,
     required String exercisesJson,
     this.clientFeedback = const Value.absent(),
     this.trainerNote = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        clientId = Value(clientId),
@@ -2981,26 +2988,26 @@ class ClientRoutineHistoryCompanion
     Expression<String>? id,
     Expression<String>? clientId,
     Expression<String>? dateLabel,
-    Expression<String>? date,
     Expression<String>? label,
     Expression<int>? completionRate,
     Expression<String>? exercisesJson,
     Expression<String>? clientFeedback,
     Expression<String>? trainerNote,
     Expression<int>? sortOrder,
+    Expression<DateTime>? completedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (clientId != null) 'client_id': clientId,
       if (dateLabel != null) 'date_label': dateLabel,
-      if (date != null) 'date': date,
       if (label != null) 'label': label,
       if (completionRate != null) 'completion_rate': completionRate,
       if (exercisesJson != null) 'exercises_json': exercisesJson,
       if (clientFeedback != null) 'client_feedback': clientFeedback,
       if (trainerNote != null) 'trainer_note': trainerNote,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3009,26 +3016,26 @@ class ClientRoutineHistoryCompanion
     Value<String>? id,
     Value<String>? clientId,
     Value<String>? dateLabel,
-    Value<String>? date,
     Value<String>? label,
     Value<int>? completionRate,
     Value<String>? exercisesJson,
     Value<String>? clientFeedback,
     Value<String>? trainerNote,
     Value<int>? sortOrder,
+    Value<DateTime?>? completedAt,
     Value<int>? rowid,
   }) {
     return ClientRoutineHistoryCompanion(
       id: id ?? this.id,
       clientId: clientId ?? this.clientId,
       dateLabel: dateLabel ?? this.dateLabel,
-      date: date ?? this.date,
       label: label ?? this.label,
       completionRate: completionRate ?? this.completionRate,
       exercisesJson: exercisesJson ?? this.exercisesJson,
       clientFeedback: clientFeedback ?? this.clientFeedback,
       trainerNote: trainerNote ?? this.trainerNote,
       sortOrder: sortOrder ?? this.sortOrder,
+      completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3044,9 +3051,6 @@ class ClientRoutineHistoryCompanion
     }
     if (dateLabel.present) {
       map['date_label'] = Variable<String>(dateLabel.value);
-    }
-    if (date.present) {
-      map['date'] = Variable<String>(date.value);
     }
     if (label.present) {
       map['label'] = Variable<String>(label.value);
@@ -3066,6 +3070,9 @@ class ClientRoutineHistoryCompanion
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3078,13 +3085,13 @@ class ClientRoutineHistoryCompanion
           ..write('id: $id, ')
           ..write('clientId: $clientId, ')
           ..write('dateLabel: $dateLabel, ')
-          ..write('date: $date, ')
           ..write('label: $label, ')
           ..write('completionRate: $completionRate, ')
           ..write('exercisesJson: $exercisesJson, ')
           ..write('clientFeedback: $clientFeedback, ')
           ..write('trainerNote: $trainerNote, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6634,13 +6641,13 @@ typedef $$ClientRoutineHistoryTableCreateCompanionBuilder =
       required String id,
       required String clientId,
       required String dateLabel,
-      Value<String> date,
       required String label,
       required int completionRate,
       required String exercisesJson,
       Value<String> clientFeedback,
       Value<String> trainerNote,
       Value<int> sortOrder,
+      Value<DateTime?> completedAt,
       Value<int> rowid,
     });
 typedef $$ClientRoutineHistoryTableUpdateCompanionBuilder =
@@ -6648,13 +6655,13 @@ typedef $$ClientRoutineHistoryTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> clientId,
       Value<String> dateLabel,
-      Value<String> date,
       Value<String> label,
       Value<int> completionRate,
       Value<String> exercisesJson,
       Value<String> clientFeedback,
       Value<String> trainerNote,
       Value<int> sortOrder,
+      Value<DateTime?> completedAt,
       Value<int> rowid,
     });
 
@@ -6679,11 +6686,6 @@ class $$ClientRoutineHistoryTableFilterComposer
 
   ColumnFilters<String> get dateLabel => $composableBuilder(
     column: $table.dateLabel,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get date => $composableBuilder(
-    column: $table.date,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6716,6 +6718,11 @@ class $$ClientRoutineHistoryTableFilterComposer
     column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$ClientRoutineHistoryTableOrderingComposer
@@ -6739,11 +6746,6 @@ class $$ClientRoutineHistoryTableOrderingComposer
 
   ColumnOrderings<String> get dateLabel => $composableBuilder(
     column: $table.dateLabel,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get date => $composableBuilder(
-    column: $table.date,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6776,6 +6778,11 @@ class $$ClientRoutineHistoryTableOrderingComposer
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ClientRoutineHistoryTableAnnotationComposer
@@ -6795,9 +6802,6 @@ class $$ClientRoutineHistoryTableAnnotationComposer
 
   GeneratedColumn<String> get dateLabel =>
       $composableBuilder(column: $table.dateLabel, builder: (column) => column);
-
-  GeneratedColumn<String> get date =>
-      $composableBuilder(column: $table.date, builder: (column) => column);
 
   GeneratedColumn<String> get label =>
       $composableBuilder(column: $table.label, builder: (column) => column);
@@ -6824,6 +6828,11 @@ class $$ClientRoutineHistoryTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ClientRoutineHistoryTableTableManager
@@ -6872,25 +6881,25 @@ class $$ClientRoutineHistoryTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> clientId = const Value.absent(),
                 Value<String> dateLabel = const Value.absent(),
-                Value<String> date = const Value.absent(),
                 Value<String> label = const Value.absent(),
                 Value<int> completionRate = const Value.absent(),
                 Value<String> exercisesJson = const Value.absent(),
                 Value<String> clientFeedback = const Value.absent(),
                 Value<String> trainerNote = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientRoutineHistoryCompanion(
                 id: id,
                 clientId: clientId,
                 dateLabel: dateLabel,
-                date: date,
                 label: label,
                 completionRate: completionRate,
                 exercisesJson: exercisesJson,
                 clientFeedback: clientFeedback,
                 trainerNote: trainerNote,
                 sortOrder: sortOrder,
+                completedAt: completedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6898,25 +6907,25 @@ class $$ClientRoutineHistoryTableTableManager
                 required String id,
                 required String clientId,
                 required String dateLabel,
-                Value<String> date = const Value.absent(),
                 required String label,
                 required int completionRate,
                 required String exercisesJson,
                 Value<String> clientFeedback = const Value.absent(),
                 Value<String> trainerNote = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientRoutineHistoryCompanion.insert(
                 id: id,
                 clientId: clientId,
                 dateLabel: dateLabel,
-                date: date,
                 label: label,
                 completionRate: completionRate,
                 exercisesJson: exercisesJson,
                 clientFeedback: clientFeedback,
                 trainerNote: trainerNote,
                 sortOrder: sortOrder,
+                completedAt: completedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

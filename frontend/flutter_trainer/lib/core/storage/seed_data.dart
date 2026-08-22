@@ -14,10 +14,24 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v21']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v23']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// The flag is `_v23` (was `_v22`): 운동 기록마다 실제 완료 날짜가 붙었다(#1114) —
+/// 날짜가 없으면 오늘·이번 주·전체를 골라도 목록이 그대로라, 같은 화면의
+/// 그래프와 목록이 서로 다른 기간을 이야기한다. `dateLabel` 도 이제 그 날짜에서
+/// 만들어, 시드에 박힌 채 7월에 머물던 문구가 사라졌다.
+///
+/// `_v22` fixed a second `createdAt` bug left by `_v21`: the day offset
+/// added a thread's `dayIndex` directly, but that value is only the
+/// message's position **within its own thread**, not a real day count —
+/// so a thread spanning several days (dayIndex 0·1·2) always sorted a
+/// few days ahead of a same-`daysAgo` single-day thread, no matter what
+/// either showed on screen(#1104). The day offset now anchors purely on
+/// `daysAgo`, with `dayIndex` only shifting earlier messages further
+/// back relative to the thread's own last message.
 ///
 /// `_v21` fixed seed chat `createdAt`: the time-of-day component used to be
 /// the message's array index (`i`), unrelated to the `timeLabel` shown on
@@ -39,10 +53,9 @@ part 'seed_clients.dart';
 /// 달랐다(#757). 그의 식단·이행률·날짜별 이력은 공유 픽스처에서 오고, 나머지 고객은
 /// 아래 생성기(`_dailyMetrics`)가 그대로 만든다.
 ///
-/// The flag is `_v18` (was `_v16`): 끼니마다 탄단지와 사진이 채워졌다(#819) — 열량만
-/// 있고 영양소가 0 이면 식단 탭이 근거 없이 숫자만 보여 주고, 사진이 없으면
-/// 이 제품의 핵심인 사진 인식을 데모에서 확인할 수 없다. 올리지 않으면
-/// 오늘 이미 접속한 브라우저는 날짜가 넘어갈 때까지 옛 값을 그대로 쓴다.
+/// `_v18` 은 끼니마다 탄단지와 사진을 채웠다(#819) — 열량만 있고 영양소가 0 이면
+/// 식단 탭이 근거 없이 숫자만 보여 주고, 사진이 없으면 이 제품의 핵심인 사진
+/// 인식을 데모에서 확인할 수 없다.
 /// `_v13` 은 요일마다 다른 루틴을 넣었다: each weekday now gets its own routine
 /// so a week no longer repeats one workout (#754). `_v12` first carried that day's
 /// exercise list for the report's 요일별 상세 (#754). `_v11` reached 12 weeks
@@ -90,7 +103,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v21') == today) return;
+  if (await db.readValue('trainer_seeded_v23') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -249,17 +262,14 @@ Future<void> seedIfEmpty(
             ClientRoutineHistoryCompanion.insert(
               id: 'seed-history-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              date: Value(ymd(_historyDateOf(now, history[i].daysAgo))),
-              dateLabel: _historyDateLabel(
-                now,
-                _historyDateOf(now, history[i].daysAgo),
-              ),
+              dateLabel: _historyLabel(now, history[i].daysAgo),
               label: history[i].label,
               completionRate: history[i].completionRate,
               exercisesJson: jsonEncode(history[i].exercises),
               clientFeedback: Value(history[i].clientFeedback),
               trainerNote: Value(history[i].trainerNote),
               sortOrder: Value(i),
+              completedAt: Value(_daysBefore(now, history[i].daysAgo)),
             ),
         ]);
 
@@ -270,6 +280,13 @@ Future<void> seedIfEmpty(
               : _dailyMetrics(client, now).toList(growable: false),
         );
 
+        // 스레드의 **마지막** 메시지가 daysAgo 를 앵커링한다 — dayIndex 는
+        // 그 스레드 안에서의 상대 순서일 뿐, 몇 번째 실제 날짜인지가
+        // 아니다. 마지막 메시지 자신의 dayIndex 를 기준(0)으로 삼아
+        // 각 메시지가 거기서 며칠 전인지로 환산한다(아래 참고).
+        final int lastDayIndex = client.chat.isEmpty
+            ? 0
+            : _lastChat(client.chat).dayIndex;
         b.insertAll(db.clientChatMessages, <ClientChatMessagesCompanion>[
           for (var i = 0; i < client.chat.length; i++)
             ClientChatMessagesCompanion.insert(
@@ -292,6 +309,16 @@ Future<void> seedIfEmpty(
               // 답장(지금 시각)이 시드 뒤에 온다는 보장을 깨지 않기
               // 위해서다.
               //
+              // `dayIndex` 를 날짜 오프셋에 그대로 더하면 안 된다 — 그 값은
+              // 실제 며칠 전이 아니라 **그 스레드 안에서** 몇 번째 날인지일
+              // 뿐이다. 그대로 더하면 여러 날짜에 걸친 스레드(dayIndex
+              // 0·1·2)의 마지막 메시지가 daysAgo 가 같은 단일 날짜 스레드보다
+              // 항상 며칠 더 "미래"로 계산돼, 화면 시각과 무관하게 최신순
+              // 맨 위로 올라왔다(#1104). 마지막 메시지의 dayIndex 를 0 으로
+              // 삼아 상대적으로 며칠 전인지로 바꾼다 — 마지막 메시지는 정확히
+              // daysAgo 로 앵커링되고, 그 전 메시지들은 더 이른 날짜로 밀려
+              // 스레드 내부 순서는 그대로 유지된다.
+              //
               // 시각 성분은 `timeLabel`에서 실제로 읽는다 — 예전에는 그
               // 대화 안에서 몇 번째 메시지인지(`i`, 0·1·2…)를 그대로 분으로
               // 썼는데, 그러면 화면에 박아둔 `'16:48'` 같은 문구와 무관한
@@ -305,8 +332,8 @@ Future<void> seedIfEmpty(
                 Duration(
                   days:
                       _chatSpreadDays -
-                      client.daysAgo +
-                      client.chat[i].dayIndex,
+                      client.daysAgo -
+                      (lastDayIndex - client.chat[i].dayIndex),
                   minutes: _minutesOfDay(client.chat[i].timeLabel),
                   seconds: i,
                 ),
@@ -372,7 +399,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v21', today);
+    await db.putValue('trainer_seeded_v23', today);
   });
 }
 
@@ -431,11 +458,10 @@ class _History {
     required this.trainerNote,
   });
 
-  /// 오늘로부터 며칠 전인가(0 = 오늘).
-  ///
-  /// 예전에는 `'7/11 (어제)'` 처럼 날짜를 박아 두어, 오늘이 무슨 날이든 데모가
-  /// 7월을 말했다 — 픽스처 고객만 실제 날짜로 라벨을 만들고 있었다. 시딩이
-  /// 이 값으로 날짜와 라벨을 함께 만든다(#1025).
+  /// 며칠 전 운동인가 (0 = 오늘). 예전에는 `'7/11 (어제)'` 같은 표시용
+  /// 문자열만 들고 있어, 날이 바뀌어도 7월에 머물렀고 무엇보다 **날짜로 거를
+  /// 수가 없었다**(#1114). `_Client.daysAgo`·`_Chat.dayIndex` 와 같은 방식으로
+  /// 오늘 위에 얹으면 라벨과 필터가 늘 같은 날을 가리킨다.
   final int daysAgo;
   final String label;
   final int completionRate;
@@ -581,24 +607,25 @@ class _FixtureClient {
 
   /// 고객 상세의 운동 이력. 가까운 날부터, 운동이 있던 날만.
   ///
-  /// 예전에는 최근 사흘만 가져왔다. 그때는 이 값을 읽는 화면이 `운동 기록`
-  /// 카드 목록 하나였고 최근 몇 건만 보여 주면 됐다. 지금은 날짜별 기록이
-  /// 이력을 그날에 붙이므로(#1025), 사흘 밖의 날을 펼치면 그 자리가 비었다.
+  /// 픽스처는 날짜를 이미 알고 있으므로 `daysAgo` 를 지어내지 않고 오늘과의
+  /// 차이로 센다 — 운동이 있던 날만 골라 담아 하루씩 이어지지 않는데, 자리
+  /// 번호를 날짜로 쓰면 라벨과 실제 날짜가 어긋난다(#1114).
   ///
-  /// 픽스처는 이미 이백 일치 운동을 날마다 들고 있다 — 지어내는 것이 아니라
-  /// 버리지 않는 것이다. 이행률도 그날 운동의 수행 여부에서 계산된 값이고,
-  /// 고객 피드백·트레이너 메모는 큐레이션한 사흘에만 있어 나머지 날에는 그
-  /// 상자가 뜨지 않는다(빈 값이면 그리지 않는 기존 동작 그대로).
+  /// 예전에는 그중 최근 사흘만 가져왔다. 그때는 이 값을 읽는 화면이 `운동
+  /// 기록` 카드 목록 하나였고 최근 몇 건만 보여 주면 됐다. 지금은 날짜별
+  /// 기록이 이력을 그날에 붙이므로(#1025), 사흘 밖의 날을 펼치면 자리가
+  /// 비었다. 픽스처가 이미 이백 일치를 들고 있으니 지어내는 것이 아니라
+  /// 버리지 않는 것이다 — 고객 피드백·트레이너 메모는 큐레이션한 사흘에만
+  /// 있어 나머지 날에는 그 상자가 뜨지 않는다.
   List<_History> get history => <_History>[
     for (final FixtureDay day in days.reversed.where(
       (FixtureDay d) => d.exercises.isNotEmpty,
     ))
       _History(
-        // 픽스처 날짜를 오늘 기준 상대 일수로 바꾼다 — 시딩이 그 값으로
-        // 날짜와 라벨을 함께 만든다.
-        daysAgo: DateTime.parse(
-          today.date,
-        ).difference(DateTime.parse(day.date)).inDays,
+        daysAgo: _daysBetween(
+          DateTime.parse(day.date),
+          DateTime.parse(today.date),
+        ),
         label: day.routineLabel,
         completionRate: day.completion,
         exercises: <String>[
@@ -649,18 +676,6 @@ class _FixtureClient {
       );
     }
   }
-}
-
-/// 이력 항목이 가리키는 날. 시딩 시각에서 [daysAgo] 만큼 거슬러 올라간다.
-DateTime _historyDateOf(DateTime now, int daysAgo) =>
-    DateTime(now.year, now.month, now.day - daysAgo);
-
-/// `7/11`, 오늘이면 `7/12 (오늘)`. 픽스처 고객이 쓰던 규칙과 같다.
-String _historyDateLabel(DateTime now, DateTime when) {
-  final String base = '${when.month}/${when.day}';
-  final bool isToday =
-      when.year == now.year && when.month == now.month && when.day == now.day;
-  return isToday ? '$base (오늘)' : base;
 }
 
 /// 끼니 종류 → 화면에 쓰는 한국어 라벨.
@@ -912,6 +927,35 @@ String _lastTimeLabel(_Client client, DateTime now) {
   if (client.daysAgo == 0) return _clockOf(_lastChat(client.chat).timeLabel);
   if (client.daysAgo == 1) return '어제';
   return ymd(now.subtract(Duration(days: client.daysAgo)));
+}
+
+/// [daysAgo] 일 전의 날짜(시각은 0시). 성분으로 빼므로 서머타임이 있는
+/// 지역에서도 하루가 밀리지 않는다.
+DateTime _daysBefore(DateTime now, int daysAgo) =>
+    DateTime(now.year, now.month, now.day - daysAgo);
+
+/// [from] 이 [to] 보다 며칠 전인가. UTC 로 옮겨 빼는 이유는 서머타임이
+/// 시작하는 날 두 자정 사이가 23시간이라 `inDays` 가 하루를 잃기 때문이다 —
+/// `date_format.dart` 의 `dateLabel` 과 같은 계산이다.
+int _daysBetween(DateTime from, DateTime to) => DateTime.utc(
+  to.year,
+  to.month,
+  to.day,
+).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+
+/// 운동 기록 카드의 날짜 문구 — `'8/22 (오늘)'` · `'8/21 (어제)'` · `'8/19'`.
+///
+/// 저장된 완료 날짜에서 만든다. 예전에는 시드에 박아 둔 고정 문자열이라 날이
+/// 바뀌어도 7월에 머물렀고, 이제 기간 필터가 붙으면서 라벨과 필터가 서로 다른
+/// 날을 가리키는 것이 눈에 보이게 됐다(#1114).
+String _historyLabel(DateTime now, int daysAgo) {
+  final DateTime date = _daysBefore(now, daysAgo);
+  final String base = '${date.month}/${date.day}';
+  return switch (daysAgo) {
+    0 => '$base (오늘)',
+    1 => '$base (어제)',
+    _ => base,
+  };
 }
 
 /// `'화 10:26'` · `'6/21 12:40'` · `'18:18'` 에서 `HH:MM` 만 남긴다 — 라벨은

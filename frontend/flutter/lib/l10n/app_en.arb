@@ -46,9 +46,7 @@
   },
   "homeWeeklyExerciseTrend": "Exercise trend",
   "homeExerciseTrendUnavailable": "Couldn't load this week's workout history.",
-  "homeExerciseActiveTime": "Active time",
   "homeExerciseBurned": "Calories",
-  "homeExerciseDays": "Workout days",
   "homeMealReasonSodium": "Great for sodium control",
   "homeMealSourceTrainer": "Trainer pick",
   "homeMealSourceAi": "AI pick",
@@ -77,7 +75,7 @@
     }
   },
   "homeRecBasisOverLimit": "over the daily limit",
-  "homeRecMealsTitle": "This week's AI meal picks",
+  "homeRecMealsTitle": "Recommended meals",
   "homeViewAll": "View all",
   "homeScheduleDate": "{weekday}, {month}/{day}",
   "@homeScheduleDate": {
@@ -96,7 +94,7 @@
   "homeScheduleTitle": "Today's schedule",
   "unitKcal": "kcal",
   "unitMinutes": "min",
-  "unitDays": "days",
+  "unitSets": "sets",
   "unitKcalValue": "{count} kcal",
   "@unitKcalValue": {
     "placeholders": {
@@ -136,7 +134,6 @@
   "dietEmptyLog": "No meals logged.\nAdd a meal with a photo!",
   "dietLoadError": "Couldn't load your diet.",
   "dietPeriodAverage": "Daily average",
-  "dietPeriodTotal": "Period total",
   "dietPeriodEmpty": "No meals were logged in this period.",
   "dietPeriodRange": "{start} - {end}",
   "@dietPeriodRange": {
@@ -274,7 +271,6 @@
   "exBurnTodayTitle": "Burned today",
   "exBurnWeekTitle": "Burned this week",
   "exBurnAllTitle": "Average burned",
-  "exLoadDayTitle": "Burned",
   "exGoalValue": "Goal {value}",
   "@exGoalValue": {
     "placeholders": {
@@ -391,7 +387,7 @@
   "exNoSearchResults": "No search results.",
   "exTrainersLoadError": "Couldn't load trainers.",
   "exGymSearchHint": "Search by gym or area",
-  "exNearbyGyms": "Nearby Gyms · O2O",
+  "exNearbyGyms": "Nearby gyms",
   "exAiAnalysis": "✦ AI analysis",
   "exNoGymMatch": "No gyms match '{query}'",
   "@exNoGymMatch": {
@@ -443,8 +439,7 @@
     }
   },
   "exTrainerDedicated": "Personal trainer",
-  "exAiSlotTitle": "✦ AI recommended times",
-  "exTrainerAvailability": "{trainer}'s openings",
+  "exTrainerAvailability": "{trainer}'s open booking times",
   "@exTrainerAvailability": {
     "placeholders": {
       "trainer": {
@@ -460,14 +455,6 @@
       },
       "time": {
         "type": "String"
-      }
-    }
-  },
-  "exSlotRemaining": "{count} left",
-  "@exSlotRemaining": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -948,7 +935,13 @@
   "@myGoalsDietSection": {
     "description": "Section label in the health goals sheet."
   },
-  "myGoalsExerciseSection": "Weekly exercise goals",
+  "myGoalsExerciseSection": "Exercise goals",
+  "myGoalBurnDaily": "Daily calories burned (kcal)",
+  "myGoalCardioWeekly": "Weekly cardio (min)",
+  "myGoalStrengthWeekly": "Weekly strength (sets)",
+  "myGoalFlexibilityWeekly": "Weekly stretching (min)",
+  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week",
+  "myGoalExerciseApplySuggestion": "Use suggested goals",
   "@myGoalsExerciseSection": {
     "description": "Section label in the health goals sheet."
   },
@@ -1041,10 +1034,6 @@
   "@coachAssignedTrainer": {
     "description": "Header of the assigned trainer card."
   },
-  "coachAiCoaching": "AI coaching",
-  "@coachAiCoaching": {
-    "description": "Header of the AI coaching card."
-  },
   "coachPointsTitle": "This week's coaching points",
   "@coachPointsTitle": {
     "description": "Section title in the coaching card."
@@ -1052,10 +1041,6 @@
   "coachRoutineTitle": "Recommended solo workouts",
   "@coachRoutineTitle": {
     "description": "Section title in the coaching card."
-  },
-  "coachRoutineSubtitle": "Workouts to do on your own between PT sessions",
-  "@coachRoutineSubtitle": {
-    "description": "Explains what a solo routine is."
   },
   "coachRoutineByTrainer": "Recommended by your trainer",
   "@coachRoutineByTrainer": {
@@ -1091,6 +1076,13 @@
     "description": "Shown when marking a routine done fails for an unexpected reason."
   },
   "coachRoutineDone": "Done",
+  "coachRoutineUndo": "Undo",
+  "coachRoutineUndoConfirm": "Undo completing '{name}'? It will be removed from your workout log too.",
+  "@coachRoutineUndoConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineUndone": "Completion undone",
+  "coachRoutineUndoFailed": "Could not undo the completion.",
   "coachRoutineCancel": "Cancel this workout",
   "coachRoutineCancelConfirm": "Remove '{name}' from the list? Anything you already logged stays.",
   "@coachRoutineCancelConfirm": {

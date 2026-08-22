@@ -755,7 +755,7 @@ void main() {
       await settle(tester);
 
       TextButton rejectButton() =>
-          tester.widget<TextButton>(find.widgetWithText(TextButton, '반려하기'));
+          tester.widget<TextButton>(find.widgetWithText(TextButton, '거절하기'));
       expect(rejectButton().onPressed, isNull);
 
       await tester.enterText(find.byType(TextField).last, '   ');
@@ -1172,13 +1172,12 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
+      // 확인 다이얼로그 없이 누르는 즉시 완료 처리된다 — 메모는 언제든
+      // 상세 패널에서 따로 남길 수 있어, 매번 빈 메모란을 거칠 이유가
+      // 없다(#1106).
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      await settle(tester);
-
-      await tester.enterText(find.byType(TextField).last, '벤치 폼 안정적');
-      await tester.tap(find.text('완료 처리'));
       await settle(tester);
 
       // The card flipped to 완료 (the 완료 action chip is gone).
@@ -1187,15 +1186,17 @@ void main() {
         findsNothing,
       );
 
-      // …and the 운동 sub-tab shows the fresh PT entry. The routines the
-      // tab absorbed sit above the history, so scroll down to it.
+      // …and the 운동 sub-tab shows the fresh PT entry.
       await goTo(
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'workout'),
       );
       // 운동 기록은 날짜별 목록 하나로 합쳐졌고 오늘 줄은 처음부터 펼쳐져
       // 있다(#1025). 목록이 길어 스크롤 곡예 대신 화면을 키운다.
-      expect(find.text('벤치 폼 안정적'), findsOneWidget);
+      //
+      // 메모는 더 이상 완료 처리에서 받지 않으므로(#1106) 그 문구로 찾지
+      // 않는다 — 방금 생긴 PT 기록의 종류로 확인한다.
+      expect(find.text('PT 세션 · 트레이너 지도'), findsWidgets);
       // 날짜는 미션 카드가 아니라 그 줄이 말한다.
       const List<String> weekdays = <String>['월', '화', '수', '목', '금', '토', '일'];
       final DateTime today = nowKst();
@@ -1524,8 +1525,6 @@ void main() {
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      await settle(tester);
-      await tester.tap(find.text('완료 처리'));
       await settle(tester);
 
       // The exception is caught: an error snackbar shows and the card is

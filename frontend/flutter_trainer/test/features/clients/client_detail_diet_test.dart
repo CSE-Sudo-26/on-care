@@ -163,14 +163,13 @@ void main() {
   });
 
   group('DietView', () {
+    // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
+    // 패널과 하나의 스크롤을 공유하도록 `embedded: true` 로 그려진다. 그
+    // 공유 스크롤(`ListView`) 자체가 `client-detail-tabs-$clientId` 키를
+    // 달고 있다.
     Finder detailScrollable(String clientId) => find
         .descendant(
-          of: find
-              .descendant(
-                of: find.byKey(ValueKey<String>('diet-$clientId')),
-                matching: find.byType(ListView),
-              )
-              .first,
+          of: find.byKey(ValueKey<String>('client-detail-tabs-$clientId')),
           matching: find.byType(Scrollable),
         )
         .first;
@@ -361,9 +360,9 @@ void main() {
                   matching: find.byType(ColoredBox),
                 ),
               )
-              .any((box) => box.color == AppColors.userSugarGreen),
+              .any((box) => box.color == AppColors.statusNormal),
           isTrue,
-          reason: '$key 정상 그래프가 사용자 앱 당류 초록색을 써야 합니다.',
+          reason: '$key 정상 그래프가 공용 `정상` 초록을 써야 합니다. (#1027)',
         );
       }
     });

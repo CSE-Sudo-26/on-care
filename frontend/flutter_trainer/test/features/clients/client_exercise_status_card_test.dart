@@ -6,6 +6,7 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -85,9 +86,12 @@ void main() {
     clientExercisePeriodProvider.overrideWith(
       (ref, key) async => _fixture(
         key,
-        cardio: const <int>[20, 0, 30, 0, 10, 0, 0],
-        strength: const <int>[25, 0, 15, 0, 30, 0, 0],
-        stretch: const <int>[15, 0, 0, 0, 20, 0, 0],
+        // `전체`의 두 번째 주가 실행 요일과 무관하게 기록을 갖도록 2주치다.
+        // 7일치뿐이면 84일 범위가 월요일에 시작하는 날에는 두 번째 막대가
+        // 비어, 주말에만 테스트가 깨진다.
+        cardio: const <int>[20, 0, 30, 0, 10, 0, 0, 20, 0, 30, 0, 10, 0, 0],
+        strength: const <int>[25, 0, 15, 0, 30, 0, 0, 25, 0, 15, 0, 30, 0, 0],
+        stretch: const <int>[15, 0, 0, 0, 20, 0, 0, 15, 0, 0, 0, 20, 0, 0],
       ),
     ),
   ];
@@ -325,5 +329,95 @@ void main() {
 
   test('오늘 기준 키는 KST 를 쓴다', () {
     expect(clientPeriodKeyNow('c1', ClientPeriod.today).day, todayKst());
+  });
+
+  group('상세 내역 펼치기/접기', () {
+    // 이력은 이미 최신순으로 온다(`clientHistoryProvider` 계약) — 접힌
+    // 상태에서 보이는 첫 항목이 곧 가장 최근 기록이어야 한다.
+    List<RoutineHistoryEntry> history() => const <RoutineHistoryEntry>[
+      RoutineHistoryEntry(
+        dateLabel: '오늘 기록',
+        label: 'PT 세션',
+        completionRate: 100,
+        exercises: <String>['레그프레스 3세트 × 12회 · 80kg ✓'],
+        clientFeedback: '',
+        trainerNote: '',
+      ),
+      RoutineHistoryEntry(
+        dateLabel: '어제 기록',
+        label: 'PT 세션',
+        completionRate: 80,
+        exercises: <String>['데드리프트 4세트 × 8회 · 55kg ✓'],
+        clientFeedback: '',
+        trainerNote: '',
+      ),
+    ];
+
+    Widget detailApp(List<RoutineHistoryEntry> fixture) => ProviderScope(
+      overrides: <Override>[
+        ...withSplit(),
+        clientHistoryProvider.overrideWith(
+          (ref, clientId) => Stream<List<RoutineHistoryEntry>>.value(fixture),
+        ),
+      ],
+      child: const MaterialApp(
+        locale: Locale('ko'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ClientExerciseStatusCard(
+              clientId: 'c1',
+              clientName: '김민수',
+              period: ClientPeriod.week,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final Finder toggle = find.byKey(
+      const ValueKey<String>('client-exercise-detail-toggle'),
+    );
+
+    testWidgets('접힌 기본 상태에는 최근 기록 하나만 보인다', (tester) async {
+      await tester.pumpWidget(detailApp(history()));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('오늘 기록'), findsOneWidget);
+      expect(find.textContaining('어제 기록'), findsNothing);
+      expect(find.text('레그프레스 3세트 × 12회 · 80kg'), findsOneWidget);
+      expect(toggle, findsOneWidget);
+      expect(find.byIcon(Icons.expand_more), findsOneWidget);
+    });
+
+    testWidgets('펼치면 전체 이력이, 다시 접으면 최근 하나만 보인다', (tester) async {
+      await tester.pumpWidget(detailApp(history()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('오늘 기록'), findsOneWidget);
+      expect(find.textContaining('어제 기록'), findsOneWidget);
+      expect(find.text('데드리프트 4세트 × 8회 · 55kg'), findsOneWidget);
+      expect(find.byIcon(Icons.expand_less), findsOneWidget);
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('오늘 기록'), findsOneWidget);
+      expect(find.textContaining('어제 기록'), findsNothing);
+    });
+
+    testWidgets('기록이 하나뿐이면 펼치기 버튼이 없다', (tester) async {
+      await tester.pumpWidget(
+        detailApp(<RoutineHistoryEntry>[history().first]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('오늘 기록'), findsOneWidget);
+      expect(toggle, findsNothing);
+    });
   });
 }

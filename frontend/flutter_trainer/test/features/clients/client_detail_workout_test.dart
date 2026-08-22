@@ -76,6 +76,41 @@ String _todayRowLabel() => _rowLabel(nowKst());
   throw StateError('최근 사흘에 거른 항목이 없다 — 취소선 렌더링을 볼 수 없다');
 }
 
+/// 운동 기록만 정해진 세 줄로 바꾼다 — 나머지는 데모 DB 그대로.
+///
+/// 기간 경계는 픽스처가 아니라 오늘을 기준으로 봐야 하므로, 시드가 무엇을
+/// 담고 있든 흔들리지 않게 날짜를 직접 만든다(#1114).
+class _DatedHistoryRepository extends DriftClientRepository {
+  _DatedHistoryRepository(super.db);
+
+  static const String todayLabel = '오늘-기록';
+  static const String oldLabel = '한참-전-기록';
+  static const String undatedLabel = '날짜-없는-기록';
+
+  @override
+  Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) {
+    final DateTime today = todayKst();
+    return Stream<List<RoutineHistoryEntry>>.value(<RoutineHistoryEntry>[
+      _entry(todayLabel, today),
+      _entry(undatedLabel, null),
+      _entry(oldLabel, today.subtract(const Duration(days: 30))),
+    ]);
+  }
+
+  RoutineHistoryEntry _entry(String label, DateTime? completedAt) =>
+      RoutineHistoryEntry(
+        dateLabel: label,
+        label: 'PT 세션 · 트레이너 지도',
+        completionRate: 100,
+        // 표식을 종목 이름에 둔다 — 기록 카드는 더 이상 `dateLabel` 을 그리지
+        // 않는다(그 날은 카드를 펼친 줄이 말한다, #1025).
+        exercises: <String>['$label ✓'],
+        clientFeedback: '',
+        trainerNote: '',
+        completedAt: completedAt,
+      );
+}
+
 /// Fails the first `watchHistory`; every other read still succeeds.
 class _HistoryFailsOnceRepository extends DriftClientRepository {
   _HistoryFailsOnceRepository(super.db);
@@ -153,9 +188,9 @@ class _FeedbackRepository extends DriftClientRepository {
     : entry = RoutineHistoryEntry(
         id: 'assigned-ex-r1',
         dateLabel: '8/13 (오늘)',
-        // 날짜별 목록은 이 값으로 날을 가른다(#1025). 오늘 것이라고 말하는
-        // 기록이므로 오늘에 놓는다.
-        date: nowKst(),
+        // 날짜별 목록은 이 값으로 날을 가른다(#1025, #1114). 오늘 것이라고
+        // 말하는 기록이므로 오늘에 놓는다.
+        completedAt: nowKst(),
         label: '코어 운동',
         completionRate: 100,
         exercises: <String>['코어 운동 · 30분'],
@@ -182,7 +217,7 @@ class _FeedbackRepository extends DriftClientRepository {
       id: entry.id,
       dateLabel: entry.dateLabel,
       // 날짜를 빠뜨리면 저장한 기록이 날짜별 목록에서 통째로 사라진다(#1025).
-      date: entry.date,
+      completedAt: entry.completedAt,
       label: entry.label,
       completionRate: entry.completionRate,
       exercises: entry.exercises,
@@ -266,14 +301,13 @@ void main() {
   });
 
   group('WorkoutView', () {
+    // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
+    // 패널과 하나의 스크롤을 공유하도록 `embedded: true` 로 그려진다. 그
+    // 공유 스크롤(`ListView`) 자체가 `client-detail-tabs-$clientId` 키를
+    // 달고 있다.
     Finder detailScrollable(String clientId) => find
         .descendant(
-          of: find
-              .descendant(
-                of: find.byKey(ValueKey<String>('workout-$clientId')),
-                matching: find.byType(ListView),
-              )
-              .first,
+          of: find.byKey(ValueKey<String>('client-detail-tabs-$clientId')),
           matching: find.byType(Scrollable),
         )
         .first;
@@ -505,6 +539,42 @@ void main() {
         find.byKey(const ValueKey<String>('workout-cancel-routine-done-1')),
         findsNothing,
       );
+    });
+
+    testWidgets('날짜를 모르는 기록은 어느 기간에서도 사라지지 않는다 (#1114)', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith(
+            (ref) => _DatedHistoryRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+
+      Finder marker(String label) => find.text(label);
+
+      // 오늘: 오늘 기록은 그 날 줄 안에, 날짜 없는 기록은 따로 모인 자리에.
+      // 한참 전 기록은 이 기간에 없다.
+      expect(marker(_DatedHistoryRepository.todayLabel), findsOneWidget);
+      expect(marker(_DatedHistoryRepository.undatedLabel), findsOneWidget);
+      expect(marker(_DatedHistoryRepository.oldLabel), findsNothing);
+      expect(find.text('날짜를 알 수 없는 기록'), findsOneWidget);
+
+      // 전체로 넓히면 날짜 없는 기록은 그대로 있고, 지난 기록은 그 날 줄에
+      // 가 있다 — 접혀 있으므로 펼쳐야 보인다.
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await settle(tester);
+      expect(marker(_DatedHistoryRepository.undatedLabel), findsOneWidget);
+
+      final DateTime old30 = todayKst().subtract(const Duration(days: 30));
+      await tester.tap(find.text(_rowLabel(old30)));
+      await settle(tester);
+      expect(marker(_DatedHistoryRepository.oldLabel), findsOneWidget);
     });
 
     testWidgets('기록 카드는 색 띠 없는 흰 판이다 (#1025)', (tester) async {

@@ -799,8 +799,8 @@ class DriftClientRepository implements ClientRepository {
       (rows) => rows
           .map(
             (row) => RoutineHistoryEntry(
+              id: row.id,
               dateLabel: row.dateLabel,
-              date: DateTime.tryParse(row.date),
               label: row.label,
               completionRate: row.completionRate,
               exercises: (jsonDecode(row.exercisesJson) as List<Object?>)
@@ -808,6 +808,7 @@ class DriftClientRepository implements ClientRepository {
                   .toList(),
               clientFeedback: row.clientFeedback,
               trainerNote: row.trainerNote,
+              completedAt: row.completedAt,
             ),
           )
           .toList(),

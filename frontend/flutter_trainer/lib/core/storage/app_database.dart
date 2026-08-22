@@ -111,19 +111,17 @@ class ClientRoutineHistory extends Table {
   TextColumn get clientId => text()();
   TextColumn get dateLabel => text()(); // "7/12 (오늘)"
 
-  /// 이 기록이 가리키는 날(`YYYY-MM-DD`).
-  ///
-  /// [dateLabel] 은 사람이 읽는 표시용이라 날짜로 견줄 수 없다. 날짜별 기록을
-  /// 펼쳤을 때 그날의 이력을 함께 보여 주려면 견줄 수 있는 값이 필요하다
-  /// (#1025). 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로
-  /// 거르는 조회에는 걸리지 않는다.
-  TextColumn get date => text().withDefault(const Constant(''))();
   TextColumn get label => text()(); // "PT 세션 · 트레이너 지도"
   IntColumn get completionRate => integer()(); // 0..100
   TextColumn get exercisesJson => text()(); // ["레그프레스 3세트", ...]
   TextColumn get clientFeedback => text().withDefault(const Constant(''))();
   TextColumn get trainerNote => text().withDefault(const Constant(''))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  /// 실제로 운동을 마친 시각. `dateLabel` 은 화면에 그릴 문자열일 뿐이라
+  /// 기간으로 거를 수 없다 — 실 API 가 주는 `completed_at` 과 같은 값을
+  /// 데모도 들고 있어야 두 모드가 같은 목록을 보여 준다(#1114).
+  DateTimeColumn get completedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
@@ -387,19 +385,22 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.proteinG);
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.fatG);
       }
-      // v14: 끼니의 당류와 날짜(#1025). 둘 다 기본값이 있어 기존 행도 그대로
+      // v14: 운동 기록의 실제 완료 날짜(#1114). nullable 이라 기존 행은 날짜
+      // 없이 그대로 읽히고, 화면은 날짜를 모르는 기록을 기간과 무관하게 늘
+      // 보여 준다 — 모른다고 숨기면 데이터가 사라진 것처럼 보인다.
+      if (from < 14) {
+        await m.addColumn(
+          clientRoutineHistory,
+          clientRoutineHistory.completedAt,
+        );
+      }
+      // v15: 끼니의 당류와 날짜(#1025). 둘 다 기본값이 있어 기존 행도 그대로
       // 읽히고, 다음 재시딩이 실제 값을 채운다. 날짜가 빈 행은 날짜로 거르는
       // 조회에 걸리지 않으므로, 재시딩 전에는 기간 뷰의 끼니가 비어 보일 뿐
       // 오늘 화면은 지금까지와 같다.
-      if (from < 14) {
+      if (from < 15) {
         await m.addColumn(clientDietEntries, clientDietEntries.sugarG);
         await m.addColumn(clientDietEntries, clientDietEntries.date);
-      }
-      // v15: 운동 이력의 날짜(#1025). 표시용 라벨만으로는 날짜를 견줄 수 없어
-      // 날짜별 기록에 이력을 붙일 수 없었다. 기본값이 빈 문자열이라 기존 행도
-      // 그대로 읽히고, 다음 재시딩이 실제 값을 채운다.
-      if (from < 15) {
-        await m.addColumn(clientRoutineHistory, clientRoutineHistory.date);
       }
     },
   );

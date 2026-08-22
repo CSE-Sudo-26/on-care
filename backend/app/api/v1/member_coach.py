@@ -117,6 +117,30 @@ def complete_my_routine(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.delete(
+    "/me/coach/routines/{routine_id}/complete",
+    response_model=RoutineOut,
+)
+def uncomplete_my_routine(
+    routine_id: str,
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """완료 표시를 되돌린다 — 그 배정으로 남은 운동 기록을 지운다. (#1131)
+
+    체크를 잘못 눌렀을 때 되돌릴 방법이 없으면, 하지 않은 운동이 주간 시간·
+    칼로리에 그대로 남는다. 배정 자체는 지우지 않는다 — 지우는 것은 `수행`이지
+    `할 일`이 아니다.
+    """
+    trainer_id = trainer_service.get_member_trainer_id(db, member.id)
+    try:
+        return trainer_service.uncomplete_assigned_routine(
+            db, trainer_id, member.id, routine_id
+        )
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.delete("/me/coach/routines/{routine_id}", status_code=204)
 def delete_my_routine(
     routine_id: str,

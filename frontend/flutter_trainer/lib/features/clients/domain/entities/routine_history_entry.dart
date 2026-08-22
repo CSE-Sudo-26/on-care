@@ -1,3 +1,5 @@
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+
 /// One past workout in a client's history (운동기록 sub-tab). Decoded
 /// from the drift `ClientRoutineHistory` row (`exercisesJson` becomes
 /// the [exercises] list).
@@ -6,7 +8,6 @@ class RoutineHistoryEntry {
   const RoutineHistoryEntry({
     this.id = '',
     required this.dateLabel,
-    this.date,
     required this.label,
     required this.completionRate,
     required this.exercises,
@@ -21,11 +22,6 @@ class RoutineHistoryEntry {
 
   /// Display date (e.g. "7/12 (오늘)").
   final String dateLabel;
-
-  /// 이 기록이 가리키는 날. [dateLabel] 은 사람이 읽는 표시용이라 날짜로 견줄
-  /// 수 없어, 날짜별 기록에 이력을 붙이려면 이 값이 필요하다(#1025). 날짜를
-  /// 알 수 없는 기록에서는 null 이다.
-  final DateTime? date;
 
   /// Session kind (e.g. "PT 세션 · 트레이너 지도").
   final String label;
@@ -44,5 +40,36 @@ class RoutineHistoryEntry {
 
   /// Present only when this history row came from an assigned routine.
   final String? assignedRoutineId;
+
+  /// 운동을 마친 시각. 실 API 는 `completed_at` 으로 늘 채워 주고, 데모는
+  /// 시드가 오늘 위에 얹은 날짜를 준다. [dateLabel] 은 화면에 그릴 문자열일
+  /// 뿐이라 기간을 판단하는 데 쓸 수 없다 — 거르는 쪽은 언제나 이 값이다.
   final DateTime? completedAt;
+}
+
+/// [range] 안에 있는 기록만. 시작·끝 모두 **포함**이고 시각은 버린다 —
+/// 서버가 주는 완료 시각은 하루 중 아무 때나이므로, 마지막 날 0시와 견주면
+/// 그날 저녁 운동이 통째로 빠진다.
+///
+/// [RoutineHistoryEntry.completedAt] 이 없는 기록은 **늘 남긴다**. 날짜를 모르는
+/// 것과 그 기간이 아닌 것은 다른 말이고, 모른다고 숨기면 트레이너 눈에는
+/// 기록이 사라진 것으로 보인다(#1114).
+List<RoutineHistoryEntry> historyInRange(
+  Iterable<RoutineHistoryEntry> entries,
+  ClientDateRange range,
+) {
+  final DateTime from = DateTime(
+    range.from.year,
+    range.from.month,
+    range.from.day,
+  );
+  final DateTime to = DateTime(range.to.year, range.to.month, range.to.day);
+  return entries
+      .where((RoutineHistoryEntry entry) {
+        final DateTime? at = entry.completedAt;
+        if (at == null) return true;
+        final DateTime day = DateTime(at.year, at.month, at.day);
+        return !day.isBefore(from) && !day.isAfter(to);
+      })
+      .toList(growable: false);
 }

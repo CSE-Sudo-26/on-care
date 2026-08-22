@@ -17,14 +17,16 @@ import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
-import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
+import 'package:oncare/shared/services/exercise_goals_provider.dart';
 import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/metric_trend_chart.dart';
@@ -336,7 +338,9 @@ class _CardHeader extends StatelessWidget {
     // 필이 카드를 갈라 주지 못하면서, 제목 줄만 좁혔다.
     return Row(
       children: <Widget>[
-        Expanded(child: _CardTitle(icon: icon, label: label)),
+        Expanded(
+          child: _CardTitle(icon: icon, label: label),
+        ),
         const SizedBox(width: 8),
         _DetailLink(onTap: onOpen),
       ],
@@ -354,15 +358,9 @@ class _CardTitle extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: FigmaColors.iconTint,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 14, color: FigmaColors.primary),
-        ),
+        // 배경 틴트 없이 아이콘만 둔다 (#1117) — 카드마다 붙은 사각 틴트가
+        // 제목 줄을 무겁게 만들었다.
+        Icon(icon, size: 18, color: FigmaColors.primary),
         const SizedBox(width: 6),
         // 폭이 모자라면 제목부터 줄인다 — 아이콘·필·더보기는 남긴다(#440).
         Flexible(
@@ -451,36 +449,6 @@ class _DietNutritionCard extends ConsumerWidget {
                 ),
               ],
             ],
-          ),
-          const SizedBox(height: 12),
-          // 탄단지는 타일 없이 검은 텍스트로 가로 나열. 세 항목을 하나의
-          // FittedBox 로 함께 축소해야 글자 크기가 서로 어긋나지 않는다
-          // (항목별로 축소하면 가장 긴 '탄수화물'만 작아진다).
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _MacroText(
-                  label: l.homeMacroCarbs,
-                  grams: summary.macros.carbsG,
-                  goalG: 275,
-                ),
-                const SizedBox(width: 14),
-                _MacroText(
-                  label: l.homeMacroProtein,
-                  grams: summary.macros.proteinG,
-                  goalG: 100,
-                ),
-                const SizedBox(width: 14),
-                _MacroText(
-                  label: l.homeMacroFat,
-                  grams: summary.macros.fatG,
-                  goalG: 55,
-                ),
-              ],
-            ),
           ),
           if (showCharts) const SizedBox(height: 10),
           if (showCharts) const _SoftDivider(),
@@ -635,63 +603,6 @@ class _MetricStatCard extends StatelessWidget {
   }
 }
 
-/// 탄단지 한 항목. 타일 없이 "탄수화물 120g /275g" 형태의 검은 텍스트로만
-/// 표기하고, 세 항목을 가로로 나란히 놓는다.
-class _MacroText extends StatelessWidget {
-  const _MacroText({required this.label, required this.grams, this.goalG});
-
-  final String label;
-  final double grams;
-
-  /// Optional daily target in grams, shown as a small "/275g" suffix.
-  final int? goalG;
-
-  @override
-  Widget build(BuildContext context) {
-    final value = grams == grams.roundToDouble()
-        ? grams.toStringAsFixed(0)
-        : grams.toStringAsFixed(1);
-    // 축소는 세 항목을 감싼 바깥 FittedBox 가 한꺼번에 처리한다.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          label,
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: FigmaColors.ink,
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          '${value}g',
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 15.5,
-            fontWeight: FontWeight.w800,
-            color: FigmaColors.ink,
-          ),
-        ),
-        if (goalG != null)
-          Text(
-            ' /${goalG}g',
-            maxLines: 1,
-            // 목표치는 회색으로 낮춰 실제 섭취량(검정)과 구분.
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.mutedForeground,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────── shared card chrome ──
 
 /// The "자세히 >" trailing link used in the card headers.
@@ -743,6 +654,27 @@ class _SoftDivider extends StatelessWidget {
 }
 
 /// A tiny right-aligned chart Y-axis value label.
+/// 이번 주의 시작(월요일). 운동 탭과 같은 기준으로 잘라야 홈이 같은 한 주를
+/// 말한다.
+DateTime _thisMonday() {
+  final DateTime n = nowKst();
+  final DateTime d = DateTime(n.year, n.month, n.day);
+  return d.subtract(Duration(days: d.weekday - 1));
+}
+
+/// 유형별 아이콘. 라벨·색은 운동 탭(`kindLabel`/`kindColor`)과 공유한다.
+IconData _kindIcon(ExerciseLoadKind kind) => switch (kind) {
+  ExerciseLoadKind.cardio => Icons.directions_run_rounded,
+  ExerciseLoadKind.strength => Icons.fitness_center_rounded,
+  ExerciseLoadKind.flexibility => Icons.self_improvement_rounded,
+};
+
+/// 유형의 **원래 단위** — 유산소·스트레칭은 분, 근력은 세트.
+String _kindUnit(AppLocalizations l, ExerciseLoadKind kind) => switch (kind) {
+  ExerciseLoadKind.cardio || ExerciseLoadKind.flexibility => l.unitMinutes,
+  ExerciseLoadKind.strength => l.unitSets,
+};
+
 /// The full-width 운동 card: activity metrics (time / kcal / count), the burn
 /// goal progress, and a weekly burned-calories trend chart with value labels.
 class _ExerciseCard extends ConsumerWidget {
@@ -760,19 +692,32 @@ class _ExerciseCard extends ConsumerWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     // 운동 탭과 같은 단일 소스(exerciseWeekViewProvider)에서 주간 수치·일별
     // 칼로리를 읽어 홈 카드와 운동 탭이 항상 일치한다. 이 provider 는 오늘 체크한
-    // AI 추천 운동까지 이미 더한 값이라, 아래 3지표와 주간 추이 차트가 같이 움직인다.
-    // 로딩 전에는 summary 값으로 폴백.
+    // AI 추천 운동까지 이미 더한 값이라, 지표와 주간 추이 차트가 같이 움직인다.
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
       exerciseWeekViewProvider,
     );
     // 새로고침 중에는 직전 값을 계속 그린다 — 이미 맞는 그림을 지웠다 다시
     // 그리면 깜빡임만 는다.
     final ExerciseWeek? wk = weekAsync.valueOrNull;
-    final int minutes = wk?.totalMinutes ?? summary.exerciseMinutes;
-    final int count = wk?.workoutCount ?? summary.exerciseCount;
-    final double burned = (wk?.totalCalories ?? summary.exerciseCalories)
-        .toDouble();
-    final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
+    // 지표는 운동 탭 `운동 현황 - 이번 주` 와 **같은 네 가지**다 (#1119).
+    // 예전에는 활동 시간·소모 칼로리·운동 일수를 MY 프로필 목표(주 3회·150분·
+    // 500kcal)와 견줬는데, 운동 탭은 유형별 주간 목표(ExerciseLoadGoals)를 쓰고
+    // 있어 같은 한 주를 두 화면이 다르게 말했다.
+    // MY 건강 목표에서 저장한 값을 운동 탭과 함께 읽는다 (#1139).
+    final ExerciseLoadGoals goals = ref.watch(exerciseLoadGoalsProvider);
+    final List<ExerciseDayLoad> loads = wk == null
+        ? const <ExerciseDayLoad>[]
+        : dayLoadsOfWeek(wk, _thisMonday());
+    double sumOf(ExerciseLoadKind k) => loads.fold<double>(
+      0,
+      (double a, ExerciseDayLoad d) => a + d.valueOf(k),
+    );
+    final double burned = wk == null
+        ? summary.exerciseCalories.toDouble()
+        : loads.fold<double>(
+            0,
+            (double a, ExerciseDayLoad d) => a + d.calories,
+          );
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
     // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = nowKst().weekday - 1;
@@ -798,29 +743,23 @@ class _ExerciseCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     _ExerciseStat(
-                      icon: Icons.timer_outlined,
-                      label: l.homeExerciseActiveTime,
-                      value: '$minutes',
-                      goal: '${goals.minutes}',
-                      unit: l.unitMinutes,
-                    ),
-                    const SizedBox(height: 14),
-                    _ExerciseStat(
                       icon: Icons.local_fire_department_rounded,
                       label: l.homeExerciseBurned,
                       value: nf.format(burned),
-                      goal: nf.format(goals.burnCalories),
+                      goal: nf.format(goals.weeklyBurnKcal),
                       unit: l.unitKcal,
                     ),
-                    const SizedBox(height: 14),
-                    _ExerciseStat(
-                      icon: Icons.check_circle_outline_rounded,
-                      label: l.homeExerciseDays,
-                      // 값 = 주간 운동한 날짜 수(workoutCount).
-                      value: '$count',
-                      goal: '${goals.workouts}',
-                      unit: l.unitDays,
-                    ),
+                    for (final ExerciseLoadKind k
+                        in ExerciseLoadKind.values) ...<Widget>[
+                      const SizedBox(height: 10),
+                      _ExerciseStat(
+                        icon: _kindIcon(k),
+                        label: kindLabel(l, k),
+                        value: nf.format(sumOf(k).round()),
+                        goal: nf.format(goals.weeklyGoalOf(k).round()),
+                        unit: _kindUnit(l, k),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -831,9 +770,9 @@ class _ExerciseCard extends ConsumerWidget {
                   child: _ExerciseTrend(
                     weekAsync: weekAsync,
                     todayIndex: todayIdx,
-                    // 하루 목표. 목표는 주 단위로만 세우므로 7 로 나눈다 —
-                    // 식단 그래프가 하루 목표를 그리는 것과 같은 뜻이다. (#1015)
-                    dailyGoalCalories: goals.burnCalories / 7,
+                    // 하루 목표. 운동 탭이 요일 막대에 긋는 것과 같은 선이다
+                    // (#1119) — 식단 그래프가 하루 목표를 그리는 것과 같은 뜻.
+                    dailyGoalCalories: goals.dailyBurnKcal,
                     // 되짚는 대상은 파생 provider 가 아니라 실제로 서버를
                     // 부르는 쪽이다 — 뷰만 무효화하면 캐시된 에러가 그대로
                     // 다시 계산돼 아무 일도 일어나지 않는다.
@@ -1598,8 +1537,7 @@ class _RecommendedMeals extends ConsumerWidget {
         MealRecommendations.fallback;
     // 담당 트레이너가 있는 회원의 첫 장은 트레이너가 짚어 준 자리다. 담당이
     // 없으면 그 배지를 달지 않는다 — 없는 사람의 추천이라고 말하게 된다.
-    final bool hasCoach =
-        ref.watch(memberCoachProvider).valueOrNull != null;
+    final bool hasCoach = ref.watch(memberCoachProvider).valueOrNull != null;
     final List<_RecMeal> meals = <_RecMeal>[
       for (final (int i, _RecMeal meal) in _cardsFor(l, recs).indexed)
         i == 0 && hasCoach ? meal.withSource(_RecSource.trainer) : meal,
@@ -1643,40 +1581,31 @@ class _RecommendedMeals extends ConsumerWidget {
             ],
           ),
         ),
-        SizedBox(
-          // 세로 여백은 카드 그림자가 리스트 뷰포트에 잘리지 않게 하는 용도
-          // (여백 20 + 카드 높이 158).
-          //
-          // 카드 높이가 글씨 배율을 따라가야 한다 (#995). 158 로 박아 두면
-          // 앱 기본 배율을 키운 순간 이름·설명·태그가 카드 밖으로 밀린다.
-          // 사진(72)과 여백은 그대로 두고 **글씨가 차지하는 만큼만** 늘린다 —
-          // 카드 전체를 한 배율로 곱하면 사진까지 커져 계산이 어긋난다.
-          height: 20 + _recMealCardHeight(context),
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-            itemCount: meals.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, int i) => _RecMealCard(meal: meals[i]),
+        // 카드 높이를 숫자로 박지 않는다 (#1118). 예전에는 설명 두 줄을 미리
+        // 잡아 두느라, 설명이 한 줄인 카드는 태그 아래가 통째로 비었다.
+        // IntrinsicHeight 가 실제 내용으로 높이를 재고, 카드끼리는 가장 높은
+        // 것에 맞춰 늘어난다 — 글씨 배율이 커져도 계산이 어긋날 자리가 없다.
+        //
+        // 아래 여백(18)은 카드 그림자(blur 14, y+4)가 뷰포트에 잘리지 않을
+        // 만큼이다. 위(8)보다 넉넉한 것은 그림자가 아래로 치우쳐 지기 때문.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (int i = 0; i < meals.length; i++) ...<Widget>[
+                  if (i != 0) const SizedBox(width: 12),
+                  _RecMealCard(meal: meals[i]),
+                ],
+              ],
+            ),
           ),
         ),
       ],
     );
   }
-}
-
-/// 추천 식단 카드 높이. 사진(72) + 안쪽 여백 + 글씨 세 줄기(이름·설명 2줄·
-/// 태그)를 현재 글씨 배율로 재서 더한다. (#995)
-double _recMealCardHeight(BuildContext context) {
-  final TextScaler ts = MediaQuery.textScalerOf(context);
-  const double photo = 72;
-  const double paddings = 18 + 3 + 6 + 4; // 카드 안쪽 여백 + 요소 사이 간격
-  return photo +
-      paddings +
-      ts.scale(14 * 1.3) + // 이름
-      ts.scale(11 * 1.4) * 2 + // 설명 두 줄
-      ts.scale(12 * 1.2) + // 태그
-      2; // 반올림 여유
 }
 
 /// 카드 좌측 상단의 추천 출처 배지.
@@ -1752,73 +1681,67 @@ class _RecMealCard extends StatelessWidget {
               ),
             ],
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    meal.name,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  meal.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.ink,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                // 카드 폭이 130px 고정이라 12.5px 로는 "나트륨 조절에
+                // 좋아요" 가 한 줄에 못 들어간다. 가독성 개선(3299f996)에서
+                // 키운 값을 이 카드만 되돌린다 — 제목이 진한 14px 이라 부제는
+                // 작은 회색이어야 위계도 산다.
+                Text(
+                  meal.reason,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: FigmaColors.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    // 배지 색은 하나다 (#1056). 요리마다 색이 달라지면 색이
+                    // 영양 특성을 뜻하는지 요리 종류를 뜻하는지 알 수 없다.
+                    color: FigmaColors.primaryA(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    meal.tag,
+                    key: const Key('rec-meal-tag'),
+                    // 영어 태그는 길어서 두 줄이 되고, 그만큼 설명이 눌려
+                    // 사라진다 — 태그는 한 줄로 못 박는다. (#1004)
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: FigmaColors.ink,
-                      height: 1.3,
+                      height: 1.2,
+                      color: FigmaColors.primary,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Flexible(
-                    child: Text(
-                      meal.reason,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      // 카드 폭이 130px 고정이라 12.5px 로는 "나트륨 조절에
-                      // 좋아요" 가 한 줄에 못 들어가 두 줄이 되고, 카드 높이가
-                      // 158px 로 고정이라 그 둘째 줄이 잘렸다. 가독성
-                      // 개선(3299f996)에서 키운 값을 이 카드만 되돌린다 —
-                      // 제목이 진한 14px 이라 부제는 작은 회색이어야 위계도 산다.
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: FigmaColors.textMuted,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      // 배지 색은 하나다 (#1056). 요리마다 색이 달라지면 색이
-                      // 영양 특성을 뜻하는지 요리 종류를 뜻하는지 알 수 없다.
-                      color: FigmaColors.primaryA(0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      meal.tag,
-                      key: const Key('rec-meal-tag'),
-                      // 영어 태그는 길어서 두 줄이 되고, 그만큼 설명이 눌려
-                      // 사라진다 — 태그는 한 줄로 못 박는다. (#1004)
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        // 줄 높이를 못 박아 둔다 — 서체를 바꾸면 폰트 자체의
-                        // 줄 간격이 달라져 카드 높이 계산이 어긋난다. (#995)
-                        height: 1.2,
-                        color: FigmaColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

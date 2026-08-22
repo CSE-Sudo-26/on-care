@@ -6,7 +6,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 
 void main() {
   test(
-    'v12 to v15 adds the daily macro columns and preserves existing rows',
+    'v12 to v15 adds the daily macro·완료 날짜 columns and preserves rows',
     () async {
       // v3~v5 에서 올라오는 경로는 v7 의 `createTable` 이 **현재 정의**로 표를
       // 만들어 버려, `from >= 7 && from < 13` 갈래를 지나가지 않는다. 이미
@@ -31,7 +31,31 @@ void main() {
              exercises_json)
           VALUES ('seed-client-1', '2026-08-18', 80, 1800, 2100, 17.8, '["걷기"]')
         ''');
-          // 실제 v12 DB 에는 이 표가 v1 부터 있다. v14 가 여기에 컬럼을
+          // 이 테이블도 v1 부터 있었다. 스냅샷이 빼먹으면 v14 의 `completed_at`
+          // 추가가 없는 표를 고치려다 죽는다(#1114).
+          database.execute('''
+            CREATE TABLE client_routine_history (
+              id TEXT NOT NULL PRIMARY KEY,
+              client_id TEXT NOT NULL,
+              date_label TEXT NOT NULL,
+              label TEXT NOT NULL,
+              completion_rate INTEGER NOT NULL,
+              exercises_json TEXT NOT NULL,
+              client_feedback TEXT NOT NULL DEFAULT '',
+              trainer_note TEXT NOT NULL DEFAULT '',
+              sort_order INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          database.execute('''
+            INSERT INTO client_routine_history (
+              id, client_id, date_label, label, completion_rate, exercises_json,
+              client_feedback, trainer_note, sort_order
+            ) VALUES (
+              'old-history', 'existing-client', '7/9', 'AI 루틴 · 자율 운동', 80,
+              '["\\uc2a4\\ucffc\\ud2b8 3\\uc138\\ud2b8"]', '', '', 0
+            )
+          ''');
+          // 실제 DB 에는 이 표가 v1 부터 있다. v15 가 여기에 컬럼을
           // 붙이므로(#1025), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
           database.execute('''
           CREATE TABLE client_diet_entries (
@@ -45,22 +69,6 @@ void main() {
             protein_g REAL NOT NULL DEFAULT 0,
             fat_g REAL NOT NULL DEFAULT 0,
             photo_asset TEXT,
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (id)
-          )
-        ''');
-          // 실제 DB 에는 이 표가 v1 부터 있다. v15 가 여기에 컬럼을
-          // 붙이므로(#1025), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
-          database.execute('''
-          CREATE TABLE client_routine_history (
-            id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
-            date_label TEXT NOT NULL,
-            label TEXT NOT NULL,
-            completion_rate INTEGER NOT NULL,
-            exercises_json TEXT NOT NULL,
-            client_feedback TEXT NOT NULL DEFAULT '',
-            trainer_note TEXT NOT NULL DEFAULT '',
             sort_order INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (id)
           )
@@ -90,10 +98,12 @@ void main() {
     },
   );
 
-  test('v3 to v15 adds macro·주간 계열·취소 기록 columns and preserves rows', () async {
-    final executor = NativeDatabase.memory(
-      setup: (database) {
-        database.execute('''
+  test(
+    'v3 to v15 adds macro·주간 계열·취소·완료 날짜 columns and preserves rows',
+    () async {
+      final executor = NativeDatabase.memory(
+        setup: (database) {
+          database.execute('''
           CREATE TABLE trainer_clients (
             id TEXT NOT NULL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -111,7 +121,7 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        database.execute('''
+          database.execute('''
           CREATE TABLE client_diet_entries (
             id TEXT NOT NULL PRIMARY KEY,
             client_id TEXT NOT NULL,
@@ -122,7 +132,7 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        database.execute('''
+          database.execute('''
           INSERT INTO trainer_clients (
             id, name, avatar, goal, last_message, last_time, active,
             calories_today, sodium_mg, sugar_g, last_routine,
@@ -132,16 +142,16 @@ void main() {
             500, 700, 12, '어제', '[100,0,0,0,0,0,0]', '[700]', 1
           )
         ''');
-        database.execute('''
+          database.execute('''
           INSERT INTO client_diet_entries (
             id, client_id, meal, items, calories, sodium_mg, sort_order
           ) VALUES (
             'existing-meal', 'existing-client', '아침', '기존 식단', 500, 700, 0
           )
         ''');
-        // 이 테이블은 v1 부터 있었다. 스냅샷이 빼먹으면 그 위에서 도는
-        // 마이그레이션이 실제 DB 와 다른 것을 보게 된다(#822).
-        database.execute('''
+          // 이 테이블은 v1 부터 있었다. 스냅샷이 빼먹으면 그 위에서 도는
+          // 마이그레이션이 실제 DB 와 다른 것을 보게 된다(#822).
+          database.execute('''
           CREATE TABLE trainer_schedule_entries (
             id TEXT NOT NULL PRIMARY KEY,
             date TEXT NOT NULL,
@@ -156,11 +166,11 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        // 실제 DB 에는 이 표가 v1 부터 있다. v15 가 여기에 컬럼을
-        // 붙이므로(#1025), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
-        database.execute('''
+          // 이 테이블도 v1 부터 있었다. 스냅샷이 빼먹으면 v14 의 `completed_at`
+          // 추가가 없는 표를 고치려다 죽는다(#1114).
+          database.execute('''
           CREATE TABLE client_routine_history (
-            id TEXT NOT NULL,
+            id TEXT NOT NULL PRIMARY KEY,
             client_id TEXT NOT NULL,
             date_label TEXT NOT NULL,
             label TEXT NOT NULL,
@@ -168,62 +178,96 @@ void main() {
             exercises_json TEXT NOT NULL,
             client_feedback TEXT NOT NULL DEFAULT '',
             trainer_note TEXT NOT NULL DEFAULT '',
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (id)
+            sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        database.execute('PRAGMA user_version = 3');
-      },
-    );
-    final db = AppDatabase.forTesting(executor);
-    addTearDown(db.close);
+          database.execute('''
+          INSERT INTO client_routine_history (
+            id, client_id, date_label, label, completion_rate, exercises_json,
+            client_feedback, trainer_note, sort_order
+          ) VALUES (
+            'old-history', 'existing-client', '7/9', 'AI 루틴 · 자율 운동', 80,
+            '["\\uc2a4\\ucffc\\ud2b8 3\\uc138\\ud2b8"]', '', '', 0
+          )
+        ''');
+          database.execute('PRAGMA user_version = 3');
+        },
+      );
+      final db = AppDatabase.forTesting(executor);
+      addTearDown(db.close);
 
-    final client = await db.select(db.trainerClients).getSingle();
-    final meal = await db.select(db.clientDietEntries).getSingle();
-    final version = await db.customSelect('PRAGMA user_version').getSingle();
+      final client = await db.select(db.trainerClients).getSingle();
+      final meal = await db.select(db.clientDietEntries).getSingle();
+      final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 15);
-    expect(client.id, 'existing-client');
-    expect(client.caloriesToday, 500);
-    expect(client.sugarG, 12.0);
-    expect(client.carbsG, 0);
-    // 새 주간 계열은 기본값으로 들어와 다음 재시딩이 실제 값을 채운다(#746).
-    expect(client.caloriesWeekJson, '[]');
-    expect(client.sugarWeekJson, '[]');
-    expect(client.proteinG, 0);
-    expect(client.fatG, 0);
-    expect(meal.id, 'existing-meal');
-    expect(meal.items, '기존 식단');
-    expect(meal.carbsG, 0);
-    expect(meal.proteinG, 0);
-    expect(meal.fatG, 0);
-    // v11 은 리포트 피드백 초안 표를 새로 만든다(#821). 예전 DB 에는 없던
-    // 표라, 만들어지지 않으면 초안 저장이 첫 조회에서 죽는다.
-    expect(await db.select(db.reportFeedbackDrafts).get(), isEmpty);
-    // v12 는 일정에 취소·노쇼 기록 칸을 붙인다(#906). 붙지 않으면 취소를
-    // 누르는 순간 없는 컬럼에 쓰다가 죽는다. 예전 행은 값이 없는 것이 정상이고,
-    // 그 자체가 "취소가 아님" 이라는 뜻이다.
-    final schedule = await db.select(db.trainerScheduleEntries).get();
-    expect(schedule, isEmpty);
-    await db
-        .into(db.trainerScheduleEntries)
-        .insert(
-          TrainerScheduleEntriesCompanion.insert(
-            id: 'migrated-session',
-            date: '2026-08-19',
-            time: '10:00',
-            status: '취소',
-            cancelledAt: Value(DateTime(2026, 8, 19, 9)),
-            cancellationSource: const Value('member'),
-            cancellationReason: const Value('고객 사정'),
-          ),
-        );
-    final stored = await db.select(db.trainerScheduleEntries).getSingle();
-    expect(stored.cancellationSource, 'member');
-    expect(stored.cancellationReason, '고객 사정');
-    expect(stored.cancelledAt, isNotNull);
-    expect(stored.noShowAt, isNull);
-  });
+      expect(version.read<int>('user_version'), 15);
+      expect(client.id, 'existing-client');
+      expect(client.caloriesToday, 500);
+      expect(client.sugarG, 12.0);
+      expect(client.carbsG, 0);
+      // 새 주간 계열은 기본값으로 들어와 다음 재시딩이 실제 값을 채운다(#746).
+      expect(client.caloriesWeekJson, '[]');
+      expect(client.sugarWeekJson, '[]');
+      expect(client.proteinG, 0);
+      expect(client.fatG, 0);
+      expect(meal.id, 'existing-meal');
+      expect(meal.items, '기존 식단');
+      expect(meal.carbsG, 0);
+      expect(meal.proteinG, 0);
+      expect(meal.fatG, 0);
+      // v11 은 리포트 피드백 초안 표를 새로 만든다(#821). 예전 DB 에는 없던
+      // 표라, 만들어지지 않으면 초안 저장이 첫 조회에서 죽는다.
+      expect(await db.select(db.reportFeedbackDrafts).get(), isEmpty);
+      // v12 는 일정에 취소·노쇼 기록 칸을 붙인다(#906). 붙지 않으면 취소를
+      // 누르는 순간 없는 컬럼에 쓰다가 죽는다. 예전 행은 값이 없는 것이 정상이고,
+      // 그 자체가 "취소가 아님" 이라는 뜻이다.
+      final schedule = await db.select(db.trainerScheduleEntries).get();
+      expect(schedule, isEmpty);
+      await db
+          .into(db.trainerScheduleEntries)
+          .insert(
+            TrainerScheduleEntriesCompanion.insert(
+              id: 'migrated-session',
+              date: '2026-08-19',
+              time: '10:00',
+              status: '취소',
+              cancelledAt: Value(DateTime(2026, 8, 19, 9)),
+              cancellationSource: const Value('member'),
+              cancellationReason: const Value('고객 사정'),
+            ),
+          );
+      final stored = await db.select(db.trainerScheduleEntries).getSingle();
+      expect(stored.cancellationSource, 'member');
+      expect(stored.cancellationReason, '고객 사정');
+      expect(stored.cancelledAt, isNotNull);
+      expect(stored.noShowAt, isNull);
+      // v14 는 운동 기록에 완료 날짜 칸을 붙인다(#1114). 예전 행은 날짜가 없는
+      // 것이 정상이고 — 화면은 그런 기록을 기간과 무관하게 늘 보여 준다 —
+      // 새로 쓰는 행부터 실제 날짜가 남는다.
+      final history = await db.select(db.clientRoutineHistory).getSingle();
+      expect(history.id, 'old-history');
+      expect(history.dateLabel, '7/9');
+      expect(history.completionRate, 80);
+      expect(history.completedAt, isNull);
+      await db
+          .into(db.clientRoutineHistory)
+          .insert(
+            ClientRoutineHistoryCompanion.insert(
+              id: 'dated-history',
+              clientId: 'existing-client',
+              dateLabel: '8/19 (오늘)',
+              label: 'PT 세션 · 트레이너 지도',
+              completionRate: 90,
+              exercisesJson: '[]',
+              completedAt: Value(DateTime(2026, 8, 19, 18, 30)),
+            ),
+          );
+      final dated = await (db.select(
+        db.clientRoutineHistory,
+      )..where((t) => t.id.equals('dated-history'))).getSingle();
+      expect(dated.completedAt, DateTime(2026, 8, 19, 18, 30));
+    },
+  );
 
   test('v4 to v15 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
@@ -290,11 +334,11 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        // 실제 DB 에는 이 표가 v1 부터 있다. v15 가 여기에 컬럼을
-        // 붙이므로(#1025), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
+        // 이 테이블도 v1 부터 있었다. 스냅샷이 빼먹으면 v14 의 `completed_at`
+        // 추가가 없는 표를 고치려다 죽는다(#1114).
         database.execute('''
           CREATE TABLE client_routine_history (
-            id TEXT NOT NULL,
+            id TEXT NOT NULL PRIMARY KEY,
             client_id TEXT NOT NULL,
             date_label TEXT NOT NULL,
             label TEXT NOT NULL,
@@ -302,8 +346,16 @@ void main() {
             exercises_json TEXT NOT NULL,
             client_feedback TEXT NOT NULL DEFAULT '',
             trainer_note TEXT NOT NULL DEFAULT '',
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (id)
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        database.execute('''
+          INSERT INTO client_routine_history (
+            id, client_id, date_label, label, completion_rate, exercises_json,
+            client_feedback, trainer_note, sort_order
+          ) VALUES (
+            'old-history', 'existing-client', '7/9', 'AI 루틴 · 자율 운동', 80,
+            '["\\uc2a4\\ucffc\\ud2b8 3\\uc138\\ud2b8"]', '', '', 0
           )
         ''');
         database.execute('PRAGMA user_version = 4');
@@ -395,21 +447,29 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
-          // 실제 DB 에는 이 표가 v1 부터 있다. v15 가 여기에 컬럼을
-          // 붙이므로(#1025), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
+          // 이 테이블도 v1 부터 있었다. 스냅샷이 빼먹으면 v14 의 `completed_at`
+          // 추가가 없는 표를 고치려다 죽는다(#1114).
           database.execute('''
-          CREATE TABLE client_routine_history (
-            id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
-            date_label TEXT NOT NULL,
-            label TEXT NOT NULL,
-            completion_rate INTEGER NOT NULL,
-            exercises_json TEXT NOT NULL,
-            client_feedback TEXT NOT NULL DEFAULT '',
-            trainer_note TEXT NOT NULL DEFAULT '',
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (id)
-          )
+            CREATE TABLE client_routine_history (
+              id TEXT NOT NULL PRIMARY KEY,
+              client_id TEXT NOT NULL,
+              date_label TEXT NOT NULL,
+              label TEXT NOT NULL,
+              completion_rate INTEGER NOT NULL,
+              exercises_json TEXT NOT NULL,
+              client_feedback TEXT NOT NULL DEFAULT '',
+              trainer_note TEXT NOT NULL DEFAULT '',
+              sort_order INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          database.execute('''
+            INSERT INTO client_routine_history (
+              id, client_id, date_label, label, completion_rate, exercises_json,
+              client_feedback, trainer_note, sort_order
+            ) VALUES (
+              'old-history', 'existing-client', '7/9', 'AI 루틴 · 자율 운동', 80,
+              '["\\uc2a4\\ucffc\\ud2b8 3\\uc138\\ud2b8"]', '', '', 0
+            )
           ''');
           database.execute('PRAGMA user_version = 5');
         },
@@ -429,15 +489,12 @@ void main() {
     },
   );
 
-  test(
-    'v13 to v15 adds the per-meal sugar·date columns and keeps rows',
-    () async {
-      // 이 표는 그동안 **오늘 하루**만 담아 날짜가 없었다(#1025). 컬럼이 늘어도
-      // 있던 끼니는 그대로 읽혀야 한다 — 재시딩 전에도 오늘 화면은 지금까지와
-      // 같아야 하기 때문이다.
-      final executor = NativeDatabase.memory(
-        setup: (database) {
-          database.execute('''
+  test('v14 to v15 adds the per-meal sugar·date columns and keeps rows', () async {
+    // 끼니 표는 그동안 **오늘 하루**만 담아 날짜가 없었고, 당류도 하루 합계로만
+    // 있었다(#1025). 컬럼이 늘어도 있던 끼니는 그대로 읽힌다.
+    final executor = NativeDatabase.memory(
+      setup: (database) {
+        database.execute('''
           CREATE TABLE client_diet_entries (
             id TEXT NOT NULL,
             client_id TEXT NOT NULL,
@@ -453,76 +510,12 @@ void main() {
             PRIMARY KEY (id)
           )
         ''');
-          database.execute('''
+        database.execute('''
           INSERT INTO client_diet_entries
             (id, client_id, meal, items, calories, sodium_mg, carbs_g,
              protein_g, fat_g, sort_order)
           VALUES ('seed-diet-1', 'seed-client-1', '점심', '비빔밥',
                   720, 1320, 90.5, 28.0, 18.5, 0)
-        ''');
-          // 실제 DB 에는 이 표가 v1 부터 있다. v15 가 여기에 컬럼을
-          // 붙이므로(#1025), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
-          database.execute('''
-          CREATE TABLE client_routine_history (
-            id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
-            date_label TEXT NOT NULL,
-            label TEXT NOT NULL,
-            completion_rate INTEGER NOT NULL,
-            exercises_json TEXT NOT NULL,
-            client_feedback TEXT NOT NULL DEFAULT '',
-            trainer_note TEXT NOT NULL DEFAULT '',
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (id)
-          )
-          ''');
-          database.execute('PRAGMA user_version = 13');
-        },
-      );
-      final db = AppDatabase.forTesting(executor);
-      addTearDown(db.close);
-
-      final row = await db.select(db.clientDietEntries).getSingle();
-      final version = await db.customSelect('PRAGMA user_version').getSingle();
-
-      expect(version.read<int>('user_version'), 15);
-      // 있던 값은 그대로.
-      expect(row.meal, '점심');
-      expect(row.items, '비빔밥');
-      expect(row.calories, 720);
-      expect(row.sodiumMg, 1320);
-      expect(row.carbsG, 90.5);
-      // 새 컬럼은 기본값. 날짜가 빈 행은 날짜로 거르는 조회에 걸리지 않으므로,
-      // 재시딩 전에는 기간 뷰의 끼니가 비어 보일 뿐 화면이 깨지지 않는다.
-      expect(row.sugarG, 0);
-      expect(row.date, '');
-    },
-  );
-
-  test('v14 to v15 adds the history date column and keeps rows', () async {
-    // 표시용 라벨(`8/23 (오늘)`)만으로는 날짜를 견줄 수 없어, 날짜별 기록에
-    // 이력을 붙일 수 없었다(#1025). 컬럼이 늘어도 있던 이력은 그대로 읽힌다.
-    final executor = NativeDatabase.memory(
-      setup: (database) {
-        database.execute('''
-          CREATE TABLE client_routine_history (
-            id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
-            date_label TEXT NOT NULL,
-            label TEXT NOT NULL,
-            completion_rate INTEGER NOT NULL,
-            exercises_json TEXT NOT NULL,
-            client_feedback TEXT NOT NULL DEFAULT '',
-            trainer_note TEXT NOT NULL DEFAULT '',
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (id)
-          )
-        ''');
-        database.execute('''
-          INSERT INTO client_routine_history
-            (id, client_id, date_label, label, completion_rate, exercises_json)
-          VALUES ('seed-history-1', 'seed-client-1', '8/22', 'PT 세션',
-                  100, '["스쿼트 3세트 ✓"]')
         ''');
         database.execute('PRAGMA user_version = 14');
       },
@@ -530,15 +523,16 @@ void main() {
     final db = AppDatabase.forTesting(executor);
     addTearDown(db.close);
 
-    final row = await db.select(db.clientRoutineHistory).getSingle();
+    final row = await db.select(db.clientDietEntries).getSingle();
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
     expect(version.read<int>('user_version'), 15);
-    expect(row.dateLabel, '8/22');
-    expect(row.label, 'PT 세션');
-    expect(row.completionRate, 100);
-    // 날짜가 빈 행은 날짜로 거르는 조회에 걸리지 않는다 — 재시딩 전에는 그
-    // 이력이 날짜별 목록에 붙지 않을 뿐, 화면이 깨지지 않는다.
+    expect(row.meal, '점심');
+    expect(row.calories, 720);
+    expect(row.carbsG, 90.5);
+    // 새 컬럼은 기본값. 날짜가 빈 행은 날짜로 거르는 조회에 걸리지 않으므로,
+    // 재시딩 전에는 기간 뷰의 끼니가 비어 보일 뿐 오늘 화면은 그대로다.
+    expect(row.sugarG, 0);
     expect(row.date, '');
   });
 }

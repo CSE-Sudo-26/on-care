@@ -51,6 +51,7 @@
   "navReports": "Reports",
   "navConsultations": "Requests",
   "actionSave": "Save",
+  "actionSaved": "Saved",
   "actionCancel": "Cancel",
   "actionEdit": "Edit",
   "actionDelete": "Delete",
@@ -256,7 +257,6 @@
   "clientsAddFailed": "Couldn't add the client. Please try again",
   "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
   "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
-  "memberHealthTitle": "Body and goals",
   "memberHealthSaving": "Saving…",
   "memberHealthGender": "Gender",
   "memberHealthGenderUnset": "Not set",
@@ -421,6 +421,8 @@
   "consultRejectAction": "Decline",
   "consultStatusApproved": "Added as a client",
   "workoutRecords": "Workout log",
+  "workoutRecordsShowMore": "Show more",
+  "workoutRecordsShowLess": "Show less",
   "workoutLoadFailed": "Couldn't load the workout log",
   "workoutEmpty": "No workouts logged yet",
   "routinesAssigned": "Assigned routines",
@@ -628,6 +630,7 @@
     }
   },
   "reportsCompletionAvg": "Workout completion",
+  "reportsWeeklyCompletion": "Weekly completion",
   "reportsCompletionByDay": "Weekly workout completion",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
   "reportsMetricTrend": "{metric} trend",
@@ -717,20 +720,6 @@
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",
   "schedEmptyDay": "Nothing scheduled for this day.\nUse New session above to add one.",
-  "schedCompleteTitle": "Mark session complete",
-  "schedCompleteBody": "This marks the {time} session with {name} complete and logs it to their workout history.",
-  "@schedCompleteBody": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "schedNoteOptional": "Trainer's note (optional)",
-  "schedCompleteAction": "Mark complete",
   "schedSaveFailed": "Couldn't save the session. Please try again",
   "schedAddTitle": "Add a session",
   "schedEditTitle": "Edit session",
@@ -815,14 +804,7 @@
   "slotStartTime": "Start time",
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
-  "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
-  "@slotCloseBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "slotCloseBody": "Any existing booking stays; only new bookings stop.",
   "slotClosed": "New bookings closed.",
   "slotActionFailed": "Couldn't complete the request. Please try again in a moment.",
   "slotManageTitle": "Manage booking slots",
@@ -837,25 +819,9 @@
   "slotOpenAction": "Open",
   "slotReload": "Reload",
   "slotEmpty": "No booking slots open on this day.",
-  "slotClosedSummary": "Closed · {booked} booked",
-  "@slotClosedSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      }
-    }
-  },
-  "slotOpenSummary": "{booked} booked · {remaining} left",
-  "@slotOpenSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "slotClosedSummary": "Closed",
+  "slotBookedSummary": "Booked",
+  "slotOpenSummary": "Open",
   "slotCloseAction": "Close bookings",
   "myCareerInvalid": "Enter years of experience between 0 and 80.",
   "myProfileSaveFailed": "Couldn't save your profile.",
@@ -1327,6 +1293,7 @@
   },
   "routineAlreadyGone": "That routine is already gone",
   "workoutPendingTitle": "Not done yet",
+  "workoutUndatedTitle": "Records without a date",
   "workoutPendingCancel": "Cancel assignment",
   "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
   "routineUpdated": "Routine updated",
@@ -1452,10 +1419,10 @@
   "messagesSelectPrompt": "Select a client from the list to start a conversation.",
   "clientQuickMessages": "Messages",
   "clientQuickProgram": "Program",
+  "clientQuickReport": "Report",
   "clientHealthGoals": "Body profile & goals",
+  "clientProfileSectionTitle": "Body, goals & memo",
   "clientTrainerMemo": "Memo",
-  "clientTrainerMemoTitle": "Memos on {name}",
-  "@clientTrainerMemoTitle": {"placeholders": {"name": {"type": "String"}}},
   "clientTrainerMemoHint": "Note what you want to remember about this member",
   "clientTrainerMemoAdd": "Add memo",
   "clientTrainerMemoEmpty": "No memos yet.",

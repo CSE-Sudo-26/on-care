@@ -42,10 +42,21 @@ void main() {
     final result = await repository.list();
 
     expect(result.single.id, 'slot-1');
-    expect(result.single.capacity, 1);
-    expect(result.single.remaining, 0);
-    expect(result.single.booked, 1);
+    // 서버가 좌석 수로 주더라도 앱은 예약 여부만 본다(#1072).
+    expect(result.single.booked, isTrue);
     expect(result.single.sessionType, '1:1 PT');
+  });
+
+  test('좌석이 남아 있으면 비어 있는 자리로 읽는다', () async {
+    when(() => dio.get<List<dynamic>>('/trainer/reservation-slots')).thenAnswer(
+      (_) async => Response<List<dynamic>>(
+        requestOptions: RequestOptions(path: '/trainer/reservation-slots'),
+        statusCode: 200,
+        data: <dynamic>[slotJson()],
+      ),
+    );
+
+    expect((await repository.list()).single.booked, isFalse);
   });
 
   test('create sends UTC time and session type', () async {
@@ -135,7 +146,7 @@ void main() {
       expect(await mockRepository.list(), isEmpty);
     });
 
-    test('create opens a slot with a fixed capacity of one', () async {
+    test('새로 연 자리는 비어 있는 상태로 시작한다', () async {
       final mockRepository = MockReservationSlotRepository();
       final future = nowKst().add(const Duration(days: 1));
 
@@ -144,8 +155,8 @@ void main() {
         sessionType: '상담',
       );
 
-      expect(slot.capacity, 1);
-      expect(slot.remaining, 1);
+      expect(slot.booked, isFalse);
+      expect(slot.isClosed, isFalse);
       expect(slot.sessionType, '상담');
     });
 

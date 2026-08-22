@@ -53,7 +53,6 @@ RoutineHistoryEntry routineHistoryEntryFromJson(Map<String, Object?> json) {
   return RoutineHistoryEntry(
     id: _str(json['id']),
     dateLabel: _str(json['date_label']),
-    date: DateTime.tryParse(_str(json['date'])),
     label: _str(json['label']),
     completionRate: _int(json['completion_rate']),
     exercises: _strList(json['exercises']),
