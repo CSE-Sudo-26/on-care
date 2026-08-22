@@ -556,6 +556,11 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                 _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
               }),
               emptyLabel: l.dietDayEmpty,
+              // 펼친 날에만 그날 한 운동을 읽는다 — 12주치를 미리 읽어 두면
+              // 아무도 펼치지 않은 날까지 요청이 나간다.
+              extra: _openDay == ymd(day.date) && day.minutes > 0
+                  ? _DayExercises(clientId: widget.clientId, date: day.date)
+                  : null,
               summary:
                   '${day.minutes}${l.unitMinutes} · '
                   '${formatNumber(day.calories)} ${l.unitKcal}',
@@ -592,6 +597,46 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
             ),
         ],
       ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// 펼친 날에 실제로 한 운동. (#1025)
+///
+/// 위 알약들은 "얼마나" 를 말한다(시간·칼로리·유형별 분). 그 숫자가 **무엇으로**
+/// 채워졌는지는 이름이 말한다 — 식단에서 하루 합계 아래 끼니를 펴는 것과 같은
+/// 자리다.
+///
+/// 줄은 아래 운동 기록 카드와 같은 [ExerciseLine] 이다. 걸른 운동에 취소선이
+/// 그어지는 규칙도 그대로라, 한 화면에서 같은 표시가 다른 뜻으로 읽히지 않는다.
+class _DayExercises extends ConsumerWidget {
+  const _DayExercises({required this.clientId, required this.date});
+
+  final String clientId;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<String>> async = ref.watch(
+      clientExercisesOnProvider((clientId: clientId, date: date)),
+    );
+    return async.maybeWhen(
+      data: (List<String> lines) {
+        // 분 수는 있는데 이름이 없는 날이 있다 — 합계만 들어온 기록이다.
+        // 그럴 때는 아무 말도 하지 않는다: 위 알약이 이미 그날을 말했다.
+        if (lines.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (final String line in lines)
+                ExerciseLine(line: line, fontSize: 13.5),
+            ],
+          ),
+        );
+      },
       orElse: () => const SizedBox.shrink(),
     );
   }

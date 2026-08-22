@@ -1,3 +1,4 @@
+
 import 'dart:io';
 
 import 'package:demo_fixture/demo_fixture.dart';
@@ -11,6 +12,7 @@ import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -272,6 +274,16 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(minutesPill, findsWidgets);
+
+      // 알약은 "얼마나" 를 말한다. 그 숫자가 무엇으로 채워졌는지는 이름이
+      // 말해야 한다 — 식단에서 합계 아래 끼니를 펴는 것과 같은 자리다(#1025).
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('exercise-daily-records')),
+          matching: find.byType(ExerciseLine),
+        ),
+        findsWidgets,
+      );
     });
 
     testWidgets('운동 전체 AI 카드는 전체 기간을 제목으로 말한다 (#1025)', (tester) async {

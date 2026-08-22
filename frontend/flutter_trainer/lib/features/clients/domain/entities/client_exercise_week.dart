@@ -12,6 +12,7 @@ class ClientExerciseWeek {
     this.strengthSets = const <int>[],
     this.sessionCount,
     this.weeklyGoalMinutes = 0,
+    this.itemsByDayLabel = const <String, List<String>>{},
   });
 
   final List<String> dayLabels;
@@ -43,6 +44,12 @@ class ClientExerciseWeek {
   /// 않는다. (#1015)
   final int weeklyGoalMinutes;
 
+  /// 요일 라벨 → 그날 한 운동 이름들. 서버 응답의 `sessions` 에서 모은다.
+  ///
+  /// 날짜별 기록을 펼쳤을 때 "그날 무엇을 했는지" 를 말하는 재료다(#1025).
+  /// 예전에는 `sessions` 에서 개수만 세고 버렸다.
+  final Map<String, List<String>> itemsByDayLabel;
+
   /// 유형 분해가 실려 왔는가. 길이가 어긋난 응답은 없는 것으로 본다 — 반쪽만
   /// 쌓으면 막대가 실제보다 낮아 보인다.
   bool get hasTypeSplit {
@@ -55,6 +62,24 @@ class ClientExerciseWeek {
 
   int get workoutCount =>
       sessionCount ?? dailyMinutes.where((minutes) => minutes > 0).length;
+
+  /// `sessions` → 요일별 운동 이름. 같은 요일에 두 번 했으면 이어 붙인다.
+  static Map<String, List<String>> _itemsByDayLabel(Object? sessions) {
+    final Map<String, List<String>> out = <String, List<String>>{};
+    for (final Object? row
+        in (sessions as List<Object?>?) ?? const <Object?>[]) {
+      if (row is! Map<String, Object?>) continue;
+      final String day = (row['day_label'] as String?) ?? '';
+      if (day.isEmpty) continue;
+      final List<String> items =
+          ((row['items'] as List<Object?>?) ?? const <Object?>[])
+              .whereType<String>()
+              .toList();
+      if (items.isEmpty) continue;
+      (out[day] ??= <String>[]).addAll(items);
+    }
+    return out;
+  }
 
   factory ClientExerciseWeek.fromJson(Map<String, Object?> json) {
     List<int> ints(String key) =>
@@ -76,6 +101,7 @@ class ClientExerciseWeek {
       totalMinutes: (json['total_minutes'] as num?)?.toInt() ?? 0,
       totalCalories: (json['total_calories'] as num?)?.toInt() ?? 0,
       sessionCount: (json['sessions'] as List<Object?>?)?.length,
+      itemsByDayLabel: _itemsByDayLabel(json['sessions']),
       weeklyGoalMinutes: (json['weekly_goal_minutes'] as num?)?.toInt() ?? 0,
     );
   }

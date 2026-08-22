@@ -257,6 +257,19 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   );
 
   @override
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date) async {
+    // 주 단위 응답의 `sessions` 에 그날 한 운동 이름이 실려 온다. 그 주를 한 번
+    // 읽어 해당 요일만 고른다 — 날짜별 엔드포인트를 따로 두지 않아도 된다.
+    final ClientExerciseWeek week = await fetchExerciseWeek(
+      clientId,
+      weekStart: clientMondayOf(date),
+    );
+    final int index = date.weekday - 1;
+    if (index < 0 || index >= week.dayLabels.length) return const <String>[];
+    return week.itemsByDayLabel[week.dayLabels[index]] ?? const <String>[];
+  }
+
+  @override
   Future<List<ClientDietEntry>> fetchDietOn(String clientId, DateTime date) =>
       // 같은 엔드포인트가 `date` 를 받는다 — 날짜를 주지 않으면 오늘이다.
       _getList(

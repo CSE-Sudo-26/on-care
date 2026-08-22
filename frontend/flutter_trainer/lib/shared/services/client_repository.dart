@@ -55,6 +55,10 @@ abstract interface class ClientRepository {
   /// [clientId] 가 [date] 에 먹은 끼니. 기간 뷰에서 날짜를 눌러 그날을 펼칠
   /// 때 쓴다(#1025). 기록이 없으면 빈 목록이다.
   Future<List<ClientDietEntry>> fetchDietOn(String clientId, DateTime date);
+
+  /// [clientId] 가 [date] 에 한 운동 이름들. 끝의 `✓`/`✗` 가 수행 여부다 —
+  /// 운동 기록 카드가 쓰는 것과 같은 문자열이다(#1025).
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
   Future<RoutineHistoryEntry> updateHistoryFeedback(
     String clientId,
@@ -755,6 +759,21 @@ class DriftClientRepository implements ClientRepository {
     return (await query.get()).map(_toDietEntry).toList();
   }
 
+  @override
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date) async {
+    // 데모는 하루 지표에 그날 한 운동 이름을 함께 담아 둔다 — 기간 그래프가
+    // 읽는 것과 같은 표라, 그래프의 분 수와 여기 이름이 같은 날을 말한다.
+    final ClientDailyMetricRow? row =
+        await (_db.select(_db.clientDailyMetrics)
+              ..where((t) => t.clientId.equals(clientId))
+              ..where((t) => t.date.equals(ymd(date))))
+            .getSingleOrNull();
+    if (row == null) return const <String>[];
+    final Object? decoded = jsonDecode(row.exercisesJson);
+    if (decoded is! List<Object?>) return const <String>[];
+    return decoded.whereType<String>().toList(growable: false);
+  }
+
   ClientDietEntry _toDietEntry(ClientDietEntryRow row) => ClientDietEntry(
     meal: row.meal,
     items: row.items,
@@ -969,6 +988,14 @@ final clientDietOnProvider = FutureProvider.autoDispose
       return ref
           .watch(clientRepositoryProvider)
           .fetchDietOn(key.clientId, key.date);
+    });
+
+/// 한 고객이 [date] 에 한 운동 이름들. 펼친 날에만 읽는다(#1025).
+final clientExercisesOnProvider = FutureProvider.autoDispose
+    .family<List<String>, ({String clientId, DateTime date})>((ref, key) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchExercisesOn(key.clientId, key.date);
     });
 
 /// 기간에 맞는 운동 조언. 식단(`clientDietAdviceProvider`)과 같은 모양이다.

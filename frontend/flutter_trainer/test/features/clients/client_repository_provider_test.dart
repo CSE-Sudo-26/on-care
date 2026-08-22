@@ -102,6 +102,10 @@ class _StreamingClientRepository implements ClientRepository {
   ) async => const <ClientDietEntry>[];
 
   @override
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date) async =>
+      const <String>[];
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
