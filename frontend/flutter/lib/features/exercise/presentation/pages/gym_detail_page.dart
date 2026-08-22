@@ -352,6 +352,7 @@ class _TrainerPickerSheet extends ConsumerWidget {
                           request.status == ConsultationStatus.pending,
                     );
                     return _AffiliatedTrainerRow(
+                      key: Key('gym-consult-trainer-${trainer.id}'),
                       trainer: trainer,
                       trailingLabel: pending ? l.exConsultPendingCta : null,
                       onTap: pending
@@ -471,6 +472,7 @@ class _AffiliatedTrainerRow extends StatelessWidget {
     required this.trainer,
     this.onTap,
     this.trailingLabel,
+    super.key,
   });
 
   final Trainer trainer;
