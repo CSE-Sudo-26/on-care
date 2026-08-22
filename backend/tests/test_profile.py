@@ -167,6 +167,43 @@ def test_weekly_exercise_goals_are_saved_per_user(client):
     assert profile_b.json()["weekly_burn_goal"] is None
 
 
+def test_exercise_type_goals_are_saved_and_cleared(client):
+    """운동 탭이 견주는 목표(일일 소모 + 유형별 주간)를 저장·해제한다. (#1139)"""
+    token, _ = _register_and_login(client)
+
+    updated = client.put(
+        "/v1/users/me/health-goals",
+        json={
+            "daily_burn_kcal": 400,
+            "weekly_cardio_minutes": 240,
+            "weekly_strength_sets": 30,
+            "weekly_flexibility_minutes": 90,
+        },
+        headers=_auth(token),
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["daily_burn_kcal"] == 400
+    assert updated.json()["weekly_cardio_minutes"] == 240
+    assert updated.json()["weekly_strength_sets"] == 30
+    assert updated.json()["weekly_flexibility_minutes"] == 90
+
+    stored = client.get("/v1/users/me/profile", headers=_auth(token))
+    assert stored.json()["daily_burn_kcal"] == 400
+    assert stored.json()["weekly_strength_sets"] == 30
+
+    # 명시적 null 은 목표 해제다 — 지운 목표는 지워져야 한다.
+    cleared = client.put(
+        "/v1/users/me/health-goals",
+        json={"daily_burn_kcal": None, "weekly_cardio_minutes": None},
+        headers=_auth(token),
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["daily_burn_kcal"] is None
+    assert cleared.json()["weekly_cardio_minutes"] is None
+    # 손대지 않은 값은 그대로 남는다.
+    assert cleared.json()["weekly_strength_sets"] == 30
+
+
 def test_delete_me_removes_account(client):
     token, email = _register_and_login(client)
     r = client.delete("/v1/users/me", headers=_auth(token))

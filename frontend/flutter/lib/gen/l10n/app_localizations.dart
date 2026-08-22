@@ -3251,8 +3251,44 @@ abstract class AppLocalizations {
   /// Section label in the health goals sheet.
   ///
   /// In en, this message translates to:
-  /// **'Weekly exercise goals'**
+  /// **'Exercise goals'**
   String get myGoalsExerciseSection;
+
+  /// No description provided for @myGoalBurnDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily calories burned (kcal)'**
+  String get myGoalBurnDaily;
+
+  /// No description provided for @myGoalCardioWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly cardio (min)'**
+  String get myGoalCardioWeekly;
+
+  /// No description provided for @myGoalStrengthWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly strength (sets)'**
+  String get myGoalStrengthWeekly;
+
+  /// No description provided for @myGoalFlexibilityWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly stretching (min)'**
+  String get myGoalFlexibilityWeekly;
+
+  /// No description provided for @myGoalExerciseSuggestionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week'**
+  String get myGoalExerciseSuggestionNote;
+
+  /// No description provided for @myGoalExerciseApplySuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Use suggested goals'**
+  String get myGoalExerciseApplySuggestion;
 
   /// Health goal field label.
   ///

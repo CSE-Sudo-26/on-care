@@ -13,6 +13,10 @@ class MockAccountRepository implements AccountRepository {
     email: 'minsu@oncare.com',
     phone: '010-1234-5678',
     birthDate: '1990-01-15',
+    // 트레이너 앱의 김민수와 같은 사람이다 — 성별과 목표가 두 앱에서 같아야
+    // 한다 (#1140).
+    gender: 'male',
+    goals: '혈압 관리 · 체중 감량',
     dailyCalories: 2000,
     dailySodiumMg: 2000,
     dailySugarG: 50,
@@ -119,6 +123,10 @@ class MockAccountRepository implements AccountRepository {
     GoalUpdate? weeklyWorkoutGoal,
     GoalUpdate? weeklyExerciseMinutesGoal,
     GoalUpdate? weeklyBurnGoal,
+    GoalUpdate? dailyBurnKcal,
+    GoalUpdate? weeklyCardioMinutes,
+    GoalUpdate? weeklyStrengthSets,
+    GoalUpdate? weeklyFlexibilityMinutes,
   }) async {
     _profile = UserProfile(
       id: _profile.id,
@@ -155,6 +163,18 @@ class MockAccountRepository implements AccountRepository {
       weeklyBurnGoal: weeklyBurnGoal == null
           ? _profile.weeklyBurnGoal
           : weeklyBurnGoal.value,
+      dailyBurnKcal: dailyBurnKcal == null
+          ? _profile.dailyBurnKcal
+          : dailyBurnKcal.value,
+      weeklyCardioMinutes: weeklyCardioMinutes == null
+          ? _profile.weeklyCardioMinutes
+          : weeklyCardioMinutes.value,
+      weeklyStrengthSets: weeklyStrengthSets == null
+          ? _profile.weeklyStrengthSets
+          : weeklyStrengthSets.value,
+      weeklyFlexibilityMinutes: weeklyFlexibilityMinutes == null
+          ? _profile.weeklyFlexibilityMinutes
+          : weeklyFlexibilityMinutes.value,
     );
     return _profile;
   }

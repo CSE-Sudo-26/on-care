@@ -935,7 +935,13 @@
   "@myGoalsDietSection": {
     "description": "Section label in the health goals sheet."
   },
-  "myGoalsExerciseSection": "Weekly exercise goals",
+  "myGoalsExerciseSection": "Exercise goals",
+  "myGoalBurnDaily": "Daily calories burned (kcal)",
+  "myGoalCardioWeekly": "Weekly cardio (min)",
+  "myGoalStrengthWeekly": "Weekly strength (sets)",
+  "myGoalFlexibilityWeekly": "Weekly stretching (min)",
+  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week",
+  "myGoalExerciseApplySuggestion": "Use suggested goals",
   "@myGoalsExerciseSection": {
     "description": "Section label in the health goals sheet."
   },

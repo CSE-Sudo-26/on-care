@@ -1697,7 +1697,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalsDietSection => '식단 일일 목표';
 
   @override
-  String get myGoalsExerciseSection => '주간 운동 목표';
+  String get myGoalsExerciseSection => '운동 목표';
+
+  @override
+  String get myGoalBurnDaily => '일일 소모 칼로리 (kcal)';
+
+  @override
+  String get myGoalCardioWeekly => '주간 유산소 (분)';
+
+  @override
+  String get myGoalStrengthWeekly => '주간 근력 (세트)';
+
+  @override
+  String get myGoalFlexibilityWeekly => '주간 스트레칭 (분)';
+
+  @override
+  String get myGoalExerciseSuggestionNote =>
+      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 스트레칭 60분';
+
+  @override
+  String get myGoalExerciseApplySuggestion => '권장 비율로 채우기';
 
   @override
   String get myGoalCalories => '일일 칼로리 제한 (kcal)';

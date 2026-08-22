@@ -27,6 +27,10 @@ class UserProfile {
     this.weeklyWorkoutGoal,
     this.weeklyExerciseMinutesGoal,
     this.weeklyBurnGoal,
+    this.dailyBurnKcal,
+    this.weeklyCardioMinutes,
+    this.weeklyStrengthSets,
+    this.weeklyFlexibilityMinutes,
   });
 
   final String id;
@@ -69,6 +73,13 @@ class UserProfile {
       weeklyExerciseMinutesGoal ?? defaultWeeklyExerciseMinutesGoal;
   int get effectiveWeeklyBurnGoal => weeklyBurnGoal ?? defaultWeeklyBurnGoal;
 
+  // 운동 탭이 실제로 견주는 목표 (#1139). 소모는 **하루**, 유형별은 **한 주**다
+  // — 근력을 7 로 나누면 "2.3세트" 라는 뜻 없는 수가 된다.
+  final int? dailyBurnKcal;
+  final int? weeklyCardioMinutes;
+  final int? weeklyStrengthSets;
+  final int? weeklyFlexibilityMinutes;
+
   factory UserProfile.fromJson(Map<String, Object?> json) => UserProfile(
     id: (json['id'] as String?) ?? '',
     name: (json['name'] as String?) ?? '',
@@ -89,5 +100,10 @@ class UserProfile {
     weeklyExerciseMinutesGoal: (json['weekly_exercise_minutes_goal'] as num?)
         ?.toInt(),
     weeklyBurnGoal: (json['weekly_burn_goal'] as num?)?.toInt(),
+    dailyBurnKcal: (json['daily_burn_kcal'] as num?)?.toInt(),
+    weeklyCardioMinutes: (json['weekly_cardio_minutes'] as num?)?.toInt(),
+    weeklyStrengthSets: (json['weekly_strength_sets'] as num?)?.toInt(),
+    weeklyFlexibilityMinutes: (json['weekly_flexibility_minutes'] as num?)
+        ?.toInt(),
   );
 }

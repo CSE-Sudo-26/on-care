@@ -26,6 +26,7 @@ import 'package:oncare/features/member_coach/presentation/controllers/member_coa
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/metric_trend_chart.dart';
@@ -702,7 +703,8 @@ class _ExerciseCard extends ConsumerWidget {
     // 예전에는 활동 시간·소모 칼로리·운동 일수를 MY 프로필 목표(주 3회·150분·
     // 500kcal)와 견줬는데, 운동 탭은 유형별 주간 목표(ExerciseLoadGoals)를 쓰고
     // 있어 같은 한 주를 두 화면이 다르게 말했다.
-    const ExerciseLoadGoals goals = kDefaultExerciseLoadGoals;
+    // MY 건강 목표에서 저장한 값을 운동 탭과 함께 읽는다 (#1139).
+    final ExerciseLoadGoals goals = ref.watch(exerciseLoadGoalsProvider);
     final List<ExerciseDayLoad> loads = wk == null
         ? const <ExerciseDayLoad>[]
         : dayLoadsOfWeek(wk, _thisMonday());

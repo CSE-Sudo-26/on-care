@@ -298,7 +298,7 @@ void main() {
     expect(find.text('오른쪽 어깨 가동 범위를 확인해 주세요.'), findsOneWidget);
   });
 
-  testWidgets('홈 운동 카드는 운동 탭과 같은 유형별 주간 목표를 쓴다 (#1119)', (
+  testWidgets('MY 에서 저장한 운동 목표가 열려 있던 홈·운동 탭에 반영된다 (#1139)', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
@@ -346,22 +346,26 @@ void main() {
 
     await tester.tap(find.byKey(const Key('openGoals')));
     await tester.pumpAndSettle();
+    // 운동 목표 네 칸: 일일 소모 · 주간 유산소 · 주간 근력 · 주간 스트레칭.
+    // 식단 여섯 칸 뒤에 온다.
     final Finder fields = find.byType(TextField);
-    await tester.enterText(fields.at(6), '5');
+    await tester.enterText(fields.at(6), '400');
     await tester.enterText(fields.at(7), '240');
-    await tester.enterText(fields.at(8), '900');
+    await tester.enterText(fields.at(8), '30');
+    await tester.enterText(fields.at(9), '90');
     final Finder save = find.text('저장');
     await tester.ensureVisible(save);
     await tester.tap(save);
     await tester.pumpAndSettle();
 
     expect(find.byType(HealthGoalsPage), findsNothing);
-    // MY 의 주간 횟수·시간·소모 목표는 아직 이 카드를 움직이지 않는다 — 건강
-    // 목표를 운동 탭의 네 지표로 바꾸고 다시 이어 붙이는 것은 #1139 이다.
-    expect(find.text(' /5일'), findsNothing);
-    expect(find.text(' /240분'), findsNothing);
-    expect(find.text(' /900kcal'), findsNothing);
-    expect(find.text(' /2,100kcal'), findsOneWidget);
+    // 저장한 목표가 홈 카드의 기준으로 바로 들어온다 (#1139). 주간 소모는
+    // 하루 목표 × 7 이다.
+    expect(find.text(' /2,800kcal'), findsOneWidget);
+    expect(find.text(' /240분'), findsOneWidget);
+    expect(find.text(' /30세트'), findsOneWidget);
+    expect(find.text(' /90분'), findsOneWidget);
+    expect(find.text(' /2,100kcal'), findsNothing);
 
     await tester.tap(find.byKey(const Key('showExercise')));
     await tester.pumpAndSettle();

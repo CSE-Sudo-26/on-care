@@ -34,6 +34,10 @@ class _RecordingAccountRepository extends MockAccountRepository {
     GoalUpdate? weeklyWorkoutGoal,
     GoalUpdate? weeklyExerciseMinutesGoal,
     GoalUpdate? weeklyBurnGoal,
+    GoalUpdate? dailyBurnKcal,
+    GoalUpdate? weeklyCardioMinutes,
+    GoalUpdate? weeklyStrengthSets,
+    GoalUpdate? weeklyFlexibilityMinutes,
   }) {
     called = true;
     lastCarbs = dailyCarbsG;
@@ -48,6 +52,10 @@ class _RecordingAccountRepository extends MockAccountRepository {
       weeklyWorkoutGoal: weeklyWorkoutGoal,
       weeklyExerciseMinutesGoal: weeklyExerciseMinutesGoal,
       weeklyBurnGoal: weeklyBurnGoal,
+      dailyBurnKcal: dailyBurnKcal,
+      weeklyCardioMinutes: weeklyCardioMinutes,
+      weeklyStrengthSets: weeklyStrengthSets,
+      weeklyFlexibilityMinutes: weeklyFlexibilityMinutes,
     );
   }
 }

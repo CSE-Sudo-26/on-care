@@ -82,6 +82,10 @@ class DioAccountRepository implements AccountRepository {
     GoalUpdate? weeklyWorkoutGoal,
     GoalUpdate? weeklyExerciseMinutesGoal,
     GoalUpdate? weeklyBurnGoal,
+    GoalUpdate? dailyBurnKcal,
+    GoalUpdate? weeklyCardioMinutes,
+    GoalUpdate? weeklyStrengthSets,
+    GoalUpdate? weeklyFlexibilityMinutes,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/users/me/health-goals',
@@ -99,6 +103,13 @@ class DioAccountRepository implements AccountRepository {
         if (weeklyExerciseMinutesGoal != null)
           'weekly_exercise_minutes_goal': weeklyExerciseMinutesGoal.value,
         if (weeklyBurnGoal != null) 'weekly_burn_goal': weeklyBurnGoal.value,
+        if (dailyBurnKcal != null) 'daily_burn_kcal': dailyBurnKcal.value,
+        if (weeklyCardioMinutes != null)
+          'weekly_cardio_minutes': weeklyCardioMinutes.value,
+        if (weeklyStrengthSets != null)
+          'weekly_strength_sets': weeklyStrengthSets.value,
+        if (weeklyFlexibilityMinutes != null)
+          'weekly_flexibility_minutes': weeklyFlexibilityMinutes.value,
       },
     );
     return UserProfile.fromJson(res.data!);
