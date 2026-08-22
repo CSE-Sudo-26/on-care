@@ -26,6 +26,7 @@ def test_reserve_flushes_schedule_before_reservation() -> None:
         starts_at=now + timedelta(days=1),
         capacity=1,
         remaining=1,
+        session_type="1:1 PT",
     )
     member = User(
         id="member-order-test",
@@ -156,12 +157,14 @@ def created_slots(db_session):
     db_session.commit()
 
 
-def _create_slot(client, trainer_token: str, created_slots, *, capacity: int = 2):
+def _create_slot(
+    client, trainer_token: str, created_slots, *, session_type: str = "1:1 PT"
+):
     starts_at = datetime.now(timezone.utc) + timedelta(days=2)
     response = client.post(
         "/v1/trainer/reservation-slots",
         headers=_headers(trainer_token),
-        json={"starts_at": starts_at.isoformat(), "capacity": capacity},
+        json={"starts_at": starts_at.isoformat(), "session_type": session_type},
     )
     assert response.status_code == 201, response.text
     created_slots.append(response.json()["id"])
@@ -179,8 +182,10 @@ def test_trainer_creates_and_member_lists_slots(client, created_slots):
 
     assert response.status_code == 200, response.text
     selected = next(row for row in response.json() if row["id"] == slot["id"])
-    assert selected["capacity"] == 2
-    assert selected["remaining"] == 2
+    # 슬롯은 늘 한 사람 몫이다(#1083) — 정원을 고를 자리가 없다.
+    assert selected["capacity"] == 1
+    assert selected["remaining"] == 1
+    assert selected["session_type"] == "1:1 PT"
 
 
 def test_reservation_persists_and_appears_in_trainer_schedule(
@@ -202,12 +207,14 @@ def test_reservation_persists_and_appears_in_trainer_schedule(
     assert reservation is not None
     assert reservation.member_id == "user-jisu"
     persisted_slot = db_session.get(TrainerReservationSlot, slot["id"])
-    assert persisted_slot.remaining == 1
+    assert persisted_slot.remaining == 0
     schedule = db_session.get(TrainerSchedule, booked.json()["schedule_id"])
     assert schedule is not None
     assert schedule.trainer_id == "trainer-demo"
     assert schedule.member_id == "user-jisu"
     assert schedule.client_name == "이지수"
+    assert schedule.type == "1:1 PT"
+    assert schedule.duration_minutes == 60
 
     timeline = client.get(
         "/v1/trainer/schedule",
@@ -223,7 +230,7 @@ def test_reserved_schedule_cannot_be_updated_or_deleted_as_regular_schedule(
 ):
     trainer_token = _login(client, "trainer@oncare.com")
     member_token = _login(client, "jisu@oncare.com")
-    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+    slot = _create_slot(client, trainer_token, created_slots)
     booked = client.post(
         "/v1/reservations",
         headers=_headers(member_token),
@@ -258,7 +265,7 @@ def test_reserved_schedule_accepts_program_without_changing_booking(
 ):
     trainer_token = _login(client, "trainer@oncare.com")
     member_token = _login(client, "jisu@oncare.com")
-    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+    slot = _create_slot(client, trainer_token, created_slots)
     booked = client.post(
         "/v1/reservations",
         headers=_headers(member_token),
@@ -364,7 +371,7 @@ def test_member_account_deletion_restores_slot_and_removes_schedule(
 def test_duplicate_and_full_slot_return_409(client, created_slots):
     trainer_token = _login(client, "trainer@oncare.com")
     member_token = _login(client, "jisu@oncare.com")
-    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+    slot = _create_slot(client, trainer_token, created_slots)
 
     first = client.post(
         "/v1/reservations",
@@ -381,18 +388,19 @@ def test_duplicate_and_full_slot_return_409(client, created_slots):
     assert second.status_code == 409
 
 
-def test_trainer_can_change_capacity_and_close_slot(client, created_slots):
+def test_trainer_can_change_session_type_and_close_slot(client, created_slots):
     trainer_token = _login(client, "trainer@oncare.com")
     member_token = _login(client, "jisu@oncare.com")
-    slot = _create_slot(client, trainer_token, created_slots, capacity=3)
+    slot = _create_slot(client, trainer_token, created_slots, session_type="1:1 PT")
 
     updated = client.put(
         f"/v1/trainer/reservation-slots/{slot['id']}",
         headers=_headers(trainer_token),
-        json={"capacity": 4},
+        json={"session_type": "상담"},
     )
     assert updated.status_code == 200
-    assert updated.json()["remaining"] == 4
+    assert updated.json()["session_type"] == "상담"
+    assert updated.json()["remaining"] == 1
 
     closed = client.delete(
         f"/v1/trainer/reservation-slots/{slot['id']}",
@@ -408,6 +416,47 @@ def test_trainer_can_change_capacity_and_close_slot(client, created_slots):
         json={"slot_id": slot["id"]},
     )
     assert refused.status_code == 409
+
+
+def test_booked_slot_rejects_session_type_change(client, created_slots):
+    """예약이 걸린 자리의 종류는 바꿀 수 없다 — 회원이 본 종류를 그대로 지킨다."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots, session_type="1:1 PT")
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    assert booked.status_code == 201, booked.text
+
+    refused = client.put(
+        f"/v1/trainer/reservation-slots/{slot['id']}",
+        headers=_headers(trainer_token),
+        json={"session_type": "상담"},
+    )
+    assert refused.status_code == 409, refused.text
+
+
+def test_consultation_slot_reservation_creates_a_thirty_minute_session(
+    client, db_session, created_slots
+):
+    """상담 슬롯을 예약하면 종류·소요 시간이 그 슬롯을 따라간다(#1083)."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots, session_type="상담")
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+
+    assert booked.status_code == 201, booked.text
+    schedule = db_session.get(TrainerSchedule, booked.json()["schedule_id"])
+    assert schedule is not None
+    assert schedule.type == "상담"
+    assert schedule.duration_minutes == 30
 
 
 def test_past_slots_are_not_returned(client, db_session, created_slots):
@@ -503,7 +552,7 @@ def test_member_cancels_and_the_seat_comes_back(client, db_session, created_slot
     after_booking = client.get(
         "/v1/trainers/trainer-demo/slots", headers=_headers(member_token)
     ).json()
-    assert next(r for r in after_booking if r["id"] == slot["id"])["remaining"] == 1
+    assert next(r for r in after_booking if r["id"] == slot["id"])["remaining"] == 0
 
     cancelled = client.delete(
         f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
@@ -513,7 +562,7 @@ def test_member_cancels_and_the_seat_comes_back(client, db_session, created_slot
     after_cancel = client.get(
         "/v1/trainers/trainer-demo/slots", headers=_headers(member_token)
     ).json()
-    assert next(r for r in after_cancel if r["id"] == slot["id"])["remaining"] == 2
+    assert next(r for r in after_cancel if r["id"] == slot["id"])["remaining"] == 1
 
     db_session.expire_all()
     assert db_session.get(TrainerReservation, reservation_id) is None
@@ -532,7 +581,7 @@ def test_cancelling_frees_the_slot_for_a_new_booking(client, created_slots):
     """취소한 자리는 다시 예약할 수 있다 — 유니크 제약에 걸리지 않는다."""
     trainer_token = _login(client, "trainer@oncare.com")
     member_token = _login(client, "jisu@oncare.com")
-    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+    slot = _create_slot(client, trainer_token, created_slots)
 
     first = client.post(
         "/v1/reservations",

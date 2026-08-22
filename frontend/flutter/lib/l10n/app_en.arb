@@ -472,6 +472,8 @@
     }
   },
   "exSlotFull": "Fully booked",
+  "exSlotTypePersonalTraining": "1:1 PT",
+  "exSlotTypeConsultation": "Consultation",
   "exSlotsEmpty": "No times available",
   "exSlotsAllBooked": "All available times are fully booked",
   "exSlotsLoadError": "Could not load available times.",

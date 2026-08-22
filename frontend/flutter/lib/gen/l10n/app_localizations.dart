@@ -1658,6 +1658,18 @@ abstract class AppLocalizations {
   /// **'Fully booked'**
   String get exSlotFull;
 
+  /// No description provided for @exSlotTypePersonalTraining.
+  ///
+  /// In en, this message translates to:
+  /// **'1:1 PT'**
+  String get exSlotTypePersonalTraining;
+
+  /// No description provided for @exSlotTypeConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation'**
+  String get exSlotTypeConsultation;
+
   /// No description provided for @exSlotsEmpty.
   ///
   /// In en, this message translates to:

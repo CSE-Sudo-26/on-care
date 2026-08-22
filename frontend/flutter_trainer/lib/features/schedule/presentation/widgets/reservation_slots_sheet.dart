@@ -8,6 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/reservation_slot_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 class ReservationSlotsSheet extends ConsumerStatefulWidget {
@@ -24,9 +25,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
   bool _saving = false;
 
-  /// 슬롯은 늘 한 사람 몫이다 — 1:1 PT 이거나 상담이고, 여럿이 함께 듣는
-  /// 자리는 없다. 정원을 고를 이유가 없으니 입력칸을 두지 않는다(#1012).
-  static const int _capacity = 1;
+  /// 정원 대신 종류를 고른다 — 슬롯은 늘 한 사람 몫이다(#1012). 회원 예약이
+  /// 만드는 일정이 이 종류를 그대로 물려받는다(#1083).
+  String _type = SessionType.personalTraining;
 
   bool _sameDay(DateTime left, DateTime right) =>
       left.year == right.year &&
@@ -54,7 +55,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .create(startsAt: startsAt, capacity: _capacity);
+          .create(startsAt: startsAt, sessionType: _type);
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotOpened);
     } catch (error) {
@@ -67,23 +68,50 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   Future<void> _edit(ReservationSlot slot) async {
     final AppLocalizations l = AppLocalizations.of(context);
     var time = TimeOfDay.fromDateTime(slot.startsAt);
-    // 정원은 늘 1이라 고칠 것이 시각뿐이다(#1012).
-    final changed = await showDialog<TimeOfDay?>(
+    var type = slot.sessionType;
+    // 이미 예약이 걸린 자리는 종류를 고칠 수 없다 — 서버가 409 로 막는
+    // 동작을 아예 내놓지 않는다(#871 과 같은 규약).
+    final typeLocked = slot.booked > 0;
+    final changed = await showDialog<(TimeOfDay, String)?>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(l.slotEditTitle),
-          content: ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l.slotStartTime),
-            trailing: Text(time.format(context)),
-            onTap: () async {
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: time,
-              );
-              if (picked != null) setDialogState(() => time = picked);
-            },
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.slotStartTime),
+                trailing: Text(time.format(context)),
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: time,
+                  );
+                  if (picked != null) setDialogState(() => time = picked);
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.slotSessionType),
+                trailing: typeLocked
+                    ? Text(sessionTypeLabel(l, type))
+                    : DropdownButton<String>(
+                        value: type,
+                        underline: const SizedBox.shrink(),
+                        items: <DropdownMenuItem<String>>[
+                          for (final t in SessionType.all)
+                            DropdownMenuItem<String>(
+                              value: t,
+                              child: Text(sessionTypeLabel(l, t)),
+                            ),
+                        ],
+                        onChanged: (v) =>
+                            setDialogState(() => type = v ?? type),
+                      ),
+              ),
+            ],
           ),
           actions: <Widget>[
             TextButton(
@@ -91,7 +119,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               child: Text(l.actionCancel),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, time),
+              onPressed: () => Navigator.pop(dialogContext, (time, type)),
               child: Text(l.actionSave),
             ),
           ],
@@ -103,7 +131,11 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .update(slot.id, startsAt: _startsAt(changed), capacity: _capacity);
+          .update(
+            slot.id,
+            startsAt: _startsAt(changed.$1),
+            sessionType: changed.$2 == slot.sessionType ? null : changed.$2,
+          );
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotUpdated);
     } catch (error) {
@@ -159,10 +191,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     if (error is StateError) {
       // 목 리포지토리는 코드를 던진다 — 문구는 여기서 붙인다. (#501)
       return switch (error.message.toString()) {
-        SlotErrorCodes.capacityRange => l.slotCapacityRange,
         SlotErrorCodes.futureOnly => l.slotFutureOnly,
         SlotErrorCodes.notFound => l.slotNotFound,
-        SlotErrorCodes.capacityBelowBooked => l.slotCapacityBelowBooked,
+        SlotErrorCodes.typeLockedByBooking => l.slotTypeLockedByBooking,
         _ => l.slotActionFailed,
       };
     }
@@ -223,6 +254,33 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
+              // 종류(1:1 PT/상담)를 먼저 고른다 — 정원이 없어진 자리다(#1083).
+              // 회원 예약이 만드는 일정이 이 종류를 그대로 물려받는다.
+              Row(
+                children: <Widget>[
+                  Text(
+                    l.slotSessionType,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  DropdownButton<String>(
+                    key: const ValueKey<String>('slot-session-type'),
+                    value: _type,
+                    underline: const SizedBox.shrink(),
+                    items: <DropdownMenuItem<String>>[
+                      for (final t in SessionType.all)
+                        DropdownMenuItem<String>(
+                          value: t,
+                          child: Text(sessionTypeLabel(l, t)),
+                        ),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (v) => setState(() => _type = v ?? _type),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -313,18 +371,31 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
-                                child: Text(
-                                  slot.isClosed
-                                      ? l.slotClosedSummary(slot.booked)
-                                      : l.slotOpenSummary(
-                                          slot.booked,
-                                          slot.remaining,
-                                        ),
-                                  style: TextStyle(
-                                    color: slot.isClosed
-                                        ? AppColors.subtleForeground
-                                        : AppColors.foreground,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
+                                      sessionTypeLabel(l, slot.sessionType),
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      slot.isClosed
+                                          ? l.slotClosedSummary(slot.booked)
+                                          : l.slotOpenSummary(
+                                              slot.booked,
+                                              slot.remaining,
+                                            ),
+                                      style: TextStyle(
+                                        color: slot.isClosed
+                                            ? AppColors.subtleForeground
+                                            : AppColors.foreground,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               if (!slot.isClosed) ...<Widget>[

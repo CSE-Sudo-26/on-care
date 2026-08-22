@@ -338,34 +338,42 @@ class MockGymRepository implements GymRepository {
       // 오늘 자리는 데모에서 "가까운 시간"을 보여주려고 둔다. 저녁에 앱을 켜면
       // 이미 지나 목록에서 빠지므로, 트레이너마다 내일 이후 자리를 함께 둬서
       // 어느 시각에 열어도 예약할 수 있는 자리가 남는다.
+      //
+      // 슬롯은 늘 한 사람 몫이다(#1012) — 정원은 언제나 1. 종류(1:1 PT/상담)
+      // 는 트레이너가 열 때 고른다(#1083). 상담 자리도 여기 섞어 둬야 회원
+      // 헬스장 탭의 "희망 시간대" 목록에서 상담도 고를 수 있는지 볼 수 있다.
       TrainerSlot(
         id: 'slot-kim-today',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 0, 19, 0),
-        capacity: 2,
+        capacity: 1,
         remaining: 1,
+        sessionType: '1:1 PT',
       ),
       TrainerSlot(
         id: 'slot-kim-1',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 1, 7, 30),
-        capacity: 2,
-        remaining: 2,
+        capacity: 1,
+        remaining: 1,
+        sessionType: '1:1 PT',
       ),
       TrainerSlot(
         id: 'slot-kim-2',
         trainerId: 'trainer-kim',
         // 마감된 자리도 남겨 두어야 "그날은 꽉 찼다"가 읽힌다.
         startsAt: _at(today, 1, 20, 0),
-        capacity: 3,
+        capacity: 1,
         remaining: 0,
+        sessionType: '1:1 PT',
       ),
       TrainerSlot(
         id: 'slot-kim-3',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 2, 18, 0),
-        capacity: 2,
-        remaining: 2,
+        capacity: 1,
+        remaining: 1,
+        sessionType: '상담',
       ),
       // 박트레이너 — 재활 세션이라 1:1, 낮 시간대.
       TrainerSlot(
@@ -374,6 +382,7 @@ class MockGymRepository implements GymRepository {
         startsAt: _at(today, 0, 14, 0),
         capacity: 1,
         remaining: 1,
+        sessionType: '1:1 PT',
       ),
       TrainerSlot(
         id: 'slot-park-1',
@@ -381,6 +390,7 @@ class MockGymRepository implements GymRepository {
         startsAt: _at(today, 1, 11, 0),
         capacity: 1,
         remaining: 1,
+        sessionType: '상담',
       ),
       TrainerSlot(
         id: 'slot-park-2',
@@ -388,36 +398,40 @@ class MockGymRepository implements GymRepository {
         startsAt: _at(today, 2, 15, 0),
         capacity: 1,
         remaining: 1,
+        sessionType: '1:1 PT',
       ),
-      // 최트레이너 — 소그룹이라 정원이 크다.
       TrainerSlot(
         id: 'slot-choi-1',
         trainerId: 'trainer-choi',
         startsAt: _at(today, 1, 18, 30),
-        capacity: 4,
-        remaining: 3,
+        capacity: 1,
+        remaining: 1,
+        sessionType: '1:1 PT',
       ),
       // 강트레이너 — 교대근무 대응이라 이른 아침·늦은 밤.
       TrainerSlot(
         id: 'slot-kang-today',
         trainerId: 'trainer-kang',
         startsAt: _at(today, 0, 6, 0),
-        capacity: 2,
-        remaining: 2,
+        capacity: 1,
+        remaining: 1,
+        sessionType: '1:1 PT',
       ),
       TrainerSlot(
         id: 'slot-kang-1',
         trainerId: 'trainer-kang',
         startsAt: _at(today, 1, 22, 0),
-        capacity: 2,
+        capacity: 1,
         remaining: 1,
+        sessionType: '1:1 PT',
       ),
       TrainerSlot(
         id: 'slot-lee-1',
         trainerId: 'trainer-lee',
         startsAt: _at(today, 2, 10, 0),
-        capacity: 2,
-        remaining: 2,
+        capacity: 1,
+        remaining: 1,
+        sessionType: '1:1 PT',
       ),
       // 윤트레이너는 슬롯이 없다 — 빈 상태를 데모에서도 볼 수 있어야 한다.
     ];

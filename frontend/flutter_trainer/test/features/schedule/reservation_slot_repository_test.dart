@@ -17,13 +17,17 @@ void main() {
     repository = DioReservationSlotRepository(dio);
   });
 
-  Map<String, dynamic> slotJson({int remaining = 2}) => <String, dynamic>{
+  Map<String, dynamic> slotJson({
+    int remaining = 1,
+    String sessionType = '1:1 PT',
+  }) => <String, dynamic>{
     'id': 'slot-1',
     'trainer_id': 'trainer-1',
     'starts_at': '2026-08-10T01:00:00Z',
-    'capacity': 3,
+    'capacity': 1,
     'remaining': remaining,
     'is_closed': false,
+    'session_type': sessionType,
   };
 
   test('list maps the trainer slot API response', () async {
@@ -31,19 +35,20 @@ void main() {
       (_) async => Response<List<dynamic>>(
         requestOptions: RequestOptions(path: '/trainer/reservation-slots'),
         statusCode: 200,
-        data: <dynamic>[slotJson()],
+        data: <dynamic>[slotJson(remaining: 0)],
       ),
     );
 
     final result = await repository.list();
 
     expect(result.single.id, 'slot-1');
-    expect(result.single.capacity, 3);
-    expect(result.single.remaining, 2);
+    expect(result.single.capacity, 1);
+    expect(result.single.remaining, 0);
     expect(result.single.booked, 1);
+    expect(result.single.sessionType, '1:1 PT');
   });
 
-  test('create sends UTC time and capacity', () async {
+  test('create sends UTC time and session type', () async {
     when(
       () => dio.post<Map<String, dynamic>>(
         '/trainer/reservation-slots',
@@ -53,13 +58,13 @@ void main() {
       (_) async => Response<Map<String, dynamic>>(
         requestOptions: RequestOptions(path: '/trainer/reservation-slots'),
         statusCode: 201,
-        data: slotJson(remaining: 3),
+        data: slotJson(sessionType: '상담'),
       ),
     );
 
     await repository.create(
       startsAt: DateTime.parse('2026-08-10T10:00:00+09:00'),
-      capacity: 3,
+      sessionType: '상담',
     );
 
     final data =
@@ -72,7 +77,7 @@ void main() {
             as Map<String, dynamic>;
     expect(data, <String, dynamic>{
       'starts_at': '2026-08-10T01:00:00.000Z',
-      'capacity': 3,
+      'session_type': '상담',
     });
   });
 
@@ -88,7 +93,7 @@ void main() {
           path: '/trainer/reservation-slots/slot-1',
         ),
         statusCode: 200,
-        data: slotJson(),
+        data: slotJson(sessionType: '상담'),
       ),
     );
     when(
@@ -104,56 +109,53 @@ void main() {
       ),
     );
 
-    await repository.update('slot-1', capacity: 4);
+    await repository.update('slot-1', sessionType: '상담');
     final closed = await repository.close('slot-1');
 
     verify(
       () => dio.put<Map<String, dynamic>>(
         '/trainer/reservation-slots/slot-1',
-        data: <String, dynamic>{'capacity': 4},
+        data: <String, dynamic>{'session_type': '상담'},
       ),
     ).called(1);
     expect(closed.isClosed, isTrue);
   });
 
   group('MockReservationSlotRepository validation', () {
-    test('create rejects past times and capacities outside 1 to 100', () async {
+    test('create rejects past times', () async {
       final mockRepository = MockReservationSlotRepository();
-      final future = nowKst().add(const Duration(days: 1));
 
       await expectLater(
         mockRepository.create(
           startsAt: nowKst().subtract(const Duration(minutes: 1)),
-          capacity: 1,
+          sessionType: '1:1 PT',
         ),
-        throwsStateError,
-      );
-      await expectLater(
-        mockRepository.create(startsAt: future, capacity: 0),
-        throwsStateError,
-      );
-      await expectLater(
-        mockRepository.create(startsAt: future, capacity: 101),
         throwsStateError,
       );
       expect(await mockRepository.list(), isEmpty);
     });
 
-    test('update rejects past times and capacities outside 1 to 100', () async {
+    test('create opens a slot with a fixed capacity of one', () async {
+      final mockRepository = MockReservationSlotRepository();
+      final future = nowKst().add(const Duration(days: 1));
+
+      final slot = await mockRepository.create(
+        startsAt: future,
+        sessionType: '상담',
+      );
+
+      expect(slot.capacity, 1);
+      expect(slot.remaining, 1);
+      expect(slot.sessionType, '상담');
+    });
+
+    test('update rejects past times', () async {
       final mockRepository = MockReservationSlotRepository();
       final slot = await mockRepository.create(
         startsAt: nowKst().add(const Duration(days: 1)),
-        capacity: 2,
+        sessionType: '1:1 PT',
       );
 
-      await expectLater(
-        mockRepository.update(slot.id, capacity: 0),
-        throwsStateError,
-      );
-      await expectLater(
-        mockRepository.update(slot.id, capacity: 101),
-        throwsStateError,
-      );
       await expectLater(
         mockRepository.update(
           slot.id,
@@ -163,8 +165,20 @@ void main() {
       );
 
       final unchanged = (await mockRepository.list()).single;
-      expect(unchanged.capacity, 2);
+      expect(unchanged.sessionType, '1:1 PT');
       expect(unchanged.startsAt, slot.startsAt);
+    });
+
+    test('update can change the session type of an open slot', () async {
+      final mockRepository = MockReservationSlotRepository();
+      final slot = await mockRepository.create(
+        startsAt: nowKst().add(const Duration(days: 1)),
+        sessionType: '1:1 PT',
+      );
+
+      final changed = await mockRepository.update(slot.id, sessionType: '상담');
+
+      expect(changed.sessionType, '상담');
     });
   });
 }
