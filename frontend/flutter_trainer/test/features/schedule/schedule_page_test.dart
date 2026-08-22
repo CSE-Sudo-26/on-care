@@ -755,7 +755,7 @@ void main() {
       await settle(tester);
 
       TextButton rejectButton() =>
-          tester.widget<TextButton>(find.widgetWithText(TextButton, '반려하기'));
+          tester.widget<TextButton>(find.widgetWithText(TextButton, '거절하기'));
       expect(rejectButton().onPressed, isNull);
 
       await tester.enterText(find.byType(TextField).last, '   ');
