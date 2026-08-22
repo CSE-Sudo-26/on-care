@@ -220,10 +220,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
           ),
           if (request.message != null) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              request.message!,
-              style: const TextStyle(color: AppColors.mutedForeground),
-            ),
+            _line(l.consultMessage, request.message!),
           ],
           const SizedBox(height: AppSpacing.lg),
           Row(

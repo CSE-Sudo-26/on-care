@@ -302,6 +302,15 @@ void main() {
       await goTo(tester, AppRoutes.messages);
       expect(topOf('seed-client-13'), lessThan(topOf('seed-client-3')));
 
+      // 같은 날 안에서도 화면 시각 그대로 서야 한다(#1087). 강서연(6,
+      // '16:48')·하윤(4, '14:31')·유나(10, '13:25')·태경(13, '11:49')은
+      // 모두 오늘이고, 넷 다 대화의 마지막 메시지가 "3개 중 세 번째"라
+      // 시드가 배열 인덱스를 그대로 시각으로 썼을 때는 넷의 순서가
+      // 시드에 적힌 순서로 뒤섞였다.
+      expect(topOf('seed-client-6'), lessThan(topOf('seed-client-4')));
+      expect(topOf('seed-client-4'), lessThan(topOf('seed-client-10')));
+      expect(topOf('seed-client-10'), lessThan(topOf('seed-client-13')));
+
       // `관리 필요` 는 챙길 사람을 고르는 자리다 — 주의 신호가 앞선다.
       // 노태강은 신호가 없어 목록에서 아예 빠진다.
       await goTo(tester, AppRoutes.messagesFor(null, filter: 'attention'));

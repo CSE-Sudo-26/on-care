@@ -1712,6 +1712,12 @@ abstract class AppLocalizations {
   /// **'Preferred time'**
   String get consultPreferredTime;
 
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
+
   /// No description provided for @consultReject.
   ///
   /// In en, this message translates to:
