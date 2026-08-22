@@ -90,8 +90,12 @@ void main() {
     await _openClient(tester);
 
     expect(find.text('AI에게 묻기'), findsNothing);
-    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-    expect(find.text('메모'), findsOneWidget);
+    // 신체·목표는 통합 대화상자로 옮겼고 메모는 아이콘만 남았다(#1024).
+    expect(find.text('리포트'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('client-detail-open-memo')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('실 API 모드에서도 AI 상담 빠른 버튼을 숨긴다', (WidgetTester tester) async {

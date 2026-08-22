@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSave => 'Save';
 
   @override
+  String get actionSaved => 'Saved';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -530,9 +533,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get memberHealthSaveFailed =>
       'Couldn\'t save the member profile. Please try again';
-
-  @override
-  String get memberHealthTitle => 'Body and goals';
 
   @override
   String get memberHealthSaving => 'Saving…';
@@ -2595,15 +2595,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientQuickProgram => 'Program';
 
   @override
+  String get clientQuickReport => 'Report';
+
+  @override
   String get clientHealthGoals => 'Body profile & goals';
 
   @override
-  String get clientTrainerMemo => 'Memo';
+  String get clientProfileSectionTitle => 'Body, goals & memo';
 
   @override
-  String clientTrainerMemoTitle(String name) {
-    return 'Memos on $name';
-  }
+  String get clientTrainerMemo => 'Memo';
 
   @override
   String get clientTrainerMemoHint =>
