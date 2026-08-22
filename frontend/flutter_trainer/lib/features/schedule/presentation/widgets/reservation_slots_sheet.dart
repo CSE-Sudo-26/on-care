@@ -22,6 +22,7 @@ class ReservationSlotsSheet extends ConsumerStatefulWidget {
 }
 
 class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
+  late DateTime _date = widget.selectedDay;
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
   bool _saving = false;
 
@@ -34,13 +35,23 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       left.month == right.month &&
       left.day == right.day;
 
-  DateTime _startsAt(TimeOfDay time) => DateTime(
-    widget.selectedDay.year,
-    widget.selectedDay.month,
-    widget.selectedDay.day,
-    time.hour,
-    time.minute,
-  );
+  DateTime _startsAt(TimeOfDay time) =>
+      DateTime(_date.year, _date.month, _date.day, time.hour, time.minute);
+
+  /// 시트를 연 날짜만 볼 수 있던 것을 고친다 — 다른 날짜에 슬롯을 열려면
+  /// 시트를 닫고 캘린더에서 날짜를 옮긴 뒤 다시 열어야 했다(#1090).
+  Future<void> _pickDate() async {
+    final today = nowKst();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(today.year, today.month, today.day),
+      lastDate: DateTime(today.year + 1, today.month, today.day),
+    );
+    if (picked != null) {
+      setState(() => _date = DateTime(picked.year, picked.month, picked.day));
+    }
+  }
 
   Future<void> _create() async {
     // await 전에 한 번만 잡아 둔다 — 뒤에서 context 를 다시 만지면 async gap 을
@@ -245,12 +256,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                l.slotIntro(
-                  l.dateMonthDay(
-                    widget.selectedDay.month,
-                    widget.selectedDay.day,
-                  ),
-                ),
+                l.slotIntro(l.dateMonthDay(_date.month, _date.day)),
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -279,6 +285,13 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                         : (v) => setState(() => _type = v ?? _type),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(
+                key: const ValueKey<String>('slot-date'),
+                onPressed: _saving ? null : _pickDate,
+                icon: const Icon(Icons.calendar_today_outlined),
+                label: Text(l.dateMonthDay(_date.month, _date.day)),
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
@@ -325,9 +338,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   ),
                   data: (allSlots) {
                     final daySlots = allSlots
-                        .where(
-                          (slot) => _sameDay(slot.startsAt, widget.selectedDay),
-                        )
+                        .where((slot) => _sameDay(slot.startsAt, _date))
                         .toList();
                     if (daySlots.isEmpty) {
                       return Center(
