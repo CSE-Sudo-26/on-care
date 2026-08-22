@@ -2516,6 +2516,24 @@ abstract class AppLocalizations {
   /// **'Duration'**
   String get schedFieldDuration;
 
+  /// No description provided for @schedFieldStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get schedFieldStart;
+
+  /// No description provided for @schedFieldEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get schedFieldEnd;
+
+  /// No description provided for @schedEndBeforeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'End time must be after the start time'**
+  String get schedEndBeforeStart;
+
   /// No description provided for @schedRepeat.
   ///
   /// In en, this message translates to:

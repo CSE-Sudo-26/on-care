@@ -908,8 +908,11 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // Change 00분 → 15분 in the time picker.
-      await tester.tap(find.text('00분'));
+      // 시작 00분 → 15분. 종료는 소요 시간(기본 60분)을 지키며 바라간다 —
+      // 시작만 옮기면 세션이 짧아지는 것을 막는다(#1090).
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-start-minute')),
+      );
       await settle(tester);
       await tester.tap(find.text('15분').last);
       await settle(tester);
@@ -917,8 +920,49 @@ void main() {
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      // 시간표 블록이 시작·끝을 함께 말한다(기본 60분).
+      // 시간표 블록이 시작·끝을 함께 말한다(기본 60분 유지).
       expect(find.text('10:15\u201311:15'), findsOneWidget);
+    });
+
+    testWidgets('종료 시간을 직접 옮기면 소요 시간이 바뀐다 (#1090)', (tester) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('새 일정'));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const ValueKey<String>('session-end-hour')));
+      await settle(tester);
+      await tester.tap(find.text('11시').last);
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-end-minute')),
+      );
+      await settle(tester);
+      await tester.tap(find.text('30분').last);
+      await settle(tester);
+
+      await tester.tap(find.text('추가하기'));
+      await settle(tester);
+
+      expect(find.text('10:00\u201311:30'), findsOneWidget);
+    });
+
+    testWidgets('종료 시간이 시작보다 이르면 저장을 막는다 (#1090)', (tester) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('새 일정'));
+      await settle(tester);
+
+      // 종료를 시작(10시)보다 이른 6시로 옮긴다.
+      await tester.tap(find.byKey(const ValueKey<String>('session-end-hour')));
+      await settle(tester);
+      await tester.tap(find.text('06시').last);
+      await settle(tester);
+
+      await tester.tap(find.text('추가하기'));
+      await settle(tester);
+
+      expect(find.text('종료 시간은 시작 시간보다 늑어야 해요'), findsOneWidget);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
