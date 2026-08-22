@@ -2456,30 +2456,6 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled for this day.\nUse New session above to add one.'**
   String get schedEmptyDay;
 
-  /// No description provided for @schedCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark session complete'**
-  String get schedCompleteTitle;
-
-  /// No description provided for @schedCompleteBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This marks the {time} session with {name} complete and logs it to their workout history.'**
-  String schedCompleteBody(String time, String name);
-
-  /// No description provided for @schedNoteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer\'s note (optional)'**
-  String get schedNoteOptional;
-
-  /// No description provided for @schedCompleteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark complete'**
-  String get schedCompleteAction;
-
   /// No description provided for @schedSaveFailed.
   ///
   /// In en, this message translates to:
