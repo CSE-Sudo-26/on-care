@@ -31,7 +31,6 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
-import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 
 /// 소모 칼로리 색. 콘솔의 브랜드 색을 그대로 쓴다.
@@ -522,13 +521,12 @@ class BurnBarChart extends StatelessWidget {
             onSelected: selection.select,
             onVisibleRangeChanged: selection.setVisible,
             daysPerScreen: _slotsPerScreen,
-            goalOverlay: GoalLineOverlay(
-              visible: goalKcal > 0,
-              bottom: chartHeight * (goalKcal / max).clamp(0.0, 1.0),
-              label:
-                  '${l.clientPeriodGoal} '
-                  '${goalKcal.round()}${l.unitKcal}',
-            ),
+            // 목표치는 왼쪽 칸에 두 줄로 적는다 (#1071).
+            goalBottom: goalKcal > 0
+                ? chartHeight * (goalKcal / max).clamp(0.0, 1.0)
+                : null,
+            goalLabel:
+                '${l.clientPeriodGoal}\n${goalKcal.round()}${l.unitKcal}',
             // 달이 바뀌는 칸에만 적는다 — 모든 칸에 적으면 글자가 서로 겹쳐
             // 아무것도 읽히지 않는다. 회원 앱 `전체` 그래프와 같은 규칙이다.
             labelBuilder: (int i) =>

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -1271,15 +1272,35 @@ class _WeeklyBurnChart extends StatelessWidget {
             ),
           ),
         );
-        return Stack(
-          key: const Key('exerciseAllPeriodChart'),
+        // 목표치는 그래프 왼쪽 칸에 두 줄로 적는다 — 홈 탭 식단 영양 그래프와
+        // 같은 자리다. 예전에는 점선 오른쪽 끝에 알약 라벨로 얹혀 있어, 그래프
+        // 마다 목표치가 다른 자리에 있었다. (#1071)
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Positioned.fill(child: scroller),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: (chartH * (1 - (goal / max).clamp(0.0, 1.0))) - 6,
-              child: IgnorePointer(child: _GoalLine(goal: goal.round())),
+            ChartGoalAxis(
+              height: chartH,
+              label:
+                  '${AppLocalizations.of(context).homeGoal}\n${goal.round()}',
+              lineBottom: chartH * (goal / max).clamp(0.0, 1.0),
+            ),
+            const SizedBox(width: chartGoalAxisGap),
+            Expanded(
+              child: SizedBox(
+                height: c.maxHeight,
+                child: Stack(
+                  key: const Key('exerciseAllPeriodChart'),
+                  children: <Widget>[
+                    Positioned.fill(child: scroller),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: (chartH * (1 - (goal / max).clamp(0.0, 1.0))) - 6,
+                      child: const IgnorePointer(child: _GoalLine()),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         );
@@ -1288,42 +1309,15 @@ class _WeeklyBurnChart extends StatelessWidget {
   }
 }
 
-/// 주간 목표선 — 점선 위에 알약 라벨.
+/// 주간 목표선 — 점선만 긋는다. 목표치는 왼쪽 [ChartGoalAxis] 칸이 적는다.
 class _GoalLine extends StatelessWidget {
-  const _GoalLine({required this.goal});
-
-  final int goal;
+  const _GoalLine();
 
   @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: CustomPaint(
-            size: const Size(double.infinity, 1),
-            painter: _DashPainter(),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            '${l.homeGoal} $goal',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.textMuted,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => CustomPaint(
+    size: const Size(double.infinity, 1),
+    painter: _DashPainter(),
+  );
 }
 
 class _DashPainter extends CustomPainter {
