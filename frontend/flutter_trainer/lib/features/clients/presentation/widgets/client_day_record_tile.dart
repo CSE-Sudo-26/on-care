@@ -122,16 +122,25 @@ class ClientDayRecordTile extends StatelessWidget {
                   // 날짜 칸의 폭을 고정해 줄들이 왼쪽에서 가지런히 선다.
                   // 글씨를 키우면 줄임표 대신 줄어든다 — 카드 제목이 쓰는
                   // 방식과 같다(#1004).
+                  //
+                  // `오늘`·`어제` 는 붙이지 않는다. 접두어가 붙은 줄만 글자가
+                  // 길어져 칸 안에서 더 줄어들고, 그 두 줄만 날짜가 작게
+                  // 보였다. 어차피 목록이 최근 날부터 내려가므로 맨 위가
+                  // 오늘이라는 것은 순서가 말한다.
                   SizedBox(
-                    width: 92,
+                    width: 104,
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: AlignmentDirectional.centerStart,
                       child: Text(
-                        dateLabel(l, date),
+                        l.dateMonthDayWeekday(
+                          date.month,
+                          date.day,
+                          weekdayNames(l)[date.weekday - 1],
+                        ),
                         maxLines: 1,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w700,
                           color: logged
                               ? AppColors.foreground
@@ -149,7 +158,7 @@ class ClientDayRecordTile extends StatelessWidget {
                       textAlign: TextAlign.end,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13.5,
                         fontWeight: logged ? FontWeight.w600 : FontWeight.w500,
                         color: logged
                             ? AppColors.mutedForeground
@@ -223,7 +232,7 @@ class _DetailPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
       color: AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.pill),
@@ -235,14 +244,14 @@ class _DetailPill extends StatelessWidget {
           TextSpan(
             text: '$label ',
             style: const TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               color: AppColors.subtleForeground,
             ),
           ),
           TextSpan(
             text: value,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
               color: AppColors.foreground,
             ),

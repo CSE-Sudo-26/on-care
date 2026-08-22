@@ -447,19 +447,19 @@ class _DayMeals extends ConsumerWidget {
                           Text(
                             meal.items,
                             style: const TextStyle(
-                              fontSize: 12.5,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                               height: 1.35,
                               color: AppColors.foreground,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Text(
                             '${formatNumber(meal.calories)} ${l.unitKcal} · '
                             '${l.dietSodiumValue(meal.sodiumMg)} · '
                             '${l.metricSugar} ${_grams(meal.sugarG)}g',
                             style: const TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 12.5,
                               color: AppColors.subtleForeground,
                             ),
                           ),
@@ -489,9 +489,9 @@ class _MealChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 48,
+    width: 54,
     alignment: Alignment.center,
-    padding: const EdgeInsets.symmetric(vertical: 3),
+    padding: const EdgeInsets.symmetric(vertical: 4),
     decoration: const BoxDecoration(
       color: AppColors.accentSurface,
       borderRadius: BorderRadius.all(AppRadius.pill),
@@ -502,7 +502,7 @@ class _MealChip extends StatelessWidget {
         label,
         maxLines: 1,
         style: const TextStyle(
-          fontSize: 11.5,
+          fontSize: 12.5,
           fontWeight: FontWeight.w700,
           color: AppColors.accent,
         ),
