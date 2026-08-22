@@ -8,7 +8,7 @@
 ///  3. (트레이너) `verify-schedule`
 ///  4. `cancel`      — 회원이 취소한다. 좌석이 돌아오고 다시 고를 수 있다.
 ///  5. (트레이너) `verify-schedule-cancelled`
-///  6. `edge-cases`  — 중복·마감·과거·정원 경쟁이 초과 예약을 만들지 않는지.
+///  6. `edge-cases`  — 중복·마감·마지막 좌석 경쟁이 초과 예약을 만들지 않는지.
 library;
 
 import 'package:dio/dio.dart';
@@ -142,10 +142,8 @@ void main() {
 
       case 'edge-cases':
         // 여기는 화면이 아니라 계약을 본다. 초과 예약은 UI 를 거치지 않는 요청에서도
-        // 막혀야 하고, 동시 요청은 UI 로는 재현할 수 없다.
-        //
-        // 주의: `jisu@oncare.com` 도 이 트레이너의 **담당 회원**이다(시드). 그래서 이
-        // 계정의 예약은 거절되는 것이 아니라 두 번째 좌석을 정상적으로 가져간다.
+        // 막혀야 하고, 동시 요청은 UI 로는 재현할 수 없다. 슬롯은 늘 정원 1이라
+        // (#1012) 모든 자리가 마지막 좌석 경쟁 시나리오다.
         final String slotId = state.require('slotId');
         final int capacity = state.requireInt('slotCapacity');
 
@@ -162,31 +160,10 @@ void main() {
         );
         expect((await api.slotById(slotId))!['remaining'], capacity - 1);
 
-        // 2) 정원이 여럿인 자리는 서버 계약으로는 여전히 지원된다 — 화면은 늘
-        //    정원 1 짜리만 만들지만(#1012), 다른 경로로 연 자리는 담당 회원
-        //    둘이 하나씩 채우고 그 다음은 막혀야 한다. 이 단계 전용으로 새로
-        //    연다 — 화면이 만든 슬롯에 기댈 수 없다.
-        final Map<String, dynamic> capacitySlot = await trainer
-            .createSlotAsTrainer(
-              startsAt: DateTime.now().add(const Duration(days: 2)),
-              capacity: 2,
-            );
-        final String capacitySlotId = capacitySlot['id'] as String;
-        expect((await api.reserveRaw(capacitySlotId)).statusCode, 201);
-        expect((await api.slotById(capacitySlotId))!['remaining'], 1);
-        expect((await other.reserveRaw(capacitySlotId)).statusCode, 201);
-        expect((await api.slotById(capacitySlotId))!['remaining'], 0);
-        expect(
-          (await other.reserveRaw(capacitySlotId)).statusCode,
-          409,
-          reason: '정원이 찬 자리에 예약이 더 들어갔습니다.',
-        );
-
-        // 3) 마지막 좌석 경쟁. 정원 1 짜리 자리에서만 정직하게 재현된다 — 정원 2 에서는
-        //    한쪽이 첫 좌석을 채우는 순간 다른 요청이 '중복' 으로 걸려 경쟁이 아니게 된다.
+        // 2) 마지막 좌석 경쟁 — 슬롯은 늘 정원 1이라(#1012) 모든 슬롯이 이
+        //    시나리오다. 동시 요청 중 하나만 성공해야 한다.
         final Map<String, dynamic> raceSlot = await trainer.createSlotAsTrainer(
           startsAt: DateTime.now().add(const Duration(days: 3)),
-          capacity: 1,
         );
         final String raceSlotId = raceSlot['id'] as String;
 
@@ -206,13 +183,9 @@ void main() {
           reason: '경쟁 후 잔여 좌석이 0 이 아닙니다.',
         );
 
-        // 4) 정리 — 이 단계가 만든 예약을 모두 되돌리고 임시 슬롯들을 닫는다.
+        // 3) 정리 — 이 단계가 만든 예약을 모두 되돌리고 임시 슬롯을 닫는다.
         for (final E2eApi client in <E2eApi>[api, other]) {
-          for (final String id in <String>[
-            slotId,
-            capacitySlotId,
-            raceSlotId,
-          ]) {
+          for (final String id in <String>[slotId, raceSlotId]) {
             final Map<String, dynamic>? row = await client.reservationForSlot(
               id,
             );
@@ -229,10 +202,9 @@ void main() {
           capacity,
           reason: '정리 후 좌석이 정원까지 복구되지 않았습니다.',
         );
-        await trainer.closeSlotAsTrainer(capacitySlotId);
         await trainer.closeSlotAsTrainer(raceSlotId);
 
-        // 5) 없는(이미 취소된) 예약의 취소는 존재조차 드러내지 않는다.
+        // 4) 없는(이미 취소된) 예약의 취소는 존재조차 드러내지 않는다.
         expect(
           (await api.cancelRaw('res-does-not-exist')).statusCode,
           404,
