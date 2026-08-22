@@ -962,7 +962,7 @@ void main() {
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      expect(find.text('종료 시간은 시작 시간보다 늑어야 해요'), findsOneWidget);
+      expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -995,7 +995,9 @@ void main() {
       );
 
       // Change 00분 → 30분 in the time picker and save.
-      await tester.tap(find.text('00분'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-start-minute')),
+      );
       await settle(tester);
       await tester.tap(find.text('30분').last);
       await settle(tester);
