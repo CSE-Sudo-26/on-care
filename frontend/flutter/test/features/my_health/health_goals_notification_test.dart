@@ -21,6 +21,10 @@ class _FailingAccountRepository extends MockAccountRepository {
     GoalUpdate? weeklyWorkoutGoal,
     GoalUpdate? weeklyExerciseMinutesGoal,
     GoalUpdate? weeklyBurnGoal,
+    GoalUpdate? dailyBurnKcal,
+    GoalUpdate? weeklyCardioMinutes,
+    GoalUpdate? weeklyStrengthSets,
+    GoalUpdate? weeklyFlexibilityMinutes,
   }) async {
     throw StateError('save failed');
   }

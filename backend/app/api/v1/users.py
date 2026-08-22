@@ -126,6 +126,10 @@ def _profile_view(user: User) -> ProfileView:
         weekly_workout_goal=p.weekly_workout_goal if p else None,
         weekly_exercise_minutes_goal=(p.weekly_exercise_minutes_goal if p else None),
         weekly_burn_goal=p.weekly_burn_goal if p else None,
+        daily_burn_kcal=p.daily_burn_kcal if p else None,
+        weekly_cardio_minutes=p.weekly_cardio_minutes if p else None,
+        weekly_strength_sets=p.weekly_strength_sets if p else None,
+        weekly_flexibility_minutes=(p.weekly_flexibility_minutes if p else None),
         onboarded=p.onboarded if p else False,
     )
 
@@ -165,7 +169,11 @@ def update_health_goals(
     user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProfileView:
-    """건강 목표(식단 일일 6종 + 주간 운동 3종) 저장. 제공된 필드만 반영."""
+    """건강 목표(식단 일일 6종 + 운동 7종) 저장. 제공된 필드만 반영.
+
+    운동 목표는 운동 탭이 견주는 축과 같다 (#1139) — 소모 칼로리는 하루,
+    유산소·근력·스트레칭은 한 주다.
+    """
     profile = _get_or_create_profile(db, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)

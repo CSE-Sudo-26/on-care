@@ -14,6 +14,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/services/exercise_goals_provider.dart';
 
 /// `운동 현황` 의 기본 기간 — 0 = 오늘, 1 = 이번 주, 2 = 전체.
 const int kExerciseActivityPeriodDefault = 0;
@@ -138,7 +139,8 @@ class ExerciseActivityStatus extends ConsumerStatefulWidget {
 
 class _ExerciseActivityStatusState
     extends ConsumerState<ExerciseActivityStatus> {
-  static const ExerciseLoadGoals _goals = kDefaultExerciseLoadGoals;
+  /// MY 건강 목표에서 저장한 값. 저장한 적이 없으면 권장값이다 (#1139).
+  ExerciseLoadGoals get _goals => ref.watch(exerciseLoadGoalsProvider);
 
   List<ExerciseDayLoad> get _loads =>
       dayLoadsOfWeek(widget.week, _thisMonday());
@@ -189,12 +191,13 @@ class _ExerciseActivityStatusState
         if (period == 0)
           ExerciseDayLoadCard(
             load: _todayLoad,
+            goals: _goals,
             streakDays: widget.week.streakDays,
           )
         else if (period == 1)
           _WeekView(loads: _loads, goals: _goals)
         else
-          const _AllPeriodView(goals: _goals),
+          _AllPeriodView(goals: _goals),
       ],
     );
   }

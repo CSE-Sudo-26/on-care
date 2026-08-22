@@ -27,6 +27,10 @@ class UserProfile {
     this.weeklyWorkoutGoal,
     this.weeklyExerciseMinutesGoal,
     this.weeklyBurnGoal,
+    this.dailyBurnKcal,
+    this.weeklyCardioMinutes,
+    this.weeklyStrengthSets,
+    this.weeklyFlexibilityMinutes,
   });
 
   final String id;
@@ -54,20 +58,22 @@ class UserProfile {
   int get effectiveDailyProteinG => dailyProteinG ?? defaultDailyProteinG;
   int get effectiveDailyFatG => dailyFatG ?? defaultDailyFatG;
 
-  // 주간 운동 목표.
+  // 주간 운동 목표 — 트레이너 앱이 고객 목표로 읽는 값이다. 회원 화면은 아래
+  // 유형별 목표를 쓴다 (#1139).
   final int? weeklyWorkoutGoal; // 횟수
   final int? weeklyExerciseMinutesGoal; // 분
   final int? weeklyBurnGoal; // kcal
 
-  static const int defaultWeeklyWorkoutGoal = 3;
-  static const int defaultWeeklyExerciseMinutesGoal = 150;
-  static const int defaultWeeklyBurnGoal = 500;
+  // 기본값·`effective…` 는 두지 않는다 (#1139). 회원 화면이 견주는 목표는 아래
+  // 유형별 값이고, 이 셋은 트레이너 앱이 읽는 값이라 회원 앱에서 기본값을
+  // 씌우면 "회원이 정한 적 없는 목표" 가 있는 것처럼 보인다.
 
-  int get effectiveWeeklyWorkoutGoal =>
-      weeklyWorkoutGoal ?? defaultWeeklyWorkoutGoal;
-  int get effectiveWeeklyExerciseMinutesGoal =>
-      weeklyExerciseMinutesGoal ?? defaultWeeklyExerciseMinutesGoal;
-  int get effectiveWeeklyBurnGoal => weeklyBurnGoal ?? defaultWeeklyBurnGoal;
+  // 운동 탭이 실제로 견주는 목표 (#1139). 소모는 **하루**, 유형별은 **한 주**다
+  // — 근력을 7 로 나누면 "2.3세트" 라는 뜻 없는 수가 된다.
+  final int? dailyBurnKcal;
+  final int? weeklyCardioMinutes;
+  final int? weeklyStrengthSets;
+  final int? weeklyFlexibilityMinutes;
 
   factory UserProfile.fromJson(Map<String, Object?> json) => UserProfile(
     id: (json['id'] as String?) ?? '',
@@ -89,5 +95,10 @@ class UserProfile {
     weeklyExerciseMinutesGoal: (json['weekly_exercise_minutes_goal'] as num?)
         ?.toInt(),
     weeklyBurnGoal: (json['weekly_burn_goal'] as num?)?.toInt(),
+    dailyBurnKcal: (json['daily_burn_kcal'] as num?)?.toInt(),
+    weeklyCardioMinutes: (json['weekly_cardio_minutes'] as num?)?.toInt(),
+    weeklyStrengthSets: (json['weekly_strength_sets'] as num?)?.toInt(),
+    weeklyFlexibilityMinutes: (json['weekly_flexibility_minutes'] as num?)
+        ?.toInt(),
   );
 }
