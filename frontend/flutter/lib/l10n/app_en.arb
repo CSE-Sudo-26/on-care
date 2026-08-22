@@ -274,7 +274,6 @@
   "exBurnTodayTitle": "Burned today",
   "exBurnWeekTitle": "Burned this week",
   "exBurnAllTitle": "Average burned",
-  "exLoadDayTitle": "Burned",
   "exGoalValue": "Goal {value}",
   "@exGoalValue": {
     "placeholders": {

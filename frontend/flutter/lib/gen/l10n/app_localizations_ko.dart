@@ -601,9 +601,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exBurnAllTitle => '평균 소모';
 
   @override
-  String get exLoadDayTitle => '소모';
-
-  @override
   String exGoalValue(String value) {
     return '목표 $value';
   }

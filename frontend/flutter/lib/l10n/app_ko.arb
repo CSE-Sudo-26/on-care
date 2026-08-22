@@ -202,7 +202,6 @@
   "exBurnTodayTitle": "오늘 소모",
   "exBurnWeekTitle": "이번 주 소모",
   "exBurnAllTitle": "평균 소모",
-  "exLoadDayTitle": "소모",
   "exGoalValue": "목표 {value}",
   "exLoadEmpty": "아직 기록이 없어요.",
   "exThisWeek": "이번 주",

@@ -1202,12 +1202,6 @@ abstract class AppLocalizations {
   /// **'Average burned'**
   String get exBurnAllTitle;
 
-  /// No description provided for @exLoadDayTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Burned'**
-  String get exLoadDayTitle;
-
   /// No description provided for @exGoalValue.
   ///
   /// In en, this message translates to:

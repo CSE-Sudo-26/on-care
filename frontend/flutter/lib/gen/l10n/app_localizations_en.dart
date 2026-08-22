@@ -611,9 +611,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exBurnAllTitle => 'Average burned';
 
   @override
-  String get exLoadDayTitle => 'Burned';
-
-  @override
   String exGoalValue(String value) {
     return 'Goal $value';
   }
