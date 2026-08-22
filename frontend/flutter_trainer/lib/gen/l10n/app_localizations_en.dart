@@ -918,6 +918,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultPreferredTime => 'Preferred time';
 
   @override
+  String get consultMessage => 'Message';
+
+  @override
   String get consultReject => 'Decline';
 
   @override
