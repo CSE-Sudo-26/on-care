@@ -134,7 +134,6 @@
   "dietEmptyLog": "No meals logged.\nAdd a meal with a photo!",
   "dietLoadError": "Couldn't load your diet.",
   "dietPeriodAverage": "Daily average",
-  "dietPeriodTotal": "Period total",
   "dietPeriodEmpty": "No meals were logged in this period.",
   "dietPeriodRange": "{start} - {end}",
   "@dietPeriodRange": {

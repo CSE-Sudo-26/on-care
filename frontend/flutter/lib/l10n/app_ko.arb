@@ -95,7 +95,6 @@
   "dietEmptyLog": "기록된 식단이 없어요.\n사진으로 끼니를 추가해 보세요!",
   "dietLoadError": "식단 정보를 불러오지 못했어요.",
   "dietPeriodAverage": "하루 평균",
-  "dietPeriodTotal": "기간 합계",
   "dietPeriodEmpty": "이 기간에 기록된 식단이 없어요.",
   "dietPeriodRange": "{start} ~ {end}",
   "dietPeriodNoRecord": "기록 없음",

@@ -205,8 +205,11 @@ extension DietDayTotals on DietDay {
   /// 하루 요약 카드는 `macros` 를 그대로 읽는데, 기간 뷰가 음식만 보고 계산하면
   /// 실서버 응답(음식에 영양이 없는 경우)에서 같은 날이 두 화면에서 다르게
   /// 나온다. 세 단계 모두를 거치는 이유다.
-  double get effectiveCarbsG =>
-      _macro((FoodItem f) => f.carbsG, (DietEntry e) => e.carbsG, macros.carbsG);
+  double get effectiveCarbsG => _macro(
+    (FoodItem f) => f.carbsG,
+    (DietEntry e) => e.carbsG,
+    macros.carbsG,
+  );
 
   double get effectiveProteinG => _macro(
     (FoodItem f) => f.proteinG,

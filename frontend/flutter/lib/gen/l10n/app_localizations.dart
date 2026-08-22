@@ -608,12 +608,6 @@ abstract class AppLocalizations {
   /// **'Daily average'**
   String get dietPeriodAverage;
 
-  /// No description provided for @dietPeriodTotal.
-  ///
-  /// In en, this message translates to:
-  /// **'Period total'**
-  String get dietPeriodTotal;
-
   /// No description provided for @dietPeriodEmpty.
   ///
   /// In en, this message translates to:
