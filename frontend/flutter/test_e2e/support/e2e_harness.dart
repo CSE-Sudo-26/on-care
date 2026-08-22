@@ -708,7 +708,6 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
 Future<void> submitConsultation(
   WidgetTester tester, {
   required int goalIndex,
-  required int purposeIndex,
   required int timeIndex,
   required String message,
 }) async {
@@ -735,7 +734,6 @@ Future<void> submitConsultation(
   await tester.pump();
 
   await tapChip('consult-goal', goalIndex);
-  await tapChip('consult-purpose', purposeIndex);
 
   final Finder date = await _revealInForm(
     tester,

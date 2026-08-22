@@ -2498,48 +2498,6 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get exOptionOther;
 
-  /// No description provided for @exHealthPurpose.
-  ///
-  /// In en, this message translates to:
-  /// **'Health Management Purpose'**
-  String get exHealthPurpose;
-
-  /// No description provided for @exPurposeWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Weight Management'**
-  String get exPurposeWeight;
-
-  /// No description provided for @exPurposeChronic.
-  ///
-  /// In en, this message translates to:
-  /// **'Chronic Condition Management'**
-  String get exPurposeChronic;
-
-  /// No description provided for @exPurposeRehab.
-  ///
-  /// In en, this message translates to:
-  /// **'Pain or Rehabilitation'**
-  String get exPurposeRehab;
-
-  /// No description provided for @exPurposeGeneral.
-  ///
-  /// In en, this message translates to:
-  /// **'General Health Management'**
-  String get exPurposeGeneral;
-
-  /// No description provided for @exPurposeNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get exPurposeNone;
-
-  /// No description provided for @exHealthPurposeOtherHint.
-  ///
-  /// In en, this message translates to:
-  /// **'For example, back rehabilitation, knee pain, or cholesterol management'**
-  String get exHealthPurposeOtherHint;
-
   /// No description provided for @exOtherGoalHint.
   ///
   /// In en, this message translates to:
@@ -2612,17 +2570,11 @@ abstract class AppLocalizations {
   /// **'Please select an exercise goal.'**
   String get exGoalRequired;
 
-  /// No description provided for @exHealthPurposeRequired.
+  /// No description provided for @exOtherGoalDetailRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please select a health management purpose.'**
-  String get exHealthPurposeRequired;
-
-  /// No description provided for @exHealthPurposeInputRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Please enter a health management purpose.'**
-  String get exHealthPurposeInputRequired;
+  /// **'Please describe your specific exercise goal in the message.'**
+  String get exOtherGoalDetailRequired;
 
   /// No description provided for @exDateRequired.
   ///

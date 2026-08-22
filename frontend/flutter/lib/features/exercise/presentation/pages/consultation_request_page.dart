@@ -17,18 +17,12 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 enum _ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 
-enum _HealthPurpose { weight, chronic, rehab, general, none, other }
-
 enum _PreferredTime { morning, afternoon, evening, flexible }
 
 // 화면 선택지 → 서버 계약 enum. 순서가 같으므로 index 로 잇되, 길이가 어긋나면
 // 조용히 틀린 값이 나가므로 아래 assert 로 막는다.
 extension on _ExerciseGoal {
   ExerciseGoal get wire => ExerciseGoal.values[index];
-}
-
-extension on _HealthPurpose {
-  HealthPurposeType get wire => HealthPurposeType.values[index];
 }
 
 extension on _PreferredTime {
@@ -55,12 +49,9 @@ class ConsultationRequestPage extends ConsumerStatefulWidget {
 
 class _ConsultationRequestPageState
     extends ConsumerState<ConsultationRequestPage> {
-  final TextEditingController _healthPurposeController =
-      TextEditingController();
   final TextEditingController _messageController = TextEditingController();
 
   _ExerciseGoal? _exerciseGoal;
-  _HealthPurpose? _healthPurpose;
   DateTime? _preferredDate;
   _PreferredTime? _preferredTime;
   bool _attempted = false;
@@ -68,7 +59,6 @@ class _ConsultationRequestPageState
 
   @override
   void dispose() {
-    _healthPurposeController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -105,9 +95,12 @@ class _ConsultationRequestPageState
     }
   }
 
-  bool get _healthPurposeInputMissing =>
-      _healthPurpose == _HealthPurpose.other &&
-      _healthPurposeController.text.trim().isEmpty;
+  /// 운동 목표가 "기타"면 문의 내용에 구체적으로 적어야 한다 — 그 내용이
+  /// 서버로는 `health_purpose_detail`도 겸해서 나간다(#1112). 목표 선택
+  /// 하나로 줄었으니 상세를 받을 자리도 문의 내용 하나여야 한다.
+  bool get _otherGoalDetailMissing =>
+      _exerciseGoal == _ExerciseGoal.other &&
+      _messageController.text.trim().isEmpty;
 
   /// 데이터 공유에 동의했는가. 신청은 회원이 하고 연결은 나중에 트레이너가
   /// 수락하며 만들어진다 — 회원이 그 자리에 없으므로 동의는 여기서 받는다.
@@ -116,8 +109,7 @@ class _ConsultationRequestPageState
 
   bool get _isValid =>
       _exerciseGoal != null &&
-      _healthPurpose != null &&
-      !_healthPurposeInputMissing &&
+      !_otherGoalDetailMissing &&
       _preferredDate != null &&
       _preferredTime != null &&
       _dataSharingConsent;
@@ -126,7 +118,6 @@ class _ConsultationRequestPageState
     required Gym gym,
     required Trainer trainer,
     required Map<_ExerciseGoal, String> goalLabels,
-    required Map<_HealthPurpose, String> purposeLabels,
     required Map<_PreferredTime, String> timeLabels,
   }) async {
     if (_submitting) return;
@@ -141,6 +132,14 @@ class _ConsultationRequestPageState
     setState(() => _submitting = true);
     final DateTime now = nowKst();
     final String message = _messageController.text.trim();
+    final ExerciseGoal exerciseGoal = _exerciseGoal!.wire;
+    final HealthPurposeType healthPurposeType = healthPurposeFromExerciseGoal(
+      exerciseGoal,
+    );
+    // "기타"만 상세가 필요하다(서버 422 회피) — 그 상세는 문의 내용
+    // 그대로다. 나머지 목표는 매핑된 종류만으로 뜻이 충분하다.
+    final String? healthPurposeDetail =
+        healthPurposeType == HealthPurposeType.other ? message : null;
     final ConsultationRequest request = ConsultationRequest(
       id: 'consult-${now.microsecondsSinceEpoch}',
       trainerId: trainer.id,
@@ -148,11 +147,9 @@ class _ConsultationRequestPageState
       trainerRole: trainer.role,
       // 라벨이 아니라 계약 enum 을 담는다 — 라벨을 저장하면 서버에서 복원할 때
       // 문구를 만들 수 없다(#327).
-      exerciseGoal: _exerciseGoal!.wire,
-      healthPurposeType: _healthPurpose!.wire,
-      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
-          ? _healthPurposeController.text.trim()
-          : null,
+      exerciseGoal: exerciseGoal,
+      healthPurposeType: healthPurposeType,
+      healthPurposeDetail: healthPurposeDetail,
       preferredDate: _preferredDate!,
       preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
@@ -161,11 +158,9 @@ class _ConsultationRequestPageState
     );
     final ConsultationDraft draft = ConsultationDraft(
       trainerId: trainer.id,
-      exerciseGoal: _exerciseGoal!.wire,
-      healthPurposeType: _healthPurpose!.wire,
-      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
-          ? _healthPurposeController.text.trim()
-          : null,
+      exerciseGoal: exerciseGoal,
+      healthPurposeType: healthPurposeType,
+      healthPurposeDetail: healthPurposeDetail,
       preferredDate: _preferredDate!,
       preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
@@ -278,14 +273,6 @@ class _ConsultationRequestPageState
       _ExerciseGoal.health: l.exGoalHealth,
       _ExerciseGoal.other: l.exOptionOther,
     };
-    final Map<_HealthPurpose, String> purposeLabels = <_HealthPurpose, String>{
-      _HealthPurpose.weight: l.exPurposeWeight,
-      _HealthPurpose.chronic: l.exPurposeChronic,
-      _HealthPurpose.rehab: l.exPurposeRehab,
-      _HealthPurpose.general: l.exPurposeGeneral,
-      _HealthPurpose.none: l.exPurposeNone,
-      _HealthPurpose.other: l.exOptionOther,
-    };
     final Map<_PreferredTime, String> timeLabels = <_PreferredTime, String>{
       _PreferredTime.morning: l.exTimeMorning,
       _PreferredTime.afternoon: l.exTimeAfternoon,
@@ -335,35 +322,6 @@ class _ConsultationRequestPageState
               ),
             ],
             const SizedBox(height: 20),
-            _ChoiceField<_HealthPurpose>(
-              key: const Key('health-purpose-options'),
-              chipKeyPrefix: 'consult-purpose',
-              title: l.exHealthPurpose,
-              values: _HealthPurpose.values,
-              labels: purposeLabels,
-              selected: _healthPurpose,
-              onSelected: (_HealthPurpose value) {
-                setState(() => _healthPurpose = value);
-              },
-              errorText: _attempted && _healthPurpose == null
-                  ? l.exHealthPurposeRequired
-                  : null,
-            ),
-            if (_healthPurpose == _HealthPurpose.other) ...<Widget>[
-              const SizedBox(height: 10),
-              TextField(
-                key: const Key('consult-purpose-other'),
-                controller: _healthPurposeController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: l.exHealthPurposeOtherHint,
-                  errorText: _attempted && _healthPurposeInputMissing
-                      ? l.exHealthPurposeInputRequired
-                      : null,
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
             _FieldTitle(title: l.exPreferredDate),
             const SizedBox(height: 8),
             _DateField(
@@ -392,9 +350,15 @@ class _ConsultationRequestPageState
             TextField(
               key: const Key('consult-message'),
               controller: _messageController,
+              onChanged: (_) => setState(() {}),
               minLines: 4,
               maxLines: 7,
-              decoration: InputDecoration(hintText: l.exConsultMessageHint),
+              decoration: InputDecoration(
+                hintText: l.exConsultMessageHint,
+                errorText: _attempted && _otherGoalDetailMissing
+                    ? l.exOtherGoalDetailRequired
+                    : null,
+              ),
             ),
             if (hasPending) ...<Widget>[
               const SizedBox(height: 14),
@@ -410,7 +374,6 @@ class _ConsultationRequestPageState
                         gym: gym,
                         trainer: trainer,
                         goalLabels: goalLabels,
-                        purposeLabels: purposeLabels,
                         timeLabels: timeLabels,
                       ),
                     ),

@@ -912,9 +912,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultExerciseGoal => 'Training goal';
 
   @override
-  String get consultHealthPurpose => 'Health purpose';
-
-  @override
   String get consultPreferredTime => 'Preferred time';
 
   @override
@@ -2199,24 +2196,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalOther => 'Other';
-
-  @override
-  String get purposeWeight => 'Weight management';
-
-  @override
-  String get purposeChronic => 'Chronic condition';
-
-  @override
-  String get purposeRehab => 'Rehabilitation';
-
-  @override
-  String get purposeGeneral => 'General wellbeing';
-
-  @override
-  String get purposeNone => 'None';
-
-  @override
-  String get purposeOther => 'Other';
 
   @override
   String get slotMorning => 'Morning';

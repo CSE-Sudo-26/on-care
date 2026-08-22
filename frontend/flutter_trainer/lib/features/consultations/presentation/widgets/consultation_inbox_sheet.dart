@@ -202,16 +202,12 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.sm),
+          // 운동 목표 하나만 보인다 — 관리 목적은 회원이 고른 운동 목표에서
+          // 자동으로 채워지는 값이라 따로 보여줄 이유가 없다(#1112).
+          // "기타"의 상세는 문의 내용에 있다.
           _line(
             l.consultExerciseGoal,
             label(exerciseGoalLabels(l), request.goalCode),
-          ),
-          _line(
-            l.consultHealthPurpose,
-            request.purposeDetail == null
-                ? label(healthPurposeLabels(l), request.purposeCode)
-                : '${label(healthPurposeLabels(l), request.purposeCode)} · '
-                      '${request.purposeDetail}',
           ),
           _line(
             l.consultPreferredTime,
