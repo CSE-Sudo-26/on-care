@@ -475,6 +475,62 @@ void main() {
       expect(find.textContaining(expectedText), findsOneWidget);
     });
 
+    testWidgets('AI 카드 제목이 기간을 말한다 (#1025)', (tester) async {
+      // `오늘` 과 `이번 주` 가 같은 제목이면, 카드가 무엇을 두고 한 말인지
+      // 문장을 다 읽어야만 알 수 있다.
+      await openDiet(tester, '김민수');
+      await tester.scrollUntilVisible(
+        find.text('AI 분석'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      expect(find.text('AI 분석'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 기간 분석'), findsOneWidget);
+      expect(find.text('AI 분석'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 전체 분석'), findsOneWidget);
+    });
+
+    testWidgets('날짜 줄을 누르면 그날 기록이 펼쳐진다 (#1025)', (tester) async {
+      // 그래프는 "얼마나" 만 말한다. 그날 무엇을 먹었는지는 줄을 눌러야 나온다.
+      await openDiet(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+
+      final Finder records = find.byKey(
+        const ValueKey<String>('diet-daily-records'),
+      );
+      await tester.scrollUntilVisible(
+        records,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+
+      // 화살표가 있는 줄만 펼칠 수 있다 — 기록이 없는 날은 펼칠 것이 없다.
+      expect(find.text('탄단지'), findsNothing);
+      final Finder openable = find.descendant(
+        of: records,
+        matching: find.byIcon(Icons.expand_more),
+      );
+      expect(openable, findsWidgets);
+      await tester.ensureVisible(openable.first);
+      await tester.pumpAndSettle();
+      final Finder row = find
+          .ancestor(of: openable.first, matching: find.byType(InkWell))
+          .first;
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      // 펼친 줄에는 그날의 항목이 라벨과 함께 선다.
+      expect(find.text('칼로리'), findsWidgets);
+      expect(find.text('나트륨'), findsWidgets);
+    });
+
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (
       tester,
     ) async {

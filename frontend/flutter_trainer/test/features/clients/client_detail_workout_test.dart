@@ -132,9 +132,7 @@ void main() {
       // 종목 이름은 픽스처가 정한다 — 여기 적으면 두 벌이 된다.
       expect(
         history.first.exercises,
-        contains(
-          '${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓',
-        ),
+        contains('${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓'),
       );
       expect(history.first.trainerNote, isNotEmpty);
       // Later entries have no trainer note (box hidden).
@@ -233,6 +231,55 @@ void main() {
       expect(repository.updateCalls, 1);
       expect(find.text('자세가 안정적이었어요'), findsOneWidget);
       expect(find.text('피드백 수정'), findsOneWidget);
+    });
+
+    testWidgets('운동 이번 주에 기간 AI 카드와 날짜별 기록이 선다 (#1025)', (tester) async {
+      // 식단만 기간별 조언을 읽고 운동은 못 읽으면 한 화면에서 반쪽만
+      // 코칭이 된다.
+      await openWorkout(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await settle(tester);
+
+      // 카드는 그래프 아래라 화면 밖에서 시작한다.
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('exercise-ai-analysis')),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      expect(find.text('AI 기간 분석'), findsOneWidget);
+
+      // 화살표가 있는 줄만 펼칠 수 있다 — 쉰 날은 펼칠 것이 없다.
+      final Finder openable = find.descendant(
+        of: find.byKey(const ValueKey<String>('exercise-daily-records')),
+        matching: find.byIcon(Icons.expand_more),
+      );
+      expect(openable, findsWidgets);
+      await tester.ensureVisible(openable.first);
+      await settle(tester);
+      await tester.tap(
+        find.ancestor(of: openable.first, matching: find.byType(InkWell)).first,
+      );
+      await settle(tester);
+      await tester.scrollUntilVisible(
+        find.text('운동 시간').first,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      expect(find.text('운동 시간'), findsWidgets);
+    });
+
+    testWidgets('운동 전체 AI 카드는 전체 기간을 제목으로 말한다 (#1025)', (tester) async {
+      await openWorkout(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('exercise-ai-analysis')),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      expect(find.text('AI 전체 분석'), findsOneWidget);
+      expect(find.text('AI 기간 분석'), findsNothing);
     });
 
     testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {

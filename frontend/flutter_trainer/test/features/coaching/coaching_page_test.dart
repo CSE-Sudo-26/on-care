@@ -191,6 +191,12 @@ class _FixedClientRepository implements ClientRepository {
       '';
 
   @override
+  Future<String> fetchExerciseAdvice(
+    String clientId,
+    ClientPeriod period,
+  ) async => '';
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,

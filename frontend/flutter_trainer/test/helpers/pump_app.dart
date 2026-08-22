@@ -230,6 +230,10 @@ class _StillClientRepository implements ClientRepository {
       throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
 
   @override
+  Future<String> fetchExerciseAdvice(String clientId, ClientPeriod period) =>
+      throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,

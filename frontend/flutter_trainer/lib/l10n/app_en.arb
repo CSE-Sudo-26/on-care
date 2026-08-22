@@ -456,6 +456,8 @@
   "trainerNote": "Trainer's note",
   "dietLoadFailed": "Couldn't load meals",
   "dietEmpty": "No meals logged yet",
+  "dietDayEmpty": "No record",
+  "dietMacros": "Macros",
   "dietTodaySummary": "Today's nutrition",
   "clientNutritionSummary": "Nutrition summary",
   "dietAchieveRate": "Progress",
@@ -483,7 +485,9 @@
       }
     }
   },
-  "dietAiAnalysis": "AI analysis",
+  "aiAnalysis": "AI analysis",
+  "aiPeriodAnalysis": "AI period analysis",
+  "aiAllAnalysis": "AI all-time analysis",
   "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's routine would help.",
   "@dietAiOverSodium": {
     "placeholders": {

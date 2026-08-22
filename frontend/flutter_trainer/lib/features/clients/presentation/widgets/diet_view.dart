@@ -8,6 +8,8 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_ai_analysis_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_day_record_tile.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_diet_period_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_meal_photo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
@@ -16,7 +18,6 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 
 /// The 식단 sub-tab: `오늘 / 이번 주 / 이번 달` over the client's nutrition.
@@ -64,12 +65,12 @@ class _DietViewState extends ConsumerState<DietView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             ClientDietPeriodCard(clientId: client.id, period: period),
-            // 이번 주만 — 요일별로 그날 기록을 바로 확인할 수 있게 카드를
-            // 덧붙인다(#1025).
-            if (period == ClientPeriod.week) ...<Widget>[
-              const SizedBox(height: AppSpacing.md),
-              _WeekDailyCards(clientId: client.id),
-            ],
+            // 그래프 아래 날짜별 기록. 그래프는 "얼마나" 를 말하지만 "그날
+            // 무엇을" 은 말하지 않았고, 그걸 보려면 회원 앱으로 건너가야
+            // 했다(#1025). 접힌 줄만 늘어놓고 누른 날만 펼치므로 전체(12주)
+            // 에서도 스크롤이 감당한다.
+            const SizedBox(height: AppSpacing.md),
+            _DailyDietRecords(clientId: client.id, period: period),
             // 기간을 고르면 그 기간의 조언을 함께 읽는다 — 그래프만 바뀌고
             // 조언이 오늘 이야기로 남으면 화면과 무관한 말이 된다. (#1017)
             const SizedBox(height: AppSpacing.md),
@@ -304,62 +305,89 @@ class _AiComment extends ConsumerWidget {
             )
             .valueOrNull ??
         fallback;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.accentSurface,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          IconLabel(
-            icon: Icons.auto_awesome,
-            label: l.dietAiAnalysis,
-            color: AppColors.accent,
-            fontSize: 11,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: 13,
-              height: 1.55,
-              fontWeight: FontWeight.w500,
-              color: AppColors.foreground,
-            ),
-          ),
-        ],
-      ),
+    // 카드 모양과 기간별 제목은 운동과 공유한다 — 같은 성격의 말이 두 화면에서
+    // 다른 모양으로 읽히지 않도록(#1025).
+    return ClientAiAnalysisCard(
+      cardKey: const ValueKey<String>('diet-ai-analysis'),
+      period: period,
+      message: message,
     );
   }
 }
 
-/// 이번 주 날짜별 기록 카드 — 요일마다 그날의 식단을 바로 확인한다(#1025).
+/// 기간의 날짜별 식단 기록 — 눌러서 펼친다. (#1025)
 ///
-/// 위 [ClientDietPeriodCard] 가 이미 읽어 둔 같은 기간 데이터를 다시
-/// 구독한다. Riverpod 이 같은 키를 캐시하므로 요청이 한 번 더 나가지
-/// 않는다 — 카드 하나를 위해 위젯 트리를 다시 짤 필요가 없다.
-class _WeekDailyCards extends ConsumerWidget {
-  const _WeekDailyCards({required this.clientId});
+/// 위 [ClientDietPeriodCard] 가 이미 읽어 둔 같은 기간 데이터를 다시 구독한다.
+/// Riverpod 이 같은 키를 캐시하므로 요청이 한 번 더 나가지 않는다.
+class _DailyDietRecords extends ConsumerStatefulWidget {
+  const _DailyDietRecords({required this.clientId, required this.period});
 
   final String clientId;
+  final ClientPeriod period;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ClientPeriodKey key = clientPeriodKeyNow(clientId, ClientPeriod.week);
+  ConsumerState<_DailyDietRecords> createState() => _DailyDietRecordsState();
+}
+
+class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
+  /// 펼쳐 둔 날. 하나만 연다 — 여럿을 펼치면 그래프가 화면 밖으로 밀린다.
+  String? _openDay;
+
+  @override
+  void didUpdateWidget(_DailyDietRecords old) {
+    super.didUpdateWidget(old);
+    // 기간을 바꾸면 날짜 목록 자체가 달라진다. 열어 둔 날을 그대로 들고 가면
+    // 새 목록에 없는 날을 가리킨 채 아무것도 펼쳐지지 않는다.
+    if (old.period != widget.period || old.clientId != widget.clientId) {
+      _openDay = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final ClientPeriodKey key = clientPeriodKeyNow(
+      widget.clientId,
+      widget.period,
+    );
     final AsyncValue<ClientDietPeriod> async = ref.watch(
       clientDietPeriodProvider(key),
     );
     return async.maybeWhen(
       data: (ClientDietPeriod period) => Column(
+        key: const ValueKey<String>('diet-daily-records'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          for (final ClientDietDay day in period.days) ...<Widget>[
-            _DietDayCard(day: day),
-            const SizedBox(height: AppSpacing.sm),
-          ],
+          // 최근 날이 위다 — 트레이너가 먼저 궁금해하는 것은 어제와 오늘이다.
+          for (final ClientDietDay day in period.days.reversed)
+            ClientDayRecordTile(
+              date: day.date,
+              logged: day.logged,
+              expanded: _openDay == ymd(day.date),
+              onToggle: () => setState(() {
+                _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
+              }),
+              emptyLabel: l.dietDayEmpty,
+              summary:
+                  '${formatNumber(day.calories)} ${l.unitKcal} · '
+                  '${l.dietSodiumValue(day.sodiumMg)}',
+              details: <({String label, String value})>[
+                (
+                  label: l.metricCalories,
+                  value: '${formatNumber(day.calories)} ${l.unitKcal}',
+                ),
+                (label: l.metricSodium, value: l.dietSodiumValue(day.sodiumMg)),
+                (label: l.metricSugar, value: '${_grams(day.sugarG)}g'),
+                if (day.hasMacros)
+                  (
+                    label: l.dietMacros,
+                    value:
+                        '${l.metricCarbs} ${_grams(day.carbsG)}g · '
+                        '${l.metricProtein} ${_grams(day.proteinG)}g · '
+                        '${l.metricFat} ${_grams(day.fatG)}g',
+                  ),
+              ],
+            ),
         ],
       ),
       // 로딩·실패는 위 그래프 카드가 이미 말한다 — 같은 상태를 두 번 그리지
@@ -368,95 +396,3 @@ class _WeekDailyCards extends ConsumerWidget {
     );
   }
 }
-
-/// 하루치 기록 한 장. 기록이 없으면 빈 날임을 그대로 말한다 — 0으로 채우면
-/// "적지 않은 날"이 "0kcal 먹은 날"이 된다.
-class _DietDayCard extends StatelessWidget {
-  const _DietDayCard({required this.day});
-
-  final ClientDietDay day;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      key: ValueKey<String>('diet-day-card-${ymd(day.date)}'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: 88,
-            child: Text(
-              dateLabel(l, day.date),
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.foreground,
-              ),
-            ),
-          ),
-          Expanded(
-            child: day.logged
-                ? Wrap(
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.xs,
-                    children: <Widget>[
-                      Text(
-                        '${formatNumber(day.calories)} ${l.unitKcal}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.dietChart,
-                        ),
-                      ),
-                      Text(
-                        l.dietSodiumValue(day.sodiumMg),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.subtleForeground,
-                        ),
-                      ),
-                      Text(
-                        '${l.metricSugar} ${_grams(day.sugarG)}g',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.subtleForeground,
-                        ),
-                      ),
-                      if (day.hasMacros)
-                        Text(
-                          '${l.metricCarbs} ${_grams(day.carbsG)}g · '
-                          '${l.metricProtein} ${_grams(day.proteinG)}g · '
-                          '${l.metricFat} ${_grams(day.fatG)}g',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                    ],
-                  )
-                : Text(
-                    l.chartNoRecord,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.disabledForeground,
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-

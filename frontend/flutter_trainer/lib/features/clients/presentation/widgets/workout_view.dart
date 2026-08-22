@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -8,6 +10,8 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_ai_analysis_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_day_record_tile.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -61,6 +65,14 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
         onChanged: (ClientPeriod p) => setState(() => _period = p),
         child: ClientExerciseStatusCard(clientId: client.id, period: _period),
       ),
+      // 기간을 고르면 그 기간의 날짜별 기록과 조언이 따라온다(#1025).
+      // 오늘은 아래 기록 카드가 이미 그날을 낱낱이 말하므로 겹치지 않는다.
+      if (_period != ClientPeriod.today) ...<Widget>[
+        const SizedBox(height: AppSpacing.md),
+        _DailyExerciseRecords(clientId: client.id, period: _period),
+      ],
+      const SizedBox(height: AppSpacing.md),
+      _ExerciseAiComment(clientId: client.id, period: _period),
       const SizedBox(height: AppSpacing.lg),
       Text(
         l.workoutRecords,
@@ -122,7 +134,10 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
 /// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
 /// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
 Color _rateColor(int rate) {
-  if (rate >= 100) return AppColors.success;
+  // 100% 초록은 회원 앱이 쓰는 어두운 초록과 같은 토큰이다 — 같은 성취를 두
+  // 앱이 다른 초록으로 칠하면 나란히 놓고 이야기할 때 서로 다른 것처럼
+  // 보인다(#1025).
+  if (rate >= 100) return AppColors.statusNormal;
   if (rate > 0) return AppColors.brandOrange;
   return AppColors.borderStrong;
 }
@@ -453,6 +468,132 @@ class _NoteBox extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 기간에 맞는 운동 조언. 식단과 **같은 카드**를 쓴다. (#1025)
+///
+/// 서버가 만든 문장이다 — 화면이 따로 계산하면 같은 회원의 같은 주를 두 곳이
+/// 다르게 말한다(식단이 #1017 에서 겪은 것과 같은 문제다).
+class _ExerciseAiComment extends ConsumerWidget {
+  const _ExerciseAiComment({required this.clientId, required this.period});
+
+  final String clientId;
+  final ClientPeriod period;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 아직 오지 않았거나 실패하면 카드를 세우지 않는다. 운동에는 식단의
+    // `dietAiBalanced` 같은 화면 쪽 대체 문구가 없다 — 없는 조언을 지어내는
+    // 대신 자리를 비운다.
+    final String message =
+        ref
+            .watch(
+              clientExerciseAdviceProvider((
+                clientId: clientId,
+                period: period,
+              )),
+            )
+            .valueOrNull ??
+        '';
+    return ClientAiAnalysisCard(
+      cardKey: const ValueKey<String>('exercise-ai-analysis'),
+      period: period,
+      message: message,
+    );
+  }
+}
+
+/// 기간의 날짜별 운동 기록 — 눌러서 펼친다. (#1025)
+///
+/// 식단과 같은 줄([ClientDayRecordTile])을 쓴다. 위 [ClientExerciseStatusCard]
+/// 가 이미 읽어 둔 같은 기간 데이터를 다시 구독하므로 요청이 더 나가지 않는다.
+class _DailyExerciseRecords extends ConsumerStatefulWidget {
+  const _DailyExerciseRecords({required this.clientId, required this.period});
+
+  final String clientId;
+  final ClientPeriod period;
+
+  @override
+  ConsumerState<_DailyExerciseRecords> createState() =>
+      _DailyExerciseRecordsState();
+}
+
+class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
+  /// 펼쳐 둔 날. 하나만 연다 — 식단과 같은 규칙이다.
+  String? _openDay;
+
+  @override
+  void didUpdateWidget(_DailyExerciseRecords old) {
+    super.didUpdateWidget(old);
+    if (old.period != widget.period || old.clientId != widget.clientId) {
+      _openDay = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final ClientPeriodKey key = clientPeriodKeyNow(
+      widget.clientId,
+      widget.period,
+    );
+    final AsyncValue<ClientExercisePeriod> async = ref.watch(
+      clientExercisePeriodProvider(key),
+    );
+    return async.maybeWhen(
+      data: (ClientExercisePeriod period) => Column(
+        key: const ValueKey<String>('exercise-daily-records'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final ClientExerciseDay day in period.days.reversed)
+            ClientDayRecordTile(
+              date: day.date,
+              // 쉰 날과 적지 않은 날을 가르는 기준은 그날 움직인 시간이다.
+              logged: day.minutes > 0,
+              expanded: _openDay == ymd(day.date),
+              onToggle: () => setState(() {
+                _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
+              }),
+              emptyLabel: l.dietDayEmpty,
+              summary:
+                  '${day.minutes}${l.unitMinutes} · '
+                  '${formatNumber(day.calories)} ${l.unitKcal}',
+              details: <({String label, String value})>[
+                (
+                  label: l.clientTrendWorkoutMinutes,
+                  value: '${day.minutes}${l.unitMinutes}',
+                ),
+                (
+                  label: l.metricCalories,
+                  value: '${formatNumber(day.calories)} ${l.unitKcal}',
+                ),
+                if (day.cardioMinutes > 0)
+                  (
+                    label: l.routineTypeCardio,
+                    value: '${day.cardioMinutes}${l.unitMinutes}',
+                  ),
+                if (day.strengthMinutes > 0)
+                  (
+                    label: l.routineTypeStrength,
+                    value: '${day.strengthMinutes}${l.unitMinutes}',
+                  ),
+                if (day.stretchingMinutes > 0)
+                  (
+                    label: l.routineTypeFlexibility,
+                    value: '${day.stretchingMinutes}${l.unitMinutes}',
+                  ),
+                if (day.otherMinutes > 0)
+                  (
+                    label: l.routineTypeOther,
+                    value: '${day.otherMinutes}${l.unitMinutes}',
+                  ),
+              ],
+            ),
+        ],
+      ),
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }
