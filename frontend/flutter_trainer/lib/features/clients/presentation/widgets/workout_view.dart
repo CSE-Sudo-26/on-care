@@ -72,7 +72,11 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
       // 아직 하지 않은 개인 운동. 지난 기록보다 먼저 온다 — 앞으로 할 일이
       // 지나간 일보다 급하고, 잘못 보낸 배정을 여기서 바로 물릴 수 있어야
       // 한다(#1020). 물릴 것이 없으면 이 자리는 통째로 비어 있다.
-      _PendingRoutines(clientId: client.id),
+      //
+      // `오늘` 에만 둔다. 이번 주·전체는 지나간 기록을 되짚는 화면이라, 기간과
+      // 무관한 '앞으로 할 일' 이 거기 계속 붙어 있으면 두 성격이 섞인다 —
+      // 기간 토글이 목록을 지배한다는 이 화면의 규칙과도 어긋난다.
+      if (_period == ClientPeriod.today) _PendingRoutines(clientId: client.id),
       const SizedBox(height: AppSpacing.md),
       // 기록은 이 목록 하나다. 예전에는 날짜별 목록 아래에 `운동 기록` 카드
       // 목록이 또 있어, 이번 주·전체에서 같은 날의 같은 운동이 두 벌로

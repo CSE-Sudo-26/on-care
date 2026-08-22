@@ -442,6 +442,16 @@ void main() {
       expect(find.text('저강도 유산소 · 20분'), findsNothing);
       // 나머지 배정은 그대로다.
       expect(find.text('코어 서킷 · 15분'), findsOneWidget);
+
+      // 이번 주·전체는 지나간 기록을 되짚는 화면이라 '앞으로 할 일' 은 접는다.
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await settle(tester);
+      expect(pending, findsNothing);
+      expect(find.text('코어 서킷 · 15분'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('client-period-today')));
+      await settle(tester);
+      expect(pending, findsOneWidget);
     });
 
     testWidgets('취소는 이미 완료한 운동 기록을 건드리지 않는다 (#1020)', (tester) async {
