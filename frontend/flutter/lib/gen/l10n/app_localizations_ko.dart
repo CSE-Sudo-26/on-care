@@ -787,7 +787,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exGymSearchHint => '헬스장, 지역으로 검색';
 
   @override
-  String get exNearbyGyms => '주변 헬스장 · O2O 연동';
+  String get exNearbyGyms => '주변 헬스장';
 
   @override
   String get exAiAnalysis => '✦ AI 분석';

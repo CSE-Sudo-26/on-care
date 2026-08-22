@@ -1541,7 +1541,7 @@ abstract class AppLocalizations {
   /// No description provided for @exNearbyGyms.
   ///
   /// In en, this message translates to:
-  /// **'Nearby Gyms · O2O'**
+  /// **'Nearby gyms'**
   String get exNearbyGyms;
 
   /// No description provided for @exAiAnalysis.

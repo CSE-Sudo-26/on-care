@@ -387,7 +387,7 @@
   "exNoSearchResults": "No search results.",
   "exTrainersLoadError": "Couldn't load trainers.",
   "exGymSearchHint": "Search by gym or area",
-  "exNearbyGyms": "Nearby Gyms · O2O",
+  "exNearbyGyms": "Nearby gyms",
   "exAiAnalysis": "✦ AI analysis",
   "exNoGymMatch": "No gyms match '{query}'",
   "@exNoGymMatch": {

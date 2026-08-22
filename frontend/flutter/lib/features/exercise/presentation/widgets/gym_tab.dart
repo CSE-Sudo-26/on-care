@@ -12,23 +12,17 @@ import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
-import 'package:oncare/features/exercise/presentation/widgets/gym_locator_map.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymTab extends ConsumerWidget {
-  const GymTab({
-    required this.selectedSlot,
-    required this.onSlot,
-    required this.onFind,
-    super.key,
-  });
+  const GymTab({required this.selectedSlot, required this.onSlot, super.key});
 
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
-  final VoidCallback onFind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -75,6 +69,49 @@ class GymTab extends ConsumerWidget {
       );
     }
 
+    // 연결된 헬스장이 없으면 이 탭에서 할 일은 헬스장을 찾는 것뿐이다 —
+    // 지도만 든 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면을 그대로 보여
+    // 준다 (#1133). 추천 헬스장·추천 트레이너 섹션도 그 화면의 목록과 같은
+    // 말을 하므로 함께 내린다. 트레이너와 채팅 버튼도 여기서는 없다 (#1132) —
+    // 담당이 있으면 헤더의 채팅 버튼이 그 자리를 맡는다.
+    //
+    // 조회 중에는 찾기 화면을 미리 보여 주지 않는다. 잠깐 떴다 사라지면 연결이
+    // 풀린 것처럼 읽힌다.
+    if (myGymAsync.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: _SectionLoading(height: 180),
+      );
+    }
+    if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
+      // 상담을 넣어 둔 상태는 그대로 보여 준다 — 헬스장이 아직 없는 회원에게
+      // 지금 진행 중인 일이 바로 그 상담이다.
+      if (displayedRequest == null) return const GymFinderView();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _RecentConsultationSection(
+                  key: recentConsultationKey,
+                  request: displayedRequest,
+                ),
+                if (pendingRequest != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _PendingConsultationButton(onTap: showRecentConsultation),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const GymFinderView(),
+        ],
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -87,7 +124,6 @@ class GymTab extends ConsumerWidget {
             trainer: ref.watch(myTrainerProvider).valueOrNull,
             selectedSlot: selectedSlot,
             onSlot: onSlot,
-            onFind: onFind,
             onRetry: () => ref.invalidate(myGymProvider),
             onPendingConsultationTap: pendingRequest == null
                 ? null
@@ -337,7 +373,6 @@ class _MyGymSection extends StatelessWidget {
     required this.trainer,
     required this.selectedSlot,
     required this.onSlot,
-    required this.onFind,
     required this.onRetry,
     required this.onPendingConsultationTap,
     required this.onTrainerChatTap,
@@ -350,7 +385,6 @@ class _MyGymSection extends StatelessWidget {
   final Trainer? trainer;
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
-  final VoidCallback onFind;
   final VoidCallback onRetry;
   final VoidCallback? onPendingConsultationTap;
   final VoidCallback? onTrainerChatTap;
@@ -361,22 +395,11 @@ class _MyGymSection extends StatelessWidget {
     return gymAsync.when(
       loading: () => const _SectionLoading(height: 180),
       error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
+      // 연결된 헬스장이 없는 경우는 이 위젯에 오지 않는다 — 탭이 찾기 화면을
+      // 대신 그린다 (#1133). 그래도 방어적으로 빈 상태를 오류처럼 다루지 않고
+      // 재시도 자리를 남긴다.
       data: (Gym? gym) => gym == null
-          ? Column(
-              children: <Widget>[
-                _EmptyMyGym(onFind: onFind),
-                if (onPendingConsultationTap != null) ...<Widget>[
-                  const SizedBox(height: 14),
-                  _PendingConsultationButton(onTap: onPendingConsultationTap!),
-                ] else if (onTrainerChatTap != null) ...<Widget>[
-                  const SizedBox(height: 14),
-                  _TrainerChatButton(
-                    unread: unreadCoachMessages,
-                    onTap: onTrainerChatTap!,
-                  ),
-                ],
-              ],
-            )
+          ? _SectionError(onRetry: onRetry)
           : _MyGymCard(
               gym: gym,
               trainer: trainer,
@@ -555,6 +578,9 @@ class _PendingConsultationButton extends StatelessWidget {
   }
 }
 
+/// 읽지 않음 배지의 지름. 원을 유지하려면 가로·세로가 같아야 한다 (#1138).
+const double _kUnreadBadgeSize = 18;
+
 class _TrainerChatButton extends StatelessWidget {
   const _TrainerChatButton({required this.unread, required this.onTap});
 
@@ -587,18 +613,34 @@ class _TrainerChatButton extends StatelessWidget {
             ),
             if (unread > 0) ...<Widget>[
               const SizedBox(width: 8),
+              // 한 자리 수는 **정원**이어야 한다 (#1138). 좌우 여백만 주면
+              // 글자 높이만큼 세로로 길어져 알약처럼 보였다. 최소 지름을
+              // 정해 두고 숫자는 그 안에서 줄인다 — `99+` 도 같은 원 안에
+              // 들어간다.
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                width: _kUnreadBadgeSize,
+                height: _kUnreadBadgeSize,
+                alignment: Alignment.center,
                 decoration: const BoxDecoration(
                   color: FigmaColors.redDot,
-                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                  shape: BoxShape.circle,
                 ),
-                child: Text(
-                  unreadLabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                // 원 안에 들어갈 만큼 글자를 줄인다. `99+` 처럼 긴 값도 원을
+                // 늘리지 않는다 — 늘어난 원은 알약이 된다.
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      unreadLabel,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -821,7 +863,12 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                 onRetry: () =>
                     ref.invalidate(trainerSlotsProvider(widget.trainer.id)),
               ),
-              data: (List<TrainerSlot> slots) {
+              data: (List<TrainerSlot> all) {
+                // 이미 연결된 헬스장이라 상담은 지난 걸음이다 — 상담으로 열린
+                // 자리는 여기서 보여 주지 않는다 (#1136). 남는 것은 1:1 PT 뿐.
+                final List<TrainerSlot> slots = all
+                    .where((TrainerSlot slot) => slot.sessionType != '상담')
+                    .toList(growable: false);
                 if (slots.isEmpty) {
                   return _SlotNotice(message: l.exSlotsEmpty);
                 }
@@ -848,12 +895,9 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                         for (final TrainerSlot slot in slots)
                           _SlotChip(
                             key: ValueKey<String>('slot-chip-${slot.id}'),
-                            // 종류(1:1 PT/상담)를 시각 앞에 둔다 — 트레이너가
-                            // 상담으로 연 자리도 여기서 회원의 희망 시간대로
-                            // 고를 수 있어야 한다(#1083).
-                            type: slot.sessionType == '상담'
-                                ? l.exSlotTypeConsultation
-                                : l.exSlotTypePersonalTraining,
+                            // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
+                            // 남으므로(#1136) 실제로는 늘 같은 값이다.
+                            type: l.exSlotTypePersonalTraining,
                             label: _when(context, l, slot.startsAt),
                             // 한 사람 몫뿐인 자리라 빈 자리에는 덧붙일 수가
                             // 없다 — 마감된 자리만 그 사실을 적는다(#1072).
@@ -1417,79 +1461,24 @@ class _SlotChip extends StatelessWidget {
                       : (disabled ? FigmaColors.textFaint : FigmaColors.ink),
                 ),
               ),
-              if (sub != null)
-                Text(
-                  sub!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: selected
-                        ? Colors.white.withValues(alpha: 0.8)
-                        : (disabled
-                              ? FigmaColors.textFaint
-                              : AppColors.mutedForeground),
-                  ),
+              // 마감 문구가 붙는 자리는 **늘 잡아 둔다** (#1136). 문구가 있을
+              // 때만 줄이 생기면 마감된 칩만 키가 커져, 같은 줄의 자리들이
+              // 서로 다른 크기로 보인다.
+              Text(
+                sub ?? '',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.8)
+                      : (disabled
+                            ? FigmaColors.textFaint
+                            : AppColors.mutedForeground),
                 ),
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 연결된 헬스장이 없을 때의 카드.
-///
-/// 아이콘 하나로 비어 있다고만 알리던 자리다. 헬스장이 없는 회원에게 이 탭에서
-/// 할 일은 헬스장을 찾는 것뿐이므로, 지도를 카드 맨 앞에 그대로 띄워 탭에
-/// 들어오자마자 보이게 한다(#1072).
-class _EmptyMyGym extends ConsumerWidget {
-  const _EmptyMyGym({required this.onFind});
-
-  final VoidCallback onFind;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    // 시트와 같은 목록(제휴 + 카카오)을 핀으로 쓴다. 아직 로딩 중이면 핀 없이
-    // 지도만 먼저 그려지고, 결과가 오면 다시 찍힌다.
-    final List<Gym> pinned =
-        ref.watch(gymFinderResultsProvider).valueOrNull ?? const <Gym>[];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration(),
-      child: Column(
-        children: <Widget>[
-          GymLocatorMap(gyms: pinned),
-          const SizedBox(height: 14),
-          Text(
-            l.exNoConnectedGym,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
-            ),
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: onFind,
-            style: FilledButton.styleFrom(
-              backgroundColor: FigmaColors.primary,
-              minimumSize: const Size(0, 46),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            icon: const Icon(Icons.search, size: 17),
-            label: Text(
-              l.exFindGym,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
       ),
     );
   }
