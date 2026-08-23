@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -42,7 +43,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   /// 시트를 닫고 캘린더에서 날짜를 옮긴 뒤 다시 열어야 했다(#1090).
   Future<void> _pickDate() async {
     final today = nowKst();
-    final picked = await showDatePicker(
+    final picked = await showPortraitDatePicker(
       context: context,
       initialDate: _date,
       firstDate: DateTime(today.year, today.month, today.day),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/core/utils/portrait_date_picker.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
@@ -72,7 +73,7 @@ class _ConsultationRequestPageState
 
   Future<void> _selectDate() async {
     final DateTime today = DateUtils.dateOnly(nowKst());
-    final DateTime? selected = await showDatePicker(
+    final DateTime? selected = await showPortraitDatePicker(
       context: context,
       initialDate: _preferredDate ?? today,
       firstDate: today,

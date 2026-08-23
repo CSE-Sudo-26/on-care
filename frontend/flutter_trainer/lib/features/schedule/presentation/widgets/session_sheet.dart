@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -220,7 +221,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
 
   Future<void> _pickUntil() async {
     final start = DateTime.parse(widget.date);
-    final picked = await showDatePicker(
+    final picked = await showPortraitDatePicker(
       context: context,
       initialDate: _repeatUntil ?? start.add(const Duration(days: 56)),
       // 시작일 이전으로는 갈 수 없다 — 그러면 회차가 하나도 없다.
