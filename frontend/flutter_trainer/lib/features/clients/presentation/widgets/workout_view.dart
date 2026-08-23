@@ -600,10 +600,12 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                 // 처리하면 이력이 먼저 생기고 하루 집계는 아직 0 이다. 시간만
                 // 보고 접어 두면 방금 남긴 기록이 갈 곳을 잃는다(#1025).
                 final bool logged = day.minutes > 0 || dayEntries.isNotEmpty;
+                final bool today = widget.period == ClientPeriod.today;
                 return ClientDayRecordTile(
                   date: day.date,
                   logged: logged,
-                  expanded: _openDay == ymd(day.date),
+                  expanded: today || _openDay == ymd(day.date),
+                  toggleable: !today,
                   onToggle: () => setState(() {
                     _openDay = _openDay == ymd(day.date) ? null : ymd(day.date);
                   }),
@@ -611,7 +613,7 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                   // 그날의 미션 카드가 펼친 자리로 들어온다 — 이행률·종류·
                   // 피드백·메모까지, 예전 `운동 기록` 카드가 하던 말 그대로다.
                   // 이력이 없는 날에는 지표에 남은 운동 이름만 보여 준다.
-                  extra: _openDay == ymd(day.date) && logged
+                  extra: (today || _openDay == ymd(day.date)) && logged
                       ? _DayDetail(
                           clientId: widget.clientId,
                           date: day.date,
