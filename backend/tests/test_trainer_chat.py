@@ -101,7 +101,9 @@ def test_send_message_reflects_in_thread_and_roster(client):
     jisu = next(c for c in roster if c["id"] == "user-jisu")
     assert jisu["last_message"] == "다음 주 루틴 보냈어요!"
     # 상대 시각 라벨이 아닌 실제 정렬 키를 로스터가 내려 준다.
-    assert _datetime.fromisoformat(jisu["last_message_at"]) is not None
+    assert _datetime.fromisoformat(jisu["last_message_at"]) == _datetime.fromisoformat(
+        thread[-1]["created_at"]
+    )
 
 
 def test_empty_message_rejected(client):

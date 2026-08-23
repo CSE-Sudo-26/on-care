@@ -262,6 +262,8 @@ void main() {
 
   testWidgets('활성 고객 우선은 실제 active 필드로 정렬한다', (tester) async {
     await openWide(tester);
+    const countSummary = '15명 · 활성 13명';
+    expect(find.text(countSummary), findsWidgets);
 
     await tester.tap(find.text('정렬: 관리 필요 우선'));
     await tester.pumpAndSettle();
@@ -274,6 +276,15 @@ void main() {
         .toList(growable: false);
     expect(visibleCards, isNotEmpty);
     expect(visibleCards.every((card) => card.client.active), isTrue);
+
+    // 활성 우선은 휴면 고객을 숨기는 필터가 아니다. 명단 수를 유지한
+    // 채 활성 고객 뒤로 보낸다.
+    await scrollToCard(tester, '박성호');
+    final dormantCard = tester.widget<ClientCard>(
+      find.ancestor(of: find.text('박성호'), matching: find.byType(ClientCard)),
+    );
+    expect(dormantCard.client.active, isFalse);
+    expect(find.text(countSummary), findsWidgets);
   });
 
   testWidgets('대시보드에서 걸어 준 필터는 고객을 열어도 유지된다 (#816)', (tester) async {
