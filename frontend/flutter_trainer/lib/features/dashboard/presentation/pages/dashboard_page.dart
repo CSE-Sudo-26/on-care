@@ -48,14 +48,6 @@ class DashboardPage extends ConsumerWidget {
       title: l.dashTitle,
       subtitle: dateLabel(l, today),
       headerCenter: const ClientSearchBar(),
-      actions: <Widget>[
-        ActionButton(
-          label: l.dashAddSchedule,
-          icon: Icons.add,
-          primary: true,
-          onPressed: () => context.go(AppRoutes.scheduleAt()),
-        ),
-      ],
       child: summaryAsync.when(
         loading: () => const Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxxl),

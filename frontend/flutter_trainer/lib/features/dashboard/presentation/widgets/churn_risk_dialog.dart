@@ -32,7 +32,20 @@ class ChurnRiskDialog extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return AlertDialog(
       key: const ValueKey<String>('churn-risk-dialog'),
-      title: Text(l.dashChurnRiskTitle),
+      title: Row(
+        children: <Widget>[
+          Expanded(child: Text(l.dashChurnRiskTitle)),
+          IconButton(
+            key: const ValueKey<String>('churn-risk-dialog-close'),
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+            iconSize: 20,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            color: AppColors.subtleForeground,
+          ),
+        ],
+      ),
       content: SizedBox(
         width: 480,
         child: entries.isEmpty
@@ -56,13 +69,6 @@ class ChurnRiskDialog extends StatelessWidget {
                 ),
               ),
       ),
-      actions: <Widget>[
-        TextButton(
-          key: const ValueKey<String>('churn-risk-dialog-close'),
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.actionClose),
-        ),
-      ],
     );
   }
 }
