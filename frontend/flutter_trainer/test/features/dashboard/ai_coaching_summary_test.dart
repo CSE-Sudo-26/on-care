@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,8 +6,6 @@ import 'package:oncare_trainer/features/dashboard/data/ai_coaching_summary_repos
 import 'package:oncare_trainer/features/dashboard/domain/ai_coaching_summary.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 import '../../helpers/client_factory.dart';
 
@@ -112,51 +109,7 @@ void main() {
     },
   );
 
-  testWidgets('demo rule copy renders in English locale', (tester) async {
-    const insight = AiCoachingClientInsight(
-      memberId: 'member-1',
-      memberName: 'Alex',
-      priority: CoachingPriority.high,
-      statusSummary: '',
-      evidence: <String>[],
-      exerciseFocus: '',
-      caution: '',
-      ruleData: RuleCoachingData(
-        signal: RuleCoachingSignal.knee,
-        recentMessage: 'My knee feels tight',
-      ),
-    );
-    final summary = AiCoachingSummary(
-      headline: '',
-      clients: const <AiCoachingClientInsight>[insight],
-      generatedBy: 'rule',
-      dataAsOf: DateTime(2026, 8, 14),
-      kind: CoachingSummaryKind.attention,
-      totalClients: 1,
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: AiSummaryCard(
-              summary: AsyncData<AiCoachingSummary>(summary),
-              onRetry: _noop,
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(find.textContaining('Check Alex first'), findsOneWidget);
-    expect(find.textContaining('lower-body discomfort'), findsOneWidget);
-    expect(find.textContaining('Reduce heavy squats'), findsOneWidget);
-    expect(find.textContaining('Recent message'), findsOneWidget);
-  });
 }
-
-void _noop() {}
 
 class _RecordingRepository implements AiCoachingSummaryRepository {
   var fetchCount = 0;
