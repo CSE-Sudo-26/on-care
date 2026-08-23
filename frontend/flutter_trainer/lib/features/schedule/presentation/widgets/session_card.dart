@@ -243,7 +243,7 @@ class SessionCard extends ConsumerWidget {
                       ]
                     else if (s.isUpcoming) ...<Widget>[
                       // 예정 session without a plan yet.
-                      const SessionNoPlanBox(),
+                      SessionNoPlanBox(onAdd: onEditProgram),
                       const SizedBox(height: AppSpacing.md),
                     ],
                   if (s.note.isNotEmpty) ...<Widget>[
@@ -269,6 +269,9 @@ class SessionCard extends ConsumerWidget {
                     // 상담이면서 아직 메모가 없으면 `메모 추가` 는 위
                     // `SessionNoNoteBox` 안으로 옮겨 갔다(#1012).
                     showEditNote: !(noteOnly && s.note.trim().isEmpty),
+                    // 프로그램이 아직 비어 있으면 `프로그램 수정` 은 위
+                    // `SessionNoPlanBox` 안으로 옮겨 갔다(#1236).
+                    showEditProgram: s.program.isNotEmpty,
                     onDelete: onDelete,
                     onCancel: onCancel,
                     onNoShow: onNoShow,
