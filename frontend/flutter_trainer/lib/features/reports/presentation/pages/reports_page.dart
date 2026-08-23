@@ -592,10 +592,16 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     // 무엇이 뜨는지만 적는다 — 빈 칸으로 두면 왼쪽 열이 목록
                     // 아래에서 그냥 잘린 것처럼 보인다.
                     final Widget summarySlot = reportAsync.when(
-                      loading: () =>
-                          ReportSummaryHint(message: l.reportsAiLoading),
-                      error: (_, _) =>
-                          ReportSummaryHint(message: l.reportsAiUnavailable),
+                      // 아직 못 읽은 자리도 같은 크기로 채운다 — 요약이 도착할
+                      // 때 열이 흔들리지 않는다.
+                      loading: () => ReportSummaryHint(
+                        message: l.reportsAiLoading,
+                        fill: true,
+                      ),
+                      error: (_, _) => ReportSummaryHint(
+                        message: l.reportsAiUnavailable,
+                        fill: true,
+                      ),
                       data: (data) => ReportAiCard(
                         report: data,
                         // 목록 아래 남는 자리를 채운다. 카드 안에서 스크롤하므로
@@ -620,34 +626,30 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           // 두어 오른쪽 리포트와는 여전히 따로 움직인다.
                           child: LayoutBuilder(
                             builder: (context, column) {
-                              // 창이 짧으면 예전처럼 열 안에서 스크롤한다 —
-                              // 목록만으로도 자리가 모자란 높이에서 요약까지
-                              // 늘리면 둘 다 못 읽는다.
-                              if (column.maxHeight <
-                                  AppLayout.reportsSummaryFillMinHeight) {
-                                return SingleChildScrollView(
-                                  key: const ValueKey<String>(
-                                    'reports-left-scroll',
+                              // 목록 아래 남는 자리를 요약이 채운다. 자리가
+                              // 모자라면 열이 스크롤하고 요약은 제 높이를
+                              // 지킨다 — `Expanded` 만 쓰면 목록이 긴 창에서
+                              // 요약이 몇 픽셀짜리 띠로 눌린다(#1177).
+                              return SingleChildScrollView(
+                                key: const ValueKey<String>(
+                                  'reports-left-scroll',
+                                ),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: column.maxHeight,
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      clientPicker,
-                                      const SizedBox(height: AppSpacing.lg),
-                                      summarySlot,
-                                    ],
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        clientPicker,
+                                        const SizedBox(height: AppSpacing.lg),
+                                        Expanded(child: summarySlot),
+                                      ],
+                                    ),
                                   ),
-                                );
-                              }
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  clientPicker,
-                                  const SizedBox(height: AppSpacing.lg),
-                                  Expanded(child: summarySlot),
-                                ],
+                                ),
                               );
                             },
                           ),

@@ -394,6 +394,21 @@ void main() {
     );
   });
 
+  testWidgets('짧은 창에서도 요약 카드가 띠로 눌리지 않는다 (#1177)', (tester) async {
+    // 목록이 열을 거의 다 쓰는 높이다. `Expanded` 만 쓰면 요약이 몇 픽셀짜리
+    // 띠가 되어 내용이 넘치고, 렌더 오버플로가 난다.
+    await openReports(tester, size: const Size(1600, 700));
+
+    expect(tester.takeException(), isNull);
+    final Finder summary = find.text('AI 코칭 보조 · 리포트 요약');
+    expect(summary, findsOneWidget);
+    // 열은 그 대신 스스로 스크롤한다.
+    expect(
+      find.byKey(const ValueKey<String>('reports-left-scroll')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('좁은 화면 목록에서는 요약 자리에 무엇이 뜨는지 알린다 (#897)', (tester) async {
     await openReports(tester, size: const Size(700, 1000));
 
