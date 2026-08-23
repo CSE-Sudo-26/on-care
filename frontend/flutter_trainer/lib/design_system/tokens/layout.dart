@@ -24,6 +24,12 @@ class AppLayout {
   /// and becomes a drawer behind a menu button (tablet portrait/phone).
   static const double sidebarDrawerBreakpoint = 1024;
 
+  /// 리포트 왼쪽 열에서 요약 카드가 남은 자리를 채우기 시작하는 열 높이.
+  ///
+  /// 고객 목록(5줄 고정)만으로도 이 아래에서는 자리가 빠듯하다 — 그보다 짧은
+  /// 창에서는 요약을 늘리는 대신 열 안에서 스크롤한다. (#1177)
+  static const double reportsSummaryFillMinHeight = 560;
+
   /// 헤더 가운데 슬롯(통합 검색 바)이 인라인 형태를 유지하는 최소 폭.
   /// 이보다 좁아지면 검색 바가 스스로 아이콘으로 접힌다 — 접히기 전에
   /// 좌우 대칭 예약을 포기하고 남는 자리를 몰아 준다. (#995)

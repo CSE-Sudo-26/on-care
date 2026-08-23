@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show weekdayCount;
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
-import 'package:oncare_trainer/features/reports/presentation/widgets/four_week_compliance_trend.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 
 /// 요일별 운동 내역 — 막대 아래에 하루하루를 이행률·운동 이름과 함께 적는다.
@@ -34,14 +33,6 @@ class ReportDailyDetail extends StatelessWidget {
               ),
           ],
         ),
-        if (report.completionAvg != null) ...<Widget>[
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(height: 1, thickness: 1, color: AppColors.border),
-          const SizedBox(height: AppSpacing.sm),
-          // 마지막 줄에 이번 주를 앞선 세 주 옆에 놓는다. 며칠을 나눈
-          // 값인지는 따로 적지 않는다 — 값이 있는 막대를 세면 나온다(#754).
-          FourWeekComplianceTrend(report: report),
-        ],
       ],
     );
   }
@@ -52,6 +43,9 @@ class _DailyDetailColumn extends StatelessWidget {
   const _DailyDetailColumn({required this.day});
 
   final ReportDay? day;
+
+  /// 한 칸에 적는 운동 줄 수. 넘는 만큼은 `+N개` 로 접는다.
+  static const int _maxLines = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +61,25 @@ class _DailyDetailColumn extends StatelessWidget {
             // 막대가 이미 말하고, 개수는 아래 ✓/✗ 를 세면 나온다. 기록이 없는
             // 날은 막대 쪽에 '기록 없음' 이 적히고, 아직 오지 않은 날은 비워
             // 둔다 — 빈칸이 곧 "아직" 이다.
-            for (final name in names)
+            for (final name in names.take(_maxLines))
               ExerciseLine(line: name, fontSize: 11.5, maxLines: 2),
+            // 운동을 많이 배정한 날이 카드 높이를 혼자 정하지 않게 한다.
+            // 일요일 한 칸 때문에 카드가 두 배로 길어지면 정작 견줘야 할
+            // 요일 일곱 칸이 한눈에 들어오지 않는다(#1177).
+            if (names.length > _maxLines)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  AppLocalizations.of(
+                    context,
+                  ).reportsMoreExercises(names.length - _maxLines),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

@@ -39,8 +39,11 @@ class FourWeekMetricTrend extends ConsumerWidget {
 
   /// 눈금 끝은 목표의 1.5배. 목표를 눈금 끝으로 삼으면 — 김민수의 나트륨처럼
   /// 네 주가 모두 목표를 넘은 경우 — 막대 넷이 전부 꽉 차 버려 어느 주가 더
-  /// 나빴는지가 사라진다. 여유를 두고 2/3 지점에 목표선을 그으면 초과 여부와
-  /// 주별 차이를 함께 읽는다.
+  /// 나빴는지가 사라진다. 여유를 두면 주별 차이가 길이로 드러난다.
+  ///
+  /// 2/3 지점에 긋던 목표선은 지웠다. 그 선이 무엇인지 말해 주던 `│ 목표 …`
+  /// 표기와 함께 사라졌고, 설명 없는 세로선은 눈금처럼 읽힌다. 목표를 넘긴
+  /// 주는 막대가 빨갛다 — 초과 여부는 색이 말한다(#1177).
   static const double _headroom = 1.5;
 
   /// 값 뒤에 붙는 단위.
@@ -67,28 +70,16 @@ class FourWeekMetricTrend extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                '${l.reportsRecentWeeks} · $label',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-            ),
-            // 세로선이 무엇인지 한 번은 적어 준다.
-            Text(
-              l.reportsGoalMarker('${metricTrendNumber(goal)}$unit'),
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.mutedForeground,
-              ),
-            ),
-          ],
+        // 목표 표기는 적지 않는다. 눈금 위 세로선과 초과한 주의 빨간 막대가
+        // 이미 같은 말을 하고 있었고, 줄 끝의 `│ 목표 2,000mg` 은 그 세로선과
+        // 겹쳐 읽혀 오히려 눈금처럼 보였다(#1177).
+        Text(
+          '${l.reportsRecentWeeks} · $label',
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.subtleForeground,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         for (var i = 0; i < weeks.length; i++)
@@ -100,7 +91,6 @@ class FourWeekMetricTrend extends ConsumerWidget {
             return WeekTrendBar(
               label: labels[i],
               fraction: mean == null ? null : mean / (goal * _headroom),
-              goalFraction: 1 / _headroom,
               text: mean == null
                   ? '-'
                   : '${metricTrendNumber(mean.round())}$unit',
