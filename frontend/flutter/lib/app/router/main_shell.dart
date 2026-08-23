@@ -205,6 +205,10 @@ class _MainShellState extends ConsumerState<MainShell>
                           onTap: () => _onTap(2),
                         ),
                         _Destination(
+                          // 운동 칸과 같이 열쇠를 준다 — 사람 아이콘은 이제
+                          // 헬스장 카드의 트레이너 줄에도 있어서(#1185),
+                          // 아이콘만으로는 이 칸을 지목할 수 없다.
+                          key: const ValueKey<String>('nav-my'),
                           icon: Icons.person_outline,
                           activeIcon: Icons.person,
                           label: l.navMyHealth,

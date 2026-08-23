@@ -233,9 +233,11 @@ void main() {
     expect(find.text(l.exConsultButton), findsNothing);
     expect(find.text(l.exViewConsultationRequest), findsNothing);
     expect(find.text(l.exMyGymSection), findsOneWidget);
+    // 담당 트레이너 이름은 이제 카드 안에 한 줄로 있다 (#1187) — 예전에는
+    // 예약 패널 머리에서만 스쳐 지나갔다.
     expect(
       find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),
-      findsNothing,
+      findsWidgets,
     );
 
     expect(find.text(l.exTrainerAvailability(_trainer.name)), findsOneWidget);
