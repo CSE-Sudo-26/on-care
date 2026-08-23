@@ -156,6 +156,12 @@ class AppColors {
   /// 트레이너 화면에서 다른 세기로 보여주지 않는다.
   static const Color statusOver = statusDanger;
 
+  /// 이탈 위험 전용 톤다운 빨강. [statusOver]/[statusDanger] 와 같은 빨강
+  /// 계열이지만 채도·명도를 낮췄다 — 대시보드에서 "주의 고객"(나트륨 등
+  /// 목표 초과와 같은 [statusOver])과 "이탈 위험"이 나란히 서는데, 둘 다
+  /// 같은 빨강이면 KPI 카드 두 장이 하나의 경고처럼 읽힌다.
+  static const Color statusChurnRisk = Color(0xFFB42318);
+
   /// 식단 그래프 색. 파랑에서 초록으로 옮긴다 — 운동과 한눈에 갈라 보라는
   /// 요구이므로 식단만 바꾸고 운동은 파랑을 지킨다.
   static const Color dietChart = statusNormal;

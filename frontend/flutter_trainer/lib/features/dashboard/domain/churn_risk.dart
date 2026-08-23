@@ -87,8 +87,9 @@ Set<ChurnSignal> computeChurnSignals(
   // PT 2회 연속 취소/노쇼 — 예약 순서상 가장 최근 두 건(공백 제외, 예정
   // 제외)이 둘 다 취소나 노쇼면 관계가 흔들린 신호로 본다.
   final finished =
-      recentSessions.where((s) => s.isFinished).toList(growable: false)
-        ..sort((a, b) => '${b.date} ${b.time}'.compareTo('${a.date} ${a.time}'));
+      recentSessions.where((s) => s.isFinished).toList(growable: false)..sort(
+        (a, b) => '${b.date} ${b.time}'.compareTo('${a.date} ${a.time}'),
+      );
   if (finished.length >= 2 &&
       (finished[0].isCancelled || finished[0].isNoShow) &&
       (finished[1].isCancelled || finished[1].isNoShow)) {

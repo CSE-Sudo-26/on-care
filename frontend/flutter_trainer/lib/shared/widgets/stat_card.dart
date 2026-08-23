@@ -17,16 +17,17 @@ enum StatTone {
   /// A target was exceeded — red, same as the member app.
   alert,
 
-  /// Worth a look but not urgent — orange.
+  /// Worth a look but not urgent — red, same as [alert] (#690: 주의도
+  /// 결국 빨강이다, 주황이던 시절의 문구만 남아 있었다).
   warn,
 
   /// On track — green.
   positive,
 
-  /// 고객 상태 등급의 중간 단계(주의 고객) — 주황. [alert]/[warn] 은 이미
-  /// 빨강(#690)이라, 주의와 이탈 위험을 한 행에서 나란히 보여줄 때는 이
-  /// 톤을 쓴다.
-  caution,
+  /// 이탈 위험처럼 [alert]/[warn] 보다 한 단계 더 심각한 신호 — 톤다운된
+  /// 빨강. 대시보드에서 "주의 고객"(warn)과 "이탈 위험"이 나란히 서는데,
+  /// 둘 다 같은 빨강이면 KPI 카드 두 장이 하나의 경고처럼 읽힌다.
+  severe,
 }
 
 /// A KPI tile: label, big number, unit, and a hint line.
@@ -74,7 +75,7 @@ class StatCard extends StatelessWidget {
     StatTone.alert => AppColors.overTarget,
     StatTone.warn => AppColors.warning,
     StatTone.positive => AppColors.success,
-    StatTone.caution => AppColors.statusCaution,
+    StatTone.severe => AppColors.statusChurnRisk,
   };
 
   Color get _iconColor =>

@@ -1,24 +1,19 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
-import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
-import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
 import 'package:oncare_trainer/features/dashboard/domain/churn_risk.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/churn_risk_dialog.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/follow_up_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/task_progress_chart.dart';
+import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_tasks_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_timeline_card.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -28,20 +23,12 @@ import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 
-/// Bumped whenever `_TodayTasksCardState` persists a new daily snapshot, so
-/// [_TaskProgressCard] (a sibling with no direct link to that state) knows
-/// to re-read [dailyTaskProgressStoreProvider].
-final _taskProgressVersionProvider = StateProvider<int>(
-  (ref) => 0,
-  name: 'taskProgressVersion',
-);
-
 /// 대시보드 — the console's home: what needs doing today.
 ///
 /// Every number here is a link. The four KPI cards deep-link into the
-/// view that explains them (예약 → 스케줄, 답장 필요 → 필터된 고객 목록),
-/// because a dashboard the trainer can only read is a dashboard they
-/// stop opening.
+/// view that explains them (담당 고객 → 고객 명단, 메시지 → 안읽음 필터,
+/// 주의 고객/이탈 위험 → 해당 목록/다이얼로그), because a dashboard the
+/// trainer can only read is a dashboard they stop opening.
 class DashboardPage extends ConsumerWidget {
   /// Creates the dashboard.
   const DashboardPage({super.key});
@@ -50,10 +37,9 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final summaryAsync = ref.watch(dashboardSummaryProvider);
-    final coachingSummary = ref.watch(dashboardAiCoachingSummaryProvider);
-    // 30일 스케줄 구간을 도는 별도 provider — 대시보드 화면에 있을 때만
-    // 구독하려고 `dashboardSummaryProvider` 밖에 둔다(dashboard_controller.dart
-    // 참고).
+    // 이탈 위험·활동 피드백은 대시보드 화면에 있을 때만 구독하는 별도
+    // provider다(dashboard_controller.dart 참고 — 30일 스케줄 구간을 도는
+    // 조회라 `dashboardSummaryProvider`처럼 앱 내내 살아 있으면 안 된다).
     final churnRisk = ref.watch(dashboardChurnRiskProvider);
     final activityFeedback = ref.watch(dashboardActivityFeedbackProvider);
     final today = nowKst();
@@ -92,6 +78,14 @@ class DashboardPage extends ConsumerWidget {
         data: (summary) => LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= AppLayout.twoColumnBreakpoint;
+            final todayColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                TodayTasksCard(entries: summary.attention),
+                const SizedBox(height: AppSpacing.lg),
+                const _TaskProgressCard(),
+              ],
+            );
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
@@ -102,213 +96,27 @@ class DashboardPage extends ConsumerWidget {
                     key: const ValueKey<String>('dashboard-action-row'),
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Expanded(child: TodayTimelineCard()),
+                      // 5:4 — 딱 반반은 아니다. 오늘의 일정이 시간표 형식이라
+                      // 칸이 좁아지면 상자 테두리가 먼저 답답해진다.
+                      const Expanded(flex: 5, child: TodayTimelineCard()),
                       const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: AttentionCard(entries: summary.attention),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            _TodayTasksCard(entries: summary.attention),
-                            const SizedBox(height: AppSpacing.lg),
-                            const _TaskProgressCard(),
-                          ],
-                        ),
-                      ),
+                      Expanded(flex: 4, child: todayColumn),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  // 파생된 신호(`오늘 할 일`) 아래에 트레이너가 직접 남긴 업무
-                  // 큐를 둔다 — 위는 "무엇이 눈에 띄나", 아래는 "무엇을 하기로
-                  // 했나"다(#869).
-                  const FollowUpCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(
-                    summary: coachingSummary,
-                    activityFeedback: activityFeedback,
-                    onRetry: () =>
-                        ref.invalidate(dashboardAiCoachingSummaryProvider),
-                  ),
+                  AiSummaryCard(activityFeedback: activityFeedback),
                 ] else ...<Widget>[
                   const TodayTimelineCard(),
                   const SizedBox(height: AppSpacing.lg),
-                  AttentionCard(entries: summary.attention),
+                  todayColumn,
                   const SizedBox(height: AppSpacing.lg),
-                  _TodayTasksCard(entries: summary.attention),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _TaskProgressCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  const FollowUpCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(
-                    summary: coachingSummary,
-                    activityFeedback: activityFeedback,
-                    onRetry: () =>
-                        ref.invalidate(dashboardAiCoachingSummaryProvider),
-                  ),
+                  AiSummaryCard(activityFeedback: activityFeedback),
                 ],
               ],
             );
           },
         ),
       ),
-    );
-  }
-}
-
-class _TodayTasksCard extends ConsumerStatefulWidget {
-  const _TodayTasksCard({required this.entries});
-
-  final List<AttentionClient> entries;
-
-  @override
-  ConsumerState<_TodayTasksCard> createState() => _TodayTasksCardState();
-}
-
-class _TodayTasksCardState extends ConsumerState<_TodayTasksCard> {
-  bool _expanded = true;
-  Set<String> _checkedKeys = <String>{};
-  String? _loadedForDate;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadForToday();
-  }
-
-  @override
-  void didUpdateWidget(covariant _TodayTasksCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _loadForToday();
-  }
-
-  static String _keyFor(_DashboardTask task) =>
-      '${task.alert.name}-${task.entry.client.id}';
-
-  static Set<String> _keysFor(List<_DashboardTask> tasks) =>
-      tasks.map(_keyFor).toSet();
-
-  /// Rehydrates today's checked state from what was last persisted —
-  /// **only on a date change**. Re-reading on every incidental rebuild
-  /// (roster refresh, unread count tick) would throw away a check the
-  /// trainer just made before this widget's own write lands.
-  void _loadForToday() {
-    final today = ymd(nowKst());
-    if (_loadedForDate == today) return;
-    _loadedForDate = today;
-    final snapshot = ref.read(dailyTaskProgressStoreProvider).read(today);
-    final keys = _keysFor(_buildTodayTasks(widget.entries));
-    final restored = snapshot == null
-        ? const <String>{}
-        : keys.where((k) => !snapshot.pendingKeys.contains(k)).toSet();
-    if (!mounted) return;
-    setState(() => _checkedKeys = restored);
-  }
-
-  void _toggle(String key) {
-    setState(() {
-      if (!_checkedKeys.remove(key)) _checkedKeys.add(key);
-    });
-    unawaited(_persist());
-  }
-
-  /// Saves today's snapshot — including which keys were already pending
-  /// yesterday, so a check made today can be told apart as a genuine
-  /// carry-over rather than a fresh task (#[dashboard]).
-  Future<void> _persist() async {
-    final store = ref.read(dailyTaskProgressStoreProvider);
-    final keys = _keysFor(_buildTodayTasks(widget.entries));
-    final checked = _checkedKeys.intersection(keys);
-    final yesterday = store.read(
-      ymd(nowKst().subtract(const Duration(days: 1))),
-    );
-    final carriedOverKeys = yesterday == null
-        ? const <String>{}
-        : yesterday.pendingKeys.intersection(keys);
-    final carriedCompleted = checked.intersection(carriedOverKeys).length;
-    await store.save(
-      ymd(nowKst()),
-      DailyTaskSnapshot(
-        total: keys.length,
-        completedToday: checked.length - carriedCompleted,
-        completedCarriedOver: carriedCompleted,
-        pendingKeys: keys.difference(checked),
-      ),
-    );
-    if (!mounted) return;
-    ref.read(_taskProgressVersionProvider.notifier).state++;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final tasks = _buildTodayTasks(widget.entries);
-    final keys = _keysFor(tasks);
-    final checkedCount = _checkedKeys.intersection(keys).length;
-    final allDone = tasks.isNotEmpty && checkedCount == tasks.length;
-
-    return SectionCard(
-      title: l.dashTodayTasks,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            tasks.isEmpty || allDone
-                ? l.dashTasksReviewed
-                : l.dashTasksNeedReview(tasks.length - checkedCount),
-            style: TextStyle(
-              color: tasks.isEmpty || allDone
-                  ? AppColors.success
-                  : AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          InkWell(
-            key: const ValueKey<String>('dashboard-tasks-toggle'),
-            borderRadius: const BorderRadius.all(AppRadius.sm),
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.xs),
-              child: Icon(
-                _expanded ? Icons.expand_less : Icons.expand_more,
-                size: 20,
-                color: AppColors.subtleForeground,
-              ),
-            ),
-          ),
-        ],
-      ),
-      child: !_expanded
-          ? const SizedBox.shrink()
-          : tasks.isEmpty
-          ? EmptyHint(message: l.dashTasksEmpty, icon: Icons.task_alt)
-          : Column(
-              children: <Widget>[
-                for (final task in tasks)
-                  _TaskRow(
-                    key: ValueKey<String>('dashboard-task-${_keyFor(task)}'),
-                    task: task,
-                    checked: _checkedKeys.contains(_keyFor(task)),
-                    onToggle: () => _toggle(_keyFor(task)),
-                    onTap: () {
-                      if (task.alert == ClientAlert.unanswered) {
-                        context.go(AppRoutes.messagesFor(task.entry.client.id));
-                        return;
-                      }
-                      context.go(
-                        AppRoutes.clientDetail(
-                          task.entry.client.id,
-                          section: AttentionCard.sectionFor(task.alert),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
     );
   }
 }
@@ -322,7 +130,7 @@ class _TaskProgressCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 값 자체는 안 쓰지만, 오늘 할 일 카드가 새로 저장할 때마다 이 카드도
     // 다시 그리게 만드는 구독이다 — SharedPreferences 는 스트림이 아니다.
-    ref.watch(_taskProgressVersionProvider);
+    ref.watch(taskProgressVersionProvider);
     final l = AppLocalizations.of(context);
     final store = ref.watch(dailyTaskProgressStoreProvider);
     final today = nowKst();
@@ -337,168 +145,6 @@ class _TaskProgressCard extends ConsumerWidget {
         snapshots: <DailyTaskSnapshot?>[for (final d in dates) store.read(d)],
         labels: weekdayLabels(l),
         todayIndex: elapsedWeekdays(today) - 1,
-      ),
-    );
-  }
-}
-
-/// Selects at most one task per action type so a sodium-heavy roster does not
-/// turn the whole checklist into duplicate diet reviews.
-List<_DashboardTask> _buildTodayTasks(List<AttentionClient> entries) {
-  const order = <ClientAlert>[
-    ClientAlert.unanswered,
-    ClientAlert.lowCompletion,
-    ClientAlert.sodiumOver,
-  ];
-  final usedClientIds = <String>{};
-  final tasks = <_DashboardTask>[];
-  for (final alert in order) {
-    final matching = entries
-        .where((entry) => entry.alerts.contains(alert))
-        .toList(growable: false);
-    final entry = matching
-        .where((candidate) => !usedClientIds.contains(candidate.client.id))
-        .firstOrNull;
-    final selected = entry ?? matching.firstOrNull;
-    if (selected == null) continue;
-    tasks.add(_DashboardTask(entry: selected, alert: alert));
-    usedClientIds.add(selected.client.id);
-  }
-  return tasks;
-}
-
-class _DashboardTask {
-  const _DashboardTask({required this.entry, required this.alert});
-
-  final AttentionClient entry;
-  final ClientAlert alert;
-}
-
-class _TaskRow extends StatelessWidget {
-  const _TaskRow({
-    super.key,
-    required this.task,
-    required this.checked,
-    required this.onToggle,
-    required this.onTap,
-  });
-
-  final _DashboardTask task;
-
-  /// Ticked by the trainer — stays on the list, greyed out with a
-  /// strikethrough, rather than disappearing (#[dashboard]).
-  final bool checked;
-
-  /// Toggles [checked]. Lives on the leading circle only — the rest of the
-  /// row keeps navigating via [onTap], same as before checking existed.
-  final VoidCallback onToggle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final alert = task.alert;
-    final entry = task.entry;
-    final tone = checked
-        ? AppColors.disabledForeground
-        : switch (alert) {
-            ClientAlert.unanswered => AppColors.primary,
-            ClientAlert.sodiumOver => AppColors.overTarget,
-            ClientAlert.sugarOver => AppColors.overTarget,
-            ClientAlert.lowCompletion => AppColors.warning,
-          };
-    final type = switch (alert) {
-      ClientAlert.unanswered => l.dashTaskReply,
-      ClientAlert.sodiumOver => l.dashTaskDiet,
-      ClientAlert.sugarOver => l.dashTaskDiet,
-      ClientAlert.lowCompletion => l.dashTaskWorkout,
-    };
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Material(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.borderStrong),
-              borderRadius: const BorderRadius.all(AppRadius.md),
-            ),
-            child: Row(
-              children: <Widget>[
-                InkWell(
-                  key: ValueKey<String>(
-                    'dashboard-task-check-${task.alert.name}-${entry.client.id}',
-                  ),
-                  onTap: onToggle,
-                  borderRadius: const BorderRadius.all(AppRadius.pill),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: checked ? AppColors.success : Colors.transparent,
-                      border: Border.all(
-                        color: checked
-                            ? AppColors.success
-                            : AppColors.borderStrong,
-                      ),
-                    ),
-                    child: checked
-                        ? const Icon(
-                            Icons.check,
-                            size: 14,
-                            color: AppColors.primaryForeground,
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tone.withValues(alpha: 0.12),
-                    borderRadius: const BorderRadius.all(AppRadius.pill),
-                  ),
-                  child: Text(
-                    type,
-                    style: TextStyle(
-                      color: tone,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    l.dashTaskReview(alert.label(l), entry.client.name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: checked ? AppColors.disabledForeground : null,
-                      decoration: checked ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: AppColors.subtleForeground,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -549,7 +195,7 @@ class _KpiRow extends StatelessWidget {
         icon: Icons.report_gmailerrorred_outlined,
         tone: summary.healthAttentionCount == 0
             ? StatTone.positive
-            : StatTone.caution,
+            : StatTone.warn,
         hint: summary.healthAttentionCount == 0
             ? l.dashNoIssues
             : l.dashCheckSodiumCompletion,
@@ -560,7 +206,7 @@ class _KpiRow extends StatelessWidget {
         value: '${churnRisk.length}',
         unit: l.dashUnitPeople,
         icon: Icons.person_off_outlined,
-        tone: churnRisk.isEmpty ? StatTone.positive : StatTone.alert,
+        tone: churnRisk.isEmpty ? StatTone.positive : StatTone.severe,
         hint: churnRisk.isEmpty ? l.dashChurnRiskNone : l.dashChurnRiskCheck,
         onTap: () => showChurnRiskDialog(context, entries: churnRisk),
       ),

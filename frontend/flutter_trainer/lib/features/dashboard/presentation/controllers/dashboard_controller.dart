@@ -65,22 +65,23 @@ final _churnRecentSessionsProvider =
 /// `.autoDispose` 다 — [dashboardSummaryProvider] 는 그렇지 않아 앱이 켜져
 /// 있는 내내 살아 있으므로, 대시보드 전용 데이터는 그쪽이 아니라 대시보드
 /// 페이지가 직접 구독하는 이 provider에 둔다.
-final _churnInputsProvider = Provider.autoDispose<
-  ({
-    List<TrainerClient> clients,
-    Map<String, int> unread,
-    List<ScheduleSession> recentSessions,
-  })
->((ref) {
-  final clients =
-      ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
-  final unread =
-      ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
-  final recentSessions =
-      ref.watch(_churnRecentSessionsProvider).valueOrNull ??
-      const <ScheduleSession>[];
-  return (clients: clients, unread: unread, recentSessions: recentSessions);
-}, name: 'churnInputs');
+final _churnInputsProvider =
+    Provider.autoDispose<
+      ({
+        List<TrainerClient> clients,
+        Map<String, int> unread,
+        List<ScheduleSession> recentSessions,
+      })
+    >((ref) {
+      final clients =
+          ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
+      final unread =
+          ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
+      final recentSessions =
+          ref.watch(_churnRecentSessionsProvider).valueOrNull ??
+          const <ScheduleSession>[];
+      return (clients: clients, unread: unread, recentSessions: recentSessions);
+    }, name: 'churnInputs');
 
 /// 이탈 위험 KPI 카드와 그 상세 다이얼로그가 함께 쓰는 목록.
 final dashboardChurnRiskProvider = Provider.autoDispose<List<ChurnRiskClient>>((

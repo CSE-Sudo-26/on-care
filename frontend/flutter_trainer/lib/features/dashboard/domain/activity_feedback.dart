@@ -14,13 +14,19 @@ enum ActivityFeedbackKind {
   /// 식단 주의 고객 피드백 미완료 안내.
   dietFeedbackPending;
 
-  /// Localized sentence with [count] baked in.
-  String label(AppLocalizations l, int count) => switch (this) {
-    ActivityFeedbackKind.difficultyReview => l.dashActivityDifficulty(count),
-    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityInactive(count),
-    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityDietFeedback(
-      count,
-    ),
+  /// Short headline shown next to the leading icon.
+  String title(AppLocalizations l) => switch (this) {
+    ActivityFeedbackKind.difficultyReview => l.dashActivityDifficultyTitle,
+    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityInactiveTitle,
+    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityDietFeedbackTitle,
+  };
+
+  /// The full explanatory sentence — what this signal means and what to
+  /// do about it.
+  String description(AppLocalizations l) => switch (this) {
+    ActivityFeedbackKind.difficultyReview => l.dashActivityDifficultyDesc,
+    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityInactiveDesc,
+    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityDietFeedbackDesc,
   };
 }
 

@@ -10,9 +10,9 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 ///
 /// Each bar has two segments: that day's own tasks (navy) stacked under
 /// tasks that were **carried over** from an earlier day's unfinished list
-/// (주황) — [DailyTaskSnapshot.completedCarriedOver] is a real count, not a
-/// visual flourish, so a taller orange band means the trainer is clearing a
-/// real backlog that day.
+/// (회색이 섞인 푸른색) — [DailyTaskSnapshot.completedCarriedOver] is a real
+/// count, not a visual flourish, so a taller band means the trainer is
+/// clearing a real backlog that day.
 class TaskProgressChart extends StatelessWidget {
   /// Creates the chart.
   const TaskProgressChart({
@@ -52,7 +52,7 @@ class TaskProgressChart extends StatelessWidget {
           children: <Widget>[
             _Legend(color: AppColors.primary, label: l.dashTaskProgressToday),
             _Legend(
-              color: AppColors.statusCaution,
+              color: AppColors.aiCardGradientEnd,
               label: l.dashTaskProgressCarriedOver,
             ),
           ],
@@ -183,10 +183,8 @@ class _StackedBar extends StatelessWidget {
                     Container(
                       height: carriedHeight,
                       decoration: const BoxDecoration(
-                        color: AppColors.statusCaution,
-                        borderRadius: BorderRadius.vertical(
-                          top: AppRadius.xs,
-                        ),
+                        color: AppColors.aiCardGradientEnd,
+                        borderRadius: BorderRadius.vertical(top: AppRadius.xs),
                       ),
                     ),
                   if (todayHeight > 0)
@@ -196,9 +194,7 @@ class _StackedBar extends StatelessWidget {
                           color: AppColors.primary,
                           borderRadius: carriedHeight > 0
                               ? null
-                              : const BorderRadius.vertical(
-                                  top: AppRadius.xs,
-                                ),
+                              : const BorderRadius.vertical(top: AppRadius.xs),
                         ),
                       ),
                     ),

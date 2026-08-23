@@ -103,72 +103,84 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final muted = session.isGap;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: const BorderRadius.all(AppRadius.sm),
-      child: Container(
-        decoration: imminent
-            ? const BoxDecoration(
-                color: AppColors.accentSurface,
-                borderRadius: BorderRadius.all(AppRadius.sm),
-              )
-            : null,
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
-        child: Opacity(
-          opacity: muted ? 0.55 : 1,
-          child: Row(
-            children: <Widget>[
-              SizedBox(
-                width: 42,
-                child: Text(
-                  session.time,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.subtleForeground,
-                  ),
-                ),
+    // 시간표 형식 — 슬롯마다 테두리 상자를 둔다. 하루치 리스트일 뿐이지만
+    // 스케줄 탭의 시간표 감각을 대시보드에서도 살린다.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: imminent ? AppColors.accentSurface : AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(AppRadius.md),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: imminent ? AppColors.primary : AppColors.borderStrong,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: muted
-                    ? Text(
-                        l.dashEmptySlot,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.subtleForeground,
-                        ),
-                      )
-                    : Text(
-                        client == null
-                            ? fallbackName
-                            : clientIdentityLabel(context, client!),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.foreground,
-                        ),
+              borderRadius: const BorderRadius.all(AppRadius.md),
+            ),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.sm,
+              horizontal: AppSpacing.sm,
+            ),
+            child: Opacity(
+              opacity: muted ? 0.55 : 1,
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 42,
+                    child: Text(
+                      session.time,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.subtleForeground,
                       ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: muted
+                        ? Text(
+                            l.dashEmptySlot,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.subtleForeground,
+                            ),
+                          )
+                        : Text(
+                            client == null
+                                ? fallbackName
+                                : clientIdentityLabel(context, client!),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.foreground,
+                            ),
+                          ),
+                  ),
+                  // 스케줄 탭과 같은 알약 두 장(#1012) — 종류는 늘 남색, 상태는
+                  // 결과에 따라 색이 갈린다. 대시보드 목록은 자리가 좁아 둘 다
+                  // compact 치수를 쓴다.
+                  if (!muted) ...<Widget>[
+                    const SizedBox(width: AppSpacing.xs),
+                    SessionTypeChip(
+                      label: session.type,
+                      muted: session.isFinished,
+                      compact: true,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    SessionStatusChip(status: session.status),
+                  ],
+                ],
               ),
-              // 스케줄 탭과 같은 알약 두 장(#1012) — 종류는 늘 남색, 상태는
-              // 결과에 따라 색이 갈린다. 대시보드 목록은 자리가 좁아 둘 다
-              // compact 치수를 쓴다.
-              if (!muted) ...<Widget>[
-                const SizedBox(width: AppSpacing.xs),
-                SessionTypeChip(
-                  label: session.type,
-                  muted: session.isFinished,
-                  compact: true,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                SessionStatusChip(status: session.status),
-              ],
-            ],
+            ),
           ),
         ),
       ),
