@@ -282,17 +282,22 @@ bool _matchesManagementFilter(
   RosterManagementFilter filter, {
   required Map<String, int> unread,
 }) {
+  final alerts = alertsFor(client, unread: unread[client.id] ?? 0);
   switch (filter) {
     case RosterManagementFilter.attention:
-      return healthAlertsFor(client).isNotEmpty || (unread[client.id] ?? 0) > 0;
+      return alerts.isNotEmpty;
     case RosterManagementFilter.active:
       return client.active;
     case RosterManagementFilter.dormant:
       return !client.active;
     case RosterManagementFilter.sodiumOver:
-      return client.sodiumOverBudget;
+      return alerts.contains(ClientAlert.sodiumOver);
     case RosterManagementFilter.sugarOver:
-      return client.sugarOverBudget;
+      return alerts.contains(ClientAlert.sugarOver);
+    case RosterManagementFilter.lowCompletion:
+      return alerts.contains(ClientAlert.lowCompletion);
+    case RosterManagementFilter.unanswered:
+      return alerts.contains(ClientAlert.unanswered);
   }
 }
 
@@ -414,6 +419,10 @@ class _MemberManagementToolbar extends StatelessWidget {
         return l.alertSodiumOver;
       case RosterManagementFilter.sugarOver:
         return l.alertSugarOver;
+      case RosterManagementFilter.lowCompletion:
+        return l.alertLowCompletion;
+      case RosterManagementFilter.unanswered:
+        return l.alertAwaitingReply;
     }
   }
 
@@ -517,7 +526,19 @@ class _FilterMenuButton extends StatelessWidget {
                           selected: selected.contains(value),
                           onTap: () {
                             setMenuState(() {
-                              if (!selected.remove(value)) selected.add(value);
+                              final wasSelected = selected.remove(value);
+                              if (!wasSelected) {
+                                if (value == RosterManagementFilter.attention) {
+                                  selected.removeAll(_attentionDetailFilters);
+                                } else if (_attentionDetailFilters.contains(
+                                  value,
+                                )) {
+                                  selected.remove(
+                                    RosterManagementFilter.attention,
+                                  );
+                                }
+                                selected.add(value);
+                              }
                             });
                             onChanged(Set<RosterManagementFilter>.of(selected));
                           },
@@ -541,6 +562,19 @@ class _FilterMenuButton extends StatelessWidget {
     );
   }
 }
+
+/// `관리 필요`가 한 번에 포함하는 배지별 세부 신호.
+///
+/// 통합 조건과 그 부분집합을 같이 OR 로 고르면 결과는 같은데 필터
+/// 개수만 늘어난다. 한쪽을 고르면 다른 쪽을 풀어 버튼이 실제로 적용한
+/// 조건 수를 그대로 말하게 한다.
+const Set<RosterManagementFilter> _attentionDetailFilters =
+    <RosterManagementFilter>{
+      RosterManagementFilter.sodiumOver,
+      RosterManagementFilter.sugarOver,
+      RosterManagementFilter.lowCompletion,
+      RosterManagementFilter.unanswered,
+    };
 
 /// One multi-select filter option, shown and removed as a chip/tag (#1026).
 ///

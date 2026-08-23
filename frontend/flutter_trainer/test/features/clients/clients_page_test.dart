@@ -643,6 +643,104 @@ void main() {
       expect(find.text('이지수'), findsNothing);
     });
 
+    testWidgets('이행률 저조 배지 필터는 같은 ClientAlert 기준을 쓴다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+        // 주간 계열이 모두 채워진 시점으로 고정해 실행 요일에 따라
+        // 저조 배지가 달라지지 않게 한다.
+        seedClock: DateTime(2026, 8, 16),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-lowCompletion')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+
+      final lowCompletionCard = find.byKey(
+        const ValueKey<String>('client-seed-client-9'),
+      );
+      await scrollToClient(tester, lowCompletionCard);
+      expect(lowCompletionCard, findsOneWidget); // 배준혁: 주간 평균 60% 미만
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-2')),
+        findsNothing,
+      ); // 이지수: 이행률 정상
+    });
+
+    testWidgets('답장 대기 배지 필터는 실제 안 읽은 메시지 수를 쓴다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+        seedClock: DateTime(2026, 8, 16),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-unanswered')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+
+      final unansweredCard = find.byKey(
+        const ValueKey<String>('client-seed-client-8'),
+      );
+      await scrollToClient(tester, unansweredCard);
+      expect(unansweredCard, findsOneWidget); // 오세라: 회원이 마지막으로 보냄
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-3')),
+        findsNothing,
+      ); // 박성호: 트레이너가 답장함
+    });
+
+    testWidgets('관리 필요와 배지별 세부 필터는 중복 선택되지 않는다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-attention')),
+      );
+      await settle(tester);
+      expect(find.text('필터 1'), findsOneWidget);
+
+      // 통합 조건의 부분집합을 고르면 통합 chip 을 풀어, 같은 결과를
+      // 만드는 조건이 두 개로 세어지지 않게 한다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
+      );
+      await settle(tester);
+      expect(find.text('필터 1'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-attention')),
+      );
+      await settle(tester);
+      expect(find.text('필터 1'), findsOneWidget);
+    });
+
     testWidgets('복수 필터는 OR 로 합쳐지고 전체 초기화로 한 번에 풀린다', (tester) async {
       await pumpTrainerApp(
         tester,
