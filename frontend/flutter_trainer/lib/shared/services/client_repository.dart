@@ -779,12 +779,25 @@ class DriftClientRepository implements ClientRepository {
     items: row.items,
     calories: row.calories,
     sodiumMg: row.sodiumMg,
+    timeLabel: row.timeLabel,
+    foods: _dietFoods(row.foodsJson),
     sugarG: row.sugarG,
     carbsG: row.carbsG,
     proteinG: row.proteinG,
     fatG: row.fatG,
     photoAsset: row.photoAsset,
   );
+
+  /// 시드가 넣어 둔 음식별 영양. 깨진 값은 없는 것으로 본다 — 끼니 카드는
+  /// 그때 `items` 한 줄로 떨어져 예전과 같이 읽힌다. (#1166)
+  static List<ClientDietFood> _dietFoods(String json) {
+    final Object? decoded = jsonDecode(json);
+    if (decoded is! List<Object?>) return const <ClientDietFood>[];
+    return <ClientDietFood>[
+      for (final Object? food in decoded)
+        if (food is Map<String, Object?>) ClientDietFood.fromJson(food),
+    ];
+  }
 
   /// A client's workout history for the 운동기록 sub-tab, newest first
   /// (seeded order).

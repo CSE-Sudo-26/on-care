@@ -459,8 +459,8 @@
   "dietEmpty": "No meals logged yet",
   "dietDayEmpty": "No record",
   "dietMacros": "Macros",
-  "dietTodaySummary": "Today's nutrition",
   "clientNutritionSummary": "Nutrition summary",
+  "dietCalorieIntake": "Calories today",
   "dietAchieveRate": "Progress",
   "dietAmountOver": "{amount} over the goal",
   "@dietAmountOver": {
@@ -592,6 +592,21 @@
   "exBurnWeekTitle": "Burned this week",
   "exBurnMonthTitle": "Burned this month",
   "exBurnDayTitle": "Burned",
+  "exBurnAllTitle": "Average burned",
+  "exWeekOfMonthLabel": "Week {week}, {month}/",
+  "@exWeekOfMonthLabel": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "week": { "type": "int" }
+    }
+  },
+  "exStreakCheer": "{days, plural, =1{1 day in a row!} other{{days} days in a row!}}",
+  "@exStreakCheer": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "exStreakStart": "No streak yet",
   "exTypeOther": "Other",
   "exSetsValue": "{count, plural, =1{1 set} other{{count} sets}}",
   "@exSetsValue": {

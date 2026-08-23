@@ -7,7 +7,7 @@ GET /trainer/me 응답:
 from __future__ import annotations
 
 from datetime import date as _date, datetime as _datetime
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import (
     BaseModel,
@@ -188,6 +188,12 @@ class ClientDietEntryOut(BaseModel):
     """고객 식단 서브탭 한 끼 — 프론트 ClientDietEntry 계약 정렬."""
     meal: str        # 아침|점심|저녁|간식
     items: str       # 음식명 나열
+    # 회원이 자기 앱에서 보는 것과 같은 끼니 카드를 트레이너도 본다(#1166).
+    # 시각과 음식별 영양이 없으면 트레이너 화면은 이름 한 줄로 떨어져, 같은
+    # 끼니를 두 화면이 다른 수준으로 말한다. 회원 API(`DietEntryOut`)가 이미
+    # 같은 `foods_json` 을 그대로 흘려 보낸다 — 키도 그쪽과 같다.
+    time_label: str = ""
+    foods: list[dict[str, Any]] = []  # [{name, calories, sodium_mg, sugar_g}]
     calories: int
     sodium_mg: int
     # 나트륨과 나란히 읽히는 값인데 이 응답에만 빠져 있어, 트레이너 끼니

@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v23']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v24']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -103,7 +103,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v23') == today) return;
+  if (await db.readValue('trainer_seeded_v24') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -230,6 +230,8 @@ Future<void> seedIfEmpty(
               calories: diet[i].calories,
               sodiumMg: diet[i].sodiumMg,
               sugarG: Value(diet[i].sugarG),
+              timeLabel: Value(diet[i].timeLabel),
+              foodsJson: Value(diet[i].foodsJson),
               // 날짜가 없는 끼니는 오늘 것이다 — 픽스처가 아닌 고객들은
               // 오늘 하루치만 갖고 있다(#1025).
               date: Value(diet[i].date ?? today),
@@ -399,7 +401,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v23', today);
+    await db.putValue('trainer_seeded_v24', today);
   });
 }
 
@@ -420,6 +422,8 @@ class _Meal {
     this.fatG = 0,
     this.photoAsset,
     this.date,
+    this.timeLabel = '',
+    this.foodsJson = '[]',
   });
   final String meal;
   final String items;
@@ -438,6 +442,13 @@ class _Meal {
 
   /// 데모에서 이 끼니로 보여 줄 번들 이미지. 없으면 사진 없이 그린다. (#819)
   final String? photoAsset;
+
+  /// 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 배지 옆에 적는 값이다. (#1166)
+  final String timeLabel;
+
+  /// 음식별 영양(JSON 배열). 회원 앱과 **같은 픽스처**에서 온다 — 같은 끼니의
+  /// 같은 음식이 두 화면에서 다른 수치로 읽히지 않는다. (#1166)
+  final String foodsJson;
 }
 
 class _Routine {
@@ -595,6 +606,10 @@ class _FixtureClient {
           meal.calories,
           meal.sodiumMg,
           date: day.date,
+          timeLabel: meal.timeLabel,
+          // 픽스처가 음식마다 들고 있는 영양을 그대로 옮긴다 — 회원 앱이 읽는
+          // 것과 **같은 JSON** 이다(`FixtureMeal.foodsJson`). (#1166)
+          foodsJson: meal.foodsJson(),
           sugarG: meal.sugarG,
           carbsG: meal.carbsG,
           proteinG: meal.proteinG,

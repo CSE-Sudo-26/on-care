@@ -11,11 +11,11 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
@@ -172,6 +172,10 @@ class _ClientDietPeriodCardState extends ConsumerState<ClientDietPeriodCard> {
 }
 
 /// 제목 없는 흰 판 — 영양 요약 카드·운동 카드와 같은 모양이다.
+///
+/// 높이는 `오늘` 카드와 같은 [kClientNutritionCardHeight] 를 바닥으로 둔다
+/// (#1167) — 기간 토글을 눌렀을 때 카드가 커졌다 작아지면 그 아래 날짜별 기록이
+/// 그때마다 뛴다. 최소 높이라 글자 배율이 커지면 함께 커진다.
 class _Card extends StatelessWidget {
   const _Card({required this.child});
 
@@ -181,7 +185,8 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     key: const ValueKey<String>('client-diet-period-card'),
     width: double.infinity,
-    padding: const EdgeInsets.all(AppSpacing.md),
+    constraints: const BoxConstraints(minHeight: kClientNutritionCardHeight),
+    padding: const EdgeInsets.all(AppSpacing.lg),
     decoration: BoxDecoration(
       color: AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -245,168 +250,286 @@ class _Body extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     // 이번 주(꺾은선)는 스크롤도 선택도 없다 — 일곱 칸이 이미 한 화면이다.
     final bool selectable = !weekly;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        // 지표 버튼은 **무엇을 고르는가**만 말한다. 지표마다 색이 다르면 고르기
-        // 전부터 셋이 서로 다른 뜻을 가진 것처럼 보인다.
-        Wrap(
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.xs,
-          children: <Widget>[
-            for (final _Metric m in _Metric.values)
-              _MetricPill(
-                label: metricLabel(l, m),
-                active: metric == m,
-                onTap: () => onMetric(m),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: ListenableBuilder(
-                listenable: selection,
-                builder: (BuildContext context, Widget? _) {
-                  final int? picked = selectable ? selection.selected : null;
-                  // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
-                  // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
-                  // 못한다. (#1018)
-                  final double value = picked == null
-                      ? (selectable ? selection.averageOf(values) : average)
-                      : values[picked];
-                  final bool over = goal > 0 && value > goal;
-                  return PeriodChartHeadline(
-                    selected: picked != null,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          picked == null
-                              ? '${l.clientPeriodAverage} · $label'
-                              : '${DateFormat.yMd(Localizations.localeOf(context).toString()).format(dates[picked])} · $label',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.subtleForeground,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text.rich(
-                            TextSpan(
-                              text: format(value),
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: over
-                                    ? AppColors.overTarget
-                                    : AppColors.foreground,
-                              ),
-                              children: <InlineSpan>[
-                                TextSpan(
-                                  text: ' / ${format(goal)} $unit',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.mutedForeground,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              l.clientPeriodLoggedDays(period.loggedDays),
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.mutedForeground,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (weekly)
-          Builder(
-            builder: (BuildContext context) {
-              final days = <String>[
-                for (final DateTime d in dates) _weekdayLabel(l, d),
-              ];
-              final today = _todayIndexIn(dates);
-              return MetricTrendChart(
-                values: values,
-                dayLabels: days,
-                goal: goal,
-                ticks: ticks,
-                // 선은 오늘까지만 잇는다. 아직 오지 않은 요일의 0 이 급락처럼
-                // 보이면 안 된다.
-                todayIndex: today,
-                // 카드 머리의 지표 이름으로 시작한다 — 음성 안내에서도 이
-                // 그래프가 무엇의 것인지가 먼저 들린다(#972).
-                semanticsLabel: chartSemanticsLabel(
-                  l,
-                  title: label,
-                  points: chartSeriesPoints(
-                    l,
-                    values: values,
-                    dayLabels: days,
-                    format: (double v) => '${format(v)} $unit',
-                    upTo: today,
+    final DateFormat range = DateFormat.MMMd(
+      Localizations.localeOf(context).toString(),
+    );
+    // 카드의 빈 곳을 누르면 고른 날이 풀려 다시 하루 평균이 뜬다 (회원 앱
+    // #1123). 막대·점은 자기 탭을 먼저 받으므로 이 손짓은 그 밖의 자리에만
+    // 닿는다.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => selection.select(null),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          // 지표 버튼과 **기간 범위를 한 줄에** 둔다 (#1167). 범위를 따로 한 줄에
+          // 두면 제목·범위·버튼 세 줄이 되어 정작 그래프가 아래로 밀린다.
+          //
+          // 버튼은 **무엇을 고르는가**만 말한다. 지표마다 색이 다르면 고르기
+          // 전부터 셋이 서로 다른 뜻을 가진 것처럼 보인다.
+          Row(
+            children: <Widget>[
+              for (final _Metric m in _Metric.values) ...<Widget>[
+                _MetricPill(
+                  label: metricLabel(l, m),
+                  active: metric == m,
+                  onTap: () => onMetric(m),
+                ),
+                if (m != _Metric.values.last) const SizedBox(width: 6),
+              ],
+              const SizedBox(width: AppSpacing.sm),
+              // 좁은 화면에서 먼저 줄어드는 쪽은 범위다 — 버튼은 눌러야 하는
+              // 것이라 잘리면 안 된다.
+              Expanded(
+                child: Text(
+                  '${range.format(period.range.from)} ~ '
+                  '${range.format(period.range.to)}',
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
-                goalLabel: '${l.clientPeriodGoal}\n${format(goal)}',
-                formatTick: (double v) => format(v),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ListenableBuilder(
+            listenable: selection,
+            builder: (BuildContext context, Widget? _) {
+              // 이번 주도 점을 골라 그날 값을 볼 수 있다 (회원 앱 #1122).
+              // 스크롤이 없을 뿐, 머리 숫자가 평균과 하루를 오가는 규칙은
+              // `전체` 와 같다.
+              final int? picked = selection.selected;
+              // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
+              // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
+              // 못한다. (#1018)
+              final double value = picked == null
+                  ? (selectable ? selection.averageOf(values) : average)
+                  : values[picked];
+              final bool over = goal > 0 && value > goal;
+              // 칼로리를 볼 때만 탄단지를 곁들인다 — 나트륨·당류는 탄단지로
+              // 쪼갤 수 있는 값이 아니다. 날을 고르면 그날의 탄단지, 아니면
+              // 기록이 있는 날의 하루 평균이다. (회원 앱 #1121)
+              final _Macros? macros = _macrosFor(picked);
+              return PeriodChartHeadline(
+                selected: picked != null,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            picked == null
+                                ? '${l.clientPeriodAverage} · $label'
+                                : '${DateFormat.yMd(Localizations.localeOf(context).toString()).format(dates[picked])} · $label',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text.rich(
+                              TextSpan(
+                                text: format(value),
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                  color: over
+                                      ? AppColors.overTarget
+                                      : AppColors.foreground,
+                                ),
+                                children: <InlineSpan>[
+                                  TextSpan(
+                                    text: ' / ${format(goal)} $unit',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0,
+                                      color: AppColors.mutedForeground,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (macros != null) ...<Widget>[
+                      const SizedBox(width: AppSpacing.md),
+                      _MacroDetail(macros: macros, format: format),
+                    ],
+                  ],
+                ),
               );
             },
-          )
-        else ...<Widget>[
-          _PeriodBars(
-            values: values,
-            logged: logged,
-            dates: dates,
-            goal: goal,
-            unit: unit,
-            label: label,
-            format: format,
-            selection: selection,
-            days: days,
           ),
-          // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
-          if (days != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: AppSpacing.md,
-              runSpacing: AppSpacing.xs,
+          const SizedBox(height: AppSpacing.md),
+          if (weekly)
+            Builder(
+              builder: (BuildContext context) {
+                final days = <String>[
+                  for (final DateTime d in dates) _weekdayLabel(l, d),
+                ];
+                final today = _todayIndexIn(dates);
+                return ListenableBuilder(
+                  listenable: selection,
+                  builder: (BuildContext context, Widget? _) =>
+                      MetricTrendChart(
+                        values: values,
+                        dayLabels: days,
+                        goal: goal,
+                        ticks: ticks,
+                        selectedIndex: selection.selected,
+                        onSelected: selection.select,
+                        // 선은 오늘까지만 잇는다. 아직 오지 않은 요일의 0 이
+                        // 급락처럼 보이면 안 된다.
+                        todayIndex: today,
+                        // 카드 머리의 지표 이름으로 시작한다 — 음성 안내에서도
+                        // 이 그래프가 무엇의 것인지가 먼저 들린다(#972).
+                        semanticsLabel: chartSemanticsLabel(
+                          l,
+                          title: label,
+                          points: chartSeriesPoints(
+                            l,
+                            values: values,
+                            dayLabels: days,
+                            format: (double v) => '${format(v)} $unit',
+                            upTo: today,
+                          ),
+                        ),
+                        goalLabel: '${l.clientPeriodGoal}\n${format(goal)}',
+                        formatTick: (double v) => format(v),
+                        // 남는 자리는 그래프가 쓴다 — 세 화면의 카드 높이를
+                        // 같게 두면서 빈 칸을 만들지 않는다. (회원 앱 #1124)
+                        height: 105,
+                      ),
+                );
+              },
+            )
+          else
+            // 쌓은 색이 무엇을 뜻하는지는 카드 머리의 탄단지 줄이 말한다 —
+            // 그래프 아래 범례는 뺐다 (#1167). 한 카드가 같은 말을 두 번 하지
+            // 않는다.
+            _PeriodBars(
+              values: values,
+              logged: logged,
+              dates: dates,
+              goal: goal,
+              unit: unit,
+              label: label,
+              format: format,
+              selection: selection,
+              days: days,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 머리 숫자 옆에 붙일 탄단지. [picked] 이 있으면 그날 값, 없으면 기록이
+  /// 있는 날의 하루 평균이다. 칼로리를 보고 있지 않거나(나트륨·당류) 서버가
+  /// 영양을 주지 않은 기간이면 null 이라 아무것도 붙지 않는다.
+  _Macros? _macrosFor(int? picked) {
+    final List<ClientDietDay>? all = days;
+    if (metric != _Metric.calories || all == null) return null;
+    if (picked != null) {
+      if (picked >= all.length) return null;
+      final ClientDietDay d = all[picked];
+      return d.hasMacros
+          ? _Macros(carbs: d.carbsG, protein: d.proteinG, fat: d.fatG)
+          : null;
+    }
+    final List<ClientDietDay> logged = all
+        .where((ClientDietDay d) => d.hasMacros)
+        .toList();
+    if (logged.isEmpty) return null;
+    double avg(double Function(ClientDietDay) of) =>
+        logged.fold<double>(0, (double a, ClientDietDay d) => a + of(d)) /
+        logged.length;
+    return _Macros(
+      carbs: avg((ClientDietDay d) => d.carbsG),
+      protein: avg((ClientDietDay d) => d.proteinG),
+      fat: avg((ClientDietDay d) => d.fatG),
+    );
+  }
+}
+
+/// 머리 숫자 옆의 탄단지 한 덩어리. 막대를 쌓은 색을 그대로 써서, 예전 그래프
+/// 아래 범례가 하던 말(어느 색이 무엇인지)까지 여기서 함께 한다. (회원 앱 #1121)
+class _Macros {
+  const _Macros({
+    required this.carbs,
+    required this.protein,
+    required this.fat,
+  });
+
+  final double carbs;
+  final double protein;
+  final double fat;
+}
+
+class _MacroDetail extends StatelessWidget {
+  const _MacroDetail({required this.macros, required this.format});
+
+  final _Macros macros;
+  final String Function(num) format;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<(String, double, Color)> rows = <(String, double, Color)>[
+      (l.metricCarbs, macros.carbs, AppColors.macroCarbs),
+      (l.metricProtein, macros.protein, AppColors.macroProtein),
+      (l.metricFat, macros.fat, AppColors.macroFat),
+    ];
+    return Column(
+      key: const ValueKey<String>('client-diet-period-macros'),
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (final (String label, double value, Color color) in rows)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                ActivityLegend(
-                  color: AppColors.macroCarbs,
-                  label: l.metricCarbs,
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
                 ),
-                ActivityLegend(
-                  color: AppColors.macroProtein,
-                  label: l.metricProtein,
+                const SizedBox(width: 5),
+                Text(
+                  '${format(value)}g',
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.foreground,
+                  ),
                 ),
-                ActivityLegend(color: AppColors.macroFat, label: l.metricFat),
               ],
             ),
-          ],
-        ],
+          ),
       ],
     );
   }

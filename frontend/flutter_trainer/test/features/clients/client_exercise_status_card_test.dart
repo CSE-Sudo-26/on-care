@@ -108,7 +108,13 @@ void main() {
     await pump(tester, withSplit());
 
     expect(find.byType(BurnDonut), findsOneWidget);
-    expect(find.text('오늘 소모'), findsWidgets);
+    // 소모 칼로리는 도넛 **안**에서 말한다(#1166) — 링 옆에 같은 숫자를 또
+    // 적으면 한 화면에서 같은 말이 두 번 나온다. 그래서 `오늘 소모` 는 이제
+    // 화면의 글자가 아니라 도넛의 시맨틱 라벨에만 있다.
+    expect(
+      tester.widget<BurnDonut>(find.byType(BurnDonut)).title,
+      '오늘 소모',
+    );
     // 유산소·근력·스트레칭이 이름과 값으로 함께 읽힌다 — 소모 칼로리가
     // 무엇으로 채워졌는지가 화면에 있어야 한다.
     for (final String label in <String>['유산소', '근력', '스트레칭']) {

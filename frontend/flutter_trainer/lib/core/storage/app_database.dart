@@ -78,6 +78,16 @@ class ClientDietEntries extends Table {
   /// 조회에서는 걸리지 않는다.
   TextColumn get date => text().withDefault(const Constant(''))();
 
+  /// 끼니를 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 끼니 배지 옆에 적는
+  /// 값이라 트레이너 화면에도 같은 자리가 있어야 한다(#1166).
+  TextColumn get timeLabel => text().withDefault(const Constant(''))();
+
+  /// 그 끼니의 **음식별** 영양(JSON 배열). 회원 앱은 음식 한 줄마다
+  /// `이름 · kcal · 나트륨 · 당류` 를 적는데, 트레이너 화면은 이름을 쉼표로
+  /// 이어 붙인 [items] 한 줄뿐이라 같은 끼니를 두 화면이 다른 수준으로
+  /// 말했다(#1166). 비어 있으면 예전처럼 [items] 만 읽는다.
+  TextColumn get foodsJson => text().withDefault(const Constant('[]'))();
+
   /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
   /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
   /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
@@ -278,7 +288,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -401,6 +411,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 15) {
         await m.addColumn(clientDietEntries, clientDietEntries.sugarG);
         await m.addColumn(clientDietEntries, clientDietEntries.date);
+      }
+      // v16: 끼니 시각과 음식별 영양. 회원 앱 끼니 카드와 같은 것을 트레이너도
+      // 읽는다(#1166). 기본값이 있어 재시딩 전 행도 그대로 읽히고, 그런 행은
+      // 예전처럼 `items` 한 줄만 보여 준다.
+      if (from < 16) {
+        await m.addColumn(clientDietEntries, clientDietEntries.timeLabel);
+        await m.addColumn(clientDietEntries, clientDietEntries.foodsJson);
       }
     },
   );

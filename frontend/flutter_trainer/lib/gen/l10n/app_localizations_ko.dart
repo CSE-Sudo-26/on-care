@@ -976,10 +976,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietMacros => '탄단지';
 
   @override
-  String get dietTodaySummary => '오늘 영양 요약';
+  String get clientNutritionSummary => '영양 요약';
 
   @override
-  String get clientNutritionSummary => '영양 요약';
+  String get dietCalorieIntake => '오늘 섭취 칼로리';
 
   @override
   String get dietAchieveRate => '달성률';
@@ -1119,6 +1119,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exBurnDayTitle => '소모';
+
+  @override
+  String get exBurnAllTitle => '평균 소모';
+
+  @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return '$month월 $week주차';
+  }
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '아직 연속 기록이 없어요';
 
   @override
   String get exTypeOther => '기타';

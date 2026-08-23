@@ -1381,6 +1381,30 @@ class $ClientDietEntriesTable extends ClientDietEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _timeLabelMeta = const VerificationMeta(
+    'timeLabel',
+  );
+  @override
+  late final GeneratedColumn<String> timeLabel = GeneratedColumn<String>(
+    'time_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _foodsJsonMeta = const VerificationMeta(
+    'foodsJson',
+  );
+  @override
+  late final GeneratedColumn<String> foodsJson = GeneratedColumn<String>(
+    'foods_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _photoAssetMeta = const VerificationMeta(
     'photoAsset',
   );
@@ -1417,6 +1441,8 @@ class $ClientDietEntriesTable extends ClientDietEntries
     fatG,
     sugarG,
     date,
+    timeLabel,
+    foodsJson,
     photoAsset,
     sortOrder,
   ];
@@ -1507,6 +1533,18 @@ class $ClientDietEntriesTable extends ClientDietEntries
         date.isAcceptableOrUnknown(data['date']!, _dateMeta),
       );
     }
+    if (data.containsKey('time_label')) {
+      context.handle(
+        _timeLabelMeta,
+        timeLabel.isAcceptableOrUnknown(data['time_label']!, _timeLabelMeta),
+      );
+    }
+    if (data.containsKey('foods_json')) {
+      context.handle(
+        _foodsJsonMeta,
+        foodsJson.isAcceptableOrUnknown(data['foods_json']!, _foodsJsonMeta),
+      );
+    }
     if (data.containsKey('photo_asset')) {
       context.handle(
         _photoAssetMeta,
@@ -1572,6 +1610,14 @@ class $ClientDietEntriesTable extends ClientDietEntries
         DriftSqlType.string,
         data['${effectivePrefix}date'],
       )!,
+      timeLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_label'],
+      )!,
+      foodsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foods_json'],
+      )!,
       photoAsset: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}photo_asset'],
@@ -1614,6 +1660,16 @@ class ClientDietEntryRow extends DataClass
   /// 조회에서는 걸리지 않는다.
   final String date;
 
+  /// 끼니를 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 끼니 배지 옆에 적는
+  /// 값이라 트레이너 화면에도 같은 자리가 있어야 한다(#1166).
+  final String timeLabel;
+
+  /// 그 끼니의 **음식별** 영양(JSON 배열). 회원 앱은 음식 한 줄마다
+  /// `이름 · kcal · 나트륨 · 당류` 를 적는데, 트레이너 화면은 이름을 쉼표로
+  /// 이어 붙인 [items] 한 줄뿐이라 같은 끼니를 두 화면이 다른 수준으로
+  /// 말했다(#1166). 비어 있으면 예전처럼 [items] 만 읽는다.
+  final String foodsJson;
+
   /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
   /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
   /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
@@ -1632,6 +1688,8 @@ class ClientDietEntryRow extends DataClass
     required this.fatG,
     required this.sugarG,
     required this.date,
+    required this.timeLabel,
+    required this.foodsJson,
     this.photoAsset,
     required this.sortOrder,
   });
@@ -1649,6 +1707,8 @@ class ClientDietEntryRow extends DataClass
     map['fat_g'] = Variable<double>(fatG);
     map['sugar_g'] = Variable<double>(sugarG);
     map['date'] = Variable<String>(date);
+    map['time_label'] = Variable<String>(timeLabel);
+    map['foods_json'] = Variable<String>(foodsJson);
     if (!nullToAbsent || photoAsset != null) {
       map['photo_asset'] = Variable<String>(photoAsset);
     }
@@ -1669,6 +1729,8 @@ class ClientDietEntryRow extends DataClass
       fatG: Value(fatG),
       sugarG: Value(sugarG),
       date: Value(date),
+      timeLabel: Value(timeLabel),
+      foodsJson: Value(foodsJson),
       photoAsset: photoAsset == null && nullToAbsent
           ? const Value.absent()
           : Value(photoAsset),
@@ -1693,6 +1755,8 @@ class ClientDietEntryRow extends DataClass
       fatG: serializer.fromJson<double>(json['fatG']),
       sugarG: serializer.fromJson<double>(json['sugarG']),
       date: serializer.fromJson<String>(json['date']),
+      timeLabel: serializer.fromJson<String>(json['timeLabel']),
+      foodsJson: serializer.fromJson<String>(json['foodsJson']),
       photoAsset: serializer.fromJson<String?>(json['photoAsset']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
@@ -1712,6 +1776,8 @@ class ClientDietEntryRow extends DataClass
       'fatG': serializer.toJson<double>(fatG),
       'sugarG': serializer.toJson<double>(sugarG),
       'date': serializer.toJson<String>(date),
+      'timeLabel': serializer.toJson<String>(timeLabel),
+      'foodsJson': serializer.toJson<String>(foodsJson),
       'photoAsset': serializer.toJson<String?>(photoAsset),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
@@ -1729,6 +1795,8 @@ class ClientDietEntryRow extends DataClass
     double? fatG,
     double? sugarG,
     String? date,
+    String? timeLabel,
+    String? foodsJson,
     Value<String?> photoAsset = const Value.absent(),
     int? sortOrder,
   }) => ClientDietEntryRow(
@@ -1743,6 +1811,8 @@ class ClientDietEntryRow extends DataClass
     fatG: fatG ?? this.fatG,
     sugarG: sugarG ?? this.sugarG,
     date: date ?? this.date,
+    timeLabel: timeLabel ?? this.timeLabel,
+    foodsJson: foodsJson ?? this.foodsJson,
     photoAsset: photoAsset.present ? photoAsset.value : this.photoAsset,
     sortOrder: sortOrder ?? this.sortOrder,
   );
@@ -1759,6 +1829,8 @@ class ClientDietEntryRow extends DataClass
       fatG: data.fatG.present ? data.fatG.value : this.fatG,
       sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
       date: data.date.present ? data.date.value : this.date,
+      timeLabel: data.timeLabel.present ? data.timeLabel.value : this.timeLabel,
+      foodsJson: data.foodsJson.present ? data.foodsJson.value : this.foodsJson,
       photoAsset: data.photoAsset.present
           ? data.photoAsset.value
           : this.photoAsset,
@@ -1780,6 +1852,8 @@ class ClientDietEntryRow extends DataClass
           ..write('fatG: $fatG, ')
           ..write('sugarG: $sugarG, ')
           ..write('date: $date, ')
+          ..write('timeLabel: $timeLabel, ')
+          ..write('foodsJson: $foodsJson, ')
           ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
@@ -1799,6 +1873,8 @@ class ClientDietEntryRow extends DataClass
     fatG,
     sugarG,
     date,
+    timeLabel,
+    foodsJson,
     photoAsset,
     sortOrder,
   );
@@ -1817,6 +1893,8 @@ class ClientDietEntryRow extends DataClass
           other.fatG == this.fatG &&
           other.sugarG == this.sugarG &&
           other.date == this.date &&
+          other.timeLabel == this.timeLabel &&
+          other.foodsJson == this.foodsJson &&
           other.photoAsset == this.photoAsset &&
           other.sortOrder == this.sortOrder);
 }
@@ -1833,6 +1911,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
   final Value<double> fatG;
   final Value<double> sugarG;
   final Value<String> date;
+  final Value<String> timeLabel;
+  final Value<String> foodsJson;
   final Value<String?> photoAsset;
   final Value<int> sortOrder;
   final Value<int> rowid;
@@ -1848,6 +1928,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.fatG = const Value.absent(),
     this.sugarG = const Value.absent(),
     this.date = const Value.absent(),
+    this.timeLabel = const Value.absent(),
+    this.foodsJson = const Value.absent(),
     this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1864,6 +1946,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.fatG = const Value.absent(),
     this.sugarG = const Value.absent(),
     this.date = const Value.absent(),
+    this.timeLabel = const Value.absent(),
+    this.foodsJson = const Value.absent(),
     this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1885,6 +1969,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Expression<double>? fatG,
     Expression<double>? sugarG,
     Expression<String>? date,
+    Expression<String>? timeLabel,
+    Expression<String>? foodsJson,
     Expression<String>? photoAsset,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
@@ -1901,6 +1987,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       if (fatG != null) 'fat_g': fatG,
       if (sugarG != null) 'sugar_g': sugarG,
       if (date != null) 'date': date,
+      if (timeLabel != null) 'time_label': timeLabel,
+      if (foodsJson != null) 'foods_json': foodsJson,
       if (photoAsset != null) 'photo_asset': photoAsset,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
@@ -1919,6 +2007,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Value<double>? fatG,
     Value<double>? sugarG,
     Value<String>? date,
+    Value<String>? timeLabel,
+    Value<String>? foodsJson,
     Value<String?>? photoAsset,
     Value<int>? sortOrder,
     Value<int>? rowid,
@@ -1935,6 +2025,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       fatG: fatG ?? this.fatG,
       sugarG: sugarG ?? this.sugarG,
       date: date ?? this.date,
+      timeLabel: timeLabel ?? this.timeLabel,
+      foodsJson: foodsJson ?? this.foodsJson,
       photoAsset: photoAsset ?? this.photoAsset,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
@@ -1977,6 +2069,12 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     if (date.present) {
       map['date'] = Variable<String>(date.value);
     }
+    if (timeLabel.present) {
+      map['time_label'] = Variable<String>(timeLabel.value);
+    }
+    if (foodsJson.present) {
+      map['foods_json'] = Variable<String>(foodsJson.value);
+    }
     if (photoAsset.present) {
       map['photo_asset'] = Variable<String>(photoAsset.value);
     }
@@ -2003,6 +2101,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
           ..write('fatG: $fatG, ')
           ..write('sugarG: $sugarG, ')
           ..write('date: $date, ')
+          ..write('timeLabel: $timeLabel, ')
+          ..write('foodsJson: $foodsJson, ')
           ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
@@ -6034,6 +6134,8 @@ typedef $$ClientDietEntriesTableCreateCompanionBuilder =
       Value<double> fatG,
       Value<double> sugarG,
       Value<String> date,
+      Value<String> timeLabel,
+      Value<String> foodsJson,
       Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
@@ -6051,6 +6153,8 @@ typedef $$ClientDietEntriesTableUpdateCompanionBuilder =
       Value<double> fatG,
       Value<double> sugarG,
       Value<String> date,
+      Value<String> timeLabel,
+      Value<String> foodsJson,
       Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
@@ -6117,6 +6221,16 @@ class $$ClientDietEntriesTableFilterComposer
 
   ColumnFilters<String> get date => $composableBuilder(
     column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeLabel => $composableBuilder(
+    column: $table.timeLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get foodsJson => $composableBuilder(
+    column: $table.foodsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6195,6 +6309,16 @@ class $$ClientDietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get timeLabel => $composableBuilder(
+    column: $table.timeLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get foodsJson => $composableBuilder(
+    column: $table.foodsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
     builder: (column) => ColumnOrderings(column),
@@ -6247,6 +6371,12 @@ class $$ClientDietEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get date =>
       $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get timeLabel =>
+      $composableBuilder(column: $table.timeLabel, builder: (column) => column);
+
+  GeneratedColumn<String> get foodsJson =>
+      $composableBuilder(column: $table.foodsJson, builder: (column) => column);
 
   GeneratedColumn<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
@@ -6308,6 +6438,8 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> fatG = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
                 Value<String> date = const Value.absent(),
+                Value<String> timeLabel = const Value.absent(),
+                Value<String> foodsJson = const Value.absent(),
                 Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6323,6 +6455,8 @@ class $$ClientDietEntriesTableTableManager
                 fatG: fatG,
                 sugarG: sugarG,
                 date: date,
+                timeLabel: timeLabel,
+                foodsJson: foodsJson,
                 photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,
@@ -6340,6 +6474,8 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> fatG = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
                 Value<String> date = const Value.absent(),
+                Value<String> timeLabel = const Value.absent(),
+                Value<String> foodsJson = const Value.absent(),
                 Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6355,6 +6491,8 @@ class $$ClientDietEntriesTableTableManager
                 fatG: fatG,
                 sugarG: sugarG,
                 date: date,
+                timeLabel: timeLabel,
+                foodsJson: foodsJson,
                 photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,

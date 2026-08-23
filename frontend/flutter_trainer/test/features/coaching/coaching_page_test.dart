@@ -380,8 +380,8 @@ void _expectNutritionStatusCardsInBounds(WidgetTester tester) {
   final nutritionRect = tester.getRect(nutrition);
   final viewportWidth = tester.view.physicalSize.width;
   for (final status in <Finder>[
-    find.byKey(const Key('client-nutrition-sodium-status')),
-    find.byKey(const Key('client-nutrition-sugar-status')),
+    find.byKey(const Key('client-nutrition-mineral-나트륨')),
+    find.byKey(const Key('client-nutrition-mineral-당류')),
   ]) {
     expect(status, findsOneWidget);
     final statusRect = tester.getRect(status);
@@ -583,8 +583,8 @@ void main() {
         final nutrition = find.byKey(
           const Key('client-nutrition-summary-card'),
         );
-        final sodium = find.byKey(const Key('client-nutrition-sodium-status'));
-        final sugar = find.byKey(const Key('client-nutrition-sugar-status'));
+        final sodium = find.byKey(const Key('client-nutrition-mineral-나트륨'));
+        final sugar = find.byKey(const Key('client-nutrition-mineral-당류'));
 
         expect(mainColumn, findsOneWidget);
         expect(assistant, findsOneWidget);
@@ -801,7 +801,7 @@ void main() {
     ) async {
       await openTab(tester, size: const Size(1366, 768));
 
-      final sugar = find.byKey(const Key('client-nutrition-sugar-status'));
+      final sugar = find.byKey(const Key('client-nutrition-mineral-당류'));
       expect(sugar, findsOneWidget);
       expect(
         tester.getBottomRight(sugar).dy,
