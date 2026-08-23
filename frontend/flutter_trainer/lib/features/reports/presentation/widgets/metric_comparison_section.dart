@@ -204,63 +204,47 @@ class _MetricComparisonSectionState
                 fontWeight: FontWeight.w600,
               ),
             ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              // 두 주는 붙여 둔다. 카드 폭을 반씩 나눠 가지면 견줄 막대 둘이
-              // 화면 양끝으로 갈라져, 정작 비교가 눈에 들어오지 않는다.
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 240),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: <Widget>[
-                    Expanded(
-                      child: _CompareBar(
-                        key: const ValueKey<String>('compare-bar-previous'),
-                        label: l.reportsLastWeek,
-                        value: last,
-                        ceiling: ceiling,
-                        unit: unit,
-                        goal: goal,
-                        macros: _macros(before),
-                        format: _format,
-                        emptyLabel: l.reportsDataInsufficient,
-                        loading: previous.isLoading,
-                        current: false,
-                      ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final Widget bars = Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Expanded(
+                    child: _CompareBar(
+                      key: const ValueKey<String>('compare-bar-previous'),
+                      label: l.reportsLastWeek,
+                      value: last,
+                      ceiling: ceiling,
+                      unit: unit,
+                      goal: goal,
+                      macros: _macros(before),
+                      format: _format,
+                      emptyLabel: l.reportsDataInsufficient,
+                      loading: previous.isLoading,
+                      current: false,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _CompareBar(
-                        key: const ValueKey<String>('compare-bar-current'),
-                        label: report.isCurrentWeek
-                            ? l.reportsThisWeek
-                            : l.reportsSelectedWeek,
-                        value: current,
-                        ceiling: ceiling,
-                        unit: unit,
-                        goal: goal,
-                        macros: _macros(report),
-                        format: _format,
-                        emptyLabel: l.reportsDataInsufficient,
-                        loading: false,
-                        current: true,
-                      ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _CompareBar(
+                      key: const ValueKey<String>('compare-bar-current'),
+                      label: report.isCurrentWeek
+                          ? l.reportsThisWeek
+                          : l.reportsSelectedWeek,
+                      value: current,
+                      ceiling: ceiling,
+                      unit: unit,
+                      goal: goal,
+                      macros: _macros(report),
+                      format: _format,
+                      emptyLabel: l.reportsDataInsufficient,
+                      loading: false,
+                      current: true,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              // 남는 가운데는 막대의 세 조각이 무엇인지 적는 자리다.
-              Expanded(
-                child:
-                    _metric == CompareMetric.calories &&
-                        _macros(report).isNotEmpty
-                    ? _MacroLegend(means: _macros(report), unit: l.unitGram)
-                    : const SizedBox.shrink(),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              SizedBox(
+                  ),
+                ],
+              );
+              final Widget delta = SizedBox(
                 width: 84,
                 child: _DeltaBadge(
                   caption: l.reportsCompareWith,
@@ -270,8 +254,51 @@ class _MetricComparisonSectionState
                   format: _format,
                   higherIsBetter: _higherIsBetter,
                 ),
-              ),
-            ],
+              );
+              final Widget? legend =
+                  _metric == CompareMetric.calories &&
+                      _macros(report).isNotEmpty
+                  ? _MacroLegend(means: _macros(report), unit: l.unitGram)
+                  : null;
+              // 좁은 카드에서는 범례를 아래로 내리고 막대가 남는 폭을 쓴다.
+              // 넓은 카드처럼 막대 폭을 240 으로 묶어 두면 변화량 칸과 합쳐
+              // 카드보다 넓어진다.
+              if (constraints.maxWidth < 380) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        Expanded(child: bars),
+                        const SizedBox(width: AppSpacing.sm),
+                        delta,
+                      ],
+                    ),
+                    if (legend != null) ...<Widget>[
+                      const SizedBox(height: AppSpacing.sm),
+                      legend,
+                    ],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  // 두 주는 붙여 둔다. 카드 폭을 반씩 나눠 가지면 견줄 막대
+                  // 둘이 화면 양끝으로 갈라져, 정작 비교가 눈에 들어오지 않는다.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    child: bars,
+                  ),
+                  const SizedBox(width: AppSpacing.lg),
+                  // 남는 가운데는 막대의 세 조각이 무엇인지 적는 자리다.
+                  Expanded(child: legend ?? const SizedBox.shrink()),
+                  const SizedBox(width: AppSpacing.sm),
+                  delta,
+                ],
+              );
+            },
           ),
         ],
       ),
