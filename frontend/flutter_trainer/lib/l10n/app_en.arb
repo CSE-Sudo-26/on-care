@@ -140,23 +140,16 @@
   "dashChurnRiskCheck": "Review churn signals",
   "dashChurnRiskTitle": "Clients at churn risk",
   "dashChurnRiskEmpty": "No clients are at churn risk right now.",
-  "dashActivityFeedbackTitle": "Trainer activity feedback",
-  "dashActivityDifficulty": "{count} clients need a difficulty review (low completion / churn risk)",
-  "@dashActivityDifficulty": {
+  "dashActivityDifficultyTitle": "Low completion / churn risk detected",
+  "dashActivityDifficultyDesc": "These clients have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.",
+  "dashActivityInactiveTitle": "Inactive 7+ days",
+  "dashActivityInactiveDesc": "No workout has been logged for these clients in the last 7 days. Reach out before it turns into churn.",
+  "dashActivityDietFeedbackTitle": "Diet feedback pending",
+  "dashActivityDietFeedbackDesc": "These clients have a diet warning (sodium/sugar over target) but haven't gotten trainer feedback in 7 days. Leave a comment so they know it was seen.",
+  "dashActivityFeedbackTarget": "For: {names}",
+  "@dashActivityFeedbackTarget": {
     "placeholders": {
-      "count": {"type": "int"}
-    }
-  },
-  "dashActivityInactive": "{count} clients inactive for 7+ days",
-  "@dashActivityInactive": {
-    "placeholders": {
-      "count": {"type": "int"}
-    }
-  },
-  "dashActivityDietFeedback": "{count} diet-flagged clients still need feedback",
-  "@dashActivityDietFeedback": {
-    "placeholders": {
-      "count": {"type": "int"}
+      "names": {"type": "String"}
     }
   },
   "dashAiSummaryTitle": "AI diagnosis",
@@ -1417,6 +1410,16 @@
   "dashTaskProgressTitle": "Task completion",
   "dashTaskProgressToday": "Done today",
   "dashTaskProgressCarriedOver": "Done (carried over)",
+  "dashTodoConsultation": "Review consultation requests",
+  "dashTodoFeedback": "Review client feedback",
+  "dashTodoProgram": "Register workout programs",
+  "dashTodoReport": "Write reports",
+  "dashTodoConsultationSubtitle": "Consultation request",
+  "dashTodoProgramSubtitle": "No recent program sent",
+  "dashTodoReportSubtitle": "This week's report",
+  "dashTodoEmpty": "Nothing to review right now.",
+  "dashTaskDismissTitle": "Delete this item?",
+  "dashTaskDismissBody": "It only disappears from today's list. Actually handling it (consultation, program, report) still happens on its own screen.",
   "churnNoRecentWorkout": "No workout logged in 7 days",
   "churnNoRecentFeedback": "No trainer feedback in 7 days",
   "churnConsecutiveCancel": "2 consecutive cancellations/no-shows",

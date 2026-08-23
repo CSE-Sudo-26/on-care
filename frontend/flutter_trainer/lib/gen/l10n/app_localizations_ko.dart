@@ -294,21 +294,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashChurnRiskEmpty => '지금은 이탈 위험 신호가 없어요.';
 
   @override
-  String get dashActivityFeedbackTitle => '트레이너 활동 피드백';
+  String get dashActivityDifficultyTitle => '이행률 저조·이탈 위험 감지';
 
   @override
-  String dashActivityDifficulty(int count) {
-    return '이행률 저조·이탈 위험 감지 $count명 — 난이도 조정을 안내하세요';
-  }
+  String get dashActivityDifficultyDesc =>
+      '개인 운동 이행률이 낮거나 이탈 위험 신호(부정적 피드백 포함)가 감지된 고객이에요. 다음 세션 전에 난이도를 낮추고, 최근 피드백에 부정적인 반응이 없었는지 먼저 확인하세요.';
 
   @override
-  String dashActivityInactive(int count) {
-    return '7일 이상 활동 저조한 고객 $count명';
-  }
+  String get dashActivityInactiveTitle => '7일 이상 활동 저조';
 
   @override
-  String dashActivityDietFeedback(int count) {
-    return '식단 주의 고객 피드백 미완료 $count명';
+  String get dashActivityInactiveDesc =>
+      '최근 7일 동안 운동 기록이 없는 고객이에요. 이탈로 이어지기 전에 먼저 연락해서 재참여를 유도해 보세요.';
+
+  @override
+  String get dashActivityDietFeedbackTitle => '식단 피드백 미완료';
+
+  @override
+  String get dashActivityDietFeedbackDesc =>
+      '나트륨·당류 초과 등 식단 주의 신호가 있는데 최근 7일간 트레이너 피드백을 남기지 않은 고객이에요. 식단 코멘트를 남겨 확인했다는 것을 알려 주세요.';
+
+  @override
+  String dashActivityFeedbackTarget(String names) {
+    return '대상: $names';
   }
 
   @override
@@ -2456,6 +2464,37 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashTaskProgressCarriedOver => '이월 처리';
+
+  @override
+  String get dashTodoConsultation => '상담 요청 확인';
+
+  @override
+  String get dashTodoFeedback => '고객 피드백 확인';
+
+  @override
+  String get dashTodoProgram => '운동 프로그램 등록';
+
+  @override
+  String get dashTodoReport => '리포트 작성';
+
+  @override
+  String get dashTodoConsultationSubtitle => '상담 요청';
+
+  @override
+  String get dashTodoProgramSubtitle => '최근 등록한 프로그램 없음';
+
+  @override
+  String get dashTodoReportSubtitle => '이번 주 리포트';
+
+  @override
+  String get dashTodoEmpty => '지금은 확인할 항목이 없어요.';
+
+  @override
+  String get dashTaskDismissTitle => '이 항목을 삭제할까요?';
+
+  @override
+  String get dashTaskDismissBody =>
+      '오늘 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
 
   @override
   String get churnNoRecentWorkout => '최근 7일 운동 기록 없음';

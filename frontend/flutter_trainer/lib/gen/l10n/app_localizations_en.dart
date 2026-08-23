@@ -304,21 +304,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashChurnRiskEmpty => 'No clients are at churn risk right now.';
 
   @override
-  String get dashActivityFeedbackTitle => 'Trainer activity feedback';
+  String get dashActivityDifficultyTitle =>
+      'Low completion / churn risk detected';
 
   @override
-  String dashActivityDifficulty(int count) {
-    return '$count clients need a difficulty review (low completion / churn risk)';
-  }
+  String get dashActivityDifficultyDesc =>
+      'These clients have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.';
 
   @override
-  String dashActivityInactive(int count) {
-    return '$count clients inactive for 7+ days';
-  }
+  String get dashActivityInactiveTitle => 'Inactive 7+ days';
 
   @override
-  String dashActivityDietFeedback(int count) {
-    return '$count diet-flagged clients still need feedback';
+  String get dashActivityInactiveDesc =>
+      'No workout has been logged for these clients in the last 7 days. Reach out before it turns into churn.';
+
+  @override
+  String get dashActivityDietFeedbackTitle => 'Diet feedback pending';
+
+  @override
+  String get dashActivityDietFeedbackDesc =>
+      'These clients have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.';
+
+  @override
+  String dashActivityFeedbackTarget(String names) {
+    return 'For: $names';
   }
 
   @override
@@ -2561,6 +2570,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashTaskProgressCarriedOver => 'Done (carried over)';
+
+  @override
+  String get dashTodoConsultation => 'Review consultation requests';
+
+  @override
+  String get dashTodoFeedback => 'Review client feedback';
+
+  @override
+  String get dashTodoProgram => 'Register workout programs';
+
+  @override
+  String get dashTodoReport => 'Write reports';
+
+  @override
+  String get dashTodoConsultationSubtitle => 'Consultation request';
+
+  @override
+  String get dashTodoProgramSubtitle => 'No recent program sent';
+
+  @override
+  String get dashTodoReportSubtitle => 'This week\'s report';
+
+  @override
+  String get dashTodoEmpty => 'Nothing to review right now.';
+
+  @override
+  String get dashTaskDismissTitle => 'Delete this item?';
+
+  @override
+  String get dashTaskDismissBody =>
+      'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.';
 
   @override
   String get churnNoRecentWorkout => 'No workout logged in 7 days';
