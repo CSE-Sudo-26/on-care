@@ -104,8 +104,10 @@ GoRouter buildAppRouter({
     ),
     routes: <RouteBase>[
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            AppShell(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) => AppShell(
+          navigationShell: navigationShell,
+          location: state.uri.toString(),
+        ),
         branches: <StatefulShellBranch>[
           StatefulShellBranch(
             routes: <RouteBase>[
@@ -164,8 +166,10 @@ GoRouter buildAppRouter({
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutes.schedule,
-                builder: (context, state) =>
-                    SchedulePage(date: state.uri.queryParameters['d']),
+                builder: (context, state) => SchedulePage(
+                  date: state.uri.queryParameters['d'],
+                  sessionId: state.uri.queryParameters['session'],
+                ),
               ),
             ],
           ),

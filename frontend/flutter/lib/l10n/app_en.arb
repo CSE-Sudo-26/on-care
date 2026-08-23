@@ -388,6 +388,14 @@
   "exTrainersLoadError": "Couldn't load trainers.",
   "exGymSearchHint": "Search by gym or area",
   "exNearbyGyms": "Nearby gyms",
+  "exGymListCollapse": "Collapse list",
+  "@exGymListCollapse": {
+    "description": "Hides the gym result list so the map fills the space"
+  },
+  "exGymListExpand": "Expand list",
+  "@exGymListExpand": {
+    "description": "Brings the gym result list back under the map"
+  },
   "exAiAnalysis": "✦ AI analysis",
   "exNoGymMatch": "No gyms match '{query}'",
   "@exNoGymMatch": {

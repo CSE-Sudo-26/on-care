@@ -46,10 +46,13 @@ import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 /// 새로고침해도 그 자리에 남는다.
 class SchedulePage extends ConsumerStatefulWidget {
   /// Creates the schedule tab.
-  const SchedulePage({super.key, this.date});
+  const SchedulePage({super.key, this.date, this.sessionId});
 
   /// Browsed day as `YYYY-MM-DD`; invalid or absent means today.
   final String? date;
+
+  /// Session selected by a deep link from the dashboard.
+  final String? sessionId;
 
   @override
   ConsumerState<SchedulePage> createState() => _SchedulePageState();
@@ -67,7 +70,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   DateTime get _weekStart => _mondayOf(_selectedDay);
 
   /// Session shown in the detail panel.
-  String? _selectedSessionId;
+  late String? _selectedSessionId = widget.sessionId;
 
   /// 프로그램 전송이 진행 중인 세션. 두 번 눌러 두 번 보내지 않는다.
   String? _sendingProgramId;
@@ -97,6 +100,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     // back/forward, must move the calendar.
     if (widget.date != oldWidget.date) {
       setState(() => _selectedDay = _resolveDay(widget.date));
+    }
+    if (widget.sessionId != oldWidget.sessionId) {
+      setState(() => _selectedSessionId = widget.sessionId);
     }
   }
 
@@ -526,7 +532,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               _selectedDay = _dateOnly(day);
               _selectedSessionId = session.id;
             });
-            context.go(AppRoutes.scheduleAt(date: session.date));
+            context.go(
+              AppRoutes.scheduleAt(date: session.date, sessionId: session.id),
+            );
           },
         );
 
