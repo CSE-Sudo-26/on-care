@@ -521,7 +521,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashActivityRecommendChat.
   ///
   /// In en, this message translates to:
-  /// **'Try checking in over Chat.'**
+  /// **'Try checking in over Messages.'**
   String get dashActivityRecommendChat;
 
   /// No description provided for @dashActivityRecommendDiet.
@@ -539,7 +539,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashActivityTabChat.
   ///
   /// In en, this message translates to:
-  /// **'Chat'**
+  /// **'Messages'**
   String get dashActivityTabChat;
 
   /// No description provided for @dashActivityTabDiet.
