@@ -138,27 +138,27 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
   }
 
-  /// 프로그램(또는 메모)을 시트로 연다.
+  /// 프로그램(또는 메모)을 가운데 모달로 연다.
   ///
   /// 예전에는 상세 패널 안에서 그 자리에 펼쳤는데, 패널 폭이 좁아 세트·
-  /// 횟수/시간·중량 칸이 잘렸다. 시트는 화면 폭을 그대로 쓰니 그 문제가
-  /// 애초에 생기지 않는다.
+  /// 횟수/시간·중량 칸이 잘렸다. 화면 폭을 그대로 쓰는 바텀시트로
+  /// 바꿨더니 이번엔 세로로 화면 끝까지 꽉 찼다 — 적당한 크기로 가운데
+  /// 띄우고, 운동이 많아 넘치면 그 안에서만 스크롤되게 한다.
   Future<void> _openProgramEditor(
     ScheduleSession session, {
     required bool noteOnly,
   }) async {
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
+          ),
+          child: SingleChildScrollView(
             child: SessionProgramEditor(
               key: ValueKey<String>(
                 noteOnly
@@ -167,8 +167,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ),
               session: session,
               noteOnly: noteOnly,
-              onSaved: () => Navigator.of(sheetContext).pop(),
-              onCancel: () => Navigator.of(sheetContext).pop(),
+              onSaved: () => Navigator.of(dialogContext).pop(),
+              onCancel: () => Navigator.of(dialogContext).pop(),
             ),
           ),
         ),
