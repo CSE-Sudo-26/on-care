@@ -814,7 +814,10 @@ class _ExerciseTrend extends StatelessWidget {
 
   /// 차트가 차지하는 높이. 세 상태가 같은 높이를 써야 로딩에서 데이터로 바뀔 때
   /// 카드가 튀지 않는다.
-  static const double _chartHeight = 96;
+  ///
+  /// 왼쪽 지표가 네 줄이 되면서(#1119) 그래프 아래에 빈 칸이 남았다 —
+  /// 그만큼 그래프를 늘려 카드를 채운다 (#1150).
+  static const double _chartHeight = 132;
 
   /// 서버가 준 일별 칼로리를 일곱 칸으로 맞춘다. 모자라는 칸은 0 이고, 아직
   /// 오지 않은 요일도 0 이다.
@@ -1047,7 +1050,9 @@ class _ExerciseStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      // 아이콘은 라벨 줄이 아니라 **두 줄 전체**의 가운데에 선다 (#1150) —
+      // 위에 붙여 두면 값 줄이 아이콘 아래로 흘러내린 것처럼 읽힌다.
+      // (`center` 가 Row 의 기본값이라 따로 적지 않는다.)
       children: <Widget>[
         Container(
           width: 28,
