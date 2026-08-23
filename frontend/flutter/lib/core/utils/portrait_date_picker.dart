@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// [showDatePicker] 를 항상 세로(portrait) 배치로 띄운다.
+/// [showDatePicker] 를 늘 세로(portrait) 배치의 달력 그리드로 띄운다.
 ///
 /// Material 은 다이얼로그를 담는 화면이 가로로 넓으면(landscape) 달력을
 /// 헤더·그리드가 좌우로 나뉜 모양으로 바꾼다. 넓은 데스크톱 창에서 열리면
@@ -11,12 +11,16 @@ import 'package:flutter/material.dart';
 /// 다이얼로그의 `MediaQuery.size` 만 가로·세로를 뒤바꿔 넘긴다 — 앱
 /// 전체가 아니라 이 다이얼로그의 내부 레이아웃 판단(`Orientation`)만
 /// 영향을 받는다. 이미 세로인 화면(좁은 창)에서는 그대로 둔다.
+///
+/// 처음 뜨는 모습은 달력 그리드다(`DatePickerEntryMode.calendar`) — 키보드
+/// 입력은 우측 상단 연필 아이콘으로 언제든 전환할 수 있어, 기본을 입력
+/// 모드로 두면 오히려 한 번 더 눌러야 늘 보던 달력이 나온다.
 Future<DateTime?> showPortraitDatePicker({
   required BuildContext context,
   required DateTime initialDate,
   required DateTime firstDate,
   required DateTime lastDate,
-  DatePickerEntryMode initialEntryMode = DatePickerEntryMode.input,
+  DatePickerEntryMode initialEntryMode = DatePickerEntryMode.calendar,
   TransitionBuilder? builder,
 }) {
   return showDatePicker(
