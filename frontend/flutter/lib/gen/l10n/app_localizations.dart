@@ -2093,7 +2093,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardDietBody.
   ///
   /// In en, this message translates to:
-  /// **'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.'**
+  /// **'Breakfast was nicely balanced. The jjamppong you had for lunch can be heavy on sodium and sugar, so drink plenty of water today. For the rest of the day, pair vegetables with protein to keep things balanced.'**
   String get coachCardDietBody;
 
   /// No description provided for @coachCardExerciseTag.
@@ -2105,13 +2105,13 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardExerciseTitle.
   ///
   /// In en, this message translates to:
-  /// **'Upper-body PT session 12 done'**
+  /// **'PT session 12 done'**
   String get coachCardExerciseTitle;
 
   /// No description provided for @coachCardExerciseBody.
   ///
   /// In en, this message translates to:
-  /// **'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.'**
+  /// **'Nice work finishing PT session 12 — keeping up a steady routine is what counts. As your coach advised, take your time with the rotator-cuff shoulder stretches and wind down with light cardio. Afterwards, rest and rehydrate rather than pushing on.'**
   String get coachCardExerciseBody;
 
   /// No description provided for @coachCardWaterTag.
@@ -2299,6 +2299,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try asking'**
   String get aicQuickRepliesLabel;
+
+  /// Shown in the coach bubble while a tailored reply is being generated
+  ///
+  /// In en, this message translates to:
+  /// **'Writing your answer'**
+  String get aicGeneratingReply;
 
   /// No description provided for @aicQuickReply1.
   ///

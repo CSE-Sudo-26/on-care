@@ -147,7 +147,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('추가 메뉴는 식단이 초록, 운동이 파랑이다 (#1060)', (tester) async {
+  testWidgets('추가 메뉴 카드가 시트 바닥에 붙지 않는다 (#1154)', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+
+    final Finder sheet = find.byKey(const Key('recordAddSheet'));
+    // 카드(테두리 있는 옵션)와 시트 바닥 사이에 여백이 있어야 잘려 보이지 않는다.
+    final Finder card = find.descendant(
+      of: find.byKey(const Key('recordOptions')),
+      matching: find.byType(InkWell),
+    );
+    expect(card, findsWidgets);
+    expect(
+      tester.getBottomRight(sheet).dy - tester.getBottomRight(card.last).dy,
+      greaterThanOrEqualTo(16),
+      reason: '옵션 카드가 시트 끝에 붙어 잘려 보인다',
+    );
+  });
+
+  testWidgets('추가 메뉴는 두 갈래 모두 브랜드 파랑이다 (#1154)', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.byKey(const Key('recordAddButton')));
     await tester.pumpAndSettle();
@@ -161,9 +185,10 @@ void main() {
         )
         .color;
 
-    // 앱 안에서 식단 그래프가 초록, 운동 그래프가 파랑이다. 이 메뉴만 뒤집혀
-    // 있으면 같은 두 영역이 자리마다 색이 바뀐다.
-    expect(iconColorOf(Icons.restaurant), FigmaColors.green);
+    // 이 시트는 "무엇을 기록할까" 를 고르는 자리라 색이 영역을 가르는 뜻으로
+    // 읽히지 않는다 — 초록 하나만 남으면 그 카드가 다른 성격처럼 보인다.
+    // (예전에는 식단 초록·운동 파랑이었다, #1060 → #1154)
+    expect(iconColorOf(Icons.restaurant), FigmaColors.primary);
     expect(iconColorOf(Icons.fitness_center), FigmaColors.primary);
   });
 
@@ -343,6 +368,36 @@ void main() {
     );
   });
 
+  testWidgets('coaching sheet keeps the CTA off the bottom edge (#1180)', (
+    tester,
+  ) async {
+    // 홈 인디케이터가 없는 기기·창에서는 SafeArea 가 밀어 주는 것이 없어,
+    // 버튼이 시트 끝에 붙어 잘려 보였다. 여백은 시트가 스스로 둔다.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('home-coaching-banner')),
+    );
+    await tester.pumpAndSettle();
+
+    final double sheetBottom = tester
+        .getBottomRight(find.byKey(const Key('coachingSheet')))
+        .dy;
+    final double buttonBottom = tester
+        .getBottomRight(
+          find.descendant(
+            of: find.byKey(const Key('coachingSheetCta')),
+            matching: find.byType(FilledButton),
+          ),
+        )
+        .dy;
+    expect(sheetBottom - buttonBottom, greaterThanOrEqualTo(16));
+  });
+
   testWidgets('header notification opens the existing full page', (
     tester,
   ) async {
@@ -489,7 +544,7 @@ void main() {
       // 코드에 하드코딩돼 있던 문구들이 이제 로케일별 ARB 로 분리됐다.
       expect(en.coachCardDietTitle, 'Great breakfast — watch lunch sodium');
       expect(ko.coachCardDietTitle, '아침 식단 훌륭, 점심 나트륨 주의');
-      expect(en.coachCardExerciseTitle, 'Upper-body PT session 12 done');
+      expect(en.coachCardExerciseTitle, 'PT session 12 done');
       expect(en.homeAiAdviceTitle, "Today's combined AI advice");
       expect(ko.homeAiAdviceTitle, '오늘의 AI 통합 조언');
       expect(en.homeSodiumExceededBadge, 'Sodium over');

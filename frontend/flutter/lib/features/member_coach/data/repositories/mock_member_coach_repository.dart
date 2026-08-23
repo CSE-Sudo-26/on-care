@@ -1,3 +1,5 @@
+import 'package:demo_fixture/demo_fixture.dart';
+
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -31,31 +33,23 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     goal: '혈압 관리 · 체중 감량',
   );
 
+  /// 배정된 개인 운동 — **공유 픽스처**가 정한다. (#1170)
+  ///
+  /// 예전에는 이 목록을 여기에 손으로 적어 두었다. 트레이너 앱의 고객 탭과
+  /// 프로그램 탭도 각자 적어 두어서, 같은 회원의 같은 날에 세 화면이 서로 다른
+  /// 운동을 말했다 — 여기는 `코어 스트레칭 10분`, 고객 탭은 `코어 서킷 15분`,
+  /// 프로그램 탭은 `코어 강화 10분` 이었다. 이제 셋 다 `shared/demo_fixture` 의
+  /// `routines` 하나만 읽는다.
   final List<CoachRoutine> _routines = <CoachRoutine>[
-    const CoachRoutine(
-      id: 'seed-r1',
-      name: '저강도 유산소 (걷기)',
-      minutes: 20,
-      type: '유산소',
-      reason: '혈압 안정에 효과적',
-      source: 'ai',
-    ),
-    const CoachRoutine(
-      id: 'seed-r2',
-      name: '코어 스트레칭',
-      minutes: 10,
-      type: '스트레칭',
-      reason: '허리 부담 완화',
-      source: 'trainer',
-    ),
-    const CoachRoutine(
-      id: 'seed-r3',
-      name: '어깨 관절 보호 스트레칭',
-      minutes: 8,
-      type: '스트레칭',
-      reason: 'PT 피드백 반영 · 오른쪽 어깨 보호',
-      source: 'ai',
-    ),
+    for (final FixtureRoutine r in DemoFixture.load().routines)
+      CoachRoutine(
+        id: r.id,
+        name: r.name,
+        minutes: r.minutes,
+        type: r.type,
+        reason: r.reason,
+        source: r.source,
+      ),
   ];
 
   /// 시드 메시지 정렬 기준점. 날짜 자체에는 의미가 없다 — 화면에 나오는 것은

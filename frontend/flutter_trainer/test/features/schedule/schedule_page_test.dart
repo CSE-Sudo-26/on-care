@@ -1157,6 +1157,13 @@ void main() {
     testWidgets('완료 chip marks the session done and shows in 운동기록', (
       tester,
     ) async {
+      // 날짜별 기록이 한 목록으로 합쳐지면서 세로가 길어졌다(#1025).
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 3000);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
       await openSchedule(tester);
 
       await openSession(tester, '박성호');
@@ -1184,7 +1191,21 @@ void main() {
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'workout'),
       );
-      expect(find.textContaining('(오늘)'), findsWidgets);
+      // 운동 기록은 날짜별 목록 하나로 합쳐졌고 오늘 줄은 처음부터 펼쳐져
+      // 있다(#1025). 목록이 길어 스크롤 곡예 대신 화면을 키운다.
+      //
+      // 메모는 더 이상 완료 처리에서 받지 않으므로(#1106) 그 문구로 찾지
+      // 않는다 — 방금 생긴 PT 기록의 종류로 확인한다.
+      expect(find.text('PT 세션 · 트레이너 지도'), findsWidgets);
+      // 날짜는 미션 카드가 아니라 그 줄이 말한다.
+      const List<String> weekdays = <String>['월', '화', '수', '목', '금', '토', '일'];
+      final DateTime today = nowKst();
+      expect(
+        find.text(
+          '${today.month}월 ${today.day}일 (${weekdays[today.weekday - 1]})',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a future session offers no 완료 action', (tester) async {

@@ -708,3 +708,83 @@ def test_trainer_cannot_read_unassigned_member_exercise_week(client):
         headers=_auth(token),
     )
     assert response.status_code == 404
+
+
+def test_trainer_client_exercise_advice_changes_with_the_period(client, db_session):
+    """기간을 바꾸면 운동 조언도 달라진다 — 그래프만 갈아 끼우면 안 된다. (#1025)
+
+    식단 조언(#1017)과 같은 규칙이라, 여기서도 같은 것을 확인한다: 오늘과 이번 주가
+    서로 다른 재료를 보고 말하는가.
+    """
+    from datetime import timedelta
+
+    from app.models.models import ExerciseSession
+    from app.services.exercise_service import WEEKDAY_LABELS, monday_of_this_week_str
+
+    token = _trainer_token(client)
+    url = "/v1/trainer/clients/user-jisu/exercise-advice"
+    monday = monday_of_this_week_str()
+    today = clock.today()
+
+    # 이번 주 월요일부터 오늘까지 유산소만 채운다 — "한 유형에 쏠렸다" 를
+    # 짚는 문장이 나와야 한다.
+    rows = []
+    for back in range(today.weekday() + 1):
+        day = today - timedelta(days=back)
+        rows.append(
+            ExerciseSession(
+                id=f"test-ex-advice-{uuid4().hex[:10]}",
+                user_id="user-jisu",
+                week_start=monday,
+                day_label=WEEKDAY_LABELS[day.weekday()],
+                type="cardio",
+                minutes=30,
+                calories=270,
+                intensity="moderate",
+            )
+        )
+    for row in rows:
+        db_session.add(row)
+    db_session.commit()
+    try:
+        week = client.get(f"{url}?period=week", headers=_auth(token))
+        assert week.status_code == 200, week.text
+        body = week.json()
+        assert body["period"] == "week"
+        assert body["from_date"] == monday
+        assert body["to_date"] == today.isoformat()
+        assert body["days_logged"] == len(rows)
+        assert "이번 주" in body["message"]
+
+        today_body = client.get(f"{url}?period=today", headers=_auth(token)).json()
+        assert today_body["from_date"] == today.isoformat()
+        # 오늘은 되짚지 않고 지금 한 것을 말한다 — 주간 문장과 달라야 한다.
+        assert today_body["message"] != body["message"]
+        assert "오늘" in today_body["message"]
+    finally:
+        for row in rows:
+            db_session.delete(row)
+        db_session.commit()
+
+
+def test_trainer_client_exercise_advice_says_nothing_when_there_is_nothing(client):
+    """없는 기록으로 조언을 지어내지 않는다. (#1025)"""
+    token = _trainer_token(client)
+    body = client.get(
+        "/v1/trainer/clients/user-sera/exercise-advice?period=all",
+        headers=_auth(token),
+    )
+    assert body.status_code == 200, body.text
+    payload = body.json()
+    if payload["days_logged"] == 0:
+        assert "쌓이면" in payload["message"]
+
+
+def test_trainer_client_exercise_advice_requires_own_client(client):
+    """담당하지 않는 회원의 조언은 볼 수 없다."""
+    token = _trainer_token(client)
+    denied = client.get(
+        "/v1/trainer/clients/not-my-member/exercise-advice",
+        headers=_auth(token),
+    )
+    assert denied.status_code in (403, 404), denied.text
