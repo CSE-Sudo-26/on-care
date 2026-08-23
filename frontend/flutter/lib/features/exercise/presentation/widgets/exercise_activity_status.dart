@@ -210,7 +210,7 @@ class _ExerciseActivityStatusState
             streakDays: widget.week.streakDays,
           )
         else if (period == 1)
-          _WeekView(loads: _loads, goals: _goals)
+          ExerciseWeekLoadCard(loads: _loads, goals: _goals)
         else
           _AllPeriodView(goals: _goals),
       ],
@@ -771,31 +771,43 @@ class _DonutPainter extends CustomPainter {
 /// 링은 셋이 크기 순으로 겹친다(바깥 유산소 → 근력 → 스트레칭). 단위가 서로
 /// 다르니 높이를 나란히 두지 않고, 각자의 주간 목표에 대한 **달성률**만 같은
 /// 모양으로 겹쳐 보여 준다.
-class _WeekView extends StatefulWidget {
-  const _WeekView({required this.loads, required this.goals});
+/// 이번 주 = **주간 소모 칼로리 한 줄** + 유형별 목표 링 셋 + 그 값.
+///
+/// 홈 탭 운동 카드도 이 카드를 그대로 쓴다 (#1183) — 같은 한 주를 두 화면이
+/// 다른 그림으로 말하지 않게, 오늘 카드([ExerciseDayLoadCard])와 같은 방식으로
+/// 공개해 둔다.
+class ExerciseWeekLoadCard extends StatelessWidget {
+  const ExerciseWeekLoadCard({
+    required this.loads,
+    this.goals = kDefaultExerciseLoadGoals,
+    this.surface = true,
+    super.key,
+  });
 
   final List<ExerciseDayLoad> loads;
   final ExerciseLoadGoals goals;
 
-  @override
-  State<_WeekView> createState() => _WeekViewState();
-}
+  /// 흰 카드 바탕을 직접 그릴지. 홈처럼 **이미 카드 안**에 놓일 때는 끈다 —
+  /// 카드 안의 카드는 테두리가 두 겹으로 겹친다.
+  final bool surface;
 
-class _WeekViewState extends State<_WeekView> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final String locale = Localizations.localeOf(context).toString();
-    final List<ExerciseDayLoad> loads = widget.loads;
     if (loads.isEmpty) {
-      return _Card(child: Center(child: _Muted(l.exLoadEmpty)));
+      return _Card(
+        surface: surface,
+        child: Center(child: _Muted(l.exLoadEmpty)),
+      );
     }
-    final ExerciseLoadGoals g = widget.goals;
+    final ExerciseLoadGoals g = goals;
     final double weekKcal = loads.fold<double>(
       0,
       (double a, ExerciseDayLoad d) => a + d.calories,
     );
     return _Card(
+      surface: surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1599,13 +1611,19 @@ class _ChartGridPainter extends CustomPainter {
 // ── 공통 조각 ──────────────────────────────────────────────────────────
 
 class _Card extends StatelessWidget {
-  const _Card({required this.child});
+  const _Card({required this.child, this.surface = true});
 
   final Widget child;
 
+  /// 흰 바탕·그림자·안쪽 여백을 직접 그릴지. 홈 카드 안에 놓일 때는 끈다 —
+  /// 높이 규칙만 남아 두 화면의 카드가 같은 크기로 선다.
+  final bool surface;
+
   @override
   Widget build(BuildContext context) => Container(
-    key: const Key('exerciseActivityCard'),
+    // 운동 탭의 카드만 이 열쇠를 갖는다 — 홈에 놓인 같은 카드까지 잡히면
+    // "카드가 하나" 를 세는 테스트가 두 개를 보게 된다.
+    key: surface ? const Key('exerciseActivityCard') : null,
     width: double.infinity,
     // 높이는 고정이되 **글자 배율을 따라간다**. 세 기간 카드가 같은 높이여야
     // 토글을 눌러도 화면이 출렁이지 않는데, 배율만 커지면 그 고정 높이 안에서
@@ -1613,15 +1631,19 @@ class _Card extends StatelessWidget {
     height:
         kActivityCardHeight *
         MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6),
-    padding: const EdgeInsets.symmetric(
-      horizontal: _kCardPaddingH,
-      vertical: _kCardPadding,
-    ),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: kCardShadow,
-    ),
+    padding: surface
+        ? const EdgeInsets.symmetric(
+            horizontal: _kCardPaddingH,
+            vertical: _kCardPadding,
+          )
+        : EdgeInsets.zero,
+    decoration: surface
+        ? BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: kCardShadow,
+          )
+        : null,
     child: child,
   );
 }
@@ -1709,19 +1731,23 @@ class _PeriodToggle extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey<String>('exercise-period-toggle'),
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: FigmaColors.statBg,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (int i = 0; i < labels.length; i++)
-          Flexible(
-            child: Semantics(
+  Widget build(BuildContext context) => FittedBox(
+    // 세 라벨은 줄이지 않는다 — `이번 주` 가 `이번…` 으로 잘려 무엇을 고르는
+    // 자리인지 사라졌다 (#1182). 폭이 모자라면 토글을 통째로 줄인다.
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerRight,
+    child: Container(
+      key: const ValueKey<String>('exercise-period-toggle'),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (int i = 0; i < labels.length; i++)
+            Semantics(
               button: true,
               selected: active == i,
               child: GestureDetector(
@@ -1732,7 +1758,7 @@ class _PeriodToggle extends StatelessWidget {
                   duration: const Duration(milliseconds: 160),
                   // 식단 탭 기간 토글과 **같은 크기**다 (#1126) — 같은 자리에
                   // 놓인 같은 조작이 탭마다 다르게 보이면 안 된다. 글자를 키운
-                  // 화면에서 세 탭이 줄을 넘기지 않도록 좁히는 규칙까지 같다.
+                  // 화면에서 여백을 좁히는 규칙까지 같다.
                   padding: EdgeInsets.symmetric(
                     horizontal: MediaQuery.textScalerOf(context).scale(1) > 1.3
                         ? 12
@@ -1748,7 +1774,7 @@ class _PeriodToggle extends StatelessWidget {
                   child: Text(
                     labels[i],
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -1760,8 +1786,8 @@ class _PeriodToggle extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }
