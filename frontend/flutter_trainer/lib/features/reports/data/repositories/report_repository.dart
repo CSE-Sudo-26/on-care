@@ -167,6 +167,9 @@ class LocalReportRepository implements ReportRepository {
       sodium: <int>[for (var d = 0; d < 7; d++) on(d)?.sodiumMg ?? 0],
       calories: <int>[for (var d = 0; d < 7; d++) on(d)?.calories ?? 0],
       sugar: <double>[for (var d = 0; d < 7; d++) on(d)?.sugarG ?? 0],
+      carbs: <double>[for (var d = 0; d < 7; d++) on(d)?.carbsG ?? 0],
+      protein: <double>[for (var d = 0; d < 7; d++) on(d)?.proteinG ?? 0],
+      fat: <double>[for (var d = 0; d < 7; d++) on(d)?.fatG ?? 0],
     );
   }
 
@@ -376,6 +379,11 @@ WeeklyReport weeklyReportFromJson(
     sodiumWeek: ints('sodium_week'),
     caloriesWeek: ints('calories_week'),
     sugarWeek: doubles('sugar_week'),
+    // 탄단지는 백엔드 `WeeklyReportOut` 이 이미 함께 준다 — 비교 그래프가
+    // 칼로리를 이 셋으로 쌓아 그린다(#1177).
+    carbsWeek: doubles('carbs_week'),
+    proteinWeek: doubles('protein_week'),
+    fatWeek: doubles('fat_week'),
     days: <ReportDay>[
       for (final day in (json['days'] as List<Object?>? ?? const <Object?>[]))
         if (day is Map<String, dynamic>)

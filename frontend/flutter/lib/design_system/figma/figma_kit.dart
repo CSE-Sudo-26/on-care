@@ -54,6 +54,13 @@ class FigmaColors {
   static const Color macroCarbs = Color(0xFF3EAFDF); // 탄수화물 — 브랜드 100%
   static const Color macroProtein = Color(0xFF82CBEA); // 단백질 — 브랜드 65%
   static const Color macroFat = Color(0xFFBBE3F4); // 지방 — 브랜드 35%
+
+  // 목표를 넘긴 날의 탄단지 (#1201). 브랜드 파랑 세 단계와 **같은 방식**으로
+  // 만든 빨강 세 단계다 — 경고색 100% / 65% / 35%. 진하기 순서가 같아야
+  // 초과한 날에도 어느 칸이 탄수화물인지 눈이 그대로 읽는다.
+  static const Color macroCarbsOver = Color(0xFFF04438); // 탄수화물 — 경고 100%
+  static const Color macroProteinOver = Color(0xFFF5857E); // 단백질 — 경고 65%
+  static const Color macroFatOver = Color(0xFFFABEB9); // 지방 — 경고 35%
   static const Color sleepPurple = Color(0xFF6B7FE0); // 수면 chart
 
   // Dots / status

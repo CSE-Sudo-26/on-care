@@ -980,11 +980,11 @@ abstract class AppLocalizations {
   /// **'in {minutes} min'**
   String dashScheduleMinutesLeft(int minutes);
 
-  /// No description provided for @dashPrepareClass.
+  /// No description provided for @dashPreparePt.
   ///
   /// In en, this message translates to:
-  /// **'Prepare the session'**
-  String get dashPrepareClass;
+  /// **'Prepare PT'**
+  String get dashPreparePt;
 
   /// No description provided for @dashLeaveMemo.
   ///
@@ -2213,14 +2213,8 @@ abstract class AppLocalizations {
   /// No description provided for @reportsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Summarize this week\'s changes and prepare a report to share'**
+  /// **'Review the week\'s changes and share them with your client'**
   String get reportsSubtitle;
-
-  /// No description provided for @reportsPrevWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'Previous'**
-  String get reportsPrevWeek;
 
   /// No description provided for @reportsLoadFailed.
   ///
@@ -2504,12 +2498,6 @@ abstract class AppLocalizations {
   /// **'Weekly diet trend'**
   String get reportsDietTrend;
 
-  /// No description provided for @reportsSodiumOverInline.
-  ///
-  /// In en, this message translates to:
-  /// **'{days} days over sodium'**
-  String reportsSodiumOverInline(int days);
-
   /// No description provided for @workoutDoneOfTotal.
   ///
   /// In en, this message translates to:
@@ -2564,22 +2552,16 @@ abstract class AppLocalizations {
   /// **'{name}, here\'s your weekly report for {range}.'**
   String reportBodyGreeting(String name, String range);
 
-  /// No description provided for @reportBodySessions.
-  ///
-  /// In en, this message translates to:
-  /// **'We got through {done} of {booked} PT sessions.'**
-  String reportBodySessions(int done, int booked);
-
   /// No description provided for @reportBodyCompletionGood.
   ///
   /// In en, this message translates to:
-  /// **'You kept up well this week — {avg}% of your workouts done.'**
+  /// **'You kept up well — {avg}% of your workouts done.'**
   String reportBodyCompletionGood(int avg);
 
   /// No description provided for @reportBodyCompletionLow.
   ///
   /// In en, this message translates to:
-  /// **'Workout completion came in at {avg}% this week. Sounds like a busy one.'**
+  /// **'Workout completion came in at {avg}%. Sounds like a busy one.'**
   String reportBodyCompletionLow(int avg);
 
   /// No description provided for @reportBodySkipped.
@@ -2591,25 +2573,25 @@ abstract class AppLocalizations {
   /// No description provided for @reportBodySodiumOver.
   ///
   /// In en, this message translates to:
-  /// **'Sodium averaged {avg}mg a day, over the 2,000mg target on {days} days. Leaving half the broth behind saves 400-500mg a day.'**
-  String reportBodySodiumOver(int avg, int days);
+  /// **'Sodium averaged {avg}mg a day, and went over the {target}mg target on {days} days. Leaving half the broth behind saves 400-500mg a day.'**
+  String reportBodySodiumOver(String avg, String target, int days);
 
   /// No description provided for @reportBodySodiumOk.
   ///
   /// In en, this message translates to:
-  /// **'Sodium averaged {avg}mg a day — comfortably inside your target.'**
-  String reportBodySodiumOk(int avg);
+  /// **'Sodium averaged {avg}mg a day — comfortably inside the {target}mg target.'**
+  String reportBodySodiumOk(String avg, String target);
 
   /// No description provided for @reportBodyCalories.
   ///
   /// In en, this message translates to:
   /// **'Calories averaged {avg}kcal a day.'**
-  String reportBodyCalories(int avg);
+  String reportBodyCalories(String avg);
 
   /// No description provided for @reportBodyPraise.
   ///
   /// In en, this message translates to:
-  /// **'Great week — let\'s keep this pace next week!'**
+  /// **'Great work — let\'s keep this pace next week!'**
   String get reportBodyPraise;
 
   /// No description provided for @reportBodyEncourage.
@@ -2621,7 +2603,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportBodyNoRecords.
   ///
   /// In en, this message translates to:
-  /// **'There\'s nothing logged this week, so nothing to sum up. Let\'s plan next week\'s start together.'**
+  /// **'There\'s nothing logged for this week, so nothing to sum up. Let\'s plan next week\'s start together.'**
   String get reportBodyNoRecords;
 
   /// No description provided for @schedTitle.
@@ -5606,17 +5588,47 @@ abstract class AppLocalizations {
   /// **'Last 4 weekly averages'**
   String get reportsRecentWeeks;
 
+  /// No description provided for @reportsWeekTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Week total'**
+  String get reportsWeekTotal;
+
+  /// No description provided for @reportsGoalOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal {value}'**
+  String reportsGoalOf(String value);
+
+  /// No description provided for @reportsCompareWith.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last week'**
+  String get reportsCompareWith;
+
+  /// No description provided for @reportsMoreExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String reportsMoreExercises(int count);
+
+  /// No description provided for @reportsRecordedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days logged'**
+  String reportsRecordedDays(int days);
+
+  /// No description provided for @reportsAverageChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg {value}'**
+  String reportsAverageChip(String value);
+
   /// No description provided for @chartGoalLabel.
   ///
   /// In en, this message translates to:
   /// **'Goal\n{value}'**
   String chartGoalLabel(String value);
-
-  /// No description provided for @reportsGoalMarker.
-  ///
-  /// In en, this message translates to:
-  /// **'│ Goal {value}'**
-  String reportsGoalMarker(String value);
 
   /// No description provided for @reportsWeeksAgo.
   ///
@@ -5629,6 +5641,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI coaching assistant · Report summary'**
   String get reportsAiTitle;
+
+  /// No description provided for @reportsAiNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week\'s coaching'**
+  String get reportsAiNextWeek;
+
+  /// No description provided for @reportsActionSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask them to leave half the broth and the pickled sides.'**
+  String get reportsActionSodium;
+
+  /// No description provided for @reportsActionSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Some days went over the {target}g sugar target. Start with drinks and snacks.'**
+  String reportsActionSugar(String target);
+
+  /// No description provided for @reportsActionLowCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop the routine a notch so they finish it first.'**
+  String get reportsActionLowCompletion;
+
+  /// No description provided for @reportsActionHighCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Good pace. Add a set or a little weight next week.'**
+  String get reportsActionHighCompletion;
+
+  /// No description provided for @reportsActionSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare alternatives for {names} for the next session.'**
+  String reportsActionSkipped(String names);
+
+  /// No description provided for @reportsActionUnlogged.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days went unlogged. Build the logging habit first.'**
+  String reportsActionUnlogged(int days);
+
+  /// No description provided for @reportsActionCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Intake is under the {target}kcal target. Suggest one protein-led meal.'**
+  String reportsActionCalories(String target);
 
   /// No description provided for @reportsAiGenerated.
   ///

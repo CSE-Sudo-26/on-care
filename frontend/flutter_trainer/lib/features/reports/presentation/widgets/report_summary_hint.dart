@@ -11,13 +11,50 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 무엇을 얻는지도 알 수 없다. 카드 껍데기는 [ReportAiCard] 와 같게 두어,
 /// 내용이 채워질 때 자리가 흔들리지 않는다.
 class ReportSummaryHint extends StatelessWidget {
-  const ReportSummaryHint({super.key, required this.message});
+  const ReportSummaryHint({
+    super.key,
+    required this.message,
+    this.fill = false,
+  });
 
   final String message;
+
+  /// 남은 세로 자리를 채우는가. [ReportAiCard] 와 같은 자리에 놓이므로 같은
+  /// 규칙을 쓴다 — 칸이 안내문보다 짧으면 카드 안에서 스크롤한다.
+  ///
+  /// 이 값이 없던 때에는 리포트를 읽는 동안 칸이 잠깐 얇아지는 순간마다
+  /// 렌더 오버플로가 났다. 채우는 자리에서만 스크롤을 붙이는 이유는, 좁은
+  /// 화면에서는 이 카드가 **스스로 스크롤하는 열 안에** 놓여 높이가 무한하기
+  /// 때문이다(#1177).
+  final bool fill;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final Widget body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          l.reportsAiTitle,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          message,
+          style: const TextStyle(
+            color: AppColors.mutedForeground,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
     return Container(
       key: const ValueKey<String>('reports-summary-hint'),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -32,29 +69,12 @@ class ReportSummaryHint extends StatelessWidget {
           const Icon(Icons.auto_awesome, color: AppColors.primary, size: 19),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  l.reportsAiTitle,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    color: AppColors.mutedForeground,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
+            child: fill
+                ? SingleChildScrollView(
+                    key: const ValueKey<String>('reports-summary-hint-scroll'),
+                    child: body,
+                  )
+                : body,
           ),
         ],
       ),
