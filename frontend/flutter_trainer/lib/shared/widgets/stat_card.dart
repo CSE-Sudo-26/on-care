@@ -22,6 +22,11 @@ enum StatTone {
 
   /// On track — green.
   positive,
+
+  /// 고객 상태 등급의 중간 단계(주의 고객) — 주황. [alert]/[warn] 은 이미
+  /// 빨강(#690)이라, 주의와 이탈 위험을 한 행에서 나란히 보여줄 때는 이
+  /// 톤을 쓴다.
+  caution,
 }
 
 /// A KPI tile: label, big number, unit, and a hint line.
@@ -69,6 +74,7 @@ class StatCard extends StatelessWidget {
     StatTone.alert => AppColors.overTarget,
     StatTone.warn => AppColors.warning,
     StatTone.positive => AppColors.success,
+    StatTone.caution => AppColors.statusCaution,
   };
 
   Color get _iconColor =>

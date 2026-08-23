@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/dashboard/domain/activity_feedback.dart';
 import 'package:oncare_trainer/features/dashboard/domain/ai_coaching_summary.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -18,10 +19,14 @@ class AiSummaryCard extends StatelessWidget {
     super.key,
     required this.summary,
     required this.onRetry,
+    this.activityFeedback = const <ActivityFeedbackItem>[],
   });
 
   final AsyncValue<AiCoachingSummary> summary;
   final VoidCallback onRetry;
+
+  /// 트레이너 활동 피드백 bullets — 이행률·이탈 위험·식단 피드백 미완료 등.
+  final List<ActivityFeedbackItem> activityFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +46,10 @@ class AiSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _Header(title: l.dashAiSummaryTitle, today: l.dashToday),
+          if (activityFeedback.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            _ActivityFeedbackList(items: activityFeedback),
+          ],
           const SizedBox(height: AppSpacing.md),
           summary.when(
             loading: () => _LoadingState(label: l.dashAiLoading),
@@ -103,6 +112,69 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "AI 진단" 카드 헤더 아래의 트레이너 활동 피드백 — 이행률·이탈 위험·식단
+/// 피드백 등 오늘 트레이너가 챙길 만한 사항을 짧은 불릿으로 짚어 준다.
+class _ActivityFeedbackList extends StatelessWidget {
+  const _ActivityFeedbackList({required this.items});
+
+  final List<ActivityFeedbackItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card.withValues(alpha: 0.9),
+        border: Border.all(color: AppColors.borderStrong),
+        borderRadius: const BorderRadius.all(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.dashActivityFeedbackTitle,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.only(top: 5, right: AppSpacing.xs),
+                    child: Icon(
+                      Icons.circle,
+                      size: 4,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      item.kind.label(l, item.count),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

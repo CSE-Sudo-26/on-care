@@ -8,7 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/session_chips.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -99,12 +99,6 @@ class _Row extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  Color get _statusColor {
-    if (session.isDone) return AppColors.success;
-    if (session.isUpcoming) return AppColors.primary;
-    return AppColors.disabledForeground;
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -135,15 +129,7 @@ class _Row extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.only(right: AppSpacing.sm),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _statusColor,
-                ),
-              ),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: muted
                     ? Text(
@@ -157,7 +143,9 @@ class _Row extends StatelessWidget {
                         ),
                       )
                     : Text(
-                        '${client == null ? fallbackName : clientIdentityLabel(context, client!)} · ${session.type}',
+                        client == null
+                            ? fallbackName
+                            : clientIdentityLabel(context, client!),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -167,16 +155,19 @@ class _Row extends StatelessWidget {
                         ),
                       ),
               ),
-              if (!muted)
-                Text(
-                  // 저장된 계약값이 아니라 표시 문구를 그린다. (#501)
-                  scheduleStatusLabel(l, session.status),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: _statusColor,
-                  ),
+              // 스케줄 탭과 같은 알약 두 장(#1012) — 종류는 늘 남색, 상태는
+              // 결과에 따라 색이 갈린다. 대시보드 목록은 자리가 좁아 둘 다
+              // compact 치수를 쓴다.
+              if (!muted) ...<Widget>[
+                const SizedBox(width: AppSpacing.xs),
+                SessionTypeChip(
+                  label: session.type,
+                  muted: session.isFinished,
+                  compact: true,
                 ),
+                const SizedBox(width: AppSpacing.xs),
+                SessionStatusChip(status: session.status),
+              ],
             ],
           ),
         ),
