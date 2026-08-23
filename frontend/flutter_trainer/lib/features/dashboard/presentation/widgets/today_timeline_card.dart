@@ -195,8 +195,8 @@ class _NextUpBanner extends StatelessWidget {
             icon: const Icon(Icons.arrow_forward, size: 16),
             label: Text(
               isConsultation || clientId == null
-                  ? l.dashLeaveMemo
-                  : l.dashPrepareClass,
+                  ? l.dashPrepareConsultation
+                  : l.dashPreparePt,
             ),
           ),
         ],

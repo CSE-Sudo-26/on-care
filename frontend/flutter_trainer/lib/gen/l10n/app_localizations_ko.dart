@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -493,7 +492,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String dashScheduleNextSession(String time, String name) {
-    return '다음 수업 $time · $name';
+    return '다음 일정 $time · $name';
   }
 
   @override
@@ -502,10 +501,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => '수업 준비하기';
+  String get dashPreparePt => 'PT 준비하기';
 
   @override
-  String get dashLeaveMemo => '메모 남기기';
+  String get dashPrepareConsultation => '상담 준비하기';
 
   @override
   String get dashSessionSent => '전송됨';

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -523,10 +522,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => 'Prepare the session';
+  String get dashPreparePt => 'Prepare PT';
 
   @override
-  String get dashLeaveMemo => 'Leave a memo';
+  String get dashPrepareConsultation => 'Prepare consultation';
 
   @override
   String get dashSessionSent => 'Sent';

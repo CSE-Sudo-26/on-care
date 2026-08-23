@@ -980,17 +980,17 @@ abstract class AppLocalizations {
   /// **'in {minutes} min'**
   String dashScheduleMinutesLeft(int minutes);
 
-  /// No description provided for @dashPrepareClass.
+  /// No description provided for @dashPreparePt.
   ///
   /// In en, this message translates to:
-  /// **'Prepare the session'**
-  String get dashPrepareClass;
+  /// **'Prepare PT'**
+  String get dashPreparePt;
 
-  /// No description provided for @dashLeaveMemo.
+  /// No description provided for @dashPrepareConsultation.
   ///
   /// In en, this message translates to:
-  /// **'Leave a memo'**
-  String get dashLeaveMemo;
+  /// **'Prepare consultation'**
+  String get dashPrepareConsultation;
 
   /// No description provided for @dashSessionSent.
   ///
