@@ -2894,6 +2894,18 @@ abstract class AppLocalizations {
   /// **'Weight'**
   String get progWeight;
 
+  /// No description provided for @progType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get progType;
+
+  /// No description provided for @progDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (min)'**
+  String get progDuration;
+
   /// No description provided for @progOptional.
   ///
   /// In en, this message translates to:

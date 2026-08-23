@@ -10,6 +10,8 @@ class ProgramItem {
     required this.reps,
     required this.weight,
     this.session = '',
+    this.type = '근력',
+    this.duration = '',
   });
 
   /// Exercise name.
@@ -29,6 +31,14 @@ class ProgramItem {
   /// Empty for a single-session program and for rows written before sessions
   /// existed — the schedule then reads as the flat list it always was.
   final String session;
+
+  /// 운동 유형 계약값('유산소'|'근력'|'유연성'|'기타') — 코칭 탭 루틴 배정과
+  /// 같은 어휘다(#1233). 이 값이 없는 예전 행은 '근력'으로 읽힌다.
+  final String type;
+
+  /// 이 운동에 쓴 분. 빈 문자열은 미입력 — PT 완료 자동 기록은 이 값이 없으면
+  /// 세션 슬롯 전체 길이로 되돌아간다(#1233).
+  final String duration;
 }
 
 /// One slot on the trainer's daily timeline (스케줄 탭). Decoded from

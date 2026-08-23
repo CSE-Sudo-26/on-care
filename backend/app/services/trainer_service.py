@@ -2369,8 +2369,32 @@ def _program_items(program_json: str) -> list[ProgramItem]:
             weight=str(m.get("weight", "")),
             # 이 키가 없는 예전 행은 세션 구분 없는 목록으로 그대로 읽힌다(#709).
             session=str(m.get("session", "") or ""),
+            # 이 키들이 없는 예전 행은 기본값으로 읽힌다(#1233).
+            type=m.get("type") or "근력",
+            duration=str(m.get("duration", "")),
         ))
     return out
+
+
+def _program_minutes_and_type(
+    items: Sequence[ProgramItem],
+) -> tuple[int, str | None]:
+    """프로그램 항목들을 (총 분, 가장 많은 유형)으로 요약한다. (#1233)
+
+    `_session_summary` 와 같은 규칙이다 — 분은 각 항목 `duration` 의 합,
+    유형은 가장 많은 유형. 항목이 하나도 없으면 유형은 None 이라 호출부가
+    기존 폴백(세션 유형 고정값)을 쓸 수 있다.
+    """
+    minutes = 0
+    counts: dict[str, int] = {}
+    for item in items:
+        try:
+            minutes += int(item.duration.strip())
+        except ValueError:
+            pass
+        counts[item.type] = counts.get(item.type, 0) + 1
+    type_ = max(counts, key=lambda t: counts[t]) if counts else None
+    return minutes, type_
 
 
 def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
@@ -3079,6 +3103,14 @@ def _add_member_exercise_log(
     ex_type = _SESSION_EXERCISE_TYPE.get(s.type)
     if s.member_id is None or ex_type is None or s.duration_minutes <= 0:
         return None
+    # 프로그램에 적힌 실제 운동 항목의 분·유형을 우선 쓴다 — 분을 하나도
+    # 적지 않은(예전) 프로그램만 슬롯 전체 길이·고정 유형으로 되돌아간다(#1233).
+    program_minutes, program_type_ko = _program_minutes_and_type(
+        _program_items(s.program_json)
+    )
+    minutes = program_minutes if program_minutes > 0 else s.duration_minutes
+    if program_type_ko is not None:
+        ex_type = exercise_types.normalize(program_type_ko)
     row = ExerciseSession(
         id=_derived_exercise_id(s.id),
         user_id=s.member_id,
@@ -3087,9 +3119,9 @@ def _add_member_exercise_log(
         week_start=exercise_service.monday_of_str(s.date),
         day_label=exercise_service.weekday_label_of(s.date),
         type=ex_type,
-        minutes=s.duration_minutes,
+        minutes=minutes,
         calories=exercise_service.estimate_calories(
-            ex_type, s.duration_minutes, _PT_INTENSITY
+            ex_type, minutes, _PT_INTENSITY
         ),
         intensity=_PT_INTENSITY,
         source="trainer_pt",
@@ -3140,6 +3172,8 @@ def send_session_program(
             sets=str(item.sets) if item.sets else "",
             reps=item.reps,
             weight=item.weight,
+            type=item.type,
+            duration=item.duration,
         )
         for index, item in enumerate(items)
     ]
