@@ -410,7 +410,6 @@
   "consultRejected": "Request declined",
   "consultTargetTrainer": "Direct request",
   "consultExerciseGoal": "Training goal",
-  "consultHealthPurpose": "Health purpose",
   "consultPreferredTime": "Preferred time",
   "consultMessage": "Message",
   "consultReject": "Decline",
@@ -458,8 +457,10 @@
   "trainerNote": "Trainer's note",
   "dietLoadFailed": "Couldn't load meals",
   "dietEmpty": "No meals logged yet",
-  "dietTodaySummary": "Today's nutrition",
+  "dietDayEmpty": "No record",
+  "dietMacros": "Macros",
   "clientNutritionSummary": "Nutrition summary",
+  "dietCalorieIntake": "Calories today",
   "dietAchieveRate": "Progress",
   "dietAmountOver": "{amount} over the goal",
   "@dietAmountOver": {
@@ -485,7 +486,9 @@
       }
     }
   },
-  "dietAiAnalysis": "AI analysis",
+  "aiAnalysis": "AI analysis",
+  "aiPeriodAnalysis": "AI period analysis",
+  "aiAllAnalysis": "AI all-time analysis",
   "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's routine would help.",
   "@dietAiOverSodium": {
     "placeholders": {
@@ -589,6 +592,21 @@
   "exBurnWeekTitle": "Burned this week",
   "exBurnMonthTitle": "Burned this month",
   "exBurnDayTitle": "Burned",
+  "exBurnAllTitle": "Average burned",
+  "exWeekOfMonthLabel": "Week {week}, {month}/",
+  "@exWeekOfMonthLabel": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "week": { "type": "int" }
+    }
+  },
+  "exStreakCheer": "{days, plural, =1{1 day in a row!} other{{days} days in a row!}}",
+  "@exStreakCheer": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "exStreakStart": "No streak yet",
   "exTypeOther": "Other",
   "exSetsValue": "{count, plural, =1{1 set} other{{count} sets}}",
   "@exSetsValue": {
@@ -1162,12 +1180,6 @@
   "goalPosture": "Posture",
   "goalHealth": "General health",
   "goalOther": "Other",
-  "purposeWeight": "Weight management",
-  "purposeChronic": "Chronic condition",
-  "purposeRehab": "Rehabilitation",
-  "purposeGeneral": "General wellbeing",
-  "purposeNone": "None",
-  "purposeOther": "Other",
   "slotMorning": "Morning",
   "slotAfternoon": "Afternoon",
   "slotEvening": "Evening",
@@ -1288,6 +1300,9 @@
     }
   },
   "routineAlreadyGone": "That routine is already gone",
+  "workoutPendingTitle": "Not done yet",
+  "workoutUndatedTitle": "Records without a date",
+  "workoutPendingCancel": "Cancel assignment",
   "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
   "routineUpdated": "Routine updated",
   "routineDeleteTitle": "Delete this routine?",

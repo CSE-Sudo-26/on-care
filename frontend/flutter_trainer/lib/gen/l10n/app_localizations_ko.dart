@@ -876,9 +876,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
-  String get consultHealthPurpose => '관리 목적';
-
-  @override
   String get consultPreferredTime => '희망 일시';
 
   @override
@@ -973,10 +970,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietEmpty => '아직 기록된 식단이 없어요';
 
   @override
-  String get dietTodaySummary => '오늘 영양 요약';
+  String get dietDayEmpty => '기록 없음';
+
+  @override
+  String get dietMacros => '탄단지';
 
   @override
   String get clientNutritionSummary => '영양 요약';
+
+  @override
+  String get dietCalorieIntake => '오늘 섭취 칼로리';
 
   @override
   String get dietAchieveRate => '달성률';
@@ -997,7 +1000,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietAiAnalysis => 'AI 분석';
+  String get aiAnalysis => 'AI 분석';
+
+  @override
+  String get aiPeriodAnalysis => 'AI 기간 분석';
+
+  @override
+  String get aiAllAnalysis => 'AI 전체 분석';
 
   @override
   String dietAiOverSodium(int over) {
@@ -1110,6 +1119,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exBurnDayTitle => '소모';
+
+  @override
+  String get exBurnAllTitle => '평균 소모';
+
+  @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return '$month월 $week주차';
+  }
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '아직 연속 기록이 없어요';
 
   @override
   String get exTypeOther => '기타';
@@ -2101,24 +2126,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get goalOther => '기타';
 
   @override
-  String get purposeWeight => '체중 관리';
-
-  @override
-  String get purposeChronic => '만성질환 관리';
-
-  @override
-  String get purposeRehab => '재활';
-
-  @override
-  String get purposeGeneral => '전반적 건강';
-
-  @override
-  String get purposeNone => '해당 없음';
-
-  @override
-  String get purposeOther => '기타';
-
-  @override
   String get slotMorning => '오전';
 
   @override
@@ -2290,6 +2297,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineAlreadyGone => '이미 삭제된 루틴이에요';
+
+  @override
+  String get workoutPendingTitle => '아직 하지 않은 개인 운동';
+
+  @override
+  String get workoutUndatedTitle => '날짜를 알 수 없는 기록';
+
+  @override
+  String get workoutPendingCancel => '배정 취소';
 
   @override
   String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';

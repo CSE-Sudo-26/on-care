@@ -569,11 +569,11 @@ void main() {
         find.byKey(const ValueKey<String>('client-detail-sub-tabs')),
         findsOneWidget,
       );
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
-      expect(find.text('배정된 루틴'), findsNothing);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
+      expect(find.text('운동 현황'), findsNothing);
       await tester.tap(find.text('운동'));
       await settle(tester);
-      expect(find.text('배정된 루틴'), findsOneWidget);
+      expect(find.text('운동 현황'), findsOneWidget);
     });
   });
 }

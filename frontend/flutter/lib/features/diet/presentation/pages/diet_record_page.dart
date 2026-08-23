@@ -98,6 +98,9 @@ DietMeal _mealFromEntry(DietEntry e) {
     tags: const <DietTag>[],
     sodium: sodium,
     sugar: sugar,
+    carbsG: e.carbsG,
+    proteinG: e.proteinG,
+    fatG: e.fatG,
   );
 }
 
@@ -1141,12 +1144,18 @@ class _MacroTextLine extends StatelessWidget {
   final _NutritionSummaryItem item;
   final Color color;
 
+  /// 라벨이 차지하는 폭. `탄수화물`(네 글자)이 들어갈 만큼만 잡는다 — 값이
+  /// 라벨 바로 옆에서 시작하면서도 세 줄의 숫자가 세로로 가지런하다 (#1149).
+  /// 글자 배율을 따라가야 큰 글씨에서 라벨이 잘리지 않는다.
+  static const double _labelWidth = 56;
+
   @override
   Widget build(BuildContext context) {
     return Row(
       key: Key('nutrition-macro-${item.label}'),
       children: <Widget>[
-        Expanded(
+        SizedBox(
+          width: MediaQuery.textScalerOf(context).scale(_labelWidth),
           child: Text(
             item.label,
             maxLines: 1,
@@ -1158,13 +1167,13 @@ class _MacroTextLine extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 6),
-        // 글자 배율이 커지면 값부터 줄인다 — 라벨은 이미 말줄임이고, 이 줄이
-        // 넘치면 카드 오른쪽의 도넛을 밀어낸다.
+        const SizedBox(width: 4),
+        // 값은 라벨 바로 옆에서 시작한다. 글자 배율이 커지면 값부터 줄인다 —
+        // 이 줄이 넘치면 카드 오른쪽의 도넛을 밀어낸다.
         Flexible(
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
+            alignment: Alignment.centerLeft,
             child: Text.rich(
               TextSpan(
                 children: <InlineSpan>[
@@ -1662,6 +1671,25 @@ class _MealCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                // 탄단지는 알약 아래 한 줄로 작게 (#1170). 하루 합계는 위
+                // 영양 요약 카드가 말하지만, 어느 끼니가 그 합계를 만들었는지는
+                // 끼니 단위로 봐야 알 수 있다 — 트레이너 화면의 같은 카드와
+                // 짝이라 두 화면이 같은 수준으로 읽힌다.
+                if (meal.carbsG > 0 || meal.proteinG > 0 || meal.fatG > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${l.homeMacroCarbs} ${_formatG(meal.carbsG)}g · '
+                    '${l.homeMacroProtein} ${_formatG(meal.proteinG)}g · '
+                    '${l.homeMacroFat} ${_formatG(meal.fatG)}g',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textBody,
+                    ),
+                  ),
+                ],
                 if (meal.aiComment.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 10),
                   _MealAiNote(text: meal.aiComment),

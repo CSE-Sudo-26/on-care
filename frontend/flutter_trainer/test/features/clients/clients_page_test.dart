@@ -327,7 +327,7 @@ void main() {
           }),
         ],
       );
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('client-data-refresh')),
@@ -335,7 +335,7 @@ void main() {
       await settle(tester);
 
       expect(repository.clientRefreshes, <String>['seed-client-1']);
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     });
 
     testWidgets('renders the roster with its size and priority order', (

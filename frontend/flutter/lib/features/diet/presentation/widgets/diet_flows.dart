@@ -49,6 +49,9 @@ class DietMeal {
     required this.tags,
     required this.sodium,
     required this.sugar,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
     this.aiComment = '',
     this.photoAsset,
     this.photoUrl,
@@ -64,6 +67,13 @@ class DietMeal {
   final List<DietTag> tags;
   final int sodium;
   final double sugar;
+
+  /// 그 끼니의 탄·단·지(g). 끼니 카드 아래에 한 줄로 작게 적는다 (#1170) —
+  /// 하루 합계는 영양 요약 카드가 말하지만, 어느 끼니가 그 합계를 만들었는지는
+  /// 끼니 단위로 봐야 알 수 있다. 트레이너 화면의 같은 카드와 짝이다.
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
 
   /// Short per-meal AI feedback line shown under the food breakdown.
   final String aiComment;
@@ -980,6 +990,9 @@ class DietMealDetailPage extends ConsumerWidget {
     tags: const <DietTag>[],
     sodium: entry.sodiumMg,
     sugar: entry.sugarG,
+    carbsG: entry.carbsG,
+    proteinG: entry.proteinG,
+    fatG: entry.fatG,
   );
 
   @override

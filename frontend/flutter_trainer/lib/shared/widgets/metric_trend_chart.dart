@@ -27,17 +27,17 @@ import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 /// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
 const Color kMetricTrendLine = Color(0xFFDDE2E8);
 
-/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+/// 목표 대비 상태색: 초과(빨강) / 그 외(목표 안쪽).
 ///
 /// 목표가 0 이면 초과로 보지 않는다 — 목표 없는 지표의 모든 기록이 빨간 점이
 /// 되어 버린다.
 ///
-/// 정상 초록은 [AppColors.statusNormal] 이다. 예전에는 `완료` 초록
-/// ([AppColors.success], `#34C759`)이라 같은 화면의 나트륨·당류 카드가 말하는
-/// `정상`(`#22A882`)과 초록이 두 가지였다 — 카드에서 정상인 날이 그래프에서는
-/// 다른 초록으로 찍혔다. (#1027)
+/// 목표 안쪽은 [AppColors.statusWithinGoal](= 트레이너 메인 색)이다. 회원 앱
+/// 꺾은선이 자기 메인 색을 쓰는 자리와 같다 — 같은 날이 두 화면에서 같은
+/// 뜻으로 찍힌다. 초록이었던 때에는 목표에 한참 못 미친 날까지 "정상" 이라고
+/// 말했다. (#1168)
 Color metricStatusColor(double v, double goal) =>
-    goal > 0 && v > goal ? AppColors.overTarget : AppColors.statusNormal;
+    goal > 0 && v > goal ? AppColors.overTarget : AppColors.statusWithinGoal;
 
 /// 소수 첫째 자리까지만 남기고 정수는 콤마만. 당류 17.8 이 18 로 반올림돼
 /// 요약 수치와 어긋나지 않도록.
@@ -78,6 +78,8 @@ class MetricTrendChart extends StatelessWidget {
     required this.formatTick,
     this.markToday = true,
     this.height = 68,
+    this.selectedIndex,
+    this.onSelected,
   });
 
   /// 요일별 값(월→일). [dayLabels] 와 길이가 같아야 한다.
@@ -116,6 +118,15 @@ class MetricTrendChart extends StatelessWidget {
   /// 꺾은선 영역 높이(요일 라벨 제외).
   final double height;
 
+  /// 고른 점. [onSelected] 를 준 화면에서만 뜻이 있다 — 고른 점은 굵은 고리로
+  /// 표시하고, 부르는 쪽은 머리 숫자를 그날 값으로 바꾼다. 회원 앱 #1122 와
+  /// 같은 규칙이다.
+  final int? selectedIndex;
+
+  /// 점을 누르면 그 index 로, 점에서 먼 곳을 누르면 null 로 부른다. null 이면
+  /// 그래프는 예전처럼 만질 수 없는 그림이다.
+  final ValueChanged<int?>? onSelected;
+
   @override
   Widget build(BuildContext context) {
     final (lo, hi) = metricTrendScale(
@@ -153,7 +164,22 @@ class MetricTrendChart extends StatelessWidget {
             Expanded(
               child: Column(
                 children: <Widget>[
-                  SizedBox(height: height, child: _paint(lo, hi)),
+                  SizedBox(
+                    height: height,
+                    child: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints c) {
+                        final Widget chart = _paint(lo, hi);
+                        final ValueChanged<int?>? onSelected = this.onSelected;
+                        if (onSelected == null) return chart;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (TapUpDetails d) =>
+                              onSelected(_hit(d.localPosition.dx, c.maxWidth)),
+                          child: chart,
+                        );
+                      },
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -207,8 +233,25 @@ class MetricTrendChart extends StatelessWidget {
       lo: lo,
       hi: hi,
       todayIndex: todayIndex,
+      selectedIndex: selectedIndex,
     ),
   );
+
+  /// 누른 x 좌표에서 가장 가까운 점의 index. 점에서 멀면 null 이라 선택이
+  /// 풀린다 — 그래프 아무 데나 누르면 다시 평균으로 돌아온다. (회원 앱 #1122)
+  int? _hit(double dx, double width) {
+    if (values.length < 2 || width <= 0) return null;
+    final double step = width / (values.length - 1);
+    final int i = (dx / step).round().clamp(0, values.length - 1);
+    // 점에서 18px 안쪽만 그 점을 누른 것으로 본다. 반 칸까지 넓히면 그래프
+    // 어디를 눌러도 어느 점엔가 붙어, 선택을 풀 자리가 없어진다.
+    if ((dx - i * step).abs() > 18) return null;
+    // 아직 그리지 않은(오늘 이후) 점은 고를 수 없다 — 0 을 그날 값이라고
+    // 말하게 된다.
+    if (i > todayIndex.clamp(0, values.length - 1)) return null;
+    // 고른 점을 다시 누르면 풀린다.
+    return i == selectedIndex ? null : i;
+  }
 }
 
 /// 축 라벨 글씨 크기. 라벨 칸 높이를 이 값에서 재므로 한 곳에 둔다. (#1004)
@@ -224,6 +267,7 @@ class MetricTrendPainter extends CustomPainter {
     required this.lo,
     required this.hi,
     required this.todayIndex,
+    this.selectedIndex,
   });
 
   /// 요일별 값(월→일).
@@ -243,6 +287,9 @@ class MetricTrendPainter extends CustomPainter {
 
   /// 선을 여기까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
   final int todayIndex;
+
+  /// 고른 점. 그 점만 고리를 둘러 어느 날을 보고 있는지 알린다. (회원 앱 #1122)
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -284,6 +331,16 @@ class MetricTrendPainter extends CustomPainter {
 
     for (var i = 0; i <= lastIdx; i++) {
       final sc = metricStatusColor(cur[i], goal);
+      if (i == selectedIndex) {
+        canvas.drawCircle(
+          pts[i],
+          8.5,
+          Paint()
+            ..color = sc.withValues(alpha: 0.45)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
       _dot(canvas, pts[i], sc, r: i == lastIdx ? 5.0 : 4.2);
       _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc);
     }
@@ -319,5 +376,6 @@ class MetricTrendPainter extends CustomPainter {
       old.ticks != ticks ||
       old.lo != lo ||
       old.hi != hi ||
-      old.todayIndex != todayIndex;
+      old.todayIndex != todayIndex ||
+      old.selectedIndex != selectedIndex;
 }

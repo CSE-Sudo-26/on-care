@@ -29,6 +29,20 @@ String healthPurposeToWire(HealthPurposeType p) => switch (p) {
   HealthPurposeType.other => 'other',
 };
 
+/// 회원이 고르는 목표는 하나뿐이다("운동 목표") — 예전에는 건강관리 목적을
+/// 따로 또 고르게 했는데, 둘이 왜 다른 선택이어야 하는지 회원 입장에서
+/// 구분할 근거가 없었다(#1112). 서버 계약(`health_purpose_type`)은 그대로
+/// 두고, 화면에서 고른 운동 목표로부터 이 값을 자동으로 채운다.
+HealthPurposeType healthPurposeFromExerciseGoal(ExerciseGoal goal) =>
+    switch (goal) {
+      ExerciseGoal.weightLoss => HealthPurposeType.weight,
+      ExerciseGoal.strength => HealthPurposeType.general,
+      ExerciseGoal.fitness => HealthPurposeType.general,
+      ExerciseGoal.posture => HealthPurposeType.rehab,
+      ExerciseGoal.health => HealthPurposeType.general,
+      ExerciseGoal.other => HealthPurposeType.other,
+    };
+
 String preferredTimeSlotToWire(PreferredTimeSlot t) => switch (t) {
   PreferredTimeSlot.morning => 'morning',
   PreferredTimeSlot.afternoon => 'afternoon',

@@ -23,7 +23,7 @@ from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
     DietEntryOut, DietEntryUpdate, DietTodayResponse, calculate_macros,
 )
-from app.services import diet_photo_service
+from app.services import diet_photo_service, period_window
 from app.services.coach.personal_ingest import record_diet, refresh_diet
 
 logger = logging.getLogger(__name__)
@@ -91,28 +91,14 @@ def coach_message(total_sodium_mg: int, has_entries: bool) -> str:
     return "균형 잡힌 하루였어요. 내일도 이대로 가요!"
 
 
-#: 기간 조언이 다루는 구간. 화면의 기간 토글과 같은 이름이다.
-PERIOD_TODAY = "today"
-PERIOD_WEEK = "week"
-PERIOD_ALL = "all"
-
-#: `전체` 가 거슬러 올라가는 날 수. 두 앱의 `전체` 그래프와 같은 12주다 (#1018).
-ALL_PERIOD_DAYS = 84
-
-
-def period_bounds(period: str, today: date_type | None = None) -> tuple[str, str]:
-    """기간 이름 → [시작, 끝] (양끝 포함, `YYYY-MM-DD`).
-
-    경계를 서버가 정한다 — 앱과 트레이너웹이 각자 계산하면 같은 회원의 `이번 주`
-    가 화면마다 다른 날부터 시작한다.
-    """
-    day = today or clock.today()
-    if period == PERIOD_TODAY:
-        return day.isoformat(), day.isoformat()
-    if period == PERIOD_WEEK:
-        monday = day - timedelta(days=day.weekday())
-        return monday.isoformat(), day.isoformat()
-    return (day - timedelta(days=ALL_PERIOD_DAYS - 1)).isoformat(), day.isoformat()
+#: 기간 조언이 다루는 구간. 정의는 [period_window] 하나뿐이다 — 운동 조언
+#: (#1025)도 같은 구간을 봐야 해서 그리로 옮겼고, 여기서는 이름만 그대로
+#: 이어 준다(이미 이 이름으로 부르는 자리가 있다).
+PERIOD_TODAY = period_window.PERIOD_TODAY
+PERIOD_WEEK = period_window.PERIOD_WEEK
+PERIOD_ALL = period_window.PERIOD_ALL
+ALL_PERIOD_DAYS = period_window.ALL_PERIOD_DAYS
+period_bounds = period_window.period_bounds
 
 
 def _weekday_split(days: list[DietDayTotals]) -> tuple[list[int], list[int]]:

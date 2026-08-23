@@ -8770,6 +8770,40 @@ const String kimMinsuFixtureJson = r'''
         }
       ]
     }
+  ],
+  "routines": [
+    {
+      "id": "seed-routine-user-demo-0",
+      "name": "저강도 유산소 (걷기)",
+      "minutes": 30,
+      "type": "유산소",
+      "reason": "혈압 안정에 효과적",
+      "source": "ai"
+    },
+    {
+      "id": "seed-routine-user-demo-1",
+      "name": "하체 스트레칭",
+      "minutes": 15,
+      "type": "유연성",
+      "reason": "혈액순환 개선",
+      "source": "trainer"
+    },
+    {
+      "id": "seed-routine-user-demo-2",
+      "name": "코어 강화",
+      "minutes": 10,
+      "type": "근력",
+      "reason": "기초대사량 향상",
+      "source": "ai"
+    },
+    {
+      "id": "seed-routine-user-demo-3",
+      "name": "어깨 관절 보호 스트레칭",
+      "minutes": 8,
+      "type": "유연성",
+      "reason": "PT 피드백 반영 · 오른쪽 어깨 보호",
+      "source": "trainer"
+    }
   ]
 }
 ''';

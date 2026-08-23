@@ -472,6 +472,7 @@ class _RecommendedExerciseRowState
               ),
               const SizedBox(width: 8),
               Expanded(
+                flex: 3,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -528,9 +529,13 @@ class _RecommendedExerciseRowState
                 ),
               ),
               const SizedBox(width: 8),
-              // 오른쪽 묶음도 접힌다. 고정 폭으로 두면 큰 글자 배율에서
-              // 운동 이름 쪽을 다 밀어낸 뒤에도 줄이 넘쳤다(#766).
-              Flexible(
+              // 오른쪽 묶음은 **제 몫을 다 차지한다** (#1153). `Flexible` 은
+              // 내용 크기로 줄어들어, 남은 자리가 그 오른쪽에 빈 칸으로 남았고
+              // 값이 카드 가운데에서 끝난 것처럼 보였다. 폭을 받아 두고 안에서
+              // 오른쪽 정렬하면 값이 카드 끝에 붙는다. 글자 배율이 커지면
+              // 아래 FittedBox 가 값부터 줄인다(#766).
+              Expanded(
+                flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[

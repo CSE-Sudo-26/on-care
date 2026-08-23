@@ -9,13 +9,12 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -33,14 +32,34 @@ final DemoFixture _fixture = DemoFixture.parse(
 );
 
 /// 운동 이력 맨 위 줄의 날짜 라벨. 오늘을 따라 움직인다.
-String _todayHistoryLabel() {
-  final DateTime now = nowKst();
-  return '${now.month}/${now.day} (오늘)';
+/// 날짜 줄이 하루를 적는 형태. 미션 카드가 날짜를 따로 적던 시절의
+/// `8/23 (오늘)` 은 사라졌다 — 카드를 펼친 줄이 그 날을 말한다(#1025).
+/// 세로로 넉넉한 화면.
+///
+/// 날짜별 기록이 한 목록으로 합쳐지면서(#1025) 기본 800×600 에서는 아래쪽
+/// 항목이 한참 밖에 있다. 이 묶음의 테스트들은 배치가 아니라 **무엇이 보이는가**
+/// 를 재므로, 스크롤 곡예 대신 화면을 키운다.
+void _useTallSurface(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(1000, 3000);
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
 }
+
+String _rowLabel(DateTime d) {
+  const List<String> weekdays = <String>['월', '화', '수', '목', '금', '토', '일'];
+  return '${d.month}월 ${d.day}일 (${weekdays[d.weekday - 1]})';
+}
+
+String _todayRowLabel() => _rowLabel(nowKst());
 
 /// 운동 이력 세 줄 안에서 김민수가 거른 항목의 이름. 화면은 ✓/✗ 표시를 떼고
 /// 취소선으로 보여 주므로 이름만 남는다.
-String _minsuSkippedExercise() {
+/// 거른 항목 하나와 그것이 있던 날. 날짜별 목록은 그 날을 펼쳐야 항목이
+/// 보이므로(#1025), 이름만으로는 어디를 펼칠지 알 수 없다.
+({DateTime day, String name}) _minsuSkipped() {
   final List<FixtureDay> recent = _fixture
       .daysFor(nowKst())
       .reversed
@@ -49,7 +68,9 @@ String _minsuSkippedExercise() {
       .toList();
   for (final FixtureDay day in recent) {
     for (final FixtureExercise exercise in day.exercises) {
-      if (!exercise.done) return exercise.name;
+      if (!exercise.done) {
+        return (day: DateTime.parse(day.date), name: exercise.name);
+      }
     }
   }
   throw StateError('최근 사흘에 거른 항목이 없다 — 취소선 렌더링을 볼 수 없다');
@@ -81,7 +102,9 @@ class _DatedHistoryRepository extends DriftClientRepository {
         dateLabel: label,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
-        exercises: const <String>['스쿼트 3세트'],
+        // 표식을 종목 이름에 둔다 — 기록 카드는 더 이상 `dateLabel` 을 그리지
+        // 않는다(그 날은 카드를 펼친 줄이 말한다, #1025).
+        exercises: <String>['$label ✓'],
         clientFeedback: '',
         trainerNote: '',
         completedAt: completedAt,
@@ -106,11 +129,68 @@ class _HistoryFailsOnceRepository extends DriftClientRepository {
   }
 }
 
+/// 수행을 마친 배정 하나와 아직 안 한 배정 하나를 들고 있는 저장소.
+///
+/// 데모 시드에는 완료된 배정이 없어, "완료한 것에는 취소가 없다" 를 시드만으로는
+/// 볼 수 없다(#1020).
+class _MixedRoutineRepository implements TrainerRoutineRepository {
+  @override
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {}
+
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {}
+
+  @override
+  Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
+      Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[
+        AssignedRoutine(
+          id: 'done-1',
+          name: '이미 한 루틴',
+          minutes: 30,
+          type: '근력',
+          reason: '',
+          source: 'trainer',
+          completed: true,
+        ),
+        AssignedRoutine(
+          id: 'todo-1',
+          name: '아직 안 한 루틴',
+          minutes: 20,
+          type: '유산소',
+          reason: '',
+          source: 'ai',
+        ),
+      ]);
+
+  @override
+  Future<void> updateRoutine(
+    String memberId,
+    String routineId, {
+    String? name,
+    int? minutes,
+    String? type,
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> deleteRoutine(String memberId, String routineId) async {}
+}
+
 class _FeedbackRepository extends DriftClientRepository {
   _FeedbackRepository(super.db)
-    : entry = const RoutineHistoryEntry(
+    : entry = RoutineHistoryEntry(
         id: 'assigned-ex-r1',
         dateLabel: '8/13 (오늘)',
+        // 날짜별 목록은 이 값으로 날을 가른다(#1025, #1114). 오늘 것이라고
+        // 말하는 기록이므로 오늘에 놓는다.
+        completedAt: nowKst(),
         label: '코어 운동',
         completionRate: 100,
         exercises: <String>['코어 운동 · 30분'],
@@ -136,6 +216,8 @@ class _FeedbackRepository extends DriftClientRepository {
     entry = RoutineHistoryEntry(
       id: entry.id,
       dateLabel: entry.dateLabel,
+      // 날짜를 빠뜨리면 저장한 기록이 날짜별 목록에서 통째로 사라진다(#1025).
+      completedAt: entry.completedAt,
       label: entry.label,
       completionRate: entry.completionRate,
       exercises: entry.exercises,
@@ -144,60 +226,6 @@ class _FeedbackRepository extends DriftClientRepository {
       assignedRoutineId: entry.assignedRoutineId,
     );
     return entry;
-  }
-}
-
-class _AssignedFailsOnceRepository extends MockTrainerRoutineRepository {
-  int watchAssignedCalls = 0;
-
-  @override
-  Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) {
-    watchAssignedCalls++;
-    if (watchAssignedCalls == 1) {
-      return Stream<List<AssignedRoutine>>.error(
-        Exception('routine transport detail'),
-      );
-    }
-    return Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[
-      AssignedRoutine(
-        id: 'routine-recovered',
-        name: '복구 루틴',
-        minutes: 40,
-        type: '근력',
-        reason: '재시도 검증',
-        source: 'trainer',
-      ),
-    ]);
-  }
-}
-
-class _SessionsFailsOnceRepository extends DriftScheduleRepository {
-  _SessionsFailsOnceRepository(super.db);
-
-  int watchSessionCalls = 0;
-
-  @override
-  Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client) {
-    watchSessionCalls++;
-    if (watchSessionCalls == 1) {
-      return Stream<List<ScheduleSession>>.error(
-        Exception('schedule transport detail'),
-      );
-    }
-    return Stream<List<ScheduleSession>>.value(const <ScheduleSession>[
-      ScheduleSession(
-        id: 'session-recovered',
-        date: '2026-08-11',
-        time: '10:00',
-        clientId: 'seed-client-1',
-        clientName: '김민수',
-        type: '복구 PT',
-        durationMinutes: 50,
-        status: ScheduleStatus.upcoming,
-        note: '',
-        program: <ProgramItem>[],
-      ),
-    ]);
   }
 }
 
@@ -211,36 +239,36 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('returns 3 seeded workouts in order with decoded exercises', () async {
-      final history = await DriftClientRepository(
-        db,
-      ).watchHistory('seed-client-1').first;
-      expect(history.length, 3);
-      // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
-      // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
-      final DateTime now = nowKst();
-      expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
-      expect(history.first.completionRate, 100);
-      // 종목 이름은 픽스처가 정한다 — 여기 적으면 두 벌이 된다.
-      expect(
-        history.first.exercises,
-        contains('${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓'),
-      );
-      expect(history.first.trainerNote, isNotEmpty);
-      // Later entries have no trainer note (box hidden).
-      expect(history[1].trainerNote, isEmpty);
-      // 데모도 실 API 처럼 완료 날짜를 들고 온다 — 이 값이 비면 화면이
-      // 기간으로 거를 수 없다(#1114). 라벨과 같은 날을 가리켜야 한다.
-      final DateTime? completedAt = history.first.completedAt;
-      expect(completedAt, isNotNull);
-      expect(
-        DateTime(completedAt!.year, completedAt.month, completedAt.day),
-        DateTime(now.year, now.month, now.day),
-      );
-      // 피드백 수정이 가리킬 id 도 함께 온다 — 예전에는 로컬 모드에서만 늘
-      // 빈 문자열이라, 실 API 와 다른 엔티티가 화면에 올라갔다.
-      expect(history.first.id, 'seed-history-1-0');
-    });
+    test(
+      'seeds every logged day, newest first, with decoded exercises',
+      () async {
+        final history = await DriftClientRepository(
+          db,
+        ).watchHistory('seed-client-1').first;
+        // 예전에는 최근 사흘만 시딩했다. 날짜별 기록이 이력을 그날에 붙이면서
+        // 사흘 밖의 날이 비어 보였다 — 픽스처가 가진 날을 모두 옮긴다(#1025).
+        // 몇 일인지는 픽스처가 정하므로 숫자를 적지 않고 그쪽에서 센다.
+        final int loggedDays = _fixture
+            .daysFor(nowKst())
+            .where((FixtureDay d) => d.exercises.isNotEmpty)
+            .length;
+        expect(history.length, loggedDays);
+        expect(history.length, greaterThan(3));
+        // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
+        // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
+        final DateTime now = nowKst();
+        expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
+        expect(history.first.completionRate, 100);
+        // 종목 이름은 픽스처가 정한다 — 여기 적으면 두 벌이 된다.
+        expect(
+          history.first.exercises,
+          contains('${_fixture.daysFor(nowKst()).last.exercises.first.name} ✓'),
+        );
+        expect(history.first.trainerNote, isNotEmpty);
+        // Later entries have no trainer note (box hidden).
+        expect(history[1].trainerNote, isEmpty);
+      },
+    );
 
     test('returns per-client data (clients differ)', () async {
       final seongho = await DriftClientRepository(
@@ -331,91 +359,192 @@ void main() {
       await settle(tester);
 
       expect(repository.updateCalls, 1);
+      // 저장한 메모는 펼친 날 안에 붙는다 — 목록이 길어 화면 밖일 수 있다.
+      await tester.ensureVisible(find.text('자세가 안정적이었어요'));
+      await settle(tester);
       expect(find.text('자세가 안정적이었어요'), findsOneWidget);
       expect(find.text('피드백 수정'), findsOneWidget);
     });
 
-    testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {
+    testWidgets('운동 이번 주에 기간 AI 카드와 날짜별 기록이 선다 (#1025)', (tester) async {
+      _useTallSurface(tester);
+      // 식단만 기간별 조언을 읽고 운동은 못 읽으면 한 화면에서 반쪽만
+      // 코칭이 된다.
       await openWorkout(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await settle(tester);
 
-      // The tab opens on the routines it absorbed from the old 루틴 tab;
-      // 이번 주는 운동 현황 카드 하나로만 요약한다 — 같은 주를 완료율 카드로
-      // 한 번 더 세던 자리는 걷어냈다.
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
+      expect(find.text('AI 기간 분석'), findsOneWidget);
+
+      // 오늘은 처음부터 펼쳐져 있다 — 이 목록이 예전 `운동 기록` 카드 목록을
+      // 대신하므로, 오늘 것까지 눌러야 보이면 한 번 더 손이 간다(#1025).
+      final Finder records = find.byKey(
+        const ValueKey<String>('exercise-daily-records'),
       );
-      expect(find.text('운동 현황'), findsOneWidget);
-      expect(find.text('이번 주 완료율'), findsNothing);
+      expect(records, findsOneWidget);
+      expect(
+        find.descendant(
+          of: records,
+          matching: find.textContaining('운동 시간', findRichText: true),
+        ),
+        findsWidgets,
+      );
+      // 알약은 "얼마나" 를 말한다. 무엇으로 채워졌는지는 이름이 말한다.
+      expect(
+        find.descendant(of: records, matching: find.byType(ExerciseLine)),
+        findsWidgets,
+      );
+    });
 
-      // 목록은 이제 고른 기간만 보여 준다(#1114). 이 테스트가 확인하려는
-      // 카드 구성(날짜·이행률·메모·취소선)은 오늘 하루에 다 있지 않으므로
-      // 전체로 넓혀 둔다 — 토글은 `운동 현황` 과 같은 줄에 있다.
-      // `scrollUntilVisible` 은 위젯이 **지어지면** 멈추므로 캐시에만 있고
-      // 화면 밖일 수 있다. 누르기 전에 실제로 보이는 자리까지 끌어온다.
-      await tester.ensureVisible(find.byKey(const Key('client-period-month')));
-      await tester.pump();
+    testWidgets('운동 전체 AI 카드는 전체 기간을 제목으로 말한다 (#1025)', (tester) async {
+      await openWorkout(tester, '김민수');
       await tester.tap(find.byKey(const Key('client-period-month')));
       await settle(tester);
 
-      // History entries with feedback + note boxes. Lower list items are
-      // built lazily — scroll each into view before asserting.
       await tester.scrollUntilVisible(
-        find.text(_todayHistoryLabel()),
+        find.byKey(const ValueKey<String>('exercise-ai-analysis')),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text(_todayHistoryLabel()), findsOneWidget);
+      expect(find.text('AI 전체 분석'), findsOneWidget);
+      expect(find.text('AI 기간 분석'), findsNothing);
+    });
+
+    testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
+
+      // 운동현황이 화면 맨 위다(#1025).
+      expect(find.text('운동 현황'), findsOneWidget);
+      expect(find.text('이번 주 완료율'), findsNothing);
+
+      // 오늘 줄은 처음부터 펼쳐져 있고, 그 안에 그날의 미션 카드가 선다.
+      expect(find.text(_todayRowLabel()), findsOneWidget);
+      // 완료 배지 — 원형 게이지가 아니라 아이콘+글자 배지다(#1025).
       expect(find.text('100%'), findsWidgets);
-      await tester.scrollUntilVisible(
-        find.text('트레이너 메모'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
       expect(find.text('트레이너 메모'), findsOneWidget); // 오늘 것만 메모가 있다
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
       expect(find.text('고객 피드백'), findsWidgets);
-      // A skipped exercise line renders (struck-through content present).
-      // 어느 항목을 걸렀는지는 픽스처가 정한다 — 이름을 여기 적으면 두 벌이 된다.
-      // 기록이 여러 달치라 같은 이름의 거른 항목이 여러 번 나온다.
-      // `scrollUntilVisible` 은 대상이 **하나**일 때만 쓸 수 있으므로 직접
-      // 내려가며 찾는다. (#1024 로 기록 카드가 한 스크롤에 함께 마운트되면서
-      // 중복이 더 흔해졌다 — 이 방식은 그때도 그대로 통한다.)
-      final String skipped = _minsuSkippedExercise();
-      final Finder skippedLine = find.text(skipped);
-      final Finder list = detailScrollable('seed-client-1');
-      for (int i = 0; i < 40 && skippedLine.evaluate().isEmpty; i++) {
-        await tester.drag(list, const Offset(0, -150));
-        await tester.pump();
+
+      // 거른 항목은 지난 날에 있다. 이 목록은 고른 기간만 다루므로(식단과
+      // 같은 규칙, #1025) 기간을 넓힌 뒤 그 날을 펼친다.
+      final ({DateTime day, String name}) skipped = _minsuSkipped();
+      await tester.tap(find.byKey(const Key('client-period-month')));
+      await settle(tester);
+      final Finder skippedRow = find.text(_rowLabel(skipped.day));
+      expect(skippedRow, findsOneWidget);
+      if (find.text(skipped.name).evaluate().isEmpty) {
+        await tester.tap(skippedRow);
+        await settle(tester);
       }
-      expect(skippedLine, findsWidgets);
+      expect(find.text(skipped.name), findsWidgets);
     });
 
-    // 목록은 게으르게 지어진다 — 화면 밖 카드는 아직 위젯이 아니라, 한 자리에
-    // 서서 `findsNothing` 을 물으면 없는 것과 아직 안 만든 것을 구분하지 못한다.
-    // 맨 위부터 끝까지 훑으며 한 번이라도 보였는지 본다.
-    Future<void> scrollListToTop(WidgetTester tester) async {
-      final Finder list = detailScrollable('seed-client-1');
-      for (int i = 0; i < 30; i++) {
-        await tester.drag(list, const Offset(0, 300));
-        await tester.pump();
-      }
-    }
+    testWidgets('아직 하지 않은 개인 운동을 이 화면에서 취소한다 (#1020)', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
 
-    Future<bool> seenWhileScrolling(WidgetTester tester, Finder finder) async {
-      final Finder list = detailScrollable('seed-client-1');
-      await scrollListToTop(tester);
-      for (int i = 0; i < 40; i++) {
-        if (finder.evaluate().isNotEmpty) return true;
-        await tester.drag(list, const Offset(0, -150));
-        await tester.pump();
-      }
-      return finder.evaluate().isNotEmpty;
-    }
+      // 배정된 루틴 목록·PT 이력을 되살린 것이 아니다 — 물릴 수 있는 것만
+      // 온다(#1025 는 그 목록을 걷어낸 채로 둔다).
+      final Finder pending = find.byKey(
+        const ValueKey<String>('workout-pending-routines'),
+      );
+      expect(pending, findsOneWidget);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
 
-    testWidgets('운동 기록 목록이 위 그래프와 같은 기간을 본다 (#1114)', (tester) async {
+      final Finder cancel = find.byKey(
+        const ValueKey<String>('workout-cancel-routine-seed-routine-user-demo-0'),
+      );
+      expect(cancel, findsOneWidget);
+
+      // 확인 없이 지우지 않는다.
+      await tester.tap(cancel);
+      await settle(tester);
+      expect(find.text('루틴을 삭제할까요?'), findsOneWidget);
+      await tester.tap(find.text('취소'));
+      await settle(tester);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
+
+      // 확인하면 실제로 사라진다 — 데모 저장소가 배정을 들고 있어 취소가
+      // 목록에 반영된다(#1020).
+      await tester.tap(cancel);
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('confirm-cancel-pending-routine')),
+      );
+      await settle(tester);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsNothing);
+      // 나머지 배정은 그대로다.
+      expect(find.text('하체 스트레칭 · 15분'), findsOneWidget);
+
+      // 이번 주·전체는 지나간 기록을 되짚는 화면이라 '앞으로 할 일' 은 접는다.
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await settle(tester);
+      expect(pending, findsNothing);
+      expect(find.text('하체 스트레칭 · 15분'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('client-period-today')));
+      await settle(tester);
+      expect(pending, findsOneWidget);
+    });
+
+    testWidgets('취소는 이미 완료한 운동 기록을 건드리지 않는다 (#1020)', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
+
+      // 오늘 줄은 처음부터 펼쳐져 있고 그 안에 완료한 기록이 있다.
+      expect(find.text('트레이너 메모'), findsOneWidget);
+      final int linesBefore = find.byType(ExerciseLine).evaluate().length;
+      expect(linesBefore, greaterThan(0));
+
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>('workout-cancel-routine-seed-routine-user-demo-0'),
+        ),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('confirm-cancel-pending-routine')),
+      );
+      await settle(tester);
+
+      // 배정만 사라지고 기록은 그대로다 — 한 일이 없던 일이 되지 않는다.
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsNothing);
+      expect(find.text('트레이너 메모'), findsOneWidget);
+      expect(find.byType(ExerciseLine).evaluate().length, linesBefore);
+    });
+
+    testWidgets('이미 수행한 배정에는 취소가 없다 (#1020)', (tester) async {
+      _useTallSurface(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+        extraOverrides: <Override>[
+          trainerRoutineRepositoryProvider.overrideWithValue(
+            _MixedRoutineRepository(),
+          ),
+        ],
+      );
+
+      // 안 한 것만 이 자리에 온다. 이미 한 운동의 배정을 지운다고 그 기록이
+      // 없던 일이 되지 않으므로, 취소 버튼을 걸어 두면 오해를 만든다.
+      expect(find.text('아직 안 한 루틴 · 20분'), findsOneWidget);
+      expect(find.text('이미 한 루틴 · 30분'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('workout-cancel-routine-todo-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('workout-cancel-routine-done-1')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('날짜를 모르는 기록은 어느 기간에서도 사라지지 않는다 (#1114)', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -426,46 +555,66 @@ void main() {
           ),
         ],
       );
-      await settle(tester);
 
-      final Finder todayRecord = find.text(_DatedHistoryRepository.todayLabel);
-      final Finder oldRecord = find.text(_DatedHistoryRepository.oldLabel);
-      final Finder undatedRecord = find.text(
-        _DatedHistoryRepository.undatedLabel,
-      );
+      Finder marker(String label) => find.text(label);
 
-      // 기본은 오늘 — 한 달 전 기록까지 늘어놓으면 위 그래프와 아래 목록이
-      // 서로 다른 기간을 이야기한다.
-      expect(await seenWhileScrolling(tester, todayRecord), isTrue);
-      // 날짜를 모르는 기록은 어느 기간에서도 사라지지 않는다.
-      expect(await seenWhileScrolling(tester, undatedRecord), isTrue);
-      expect(await seenWhileScrolling(tester, oldRecord), isFalse);
+      // 오늘: 오늘 기록은 그 날 줄 안에, 날짜 없는 기록은 따로 모인 자리에.
+      // 한참 전 기록은 이 기간에 없다.
+      expect(marker(_DatedHistoryRepository.todayLabel), findsOneWidget);
+      expect(marker(_DatedHistoryRepository.undatedLabel), findsOneWidget);
+      expect(marker(_DatedHistoryRepository.oldLabel), findsNothing);
+      expect(find.text('날짜를 알 수 없는 기록'), findsOneWidget);
 
-      // 토글은 `운동 현황` 과 같은 줄에 있다. 훑고 난 목록은 맨 아래에 있으므로
-      // 위로 되돌린 뒤 내려가며 찾는다.
-      await scrollListToTop(tester);
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      // `scrollUntilVisible` 은 위젯이 **지어지면** 멈춘다 — 캐시에만 있고
-      // 화면 밖일 수 있어, 누르기 전에 실제로 보이는 자리까지 끌어온다.
-      await tester.ensureVisible(find.byKey(const Key('client-period-month')));
-      await tester.pump();
+      // 전체로 넓히면 날짜 없는 기록은 그대로 있고, 지난 기록은 그 날 줄에
+      // 가 있다 — 접혀 있으므로 펼쳐야 보인다.
       await tester.tap(find.byKey(const Key('client-period-month')));
       await settle(tester);
+      expect(marker(_DatedHistoryRepository.undatedLabel), findsOneWidget);
 
-      expect(await seenWhileScrolling(tester, oldRecord), isTrue);
-      expect(await seenWhileScrolling(tester, todayRecord), isTrue);
+      final DateTime old30 = todayKst().subtract(const Duration(days: 30));
+      await tester.tap(find.text(_rowLabel(old30)));
+      await settle(tester);
+      expect(marker(_DatedHistoryRepository.oldLabel), findsOneWidget);
     });
 
-    testWidgets('a failed 운동 기록 load does not take the routines with it', (
+    testWidgets('기록 카드는 색 띠 없는 흰 판이다 (#1025)', (tester) async {
+      _useTallSurface(tester);
+      await openWorkout(tester, '김민수');
+
+      // 배포된 화면과 같은 판이다 — 네 변이 같은 머리카락 테두리이고, 완료
+      // 상태를 판 자체가 색으로 말하지 않는다. 색은 오른쪽 배지에만 있다.
+      //
+      // 그림자를 가진 판만 고른다. 안쪽의 메모 상자도 왼쪽에 색 띠가 있지만
+      // 그건 배포본에도 있는 것이고 그림자가 없다.
+      final Iterable<Container> cards = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byKey(const ValueKey<String>('exercise-daily-records')),
+              matching: find.byType(Container),
+            ),
+          )
+          .where(
+            (Container c) =>
+                c.decoration is BoxDecoration &&
+                (c.decoration! as BoxDecoration).boxShadow != null,
+          );
+      expect(cards, isNotEmpty);
+      for (final Container card in cards) {
+        final BoxDecoration decoration = card.decoration! as BoxDecoration;
+        expect(decoration.color, AppColors.card);
+        expect(
+          decoration.border,
+          Border.all(color: AppColors.border),
+          reason: '기록 카드에 색 띠가 다시 붙었습니다.',
+        );
+      }
+    });
+
+    testWidgets('a failed 운동 기록 load does not take 운동현황 with it', (
       tester,
     ) async {
-      // 배정된 루틴 and the PT sessions used to be their own tab, so they
-      // stayed reachable when the history endpoint was down. Gating the
-      // whole list on the history provider silently undid that.
+      // 운동현황(ClientExerciseStatusCard) 은 기록 목록과 다른 provider를
+      // 쓴다 — /history 가 실패해도 위 운동현황은 그대로 보여야 한다.
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -478,15 +627,7 @@ void main() {
         ],
       );
 
-      // The sections above the history still rendered — they are the
-      // first thing on the tab, so the failure did not blank it.
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      expect(find.text('PT 프로그램 이력'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
+      // 운동현황은 화면 맨 위라 실패해도 바로 보인다.
       expect(find.text('운동 현황'), findsOneWidget);
       // The failure is reported in place, where the history would be.
       await tester.scrollUntilVisible(
@@ -507,7 +648,7 @@ void main() {
       await tester.tap(retry);
       await settle(tester);
       await tester.scrollUntilVisible(
-        find.text(_todayHistoryLabel()),
+        find.text(_todayRowLabel()),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
@@ -516,84 +657,7 @@ void main() {
           container.read(clientRepositoryProvider)
               as _HistoryFailsOnceRepository;
       expect(repository.watchHistoryCalls, 2);
-      expect(find.text(_todayHistoryLabel()), findsOneWidget);
-    });
-
-    testWidgets('배정 루틴 실패만 재시도해 다른 영역을 보존한다', (tester) async {
-      final repository = _AssignedFailsOnceRepository();
-      await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
-        extraOverrides: <Override>[
-          trainerRoutineRepositoryProvider.overrideWithValue(repository),
-        ],
-      );
-
-      expect(find.text('루틴을 불러오지 못했어요'), findsOneWidget);
-      expect(find.text('PT 프로그램 이력'), findsOneWidget);
-      await tester.tap(
-        find.byKey(
-          const ValueKey<String>('assigned-routines-retry-seed-client-1'),
-        ),
-      );
-      await settle(tester);
-
-      expect(repository.watchAssignedCalls, 2);
-      expect(find.text('복구 루틴'), findsOneWidget);
-      expect(find.text('PT 프로그램 이력'), findsOneWidget);
-    });
-
-    testWidgets('PT 일정 실패만 재시도해 다른 영역을 보존한다', (tester) async {
-      final container = await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
-        extraOverrides: <Override>[
-          scheduleRepositoryProvider.overrideWith(
-            (ref) =>
-                _SessionsFailsOnceRepository(ref.watch(appDatabaseProvider)),
-          ),
-        ],
-      );
-
-      expect(find.text('일정을 불러오지 못했어요'), findsOneWidget);
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      final retry = find.byKey(const ValueKey<String>('client-sessions-retry'));
-      await tester.scrollUntilVisible(
-        retry,
-        150,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      await tester.ensureVisible(retry);
-      await settle(tester);
-      await tester.tap(retry);
-      await settle(tester);
-
-      final repository =
-          container.read(scheduleRepositoryProvider)
-              as _SessionsFailsOnceRepository;
-      expect(repository.watchSessionCalls, 2);
-      final scrollable = detailScrollable('seed-client-1');
-      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.textContaining('복구 PT'),
-        150,
-        scrollable: scrollable,
-      );
-      expect(find.textContaining('복구 PT'), findsOneWidget);
-      // 운동 현황 카드는 PT 일정 **위**에 있다. 복구 PT 까지 내려온 뒤에는
-      // 위로 되짚어야 나온다 — 기간 토글이 카드 제목 줄로 들어가면서(#914)
-      // 카드가 짧아져, 내려온 자리에서 그대로 보이지는 않는다.
-      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.text('운동 현황'),
-        200,
-        scrollable: detailScrollable('seed-client-1'),
-      );
-      expect(find.text('운동 현황'), findsOneWidget);
+      expect(find.text(_todayRowLabel()), findsOneWidget);
     });
   });
 }

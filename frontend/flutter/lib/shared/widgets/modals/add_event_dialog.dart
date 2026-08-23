@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/core/utils/portrait_date_picker.dart';
 import 'package:oncare/design_system/atoms/app_button.dart';
 import 'package:oncare/design_system/atoms/app_input.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -30,7 +31,10 @@ const List<ScheduleCategory> _categories = <ScheduleCategory>[
 /// 눌러 들어오는 흐름이 쓴다.
 ///
 /// 저장에 성공하면 `true` 로 닫힌다. 부른 쪽이 목록을 다시 읽을지 판단한다.
-Future<bool?> showAddEventDialog(BuildContext context, {DateTime? initialDate}) {
+Future<bool?> showAddEventDialog(
+  BuildContext context, {
+  DateTime? initialDate,
+}) {
   return showDialog<bool>(
     context: context,
     barrierColor: Colors.black54,
@@ -122,7 +126,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
 
   Future<void> _pickDate() async {
     final DateTime now = nowKst();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showPortraitDatePicker(
       context: context,
       initialDate: _date,
       // 지난 일정도 기록할 수 있어야 하고, 앞으로도 넉넉히 잡을 수 있어야 한다.
@@ -181,11 +185,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEdit ? l.eventEditFailed : l.eventAddFailed,
-          ),
-        ),
+        SnackBar(content: Text(_isEdit ? l.eventEditFailed : l.eventAddFailed)),
       );
     }
   }
@@ -254,7 +254,9 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
               _PickerField(
                 key: const Key('addEventDate'),
                 label: l.eventDateLabel,
-                value: MaterialLocalizations.of(context).formatMediumDate(_date),
+                value: MaterialLocalizations.of(
+                  context,
+                ).formatMediumDate(_date),
                 icon: Icons.calendar_today_outlined,
                 onTap: _saving ? null : _pickDate,
               ),
@@ -266,9 +268,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
                 // 그대로 말해 준다.
                 value: _time == null
                     ? l.eventTimeNone
-                    : MaterialLocalizations.of(
-                        context,
-                      ).formatTimeOfDay(_time!),
+                    : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
                 muted: _time == null,
                 icon: Icons.schedule_outlined,
                 onTap: _saving ? null : _pickTime,

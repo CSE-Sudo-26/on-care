@@ -9,6 +9,9 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_ai_analysis_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
@@ -222,9 +225,9 @@ void main() {
         GoRouter.of(context).routeInformationProvider.value.uri.toString(),
         AppRoutes.clientDetail('seed-client-1', section: 'diet'),
       );
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
-      // 회원 앱과 같은 카드다(#698): 칼로리 링 + 탄단지 진행 바 + 나트륨·당류
-      // 상태 카드. 예전의 MetricTile 6칸 묶음은 없어졌다.
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
+      // 회원 앱과 같은 **한 장**이다(#698, #1166): 칼로리 링 + 탄단지 글자
+      // 세 줄 + 나트륨·당류 진행 바. 예전의 세 장짜리 묶음은 없어졌다.
       expect(
         find.byKey(const Key('client-nutrition-summary-card')),
         findsOneWidget,
@@ -236,28 +239,15 @@ void main() {
       final calorieProgress = tester.widget<CircularProgressIndicator>(
         find.byKey(const Key('client-nutrition-calorie-progress')),
       );
-      // 정상은 초록이다 (#1019) — 나트륨·당류 카드와 같은 색.
-      expect(calorieProgress.valueColor?.value, AppColors.statusNormal);
+      // 목표 안쪽은 **메인 색**이다 (#1166) — 회원 앱이 자기 메인 색을 쓰는
+      // 자리와 같다. 초록은 "정상" 으로 읽혀서 목표에 한참 못 미친 날까지
+      // 괜찮다고 말한다.
+      expect(calorieProgress.valueColor?.value, AppColors.statusWithinGoal);
       for (final String label in <String>['탄수화물', '단백질', '지방']) {
         expect(
           find.byKey(Key('client-nutrition-macro-$label')),
           findsOneWidget,
           reason: label,
-        );
-        expect(
-          tester
-              .widgetList<ColoredBox>(
-                find.descendant(
-                  of: find.byKey(Key('client-nutrition-macro-$label')),
-                  matching: find.byType(ColoredBox),
-                ),
-              )
-              .any(
-                (box) =>
-                    box.color == AppColors.statusNormal.withValues(alpha: 0.65),
-              ),
-          isTrue,
-          reason: '$label 그래프가 정상 초록을 써야 합니다.',
         );
       }
       Finder inMacro(String label, String text) => find.descendant(
@@ -270,7 +260,7 @@ void main() {
 
       expect(find.text('나트륨 초과'), findsOneWidget);
       final Finder sodiumStatus = find.byKey(
-        const Key('client-nutrition-sodium-status'),
+        const Key('client-nutrition-mineral-나트륨'),
       );
       expect(sodiumStatus, findsOneWidget);
       // 천 단위 구분이 들어간다 — 회원 앱과 같은 형식.
@@ -281,14 +271,19 @@ void main() {
         ),
         findsOneWidget,
       );
+      // 초과분은 라벨 오른쪽에 `+1,428mg` 로 붙는다 (#1166) — 회원 앱과 같은
+      // 표기다. 예전의 '목표보다 … 많아요' 한 문장을 대신한다.
       expect(
-        find.descendant(of: sodiumStatus, matching: find.textContaining('많아요')),
+        find.descendant(
+          of: sodiumStatus,
+          matching: find.textContaining('+1,428mg', findRichText: true),
+        ),
         findsOneWidget,
-        reason: '목표를 넘겼는데 초과 문구가 없습니다.',
+        reason: '목표를 넘겼는데 초과분 표기가 없습니다.',
       );
       expect(
         find.descendant(
-          of: find.byKey(const Key('client-nutrition-sugar-status')),
+          of: find.byKey(const Key('client-nutrition-mineral-당류')),
           matching: find.textContaining('17.8', findRichText: true),
         ),
         findsOneWidget,
@@ -301,11 +296,18 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.text('아침'), findsOneWidget);
-      expect(find.text('스크램블 에그, 딸기'), findsOneWidget);
-      expect(find.text('217 kcal'), findsOneWidget);
-      expect(find.text('탄수화물 10g'), findsOneWidget);
-      expect(find.text('단백질 13.5g'), findsOneWidget);
-      expect(find.text('지방 14.5g'), findsOneWidget);
+      // 음식은 이제 **한 줄씩** 이름과 영양을 함께 적는다 (#1166) — 회원 앱
+      // 끼니 카드와 같다. 예전에는 이름을 쉼표로 이어 붙인 한 줄뿐이었다.
+      expect(find.text('스크램블 에그'), findsOneWidget);
+      expect(find.text('딸기'), findsOneWidget);
+      expect(
+        find.textContaining('칼로리', findRichText: true),
+        findsWidgets,
+      );
+      expect(
+        find.text('탄수화물 10g · 단백질 13.5g · 지방 14.5g'),
+        findsOneWidget,
+      );
       await tester.scrollUntilVisible(
         find.text('점심'),
         150,
@@ -343,14 +345,12 @@ void main() {
       expect(find.text('100%'), findsNothing);
     });
 
-    testWidgets('normal sodium and sugar use the user app sugar green', (
-      tester,
-    ) async {
+    testWidgets('목표 안쪽 나트륨·당류는 메인 색을 쓴다 (#1166)', (tester) async {
       await openDiet(tester, '이지수');
 
       for (final Key key in <Key>[
-        const Key('client-nutrition-sodium-status'),
-        const Key('client-nutrition-sugar-status'),
+        const Key('client-nutrition-mineral-나트륨'),
+        const Key('client-nutrition-mineral-당류'),
       ]) {
         expect(
           tester
@@ -360,9 +360,9 @@ void main() {
                   matching: find.byType(ColoredBox),
                 ),
               )
-              .any((box) => box.color == AppColors.statusNormal),
+              .any((box) => box.color == AppColors.statusWithinGoal),
           isTrue,
-          reason: '$key 정상 그래프가 공용 `정상` 초록을 써야 합니다. (#1027)',
+          reason: '$key 목표 안쪽 막대가 트레이너 메인 색을 써야 합니다.',
         );
       }
     });
@@ -374,7 +374,7 @@ void main() {
 
       expect(
         find.descendant(
-          of: find.byKey(const Key('client-nutrition-sugar-status')),
+          of: find.byKey(const Key('client-nutrition-mineral-당류')),
           matching: find.textContaining('38', findRichText: true),
         ),
         findsOneWidget,
@@ -393,9 +393,11 @@ void main() {
         scrollable: detailScrollable('seed-client-6'),
       );
       expect(find.text('아직 기록된 식단이 없어요'), findsNothing);
-      expect(find.text('탄수화물 0g'), findsWidgets);
-      expect(find.text('단백질 0g'), findsWidgets);
-      expect(find.text('지방 0g'), findsWidgets);
+      // 끼니 카드의 탄단지는 한 줄로 함께 적는다 (#1166).
+      expect(
+        find.textContaining('탄수화물 0g · 단백질 0g · 지방 0g'),
+        findsWidgets,
+      );
     });
 
     testWidgets('macro values wrap without overflow on a narrow screen', (
@@ -410,7 +412,7 @@ void main() {
 
       await openDiet(tester, '김민수');
       await tester.scrollUntilVisible(
-        find.text('탄수화물 10g'),
+        find.byKey(const Key('client-nutrition-summary-card')),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
@@ -472,6 +474,137 @@ void main() {
       // 오늘 문장은 사라지고, 그 자리에 이번 주를 읽은 문장이 온다.
       expect(find.textContaining('나트륨이 목표치를'), findsNothing);
       expect(find.textContaining(expectedText), findsOneWidget);
+    });
+
+    testWidgets('AI 카드 제목이 기간을 말한다 (#1025)', (tester) async {
+      // `오늘` 과 `이번 주` 가 같은 제목이면, 카드가 무엇을 두고 한 말인지
+      // 문장을 다 읽어야만 알 수 있다.
+      //
+      // `전체` 는 여기서 확인하지 않는다 — 날짜별 기록이 열두 주치라 조언
+      // 카드까지 끌어내리는 사이 기간 토글이 화면 밖으로 나가, 검증이 아니라
+      // 스크롤을 시험하게 된다. 세 기간의 제목은 아래 `titleOf` 로 함께 본다.
+      await openDiet(tester, '김민수');
+      await tester.scrollUntilVisible(
+        find.text('AI 분석'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      expect(find.text('AI 분석'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+      // 기간을 바꾸면 그래프 카드 아래에 날짜별 기록이 붙어 AI 카드가 화면
+      // 밖으로 내려간다 — 목록이 게으르게 만들어지므로 다시 끌어올린다.
+      await tester.scrollUntilVisible(
+        find.text('AI 기간 분석'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      expect(find.text('AI 기간 분석'), findsOneWidget);
+      expect(find.text('AI 분석'), findsNothing);
+    });
+
+    testWidgets('세 기간의 AI 카드 제목이 서로 다르다 (#1025)', (tester) async {
+      late AppLocalizations l;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (BuildContext context) {
+              l = AppLocalizations.of(context);
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      final List<String> titles = <String>[
+        for (final ClientPeriod p in ClientPeriod.values)
+          ClientAiAnalysisCard.titleOf(l, p),
+      ];
+      expect(titles, <String>['AI 분석', 'AI 기간 분석', 'AI 전체 분석']);
+      expect(titles.toSet(), hasLength(3));
+    });
+
+    testWidgets('날짜 줄을 누르면 그날 기록이 펼쳐진다 (#1025)', (tester) async {
+      // 그래프는 "얼마나" 만 말한다. 그날 무엇을 먹었는지는 줄을 눌러야 나온다.
+      await openDiet(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+
+      final Finder records = find.byKey(
+        const ValueKey<String>('diet-daily-records'),
+      );
+      await tester.scrollUntilVisible(
+        records,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+
+      // 화살표가 있는 줄만 펼칠 수 있다 — 기록이 없는 날은 펼칠 것이 없다.
+      expect(find.text('탄단지'), findsNothing);
+      final Finder openable = find.descendant(
+        of: records,
+        matching: find.byIcon(Icons.expand_more),
+      );
+      expect(openable, findsWidgets);
+      await tester.ensureVisible(openable.first);
+      await tester.pumpAndSettle();
+      final Finder row = find
+          .ancestor(of: openable.first, matching: find.byType(InkWell))
+          .first;
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      // 펼친 줄에는 그날의 항목이 이름표와 값을 한 알약에 담아 선다.
+      // 이 목록 안에서만 찾는다 — 위 영양 요약 카드에도 같은 낱말이 있다.
+      Finder pill(String label) => find.descendant(
+        of: records,
+        matching: find.textContaining(label, findRichText: true),
+      );
+      expect(pill('칼로리'), findsWidgets);
+      expect(pill('나트륨'), findsWidgets);
+    });
+
+    testWidgets('좁은 화면·큰 글씨에서도 날짜 줄이 넘치지 않는다 (#1025)', (tester) async {
+      // 날짜 칸의 폭이 고정이라 글씨 배율이 커지면 가장 먼저 깨질 자리다.
+      // 480 폭은 분할 패널의 좁은 쪽, 1.3 배는 접근성 검사(#1004)가 쓰는 값이다.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(480, 900);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await openDiet(tester, '김민수');
+      await tester.tap(find.byKey(const Key('client-period-week')));
+      await tester.pumpAndSettle();
+
+      final Finder records = find.byKey(
+        const ValueKey<String>('diet-daily-records'),
+      );
+      await tester.scrollUntilVisible(
+        records,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
+      final Finder openable = find.descendant(
+        of: records,
+        matching: find.byIcon(Icons.expand_more),
+      );
+      await tester.ensureVisible(openable.first);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.ancestor(of: openable.first, matching: find.byType(InkWell)).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (

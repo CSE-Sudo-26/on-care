@@ -13,6 +13,7 @@ import uuid
 from collections.abc import Callable, Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
@@ -442,6 +443,21 @@ def _food_names(foods_json: str | None) -> list[str]:
     return names
 
 
+def _foods(foods_json: str | None) -> list[dict[str, Any]]:
+    """끼니의 음식별 영양. 회원 API 가 흘려 보내는 것과 같은 배열이다. (#1166)
+
+    깨진 값은 빈 목록으로 본다 — 트레이너 화면은 그때 `items` 한 줄로 떨어져
+    예전과 같이 읽힌다.
+    """
+    try:
+        parsed = json.loads(foods_json or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
+
+
 def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietEntryOut]:
     """회원의 특정 날짜 식단(회원 실데이터)을 고객 식단 서브탭 형태로."""
     rows = db.scalars(
@@ -460,8 +476,14 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         out.append(ClientDietEntryOut(
             meal=_meal_kr(r.meal_type),
             items=items,
+            # 회원 앱 끼니 카드와 같은 재료를 그대로 넘긴다(#1166). 이름만 이어
+            # 붙인 `items` 로는 같은 500kcal 이 밥에서 왔는지 기름에서 왔는지
+            # 트레이너가 알 수 없다.
+            time_label=r.time_label or "",
+            foods=_foods(r.foods_json),
             calories=r.total_calories,
             sodium_mg=r.sodium_mg,
+            sugar_g=r.sugar_g,
             carbs_g=r.carbs_g,
             protein_g=r.protein_g,
             fat_g=r.fat_g,
@@ -523,6 +545,11 @@ def build_client_history(
             exercises=exercises,
             client_feedback=r.client_feedback,
             trainer_note=r.trainer_note,
+            # 배정 수행(`_assigned_history_out`)은 완료 시각을 함께 내려보내는데
+            # 이 갈래만 비워 두고 있었다. 받는 쪽은 그 값으로 기록을 날짜에
+            # 붙이므로, 비어 오면 화면에서 통째로 빠진다 — 이 표는 날짜를
+            # 갖고 있으니(`date`) 그날로 채운다. (#1114, #1025)
+            completed_at=_day_start(r.date),
         )))
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
@@ -1004,6 +1031,18 @@ def build_routines(
 
 class RoutineNotFound(Exception):
     """루틴이 없거나 이 트레이너·회원의 것이 아니다."""
+
+
+def _day_start(day: str) -> datetime | None:
+    """`YYYY-MM-DD` → 그날 0시. 형식이 틀리면 None.
+
+    이 표는 시각 없이 날짜만 들고 있다. 받는 쪽은 시각을 버리고 날짜만 보므로
+    (`historyInRange`) 0시로 세워도 뜻이 달라지지 않는다.
+    """
+    try:
+        return datetime.fromisoformat(f"{day}T00:00:00")
+    except ValueError:
+        return None
 
 
 def _owned_routine(
