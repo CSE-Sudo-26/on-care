@@ -365,6 +365,7 @@ class _RejectDialogState extends State<_RejectDialog> {
         ),
         TextButton(
           key: const ValueKey<String>('consultation-reject-confirm'),
+          style: TextButton.styleFrom(foregroundColor: AppColors.destructive),
           // Returns '' rather than null when left blank: null is the
           // cancel signal, and an empty note is a valid "no reason given".
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),

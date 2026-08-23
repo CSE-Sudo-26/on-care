@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
@@ -215,6 +216,47 @@ void main() {
 
     expect(repo.accepted, <String>['consult-1']);
   });
+
+  for (final entry in <(String, String)>[
+    ('스케줄', AppRoutes.consultations),
+    ('대시보드', AppRoutes.consultationsFromDashboard()),
+  ]) {
+    testWidgets('${entry.$1} 상담 거절은 위험 색상과 일정 충돌 예시를 쓴다', (tester) async {
+      await _pumpInbox(
+        tester,
+        _FakeConsultationRepository(
+          requests: <ConsultationRequest>[_request()],
+        ),
+        at: entry.$2,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('consultation-reject-consult-1')),
+      );
+      await settle(tester);
+
+      final confirm = tester.widget<TextButton>(
+        find.byKey(const ValueKey<String>('consultation-reject-confirm')),
+      );
+      final cancel = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, _ko.actionCancel),
+      );
+      expect(
+        confirm.style?.foregroundColor?.resolve(const <WidgetState>{}),
+        AppColors.destructive,
+      );
+      expect(
+        cancel.style?.foregroundColor?.resolve(const <WidgetState>{}),
+        isNot(AppColors.destructive),
+      );
+
+      final reason = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('consultation-reject-reason')),
+      );
+      expect(reason.decoration?.hintText, '예) 요청하신 시간에 다른 일정이 있어요.');
+      expect(find.textContaining('이번 달은 정원이 찼어요'), findsNothing);
+    });
+  }
 
   testWidgets('a decided request shows its outcome, not the actions', (
     tester,

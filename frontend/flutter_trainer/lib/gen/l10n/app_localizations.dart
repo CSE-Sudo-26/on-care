@@ -1949,7 +1949,7 @@ abstract class AppLocalizations {
   /// No description provided for @consultRejectHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. We\'re fully booked this month'**
+  /// **'e.g. I have another appointment at your requested time.'**
   String get consultRejectHint;
 
   /// No description provided for @consultRejectAction.
