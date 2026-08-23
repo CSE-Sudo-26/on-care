@@ -462,6 +462,7 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
             items=items,
             calories=r.total_calories,
             sodium_mg=r.sodium_mg,
+            sugar_g=r.sugar_g,
             carbs_g=r.carbs_g,
             protein_g=r.protein_g,
             fat_g=r.fat_g,
@@ -523,6 +524,11 @@ def build_client_history(
             exercises=exercises,
             client_feedback=r.client_feedback,
             trainer_note=r.trainer_note,
+            # 배정 수행(`_assigned_history_out`)은 완료 시각을 함께 내려보내는데
+            # 이 갈래만 비워 두고 있었다. 받는 쪽은 그 값으로 기록을 날짜에
+            # 붙이므로, 비어 오면 화면에서 통째로 빠진다 — 이 표는 날짜를
+            # 갖고 있으니(`date`) 그날로 채운다. (#1114, #1025)
+            completed_at=_day_start(r.date),
         )))
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
@@ -1004,6 +1010,18 @@ def build_routines(
 
 class RoutineNotFound(Exception):
     """루틴이 없거나 이 트레이너·회원의 것이 아니다."""
+
+
+def _day_start(day: str) -> datetime | None:
+    """`YYYY-MM-DD` → 그날 0시. 형식이 틀리면 None.
+
+    이 표는 시각 없이 날짜만 들고 있다. 받는 쪽은 시각을 버리고 날짜만 보므로
+    (`historyInRange`) 0시로 세워도 뜻이 달라지지 않는다.
+    """
+    try:
+        return datetime.fromisoformat(f"{day}T00:00:00")
+    except ValueError:
+        return None
 
 
 def _owned_routine(

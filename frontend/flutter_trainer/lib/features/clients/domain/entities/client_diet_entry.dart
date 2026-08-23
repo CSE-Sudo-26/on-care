@@ -7,6 +7,7 @@ class ClientDietEntry {
     required this.items,
     required this.calories,
     required this.sodiumMg,
+    this.sugarG = 0,
     this.carbsG = 0,
     this.proteinG = 0,
     this.fatG = 0,
@@ -25,6 +26,9 @@ class ClientDietEntry {
 
   /// Sodium for this meal (mg).
   final int sodiumMg;
+
+  /// 그 끼니의 당류(g). 나트륨과 나란히 읽는 값이다(#1025).
+  final double sugarG;
 
   /// Carbohydrates in this meal (g).
   final double carbsG;

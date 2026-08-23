@@ -14,10 +14,11 @@
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date, timedelta
 
 from app.core import clock
-from app.services import exercise_types
+from app.services import exercise_types, period_window
 
 WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
 
@@ -216,3 +217,156 @@ def build_current_week(rows: list) -> dict:
         "streak_days": streak,
         "ai_coach_message": msg,
     }
+
+
+# --- 기간별 운동 조언 (#1025) -------------------------------------------------
+#
+# 식단이 먼저 한 것(#1017)과 같은 규칙이다. 기간을 바꾸는 것은 "무엇을 볼지" 를
+# 바꾸는 일인데, 그래프만 갈리고 조언이 오늘 이야기로 남으면 이번 주를 보면서
+# "오늘은 유산소를 했네요" 를 읽게 된다.
+#
+# 없는 기록으로 조언을 지어내지 않는다 — 기록이 없으면 없다고 말한다.
+
+
+@dataclass(frozen=True)
+class ExerciseDayTotals:
+    """하루치 운동 합계. **기록이 있는 날만** 만들어진다."""
+
+    date: date
+    minutes: int
+    calories: int
+    #: 유형별 시간(분). 키는 `exercise_types` 의 네 가지다.
+    by_type: dict[str, int]
+
+    @property
+    def main_type(self) -> str:
+        """그날 가장 오래 한 유형. 같으면 유산소 → 근력 → 유연성 → 기타 순."""
+        order = [
+            exercise_types.CARDIO,
+            exercise_types.STRENGTH,
+            exercise_types.FLEXIBILITY,
+            exercise_types.OTHER,
+        ]
+        return max(order, key=lambda t: (self.by_type.get(t, 0), -order.index(t)))
+
+
+def _date_of(week_start: str, day_label: str) -> date | None:
+    """`week_start`(월요일) + 요일 라벨 → 실제 날짜.
+
+    운동 기록은 날짜가 아니라 (그 주 월요일, 요일) 로 저장된다. 구간을 물어보려면
+    실제 날짜로 되돌려야 한다.
+    """
+    if day_label not in WEEKDAY_LABELS:
+        return None
+    try:
+        monday = date.fromisoformat(week_start)
+    except ValueError:
+        return None
+    return monday + timedelta(days=WEEKDAY_LABELS.index(day_label))
+
+
+def daily_totals(rows: list, start: str, end: str) -> list[ExerciseDayTotals]:
+    """[start, end] 구간의 기록 있는 날만 날짜순으로. (#1025)
+
+    기록이 없는 날을 0 으로 채우지 않는다 — 쉰 날과 적지 않은 날은 다른 말이고,
+    평균이 그 차이를 삼키면 조언이 사실과 어긋난다.
+    """
+    per_day: dict[date, dict] = {}
+    for row in rows:
+        when = _date_of(row.week_start, row.day_label)
+        if when is None or not (start <= when.isoformat() <= end):
+            continue
+        bucket = per_day.setdefault(
+            when, {"minutes": 0, "calories": 0, "by_type": {}}
+        )
+        bucket["minutes"] += row.minutes or 0
+        bucket["calories"] += row.calories or 0
+        kind = exercise_types.normalize(row.type)
+        bucket["by_type"][kind] = bucket["by_type"].get(kind, 0) + (row.minutes or 0)
+    return [
+        ExerciseDayTotals(
+            date=when,
+            minutes=v["minutes"],
+            calories=v["calories"],
+            by_type=v["by_type"],
+        )
+        for when, v in sorted(per_day.items())
+    ]
+
+
+def _avg(values: list[int]) -> float:
+    return sum(values) / len(values) if values else 0
+
+
+def period_coach_message(days: list[ExerciseDayTotals], period: str) -> str:
+    """기간에 맞는 운동 조언. (#1025)
+
+    기간마다 **재료가 다르다.** 오늘은 오늘 한 운동, 이번 주는 며칠 움직였고
+    무엇에 치우쳤는지, 전체는 최근 4주와 그 이전의 추세다. 말투도 다르다 —
+    오늘은 다음 한 걸음을 제안하고, 이번 주·전체는 되짚어 준다.
+    """
+    if not days:
+        if period == period_window.PERIOD_WEEK:
+            return "이번 주 운동 기록이 아직 없어요. 가벼운 산책 한 번도 흐름이 됩니다."
+        if period == period_window.PERIOD_ALL:
+            return "기록이 쌓이면 운동량과 유형의 흐름을 짚어 드릴게요."
+        return "아직 오늘 운동 기록이 없어요. 10분 걷기부터 시작해 볼까요?"
+
+    if period == period_window.PERIOD_TODAY:
+        today = days[-1]
+        label = exercise_types.label_for(today.main_type)
+        return (
+            f"오늘 {label} 위주로 {today.minutes}분, {today.calories}kcal 를 썼어요. "
+            "마무리로 가볍게 스트레칭하면 회복이 빨라져요."
+        )
+
+    total_minutes = sum(d.minutes for d in days)
+    active_days = len(days)
+
+    if period == period_window.PERIOD_WEEK:
+        if active_days <= 1:
+            return (
+                f"이번 주는 {active_days}일 움직였어요. "
+                "한 번 더 나가면 흐름이 끊기지 않아요."
+            )
+        # 한 유형에 쏠렸는지 — 코칭에서 가장 먼저 짚는 지점이다.
+        by_type: dict[str, int] = {}
+        for d in days:
+            for kind, minutes in d.by_type.items():
+                by_type[kind] = by_type.get(kind, 0) + minutes
+        top = max(by_type, key=lambda k: by_type[k]) if by_type else None
+        if top is not None and total_minutes and by_type[top] / total_minutes >= 0.8:
+            missing = (
+                exercise_types.STRENGTH
+                if top == exercise_types.CARDIO
+                else exercise_types.CARDIO
+            )
+            return (
+                f"이번 주 {active_days}일 {total_minutes}분을 채웠는데 "
+                f"{exercise_types.label_for(top)} 에 몰려 있어요. "
+                f"{exercise_types.label_for(missing)} 를 한 번 섞어 볼까요?"
+            )
+        return (
+            f"이번 주 {active_days}일 동안 {total_minutes}분 운동했어요. "
+            "유형도 고르게 섞였네요. 이 흐름을 이어가요."
+        )
+
+    # 전체 — 최근 4주와 그 이전을 견준다. "나아지는 중인가" 가 이 화면의 질문이다.
+    recent_from = days[-1].date - timedelta(days=27)
+    recent = [d.minutes for d in days if d.date >= recent_from]
+    earlier = [d.minutes for d in days if d.date < recent_from]
+    if earlier and recent:
+        if _avg(recent) > _avg(earlier) * 1.1:
+            return (
+                "최근 4주 운동량이 그 전보다 늘었어요. "
+                "지금 방식이 회원님께 맞는 것 같아요."
+            )
+        if _avg(recent) < _avg(earlier) * 0.9:
+            return (
+                "최근 4주 들어 운동량이 줄고 있어요. "
+                "무엇이 달라졌는지 한 주만 되짚어 볼까요?"
+            )
+    return (
+        f"기록을 통틀어 {active_days}일 {total_minutes}분을 움직였어요. "
+        "큰 기복 없이 이어가고 있어요."
+    )

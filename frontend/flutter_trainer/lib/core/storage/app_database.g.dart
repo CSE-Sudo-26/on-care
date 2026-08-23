@@ -1361,6 +1361,26 @@ class $ClientDietEntriesTable extends ClientDietEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _sugarGMeta = const VerificationMeta('sugarG');
+  @override
+  late final GeneratedColumn<double> sugarG = GeneratedColumn<double>(
+    'sugar_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _photoAssetMeta = const VerificationMeta(
     'photoAsset',
   );
@@ -1395,6 +1415,8 @@ class $ClientDietEntriesTable extends ClientDietEntries
     carbsG,
     proteinG,
     fatG,
+    sugarG,
+    date,
     photoAsset,
     sortOrder,
   ];
@@ -1473,6 +1495,18 @@ class $ClientDietEntriesTable extends ClientDietEntries
         fatG.isAcceptableOrUnknown(data['fat_g']!, _fatGMeta),
       );
     }
+    if (data.containsKey('sugar_g')) {
+      context.handle(
+        _sugarGMeta,
+        sugarG.isAcceptableOrUnknown(data['sugar_g']!, _sugarGMeta),
+      );
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    }
     if (data.containsKey('photo_asset')) {
       context.handle(
         _photoAssetMeta,
@@ -1530,6 +1564,14 @@ class $ClientDietEntriesTable extends ClientDietEntries
         DriftSqlType.double,
         data['${effectivePrefix}fat_g'],
       )!,
+      sugarG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}sugar_g'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
       photoAsset: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}photo_asset'],
@@ -1559,6 +1601,19 @@ class ClientDietEntryRow extends DataClass
   final double proteinG;
   final double fatG;
 
+  /// 그 끼니의 당류(g). 나트륨과 나란히 읽히는 값인데 여기만 빠져 있어,
+  /// 트레이너는 끼니 카드에서 나트륨만 보고 당류는 하루 합계로만 볼 수
+  /// 있었다(#1025).
+  final double sugarG;
+
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`).
+  ///
+  /// 예전에는 이 표가 **오늘 하루**만 담아 날짜가 필요 없었다. 기간 뷰에서
+  /// 날짜를 눌러 그날 끼니를 펼치려면 어느 날 것인지 알아야 한다(#1025).
+  /// 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로 거르는
+  /// 조회에서는 걸리지 않는다.
+  final String date;
+
   /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
   /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
   /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
@@ -1575,6 +1630,8 @@ class ClientDietEntryRow extends DataClass
     required this.carbsG,
     required this.proteinG,
     required this.fatG,
+    required this.sugarG,
+    required this.date,
     this.photoAsset,
     required this.sortOrder,
   });
@@ -1590,6 +1647,8 @@ class ClientDietEntryRow extends DataClass
     map['carbs_g'] = Variable<double>(carbsG);
     map['protein_g'] = Variable<double>(proteinG);
     map['fat_g'] = Variable<double>(fatG);
+    map['sugar_g'] = Variable<double>(sugarG);
+    map['date'] = Variable<String>(date);
     if (!nullToAbsent || photoAsset != null) {
       map['photo_asset'] = Variable<String>(photoAsset);
     }
@@ -1608,6 +1667,8 @@ class ClientDietEntryRow extends DataClass
       carbsG: Value(carbsG),
       proteinG: Value(proteinG),
       fatG: Value(fatG),
+      sugarG: Value(sugarG),
+      date: Value(date),
       photoAsset: photoAsset == null && nullToAbsent
           ? const Value.absent()
           : Value(photoAsset),
@@ -1630,6 +1691,8 @@ class ClientDietEntryRow extends DataClass
       carbsG: serializer.fromJson<double>(json['carbsG']),
       proteinG: serializer.fromJson<double>(json['proteinG']),
       fatG: serializer.fromJson<double>(json['fatG']),
+      sugarG: serializer.fromJson<double>(json['sugarG']),
+      date: serializer.fromJson<String>(json['date']),
       photoAsset: serializer.fromJson<String?>(json['photoAsset']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
@@ -1647,6 +1710,8 @@ class ClientDietEntryRow extends DataClass
       'carbsG': serializer.toJson<double>(carbsG),
       'proteinG': serializer.toJson<double>(proteinG),
       'fatG': serializer.toJson<double>(fatG),
+      'sugarG': serializer.toJson<double>(sugarG),
+      'date': serializer.toJson<String>(date),
       'photoAsset': serializer.toJson<String?>(photoAsset),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
@@ -1662,6 +1727,8 @@ class ClientDietEntryRow extends DataClass
     double? carbsG,
     double? proteinG,
     double? fatG,
+    double? sugarG,
+    String? date,
     Value<String?> photoAsset = const Value.absent(),
     int? sortOrder,
   }) => ClientDietEntryRow(
@@ -1674,6 +1741,8 @@ class ClientDietEntryRow extends DataClass
     carbsG: carbsG ?? this.carbsG,
     proteinG: proteinG ?? this.proteinG,
     fatG: fatG ?? this.fatG,
+    sugarG: sugarG ?? this.sugarG,
+    date: date ?? this.date,
     photoAsset: photoAsset.present ? photoAsset.value : this.photoAsset,
     sortOrder: sortOrder ?? this.sortOrder,
   );
@@ -1688,6 +1757,8 @@ class ClientDietEntryRow extends DataClass
       carbsG: data.carbsG.present ? data.carbsG.value : this.carbsG,
       proteinG: data.proteinG.present ? data.proteinG.value : this.proteinG,
       fatG: data.fatG.present ? data.fatG.value : this.fatG,
+      sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      date: data.date.present ? data.date.value : this.date,
       photoAsset: data.photoAsset.present
           ? data.photoAsset.value
           : this.photoAsset,
@@ -1707,6 +1778,8 @@ class ClientDietEntryRow extends DataClass
           ..write('carbsG: $carbsG, ')
           ..write('proteinG: $proteinG, ')
           ..write('fatG: $fatG, ')
+          ..write('sugarG: $sugarG, ')
+          ..write('date: $date, ')
           ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
@@ -1724,6 +1797,8 @@ class ClientDietEntryRow extends DataClass
     carbsG,
     proteinG,
     fatG,
+    sugarG,
+    date,
     photoAsset,
     sortOrder,
   );
@@ -1740,6 +1815,8 @@ class ClientDietEntryRow extends DataClass
           other.carbsG == this.carbsG &&
           other.proteinG == this.proteinG &&
           other.fatG == this.fatG &&
+          other.sugarG == this.sugarG &&
+          other.date == this.date &&
           other.photoAsset == this.photoAsset &&
           other.sortOrder == this.sortOrder);
 }
@@ -1754,6 +1831,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
   final Value<double> carbsG;
   final Value<double> proteinG;
   final Value<double> fatG;
+  final Value<double> sugarG;
+  final Value<String> date;
   final Value<String?> photoAsset;
   final Value<int> sortOrder;
   final Value<int> rowid;
@@ -1767,6 +1846,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
+    this.sugarG = const Value.absent(),
+    this.date = const Value.absent(),
     this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1781,6 +1862,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
+    this.sugarG = const Value.absent(),
+    this.date = const Value.absent(),
     this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1800,6 +1883,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Expression<double>? carbsG,
     Expression<double>? proteinG,
     Expression<double>? fatG,
+    Expression<double>? sugarG,
+    Expression<String>? date,
     Expression<String>? photoAsset,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
@@ -1814,6 +1899,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       if (carbsG != null) 'carbs_g': carbsG,
       if (proteinG != null) 'protein_g': proteinG,
       if (fatG != null) 'fat_g': fatG,
+      if (sugarG != null) 'sugar_g': sugarG,
+      if (date != null) 'date': date,
       if (photoAsset != null) 'photo_asset': photoAsset,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
@@ -1830,6 +1917,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Value<double>? carbsG,
     Value<double>? proteinG,
     Value<double>? fatG,
+    Value<double>? sugarG,
+    Value<String>? date,
     Value<String?>? photoAsset,
     Value<int>? sortOrder,
     Value<int>? rowid,
@@ -1844,6 +1933,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       carbsG: carbsG ?? this.carbsG,
       proteinG: proteinG ?? this.proteinG,
       fatG: fatG ?? this.fatG,
+      sugarG: sugarG ?? this.sugarG,
+      date: date ?? this.date,
       photoAsset: photoAsset ?? this.photoAsset,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
@@ -1880,6 +1971,12 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     if (fatG.present) {
       map['fat_g'] = Variable<double>(fatG.value);
     }
+    if (sugarG.present) {
+      map['sugar_g'] = Variable<double>(sugarG.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
     if (photoAsset.present) {
       map['photo_asset'] = Variable<String>(photoAsset.value);
     }
@@ -1904,6 +2001,8 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
           ..write('carbsG: $carbsG, ')
           ..write('proteinG: $proteinG, ')
           ..write('fatG: $fatG, ')
+          ..write('sugarG: $sugarG, ')
+          ..write('date: $date, ')
           ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
@@ -5933,6 +6032,8 @@ typedef $$ClientDietEntriesTableCreateCompanionBuilder =
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
+      Value<double> sugarG,
+      Value<String> date,
       Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
@@ -5948,6 +6049,8 @@ typedef $$ClientDietEntriesTableUpdateCompanionBuilder =
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
+      Value<double> sugarG,
+      Value<String> date,
       Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
@@ -6004,6 +6107,16 @@ class $$ClientDietEntriesTableFilterComposer
 
   ColumnFilters<double> get fatG => $composableBuilder(
     column: $table.fatG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sugarG => $composableBuilder(
+    column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6072,6 +6185,16 @@ class $$ClientDietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get sugarG => $composableBuilder(
+    column: $table.sugarG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
     builder: (column) => ColumnOrderings(column),
@@ -6118,6 +6241,12 @@ class $$ClientDietEntriesTableAnnotationComposer
 
   GeneratedColumn<double> get fatG =>
       $composableBuilder(column: $table.fatG, builder: (column) => column);
+
+  GeneratedColumn<double> get sugarG =>
+      $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
 
   GeneratedColumn<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
@@ -6177,6 +6306,8 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
+                Value<String> date = const Value.absent(),
                 Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6190,6 +6321,8 @@ class $$ClientDietEntriesTableTableManager
                 carbsG: carbsG,
                 proteinG: proteinG,
                 fatG: fatG,
+                sugarG: sugarG,
+                date: date,
                 photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,
@@ -6205,6 +6338,8 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
+                Value<String> date = const Value.absent(),
                 Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6218,6 +6353,8 @@ class $$ClientDietEntriesTableTableManager
                 carbsG: carbsG,
                 proteinG: proteinG,
                 fatG: fatG,
+                sugarG: sugarG,
+                date: date,
                 photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,

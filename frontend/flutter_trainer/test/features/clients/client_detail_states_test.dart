@@ -80,12 +80,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('오늘 영양 요약'), findsOneWidget);
-    expect(find.text('배정된 루틴'), findsNothing);
+    expect(find.text('운동 현황'), findsNothing);
 
     await tester.tap(find.text('운동'));
     await settle(tester);
 
-    expect(find.text('배정된 루틴'), findsOneWidget);
+    expect(find.text('운동 현황'), findsOneWidget);
     expect(find.text('오늘 영양 요약'), findsNothing);
     final context = tester.element(find.byType(Navigator).first);
     expect(
@@ -101,7 +101,7 @@ void main() {
       at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
     );
 
-    expect(find.text('배정된 루틴'), findsOneWidget);
+    expect(find.text('운동 현황'), findsOneWidget);
     expect(find.text('오늘 영양 요약'), findsNothing);
   });
 
