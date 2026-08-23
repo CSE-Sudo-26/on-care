@@ -209,14 +209,19 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              l.schedDeleteConfirm(s.time, s.clientName),
+              l.schedDeleteConfirm(timeRangeLabel(l, s), s.clientName),
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: AppSpacing.sm),
             // 삭제와 취소를 가르는 문장이다(#871). 실제 PT 가 진행되지 않은
             // 경우까지 삭제로 처리하면 그 사실이 어디에도 남지 않는다.
+            // 취소·노쇼 제안은 예정 세션에만 맞는 말이다 — 완료·취소·노쇼로
+            // 이미 끝난 세션(전이는 예정에서만 갈린다)에는 그 조치 자체가
+            // 불가능해, 다른 문구로 갈아 끼운다(#1226).
             Text(
-              l.schedDeleteMeansRemove,
+              s.isFinished
+                  ? l.schedDeleteMeansRemoveFinished
+                  : l.schedDeleteMeansRemove,
               style: const TextStyle(
                 fontSize: 12.5,
                 color: AppColors.subtleForeground,

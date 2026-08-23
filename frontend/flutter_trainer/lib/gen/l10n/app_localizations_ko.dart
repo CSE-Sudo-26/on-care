@@ -73,7 +73,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get schedDeleteMeansRemove => '기록까지 지웁니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+  String get schedDeleteMeansRemove => '기록이 지워집니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+
+  @override
+  String get schedDeleteMeansRemoveFinished =>
+      '기록이 지워집니다. 이미 완료한 일정이라 되돌릴 수 없어요.';
 
   @override
   String get scheduleStatusGap => '공백';
@@ -1416,7 +1420,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String schedDeleteConfirm(String time, String name) {
-    return '$time $name님 세션을 삭제할까요?';
+    return '$time $name님 PT 일정을 삭제할까요?';
   }
 
   @override
