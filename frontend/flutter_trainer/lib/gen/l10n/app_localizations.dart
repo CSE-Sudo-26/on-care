@@ -512,11 +512,41 @@ abstract class AppLocalizations {
   /// **'Dashboard'**
   String get dashTitle;
 
-  /// No description provided for @dashActivityCreateRoutine.
+  /// No description provided for @dashActivityRecommendRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Go create an AI routine'**
-  String get dashActivityCreateRoutine;
+  /// **'Try adjusting the routine in Program.'**
+  String get dashActivityRecommendRoutine;
+
+  /// No description provided for @dashActivityRecommendChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Try checking in over Chat.'**
+  String get dashActivityRecommendChat;
+
+  /// No description provided for @dashActivityRecommendDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Try leaving feedback in Diet.'**
+  String get dashActivityRecommendDiet;
+
+  /// No description provided for @dashActivityTabProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get dashActivityTabProgram;
+
+  /// No description provided for @dashActivityTabChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get dashActivityTabChat;
+
+  /// No description provided for @dashActivityTabDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get dashActivityTabDiet;
 
   /// No description provided for @dashLoadFailed.
   ///
@@ -931,6 +961,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing scheduled today'**
   String get dashNoScheduleToday;
+
+  /// No description provided for @dashScheduleNowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Now {time}'**
+  String dashScheduleNowLabel(String time);
+
+  /// No description provided for @dashScheduleNextSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {time} · {name}'**
+  String dashScheduleNextSession(String time, String name);
+
+  /// No description provided for @dashScheduleMinutesLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'in {minutes} min'**
+  String dashScheduleMinutesLeft(int minutes);
+
+  /// No description provided for @dashPrepareClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare the session'**
+  String get dashPrepareClass;
+
+  /// No description provided for @dashLeaveMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave a memo'**
+  String get dashLeaveMemo;
+
+  /// No description provided for @dashSessionSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get dashSessionSent;
+
+  /// No description provided for @dashSessionPrepared.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepared'**
+  String get dashSessionPrepared;
+
+  /// No description provided for @dashSessionNoteWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Written'**
+  String get dashSessionNoteWritten;
+
+  /// No description provided for @dashSessionSentNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent'**
+  String get dashSessionSentNo;
+
+  /// No description provided for @dashSessionPreparedNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not prepared'**
+  String get dashSessionPreparedNo;
+
+  /// No description provided for @dashSessionNoteNotWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Not written'**
+  String get dashSessionNoteNotWritten;
 
   /// No description provided for @weekdayMon.
   ///
@@ -4603,6 +4699,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.'**
   String get dashTaskDismissBody;
+
+  /// No description provided for @dashTaskCarriedOverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried over'**
+  String get dashTaskCarriedOverTitle;
+
+  /// No description provided for @dashTaskCategoryDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get dashTaskCategoryDone;
+
+  /// No description provided for @dashTaskCategoryRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String dashTaskCategoryRemaining(int count);
+
+  /// No description provided for @dashTaskUncheckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completion of \'{name}\'?'**
+  String dashTaskUncheckTitle(String name);
+
+  /// No description provided for @dashTaskUncheckBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It also drops off the task progress chart.'**
+  String get dashTaskUncheckBody;
+
+  /// No description provided for @dashTaskUncheckConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completion'**
+  String get dashTaskUncheckConfirm;
 
   /// No description provided for @churnNoRecentWorkout.
   ///

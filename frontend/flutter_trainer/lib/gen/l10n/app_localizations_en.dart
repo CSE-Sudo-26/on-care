@@ -234,7 +234,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashTitle => 'Dashboard';
 
   @override
-  String get dashActivityCreateRoutine => 'Go create an AI routine';
+  String get dashActivityRecommendRoutine =>
+      'Try adjusting the routine in Program.';
+
+  @override
+  String get dashActivityRecommendChat => 'Try checking in over Chat.';
+
+  @override
+  String get dashActivityRecommendDiet => 'Try leaving feedback in Diet.';
+
+  @override
+  String get dashActivityTabProgram => 'Program';
+
+  @override
+  String get dashActivityTabChat => 'Chat';
+
+  @override
+  String get dashActivityTabDiet => 'Diet';
 
   @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
@@ -489,6 +505,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashNoScheduleToday => 'Nothing scheduled today';
+
+  @override
+  String dashScheduleNowLabel(String time) {
+    return 'Now $time';
+  }
+
+  @override
+  String dashScheduleNextSession(String time, String name) {
+    return 'Next: $time · $name';
+  }
+
+  @override
+  String dashScheduleMinutesLeft(int minutes) {
+    return 'in $minutes min';
+  }
+
+  @override
+  String get dashPrepareClass => 'Prepare the session';
+
+  @override
+  String get dashLeaveMemo => 'Leave a memo';
+
+  @override
+  String get dashSessionSent => 'Sent';
+
+  @override
+  String get dashSessionPrepared => 'Prepared';
+
+  @override
+  String get dashSessionNoteWritten => 'Written';
+
+  @override
+  String get dashSessionSentNo => 'Not sent';
+
+  @override
+  String get dashSessionPreparedNo => 'Not prepared';
+
+  @override
+  String get dashSessionNoteNotWritten => 'Not written';
 
   @override
   String get weekdayMon => 'Mon';
@@ -2611,6 +2666,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dashTaskDismissBody =>
       'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.';
+
+  @override
+  String get dashTaskCarriedOverTitle => 'Carried over';
+
+  @override
+  String get dashTaskCategoryDone => 'Done';
+
+  @override
+  String dashTaskCategoryRemaining(int count) {
+    return '+$count';
+  }
+
+  @override
+  String dashTaskUncheckTitle(String name) {
+    return 'Undo completion of \'$name\'?';
+  }
+
+  @override
+  String get dashTaskUncheckBody =>
+      'It also drops off the task progress chart.';
+
+  @override
+  String get dashTaskUncheckConfirm => 'Undo completion';
 
   @override
   String get churnNoRecentWorkout => 'No workout logged in 7 days';

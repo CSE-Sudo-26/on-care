@@ -18,18 +18,29 @@ class TaskProgressChart extends StatelessWidget {
   const TaskProgressChart({
     super.key,
     required this.snapshots,
+    required this.dates,
     required this.labels,
     required this.todayIndex,
+    this.isCurrentWeek = true,
   });
 
   /// One entry per weekday (월→일), or null when nothing was saved that day.
   final List<DailyTaskSnapshot?> snapshots;
+
+  /// Calendar date for each column, same length as [snapshots] — combined
+  /// with [labels] into `8/23 일` so a past week reads as *which* past
+  /// week, not just "월~일" again.
+  final List<DateTime> dates;
 
   /// Weekday labels, same length as [snapshots].
   final List<String> labels;
 
   /// Index of today in [snapshots] — later indices haven't happened yet.
   final int todayIndex;
+
+  /// Whether [dates] is the week containing today. A past week has no
+  /// "today" to bold and no day left to greyed out as not-yet-happened.
+  final bool isCurrentWeek;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +81,7 @@ class TaskProgressChart extends StatelessWidget {
                     child: _StackedBar(
                       snapshot: snapshots[i],
                       ceiling: ceiling,
-                      pending: i > todayIndex,
+                      pending: isCurrentWeek && i > todayIndex,
                     ),
                   ),
                 ),
@@ -83,16 +94,20 @@ class TaskProgressChart extends StatelessWidget {
             for (var i = 0; i < labels.length; i++)
               Expanded(
                 child: Text(
-                  labels[i],
+                  // "8/23 일" — 지난 주로 넘어가도 어느 요일이 아니라 어느
+                  // *날* 인지 읽혀야 한다.
+                  '${dates[i].month}/${dates[i].day} ${labels[i]}',
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: i == todayIndex
+                    fontSize: 9.5,
+                    fontWeight: isCurrentWeek && i == todayIndex
                         ? FontWeight.w800
                         : FontWeight.w500,
-                    color: i == todayIndex
+                    color: isCurrentWeek && i == todayIndex
                         ? AppColors.primary
-                        : i > todayIndex
+                        : isCurrentWeek && i > todayIndex
                         ? AppColors.disabledForeground
                         : AppColors.subtleForeground,
                   ),

@@ -101,9 +101,24 @@ class _ActivityFeedbackDetail extends StatelessWidget {
 
   final ActivityFeedbackItem item;
 
+  /// Where each kind's CTA leads — the client most worth checking first.
+  String? _destination() {
+    if (item.clientIds.isEmpty) return null;
+    final id = item.clientIds.first;
+    return switch (item.kind) {
+      ActivityFeedbackKind.difficultyReview => AppRoutes.coachingFor(id),
+      ActivityFeedbackKind.inactiveSevenDays => AppRoutes.messagesFor(id),
+      ActivityFeedbackKind.dietFeedbackPending => AppRoutes.clientDetail(
+        id,
+        section: 'diet',
+      ),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final destination = _destination();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -116,41 +131,55 @@ class _ActivityFeedbackDetail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          item.kind.description(l, _names(l, item.clientNames)),
-          style: const TextStyle(
-            fontSize: 12.5,
-            height: 1.5,
-            fontWeight: FontWeight.w500,
-            color: AppColors.mutedForeground,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Align(
-          alignment: Alignment.centerRight,
-          child: OutlinedButton.icon(
-            key: ValueKey<String>('ai-summary-cta-${item.kind.name}'),
-            onPressed: () => context.go(AppRoutes.coaching),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 4,
-              ),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            icon: Text(
-              l.dashActivityCreateRoutine,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
+        // 설명은 왼쪽에서 넓게 숨 쉬고, 버튼은 오른쪽에 고정 너비로 붙는다 —
+        // 세 항목이 같은 두 칸 그리드로 줄을 맞춰야 나란히 훑어 읽힌다.
+        Row(
+          children: <Widget>[
+            Expanded(
+              // 추천 행동("프로그램에서 루틴을 조정해보세요")을 설명 문장에
+              // 이어 붙인다 — 버튼은 그 탭으로 가는 짧은 링크일 뿐, 무엇을
+              // 해야 하는지는 이 문장이 전부 말한다.
+              child: Text(
+                '${item.kind.description(l, _names(l, item.clientNames))} '
+                '${item.kind.recommendation(l)}',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.mutedForeground,
+                ),
               ),
             ),
-            label: const Icon(Icons.chevron_right, size: 14),
-            iconAlignment: IconAlignment.start,
-          ),
+            const SizedBox(width: AppSpacing.sm),
+            if (destination != null)
+              // 오늘의 일정 배너의 "수업 준비하기" 버튼과 같은 마감 —
+              // 알약처럼 둥글고 여유 있게, 짧은 탭 이름이 초라해 보이지
+              // 않도록.
+              FilledButton.icon(
+                key: ValueKey<String>('ai-summary-cta-${item.kind.name}'),
+                onPressed: () => context.go(destination),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accentDark,
+                  foregroundColor: AppColors.accentForeground,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: 12,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(AppRadius.pill),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                icon: Text(item.kind.tabLabel(l)),
+                label: const Icon(Icons.chevron_right, size: 16),
+                iconAlignment: IconAlignment.start,
+              ),
+          ],
         ),
       ],
     );

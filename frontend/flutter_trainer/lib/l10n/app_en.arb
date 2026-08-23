@@ -104,7 +104,12 @@
   "authErrInviteCodeRequired": "Enter the invite code you received from your gym",
   "authErrSignUpFailed": "Sign-up failed. Please try again in a moment.",
   "dashTitle": "Dashboard",
-  "dashActivityCreateRoutine": "Go create an AI routine",
+  "dashActivityRecommendRoutine": "Try adjusting the routine in Program.",
+  "dashActivityRecommendChat": "Try checking in over Chat.",
+  "dashActivityRecommendDiet": "Try leaving feedback in Diet.",
+  "dashActivityTabProgram": "Program",
+  "dashActivityTabChat": "Chat",
+  "dashActivityTabDiet": "Diet",
   "dashLoadFailed": "Couldn't load the dashboard",
   "dashTodayReservations": "Today's bookings",
   "dashUnitCount": "",
@@ -227,6 +232,33 @@
   "dashSeeAll": "See all",
   "dashScheduleLoadFailed": "Couldn't load the schedule",
   "dashNoScheduleToday": "Nothing scheduled today",
+  "dashScheduleNowLabel": "Now {time}",
+  "@dashScheduleNowLabel": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "dashScheduleNextSession": "Next: {time} · {name}",
+  "@dashScheduleNextSession": {
+    "placeholders": {
+      "time": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "dashScheduleMinutesLeft": "in {minutes} min",
+  "@dashScheduleMinutesLeft": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "dashPrepareClass": "Prepare the session",
+  "dashLeaveMemo": "Leave a memo",
+  "dashSessionSent": "Sent",
+  "dashSessionPrepared": "Prepared",
+  "dashSessionNoteWritten": "Written",
+  "dashSessionSentNo": "Not sent",
+  "dashSessionPreparedNo": "Not prepared",
+  "dashSessionNoteNotWritten": "Not written",
   "weekdayMon": "Mon",
   "weekdayTue": "Tue",
   "weekdayWed": "Wed",
@@ -1419,7 +1451,6 @@
       "count": {"type": "int"}
     }
   },
-  "dashTasksEmpty": "There are no new coaching tasks to review.",
   "dashTaskProgressTitle": "Task completion",
   "dashTaskProgressToday": "Done today",
   "dashTaskProgressCarriedOver": "Done (carried over)",
@@ -1454,6 +1485,22 @@
   "dashTodoReportSubtitle": "This week's report is due",
   "dashTaskDismissTitle": "Delete this item?",
   "dashTaskDismissBody": "It only disappears from today's list. Actually handling it (consultation, program, report) still happens on its own screen.",
+  "dashTaskCarriedOverTitle": "Carried over",
+  "dashTaskCategoryDone": "Done",
+  "dashTaskCategoryRemaining": "+{count}",
+  "@dashTaskCategoryRemaining": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashTaskUncheckTitle": "Undo completion of '{name}'?",
+  "@dashTaskUncheckTitle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "dashTaskUncheckBody": "It also drops off the task progress chart.",
+  "dashTaskUncheckConfirm": "Undo completion",
   "churnNoRecentWorkout": "No workout logged in 7 days",
   "churnNoRecentFeedback": "No trainer feedback in 7 days",
   "churnConsecutiveCancel": "2 consecutive cancellations/no-shows",

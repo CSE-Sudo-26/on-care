@@ -50,8 +50,8 @@ final _consultationMissionsProvider =
 /// One concrete 오늘 할 일 item — 상담 요청 하나, 건강 신호가 있는 고객
 /// 하나, 프로그램 미등록 고객 하나, 리포트 대상 고객 하나 등.
 ///
-/// 카테고리별 그리드로 나누지 않고 한 리스트에 섞어 보여준다 — 앞의 알약
-/// [keyword] 가 무슨 일인지 말해 준다.
+/// [keyword] 가 곧 카테고리다 — 같은 keyword 를 가진 항목끼리 한
+/// [_CategorySection] 으로 묶인다.
 class _Mission {
   const _Mission({
     required this.key,
@@ -66,7 +66,7 @@ class _Mission {
   /// Stable across a day — used for checked/dismissed/carry-over tracking.
   final String key;
 
-  /// 알약에 적을 짧은 낱말(상담/식단/운동/프로그램/리포트).
+  /// 카테고리 이름이자 알약에 적을 짧은 낱말(상담/식단/운동/프로그램/리포트).
   final String keyword;
   final Color keywordColor;
 
@@ -81,7 +81,8 @@ class _Mission {
 }
 
 /// 오늘 할 일 — 상담 요청·건강 신호·프로그램 미등록·리포트 대상 고객을
-/// 한 리스트로 모아 보여준다.
+/// 카테고리별로 묶어 보여준다. 어제 저장분에 남아 있던 항목은 자기
+/// 카테고리가 아니라 "지난 할 일"이라는 별도 상자로 모인다.
 ///
 /// 체크(완료 처리, 회색+취소선)와 삭제(오늘 목록에서만 제외)는 서로 다른
 /// 동작이다. 아래는 모두 이 세션이 로컬로만 기억하는 상태다: 실제 상담
@@ -110,9 +111,8 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
     _initializedForDate = today;
     final store = ref.read(dailyTaskProgressStoreProvider);
     final snapshot = store.read(today);
-    final yesterday = store.read(
-      ymd(nowKst().subtract(const Duration(days: 1))),
-    );
+    final yesterdayDate = ymd(nowKst().subtract(const Duration(days: 1)));
+    final yesterday = store.read(yesterdayDate);
     _checkedKeys = snapshot == null
         ? <String>{}
         : allKeys.where((k) => !snapshot.pendingKeys.contains(k)).toSet();
@@ -122,9 +122,35 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
     _dismissedKeys = <String>{};
   }
 
-  void _toggle(String key, Set<String> allKeys) {
+  Future<void> _toggle(_Mission mission, Set<String> allKeys) async {
+    // 체크 해제 = 완료 취소다. 되돌리면 할 일 진행률 그래프에서도 그 완료가
+    // 빠지는데, 그 사실이 체크박스 하나 누르는 것만으로는 안 보인다 —
+    // 회원 앱 운동탭의 "완료 취소" 확인창과 같은 안내를 준다. 체크(완료)는
+    // 되돌릴 게 없어 바로 처리한다.
+    if (_checkedKeys.contains(mission.key)) {
+      final l = AppLocalizations.of(context);
+      final name = mission.client?.name ?? mission.title;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l.dashTaskUncheckTitle(name)),
+          content: Text(l.dashTaskUncheckBody),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l.actionCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l.dashTaskUncheckConfirm),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
     setState(() {
-      if (!_checkedKeys.remove(key)) _checkedKeys.add(key);
+      if (!_checkedKeys.remove(mission.key)) _checkedKeys.add(mission.key);
     });
     unawaited(_persist(allKeys));
   }
@@ -269,6 +295,48 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
     final remaining = allKeys.difference(_checkedKeys).length;
     final allDone = allKeys.isNotEmpty && remaining == 0;
 
+    // 항목이 하나도 없어도 여섯 카테고리는 항상 그 자리에 있다 — 매일 다시
+    // 확인할 자리가 매번 다른 곳에서 나타났다 사라지면 습관이 안 붙는다.
+    final categoryOrder = <MapEntry<String, Color>>[
+      MapEntry(l.dashTodoConsultation, AppColors.primary),
+      MapEntry(l.dashTodoWorkout, AppColors.overTarget),
+      MapEntry(l.dashTodoDiet, AppColors.overTarget),
+      MapEntry(l.dashTodoProgram, AppColors.primary),
+      MapEntry(l.dashTodoReport, AppColors.primary),
+    ];
+    final carriedOver = <_Mission>[];
+    final byCategory = <String, List<_Mission>>{
+      for (final entry in categoryOrder) entry.key: <_Mission>[],
+    };
+    for (final mission in visible) {
+      if (_carriedOverKeys.contains(mission.key)) {
+        carriedOver.add(mission);
+        continue;
+      }
+      byCategory[mission.keyword]?.add(mission);
+    }
+
+    final sections = <Widget>[
+      _CategorySection(
+        title: l.dashTaskCarriedOverTitle,
+        color: AppColors.aiCardGradientEnd,
+        tinted: true,
+        missions: carriedOver,
+        checkedKeys: _checkedKeys,
+        onToggle: (m) => unawaited(_toggle(m, allKeys)),
+        onDismiss: (key) => _dismiss(key, allKeys),
+      ),
+      for (final category in categoryOrder)
+        _CategorySection(
+          title: category.key,
+          color: category.value,
+          missions: byCategory[category.key]!,
+          checkedKeys: _checkedKeys,
+          onToggle: (m) => unawaited(_toggle(m, allKeys)),
+          onDismiss: (key) => _dismiss(key, allKeys),
+        ),
+    ];
+
     return SectionCard(
       title: l.dashTodayTasks,
       trailing: Text(
@@ -283,21 +351,144 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
           fontWeight: FontWeight.w700,
         ),
       ),
-      child: visible.isEmpty
-          ? EmptyHint(message: l.dashTasksEmpty, icon: Icons.task_alt)
-          : Column(
-              children: <Widget>[
-                for (final mission in visible)
-                  _MissionRow(
-                    key: ValueKey<String>('dashboard-mission-${mission.key}'),
-                    mission: mission,
-                    checked: _checkedKeys.contains(mission.key),
-                    carriedOver: _carriedOverKeys.contains(mission.key),
-                    onToggle: () => _toggle(mission.key, allKeys),
-                    onDismiss: () => _dismiss(mission.key, allKeys),
+      // 카테고리 여섯은 항목이 없어도 항상 그 자리에 있다 — "오늘 할 일이
+      // 하나도 없다"는 빈 화면이 아니라 "전부 완료"로 읽혀야 한다. 화면
+      // 안에 들어오면 그대로, 넘치면 카드 자체가 커지는 대신 이 안에서만
+      // 스크롤된다 — 옆 칸(오늘의 일정 + AI 진단)과 상관없이 미션이
+      // 몇십 건이어도 대시보드 전체가 한없이 길어지지 않는다.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.55,
+        ),
+        child: SingleChildScrollView(child: Column(children: sections)),
+      ),
+    );
+  }
+}
+
+/// One 카테고리 상자 — 헤더(이름·남은 건수)를 누르면 그 카테고리의 미션
+/// 목록이 펼쳐지는 아코디언. 기본은 접힌 상태다.
+class _CategorySection extends StatefulWidget {
+  const _CategorySection({
+    required this.title,
+    required this.color,
+    required this.missions,
+    required this.checkedKeys,
+    required this.onToggle,
+    required this.onDismiss,
+    this.tinted = false,
+  });
+
+  final String title;
+  final Color color;
+  final List<_Mission> missions;
+  final Set<String> checkedKeys;
+  final ValueChanged<_Mission> onToggle;
+  final ValueChanged<String> onDismiss;
+
+  /// "지난 할 일" 상자만 다른 색으로 — 나머지 카테고리와 한눈에 갈린다.
+  final bool tinted;
+
+  @override
+  State<_CategorySection> createState() => _CategorySectionState();
+}
+
+class _CategorySectionState extends State<_CategorySection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final remaining = widget.missions
+        .where((m) => !widget.checkedKeys.contains(m.key))
+        .length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: widget.tinted
+            ? widget.color.withValues(alpha: 0.10)
+            : AppColors.background,
+        border: Border.all(
+          color: widget.tinted
+              ? widget.color.withValues(alpha: 0.4)
+              : AppColors.border,
+        ),
+        borderRadius: const BorderRadius.all(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          InkWell(
+            key: ValueKey<String>('dashboard-category-toggle-${widget.title}'),
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: const BorderRadius.all(AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.color,
+                    ),
                   ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    remaining == 0
+                        ? l.dashTaskCategoryDone
+                        : l.dashTaskCategoryRemaining(remaining),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: remaining == 0
+                          ? AppColors.success
+                          : AppColors.mutedForeground,
+                    ),
+                  ),
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.chevron_right,
+                    size: 18,
+                    color: AppColors.disabledForeground,
+                  ),
+                ],
+              ),
             ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                0,
+                AppSpacing.sm,
+                AppSpacing.sm,
+              ),
+              child: Column(
+                children: <Widget>[
+                  for (final mission in widget.missions)
+                    _MissionRow(
+                      key: ValueKey<String>('dashboard-mission-${mission.key}'),
+                      mission: mission,
+                      checked: widget.checkedKeys.contains(mission.key),
+                      onToggle: () => widget.onToggle(mission),
+                      onDismiss: () => widget.onDismiss(mission.key),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -307,17 +498,12 @@ class _MissionRow extends StatelessWidget {
     super.key,
     required this.mission,
     required this.checked,
-    required this.carriedOver,
     required this.onToggle,
     required this.onDismiss,
   });
 
   final _Mission mission;
   final bool checked;
-
-  /// 어제 저장분에 이미 남아 있던 미션인가 — 참이면 행 배경을 이월 색으로
-  /// 물들여, 오늘 새로 생긴 항목과 구분한다.
-  final bool carriedOver;
   final VoidCallback onToggle;
   final VoidCallback onDismiss;
 
@@ -327,14 +513,11 @@ class _MissionRow extends StatelessWidget {
       fontSize: 12.5,
       fontWeight: FontWeight.w700,
       color: checked ? AppColors.disabledForeground : AppColors.foreground,
-      decoration: checked ? TextDecoration.lineThrough : null,
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
-        color: carriedOver
-            ? AppColors.aiCardGradientEnd.withValues(alpha: 0.16)
-            : AppColors.card,
+        color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.md),
         child: InkWell(
           onTap: mission.onTap,
@@ -356,10 +539,10 @@ class _MissionRow extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: checked ? AppColors.success : Colors.transparent,
+                      color: checked ? AppColors.primary : Colors.transparent,
                       border: Border.all(
                         color: checked
-                            ? AppColors.success
+                            ? AppColors.primary
                             : AppColors.borderStrong,
                       ),
                     ),
@@ -392,36 +575,50 @@ class _MissionRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
+                // 고객 정보와 세부 내용을 한 줄에 이어 붙인다 — 아코디언 안은
+                // 가로로 넉넉해서, 굳이 두 줄로 쌓아 세로 자리를 쓸 이유가
+                // 없다.
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: <Widget>[
-                      mission.client == null
-                          ? Text(
-                              mission.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: nameStyle,
-                            )
-                          : ClientIdentity(
-                              client: mission.client!,
-                              nameStyle: nameStyle,
-                              demographicsStyle: nameStyle.copyWith(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.subtleForeground,
+                      Flexible(
+                        child: mission.client == null
+                            ? Text(
+                                mission.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: nameStyle,
+                              )
+                            : ClientIdentity(
+                                client: mission.client!,
+                                nameStyle: nameStyle,
+                                demographicsStyle: nameStyle.copyWith(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.subtleForeground,
+                                ),
                               ),
-                            ),
-                      if (mission.subtitle.isNotEmpty)
-                        Text(
-                          mission.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                      ),
+                      if (mission.subtitle.isNotEmpty) ...<Widget>[
+                        const Text(
+                          ' · ',
+                          style: TextStyle(
                             fontSize: 11,
                             color: AppColors.subtleForeground,
                           ),
                         ),
+                        Flexible(
+                          child: Text(
+                            mission.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.subtleForeground,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -224,7 +224,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashTitle => '대시보드';
 
   @override
-  String get dashActivityCreateRoutine => 'AI 루틴 만들러 가기';
+  String get dashActivityRecommendRoutine => '프로그램에서 루틴을 조정해보세요.';
+
+  @override
+  String get dashActivityRecommendChat => '채팅에서 안부를 물어보세요.';
+
+  @override
+  String get dashActivityRecommendDiet => '식단에서 피드백을 남겨보세요.';
+
+  @override
+  String get dashActivityTabProgram => '프로그램';
+
+  @override
+  String get dashActivityTabChat => '채팅';
+
+  @override
+  String get dashActivityTabDiet => '식단';
 
   @override
   String get dashLoadFailed => '대시보드를 불러오지 못했어요';
@@ -469,6 +484,45 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashNoScheduleToday => '오늘 등록된 일정이 없어요';
+
+  @override
+  String dashScheduleNowLabel(String time) {
+    return '지금 $time';
+  }
+
+  @override
+  String dashScheduleNextSession(String time, String name) {
+    return '다음 수업 $time · $name';
+  }
+
+  @override
+  String dashScheduleMinutesLeft(int minutes) {
+    return '$minutes분 뒤';
+  }
+
+  @override
+  String get dashPrepareClass => '수업 준비하기';
+
+  @override
+  String get dashLeaveMemo => '메모 남기기';
+
+  @override
+  String get dashSessionSent => '전송됨';
+
+  @override
+  String get dashSessionPrepared => '준비됨';
+
+  @override
+  String get dashSessionNoteWritten => '작성됨';
+
+  @override
+  String get dashSessionSentNo => '전송 안됨';
+
+  @override
+  String get dashSessionPreparedNo => '준비 안됨';
+
+  @override
+  String get dashSessionNoteNotWritten => '작성 안됨';
 
   @override
   String get weekdayMon => '월';
@@ -2504,6 +2558,28 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get dashTaskDismissBody =>
       '오늘 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
+
+  @override
+  String get dashTaskCarriedOverTitle => '지난 할 일';
+
+  @override
+  String get dashTaskCategoryDone => '완료';
+
+  @override
+  String dashTaskCategoryRemaining(int count) {
+    return '+$count';
+  }
+
+  @override
+  String dashTaskUncheckTitle(String name) {
+    return '\'$name\' 완료를 취소할까요?';
+  }
+
+  @override
+  String get dashTaskUncheckBody => '할 일 진행률에서도 빠져요.';
+
+  @override
+  String get dashTaskUncheckConfirm => '완료 취소';
 
   @override
   String get churnNoRecentWorkout => '최근 7일 운동 기록 없음';

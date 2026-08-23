@@ -7,6 +7,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/churn_risk.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 
 /// Opens the 이탈 위험 dialog: who's flagged, and why.
@@ -92,7 +93,11 @@ class _ChurnRiskTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.borderStrong),
+          // 이 목록의 각 카드만 이탈 위험임을 말해야 한다 — 프로필 원까지
+          // 빨강이면 "이 사람 자체가 위험 신호"로 읽혀 다른 화면의 파란
+          // 아바타와 뜻이 갈린다. 원은 원래 UI(파랑)로 두고, 테두리만
+          // 빨강으로 눈에 띄게 한다.
+          border: Border.all(color: AppColors.warning, width: 1.5),
           borderRadius: const BorderRadius.all(AppRadius.md),
         ),
         child: Column(
@@ -100,19 +105,7 @@ class _ChurnRiskTile extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.statusChurnRisk.withValues(
-                    alpha: 0.12,
-                  ),
-                  child: Text(
-                    client.avatar,
-                    style: const TextStyle(
-                      color: AppColors.statusChurnRisk,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
+                ClientAvatar(label: client.avatar, size: 32),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
@@ -157,7 +150,7 @@ class _ChurnRiskTile extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.statusChurnRisk.withValues(alpha: 0.10),
+                      color: AppColors.warning.withValues(alpha: 0.10),
                       borderRadius: const BorderRadius.all(AppRadius.pill),
                     ),
                     child: Text(
@@ -165,7 +158,7 @@ class _ChurnRiskTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.statusChurnRisk,
+                        color: AppColors.warning,
                       ),
                     ),
                   ),

@@ -32,18 +32,45 @@ enum ActivityFeedbackKind {
       names,
     ),
   };
+
+  /// A short clause telling the trainer *where* to act — woven into the
+  /// end of [description] so the recommendation reads as part of the same
+  /// sentence, not a separate instruction.
+  String recommendation(AppLocalizations l) => switch (this) {
+    ActivityFeedbackKind.difficultyReview => l.dashActivityRecommendRoutine,
+    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityRecommendChat,
+    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityRecommendDiet,
+  };
+
+  /// The destination tab's own name — the CTA is a short "프로그램 >" link,
+  /// not a full sentence like "AI 루틴 만들러 가기". Each kind's fix lives
+  /// on a different tab (프로그램, 채팅, 식단), so the label names that tab.
+  String tabLabel(AppLocalizations l) => switch (this) {
+    ActivityFeedbackKind.difficultyReview => l.dashActivityTabProgram,
+    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityTabChat,
+    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityTabDiet,
+  };
 }
 
 /// One bullet on the "AI 진단" card's 트레이너 활동 피드백 list.
 class ActivityFeedbackItem {
   /// Creates a feedback bullet.
-  const ActivityFeedbackItem({required this.kind, required this.clientNames});
+  const ActivityFeedbackItem({
+    required this.kind,
+    required this.clientNames,
+    required this.clientIds,
+  });
 
   /// What this bullet is about.
   final ActivityFeedbackKind kind;
 
   /// Who triggered it — an empty list is a valid "none right now".
   final List<String> clientNames;
+
+  /// Same order as [clientNames] — the CTA jumps to [clientIds].first, the
+  /// client most worth checking first (`buildActivityFeedback`'s 로스터
+  /// 순서 그대로).
+  final List<String> clientIds;
 
   /// How many clients triggered this bullet.
   int get count => clientNames.length;
@@ -59,9 +86,9 @@ List<ActivityFeedbackItem> buildActivityFeedback({
   required Map<String, int> unread,
   required DateTime now,
 }) {
-  final difficultyReview = <String>[];
-  final inactiveSevenDays = <String>[];
-  final dietFeedbackPending = <String>[];
+  final difficultyReview = <TrainerClient>[];
+  final inactiveSevenDays = <TrainerClient>[];
+  final dietFeedbackPending = <TrainerClient>[];
 
   for (final client in clients.where((c) => c.active)) {
     final signals = computeChurnSignals(
@@ -74,31 +101,31 @@ List<ActivityFeedbackItem> buildActivityFeedback({
 
     if (signals.contains(ChurnSignal.noRecentWorkout) ||
         signals.contains(ChurnSignal.goalStagnant)) {
-      difficultyReview.add(client.name);
+      difficultyReview.add(client);
     }
 
     if (signals.contains(ChurnSignal.noRecentWorkout)) {
-      inactiveSevenDays.add(client.name);
+      inactiveSevenDays.add(client);
     }
 
     if ((client.sodiumOverBudget || client.sugarOverBudget) &&
         signals.contains(ChurnSignal.noRecentFeedback)) {
-      dietFeedbackPending.add(client.name);
+      dietFeedbackPending.add(client);
     }
   }
 
   return <ActivityFeedbackItem>[
-    ActivityFeedbackItem(
-      kind: ActivityFeedbackKind.difficultyReview,
-      clientNames: difficultyReview,
-    ),
-    ActivityFeedbackItem(
-      kind: ActivityFeedbackKind.inactiveSevenDays,
-      clientNames: inactiveSevenDays,
-    ),
-    ActivityFeedbackItem(
-      kind: ActivityFeedbackKind.dietFeedbackPending,
-      clientNames: dietFeedbackPending,
-    ),
+    _item(ActivityFeedbackKind.difficultyReview, difficultyReview),
+    _item(ActivityFeedbackKind.inactiveSevenDays, inactiveSevenDays),
+    _item(ActivityFeedbackKind.dietFeedbackPending, dietFeedbackPending),
   ];
 }
+
+ActivityFeedbackItem _item(
+  ActivityFeedbackKind kind,
+  List<TrainerClient> clients,
+) => ActivityFeedbackItem(
+  kind: kind,
+  clientNames: <String>[for (final c in clients) c.name],
+  clientIds: <String>[for (final c in clients) c.id],
+);

@@ -52,6 +52,17 @@ void main() {
         key.value.startsWith('dashboard-mission-$prefix-');
   });
 
+  /// 오늘 할 일은 카테고리별 아코디언이다 — 기본은 접혀 있어, 그 안의 미션
+  /// 행을 보거나 누르기 전에 헤더를 한 번 펼쳐야 한다.
+  Future<void> expandTaskCategory(WidgetTester tester, String title) async {
+    final toggle = find.byKey(
+      ValueKey<String>('dashboard-category-toggle-$title'),
+    );
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+  }
+
   /// 주의 고객 검증이 쓰는 고정 로스터. (#907)
   ///
   /// 건강 신호 여덟(나트륨 5 · 당류 1 · 이행률 2)과 답장 대기 둘. 기대값을
@@ -203,6 +214,7 @@ void main() {
 
   testWidgets('오늘 할 일은 건강 신호가 있는 고객을 미션으로 보여주고 그 섹션으로 연결한다', (tester) async {
     await openDashboard(tester, extraOverrides: attentionRosterOverrides());
+    await expandTaskCategory(tester, '식단');
 
     // 건강 신호 여덟(나트륨 5 · 당류 1 · 이행률 2) 전부가 미션이 된다.
     // 답장 대기 둘은 건강 신호가 아니라서 오늘 할 일에 없다(#907).
@@ -228,16 +240,26 @@ void main() {
     expect(find.textContaining('난이도를 낮추고'), findsOneWidget);
   });
 
-  testWidgets('AI 루틴 만들러 가기 opens the coaching workspace', (tester) async {
-    await openDashboard(tester);
+  for (final scenario in <({String kind, String route})>[
+    (kind: 'difficultyReview', route: '/coaching'),
+    (kind: 'inactiveSevenDays', route: '/messages'),
+    (kind: 'dietFeedbackPending', route: '/diet'),
+  ]) {
+    testWidgets('AI 진단의 ${scenario.kind} 버튼이 그 활동에 맞는 화면으로 이동한다', (
+      tester,
+    ) async {
+      await openDashboard(tester);
 
-    final button = find.text('AI 루틴 만들러 가기').first;
-    await tester.ensureVisible(button);
-    await tester.pumpAndSettle();
-    await tester.tap(button);
-    await settle(tester);
-    expect(currentLocation(tester), AppRoutes.coaching);
-  });
+      final button = find.byKey(
+        ValueKey<String>('ai-summary-cta-${scenario.kind}'),
+      );
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await settle(tester);
+      expect(currentLocation(tester), contains(scenario.route));
+    });
+  }
 
   testWidgets('the dashboard renders derived tasks without fake completion', (
     tester,
@@ -287,6 +309,8 @@ void main() {
         ),
       ],
     );
+    await expandTaskCategory(tester, '식단');
+    await expandTaskCategory(tester, '프로그램');
 
     expect(
       find.descendant(
@@ -312,10 +336,10 @@ void main() {
     );
   });
 
-  for (final scenario in <({String prefix, String route})>[
-    (prefix: 'feedback-sodiumOver', route: '/diet'),
-    (prefix: 'program', route: '/coaching'),
-    (prefix: 'report', route: '/reports'),
+  for (final scenario in <({String prefix, String category, String route})>[
+    (prefix: 'feedback-sodiumOver', category: '식단', route: '/diet'),
+    (prefix: 'program', category: '프로그램', route: '/coaching'),
+    (prefix: 'report', category: '리포트', route: '/reports'),
   ]) {
     testWidgets('${scenario.prefix} 미션을 누르면 해당 화면으로 이동한다', (tester) async {
       final client = makeClient(
@@ -335,6 +359,7 @@ void main() {
           ),
         ],
       );
+      await expandTaskCategory(tester, scenario.category);
 
       final mission = findMissionRow(scenario.prefix);
       await tester.ensureVisible(mission);
@@ -347,6 +372,7 @@ void main() {
 
   testWidgets('상담 요청 미션을 누르면 상담 인박스로 이동한다', (tester) async {
     await openDashboard(tester);
+    await expandTaskCategory(tester, '상담');
 
     final mission = findMissionRow('consultation');
     await tester.ensureVisible(mission);

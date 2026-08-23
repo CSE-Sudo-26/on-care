@@ -23,11 +23,6 @@ enum StatTone {
 
   /// On track — green.
   positive,
-
-  /// 이탈 위험처럼 [alert]/[warn] 보다 한 단계 더 심각한 신호 — 톤다운된
-  /// 빨강. 대시보드에서 "주의 고객"(warn)과 "이탈 위험"이 나란히 서는데,
-  /// 둘 다 같은 빨강이면 KPI 카드 두 장이 하나의 경고처럼 읽힌다.
-  severe,
 }
 
 /// A KPI tile: label, big number, unit, and a hint line.
@@ -45,6 +40,7 @@ class StatCard extends StatelessWidget {
     this.unit,
     this.hint,
     this.tone = StatTone.neutral,
+    this.solidIcon = false,
     this.onTap,
   });
 
@@ -66,6 +62,11 @@ class StatCard extends StatelessWidget {
   /// Semantic colour of the number.
   final StatTone tone;
 
+  /// Renders the leading glyph as a white icon on a solid tone-coloured
+  /// chip instead of a tone-tinted chip with a tone-coloured icon — for a
+  /// tile that needs to read as more urgent than the others in its row.
+  final bool solidIcon;
+
   /// Where this number leads.
   final VoidCallback? onTap;
 
@@ -75,7 +76,6 @@ class StatCard extends StatelessWidget {
     StatTone.alert => AppColors.overTarget,
     StatTone.warn => AppColors.warning,
     StatTone.positive => AppColors.success,
-    StatTone.severe => AppColors.statusChurnRisk,
   };
 
   Color get _iconColor =>
@@ -116,10 +116,16 @@ class StatCard extends StatelessWidget {
                       height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: _iconColor.withValues(alpha: 0.12),
+                        color: solidIcon
+                            ? _iconColor
+                            : _iconColor.withValues(alpha: 0.12),
                         borderRadius: const BorderRadius.all(AppRadius.sm),
                       ),
-                      child: Icon(icon, size: 15, color: _iconColor),
+                      child: Icon(
+                        icon,
+                        size: 15,
+                        color: solidIcon ? Colors.white : _iconColor,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(

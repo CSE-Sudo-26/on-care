@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
@@ -123,8 +124,18 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-/// 오늘 할 일 진행률 — this week's daily completion, 지난 할일(carried-over)
-/// stacked in a different colour.
+/// 몇 주 전까지 볼 수 있는가 — 무한정 뒤로 가면 SharedPreferences 에도 없는
+/// 빈 주만 계속 나온다.
+const int _maxTaskProgressWeeksBack = 8;
+
+/// 할 일 진행률 그래프가 보는 주 — 0 이 이번 주, 음수가 지난 주.
+final _taskProgressWeekOffsetProvider = StateProvider<int>(
+  (ref) => 0,
+  name: 'taskProgressWeekOffset',
+);
+
+/// 오늘 할 일 진행률 — 선택한 주의 일별 완료 현황, 지난 할일(carried-over)
+/// stacked in a different colour. `<`/`>` 로 지난 주 기록을 오갈 수 있다.
 class _TaskProgressCard extends ConsumerWidget {
   const _TaskProgressCard();
 
@@ -135,18 +146,56 @@ class _TaskProgressCard extends ConsumerWidget {
     ref.watch(taskProgressVersionProvider);
     final l = AppLocalizations.of(context);
     final store = ref.watch(dailyTaskProgressStoreProvider);
+    final offset = ref.watch(_taskProgressWeekOffsetProvider);
     final today = nowKst();
-    final monday = today.subtract(Duration(days: today.weekday - 1));
-    final dates = <String>[
-      for (var i = 0; i < weekdayCount; i++) ymd(monday.add(Duration(days: i))),
+    final currentMonday = today.subtract(Duration(days: today.weekday - 1));
+    final monday = currentMonday.add(Duration(days: 7 * offset));
+    final dates = <DateTime>[
+      for (var i = 0; i < weekdayCount; i++) monday.add(Duration(days: i)),
     ];
     return SectionCard(
       title: l.dashTaskProgressTitle,
       icon: Icons.stacked_bar_chart_outlined,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          IconButton(
+            key: const ValueKey<String>('task-progress-prev-week'),
+            onPressed: offset <= -_maxTaskProgressWeeksBack
+                ? null
+                : () => ref
+                      .read(_taskProgressWeekOffsetProvider.notifier)
+                      .state--,
+            icon: const Icon(Icons.chevron_left, size: 18),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            color: AppColors.subtleForeground,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          IconButton(
+            key: const ValueKey<String>('task-progress-next-week'),
+            onPressed: offset >= 0
+                ? null
+                : () => ref
+                      .read(_taskProgressWeekOffsetProvider.notifier)
+                      .state++,
+            icon: const Icon(Icons.chevron_right, size: 18),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            color: AppColors.subtleForeground,
+          ),
+        ],
+      ),
       child: TaskProgressChart(
-        snapshots: <DailyTaskSnapshot?>[for (final d in dates) store.read(d)],
+        snapshots: <DailyTaskSnapshot?>[
+          for (final d in dates) store.read(ymd(d)),
+        ],
+        dates: dates,
         labels: weekdayLabels(l),
-        todayIndex: elapsedWeekdays(today) - 1,
+        todayIndex: offset == 0 ? elapsedWeekdays(today) - 1 : weekdayCount - 1,
+        isCurrentWeek: offset == 0,
       ),
     );
   }
@@ -208,7 +257,11 @@ class _KpiRow extends StatelessWidget {
         value: '${churnRisk.length}',
         unit: l.dashUnitPeople,
         icon: Icons.person_off_outlined,
-        tone: churnRisk.isEmpty ? StatTone.positive : StatTone.severe,
+        // 주의 고객과 같은 빨강 — 톤다운한 빨강은 두 카드가 서로 다른
+        // 심각도처럼 읽혀 오히려 헷갈렸다. 아이콘은 배경을 꽉 채운 진한
+        // 톤으로 그려 더 눈에 띄게 한다.
+        tone: churnRisk.isEmpty ? StatTone.positive : StatTone.warn,
+        solidIcon: true,
         hint: churnRisk.isEmpty ? l.dashChurnRiskNone : l.dashChurnRiskCheck,
         onTap: () => showChurnRiskDialog(context, entries: churnRisk),
       ),
