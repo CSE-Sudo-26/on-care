@@ -14,6 +14,10 @@ typedef BarSegment = ({double value, Color color});
 ///
 /// 두 그림이 **같은 좌표**를 쓴다. 선을 따로 그린 그래프를 아래에 붙이면
 /// 눈금이 갈라져 같은 값이 두 높이로 보인다.
+///
+/// 막대 뒤에 빈 트랙을 깔지 않는다. 회색 기둥이 막대 위로 이어지면 `아직 못
+/// 채운 몫` 처럼 읽혀, 눈금 끝이 목표가 아닌 그래프(소모 칼로리처럼 목표가 없는
+/// 값)에서도 모자란 것처럼 보였다. 값이 없는 칸은 [emptyLabel] 이 말한다.
 class BarLineChart extends StatelessWidget {
   /// Creates the chart.
   const BarLineChart({
@@ -157,24 +161,6 @@ class _BarLinePainter extends CustomPainter {
     double topOf(double v) =>
         baseline - plotHeight * (v / ceiling).clamp(0.0, 1.0);
     bool drawn(int i) => i < pendingFrom && values[i] != null;
-
-    final Paint track = Paint()..color = AppColors.inputBackground;
-    for (var i = 0; i < values.length; i++) {
-      // 빈 트랙을 늘 깔아 둔다. 기록이 없는 칸과 아직 오지 않은 칸이 '자리는
-      // 있는데 값이 없다' 로 읽혀야 한다.
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            centerOf(i) - barWidth / 2,
-            topPad,
-            barWidth,
-            plotHeight,
-          ),
-          const Radius.circular(7),
-        ),
-        track,
-      );
-    }
 
     for (var i = 0; i < values.length; i++) {
       if (!drawn(i)) continue;

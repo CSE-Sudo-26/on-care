@@ -14,6 +14,8 @@ import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/client_report_view.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/metric_comparison_section.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/report_client_picker.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_export_dialog.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/week_trend_bar.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
@@ -227,16 +229,21 @@ void main() {
     await openReports(tester);
 
     // 식단 상자는 칼로리로 열리고, 막대는 탄·단·지로 쌓이므로 그 셋이
-    // 무엇인지 적어 준다.
-    expect(find.textContaining('탄수화물'), findsOneWidget);
-    expect(find.textContaining('단백질'), findsOneWidget);
-    expect(find.textContaining('지방'), findsOneWidget);
+    // 무엇인지 적어 준다. 고객 목록에도 `체지방 감량` 같은 목표가 있어 비교
+    // 상자 안으로 범위를 좁혀 본다.
+    Finder inBox(String text) => find.descendant(
+      of: find.byType(MetricComparisonSection),
+      matching: find.textContaining(text),
+    );
+    expect(inBox('탄수화물'), findsOneWidget);
+    expect(inBox('단백질'), findsOneWidget);
+    expect(inBox('지방'), findsOneWidget);
 
     await tester.tap(
       find.byKey(const ValueKey<String>('compare-diet-sugar')),
     );
     await settle(tester);
-    expect(find.textContaining('탄수화물'), findsNothing);
+    expect(inBox('탄수화물'), findsNothing);
 
     // 운동 상자는 따로 움직인다 — 식단 지표를 바꿔도 그대로다.
     await tester.tap(
@@ -630,7 +637,9 @@ void main() {
     expect(find.text('이지수님 주간 리포트'), findsOneWidget);
   });
 
-  testWidgets('고객 목록에 공용 주간 이행률을 막대로 비교한다 (#1097)', (tester) async {
+  testWidgets('고객 목록은 이름·목표만 적고 이행률 막대는 두지 않는다 (#1177)', (
+    tester,
+  ) async {
     await openReports(
       tester,
       extraOverrides: <Override>[
@@ -639,34 +648,32 @@ void main() {
             makeClient(
               id: 'measured',
               name: '기록고객',
+              goal: '혈압 관리',
               weekCompletion: const <int>[80, 0, 60, 0, 0, 0, 0],
-            ),
-            makeClient(
-              id: 'empty',
-              name: '미기록고객',
-              weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0],
             ),
           ]),
         ),
       ],
     );
 
-    InlineBarValue completionOf(String id) => tester.widget<InlineBarValue>(
-      find.byKey(ValueKey<String>('report-client-completion-$id')),
+    // 같은 값을 오른쪽 리포트가 훨씬 자세히 말한다 — 고르는 자리에는 이름과
+    // 목표만 둔다.
+    expect(
+      find.byKey(const ValueKey<String>('report-client-completion-measured')),
+      findsNothing,
     );
-
-    final measured = completionOf('measured');
-    expect(measured.label, '주간 이행률');
-    expect(measured.fraction, 0.7);
-    expect(measured.text, '70%');
-
-    final empty = completionOf('empty');
-    expect(empty.fraction, isNull);
-    expect(empty.text, '데이터 부족');
-    expect(find.text('0%'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(ReportClientPicker),
+        matching: find.byType(InlineBarValue),
+      ),
+      findsNothing,
+    );
+    expect(find.text('기록고객'), findsWidgets);
+    expect(find.text('혈압 관리'), findsWidgets);
   });
 
-  testWidgets('좁은 리포트 고객 목록에서 이행률 막대가 overflow 나지 않는다 (#1097)', (tester) async {
+  testWidgets('좁은 리포트 고객 목록도 넘치지 않는다', (tester) async {
     await openReports(
       tester,
       size: const Size(700, 760),
@@ -685,7 +692,7 @@ void main() {
     );
 
     expect(
-      find.byKey(const ValueKey<String>('report-client-completion-narrow')),
+      find.byKey(const ValueKey<String>('report-client-narrow')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
