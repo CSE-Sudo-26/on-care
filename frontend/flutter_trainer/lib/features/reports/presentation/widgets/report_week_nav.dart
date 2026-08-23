@@ -12,6 +12,11 @@ import 'package:oncare_trainer/shared/widgets/action_button.dart';
 /// 헤더가 아니라 **리포트 카드 제목 줄**에 있다. 옮기는 것은 이 카드의
 /// 내용이지 화면 전체가 아니고, 헤더에 두면 날짜 버튼 하나가 가운데 고객
 /// 검색 바의 폭을 먹어 다른 탭과 다른 모양으로 접혔다(#1177).
+///
+/// 이 줄은 카드 제목(`Expanded`) 오른쪽에 자기 폭만큼만 차지하고 붙는다 —
+/// 즉 이 위젯 **전체 폭이 곧 왼쪽 화살표의 위치**다. 날짜와 `이번 주` 자리에
+/// 고정폭을 주지 않으면 날짜 글자 수가 바뀌거나 버튼이 나타났다 사라질 때마다
+/// 전체 폭이 흔들려 왼쪽 화살표가 좌우로 밀린다(#1245).
 class ReportWeekNav extends StatelessWidget {
   /// Creates the week nav.
   const ReportWeekNav({
@@ -30,8 +35,19 @@ class ReportWeekNav extends StatelessWidget {
   /// 다음 주로. 가장 최근 주를 보고 있으면 null — 화살표가 회색으로 죽는다.
   final VoidCallback? onNext;
 
-  /// 이번 주로 돌아간다. 이미 이번 주면 null — 버튼은 자리를 지킨 채 죽는다.
+  /// 이번 주로 돌아간다. 이미 이번 주면 null — 버튼을 아예 그리지 않는다
+  /// (스케줄 탭 `오늘` 과 같다). 자리는 [_thisWeekSlot] 이 대신 지킨다.
   final VoidCallback? onThisWeek;
+
+  /// 날짜가 앉는 자리의 폭. 스케줄 탭 날짜 행(`ScheduleDateNavBar._dateSlot`)과
+  /// 같은 형식(`8월 17일 – 8월 23일`)을 쓰므로 자리도 그대로 맞춘다.
+  static const double _dateSlot = 150;
+
+  /// `이번 주` 가 앉는 자리의 폭. 버튼을 그리지 않을 때도 이 자리는 비워
+  /// 두어야 화살표가 밀리지 않는다.
+  static const double _thisWeekSlot = 100;
+
+  static const double _gap = AppSpacing.sm;
 
   @override
   Widget build(BuildContext context) {
@@ -45,27 +61,46 @@ class ReportWeekNav extends StatelessWidget {
           tooltip: l.a11yPrevWeek,
           onTap: onPrev,
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          rangeLabel,
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: AppColors.foreground,
+        const SizedBox(width: _gap),
+        SizedBox(
+          width: _dateSlot,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                rangeLabel,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.foreground,
+                ),
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        // 스케줄 탭의 `오늘` 과 같은 자리·같은 버튼이다. 헤더에 있던 때에는
-        // 옮기는 대상(리포트)과 버튼이 서로 다른 줄에 있어, 무엇을 이번 주로
+        const SizedBox(width: _gap),
+        // 스케줄 탭의 `오늘` 과 같은 자리다. 헤더에 있던 때에는 옮기는
+        // 대상(리포트)과 버튼이 서로 다른 줄에 있어, 무엇을 이번 주로
         // 되돌리는지 자리로 이어지지 않았다(#1177).
-        ActionButton(
-          key: const ValueKey<String>('reports-go-this-week'),
-          label: l.reportsThisWeek,
-          icon: Icons.today_outlined,
-          onPressed: onThisWeek,
+        SizedBox(
+          width: _thisWeekSlot,
+          child: onThisWeek == null
+              ? const SizedBox.shrink()
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: ActionButton(
+                      key: const ValueKey<String>('reports-go-this-week'),
+                      label: l.reportsThisWeek,
+                      icon: Icons.today_outlined,
+                      onPressed: onThisWeek,
+                    ),
+                  ),
+                ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        const SizedBox(width: _gap),
         _Chevron(
           navKey: const ValueKey<String>('report-week-next'),
           icon: Icons.chevron_right,
