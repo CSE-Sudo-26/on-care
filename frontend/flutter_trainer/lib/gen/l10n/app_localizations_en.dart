@@ -78,6 +78,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.';
 
   @override
+  String get schedDeleteMeansRemoveFinished =>
+      'Deleting erases the record. This session is already over and can\'t be undone.';
+
+  @override
   String get scheduleStatusGap => 'Open';
 
   @override
@@ -1479,7 +1483,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String schedDeleteConfirm(String time, String name) {
-    return 'Delete the $time session with $name?';
+    return 'Delete the $time PT session with $name?';
   }
 
   @override

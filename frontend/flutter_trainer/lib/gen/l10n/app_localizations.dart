@@ -218,6 +218,12 @@ abstract class AppLocalizations {
   /// **'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.'**
   String get schedDeleteMeansRemove;
 
+  /// No description provided for @schedDeleteMeansRemoveFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting erases the record. This session is already over and can\'t be undone.'**
+  String get schedDeleteMeansRemoveFinished;
+
   /// Display label for an empty slot in the trainer's day.
   ///
   /// In en, this message translates to:
@@ -2609,7 +2615,7 @@ abstract class AppLocalizations {
   /// No description provided for @schedDeleteConfirm.
   ///
   /// In en, this message translates to:
-  /// **'Delete the {time} session with {name}?'**
+  /// **'Delete the {time} PT session with {name}?'**
   String schedDeleteConfirm(String time, String name);
 
   /// No description provided for @schedDeleteFailed.

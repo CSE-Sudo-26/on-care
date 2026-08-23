@@ -32,6 +32,7 @@
   "schedCancelledBy": "{source} · {date}",
   "@schedCancelledBy": {"placeholders": {"source": {"type": "String"}, "date": {"type": "String"}}},
   "schedDeleteMeansRemove": "Deleting erases the record. Use cancel or no-show for a PT that didn't happen.",
+  "schedDeleteMeansRemoveFinished": "Deleting erases the record. This session is already over and can't be undone.",
   "scheduleStatusGap": "Open",
   "@scheduleStatusGap": {
     "description": "Display label for an empty slot in the trainer's day."
@@ -757,7 +758,7 @@
   "schedTitle": "Schedule",
   "schedDetailTitle": "Session detail",
   "schedDeleteTitle": "Delete session",
-  "schedDeleteConfirm": "Delete the {time} session with {name}?",
+  "schedDeleteConfirm": "Delete the {time} PT session with {name}?",
   "@schedDeleteConfirm": {
     "placeholders": {
       "time": {

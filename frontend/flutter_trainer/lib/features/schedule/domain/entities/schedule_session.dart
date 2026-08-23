@@ -1,5 +1,6 @@
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// One exercise in a PT session's program (e.g. 레그프레스 3세트 × 12회 · 80kg).
 class ProgramItem {
@@ -139,6 +140,22 @@ int? clockMinutes(String time) {
   if (hour == null || minute == null) return null;
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
   return hour * 60 + minute;
+}
+
+/// `12:00–12:50` — 시작과 끝. 시각이 `HH:mm` 이 아니면 [session]의 시작
+/// 시각 그대로.
+String timeRangeLabel(AppLocalizations l, ScheduleSession session) {
+  final start = clockMinutes(session.time);
+  if (start == null) return session.time;
+  return l.schedTimeRange(session.time, _hhmm(start + session.durationMinutes));
+}
+
+/// 자정부터의 분을 `HH:mm` 으로.
+String _hhmm(int minutes) {
+  final wrapped = minutes % (24 * 60);
+  final hour = (wrapped ~/ 60).toString().padLeft(2, '0');
+  final minute = (wrapped % 60).toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 /// [session] 이 지금부터 [leadMinutes] 안에 시작하는가. (#817)
