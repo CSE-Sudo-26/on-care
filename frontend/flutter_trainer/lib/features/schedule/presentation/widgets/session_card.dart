@@ -134,7 +134,7 @@ class SessionCard extends ConsumerWidget {
                           // 소요 시간(`(50분)`)은 적지 않는다 — 시작·끝 시각이
                           // 이미 그 값을 말하고 있어, 옆에 다시 적으면 같은
                           // 사실을 두 번 읽게 된다.
-                          _timeRange(l, s),
+                          timeRangeLabel(l, s),
                           maxLines: 1,
                           style: TextStyle(
                             // 시각은 이 카드에서 가장 먼저 읽는 값이다 —
@@ -243,7 +243,7 @@ class SessionCard extends ConsumerWidget {
                       ]
                     else if (s.isUpcoming) ...<Widget>[
                       // 예정 session without a plan yet.
-                      const SessionNoPlanBox(),
+                      SessionNoPlanBox(onAdd: onEditProgram),
                       const SizedBox(height: AppSpacing.md),
                     ],
                   if (s.note.isNotEmpty) ...<Widget>[
@@ -269,6 +269,9 @@ class SessionCard extends ConsumerWidget {
                     // 상담이면서 아직 메모가 없으면 `메모 추가` 는 위
                     // `SessionNoNoteBox` 안으로 옮겨 갔다(#1012).
                     showEditNote: !(noteOnly && s.note.trim().isEmpty),
+                    // 프로그램이 아직 비어 있으면 `프로그램 수정` 은 위
+                    // `SessionNoPlanBox` 안으로 옮겨 갔다(#1236).
+                    showEditProgram: s.program.isNotEmpty,
                     onDelete: onDelete,
                     onCancel: onCancel,
                     onNoShow: onNoShow,
@@ -297,24 +300,6 @@ class SessionCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// `12:00–12:50` — 시작과 끝. 시각은 자르지 않는다(#1012).
-///
-/// `12–12:50` 으로 줄였더니 그 자리가 무엇을 가리키는지 한 번 더 생각해야
-/// 했다. 시간표 블록과 같은 규칙이다.
-String _timeRange(AppLocalizations l, ScheduleSession session) {
-  final start = clockMinutes(session.time);
-  if (start == null) return session.time;
-  return l.schedTimeRange(session.time, _hhmm(start + session.durationMinutes));
-}
-
-/// 자정부터의 분을 `HH:mm` 으로.
-String _hhmm(int minutes) {
-  final wrapped = minutes % (24 * 60);
-  final hour = (wrapped ~/ 60).toString().padLeft(2, '0');
-  final minute = (wrapped % 60).toString().padLeft(2, '0');
-  return '$hour:$minute';
 }
 
 class _SendButton extends StatelessWidget {

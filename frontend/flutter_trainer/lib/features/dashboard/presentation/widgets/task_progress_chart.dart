@@ -4,7 +4,6 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 월~일 stacked bar of daily 오늘 할 일 completion.
 ///
@@ -42,9 +41,17 @@ class TaskProgressChart extends StatelessWidget {
   /// "today" to bold and no day left to greyed out as not-yet-happened.
   final bool isCurrentWeek;
 
+  /// "그날 목록의 몇 %를 처리했나" — 이월까지 포함한 완료 수를 그날 전체
+  /// 목록(오늘치 + 이월) 기준으로 잰다. 아직 오지 않았거나 기록이 없는
+  /// 날은 숫자를 보여줄 근거가 없어 빈 칸이다.
+  static String _percentLabel(DailyTaskSnapshot? snapshot) {
+    if (snapshot == null || snapshot.total == 0) return '';
+    final percent = (snapshot.completed / snapshot.total * 100).round();
+    return '$percent%';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final ceiling = <int>[
       1,
       for (final s in snapshots)
@@ -55,20 +62,27 @@ class TaskProgressChart extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // `Wrap`, not `Row` — 영어 로케일의 "Done (carried over)" 는 좁은
-        // 카드 폭에서 `Row` 로는 넘친다(#[dashboard]).
-        Wrap(
-          spacing: AppSpacing.md,
-          runSpacing: 4,
+        // 그날 목록을 다 채웠는지는 막대 높이만 봐서는 짐작해야 한다 —
+        // 숫자를 막대 바로 위에 얹어 둔다.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            _Legend(color: AppColors.primary, label: l.dashTaskProgressToday),
-            _Legend(
-              color: AppColors.aiCardGradientEnd,
-              label: l.dashTaskProgressCarriedOver,
-            ),
+            for (var i = 0; i < snapshots.length; i++)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    _percentLabel(snapshots[i]),
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.subtleForeground,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 2),
         SizedBox(
           height: 88,
           child: Row(
@@ -120,8 +134,16 @@ class TaskProgressChart extends StatelessWidget {
   }
 }
 
-class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label});
+/// A colour-dot + label legend entry — used both by the chart's own header
+/// (previously) and now by [_TaskProgressCard]'s section header, next to
+/// the card title.
+class TaskProgressLegend extends StatelessWidget {
+  /// Creates one legend entry.
+  const TaskProgressLegend({
+    super.key,
+    required this.color,
+    required this.label,
+  });
 
   final Color color;
   final String label;

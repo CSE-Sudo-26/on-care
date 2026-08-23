@@ -10,7 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
-import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
+import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
@@ -161,20 +161,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
   }
 
-  Future<void> _openConsultationInbox() async {
-    final date = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (_) => const ConsultationInboxSheet(),
-    );
-    final day = date == null ? null : DateTime.tryParse(date);
-    if (day != null && mounted) _selectDay(day);
-  }
-
   Future<void> _confirmDelete(ScheduleSession s) async {
     final AppLocalizations l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
@@ -209,14 +195,19 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              l.schedDeleteConfirm(s.time, s.clientName),
+              l.schedDeleteConfirm(timeRangeLabel(l, s), s.clientName),
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: AppSpacing.sm),
             // 삭제와 취소를 가르는 문장이다(#871). 실제 PT 가 진행되지 않은
             // 경우까지 삭제로 처리하면 그 사실이 어디에도 남지 않는다.
+            // 취소·노쇼 제안은 예정 세션에만 맞는 말이다 — 완료·취소·노쇼로
+            // 이미 끝난 세션(전이는 예정에서만 갈린다)에는 그 조치 자체가
+            // 불가능해, 다른 문구로 갈아 끼운다(#1226).
             Text(
-              l.schedDeleteMeansRemove,
+              s.isFinished
+                  ? l.schedDeleteMeansRemoveFinished
+                  : l.schedDeleteMeansRemove,
               style: const TextStyle(
                 fontSize: 12.5,
                 color: AppColors.subtleForeground,
@@ -249,12 +240,45 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   }
 
   /// 완료 처리 — flips the session to 완료 and logs it to the client's
-  /// 운동기록. 확인 다이얼로그 없이 바로 처리한다 — 메모는 완료 뒤에도
-  /// 상세 패널에서 언제든 남길 수 있어, 누르는 순간 매번 빈 메모란을
-  /// 보여줄 이유가 없다(#1106).
+  /// 운동기록. 확인 다이얼로그를 거친다 — 완료는 예정에서만 갈리는 종료
+  /// 상태라 취소·노쇼처럼 되돌릴 UI가 없고, 잘못 눌러도 물릴 방법이
+  /// 없다(#1227). 메모는 이 다이얼로그가 아니라 완료 뒤 상세 패널에서
+  /// 언제든 남길 수 있어, 여기서는 빈 메모란을 보여주지 않는다.
   Future<void> _confirmComplete(ScheduleSession s) async {
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(
+          l.schedCompleteTitle,
+          style: const TextStyle(fontSize: 17),
+        ),
+        content: Text(
+          l.schedCompleteConfirm(s.time, s.clientName),
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: <Widget>[
+          ActionButton(
+            label: l.actionCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ActionButton(
+            key: const ValueKey<String>('session-complete-confirm'),
+            label: l.legendDone,
+            primary: true,
+            tone: AppColors.success,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(scheduleRepositoryProvider)
@@ -425,7 +449,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         if (consultationInbox)
           ConsultationInboxAction(
             pending: pendingConsultations,
-            onTap: _openConsultationInbox,
+            onTap: () => showConsultationsDialog(context),
           ),
       ],
       scrollable: false,

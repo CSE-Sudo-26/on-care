@@ -403,7 +403,7 @@ void main() {
     });
   }
 
-  testWidgets('상담 요청 미션을 누르면 상담 인박스로 이동한다', (tester) async {
+  testWidgets('상담 요청 미션을 누르면 대시보드 위에 상담 모달을 띄운다', (tester) async {
     await openDashboard(tester);
     await expandTaskCategory(tester, '상담');
 
@@ -412,7 +412,15 @@ void main() {
     await tester.tap(mission);
     await settle(tester);
 
-    expect(currentLocation(tester), AppRoutes.consultations);
+    expect(currentLocation(tester), AppRoutes.dashboard);
+    expect(
+      find.byKey(const ValueKey<String>('consultations-dialog')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+      findsNothing,
+    );
   });
 
   group('AttentionCard.sectionFor', () {
