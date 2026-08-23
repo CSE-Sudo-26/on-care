@@ -755,7 +755,7 @@ void main() {
       await settle(tester);
 
       TextButton rejectButton() =>
-          tester.widget<TextButton>(find.widgetWithText(TextButton, '반려하기'));
+          tester.widget<TextButton>(find.widgetWithText(TextButton, '거절하기'));
       expect(rejectButton().onPressed, isNull);
 
       await tester.enterText(find.byType(TextField).last, '   ');
@@ -1165,13 +1165,12 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
+      // 확인 다이얼로그 없이 누르는 즉시 완료 처리된다 — 메모는 언제든
+      // 상세 패널에서 따로 남길 수 있어, 매번 빈 메모란을 거칠 이유가
+      // 없다(#1106).
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      await settle(tester);
-
-      await tester.enterText(find.byType(TextField).last, '벤치 폼 안정적');
-      await tester.tap(find.text('완료 처리'));
       await settle(tester);
 
       // The card flipped to 완료 (the 완료 action chip is gone).
@@ -1180,30 +1179,11 @@ void main() {
         findsNothing,
       );
 
-      // …and the 운동 sub-tab shows the fresh PT entry. The routines the
-      // tab absorbed sit above the history, so scroll down to it.
+      // …and the 운동 sub-tab shows the fresh PT entry.
       await goTo(
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'workout'),
       );
-      // 식단·운동은 자기 `ListView` 를 만들지 않는다(#1024) — 신체·목표·메모
-      // 패널과 하나의 스크롤을 공유하도록 `embedded: true` 로 그려진다. 그
-      // 공유 스크롤(`ListView`) 자체가 `client-detail-tabs-$clientId` 키를
-      // 달고 있다.
-      final workoutScroll = find
-          .descendant(
-            of: find.byKey(
-              const ValueKey<String>('client-detail-tabs-seed-client-3'),
-            ),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      await tester.scrollUntilVisible(
-        find.text('벤치 폼 안정적'),
-        150,
-        scrollable: workoutScroll,
-      );
-      expect(find.text('벤치 폼 안정적'), findsOneWidget);
       expect(find.textContaining('(오늘)'), findsWidgets);
     });
 
@@ -1524,8 +1504,6 @@ void main() {
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      await settle(tester);
-      await tester.tap(find.text('완료 처리'));
       await settle(tester);
 
       // The exception is caught: an error snackbar shows and the card is

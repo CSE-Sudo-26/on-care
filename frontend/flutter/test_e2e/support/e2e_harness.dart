@@ -34,6 +34,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:oncare/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -43,6 +44,9 @@ const String otherMemberEmail = 'jisu@oncare.com';
 /// 픽스처 전용. 정원 1 짜리 경쟁용 슬롯을 여는 데만 쓴다.
 const String trainerEmail = 'trainer@oncare.com';
 const String trainerId = 'trainer-demo';
+
+/// `trainer-demo` 가 소속된 헬스장. 상담 동선이 이 헬스장 상세를 거친다.
+const String consultationGymId = 'gym-oncare-sinchon';
 const String memberId = 'user-demo';
 const String otherMemberId = 'user-jisu';
 const String demoPassword = 'oncare123';
@@ -643,32 +647,49 @@ Future<void> openTrainerChat(WidgetTester tester) async {
   expect(page, findsWidgets, reason: '[$e2ePhase] 트레이너 채팅 화면이 열리지 않았습니다.');
 }
 
-/// 헬스장 탭 → 추천 트레이너 카드 → 상세 → 상담 신청 폼.
+/// 헬스장 탭(= 헬스장 찾기) → 헬스장 카드 → 상세 → 상담 보낼 트레이너 고르기 →
+/// 상담 신청 폼.
 ///
 /// 폼까지 UI 로 들어간다. 라우트를 직접 push 하면 "회원이 상담을 신청할 수 있다" 가
 /// 아니라 "그 화면이 열린다" 만 검증하게 된다. (#640)
+///
+/// 연결된 헬스장이 없는 회원의 헬스장 탭은 **찾기 화면 자체**다(#1133) — 예전의
+/// 추천 트레이너 레일은 그 상태에서 더 이상 없다.
 Future<void> openConsultationForm(WidgetTester tester, String targetId) async {
   await openGymTab(tester);
-  final Finder list = find.byKey(const Key('trainer-recommendation-list'));
-  await pumpUntil(tester, list, step: '추천 트레이너 목록');
+  final Finder card = find.byKey(const Key('gym-card-$consultationGymId'));
+  await pumpUntil(tester, find.byType(GymFinderView), step: '헬스장 찾기 화면');
 
   // 카드는 화면에 들어오기 전까지 **만들어지지 않는다**. `ensureVisible` 은 이미
   // 있는 위젯만 옮기므로, 지연 목록에서는 스크롤로 만들어 내야 한다.
-  final Finder card = find.byKey(ValueKey<String>('trainer-card-$targetId'));
-  await tester.scrollUntilVisible(
-    card,
-    240,
-    scrollable: find.descendant(of: list, matching: find.byType(Scrollable)),
-    maxScrolls: 60,
-  );
+  if (card.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      card,
+      240,
+      scrollable: find.descendant(
+        of: find.byType(GymFinderView),
+        matching: find.byType(Scrollable),
+      ),
+      maxScrolls: 60,
+    );
+  }
+  await tester.ensureVisible(card);
   await tester.pump();
   await tester.tap(card);
 
-  final Finder start = find.byKey(const Key('consult-start'));
-  await pumpUntil(tester, start, step: '상담 신청 버튼');
+  final Finder start = find.byKey(const Key('gym-consult-start'));
+  await pumpUntil(tester, start, step: '헬스장 상담 신청 버튼');
   await tester.ensureVisible(start);
   await tester.pump();
   await tester.tap(start);
+
+  // 상담은 트레이너 한 사람에게 간다 — 소속 트레이너 중에서 고른다.
+  final Finder pick = find.byKey(Key('gym-consult-trainer-$targetId'));
+  await pumpUntil(tester, pick, step: '상담 트레이너 고르기');
+  await tester.ensureVisible(pick);
+  await tester.pump();
+  await tester.tap(pick);
+
   // 폼의 **맨 위** 를 기다린다. 제출 버튼은 목록 끝이라 아직 만들어지지 않았다.
   await pumpUntil(
     tester,

@@ -7,11 +7,13 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
+import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -23,16 +25,29 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 ///
 /// 기간 토글은 이 카드가 아니라 바깥 [ClientPeriodSection] 이 그린다. 카드
 /// 안에 두면 기간을 바꿀 때 토글이 함께 움직인다.
+///
+/// `clientName` 을 주면 그래프 아래에 **상세 운동 내역**(종목별 완료 여부)이
+/// 붙는다(#1027).
 class ClientExerciseStatusCard extends ConsumerWidget {
   /// Creates the card for [clientId] over [period].
   const ClientExerciseStatusCard({
     super.key,
     required this.clientId,
     required this.period,
+    this.clientName,
   });
 
   final String clientId;
   final ClientPeriod period;
+
+  /// 값을 주면(빈 문자열이 아니어도 됨 — 실제로는 opt-in 스위치) 그래프 아래에
+  /// **상세 운동 내역**이 함께 붙는다. 그래프는 "얼마나 오래" 만 말해서, 다음
+  /// 프로그램을 짤 때 정작 필요한 "무엇을 몇 세트" 가 화면 밖에 있었다(#1027).
+  ///
+  /// 상세 내역은 고객 탭 `운동 기록`(`clientHistoryProvider`)과 같은 자료다.
+  /// 고객 탭은 같은 화면에 `운동 기록` 카드가 이미 있으므로 이 파라미터를
+  /// 주지 않는다 — 한 화면에서 같은 목록을 두 번 읽게 하지 않는다.
+  final String? clientName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,23 +56,224 @@ class ClientExerciseStatusCard extends ConsumerWidget {
     final AsyncValue<ClientExercisePeriod> async = ref.watch(
       clientExercisePeriodProvider(key),
     );
+    final String? name = clientName;
     return _Card(
-      child: async.when(
-        loading: () => const SizedBox(
-          height: 170,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-        error: (_, _) => EmptyHint(
-          message: l.clientTrendLoadFailed,
-          action: ActionButton(
-            key: const ValueKey<String>('weekly-exercise-retry'),
-            label: l.actionRetry,
-            onPressed: () => ref.invalidate(clientExercisePeriodProvider(key)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          async.when(
+            loading: () => const SizedBox(
+              height: 170,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, _) => EmptyHint(
+              message: l.clientTrendLoadFailed,
+              action: ActionButton(
+                key: const ValueKey<String>('weekly-exercise-retry'),
+                label: l.actionRetry,
+                onPressed: () =>
+                    ref.invalidate(clientExercisePeriodProvider(key)),
+              ),
+            ),
+            data: (ClientExercisePeriod data) => period == ClientPeriod.today
+                ? _Today(period: data)
+                : _Range(period: data),
+          ),
+          if (name != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            const Divider(height: 1, thickness: 1, color: AppColors.border),
+            const SizedBox(height: AppSpacing.md),
+            _WorkoutDetail(clientId: clientId),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 고객 탭 `운동 기록`(`WorkoutView`)과 **같은 자료**를 그래프 아래에 붙인다.
+/// (#1027 팔로업)
+///
+/// 처음에는 스케줄에 붙은 PT 세션(`clientSessionsProvider`)을 그래프와 같은
+/// 기간으로 걸러 보여줬다. 그런데 그 세션은 트레이너가 예약한 슬롯일 뿐이고,
+/// 고객 탭이 "운동 기록"이라 부르는 것은 완료율·피드백까지 포함한 별개의
+/// 이력(`clientHistoryProvider`)이다 — 데모에서는 전자가 하루치뿐이라 두 탭이
+/// 같은 고객을 보고도 다른 개수를 말했다. 같은 이름을 쓰는 이상 같은 자료를
+/// 봐야 하므로 소스를 맞춘다.
+///
+/// 이 이력에는 믿을 만한 날짜 필드가 없어(`dateLabel` 은 표시용 문자열) 그래프
+/// 처럼 기간으로 거를 수 없다 — 고객 탭의 `운동 기록` 도 같은 이유로 기간과
+/// 무관하게 전체를 보여준다. 대신 접힌 기본 상태에서는 가장 최근 기록 하나만
+/// 보이고, 아래 캐럿을 누르면 전체 이력으로 펼쳐진다.
+class _WorkoutDetail extends ConsumerStatefulWidget {
+  const _WorkoutDetail({required this.clientId});
+
+  final String clientId;
+
+  @override
+  ConsumerState<_WorkoutDetail> createState() => _WorkoutDetailState();
+}
+
+class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AsyncValue<List<RoutineHistoryEntry>> async = ref.watch(
+      clientHistoryProvider(widget.clientId),
+    );
+    return Column(
+      key: const ValueKey<String>('client-exercise-detail'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          l.workoutRecords,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.subtleForeground,
           ),
         ),
-        data: (ClientExercisePeriod data) => period == ClientPeriod.today
-            ? _Today(period: data)
-            : _Range(period: data),
+        const SizedBox(height: AppSpacing.xs),
+        async.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, _) => EmptyHint(message: l.workoutLoadFailed),
+          data: (List<RoutineHistoryEntry> entries) {
+            if (entries.isEmpty) {
+              return EmptyHint(
+                message: l.workoutEmpty,
+                icon: Icons.fitness_center_outlined,
+              );
+            }
+            final bool canExpand = entries.length > 1;
+            // 이력은 이미 최신순이다(`clientHistoryProvider`) — 접힌 상태의
+            // 첫 항목이 곧 가장 최근 기록이다.
+            final List<RoutineHistoryEntry> shown = _expanded
+                ? entries
+                : entries.take(1).toList(growable: false);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (final RoutineHistoryEntry entry in shown)
+                  _DetailEntry(entry: entry),
+                if (canExpand)
+                  _ExpandToggle(
+                    expanded: _expanded,
+                    onTap: () => setState(() => _expanded = !_expanded),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// 상세 내역을 펼치고 접는 캐럿. 접혔을 땐 늘 아래(더 볼 게 있다)를,
+/// 펼치면 위(접을 수 있다)를 가리킨다 — 화살표 방향 자체가 상태를 말해서
+/// 옆에 적힌 글자를 안 읽어도 무엇을 누르는지 알 수 있다.
+class _ExpandToggle extends StatelessWidget {
+  const _ExpandToggle({required this.expanded, required this.onTap});
+
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String label = expanded
+        ? l.workoutRecordsShowLess
+        : l.workoutRecordsShowMore;
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: InkWell(
+        key: const ValueKey<String>('client-exercise-detail-toggle'),
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              Icon(
+                expanded ? Icons.expand_less : Icons.expand_more,
+                size: 16,
+                color: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 이력 한 건 — 날짜·종류, 몇 개 중 몇 개를 했는지, 그리고 `ExerciseLine`
+/// 으로 그리는 종목별 수행 여부. 고객 탭 `_HistoryCard` 와 같은 자료를 쓰되,
+/// 사이드바 폭에 맞춰 완료율 도넛·피드백·트레이너 메모는 뺀 압축판이다 —
+/// 그 편집 동작은 고객 탭에만 있고, 여긴 그래프 옆 참고 자료다.
+class _DetailEntry extends StatelessWidget {
+  const _DetailEntry({required this.entry});
+
+  final RoutineHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final int done = entry.exercises
+        .where((String line) => !line.contains('✗'))
+        .length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '${entry.dateLabel} · ${entry.label}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              if (entry.exercises.isNotEmpty)
+                Text(
+                  l.workoutDoneOfTotal(entry.exercises.length, done),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          for (final String line in entry.exercises)
+            ExerciseLine(line: line, fontSize: 11.5),
+        ],
       ),
     );
   }

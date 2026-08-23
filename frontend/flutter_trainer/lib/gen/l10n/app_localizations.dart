@@ -1760,6 +1760,18 @@ abstract class AppLocalizations {
   /// **'Workout log'**
   String get workoutRecords;
 
+  /// No description provided for @workoutRecordsShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get workoutRecordsShowMore;
+
+  /// No description provided for @workoutRecordsShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get workoutRecordsShowLess;
+
   /// No description provided for @workoutLoadFailed.
   ///
   /// In en, this message translates to:
@@ -2450,30 +2462,6 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled for this day.\nUse New session above to add one.'**
   String get schedEmptyDay;
 
-  /// No description provided for @schedCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark session complete'**
-  String get schedCompleteTitle;
-
-  /// No description provided for @schedCompleteBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This marks the {time} session with {name} complete and logs it to their workout history.'**
-  String schedCompleteBody(String time, String name);
-
-  /// No description provided for @schedNoteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer\'s note (optional)'**
-  String get schedNoteOptional;
-
-  /// No description provided for @schedCompleteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark complete'**
-  String get schedCompleteAction;
-
   /// No description provided for @schedSaveFailed.
   ///
   /// In en, this message translates to:
@@ -2795,8 +2783,8 @@ abstract class AppLocalizations {
   /// No description provided for @slotCloseBody.
   ///
   /// In en, this message translates to:
-  /// **'The {count} existing bookings stay; only new bookings stop.'**
-  String slotCloseBody(int count);
+  /// **'Any existing booking stays; only new bookings stop.'**
+  String get slotCloseBody;
 
   /// No description provided for @slotClosed.
   ///
@@ -2843,14 +2831,20 @@ abstract class AppLocalizations {
   /// No description provided for @slotClosedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Closed · {booked} booked'**
-  String slotClosedSummary(int booked);
+  /// **'Closed'**
+  String get slotClosedSummary;
+
+  /// No description provided for @slotBookedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked'**
+  String get slotBookedSummary;
 
   /// No description provided for @slotOpenSummary.
   ///
   /// In en, this message translates to:
-  /// **'{booked} booked · {remaining} left'**
-  String slotOpenSummary(int booked, int remaining);
+  /// **'Open'**
+  String get slotOpenSummary;
 
   /// No description provided for @slotCloseAction.
   ///

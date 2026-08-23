@@ -109,12 +109,12 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     required String sessionType,
   }) async {
     _validateFuture(startsAt);
-    // 슬롯은 늘 한 사람 몫이다(#1012) — 정원은 늘 1.
+    // 슬롯은 늘 한 사람 몫이라 새로 연 자리는 비어 있는 상태로 시작한다
+    // (#1012, #1072).
     final slot = ReservationSlot(
       id: 'slot-${DateTime.now().microsecondsSinceEpoch}',
       startsAt: startsAt,
-      capacity: 1,
-      remaining: 1,
+      booked: false,
       isClosed: false,
       sessionType: sessionType,
     );
@@ -132,16 +132,13 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     if (index < 0) throw StateError('not_found');
     final old = _slots[index];
     if (startsAt != null) _validateFuture(startsAt);
-    if (sessionType != null &&
-        sessionType != old.sessionType &&
-        old.booked > 0) {
+    if (sessionType != null && sessionType != old.sessionType && old.booked) {
       throw StateError('type_locked_by_booking');
     }
     final updated = ReservationSlot(
       id: old.id,
       startsAt: startsAt ?? old.startsAt,
-      capacity: old.capacity,
-      remaining: old.remaining,
+      booked: old.booked,
       isClosed: old.isClosed,
       sessionType: sessionType ?? old.sessionType,
     );
@@ -157,8 +154,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     final closed = ReservationSlot(
       id: old.id,
       startsAt: old.startsAt,
-      capacity: old.capacity,
-      remaining: old.remaining,
+      booked: old.booked,
       isClosed: true,
       sessionType: old.sessionType,
     );

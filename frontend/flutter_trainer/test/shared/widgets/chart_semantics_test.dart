@@ -102,7 +102,6 @@ void main() {
         goal: 2000,
         ticks: <double>[0, 1750, 3500],
         todayIndex: 2,
-        replayKey: 'sodium',
         semanticsLabel: '나트륨 주간 추이. 월 1800mg',
         formatTick: metricTrendNumber,
       ),

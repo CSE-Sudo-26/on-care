@@ -943,6 +943,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutRecords => 'Workout log';
 
   @override
+  String get workoutRecordsShowMore => 'Show more';
+
+  @override
+  String get workoutRecordsShowLess => 'Show less';
+
+  @override
   String get workoutLoadFailed => 'Couldn\'t load the workout log';
 
   @override
@@ -1383,20 +1389,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nothing scheduled for this day.\nUse New session above to add one.';
 
   @override
-  String get schedCompleteTitle => 'Mark session complete';
-
-  @override
-  String schedCompleteBody(String time, String name) {
-    return 'This marks the $time session with $name complete and logs it to their workout history.';
-  }
-
-  @override
-  String get schedNoteOptional => 'Trainer\'s note (optional)';
-
-  @override
-  String get schedCompleteAction => 'Mark complete';
-
-  @override
   String get schedSaveFailed => 'Couldn\'t save the session. Please try again';
 
   @override
@@ -1574,9 +1566,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotCloseTitle => 'Close booking slot';
 
   @override
-  String slotCloseBody(int count) {
-    return 'The $count existing bookings stay; only new bookings stop.';
-  }
+  String get slotCloseBody =>
+      'Any existing booking stays; only new bookings stop.';
 
   @override
   String get slotClosed => 'New bookings closed.';
@@ -1603,14 +1594,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotEmpty => 'No booking slots open on this day.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return 'Closed · $booked booked';
-  }
+  String get slotClosedSummary => 'Closed';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '$booked booked · $remaining left';
-  }
+  String get slotBookedSummary => 'Booked';
+
+  @override
+  String get slotOpenSummary => 'Open';
 
   @override
   String get slotCloseAction => 'Close bookings';

@@ -10,7 +10,8 @@
 ///  * 칼로리는 큰 숫자 + 달성률 링. 목표를 넘기면 빨강.
 ///  * 탄단지는 진행 바. 항목별로 목표를 넘기면 빨강 — 세 항목이 각자 판단한다.
 ///  * 나트륨·당류는 별도 카드 두 장. 정상 초록 / 초과 빨강 — 둘은 같은 성격의
-///    지표라 "정상" 을 서로 다른 색으로 말하지 않는다.
+///    지표라 "정상" 을 서로 다른 색으로 말하지 않는다. 그 초록은 앱 전체가
+///    쓰는 [AppColors.statusNormal] 하나다(#1027).
 ///
 /// 목표값은 회원 앱 기본값과 같다(`UserProfile.defaultDaily*`). 회원이 자기
 /// 목표를 바꿔도 트레이너 API 가 그 값을 주지 않아, 지금은 기본값으로 그린다.
@@ -462,6 +463,11 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     // 나트륨·당류는 같은 성격의 지표다. "정상" 을 서로 다른 색으로 말하지 않는다.
+    //
+    // 그 "정상 초록" 은 이제 [AppColors.statusNormal] 하나다(#1027). 값은
+    // 예전 `userSugarGreen` 과 같지만, 이름이 `당류` 를 가리키는 한 나트륨이
+    // 왜 당류의 초록을 쓰는지 설명할 수 없었다. 식단 그래프의 정상 점도 같은
+    // 토큰을 본다.
     final Color status = item.isOverGoal
         ? AppColors.statusOver
         : AppColors.statusNormal;

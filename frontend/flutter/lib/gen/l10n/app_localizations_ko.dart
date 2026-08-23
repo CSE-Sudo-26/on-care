@@ -120,13 +120,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeExerciseTrendUnavailable => '주간 운동 기록을 불러오지 못했어요.';
 
   @override
-  String get homeExerciseActiveTime => '운동 시간';
-
-  @override
   String get homeExerciseBurned => '소모 칼로리';
-
-  @override
-  String get homeExerciseDays => '운동 일수';
 
   @override
   String get homeMealReasonSodium => '나트륨 조절에 좋아요';
@@ -185,7 +179,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeRecBasisOverLimit => '권장 초과';
 
   @override
-  String get homeRecMealsTitle => '이번 주 AI 추천 식단';
+  String get homeRecMealsTitle => '추천 식단';
 
   @override
   String get homeViewAll => '전체 보기';
@@ -205,7 +199,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitMinutes => '분';
 
   @override
-  String get unitDays => '일';
+  String get unitSets => '세트';
 
   @override
   String unitKcalValue(int count) {
@@ -287,9 +281,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietPeriodAverage => '하루 평균';
-
-  @override
-  String get dietPeriodTotal => '기간 합계';
 
   @override
   String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';
@@ -601,9 +592,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exBurnAllTitle => '평균 소모';
 
   @override
-  String get exLoadDayTitle => '소모';
-
-  @override
   String exGoalValue(String value) {
     return '목표 $value';
   }
@@ -799,7 +787,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exGymSearchHint => '헬스장, 지역으로 검색';
 
   @override
-  String get exNearbyGyms => '주변 헬스장 · O2O 연동';
+  String get exNearbyGyms => '주변 헬스장';
 
   @override
   String get exAiAnalysis => '✦ AI 분석';
@@ -842,21 +830,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTrainerDedicated => '전담 트레이너';
 
   @override
-  String get exAiSlotTitle => '✦ AI 추천 예약 시간';
-
-  @override
   String exTrainerAvailability(String trainer) {
-    return '$trainer 빈 시간';
+    return '$trainer 빈 예약 시간';
   }
 
   @override
   String exSlotWhen(String date, String time) {
     return '$date $time';
-  }
-
-  @override
-  String exSlotRemaining(int count) {
-    return '잔여 $count자리';
   }
 
   @override
@@ -1693,7 +1673,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalsDietSection => '식단 일일 목표';
 
   @override
-  String get myGoalsExerciseSection => '주간 운동 목표';
+  String get myGoalsExerciseSection => '운동 목표';
+
+  @override
+  String get myGoalBurnDaily => '일일 소모 칼로리 (kcal)';
+
+  @override
+  String get myGoalCardioWeekly => '주간 유산소 (분)';
+
+  @override
+  String get myGoalStrengthWeekly => '주간 근력 (세트)';
+
+  @override
+  String get myGoalFlexibilityWeekly => '주간 스트레칭 (분)';
+
+  @override
+  String get myGoalExerciseSuggestionNote =>
+      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 스트레칭 60분';
+
+  @override
+  String get myGoalExerciseApplySuggestion => '권장 비율로 채우기';
 
   @override
   String get myGoalCalories => '일일 칼로리 제한 (kcal)';
@@ -1761,16 +1760,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachAssignedTrainer => '담당 트레이너';
 
   @override
-  String get coachAiCoaching => 'AI 코칭';
-
-  @override
   String get coachPointsTitle => '이번 코칭 포인트';
 
   @override
   String get coachRoutineTitle => '추천 개인운동';
-
-  @override
-  String get coachRoutineSubtitle => 'PT 와 다음 PT 사이에 스스로 하는 운동이에요';
 
   @override
   String get coachRoutineByTrainer => '트레이너 직접 추천';
@@ -1797,6 +1790,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachRoutineDone => '수행 완료';
+
+  @override
+  String get coachRoutineUndo => '완료 취소';
+
+  @override
+  String coachRoutineUndoConfirm(String name) {
+    return '\'$name\' 완료를 취소할까요? 운동 기록에서도 빠져요.';
+  }
+
+  @override
+  String get coachRoutineUndone => '완료를 취소했어요';
+
+  @override
+  String get coachRoutineUndoFailed => '완료 취소에 실패했어요.';
 
   @override
   String get coachRoutineCancel => '이 개인 운동 취소';

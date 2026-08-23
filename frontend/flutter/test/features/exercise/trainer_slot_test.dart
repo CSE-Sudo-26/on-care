@@ -19,12 +19,16 @@ void main() {
     expect(kim, isNotEmpty);
     expect(park, isNotEmpty);
     expect(kim.every((TrainerSlot s) => s.trainerId == 'trainer-kim'), isTrue);
-    expect(park.every((TrainerSlot s) => s.trainerId == 'trainer-park'), isTrue);
+    expect(
+      park.every((TrainerSlot s) => s.trainerId == 'trainer-park'),
+      isTrue,
+    );
     // 같은 헬스장 소속이어도 빈 시간이 겹치지 않는다.
     expect(
-      kim.map((TrainerSlot s) => s.startsAt).toSet().intersection(
-        park.map((TrainerSlot s) => s.startsAt).toSet(),
-      ),
+      kim
+          .map((TrainerSlot s) => s.startsAt)
+          .toSet()
+          .intersection(park.map((TrainerSlot s) => s.startsAt).toSet()),
       isEmpty,
     );
   });
@@ -70,10 +74,10 @@ void main() {
     expect(await MockGymRepository().fetchSlots('trainer-nope'), isEmpty);
   });
 
-  test('예약하면 잔여 자리가 줄고 다시 조회해도 유지된다', () async {
+  test('예약하면 그 자리가 마감되고 다시 조회해도 유지된다', () async {
     final MockGymRepository repo = MockGymRepository();
     final List<TrainerSlot> before = await repo.fetchSlots('trainer-kim');
-    final TrainerSlot open = before.firstWhere((TrainerSlot s) => !s.isFull);
+    final TrainerSlot open = before.firstWhere((TrainerSlot s) => !s.booked);
 
     await repo.reserve(open.id);
 
@@ -81,36 +85,18 @@ void main() {
     final TrainerSlot same = after.firstWhere(
       (TrainerSlot s) => s.id == open.id,
     );
-    expect(same.remaining, open.remaining - 1);
-    expect(same.capacity, open.capacity, reason: '정원은 그대로여야 함');
+    // 1:1 PT 라 한 번 잡히면 그 자리는 그대로 마감이다 — 남는 자리가 없다.
+    expect(same.booked, isTrue);
+    // 같은 자리를 두 번 잡을 수 없다.
+    await expectLater(repo.reserve(open.id), throwsStateError);
   });
 
   test('마감된 자리는 예약할 수 없다', () async {
     final MockGymRepository repo = MockGymRepository();
     final List<TrainerSlot> slots = await repo.fetchSlots('trainer-kim');
-    final TrainerSlot full = slots.firstWhere((TrainerSlot s) => s.isFull);
+    final TrainerSlot full = slots.firstWhere((TrainerSlot s) => s.booked);
 
-    expect(full.remaining, 0);
     await expectLater(repo.reserve(full.id), throwsStateError);
-  });
-
-  test('마지막 한 자리를 잡으면 그 슬롯이 마감된다', () async {
-    final MockGymRepository repo = MockGymRepository();
-    final List<TrainerSlot> slots = await repo.fetchSlots('trainer-park');
-    // 박트레이너는 1:1 이라 정원이 1이다.
-    final TrainerSlot single = slots.firstWhere(
-      (TrainerSlot s) => s.capacity == 1 && !s.isFull,
-    );
-
-    await repo.reserve(single.id);
-
-    final List<TrainerSlot> after = await repo.fetchSlots('trainer-park');
-    expect(
-      after.firstWhere((TrainerSlot s) => s.id == single.id).isFull,
-      isTrue,
-    );
-    // 같은 자리를 두 번 잡을 수 없다.
-    await expectLater(repo.reserve(single.id), throwsStateError);
   });
 
   test('없는 슬롯 예약은 실패한다', () async {
@@ -131,10 +117,7 @@ void main() {
     );
     if (!todaySlotGone) {
       // 아직 오늘 자리가 유효한 시각이므로 이 성질은 검증 대상이 아니다.
-      expect(
-        live.every((TrainerSlot s) => s.startsAt.isAfter(now)),
-        isTrue,
-      );
+      expect(live.every((TrainerSlot s) => s.startsAt.isAfter(now)), isTrue);
       return;
     }
     await expectLater(repo.reserve('slot-kang-today'), throwsStateError);
@@ -145,14 +128,14 @@ void main() {
     final List<TrainerSlot> parkBefore = await repo.fetchSlots('trainer-park');
     final TrainerSlot kimSlot = (await repo.fetchSlots(
       'trainer-kim',
-    )).firstWhere((TrainerSlot s) => !s.isFull);
+    )).firstWhere((TrainerSlot s) => !s.booked);
 
     await repo.reserve(kimSlot.id);
 
     final List<TrainerSlot> parkAfter = await repo.fetchSlots('trainer-park');
     expect(
-      parkAfter.map((TrainerSlot s) => s.remaining),
-      parkBefore.map((TrainerSlot s) => s.remaining),
+      parkAfter.map((TrainerSlot s) => s.booked),
+      parkBefore.map((TrainerSlot s) => s.booked),
     );
   });
 }

@@ -1378,6 +1378,38 @@ def complete_assigned_routine(
     return _routine_out(routine, row)
 
 
+def uncomplete_assigned_routine(
+    db: Session,
+    trainer_id: str | None,
+    member_id: str,
+    routine_id: str,
+) -> RoutineOut:
+    """완료 표시를 되돌린다 — 그 배정으로 만들어진 운동 기록을 지운다. (#1131)
+
+    회원이 체크를 잘못 눌렀을 때 되돌릴 방법이 없으면, 하지 않은 운동이 주간
+    시간·칼로리에 영원히 남는다. 완료는 배정 하나당 기록 하나(`assigned_routine_id`
+    unique)라 지울 대상도 하나다.
+
+    아직 완료하지 않은 배정에 대해서는 아무 일도 하지 않고 현재 상태를 돌려준다 —
+    같은 요청을 두 번 보내도 결과가 같다.
+    """
+    routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    row = db.scalar(
+        select(ExerciseSession).where(
+            ExerciseSession.assigned_routine_id == routine_id,
+            ExerciseSession.user_id == member_id,
+        )
+    )
+    if row is None:
+        return _routine_out(routine, None)
+    session_id = row.id
+    db.delete(row)
+    db.commit()
+    # 근거 문서도 함께 지운다 — 행이 사라지면 `_load` 가 None 을 돌려준다.
+    personal_ingest.refresh_exercise(db, member_id, session_id=session_id)
+    return _routine_out(routine, None)
+
+
 def update_assigned_routine_feedback(
     db: Session,
     trainer_id: str,

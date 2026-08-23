@@ -66,6 +66,22 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   }
 
   @override
+  Future<CoachRoutine> uncompleteRoutine(String routineId) async {
+    try {
+      final Response<Map<String, Object?>> response = await _dio.delete(
+        '/me/coach/routines/$routineId/complete',
+      );
+      final Map<String, Object?>? data = response.data;
+      if (data == null) {
+        throw const FormatException('Missing routine.');
+      }
+      return coachRoutineFromJson(data);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
   Future<void> deleteRoutine(String routineId) async {
     try {
       await _dio.delete<void>('/me/coach/routines/$routineId');

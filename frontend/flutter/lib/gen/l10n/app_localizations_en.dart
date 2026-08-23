@@ -122,13 +122,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load this week\'s workout history.';
 
   @override
-  String get homeExerciseActiveTime => 'Active time';
-
-  @override
   String get homeExerciseBurned => 'Calories';
-
-  @override
-  String get homeExerciseDays => 'Workout days';
 
   @override
   String get homeMealReasonSodium => 'Great for sodium control';
@@ -187,7 +181,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecBasisOverLimit => 'over the daily limit';
 
   @override
-  String get homeRecMealsTitle => 'This week\'s AI meal picks';
+  String get homeRecMealsTitle => 'Recommended meals';
 
   @override
   String get homeViewAll => 'View all';
@@ -207,7 +201,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitMinutes => 'min';
 
   @override
-  String get unitDays => 'days';
+  String get unitSets => 'sets';
 
   @override
   String unitKcalValue(int count) {
@@ -289,9 +283,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietPeriodAverage => 'Daily average';
-
-  @override
-  String get dietPeriodTotal => 'Period total';
 
   @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';
@@ -611,9 +602,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exBurnAllTitle => 'Average burned';
 
   @override
-  String get exLoadDayTitle => 'Burned';
-
-  @override
   String exGoalValue(String value) {
     return 'Goal $value';
   }
@@ -822,7 +810,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymSearchHint => 'Search by gym or area';
 
   @override
-  String get exNearbyGyms => 'Nearby Gyms · O2O';
+  String get exNearbyGyms => 'Nearby gyms';
 
   @override
   String get exAiAnalysis => '✦ AI analysis';
@@ -865,21 +853,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTrainerDedicated => 'Personal trainer';
 
   @override
-  String get exAiSlotTitle => '✦ AI recommended times';
-
-  @override
   String exTrainerAvailability(String trainer) {
-    return '$trainer\'s openings';
+    return '$trainer\'s open booking times';
   }
 
   @override
   String exSlotWhen(String date, String time) {
     return '$date $time';
-  }
-
-  @override
-  String exSlotRemaining(int count) {
-    return '$count left';
   }
 
   @override
@@ -1742,7 +1722,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalsDietSection => 'Daily diet goals';
 
   @override
-  String get myGoalsExerciseSection => 'Weekly exercise goals';
+  String get myGoalsExerciseSection => 'Exercise goals';
+
+  @override
+  String get myGoalBurnDaily => 'Daily calories burned (kcal)';
+
+  @override
+  String get myGoalCardioWeekly => 'Weekly cardio (min)';
+
+  @override
+  String get myGoalStrengthWeekly => 'Weekly strength (sets)';
+
+  @override
+  String get myGoalFlexibilityWeekly => 'Weekly stretching (min)';
+
+  @override
+  String get myGoalExerciseSuggestionNote =>
+      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week';
+
+  @override
+  String get myGoalExerciseApplySuggestion => 'Use suggested goals';
 
   @override
   String get myGoalCalories => 'Daily calorie limit (kcal)';
@@ -1812,17 +1811,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAssignedTrainer => 'My trainer';
 
   @override
-  String get coachAiCoaching => 'AI coaching';
-
-  @override
   String get coachPointsTitle => 'This week\'s coaching points';
 
   @override
   String get coachRoutineTitle => 'Recommended solo workouts';
-
-  @override
-  String get coachRoutineSubtitle =>
-      'Workouts to do on your own between PT sessions';
 
   @override
   String get coachRoutineByTrainer => 'Recommended by your trainer';
@@ -1850,6 +1842,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachRoutineDone => 'Done';
+
+  @override
+  String get coachRoutineUndo => 'Undo';
+
+  @override
+  String coachRoutineUndoConfirm(String name) {
+    return 'Undo completing \'$name\'? It will be removed from your workout log too.';
+  }
+
+  @override
+  String get coachRoutineUndone => 'Completion undone';
+
+  @override
+  String get coachRoutineUndoFailed => 'Could not undo the completion.';
 
   @override
   String get coachRoutineCancel => 'Cancel this workout';
