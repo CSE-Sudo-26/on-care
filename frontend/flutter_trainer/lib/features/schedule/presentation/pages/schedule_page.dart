@@ -458,6 +458,19 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     context.go(AppRoutes.messagesFor(match.first.id));
   }
 
+  /// 계획 없는 세션의 `프로그램 추가` — 이 카드 안이 아니라 그 고객의 코칭
+  /// 탭으로 이동한다. 프로그램은 AI 코칭 탭에서 짓고 보내는 것이라, 스케줄
+  /// 카드에는 편집기를 두지 않는다(#1247).
+  void _openProgram(ScheduleSession s) {
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+    final match = clients.where((c) => c.name == s.clientName);
+    if (match.isEmpty) {
+      context.go(AppRoutes.clients);
+      return;
+    }
+    context.go(AppRoutes.coachingFor(match.first.id));
+  }
+
   String get _selectedYmd => ymd(_selectedDay);
 
   /// 날짜 행 오른쪽에 붙는 `오늘`. (#882, #988)
@@ -750,6 +763,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           session: session,
           onEditSchedule: () => _openScheduleDialog(existing: session),
           onEditProgram: () => _openProgramEditor(session, noteOnly: false),
+          onGoToProgram: () => _openProgram(session),
           onEditNote: () => _openProgramEditor(session, noteOnly: true),
           onDelete: () => _confirmDelete(session),
           onChat: () => _openChat(session),

@@ -1053,7 +1053,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'The reason you write is sent to the member as a notification.';
 
   @override
-  String get consultRejectHint => 'e.g. We\'re fully booked this month';
+  String get consultRejectHint =>
+      'e.g. I have another appointment at your requested time.';
 
   @override
   String get consultRejectAction => 'Decline';
@@ -1662,6 +1663,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progEditTitle => 'Edit program';
+
+  @override
+  String get progAddTitle => 'Add program';
 
   @override
   String get progAddExercise => 'Add exercise';

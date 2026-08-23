@@ -540,7 +540,10 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                     maxLines: 4,
                     decoration: InputDecoration(
                       hintText: l.schedNoteHint,
+                      // 테마 기본 힌트 크기가 옆 `메모` 라벨(13)보다 커서 이
+                      // 시트에서만 튀어 보였다 — 그 크기에 맞춘다(#1247).
                       hintStyle: const TextStyle(
+                        fontSize: 13,
                         color: AppColors.mutedForeground,
                       ),
                       isDense: true,

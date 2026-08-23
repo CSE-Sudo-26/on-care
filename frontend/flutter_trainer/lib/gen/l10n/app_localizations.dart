@@ -1949,7 +1949,7 @@ abstract class AppLocalizations {
   /// No description provided for @consultRejectHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. We\'re fully booked this month'**
+  /// **'e.g. I have another appointment at your requested time.'**
   String get consultRejectHint;
 
   /// No description provided for @consultRejectAction.
@@ -2941,6 +2941,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit program'**
   String get progEditTitle;
+
+  /// No description provided for @progAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add program'**
+  String get progAddTitle;
 
   /// No description provided for @progAddExercise.
   ///
