@@ -227,7 +227,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashActivityRecommendRoutine => '프로그램에서 루틴을 조정해보세요.';
 
   @override
-  String get dashActivityRecommendChat => '채팅에서 안부를 물어보세요.';
+  String get dashActivityRecommendChat => '메시지에서 안부를 물어보세요.';
 
   @override
   String get dashActivityRecommendDiet => '식단에서 피드백을 남겨보세요.';
@@ -236,7 +236,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashActivityTabProgram => '프로그램';
 
   @override
-  String get dashActivityTabChat => '채팅';
+  String get dashActivityTabChat => '메시지';
 
   @override
   String get dashActivityTabDiet => '식단';
