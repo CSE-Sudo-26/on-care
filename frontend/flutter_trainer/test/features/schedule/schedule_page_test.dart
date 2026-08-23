@@ -935,7 +935,7 @@ void main() {
       expect(find.text('15:00\u201316:00'), findsNothing);
     });
 
-    testWidgets('프로그램 수정 edits exercises inside the card', (tester) async {
+    testWidgets('프로그램 수정 opens a dialog to edit exercises', (tester) async {
       await openSchedule(tester);
 
       await openSession(tester, '박성호');
@@ -949,10 +949,10 @@ void main() {
       );
       await settle(tester);
 
+      // 좁은 상세 패널이 아니라 가운데 모달로 열린다 — 세트·횟수/시간·
+      // 중량 칸이 잘리던 문제의 근본 원인이었다.
       expect(
-        find.byKey(
-          const ValueKey<String>('week-program-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
@@ -986,9 +986,7 @@ void main() {
       await settle(tester);
 
       expect(
-        find.byKey(
-          const ValueKey<String>('week-program-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsNothing,
       );
       expect(find.textContaining('15:00\u201316:00'), findsWidgets);
@@ -1018,7 +1016,7 @@ void main() {
 
       // 운동 목록 없이 메모만 연다.
       expect(
-        find.byKey(const ValueKey<String>('week-note-editor-seed-schedule-3')),
+        find.byKey(const ValueKey<String>('note-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
