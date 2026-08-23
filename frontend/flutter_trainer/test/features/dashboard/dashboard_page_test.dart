@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -210,6 +211,38 @@ void main() {
     expect(find.text('완료'), findsWidgets);
     // 빈 시간(공백 슬롯)은 이제 아예 그리지 않는다 — 예약된 것만 보여준다.
     expect(find.textContaining('빈 시간'), findsNothing);
+  });
+
+  testWidgets('오늘의 일정 행은 자신이 가리키는 세션을 선택해 연다', (tester) async {
+    await openDashboard(tester);
+
+    final rows = find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith(
+            'dashboard-schedule-',
+          ),
+    );
+    expect(rows, findsWidgets);
+    final target = rows.at(1);
+    final targetKey = tester.widget(target).key! as ValueKey<String>;
+    final sessionId = targetKey.value.substring('dashboard-schedule-'.length);
+
+    await tester.ensureVisible(target);
+    await tester.tap(target);
+    await settle(tester);
+
+    expect(currentLocation(tester), contains('session=$sessionId'));
+    expect(
+      find.byKey(ValueKey<String>('schedule-session-$sessionId')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<ScheduleWeekTimetable>(find.byType(ScheduleWeekTimetable))
+          .selectedSessionId,
+      sessionId,
+    );
   });
 
   testWidgets('오늘 할 일은 건강 신호가 있는 고객을 미션으로 보여주고 그 섹션으로 연결한다', (tester) async {

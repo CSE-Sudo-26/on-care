@@ -1,0 +1,143 @@
+/// 식단 영양 요약의 도넛 모션과 초과 색 (#1201 · #1202).
+///
+///  * 오늘 화면의 달성률 도넛은 12시에서 지금 비율까지 채워지며 들어온다.
+///  * 전체 화면의 칼로리 막대는 목표를 넘긴 날만 빨강 세 단계로 쌓인다.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/fake_diet_repository.dart';
+
+/// 짝수 날은 목표(2,000kcal)를 넘고 홀수 날은 못 미친다 — 한 화면에서 두 색이
+/// 함께 나와야 초과 표시가 무엇을 가르는지 잴 수 있다.
+class _OverAndUnderDietRepository extends FakeDietRepository {
+  @override
+  Future<DietDay> fetchByDate(DateTime date) async => _dayOf(date);
+
+  static DietDay _dayOf(DateTime date) {
+    final bool over = date.day.isEven;
+    final int calories = over ? 3000 : 1200;
+    final double carbsG = over ? 300 : 120;
+    final double proteinG = over ? 150 : 60;
+    final double fatG = over ? 100 : 40;
+    return DietDay(
+      entries: <DietEntry>[
+        DietEntry(
+          id: 'e-${date.day}',
+          mealType: MealType.lunch,
+          timeLabel: '12:00',
+          foods: const <FoodItem>[],
+          totalCalories: calories,
+          sodiumMg: 900,
+          sugarG: 12,
+          carbsG: carbsG,
+          proteinG: proteinG,
+          fatG: fatG,
+        ),
+      ],
+      totalCalories: calories,
+      totalSodiumMg: 900,
+      totalSugarG: 12,
+      macros: DietMacros(
+        carbsPct: 50,
+        proteinPct: 30,
+        fatPct: 20,
+        carbsG: carbsG,
+        proteinG: proteinG,
+        fatG: fatG,
+      ),
+      aiCoachMessage: '',
+    );
+  }
+}
+
+Future<void> _pumpDiet(
+  WidgetTester tester, {
+  FakeDietRepository? repository,
+}) async {
+  tester.view.physicalSize = const Size(420, 1800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: <Override>[
+        dietRepositoryProvider.overrideWithValue(
+          repository ?? FakeDietRepository(),
+        ),
+        accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
+      ],
+      child: const MaterialApp(
+        locale: Locale('ko'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DietRecordPage(),
+      ),
+    ),
+  );
+  // 하루치가 도착할 만큼(대역 120ms) 돌린 뒤 모션 중간에서 멈춘다 —
+  // `pumpAndSettle` 하면 이미 다 채운 뒤다.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
+double? _donutValue(WidgetTester tester) => tester
+    .widget<CircularProgressIndicator>(
+      find.byKey(const Key('nutrition-calorie-progress')),
+    )
+    .value;
+
+void main() {
+  testWidgets('달성률 도넛은 채워지며 들어온다 (#1202)', (WidgetTester tester) async {
+    await _pumpDiet(tester);
+
+    final double? growing = _donutValue(tester);
+    expect(growing, isNotNull);
+
+    await tester.pumpAndSettle();
+    final double? settled = _donutValue(tester);
+
+    expect(growing, lessThan(settled!), reason: '도넛이 처음부터 다 차 있다');
+    expect(settled, greaterThan(0));
+  });
+
+  testWidgets('다 채운 뒤에는 더 움직이지 않는다 (#1202)', (WidgetTester tester) async {
+    await _pumpDiet(tester);
+    await tester.pumpAndSettle();
+    final double? settled = _donutValue(tester);
+
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(_donutValue(tester), settled);
+  });
+
+  testWidgets('목표를 넘긴 날의 칼로리 막대는 빨강 세 단계다 (#1201)', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDiet(tester, repository: _OverAndUnderDietRepository());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('diet-period-tab-month')));
+    await tester.pumpAndSettle();
+
+    final Iterable<Color> painted = tester
+        .widgetList<ColoredBox>(find.byType(ColoredBox))
+        .map((ColoredBox box) => box.color);
+
+    // 초과한 날이 하나라도 있으면 빨강 세 단계 중 진한 칸(탄수화물)이 보인다.
+    expect(
+      painted.contains(FigmaColors.macroCarbsOver),
+      isTrue,
+      reason: '초과한 날의 막대가 아직 파랑이다',
+    );
+    // 넘기지 않은 날은 그대로 파랑이다 — 전부 빨개지면 초과가 무의미해진다.
+    expect(painted.contains(FigmaColors.macroCarbs), isTrue);
+  });
+}

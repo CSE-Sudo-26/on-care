@@ -183,13 +183,13 @@ class AppRoutes {
   /// Builds the 스케줄 tab on a given date.
   ///
   /// 보기가 주간 시간표 하나뿐이라 `v=` 는 없다(#988). 날짜만 실어 보낸다.
-  static String scheduleAt({String? date}) {
+  static String scheduleAt({String? date, String? sessionId}) {
     // [clientDetail] 과 같은 이유로 빈 맵을 넘기지 않는다 — `Uri` 는 빈 쿼리와
     // 쿼리 없음을 구분해, 빈 맵에는 `?` 만 붙은 `/schedule?` 를 돌려준다.
-    if (date == null) return schedule;
+    if (date == null && sessionId == null) return schedule;
     return Uri(
       path: schedule,
-      queryParameters: <String, String>{'d': date},
+      queryParameters: <String, String>{'d': ?date, 'session': ?sessionId},
     ).toString();
   }
 

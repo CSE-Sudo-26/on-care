@@ -276,5 +276,23 @@ void main() {
       // 잘못 만든 일정과 진행되지 않은 PT 를 가르는 문장이다(#871).
       expect(find.textContaining('취소·노쇼로 남기세요'), findsOneWidget);
     });
+
+    testWidgets('완료된 세션의 삭제 확인 문구는 취소·노쇼를 권하지 않는다', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+      // 김민수(10:00, 완료)는 예정에서만 갈리는 취소·노쇼로 되돌릴 수 없다(#1226).
+      await openSession(tester, '김민수');
+      final delete = find.byKey(const ValueKey<String>('session-delete-chip'));
+      await revealInPanel(tester, delete.first);
+      await tester.tap(delete.first);
+      await settle(tester);
+
+      expect(find.textContaining('취소·노쇼로 남기세요'), findsNothing);
+      expect(
+        find.text('10:00–11:00 김민수님 PT 일정을 삭제할까요?'),
+        findsOneWidget,
+      );
+    });
   });
 }

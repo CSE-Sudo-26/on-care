@@ -339,10 +339,11 @@ void main() {
     await tester.pumpAndSettle();
     // 홈 운동 카드의 기준은 운동 탭 `운동 현황` 과 같은 ExerciseLoadGoals 다
     // (#1119). 주간 소모 2,100kcal · 유산소 150분 · 근력 21세트 · 스트레칭 60분.
-    expect(find.text(' /2,100kcal'), findsOneWidget);
-    expect(find.text(' /150분'), findsOneWidget);
-    expect(find.text(' /21세트'), findsOneWidget);
-    expect(find.text(' /60분'), findsOneWidget);
+    // 홈은 이제 그 카드를 그대로 쓰므로 값·목표가 한 덩어리로 적힌다 (#1183).
+    expect(find.textContaining('/2,100', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/150분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/21세트', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/60분', findRichText: true), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('openGoals')));
     await tester.pumpAndSettle();
@@ -361,11 +362,11 @@ void main() {
     expect(find.byType(HealthGoalsPage), findsNothing);
     // 저장한 목표가 홈 카드의 기준으로 바로 들어온다 (#1139). 주간 소모는
     // 하루 목표 × 7 이다.
-    expect(find.text(' /2,800kcal'), findsOneWidget);
-    expect(find.text(' /240분'), findsOneWidget);
-    expect(find.text(' /30세트'), findsOneWidget);
-    expect(find.text(' /90분'), findsOneWidget);
-    expect(find.text(' /2,100kcal'), findsNothing);
+    expect(find.textContaining('/2,800', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/240분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/30세트', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/90분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/2,100', findRichText: true), findsNothing);
 
     await tester.tap(find.byKey(const Key('showExercise')));
     await tester.pumpAndSettle();

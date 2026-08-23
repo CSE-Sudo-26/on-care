@@ -40,6 +40,10 @@ CALORIE_TARGET_KCAL = 2000
 #: 이행률이 이 아래면 주의로 본다 — 주의 배지·리포트 막대와 같은 기준.
 LOW_COMPLETION = 70
 
+#: 목표를 이 날 수보다 많이 넘겼으면 주의로 본다 — 리포트의 `isGoodWeek` 와 같은
+#: 기준이다. 평균만 보면 사흘을 넘긴 주가 `목표 범위 안` 으로 넘어갔다(#1177).
+SODIUM_OVER_DAYS = 2
+
 #: 근거 문장 수. 셋을 넘으면 카드가 리포트 본문만큼 길어져 요약이 아니게 된다.
 MAX_POINTS = 3
 
@@ -113,16 +117,16 @@ def _evidence(report: WeeklyReportOut) -> list[str]:
     lines: list[str] = []
     if report.completion_avg is not None:
         lines.append(f"운동 이행률 평균 {report.completion_avg}%")
-    if report.sessions_booked:
-        lines.append(f"PT 세션 {report.sessions_done}/{report.sessions_booked}회 완료")
+    # PT 세션 수는 넣지 않는다 — 리포트 화면의 `주간 운동 이행률` 카드 제목 줄이
+    # 같은 값을 이미 적고 있어, 근거 세 줄 중 하나를 되풀이에 쓰고 있었다(#1177).
     if report.sodium_avg is not None:
         lines.append(
-            f"나트륨 평균 {report.sodium_avg}mg · 목표 {SODIUM_TARGET_MG}mg "
+            f"나트륨 평균 {report.sodium_avg:,}mg · 목표 {SODIUM_TARGET_MG:,}mg "
             f"초과 {report.sodium_over_days}일"
         )
     recorded = [v for v in report.calories_week if v > 0]
     if recorded:
-        lines.append(f"칼로리 평균 {round(sum(recorded) / len(recorded))}kcal")
+        lines.append(f"칼로리 평균 {round(sum(recorded) / len(recorded)):,}kcal")
     skipped = _skipped_exercises(report)
     if skipped:
         lines.append("건너뛴 운동: " + ", ".join(skipped))
@@ -135,17 +139,39 @@ def _skipped_exercises(report: WeeklyReportOut) -> list[str]:
     for day in report.days:
         for line in day.exercises:
             if "✗" in line:
-                name = line.replace("✗", "").strip()
+                # 분량을 뗀 이름으로 묶는다 — 같은 운동을 요일마다 건너뛴 것이
+                # 서로 다른 운동 셋으로 읽히면 안 된다(#1177).
+                name = trainer_service.exercise_base_name(line)
                 if name and name not in names:
                     names.append(name)
     return names[:MAX_POINTS]
+
+
+def _has_batchim(word: str) -> bool:
+    """마지막 글자를 소리 내어 읽었을 때 받침이 있는가.
+
+    조사를 고르는 유일한 기준이다. 한글만 보던 때에는 `81%`·`1,916mg` 처럼
+    숫자·단위로 끝나는 말이 전부 받침 없음으로 떨어져 조사가 반쯤 어긋났다.
+    앱의 `hasFinalConsonant` 와 같은 규칙이다(#1177).
+    """
+    word = word.strip()
+    if not word:
+        return False
+    last = word[-1]
+    if "가" <= last <= "힣":
+        return (ord(last) - 0xAC00) % 28 != 0
+    if last.isdigit():
+        # 영·일·삼·육·칠·팔에 받침이 있다.
+        return int(last) in {0, 1, 3, 6, 7, 8}
+    # 화면에 쓰는 단위는 모두 모음으로 끝나게 읽힌다(퍼센트·밀리그램·그램).
+    return False
 
 
 def _rule_summary(report: WeeklyReportOut, evidence: list[str]) -> ReportSummaryOut:
     """모델 없이 만드는 요약. 실패 경로이자 데모의 기본값이다."""
     name = report.member_name
     if not evidence:
-        headline = f"{name} 고객은 이번 주 기록이 없어 다음 주 시작을 함께 잡아 주세요."
+        headline = f"{name} 고객은 그 주 기록이 없어 다음 주 시작을 함께 잡아 주세요."
         return _out(report, headline, [], "rule")
 
     good: list[str] = []
@@ -155,19 +181,29 @@ def _rule_summary(report: WeeklyReportOut, evidence: list[str]) -> ReportSummary
             f"운동 이행률 {report.completion_avg}%"
         )
     if report.sodium_avg is not None:
-        (watch if report.sodium_avg > SODIUM_TARGET_MG else good).append(
-            f"나트륨 평균 {report.sodium_avg}mg"
+        # 평균만 보면 사흘을 넘긴 주도 잘 지킨 쪽으로 넘어갔다. 바로 아래 근거
+        # 줄이 `초과 3일` 을 적고 있어 카드 하나가 서로 다른 말을 했다(#1177).
+        watched = (
+            report.sodium_avg > SODIUM_TARGET_MG
+            or report.sodium_over_days > SODIUM_OVER_DAYS
+        )
+        (watch if watched else good).append(
+            f"나트륨 목표 초과 {report.sodium_over_days}일"
+            if report.sodium_over_days
+            else f"나트륨 평균 {report.sodium_avg:,}mg"
         )
 
     if watch and good:
         headline = (
-            f"{name} 고객은 {good[0]} 로 잘 지켰고, 다음 주는 {watch[0]} 을 "
+            f"{name} 고객은 {good[0]}{'으로' if _has_batchim(good[0]) else '로'} "
+            f"잘 지켰고, 다음 주는 {watch[0]}{'을' if _has_batchim(watch[0]) else '를'} "
             "함께 챙기면 좋겠습니다."
         )
     elif watch:
-        headline = f"{name} 고객은 {watch[0]} 이 목표를 벗어나 다음 주 조정이 필요합니다."
+        subject = "이" if _has_batchim(watch[0]) else "가"
+        headline = f"{name} 고객은 {watch[0]}{subject} 목표를 벗어나 다음 주 조정이 필요합니다."
     else:
-        headline = f"{name} 고객은 이번 주 기록이 목표 범위 안에 있어 지금 강도를 유지해도 좋습니다."
+        headline = f"{name} 고객은 기록이 목표 범위 안에 있어 지금 강도를 유지해도 좋습니다."
     return _out(report, headline, evidence[:MAX_POINTS], "rule")
 
 
