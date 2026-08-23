@@ -2502,9 +2502,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashTasksEmpty => '새로 확인할 코칭 업무가 없어요.';
-
-  @override
   String get dashTaskProgressTitle => '할 일 진행률';
 
   @override

@@ -509,6 +509,7 @@ class _MissionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isConsultation = mission.key.startsWith('consultation-');
     final nameStyle = TextStyle(
       fontSize: 12.5,
       fontWeight: FontWeight.w700,
@@ -562,8 +563,17 @@ class _MissionRow extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: mission.keywordColor.withValues(alpha: 0.12),
+                    // 상담은 배경을 채우지 않는다 — 오늘의 일정 종류 알약과
+                    // 같은 어휘다: 상담은 원래 배경색이 없다.
+                    color: isConsultation
+                        ? AppColors.card
+                        : mission.keywordColor.withValues(alpha: 0.12),
                     borderRadius: const BorderRadius.all(AppRadius.pill),
+                    border: isConsultation
+                        ? Border.all(
+                            color: mission.keywordColor.withValues(alpha: 0.35),
+                          )
+                        : null,
                   ),
                   child: Text(
                     mission.keyword,

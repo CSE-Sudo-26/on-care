@@ -2609,9 +2609,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashTasksEmpty => 'There are no new coaching tasks to review.';
-
-  @override
   String get dashTaskProgressTitle => 'Task completion';
 
   @override

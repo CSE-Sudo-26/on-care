@@ -4598,12 +4598,6 @@ abstract class AppLocalizations {
   /// **'{count} to review'**
   String dashTasksNeedReview(int count);
 
-  /// No description provided for @dashTasksEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'There are no new coaching tasks to review.'**
-  String get dashTasksEmpty;
-
   /// No description provided for @dashTaskProgressTitle.
   ///
   /// In en, this message translates to:
