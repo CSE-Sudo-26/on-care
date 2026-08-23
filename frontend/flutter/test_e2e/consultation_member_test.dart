@@ -28,8 +28,10 @@ import 'package:integration_test/integration_test.dart';
 import 'support/e2e_harness.dart';
 
 /// 폼에서 고를 자리. 서버 계약 enum 과 순서가 같다(화면 enum → wire 는 index 매핑).
+///
+/// 건강관리 목적은 더는 따로 고르지 않는다(#1112) — 운동 목표에서 자동
+/// 매핑된다. `strength` 는 `general` 로 매핑된다.
 const int _goalStrength = 1; // ExerciseGoal.strength
-const int _purposeRehab = 2; // HealthPurposeType.rehab
 const int _timeEvening = 2; // PreferredTimeSlot.evening
 
 const String _acceptMessage = 'E2E 승인 시나리오 문의입니다.';
@@ -54,7 +56,6 @@ Future<void> _requestAs(
   await submitConsultation(
     tester,
     goalIndex: _goalStrength,
-    purposeIndex: _purposeRehab,
     timeIndex: _timeEvening,
     message: message,
   );
@@ -97,11 +98,7 @@ void main() {
           reason: '새 회원에게 이미 담당 트레이너가 있습니다.',
         );
 
-        await _requestAs(
-          tester,
-          email: acceptEmail,
-          message: _acceptMessage,
-        );
+        await _requestAs(tester, email: acceptEmail, message: _acceptMessage);
 
         // 화면이 아니라 서버에 남았는지 본다. 그리고 **입력한 값 그대로** 인지.
         final Map<String, dynamic>? saved = await _waitForPending(acceptApi);
@@ -111,19 +108,14 @@ void main() {
         // 필드에서 뺐다 — 값이 `trainer` 하나뿐이라 실어 보낼 이유가 없어졌다.
         // 대상이 트레이너라는 것은 위의 `trainer_id` 가 이미 증명한다.
         expect(saved['exercise_goal'], 'strength');
-        expect(saved['health_purpose_type'], 'rehab');
+        // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
+        expect(saved['health_purpose_type'], 'general');
         expect(saved['preferred_time_slot'], 'evening');
         expect(saved['message'], _acceptMessage);
-        E2eState.merge(<String, Object?>{
-          'acceptConsultationId': saved['id'],
-        });
+        E2eState.merge(<String, Object?>{'acceptConsultationId': saved['id']});
 
         // 거절 사이클용 요청도 UI 로 낸다.
-        await _requestAs(
-          tester,
-          email: rejectEmail,
-          message: _rejectMessage,
-        );
+        await _requestAs(tester, email: rejectEmail, message: _rejectMessage);
         final E2eApi rejectApi = await E2eApi.login(rejectEmail);
         final Map<String, dynamic>? rejectSaved = await _waitForPending(
           rejectApi,
@@ -149,11 +141,7 @@ void main() {
         final E2eApi trainerApi = await E2eApi.login(trainerEmail);
         final List<Map<String, dynamic>> sessions = await trainerApi
             .trainerScheduleFor(memberId);
-        expect(
-          sessions,
-          isNotEmpty,
-          reason: '승인이 상담 일정을 만들지 않았습니다.',
-        );
+        expect(sessions, isNotEmpty, reason: '승인이 상담 일정을 만들지 않았습니다.');
         E2eState.merge(<String, Object?>{'sessionId': sessions.first['id']});
 
         // 화면에도 돌아오는가. 재로그인 뒤에도 남는가 — 앱이 들고 있던 값이

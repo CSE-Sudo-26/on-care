@@ -1322,28 +1322,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exOptionOther => 'Other';
 
   @override
-  String get exHealthPurpose => 'Health Management Purpose';
-
-  @override
-  String get exPurposeWeight => 'Weight Management';
-
-  @override
-  String get exPurposeChronic => 'Chronic Condition Management';
-
-  @override
-  String get exPurposeRehab => 'Pain or Rehabilitation';
-
-  @override
-  String get exPurposeGeneral => 'General Health Management';
-
-  @override
-  String get exPurposeNone => 'None';
-
-  @override
-  String get exHealthPurposeOtherHint =>
-      'For example, back rehabilitation, knee pain, or cholesterol management';
-
-  @override
   String get exOtherGoalHint =>
       'Please describe your specific exercise goal in the message.';
 
@@ -1382,12 +1360,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGoalRequired => 'Please select an exercise goal.';
 
   @override
-  String get exHealthPurposeRequired =>
-      'Please select a health management purpose.';
-
-  @override
-  String get exHealthPurposeInputRequired =>
-      'Please enter a health management purpose.';
+  String get exOtherGoalDetailRequired =>
+      'Please describe your specific exercise goal in the message.';
 
   @override
   String get exDateRequired => 'Please select a preferred date.';
