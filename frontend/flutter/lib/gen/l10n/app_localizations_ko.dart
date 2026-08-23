@@ -790,6 +790,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exNearbyGyms => '주변 헬스장';
 
   @override
+  String get exGymListCollapse => '목록 접기';
+
+  @override
+  String get exGymListExpand => '목록 펼치기';
+
+  @override
   String get exAiAnalysis => '✦ AI 분석';
 
   @override
