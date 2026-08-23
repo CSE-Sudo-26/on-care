@@ -259,6 +259,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 ActionButton(
+                  key: ValueKey<String>('consultation-accept-${request.id}'),
                   label: l.consultApprove,
                   primary: true,
                   onPressed: _busy ? null : _accept,
@@ -310,6 +311,7 @@ class _RejectDialogState extends State<_RejectDialog> {
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
+            key: const ValueKey<String>('consultation-reject-reason'),
             controller: _controller,
             maxLength: 500,
             maxLines: 3,

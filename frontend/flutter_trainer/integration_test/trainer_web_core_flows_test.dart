@@ -388,7 +388,7 @@ void main() {
       step: 'consultation rejection dialog',
     );
     await tester.enterText(
-      find.byKey(const Key('consult-reject-reason')),
+      find.byKey(const Key('consultation-reject-reason')),
       _rejectionNote,
     );
     // 사유가 비면 확인 버튼이 비활성이다. `enterText` 는 프레임을 그려 주지 않으므로
@@ -397,7 +397,7 @@ void main() {
     final rejectConfirm = find.byWidgetPredicate(
       (widget) =>
           widget is TextButton &&
-          widget.key == const Key('consult-reject-confirm') &&
+          widget.key == const Key('consultation-reject-confirm') &&
           widget.onPressed != null,
       description: 'enabled rejection confirm button',
     );
