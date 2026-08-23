@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/core/utils/portrait_date_picker.dart';
 import 'package:oncare/design_system/atoms/app_button.dart';
 import 'package:oncare/design_system/atoms/app_input.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -125,15 +126,12 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
 
   Future<void> _pickDate() async {
     final DateTime now = nowKst();
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showPortraitDatePicker(
       context: context,
       initialDate: _date,
       // 지난 일정도 기록할 수 있어야 하고, 앞으로도 넉넉히 잡을 수 있어야 한다.
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 2, 12, 31),
-      // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드 입력을
-      // 기본으로 띄우면 그 문제가 없다(#1109).
-      initialEntryMode: DatePickerEntryMode.input,
     );
     if (picked != null) setState(() => _date = picked);
   }

@@ -4,6 +4,7 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -386,14 +387,11 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             onPressed: () async {
               final today = DateUtils.dateOnly(nowKst());
               final lastDate = today.add(const Duration(days: 365));
-              final picked = await showDatePicker(
+              final picked = await showPortraitDatePicker(
                 context: context,
                 initialDate: _clampDate(_date, today, lastDate),
                 firstDate: today,
                 lastDate: lastDate,
-                // 달력 그리드는 좁은 화면에서 가로로 잘린다 — 키보드
-                // 입력을 기본으로 띄우면 그 문제가 없다(#1109).
-                initialEntryMode: DatePickerEntryMode.input,
               );
               if (picked != null) setState(() => _date = picked);
             },
