@@ -134,7 +134,32 @@
   "dashAttentionClients": "Needs attention",
   "dashNoIssues": "No issues",
   "dashCheckSodiumCompletion": "Check diet & completion",
-  "dashAiSummaryTitle": "AI coaching summary",
+  "dashMessages": "Messages",
+  "dashChurnRisk": "Churn risk",
+  "dashChurnRiskNone": "No churn risk",
+  "dashChurnRiskCheck": "Review churn signals",
+  "dashChurnRiskTitle": "Clients at churn risk",
+  "dashChurnRiskEmpty": "No clients are at churn risk right now.",
+  "dashActivityFeedbackTitle": "Trainer activity feedback",
+  "dashActivityDifficulty": "{count} clients need a difficulty review (low completion / churn risk)",
+  "@dashActivityDifficulty": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashActivityInactive": "{count} clients inactive for 7+ days",
+  "@dashActivityInactive": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashActivityDietFeedback": "{count} diet-flagged clients still need feedback",
+  "@dashActivityDietFeedback": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashAiSummaryTitle": "AI diagnosis",
   "dashToday": "Today",
   "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
   "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
@@ -1389,6 +1414,15 @@
     }
   },
   "dashTasksEmpty": "There are no new coaching tasks to review.",
+  "dashTaskProgressTitle": "Task completion",
+  "dashTaskProgressToday": "Done today",
+  "dashTaskProgressCarriedOver": "Done (carried over)",
+  "churnNoRecentWorkout": "No workout logged in 7 days",
+  "churnNoRecentFeedback": "No trainer feedback in 7 days",
+  "churnConsecutiveCancel": "2 consecutive cancellations/no-shows",
+  "churnDietStopped": "Diet logging stopped",
+  "churnGoalStagnant": "Goal metric stagnant long-term",
+  "churnUnresolvedRequest": "Unanswered message",
   "navMessages": "Messages",
   "messagesSubtitle": "Exchange coaching updates with clients and follow up quickly",
   "messagesLoadFailed": "Couldn't load conversations.",

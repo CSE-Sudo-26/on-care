@@ -276,7 +276,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashCheckSodiumCompletion => '식단·이행률 확인';
 
   @override
-  String get dashAiSummaryTitle => 'AI 코칭 요약';
+  String get dashMessages => '메시지';
+
+  @override
+  String get dashChurnRisk => '이탈 위험';
+
+  @override
+  String get dashChurnRiskNone => '이탈 위험 없음';
+
+  @override
+  String get dashChurnRiskCheck => '이탈 신호 확인';
+
+  @override
+  String get dashChurnRiskTitle => '이탈 위험 고객';
+
+  @override
+  String get dashChurnRiskEmpty => '지금은 이탈 위험 신호가 없어요.';
+
+  @override
+  String get dashActivityFeedbackTitle => '트레이너 활동 피드백';
+
+  @override
+  String dashActivityDifficulty(int count) {
+    return '이행률 저조·이탈 위험 감지 $count명 — 난이도 조정을 안내하세요';
+  }
+
+  @override
+  String dashActivityInactive(int count) {
+    return '7일 이상 활동 저조한 고객 $count명';
+  }
+
+  @override
+  String dashActivityDietFeedback(int count) {
+    return '식단 주의 고객 피드백 미완료 $count명';
+  }
+
+  @override
+  String get dashAiSummaryTitle => 'AI 진단';
 
   @override
   String get dashToday => '오늘';
@@ -2411,6 +2447,33 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashTasksEmpty => '새로 확인할 코칭 업무가 없어요.';
+
+  @override
+  String get dashTaskProgressTitle => '할 일 진행률';
+
+  @override
+  String get dashTaskProgressToday => '오늘 처리';
+
+  @override
+  String get dashTaskProgressCarriedOver => '이월 처리';
+
+  @override
+  String get churnNoRecentWorkout => '최근 7일 운동 기록 없음';
+
+  @override
+  String get churnNoRecentFeedback => '최근 7일 트레이너 피드백 없음';
+
+  @override
+  String get churnConsecutiveCancel => 'PT 2회 연속 취소·노쇼';
+
+  @override
+  String get churnDietStopped => '식단 기록 중단';
+
+  @override
+  String get churnGoalStagnant => '목표 지표 장기간 정체';
+
+  @override
+  String get churnUnresolvedRequest => '미응답 메시지 있음';
 
   @override
   String get navMessages => '메시지';

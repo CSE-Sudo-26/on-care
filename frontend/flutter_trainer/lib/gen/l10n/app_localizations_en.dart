@@ -286,7 +286,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashCheckSodiumCompletion => 'Check diet & completion';
 
   @override
-  String get dashAiSummaryTitle => 'AI coaching summary';
+  String get dashMessages => 'Messages';
+
+  @override
+  String get dashChurnRisk => 'Churn risk';
+
+  @override
+  String get dashChurnRiskNone => 'No churn risk';
+
+  @override
+  String get dashChurnRiskCheck => 'Review churn signals';
+
+  @override
+  String get dashChurnRiskTitle => 'Clients at churn risk';
+
+  @override
+  String get dashChurnRiskEmpty => 'No clients are at churn risk right now.';
+
+  @override
+  String get dashActivityFeedbackTitle => 'Trainer activity feedback';
+
+  @override
+  String dashActivityDifficulty(int count) {
+    return '$count clients need a difficulty review (low completion / churn risk)';
+  }
+
+  @override
+  String dashActivityInactive(int count) {
+    return '$count clients inactive for 7+ days';
+  }
+
+  @override
+  String dashActivityDietFeedback(int count) {
+    return '$count diet-flagged clients still need feedback';
+  }
+
+  @override
+  String get dashAiSummaryTitle => 'AI diagnosis';
 
   @override
   String get dashToday => 'Today';
@@ -2516,6 +2552,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashTasksEmpty => 'There are no new coaching tasks to review.';
+
+  @override
+  String get dashTaskProgressTitle => 'Task completion';
+
+  @override
+  String get dashTaskProgressToday => 'Done today';
+
+  @override
+  String get dashTaskProgressCarriedOver => 'Done (carried over)';
+
+  @override
+  String get churnNoRecentWorkout => 'No workout logged in 7 days';
+
+  @override
+  String get churnNoRecentFeedback => 'No trainer feedback in 7 days';
+
+  @override
+  String get churnConsecutiveCancel => '2 consecutive cancellations/no-shows';
+
+  @override
+  String get churnDietStopped => 'Diet logging stopped';
+
+  @override
+  String get churnGoalStagnant => 'Goal metric stagnant long-term';
+
+  @override
+  String get churnUnresolvedRequest => 'Unanswered message';
 
   @override
   String get navMessages => 'Messages';

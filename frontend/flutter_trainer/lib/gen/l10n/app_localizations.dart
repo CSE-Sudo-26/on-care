@@ -608,10 +608,70 @@ abstract class AppLocalizations {
   /// **'Check diet & completion'**
   String get dashCheckSodiumCompletion;
 
+  /// No description provided for @dashMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get dashMessages;
+
+  /// No description provided for @dashChurnRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Churn risk'**
+  String get dashChurnRisk;
+
+  /// No description provided for @dashChurnRiskNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No churn risk'**
+  String get dashChurnRiskNone;
+
+  /// No description provided for @dashChurnRiskCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Review churn signals'**
+  String get dashChurnRiskCheck;
+
+  /// No description provided for @dashChurnRiskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients at churn risk'**
+  String get dashChurnRiskTitle;
+
+  /// No description provided for @dashChurnRiskEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients are at churn risk right now.'**
+  String get dashChurnRiskEmpty;
+
+  /// No description provided for @dashActivityFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer activity feedback'**
+  String get dashActivityFeedbackTitle;
+
+  /// No description provided for @dashActivityDifficulty.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients need a difficulty review (low completion / churn risk)'**
+  String dashActivityDifficulty(int count);
+
+  /// No description provided for @dashActivityInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients inactive for 7+ days'**
+  String dashActivityInactive(int count);
+
+  /// No description provided for @dashActivityDietFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} diet-flagged clients still need feedback'**
+  String dashActivityDietFeedback(int count);
+
   /// No description provided for @dashAiSummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI coaching summary'**
+  /// **'AI diagnosis'**
   String get dashAiSummaryTitle;
 
   /// No description provided for @dashToday.
@@ -4447,6 +4507,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There are no new coaching tasks to review.'**
   String get dashTasksEmpty;
+
+  /// No description provided for @dashTaskProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task completion'**
+  String get dashTaskProgressTitle;
+
+  /// No description provided for @dashTaskProgressToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Done today'**
+  String get dashTaskProgressToday;
+
+  /// No description provided for @dashTaskProgressCarriedOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Done (carried over)'**
+  String get dashTaskProgressCarriedOver;
+
+  /// No description provided for @churnNoRecentWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout logged in 7 days'**
+  String get churnNoRecentWorkout;
+
+  /// No description provided for @churnNoRecentFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainer feedback in 7 days'**
+  String get churnNoRecentFeedback;
+
+  /// No description provided for @churnConsecutiveCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'2 consecutive cancellations/no-shows'**
+  String get churnConsecutiveCancel;
+
+  /// No description provided for @churnDietStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet logging stopped'**
+  String get churnDietStopped;
+
+  /// No description provided for @churnGoalStagnant.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal metric stagnant long-term'**
+  String get churnGoalStagnant;
+
+  /// No description provided for @churnUnresolvedRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Unanswered message'**
+  String get churnUnresolvedRequest;
 
   /// No description provided for @navMessages.
   ///
