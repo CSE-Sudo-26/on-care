@@ -505,6 +505,8 @@
   "progSets": "세트",
   "progReps": "횟수/시간",
   "progWeight": "중량",
+  "progType": "유형",
+  "progDuration": "시간(분)",
   "progOptional": "선택",
   "progSetsByReps": "{sets}세트 × {reps}",
   "progEmpty": "아직 계획된 프로그램이 없어요",

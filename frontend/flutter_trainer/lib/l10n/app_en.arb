@@ -841,6 +841,8 @@
   "progSets": "Sets",
   "progReps": "Reps/time",
   "progWeight": "Weight",
+  "progType": "Type",
+  "progDuration": "Duration (min)",
   "progOptional": "Optional",
   "progSetsByReps": "{sets} × {reps}",
   "@progSetsByReps": {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/models/program_draft.dart';
@@ -71,7 +72,15 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
     for (final item in widget.noteOnly ? const <ProgramDraft>[] : _items) {
       final name = item.name.text.trim();
       final sets = int.tryParse(item.sets.text.trim());
-      if (name.isEmpty || sets == null || sets < 1 || sets > 100) {
+      final durationText = item.duration.text.trim();
+      final duration = durationText.isEmpty ? 0 : int.tryParse(durationText);
+      if (name.isEmpty ||
+          sets == null ||
+          sets < 1 ||
+          sets > 100 ||
+          duration == null ||
+          duration < 0 ||
+          duration > 600) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.progInvalid)));
@@ -85,6 +94,8 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
           weight: item.weight.text.trim().isEmpty
               ? '-'
               : item.weight.text.trim(),
+          type: item.type,
+          duration: durationText,
         ),
       );
     }
@@ -140,6 +151,8 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                 index: index,
                 draft: _items[index],
                 onRemove: () => _removeItem(index),
+                onTypeChanged: (type) =>
+                    setState(() => _items[index].type = type),
               ),
               const SizedBox(height: AppSpacing.sm),
             ],
@@ -202,11 +215,13 @@ class _ProgramDraftFields extends StatelessWidget {
     required this.index,
     required this.draft,
     required this.onRemove,
+    required this.onTypeChanged,
   });
 
   final int index;
   final ProgramDraft draft;
   final VoidCallback onRemove;
+  final ValueChanged<String> onTypeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +290,45 @@ class _ProgramDraftFields extends StatelessWidget {
                   controller: draft.weight,
                   decoration: InputDecoration(
                     labelText: l.progWeight,
+                    hintText: l.progOptional,
+                    isDense: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey<String>('program-type-$index'),
+                  initialValue: normaliseRoutineType(draft.type),
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: l.progType,
+                    isDense: true,
+                  ),
+                  items: <DropdownMenuItem<String>>[
+                    for (final type in kRoutineTypes)
+                      DropdownMenuItem<String>(
+                        value: type,
+                        child: Text(routineTypeLabel(l, type)),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) onTypeChanged(value);
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-duration-$index'),
+                  controller: draft.duration,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l.progDuration,
                     hintText: l.progOptional,
                     isDense: true,
                   ),

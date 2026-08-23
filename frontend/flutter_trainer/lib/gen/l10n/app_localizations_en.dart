@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1653,6 +1654,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progWeight => 'Weight';
+
+  @override
+  String get progType => 'Type';
+
+  @override
+  String get progDuration => 'Duration (min)';
 
   @override
   String get progOptional => 'Optional';

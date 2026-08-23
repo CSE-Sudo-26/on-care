@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1580,6 +1581,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get progWeight => '중량';
+
+  @override
+  String get progType => '유형';
+
+  @override
+  String get progDuration => '시간(분)';
 
   @override
   String get progOptional => '선택';
