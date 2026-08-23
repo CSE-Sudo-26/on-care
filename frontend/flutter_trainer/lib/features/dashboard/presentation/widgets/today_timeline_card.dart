@@ -82,6 +82,7 @@ class TodayTimelineCard extends ConsumerWidget {
               ],
               for (final session in booked)
                 _Row(
+                  key: ValueKey<String>('dashboard-schedule-${session.id}'),
                   session: session,
                   client: findClientIdentity(
                     clients,
@@ -94,7 +95,12 @@ class TodayTimelineCard extends ConsumerWidget {
                   imminent:
                       settings.sessionReminders &&
                       startsWithin(session, settings.reminderLeadMinutes),
-                  onTap: () => context.go(AppRoutes.scheduleAt()),
+                  onTap: () => context.go(
+                    AppRoutes.scheduleAt(
+                      date: session.date,
+                      sessionId: session.id,
+                    ),
+                  ),
                 ),
             ],
           );
@@ -207,6 +213,7 @@ class _NextUpBanner extends StatelessWidget {
 
 class _Row extends StatelessWidget {
   const _Row({
+    super.key,
     required this.session,
     required this.client,
     required this.fallbackName,
