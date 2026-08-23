@@ -76,7 +76,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedDeleteMeansRemoveFinished =>
-      '기록이 지워집니다. 이미 끝난 세션이라 되돌릴 수 없어요.';
+      '기록이 지워집니다. 이미 완료한 일정이라 되돌릴 수 없어요.';
 
   @override
   String get scheduleStatusGap => '공백';

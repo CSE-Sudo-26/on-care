@@ -79,7 +79,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedDeleteMeansRemoveFinished =>
-      'Deleting erases the record. This session is already over and can\'t be undone.';
+      'Deleting erases the record. This session is already complete and can\'t be undone.';
 
   @override
   String get scheduleStatusGap => 'Open';

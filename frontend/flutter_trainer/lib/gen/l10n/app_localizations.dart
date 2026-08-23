@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// No description provided for @schedDeleteMeansRemoveFinished.
   ///
   /// In en, this message translates to:
-  /// **'Deleting erases the record. This session is already over and can\'t be undone.'**
+  /// **'Deleting erases the record. This session is already complete and can\'t be undone.'**
   String get schedDeleteMeansRemoveFinished;
 
   /// Display label for an empty slot in the trainer's day.

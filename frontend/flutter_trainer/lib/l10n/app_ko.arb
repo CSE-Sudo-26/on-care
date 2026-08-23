@@ -23,7 +23,7 @@
   "schedCancelledBy": "{source} · {date}",
   "@schedCancelledBy": {"placeholders": {"source": {"type": "String"}, "date": {"type": "String"}}},
   "schedDeleteMeansRemove": "기록이 지워집니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.",
-  "schedDeleteMeansRemoveFinished": "기록이 지워집니다. 이미 끝난 세션이라 되돌릴 수 없어요.",
+  "schedDeleteMeansRemoveFinished": "기록이 지워집니다. 이미 완료한 일정이라 되돌릴 수 없어요.",
   "scheduleStatusGap": "공백",
   "sessionTypePersonalTraining": "1:1 PT",
   "sessionTypeConsultation": "상담",
