@@ -1698,19 +1698,23 @@ class _PeriodToggle extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey<String>('exercise-period-toggle'),
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: FigmaColors.statBg,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (int i = 0; i < labels.length; i++)
-          Flexible(
-            child: Semantics(
+  Widget build(BuildContext context) => FittedBox(
+    // 세 라벨은 줄이지 않는다 — `이번 주` 가 `이번…` 으로 잘려 무엇을 고르는
+    // 자리인지 사라졌다 (#1182). 폭이 모자라면 토글을 통째로 줄인다.
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerRight,
+    child: Container(
+      key: const ValueKey<String>('exercise-period-toggle'),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (int i = 0; i < labels.length; i++)
+            Semantics(
               button: true,
               selected: active == i,
               child: GestureDetector(
@@ -1721,7 +1725,7 @@ class _PeriodToggle extends StatelessWidget {
                   duration: const Duration(milliseconds: 160),
                   // 식단 탭 기간 토글과 **같은 크기**다 (#1126) — 같은 자리에
                   // 놓인 같은 조작이 탭마다 다르게 보이면 안 된다. 글자를 키운
-                  // 화면에서 세 탭이 줄을 넘기지 않도록 좁히는 규칙까지 같다.
+                  // 화면에서 여백을 좁히는 규칙까지 같다.
                   padding: EdgeInsets.symmetric(
                     horizontal: MediaQuery.textScalerOf(context).scale(1) > 1.3
                         ? 12
@@ -1737,7 +1741,7 @@ class _PeriodToggle extends StatelessWidget {
                   child: Text(
                     labels[i],
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -1749,8 +1753,8 @@ class _PeriodToggle extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }
