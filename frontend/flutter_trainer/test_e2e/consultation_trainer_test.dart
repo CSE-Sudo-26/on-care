@@ -8,8 +8,8 @@
 ///  4. `trainer-reject`  — 다른 요청을 사유와 함께 거절한다.
 ///  5. (회원) `member-after-reject`
 ///
-/// 승인은 **상담 상태·담당 연결·일정** 셋을 한 번에 남긴다. 하나라도 빠지면 회원은
-/// "승인됐다" 는 말만 듣고 담당도 일정도 없는 상태가 된다.
+/// 승인은 상담 상태와 담당 연결을 함께 남긴다. 정확한 상담 시각을 받는 변경은
+/// 후속 이슈에서 다루므로, 여기서는 아직 일정을 자동 생성하지 않는다.
 library;
 
 import 'package:flutter/material.dart';
@@ -39,16 +39,12 @@ Future<void> _openInbox(WidgetTester tester) async {
 /// 인박스에서 그 회원의 요청 카드를 찾는다. 목록이 길면 스크롤해서 만들어 낸다.
 Future<Finder> _requestCard(WidgetTester tester, String consultationId) async {
   final Finder card = find.byKey(
-    ValueKey<String>('consult-request-$consultationId'),
+    ValueKey<String>('consultation-$consultationId'),
   );
   // `pumpUntil` 은 `finder.evaluate()` 로 기다린다. 여기에 `.first` 를 넘기면 대상이
   // 아직 없을 때 빈 목록에서 `first` 를 불러 `Bad state: No element` 로 즉사한다 —
   // 타임아웃 메시지도 못 보고 원인이 가려진다. 기다릴 때는 맨 파인더를 쓴다.
-  await pumpUntil(
-    tester,
-    find.byKey(const Key('consult-accept')),
-    step: '인박스 카드',
-  );
+  await pumpUntil(tester, card, step: '인박스 카드');
   if (card.evaluate().isEmpty) {
     await tester.scrollUntilVisible(card, 200, maxScrolls: 40);
   }
@@ -99,19 +95,15 @@ void main() {
 
         final Finder accept = find.descendant(
           of: card,
-          matching: find.byKey(const Key('consult-accept')),
+          matching: find.byKey(
+            ValueKey<String>('consultation-accept-$consultationId'),
+          ),
         );
         await tester.tap(accept);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
 
-        // 승인 다이얼로그는 일정까지 받는다. 기본값 그대로 확정한다.
-        final Finder confirm = find.byKey(const Key('consult-book-confirm'));
-        await pumpUntil(tester, confirm, step: '일정 확정 버튼');
-        await tester.tap(confirm);
-        await tester.pump();
-
-        // 셋이 함께 남았는가. 하나라도 빠지면 부분 성공이다.
+        // 상태와 담당 연결이 함께 남았는가. 하나라도 빠지면 부분 성공이다.
         final Map<String, dynamic> after = await _waitForStatus(
           api,
           consultationId,
@@ -122,11 +114,6 @@ void main() {
           await api.isClientOf(memberId),
           isTrue,
           reason: '승인했는데 담당 연결이 생기지 않았습니다.',
-        );
-        expect(
-          await api.scheduleFor(memberId),
-          isNotEmpty,
-          reason: '승인했는데 상담 일정이 생기지 않았습니다.',
         );
 
       case 'trainer-reject':
@@ -140,17 +127,21 @@ void main() {
         final Finder card = await _requestCard(tester, consultationId);
         final Finder reject = find.descendant(
           of: card,
-          matching: find.byKey(const Key('consult-reject')),
+          matching: find.byKey(
+            ValueKey<String>('consultation-reject-$consultationId'),
+          ),
         );
         await tester.tap(reject);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
 
-        final Finder reason = find.byKey(const Key('consult-reject-reason'));
+        final Finder reason = find.byKey(
+          const Key('consultation-reject-reason'),
+        );
         await pumpUntil(tester, reason, step: '거절 사유 입력창');
         await tester.enterText(reason, _rejectNote);
         await tester.pump();
-        await tester.tap(find.byKey(const Key('consult-reject-confirm')));
+        await tester.tap(find.byKey(const Key('consultation-reject-confirm')));
         await tester.pump();
 
         final Map<String, dynamic> after = await _waitForStatus(
@@ -177,7 +168,7 @@ void main() {
         final String rejectId = state.require('rejectConsultationId');
         for (final String id in <String>[acceptId, rejectId]) {
           expect(
-            find.byKey(ValueKey<String>('consult-request-$id')),
+            find.byKey(ValueKey<String>('consultation-$id')),
             findsNothing,
             reason: '처리한 요청이 대기 목록에 남아 있습니다.',
           );
