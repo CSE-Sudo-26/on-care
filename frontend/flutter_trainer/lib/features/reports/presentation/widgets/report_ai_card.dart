@@ -169,9 +169,10 @@ class _SummaryBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          for (final action in actions) ...<Widget>[
+          for (var i = 0; i < actions.length; i++) ...<Widget>[
             const SizedBox(height: 3),
             Row(
+              key: ValueKey<String>('reports-summary-action-$i'),
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Padding(
@@ -185,7 +186,7 @@ class _SummaryBody extends StatelessWidget {
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    action,
+                    actions[i],
                     style: const TextStyle(
                       color: AppColors.mutedForeground,
                       fontSize: 11.5,

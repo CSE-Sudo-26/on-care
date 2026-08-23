@@ -198,10 +198,31 @@ class _ComparisonBox extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: pills,
+          // 범례는 알약 **오른쪽**에 둔다. 그래프 아래에 있던 때에는 칼로리를
+          // 고를 때만 한 줄이 생겨 상자 높이가 달라졌고, 나란히 선 운동 상자와
+          // 아래 끝이 어긋났다. 알약 줄은 지표와 무관하게 늘 있는 자리다(#1177).
+          Row(
+            children: <Widget>[
+              Flexible(
+                child: Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: pills,
+                ),
+              ),
+              if (legend != null) ...<Widget>[
+                const SizedBox(width: AppSpacing.sm),
+                // 자리가 좁으면 줄을 접는 대신 글씨를 줄인다 — 접히는 순간
+                // 상자 높이가 다시 달라진다.
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: legend!,
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
           if (loading)
@@ -223,10 +244,6 @@ class _ComparisonBox extends StatelessWidget {
               maxBarWidth: 46,
               semanticsLabel: semanticsLabel,
             ),
-          if (legend != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.xs),
-            legend!,
-          ],
         ],
       ),
     );
@@ -453,9 +470,8 @@ class _MacroLegend extends StatelessWidget {
       AppColors.macroProtein,
       AppColors.macroFat,
     ];
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.xs,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         for (var i = 0; i < labels.length; i++)
           Row(
@@ -478,6 +494,7 @@ class _MacroLegend extends StatelessWidget {
                   color: AppColors.mutedForeground,
                 ),
               ),
+              if (i < labels.length - 1) const SizedBox(width: AppSpacing.sm),
             ],
           ),
       ],

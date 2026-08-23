@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show weekdayCount;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
@@ -920,13 +922,17 @@ void main() {
     final chart = tester.widget<BarLineChart>(
       find.byKey(const ValueKey<String>('reports-completion-chart')),
     );
-    expect(
-      <int>[
-        for (var i = 0; i < chart.values.length; i++)
-          if (chart.values[i] == null) i,
-      ],
-      <int>[1, 4, 6],
-    );
+    // 규칙으로 확인한다 — 요일 번호를 못 박으면 월요일에 도는 CI 에서는
+    // 지나간 날이 하루뿐이라 기대값이 통째로 어긋난다.
+    final int elapsed = chart.pendingFrom ?? weekdayCount;
+    expect(elapsed, nowKst().weekday, reason: '아직 오지 않은 날은 비워 둔다');
+    for (var i = 0; i < elapsed; i++) {
+      expect(
+        chart.values[i],
+        weekCompletion[i] == 0 ? isNull : weekCompletion[i],
+        reason: '지난 날의 0 은 기록 없음이고, 그 밖은 그날 이행률이다',
+      );
+    }
     expect(chart.emptyLabel, '기록 없음');
     // 카드 제목 줄이 평균과 며칠을 나눈 값인지 함께 말한다.
     expect(find.text('기록 $logged일'), findsOneWidget);
@@ -970,9 +976,14 @@ void main() {
 
     // PT 세션 수는 옆 카드 제목 줄이 이미 말한다 — 요약에서 되풀이하지 않는다.
     expect(find.textContaining('PT 세션 1/1회 완료'), findsNothing);
-    // 그 자리를 수치에서 곧바로 나오는 다음 주 할 일이 가져간다.
+    // 그 자리를 수치에서 곧바로 나오는 다음 주 할 일이 가져간다. 어떤 제안이
+    // 뜨는지는 그 주 수치에 달렸으므로 줄이 있다는 것만 본다 — 문구는
+    // `summaryCoachingActions` 테스트가 규칙으로 확인한다.
     expect(find.text('다음 주 코칭 제안'), findsOneWidget);
-    expect(find.textContaining('국물'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey<String>('reports-summary-action-0')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('요약을 피드백 초안으로 가져온다 (#755)', (tester) async {
