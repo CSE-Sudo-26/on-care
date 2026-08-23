@@ -36,6 +36,10 @@ const Set<String> _demoProfileValues = <String>{
   '김',
   '김트레이너',
   '온케어짐 신촌점',
+  // `DemoConsultationRepository` 는 `seed: false` 와 무관하게 항상 대기 중인
+  // 상담 요청 하나를 들고 있다(로스터 시딩과 별개 in-memory 픽스처) — 대시보드
+  // "오늘 할 일"이 그 신청자 이름을 그대로 보여주면서 이 화면에도 나타난다.
+  '김하늘',
 };
 
 void main() {
@@ -43,11 +47,7 @@ void main() {
     await pumpTrainerApp(tester, locale: const Locale('en'));
 
     final leftovers = _renderedText(tester).where(_hangul.hasMatch).toList();
-    expect(
-      leftovers,
-      isEmpty,
-      reason: '영어 로케일인데 한국어가 그려졌어요: $leftovers',
-    );
+    expect(leftovers, isEmpty, reason: '영어 로케일인데 한국어가 그려졌어요: $leftovers');
   });
 
   testWidgets('콘솔 셸(사이드바)에 한글이 남지 않는다', (WidgetTester tester) async {
@@ -66,11 +66,7 @@ void main() {
           .where(_hangul.hasMatch)
           .where((String s) => !_demoProfileValues.contains(s))
           .toList();
-      expect(
-        leftovers,
-        isEmpty,
-        reason: '영어 로케일인데 한국어가 그려졌어요: $leftovers',
-      );
+      expect(leftovers, isEmpty, reason: '영어 로케일인데 한국어가 그려졌어요: $leftovers');
     });
   });
 
