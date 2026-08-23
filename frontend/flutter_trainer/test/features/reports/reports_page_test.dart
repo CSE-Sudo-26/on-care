@@ -12,10 +12,10 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/client_report_view.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_export_dialog.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/week_trend_bar.dart';
-import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_completion_chart.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
@@ -192,27 +192,24 @@ void main() {
     expect(find.text('트레이너 피드백'), findsOneWidget);
     expect(find.text('다음 주'), findsNothing);
     // 비교 그래프는 지표 넷을 한 자리에서 돌려 쓴다 — 알약 버튼이 그 넷이다.
-    for (final metric in <String>['운동', '칼로리', '나트륨', '당류']) {
+    // 운동 상자와 식단 상자가 각자의 지표를 들고 나란히 선다.
+    for (final metric in <String>[
+      'burned',
+      'cardio',
+      'strength',
+      'stretching',
+    ]) {
       expect(
-        find.byKey(ValueKey<String>('compare-metric-$metric')),
-        findsNothing,
-        reason: '알약은 로케일 문자열이 아니라 지표 이름을 키로 쓴다',
-      );
-    }
-    for (final metric in <String>['workout', 'calories', 'sodium', 'sugar']) {
-      expect(
-        find.byKey(ValueKey<String>('compare-metric-$metric')),
+        find.byKey(ValueKey<String>('compare-exercise-$metric')),
         findsOneWidget,
       );
     }
-    expect(
-      find.byKey(const ValueKey<String>('compare-bar-previous')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('compare-bar-current')),
-      findsOneWidget,
-    );
+    for (final metric in <String>['calories', 'sodium', 'sugar']) {
+      expect(
+        find.byKey(ValueKey<String>('compare-diet-$metric')),
+        findsOneWidget,
+      );
+    }
     // Defaults to the first client rather than an empty right pane.
     expect(find.text('김민수님 주간 리포트'), findsOneWidget);
     // 카드 안에 고객 신상을 다시 적지 않는다 — 왼쪽 목록에서 방금 고른
@@ -226,26 +223,30 @@ void main() {
     );
   });
 
-  testWidgets('비교 그래프는 알약 버튼으로 지표를 갈아 끼운다 (#1177)', (tester) async {
+  testWidgets('비교 상자는 알약 버튼으로 지표를 갈아 끼운다 (#1177)', (tester) async {
     await openReports(tester);
 
-    // 운동은 %, 칼로리는 kcal — 같은 자리에서 단위까지 바뀐다.
-    expect(find.textContaining('%'), findsWidgets);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('compare-metric-calories')),
-    );
-    await settle(tester);
-    expect(find.textContaining('kcal'), findsWidgets);
-    // 칼로리 막대는 탄·단·지로 쌓이므로 그 셋이 무엇인지 적어 준다.
+    // 식단 상자는 칼로리로 열리고, 막대는 탄·단·지로 쌓이므로 그 셋이
+    // 무엇인지 적어 준다.
     expect(find.textContaining('탄수화물'), findsOneWidget);
     expect(find.textContaining('단백질'), findsOneWidget);
     expect(find.textContaining('지방'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(const ValueKey<String>('compare-metric-sugar')),
+      find.byKey(const ValueKey<String>('compare-diet-sugar')),
     );
     await settle(tester);
     expect(find.textContaining('탄수화물'), findsNothing);
+
+    // 운동 상자는 따로 움직인다 — 식단 지표를 바꿔도 그대로다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('compare-exercise-cardio')),
+    );
+    await settle(tester);
+    expect(
+      find.byKey(const ValueKey<String>('compare-exercise-cardio')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('공유는 상단에서 전송과 PDF 내보내기를 함께 보여 준다 (#735)', (tester) async {
@@ -909,20 +910,26 @@ void main() {
     // 그림이라 글자는 캔버스에 그려진다 — 무엇을 비워 둘지는 그래프가 받는
     // `missing` 이 정한다(#1177).
     expect(find.text('0%'), findsNothing);
-    final chart = tester.widget<WeeklyCompletionChart>(
-      find.byType(WeeklyCompletionChart),
+    final chart = tester.widget<BarLineChart>(
+      find.byKey(const ValueKey<String>('reports-completion-chart')),
     );
-    expect(chart.missing, <int>{1, 4, 6});
-    expect(chart.noRecordLabel, '기록 없음');
+    expect(
+      <int>[
+        for (var i = 0; i < chart.values.length; i++)
+          if (chart.values[i] == null) i,
+      ],
+      <int>[1, 4, 6],
+    );
+    expect(chart.emptyLabel, '기록 없음');
     // 카드 제목 줄이 평균과 며칠을 나눈 값인지 함께 말한다.
     expect(find.text('기록 $logged일'), findsOneWidget);
 
-    // 운동과 식단이 카드로 나뉘고, 각 카드 제목 줄에 그 카드의 수치가 남는다.
+    // 운동과 식단이 카드로 나뉜다.
     expect(find.text('주간 운동 이행률'), findsOneWidget);
     expect(find.text('주간 식단 추이'), findsOneWidget);
-    // 며칠인지는 어제가 어느 요일이냐에 따라 달라진다 — 그 수치가 카드 제목
-    // 줄에 남는다는 것이 요지다.
-    expect(find.textContaining('나트륨 초과'), findsOneWidget);
+    // 식단 카드 제목 옆에 지표 하나의 수치(`나트륨 초과 n일`)를 붙이지 않는다 —
+    // 카드가 식단 전체를 말하는 자리다(#1177).
+    expect(find.textContaining('나트륨 초과'), findsNothing);
   });
 
   testWidgets('요일 칸에 그날 한 운동 이름이 남는다 (#754)', (tester) async {

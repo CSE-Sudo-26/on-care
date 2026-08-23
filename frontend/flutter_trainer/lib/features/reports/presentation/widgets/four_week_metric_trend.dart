@@ -37,15 +37,6 @@ class FourWeekMetricTrend extends ConsumerWidget {
   /// 목표. 눈금과 주의 색의 기준을 겸한다.
   final double goal;
 
-  /// 눈금 끝은 목표의 1.5배. 목표를 눈금 끝으로 삼으면 — 김민수의 나트륨처럼
-  /// 네 주가 모두 목표를 넘은 경우 — 막대 넷이 전부 꽉 차 버려 어느 주가 더
-  /// 나빴는지가 사라진다. 여유를 두면 주별 차이가 길이로 드러난다.
-  ///
-  /// 2/3 지점에 긋던 목표선은 지웠다. 그 선이 무엇인지 말해 주던 `│ 목표 …`
-  /// 표기와 함께 사라졌고, 설명 없는 세로선은 눈금처럼 읽힌다. 목표를 넘긴
-  /// 주는 막대가 빨갛다 — 초과 여부는 색이 말한다(#1177).
-  static const double _headroom = 1.5;
-
   /// 값 뒤에 붙는 단위.
   final String unit;
 
@@ -90,7 +81,9 @@ class FourWeekMetricTrend extends ConsumerWidget {
             final mean = week == null ? null : recordedMean(values(week));
             return WeekTrendBar(
               label: labels[i],
-              fraction: mean == null ? null : mean / (goal * _headroom),
+              // 눈금 끝이 곧 목표다. 막대가 트랙을 다 채웠다는 것이 목표에
+              // 닿았다는 뜻이 되고, 넘긴 주는 꽉 찬 빨간 막대로 남는다(#1177).
+              fraction: mean == null ? null : mean / goal,
               text: mean == null
                   ? '-'
                   : '${metricTrendNumber(mean.round())}$unit',

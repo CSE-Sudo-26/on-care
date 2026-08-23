@@ -2306,12 +2306,6 @@ abstract class AppLocalizations {
   /// **'Weekly diet trend'**
   String get reportsDietTrend;
 
-  /// No description provided for @reportsSodiumOverInline.
-  ///
-  /// In en, this message translates to:
-  /// **'{days} days over sodium'**
-  String reportsSodiumOverInline(int days);
-
   /// No description provided for @workoutDoneOfTotal.
   ///
   /// In en, this message translates to:
@@ -5276,11 +5270,11 @@ abstract class AppLocalizations {
   /// **'Last 4 weekly averages'**
   String get reportsRecentWeeks;
 
-  /// No description provided for @reportsMetricWorkout.
+  /// No description provided for @reportsWeekTotal.
   ///
   /// In en, this message translates to:
-  /// **'Workout'**
-  String get reportsMetricWorkout;
+  /// **'Week total'**
+  String get reportsWeekTotal;
 
   /// No description provided for @reportsGoalOf.
   ///
@@ -5305,12 +5299,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days} days logged'**
   String reportsRecordedDays(int days);
-
-  /// No description provided for @reportsSessionsChip.
-  ///
-  /// In en, this message translates to:
-  /// **'PT {done}/{booked}'**
-  String reportsSessionsChip(int done, int booked);
 
   /// No description provided for @reportsAverageChip.
   ///

@@ -1287,11 +1287,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsDietTrend => 'Weekly diet trend';
 
   @override
-  String reportsSodiumOverInline(int days) {
-    return '$days days over sodium';
-  }
-
-  @override
   String workoutDoneOfTotal(int total, int done) {
     return '$done of $total done';
   }
@@ -2993,7 +2988,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRecentWeeks => 'Last 4 weekly averages';
 
   @override
-  String get reportsMetricWorkout => 'Workout';
+  String get reportsWeekTotal => 'Week total';
 
   @override
   String reportsGoalOf(String value) {
@@ -3011,11 +3006,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String reportsRecordedDays(int days) {
     return '$days days logged';
-  }
-
-  @override
-  String reportsSessionsChip(int done, int booked) {
-    return 'PT $done/$booked';
   }
 
   @override

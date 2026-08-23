@@ -6,13 +6,13 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/four_week_compliance_trend.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/metric_comparison_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/metric_trend_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_ai_card.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_daily_detail.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_feedback_editor.dart';
-import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_completion_chart.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_exercise_minutes.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -152,17 +152,24 @@ class ClientReportView extends StatelessWidget {
               // 계열은 리포트가 자기 주의 것을 들고 온다 — 보고 있는 주가
               // 어디든 같은 규칙으로 그린다(#752).
               if (hasWeek)
-                WeeklyCompletionChart(
-                  values: report.weekCompletion,
+                BarLineChart(
+                  key: const ValueKey<String>('reports-completion-chart'),
+                  // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
+                  // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
+                  values: <double?>[
+                    for (var i = 0; i < report.weekCompletion.length; i++)
+                      unlogged.contains(i)
+                          ? null
+                          : report.weekCompletion[i].toDouble(),
+                  ],
                   labels: weekdayLabels(l),
-                  noRecordLabel: l.chartNoRecord,
+                  ceiling: 100,
+                  format: (double v) => '${v.round()}%',
+                  emptyLabel: l.chartNoRecord,
                   // 아직 오지 않은 요일은 이번 주에만 있다.
                   pendingFrom: report.isCurrentWeek
                       ? elapsedWeekdays(nowKst())
                       : null,
-                  // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
-                  // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
-                  missing: unlogged,
                   semanticsLabel: chartSemanticsLabel(
                     l,
                     title: l.reportsCompletionByDay,
@@ -211,17 +218,10 @@ class ClientReportView extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
+          // `나트륨 초과 n일` 은 적지 않는다 — 카드 제목은 식단 전체를 말하는데
+          // 그 옆에 지표 하나의 수치만 붙어 있었고, 같은 값은 요약 카드의 근거
+          // 줄과 4주 막대의 빨강이 이미 말한다(#1177).
           title: l.reportsDietTrend,
-          trailing: Text(
-            l.reportsSodiumOverInline(report.sodiumOverDays ?? 0),
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: (report.sodiumOverDays ?? 0) > 2
-                  ? AppColors.overTarget
-                  : AppColors.subtleForeground,
-            ),
-          ),
           child: MetricTrendSection(report: report),
         ),
       ],
@@ -238,6 +238,8 @@ class _WeekSummaryChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // PT 진행 횟수는 적지 않는다 — 이 카드가 말하는 것은 회원이 루틴을 얼마나
+    // 따라왔나이고, 세션 수는 스케줄 탭이 답한다(#1177).
     final int? avg = report.completionAvg;
     final int logged = report.weekCompletion.where((v) => v > 0).length;
     return Wrap(
@@ -247,13 +249,6 @@ class _WeekSummaryChips extends StatelessWidget {
       children: <Widget>[
         if (avg != null) _Chip(label: l.reportsAverageChip('$avg%')),
         if (logged > 0) _Chip(label: l.reportsRecordedDays(logged)),
-        if (report.sessionsBooked > 0)
-          _Chip(
-            label: l.reportsSessionsChip(
-              report.sessionsDone,
-              report.sessionsBooked,
-            ),
-          ),
       ],
     );
   }

@@ -4,20 +4,28 @@ import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/metric_pill.dart';
 
-/// 비교 그래프가 다루는 지표.
-///
-/// 화면에 보이는 라벨과 분리해 둔다 — 로케일이 내부 키가 되면 영어에서 선택이
-/// 깨진다. 순서가 곧 알약 버튼의 순서다.
-enum CompareMetric {
-  /// 운동 이행률(%).
-  workout,
+/// 운동 상자가 견주는 값.
+enum ExerciseCompareMetric {
+  /// 그 주에 태운 열량(kcal).
+  burned,
 
+  /// 유산소·근력·스트레칭 시간(분).
+  cardio,
+  strength,
+  stretching,
+}
+
+/// 식단 상자가 견주는 값.
+enum DietCompareMetric {
   /// 하루 평균 칼로리(kcal). 막대는 탄·단·지로 쌓는다.
   calories,
 
@@ -28,114 +36,20 @@ enum CompareMetric {
   sugar,
 }
 
-/// 지난 주와 견주는 그래프 — 알약 버튼으로 지표를 갈아 끼운다.
+/// 이번 주 vs 지난 주 — 운동과 식단을 흰 상자 둘로 나눠 나란히 놓는다.
 ///
-/// 예전에는 이행률과 나트륨 **두 그래프가 나란히** 박혀 있었다. 카드의 절반을
-/// 쓰면서도 칼로리·당류는 어디에도 없었고, 트레이너가 회원에게 말해야 하는
-/// "지난주보다 나아졌나" 는 지표마다 다른 자리에서 답이 났다. 자리 하나를
-/// 지표 넷이 돌려 쓰면 같은 눈금에서 같은 방식으로 읽힌다(#1177).
-///
-/// 칼로리만 막대를 탄·단·지로 쌓는다 — 같은 2,000kcal 이 밥에서 왔는지
-/// 기름에서 왔는지는 총량만 봐서는 알 수 없다.
-class MetricComparisonSection extends ConsumerStatefulWidget {
+/// 한 상자 안에서는 알약 버튼으로 지표를 갈아 끼우고, 그래프는 `주간 운동
+/// 이행률` 과 **같은 그림**(막대 + 꺾은선)이다. 카드마다 다른 막대를 쓰면 같은
+/// 화면에서 눈금이 갈린 것처럼 보인다(#1177).
+class MetricComparisonSection extends StatelessWidget {
   /// Creates the comparison section.
   const MetricComparisonSection({super.key, required this.report});
 
   final WeeklyReport report;
 
   @override
-  ConsumerState<MetricComparisonSection> createState() =>
-      _MetricComparisonSectionState();
-}
-
-class _MetricComparisonSectionState
-    extends ConsumerState<MetricComparisonSection> {
-  CompareMetric _metric = CompareMetric.workout;
-
-  String _label(AppLocalizations l, CompareMetric metric) => switch (metric) {
-    CompareMetric.workout => l.reportsMetricWorkout,
-    CompareMetric.calories => l.metricCalories,
-    CompareMetric.sodium => l.metricSodium,
-    CompareMetric.sugar => l.metricSugar,
-  };
-
-  String _unit(AppLocalizations l) => switch (_metric) {
-    CompareMetric.workout => '%',
-    CompareMetric.calories => l.unitKcal,
-    CompareMetric.sodium => l.unitMg,
-    CompareMetric.sugar => l.unitGram,
-  };
-
-  /// 하루 평균. 기록이 있는 날만 센다 — 아직 오지 않은 날을 0 으로 세면 이번
-  /// 주가 늘 나아 보인다.
-  double? _value(WeeklyReport? report) {
-    if (report == null) return null;
-    return switch (_metric) {
-      CompareMetric.workout => report.completionAvg?.toDouble(),
-      CompareMetric.calories => recordedMean(report.caloriesWeek),
-      CompareMetric.sodium => report.sodiumAvg?.toDouble(),
-      CompareMetric.sugar => recordedMean(report.sugarWeek),
-    };
-  }
-
-  /// 하루 목표. 운동 이행률에는 넘길 목표가 없다 — 100% 가 곧 끝이다.
-  double? get _goal => switch (_metric) {
-    CompareMetric.workout => null,
-    CompareMetric.calories => calorieTargetKcal.toDouble(),
-    CompareMetric.sodium => sodiumTargetMg.toDouble(),
-    CompareMetric.sugar => sugarTargetG.toDouble(),
-  };
-
-  /// 값이 커지는 것이 좋은 지표인가. 칼로리는 목표에 가까울수록 좋은 값이라
-  /// 어느 쪽도 아니다 — 변화량에 색을 입히지 않는다.
-  bool? get _higherIsBetter => switch (_metric) {
-    CompareMetric.workout => true,
-    CompareMetric.sodium || CompareMetric.sugar => false,
-    CompareMetric.calories => null,
-  };
-
-  /// 그 주의 탄·단·지 하루 평균(g). 하나도 없으면 빈 목록이다.
-  List<double> _macros(WeeklyReport? report) {
-    if (report == null || _metric != CompareMetric.calories) {
-      return const <double>[];
-    }
-    final means = <double>[
-      recordedMean(report.carbsWeek) ?? 0,
-      recordedMean(report.proteinWeek) ?? 0,
-      recordedMean(report.fatWeek) ?? 0,
-    ];
-    return means.every((v) => v == 0) ? const <double>[] : means;
-  }
-
-  String _format(double value) => switch (_metric) {
-    CompareMetric.workout => value.round().toString(),
-    CompareMetric.sugar => formatNumber((value * 10).roundToDouble() / 10),
-    _ => formatNumber(value.round()),
-  };
-
-  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final report = widget.report;
-    final previousStart = report.weekStart.subtract(const Duration(days: 7));
-    final previous = ref.watch(
-      weeklyReportProvider((client: report.client, weekStart: previousStart)),
-    );
-    final WeeklyReport? before = previous.valueOrNull;
-    final double? current = _value(report);
-    final double? last = _value(before);
-    final String unit = _unit(l);
-    final double? goal = _goal;
-    // 눈금 끝은 두 주와 목표를 모두 담는다. 그 주의 최댓값에 맞춰 늘이면
-    // 1,916 과 1,138 이 늘 같은 높이에서 조금 다른 그림이 된다.
-    final double ceiling = <double>[
-      current ?? 0,
-      last ?? 0,
-      if (goal != null) goal * 1.1,
-      if (_metric == CompareMetric.workout) 100,
-      1,
-    ].reduce((a, b) => a > b ? a : b);
-
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: const BoxDecoration(
@@ -145,157 +59,39 @@ class _MetricComparisonSectionState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final title = Text(
-                l.reportsComparisonTitle(
-                  report.isCurrentWeek
-                      ? l.reportsThisWeek
-                      : l.reportsSelectedWeek,
-                ),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.foreground,
-                ),
-              );
-              final pills = Wrap(
-                alignment: WrapAlignment.end,
-                spacing: AppSpacing.xs,
-                runSpacing: AppSpacing.xs,
-                children: <Widget>[
-                  for (final metric in CompareMetric.values)
-                    MetricPill(
-                      key: ValueKey<String>('compare-metric-${metric.name}'),
-                      label: _label(l, metric),
-                      selected: metric == _metric,
-                      onTap: () => setState(() => _metric = metric),
-                    ),
-                ],
-              );
-              // 좁은 카드에서는 제목 아래로 내린다 — 한 줄에 우겨넣으면 알약이
-              // 글자 크기를 키운 화면에서 그대로 넘친다.
-              if (constraints.maxWidth < 420) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    title,
-                    const SizedBox(height: AppSpacing.xs),
-                    pills,
-                  ],
-                );
-              }
-              return Row(
-                children: <Widget>[
-                  Expanded(child: title),
-                  const SizedBox(width: AppSpacing.sm),
-                  Flexible(child: pills),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (previous.hasError)
-            Text(
-              l.reportsPreviousLoadFailed,
-              style: const TextStyle(
-                color: AppColors.warning,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
+          Text(
+            l.reportsComparisonTitle(
+              report.isCurrentWeek ? l.reportsThisWeek : l.reportsSelectedWeek,
             ),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           LayoutBuilder(
             builder: (context, constraints) {
-              final Widget bars = Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Expanded(
-                    child: _CompareBar(
-                      key: const ValueKey<String>('compare-bar-previous'),
-                      label: l.reportsLastWeek,
-                      value: last,
-                      ceiling: ceiling,
-                      unit: unit,
-                      goal: goal,
-                      macros: _macros(before),
-                      format: _format,
-                      emptyLabel: l.reportsDataInsufficient,
-                      loading: previous.isLoading,
-                      current: false,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _CompareBar(
-                      key: const ValueKey<String>('compare-bar-current'),
-                      label: report.isCurrentWeek
-                          ? l.reportsThisWeek
-                          : l.reportsSelectedWeek,
-                      value: current,
-                      ceiling: ceiling,
-                      unit: unit,
-                      goal: goal,
-                      macros: _macros(report),
-                      format: _format,
-                      emptyLabel: l.reportsDataInsufficient,
-                      loading: false,
-                      current: true,
-                    ),
-                  ),
-                ],
-              );
-              final Widget delta = SizedBox(
-                width: 84,
-                child: _DeltaBadge(
-                  caption: l.reportsCompareWith,
-                  current: current,
-                  previous: last,
-                  unit: _metric == CompareMetric.workout ? '%p' : unit,
-                  format: _format,
-                  higherIsBetter: _higherIsBetter,
-                ),
-              );
-              final Widget? legend =
-                  _metric == CompareMetric.calories &&
-                      _macros(report).isNotEmpty
-                  ? _MacroLegend(means: _macros(report), unit: l.unitGram)
-                  : null;
-              // 좁은 카드에서는 범례를 아래로 내리고 막대가 남는 폭을 쓴다.
-              // 넓은 카드처럼 막대 폭을 240 으로 묶어 두면 변화량 칸과 합쳐
-              // 카드보다 넓어진다.
-              if (constraints.maxWidth < 380) {
+              final Widget workout = _ExerciseComparisonBox(report: report);
+              final Widget diet = _DietComparisonBox(report: report);
+              // 좁은 카드에서는 위아래로 쌓는다 — 한 줄에 우겨넣으면 상자 하나가
+              // 막대 둘도 못 담는 폭이 된다.
+              if (constraints.maxWidth < 620) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: <Widget>[
-                        Expanded(child: bars),
-                        const SizedBox(width: AppSpacing.sm),
-                        delta,
-                      ],
-                    ),
-                    if (legend != null) ...<Widget>[
-                      const SizedBox(height: AppSpacing.sm),
-                      legend,
-                    ],
+                    workout,
+                    const SizedBox(height: AppSpacing.sm),
+                    diet,
                   ],
                 );
               }
               return Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  // 두 주는 붙여 둔다. 카드 폭을 반씩 나눠 가지면 견줄 막대
-                  // 둘이 화면 양끝으로 갈라져, 정작 비교가 눈에 들어오지 않는다.
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 240),
-                    child: bars,
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  // 남는 가운데는 막대의 세 조각이 무엇인지 적는 자리다.
-                  Expanded(child: legend ?? const SizedBox.shrink()),
+                  Expanded(child: workout),
                   const SizedBox(width: AppSpacing.sm),
-                  delta,
+                  Expanded(child: diet),
                 ],
               );
             },
@@ -306,156 +102,336 @@ class _MetricComparisonSectionState
   }
 }
 
-/// 한 주의 막대 — 값 · 막대 · 주 이름.
-class _CompareBar extends StatelessWidget {
-  const _CompareBar({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.ceiling,
-    required this.unit,
-    required this.goal,
-    required this.macros,
-    required this.format,
-    required this.emptyLabel,
-    required this.loading,
+/// 흰 상자 하나 — 제목 · 알약 · 그래프 · 변화량.
+class _ComparisonBox extends StatelessWidget {
+  const _ComparisonBox({
+    required this.title,
+    required this.caption,
+    required this.pills,
+    required this.previous,
     required this.current,
+    required this.previousLabel,
+    required this.currentLabel,
+    required this.format,
+    required this.goal,
+    required this.segments,
+    required this.legend,
+    required this.higherIsBetter,
+    required this.loading,
+    required this.emptyLabel,
+    required this.semanticsLabel,
   });
 
-  final String label;
-  final double? value;
-  final double ceiling;
-  final String unit;
+  final String title;
+
+  /// 값이 주 합계인지 하루 평균인지. 두 상자가 다른 기준을 쓰므로 적어 준다.
+  final String caption;
+
+  final List<Widget> pills;
+  final double? previous;
+  final double? current;
+  final String previousLabel;
+  final String currentLabel;
+  final String Function(double) format;
+
+  /// 넘으면 막대가 빨강이 되는 값.
   final double? goal;
 
-  /// 탄·단·지 하루 평균(g). 비어 있으면 한 색으로 채운다.
-  final List<double> macros;
+  /// 막대를 쌓을 조각(칼로리의 탄·단·지). 없으면 한 색으로 채운다.
+  final List<List<BarSegment>?>? segments;
 
-  final String Function(double) format;
-  final String emptyLabel;
+  /// 조각이 무엇인지 적는 줄.
+  final Widget? legend;
+
+  final bool? higherIsBetter;
   final bool loading;
-
-  /// 보고 있는 주. 지난 주보다 진하게 그려 어느 쪽이 지금인지 색으로 읽힌다.
-  final bool current;
-
-  /// 막대 영역 높이.
-  static const double _plotHeight = 92;
+  final String emptyLabel;
+  final String semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
-    final bool over = goal != null && value != null && value! > goal!;
-    final double fraction = value == null
-        ? 0
-        : (value! / ceiling).clamp(0.0, 1.0);
-    final Color fill = over
-        ? AppColors.overTarget
-        : current
-        ? AppColors.primary
-        : AppColors.aiCardGradientEnd;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          loading
-              ? '…'
-              : value == null
-              ? emptyLabel
-              : '${format(value!)}$unit',
-          maxLines: 1,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: current ? FontWeight.w800 : FontWeight.w700,
-            color: value == null
-                ? AppColors.disabledForeground
-                : over
-                ? AppColors.overTarget
-                : AppColors.foreground,
-          ),
-        ),
-        const SizedBox(height: 4),
-        SizedBox(
-          height: _plotHeight,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 56),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: AppRadius.sm),
-                child: SizedBox(
-                  // 값이 없는 주는 막대를 그리지 않는다 — 빈 자리에 0 을
-                  // 채우면 `기록 없음` 이 `0` 으로 읽힌다.
-                  height: value == null
-                      ? 0
-                      : (_plotHeight * fraction).clamp(3.0, _plotHeight),
-                  width: double.infinity,
-                  child: macros.isEmpty
-                      ? ColoredBox(color: fill)
-                      : _MacroStack(means: macros, dim: !current),
+    // 눈금 끝은 두 주와 목표를 모두 담는다. 그 주의 최댓값에 맞춰 늘이면 두 주가
+    // 늘 같은 높이에서 조금 다른 그림이 된다.
+    final double ceiling = <double>[
+      previous ?? 0,
+      current ?? 0,
+      if (goal != null) goal! * 1.05,
+      1,
+    ].reduce((a, b) => a > b ? a : b);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.foreground,
                 ),
               ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  caption,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ),
+              _DeltaBadge(
+                current: current,
+                previous: previous,
+                format: format,
+                higherIsBetter: higherIsBetter,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: pills,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+              child: LinearProgressIndicator(minHeight: 2),
+            )
+          else
+            BarLineChart(
+              values: <double?>[previous, current],
+              labels: <String>[previousLabel, currentLabel],
+              ceiling: ceiling,
+              goal: goal,
+              segments: segments,
+              format: format,
+              emptyLabel: emptyLabel,
+              highlightIndex: 1,
+              height: 96,
+              maxBarWidth: 46,
+              semanticsLabel: semanticsLabel,
             ),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: current ? FontWeight.w800 : FontWeight.w600,
-            color: current ? AppColors.primary : AppColors.subtleForeground,
-          ),
-        ),
-      ],
+          if (legend != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            legend!,
+          ],
+        ],
+      ),
     );
   }
 }
 
-/// 칼로리 막대를 탄·단·지로 쌓는다. 몫은 **열량 기여분**이다(탄·단 4kcal/g,
-/// 지방 9kcal/g) — 그램으로 쌓으면 열량의 절반을 내는 지방이 가장 얇게 그려져
-/// 막대 전체가 칼로리를 말하지 않게 된다.
-class _MacroStack extends StatelessWidget {
-  const _MacroStack({required this.means, required this.dim});
+/// 운동 상자 — 소모 칼로리·유산소·근력·스트레칭을 주 합계로 견준다.
+class _ExerciseComparisonBox extends ConsumerStatefulWidget {
+  const _ExerciseComparisonBox({required this.report});
 
-  final List<double> means;
+  final WeeklyReport report;
 
-  /// 지난 주는 흐리게 — 색은 같고 무게만 다르다.
-  final bool dim;
+  @override
+  ConsumerState<_ExerciseComparisonBox> createState() =>
+      _ExerciseComparisonBoxState();
+}
+
+class _ExerciseComparisonBoxState
+    extends ConsumerState<_ExerciseComparisonBox> {
+  ExerciseCompareMetric _metric = ExerciseCompareMetric.burned;
+
+  String _label(AppLocalizations l, ExerciseCompareMetric metric) =>
+      switch (metric) {
+        ExerciseCompareMetric.burned => l.clientTrendCaloriesBurned,
+        ExerciseCompareMetric.cardio => l.routineTypeCardio,
+        ExerciseCompareMetric.strength => l.routineTypeStrength,
+        ExerciseCompareMetric.stretching => l.routineTypeStretching,
+      };
+
+  double? _value(ClientExercisePeriod? period) {
+    if (period == null) return null;
+    // 그 주에 아무 기록도 없으면 0 이 아니라 '없음' 이다.
+    if (period.days.every((d) => !d.logged)) return null;
+    return switch (_metric) {
+      ExerciseCompareMetric.burned => period.totalCalories,
+      ExerciseCompareMetric.cardio => period.totalCardioMinutes,
+      ExerciseCompareMetric.strength => period.totalStrengthMinutes,
+      ExerciseCompareMetric.stretching => period.totalStretchingMinutes,
+    }.toDouble();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<double> kcal = <double>[
-      means[0] * 4,
-      means[1] * 4,
-      means[2] * 9,
-    ];
-    final double total = kcal.fold<double>(0, (a, b) => a + b);
-    if (total <= 0) {
-      return ColoredBox(
-        color: dim ? AppColors.aiCardGradientEnd : AppColors.primary,
-      );
-    }
-    const List<Color> colors = <Color>[
-      AppColors.macroCarbs,
-      AppColors.macroProtein,
-      AppColors.macroFat,
-    ];
-    return Column(
-      // 가로로 늘려야 한다 — 가운데 정렬(기본값)이면 조각마다 폭이 0 이 되어
-      // 막대가 통째로 사라진다.
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        // 위에서부터 지방·단백질·탄수화물 순으로 쌓는다 — 아래(바닥)가
-        // 탄수화물이라 세 막대를 견줄 때 기준이 흔들리지 않는다.
-        for (var i = 2; i >= 0; i--)
-          Expanded(
-            flex: (kcal[i] * 1000).round().clamp(1, 1 << 30),
-            child: ColoredBox(
-              color: dim ? colors[i].withValues(alpha: 0.45) : colors[i],
-            ),
+    final l = AppLocalizations.of(context);
+    final report = widget.report;
+    ClientPeriodKey keyFor(DateTime week) => (
+      clientId: report.client.id,
+      period: ClientPeriod.week,
+      day: week,
+    );
+    final week = ref.watch(
+      clientExercisePeriodProvider(keyFor(report.weekStart)),
+    );
+    final before = ref.watch(
+      clientExercisePeriodProvider(
+        keyFor(report.weekStart.subtract(const Duration(days: 7))),
+      ),
+    );
+    final String unit = _metric == ExerciseCompareMetric.burned
+        ? l.unitKcal
+        : l.unitMinutes;
+    String format(double v) => '${formatNumber(v.round())}$unit';
+    return _ComparisonBox(
+      title: l.clientTabWorkout,
+      caption: l.reportsWeekTotal,
+      pills: <Widget>[
+        for (final metric in ExerciseCompareMetric.values)
+          MetricPill(
+            key: ValueKey<String>('compare-exercise-${metric.name}'),
+            label: _label(l, metric),
+            selected: metric == _metric,
+            onTap: () => setState(() => _metric = metric),
           ),
       ],
+      previous: _value(before.valueOrNull),
+      current: _value(week.valueOrNull),
+      previousLabel: l.reportsLastWeek,
+      currentLabel: report.isCurrentWeek
+          ? l.reportsThisWeek
+          : l.reportsSelectedWeek,
+      format: format,
+      goal: null,
+      segments: null,
+      legend: null,
+      // 운동은 많이 할수록 좋은 값이다.
+      higherIsBetter: true,
+      loading: week.isLoading || before.isLoading,
+      emptyLabel: l.reportsDataInsufficient,
+      semanticsLabel: '${l.clientTabWorkout} · ${_label(l, _metric)}',
+    );
+  }
+}
+
+/// 식단 상자 — 칼로리(탄·단·지)·나트륨·당류를 하루 평균으로 견준다.
+class _DietComparisonBox extends ConsumerStatefulWidget {
+  const _DietComparisonBox({required this.report});
+
+  final WeeklyReport report;
+
+  @override
+  ConsumerState<_DietComparisonBox> createState() => _DietComparisonBoxState();
+}
+
+class _DietComparisonBoxState extends ConsumerState<_DietComparisonBox> {
+  DietCompareMetric _metric = DietCompareMetric.calories;
+
+  String _label(AppLocalizations l, DietCompareMetric metric) =>
+      switch (metric) {
+        DietCompareMetric.calories => l.metricCalories,
+        DietCompareMetric.sodium => l.metricSodium,
+        DietCompareMetric.sugar => l.metricSugar,
+      };
+
+  /// 하루 평균. 기록이 있는 날만 센다 — 아직 오지 않은 날을 0 으로 세면 이번
+  /// 주가 늘 나아 보인다.
+  double? _value(WeeklyReport? report) {
+    if (report == null) return null;
+    return switch (_metric) {
+      DietCompareMetric.calories => recordedMean(report.caloriesWeek),
+      DietCompareMetric.sodium => report.sodiumAvg?.toDouble(),
+      DietCompareMetric.sugar => recordedMean(report.sugarWeek),
+    };
+  }
+
+  double get _goal => switch (_metric) {
+    DietCompareMetric.calories => calorieTargetKcal.toDouble(),
+    DietCompareMetric.sodium => sodiumTargetMg.toDouble(),
+    DietCompareMetric.sugar => sugarTargetG.toDouble(),
+  };
+
+  /// 그 주의 탄·단·지 하루 평균(g). 하나도 없으면 빈 목록이다.
+  List<double> _macros(WeeklyReport? report) {
+    if (report == null || _metric != DietCompareMetric.calories) {
+      return const <double>[];
+    }
+    final means = <double>[
+      recordedMean(report.carbsWeek) ?? 0,
+      recordedMean(report.proteinWeek) ?? 0,
+      recordedMean(report.fatWeek) ?? 0,
+    ];
+    return means.every((v) => v == 0) ? const <double>[] : means;
+  }
+
+  /// 막대를 쌓을 조각. 몫은 **열량 기여분**이다(탄·단 4kcal/g, 지방 9kcal/g) —
+  /// 그램으로 쌓으면 열량의 절반을 내는 지방이 가장 얇게 그려져 막대 전체가
+  /// 칼로리를 말하지 않게 된다.
+  List<BarSegment>? _segments(WeeklyReport? report) {
+    final means = _macros(report);
+    if (means.isEmpty) return null;
+    return <BarSegment>[
+      (value: means[0] * 4, color: AppColors.macroCarbs),
+      (value: means[1] * 4, color: AppColors.macroProtein),
+      (value: means[2] * 9, color: AppColors.macroFat),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final report = widget.report;
+    final previous = ref.watch(
+      weeklyReportProvider((
+        client: report.client,
+        weekStart: report.weekStart.subtract(const Duration(days: 7)),
+      )),
+    );
+    final WeeklyReport? before = previous.valueOrNull;
+    final String unit = switch (_metric) {
+      DietCompareMetric.calories => l.unitKcal,
+      DietCompareMetric.sodium => l.unitMg,
+      DietCompareMetric.sugar => l.unitGram,
+    };
+    String format(double v) => _metric == DietCompareMetric.sugar
+        ? '${formatNumber((v * 10).roundToDouble() / 10)}$unit'
+        : '${formatNumber(v.round())}$unit';
+    final List<double> means = _macros(report);
+    return _ComparisonBox(
+      title: l.clientTabDiet,
+      caption: l.clientPeriodAverage,
+      pills: <Widget>[
+        for (final metric in DietCompareMetric.values)
+          MetricPill(
+            key: ValueKey<String>('compare-diet-${metric.name}'),
+            label: _label(l, metric),
+            selected: metric == _metric,
+            onTap: () => setState(() => _metric = metric),
+          ),
+      ],
+      previous: _value(before),
+      current: _value(report),
+      previousLabel: l.reportsLastWeek,
+      currentLabel: report.isCurrentWeek
+          ? l.reportsThisWeek
+          : l.reportsSelectedWeek,
+      format: format,
+      goal: _goal,
+      segments: <List<BarSegment>?>[_segments(before), _segments(report)],
+      legend: means.isEmpty
+          ? null
+          : _MacroLegend(means: means, unit: l.unitGram),
+      // 칼로리는 목표에 가까울수록 좋은 값이라 어느 쪽도 아니다.
+      higherIsBetter: _metric == DietCompareMetric.calories ? null : false,
+      loading: previous.isLoading,
+      emptyLabel: l.reportsDataInsufficient,
+      semanticsLabel: '${l.clientTabDiet} · ${_label(l, _metric)}',
     );
   }
 }
@@ -478,7 +454,7 @@ class _MacroLegend extends StatelessWidget {
       AppColors.macroFat,
     ];
     return Wrap(
-      spacing: AppSpacing.md,
+      spacing: AppSpacing.sm,
       runSpacing: AppSpacing.xs,
       children: <Widget>[
         for (var i = 0; i < labels.length; i++)
@@ -493,11 +469,11 @@ class _MacroLegend extends StatelessWidget {
                   borderRadius: const BorderRadius.all(Radius.circular(2)),
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
               Text(
                 '${labels[i]} ${formatNumber(means[i].round())}$unit',
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
                 ),
@@ -512,18 +488,14 @@ class _MacroLegend extends StatelessWidget {
 /// 지난 주 대비 변화 한 칸.
 class _DeltaBadge extends StatelessWidget {
   const _DeltaBadge({
-    required this.caption,
     required this.current,
     required this.previous,
-    required this.unit,
     required this.format,
     required this.higherIsBetter,
   });
 
-  final String caption;
   final double? current;
   final double? previous;
-  final String unit;
   final String Function(double) format;
 
   /// null 이면 좋고 나쁨을 가리지 않는다 — 칼로리처럼 목표에 가까울수록 좋은
@@ -535,38 +507,20 @@ class _DeltaBadge extends StatelessWidget {
     final double? delta = current == null || previous == null
         ? null
         : current! - previous!;
-    final Color color = delta == null || higherIsBetter == null
+    if (delta == null) return const SizedBox.shrink();
+    final Color color = higherIsBetter == null
         ? AppColors.mutedForeground
         : (delta >= 0) == higherIsBetter!
         ? AppColors.success
         : AppColors.overTarget;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          caption,
-          textAlign: TextAlign.right,
-          style: const TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          delta == null
-              ? '-'
-              : '${delta >= 0 ? '+' : '-'}${format(delta.abs())}$unit',
-          textAlign: TextAlign.right,
-          maxLines: 1,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ],
+    return Text(
+      '${delta >= 0 ? '+' : '-'}${format(delta.abs())}',
+      maxLines: 1,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: color,
+      ),
     );
   }
 }
