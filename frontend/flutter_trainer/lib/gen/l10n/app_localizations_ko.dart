@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -228,7 +227,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashActivityRecommendRoutine => '프로그램에서 루틴을 조정해보세요.';
 
   @override
-  String get dashActivityRecommendChat => '채팅에서 안부를 물어보세요.';
+  String get dashActivityRecommendChat => '메시지에서 안부를 물어보세요.';
 
   @override
   String get dashActivityRecommendDiet => '식단에서 피드백을 남겨보세요.';
@@ -237,7 +236,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashActivityTabProgram => '프로그램';
 
   @override
-  String get dashActivityTabChat => '채팅';
+  String get dashActivityTabChat => '메시지';
 
   @override
   String get dashActivityTabDiet => '식단';
@@ -2592,7 +2591,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashTaskDismissBody =>
-      '오늘 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
+      '할 일 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
 
   @override
   String get dashTaskCarriedOverTitle => '지난 할 일';

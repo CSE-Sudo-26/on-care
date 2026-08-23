@@ -44,7 +44,7 @@ enum ActivityFeedbackKind {
 
   /// The destination tab's own name — the CTA is a short "프로그램 >" link,
   /// not a full sentence like "AI 루틴 만들러 가기". Each kind's fix lives
-  /// on a different tab (프로그램, 채팅, 식단), so the label names that tab.
+  /// on a different tab (프로그램, 메시지, 식단), so the label names that tab.
   String tabLabel(AppLocalizations l) => switch (this) {
     ActivityFeedbackKind.difficultyReview => l.dashActivityTabProgram,
     ActivityFeedbackKind.inactiveSevenDays => l.dashActivityTabChat,
