@@ -62,29 +62,8 @@ class TaskProgressChart extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // 그날 목록을 다 채웠는지는 막대 높이만 봐서는 짐작해야 한다 —
-        // 숫자를 막대 바로 위에 얹어 둔다.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            for (var i = 0; i < snapshots.length; i++)
-              Expanded(
-                child: Center(
-                  child: Text(
-                    _percentLabel(snapshots[i]),
-                    style: const TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.subtleForeground,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 2),
         SizedBox(
-          height: 88,
+          height: 102,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
@@ -93,7 +72,9 @@ class TaskProgressChart extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 3),
                     child: _StackedBar(
+                      index: i,
                       snapshot: snapshots[i],
+                      percentLabel: _percentLabel(snapshots[i]),
                       ceiling: ceiling,
                       pending: isCurrentWeek && i > todayIndex,
                     ),
@@ -174,12 +155,16 @@ class TaskProgressLegend extends StatelessWidget {
 
 class _StackedBar extends StatelessWidget {
   const _StackedBar({
+    required this.index,
     required this.snapshot,
+    required this.percentLabel,
     required this.ceiling,
     required this.pending,
   });
 
+  final int index;
   final DailyTaskSnapshot? snapshot;
+  final String percentLabel;
   final int ceiling;
   final bool pending;
 
@@ -202,17 +187,35 @@ class _StackedBar extends StatelessWidget {
     final s = snapshot!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxHeight = constraints.maxHeight;
-        final todayHeight = maxHeight * (s.completedToday / ceiling);
-        final carriedHeight = maxHeight * (s.completedCarriedOver / ceiling);
+        const labelHeight = 12.0;
+        const labelGap = 2.0;
+        final maxBarHeight = constraints.maxHeight - labelHeight - labelGap;
+        final todayHeight = maxBarHeight * (s.completedToday / ceiling);
+        final carriedHeight = maxBarHeight * (s.completedCarriedOver / ceiling);
         final totalHeight = (todayHeight + carriedHeight).clamp(
           s.completed > 0 ? 2.0 : 0.0,
-          maxHeight,
+          maxBarHeight,
         );
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             SizedBox(
+              height: labelHeight,
+              child: Center(
+                child: Text(
+                  percentLabel,
+                  key: ValueKey<String>('task-progress-percent-$index'),
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: labelGap),
+            SizedBox(
+              key: ValueKey<String>('task-progress-bar-$index'),
               height: totalHeight,
               child: Column(
                 children: <Widget>[
