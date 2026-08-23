@@ -7,7 +7,6 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/activity_feedback.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/oni_avatar.dart';
 
 /// "AI 진단" — 트레이너 활동 피드백 3가지(이행률·이탈 위험 감지, 7일 이상
@@ -26,6 +25,8 @@ class AiSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // 대상이 없는 신호는 아예 그리지 않는다 — "0명" 문장은 안내가 아니다.
+    final active = activityFeedback.where((i) => i.count > 0).toList();
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -40,19 +41,25 @@ class AiSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _Header(title: l.dashAiSummaryTitle, today: l.dashToday),
+          _Header(title: l.dashAiSummaryTitle),
           const SizedBox(height: AppSpacing.md),
-          for (var i = 0; i < activityFeedback.length; i++) ...<Widget>[
-            if (i > 0) const SizedBox(height: AppSpacing.md),
-            _ActivityFeedbackDetail(item: activityFeedback[i]),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          ActionButton(
-            label: l.dashCreateAiRoutine,
-            icon: Icons.auto_awesome,
-            primary: true,
-            onPressed: () => context.go(AppRoutes.coaching),
-          ),
+          if (active.isEmpty)
+            Text(
+              l.dashAiNoClients,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.mutedForeground,
+              ),
+            )
+          else
+            for (var i = 0; i < active.length; i++) ...<Widget>[
+              if (i > 0) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                const Divider(color: AppColors.aiCardGradientEnd, height: 1),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              _ActivityFeedbackDetail(item: active[i]),
+            ],
         ],
       ),
     );
@@ -60,10 +67,9 @@ class AiSummaryCard extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.title, required this.today});
+  const _Header({required this.title});
 
   final String title;
-  final String today;
 
   @override
   Widget build(BuildContext context) {
@@ -79,30 +85,14 @@ class _Header extends StatelessWidget {
             color: AppColors.foreground,
           ),
         ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: const BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.all(AppRadius.pill),
-          ),
-          child: Text(
-            today,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
       ],
     );
   }
 }
 
-/// One 트레이너 활동 피드백 bullet, written out in full — headline, the
-/// explanation of what the signal means and what to do, and (when any
-/// client triggered it) who.
+/// One 트레이너 활동 피드백 bullet, written out in full — headline, a
+/// sentence that names the clients naturally, and a right-aligned link to
+/// go act on it.
 ///
 /// 흰 박스로 감싸지 않는다 — 카드 자체가 이미 그라디언트로 구분돼 있어,
 /// 안에 또 흰 상자를 두면 레이어가 하나 더 생길 뿐이었다(#[dashboard]).
@@ -117,39 +107,17 @@ class _ActivityFeedbackDetail extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                item.kind.title(l),
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.foreground,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.14),
-                borderRadius: const BorderRadius.all(AppRadius.pill),
-              ),
-              child: Text(
-                '${item.count}${l.dashUnitPeople}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          item.kind.title(l),
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: AppColors.foreground,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
-          item.kind.description(l),
+          item.kind.description(l, _names(l, item.clientNames)),
           style: const TextStyle(
             fontSize: 12.5,
             height: 1.5,
@@ -157,27 +125,41 @@ class _ActivityFeedbackDetail extends StatelessWidget {
             color: AppColors.mutedForeground,
           ),
         ),
-        if (item.clientNames.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 4),
-          Text(
-            l.dashActivityFeedbackTarget(_names(item.clientNames)),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            key: ValueKey<String>('ai-summary-cta-${item.kind.name}'),
+            onPressed: () => context.go(AppRoutes.coaching),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 4,
+              ),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
+            icon: Text(
+              l.dashActivityCreateRoutine,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            label: const Icon(Icons.chevron_right, size: 14),
+            iconAlignment: IconAlignment.start,
           ),
-        ],
+        ),
       ],
     );
   }
 
-  static String _names(List<String> names) {
+  static String _names(AppLocalizations l, List<String> names) {
     const maxShown = 3;
     if (names.length <= maxShown) return names.join(', ');
     final shown = names.take(maxShown).join(', ');
-    return '$shown 외 ${names.length - maxShown}명';
+    return l.dashActivityMoreClients(shown, names.length - maxShown);
   }
 }

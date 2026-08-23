@@ -78,7 +78,18 @@ class DashboardPage extends ConsumerWidget {
         data: (summary) => LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= AppLayout.twoColumnBreakpoint;
-            final todayColumn = Column(
+            // 왼쪽: 오늘의 일정 + (그 아래) AI 진단. 오른쪽: 오늘 할 일 +
+            // (그 아래) 할 일 진행률 — AI 진단이 그래프와 나란한 줄에 오도록
+            // 왼쪽 칸에 둔다.
+            final leftColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const TodayTimelineCard(),
+                const SizedBox(height: AppSpacing.lg),
+                AiSummaryCard(activityFeedback: activityFeedback),
+              ],
+            );
+            final rightColumn = Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 TodayTasksCard(entries: summary.attention),
@@ -91,27 +102,26 @@ class DashboardPage extends ConsumerWidget {
               children: <Widget>[
                 _KpiRow(summary: summary, churnRisk: churnRisk, wide: wide),
                 const SizedBox(height: AppSpacing.lg),
-                if (wide) ...<Widget>[
+                if (wide)
                   Row(
                     key: const ValueKey<String>('dashboard-action-row'),
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      // 5:4 — 딱 반반은 아니다. 오늘의 일정이 시간표 형식이라
-                      // 칸이 좁아지면 상자 테두리가 먼저 답답해진다.
-                      const Expanded(flex: 5, child: TodayTimelineCard()),
+                      // 5:4 — 딱 반반은 아니다.
+                      Expanded(flex: 5, child: leftColumn),
                       const SizedBox(width: AppSpacing.lg),
-                      Expanded(flex: 4, child: todayColumn),
+                      Expanded(flex: 4, child: rightColumn),
+                    ],
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      leftColumn,
+                      const SizedBox(height: AppSpacing.lg),
+                      rightColumn,
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(activityFeedback: activityFeedback),
-                ] else ...<Widget>[
-                  const TodayTimelineCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  todayColumn,
-                  const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(activityFeedback: activityFeedback),
-                ],
               ],
             );
           },

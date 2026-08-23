@@ -21,12 +21,16 @@ enum ActivityFeedbackKind {
     ActivityFeedbackKind.dietFeedbackPending => l.dashActivityDietFeedbackTitle,
   };
 
-  /// The full explanatory sentence — what this signal means and what to
-  /// do about it.
-  String description(AppLocalizations l) => switch (this) {
-    ActivityFeedbackKind.difficultyReview => l.dashActivityDifficultyDesc,
-    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityInactiveDesc,
-    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityDietFeedbackDesc,
+  /// The full explanatory sentence — [names] woven in naturally ("{names}
+  /// 고객이 ~해요") rather than tacked on as a separate "대상:" line.
+  String description(AppLocalizations l, String names) => switch (this) {
+    ActivityFeedbackKind.difficultyReview => l.dashActivityDifficultyDesc(
+      names,
+    ),
+    ActivityFeedbackKind.inactiveSevenDays => l.dashActivityInactiveDesc(names),
+    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityDietFeedbackDesc(
+      names,
+    ),
   };
 }
 

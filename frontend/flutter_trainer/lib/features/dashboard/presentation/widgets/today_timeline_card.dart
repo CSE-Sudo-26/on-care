@@ -15,9 +15,10 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
-/// Today's timeline, condensed for the dashboard: time, status dot,
-/// who + what, and the status word. Gaps are shown (a trainer's free
-/// hour is information) but muted.
+/// Today's timeline, condensed for the dashboard: time, status dot, who +
+/// what, and the status pill. 빈 시간(공백 슬롯)은 오늘의 예약이 무엇인지와
+/// 무관해 아예 그리지 않는다 — 여기는 "오늘 할 일"이 아니라 "오늘 누굴
+/// 보나" 목록이다.
 class TodayTimelineCard extends ConsumerWidget {
   /// Creates the card.
   const TodayTimelineCard({super.key});
@@ -47,7 +48,8 @@ class TodayTimelineCard extends ConsumerWidget {
         ),
         error: (e, _) => EmptyHint(message: l.dashScheduleLoadFailed),
         data: (sessions) {
-          if (sessions.isEmpty) {
+          final booked = sessions.where((s) => !s.isGap).toList();
+          if (booked.isEmpty) {
             return EmptyHint(
               message: l.dashNoScheduleToday,
               icon: Icons.event_busy_outlined,
@@ -55,7 +57,7 @@ class TodayTimelineCard extends ConsumerWidget {
           }
           return Column(
             children: <Widget>[
-              for (final session in sessions)
+              for (final session in booked)
                 _Row(
                   session: session,
                   client: findClientIdentity(
@@ -99,89 +101,91 @@ class _Row extends StatelessWidget {
 
   final VoidCallback onTap;
 
+  Color get _dotColor {
+    if (session.isDone) return AppColors.success;
+    if (session.isUpcoming) return AppColors.primary;
+    return AppColors.disabledForeground;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final muted = session.isGap;
-    // 시간표 형식 — 슬롯마다 테두리 상자를 둔다. 하루치 리스트일 뿐이지만
-    // 스케줄 탭의 시간표 감각을 대시보드에서도 살린다.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Material(
-        color: imminent ? AppColors.accentSurface : AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: imminent ? AppColors.primary : AppColors.borderStrong,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: const BorderRadius.all(AppRadius.sm),
+      child: Container(
+        decoration: imminent
+            ? const BoxDecoration(
+                color: AppColors.accentSurface,
+                borderRadius: BorderRadius.all(AppRadius.sm),
+              )
+            : null,
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SizedBox(
+              width: 42,
+              child: Text(
+                session.time,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.subtleForeground,
+                ),
               ),
-              borderRadius: const BorderRadius.all(AppRadius.md),
             ),
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.sm,
-              horizontal: AppSpacing.sm,
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: AppSpacing.sm),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _dotColor,
+                ),
+              ),
             ),
-            child: Opacity(
-              opacity: muted ? 0.55 : 1,
-              child: Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SizedBox(
-                    width: 42,
-                    child: Text(
-                      session.time,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.subtleForeground,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: muted
-                        ? Text(
-                            l.dashEmptySlot,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.subtleForeground,
-                            ),
-                          )
-                        : Text(
-                            client == null
-                                ? fallbackName
-                                : clientIdentityLabel(context, client!),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.foreground,
-                            ),
+                  client == null
+                      ? Text(
+                          fallbackName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.foreground,
                           ),
-                  ),
-                  // 스케줄 탭과 같은 알약 두 장(#1012) — 종류는 늘 남색, 상태는
-                  // 결과에 따라 색이 갈린다. 대시보드 목록은 자리가 좁아 둘 다
-                  // compact 치수를 쓴다.
-                  if (!muted) ...<Widget>[
-                    const SizedBox(width: AppSpacing.xs),
-                    SessionTypeChip(
-                      label: session.type,
-                      muted: session.isFinished,
-                      compact: true,
+                        )
+                      : ClientIdentity(
+                          client: client!,
+                          nameStyle: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                  Text(
+                    // 소요 시간은 안 보여준다 — 여기서 정할 것은 "누구인가"고
+                    // "얼마나 걸리나"는 스케줄 탭에서 보면 된다.
+                    session.type,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.subtleForeground,
                     ),
-                    const SizedBox(width: AppSpacing.xs),
-                    SessionStatusChip(status: session.status),
-                  ],
+                  ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(width: AppSpacing.xs),
+            SessionStatusChip(status: session.status),
+          ],
         ),
       ),
     );

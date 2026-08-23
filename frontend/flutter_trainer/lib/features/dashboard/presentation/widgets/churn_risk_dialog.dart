@@ -112,11 +112,9 @@ class _ChurnRiskTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        '${client.name} · ${clientDemographicsLabel(context, client)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                      ClientIdentity(
+                        client: client,
+                        nameStyle: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
                         ),

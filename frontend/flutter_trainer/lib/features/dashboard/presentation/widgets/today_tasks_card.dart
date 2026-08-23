@@ -16,8 +16,10 @@ import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// Bumped whenever [TodayTasksCard] persists a new daily snapshot, so a
@@ -28,7 +30,7 @@ final taskProgressVersionProvider = StateProvider<int>(
   name: 'taskProgressVersion',
 );
 
-/// 상담 요청 확인 카테고리가 쓰는 대기 목록 — **한 번만** 읽는다.
+/// 상담 요청 확인 미션이 쓰는 대기 목록 — **한 번만** 읽는다.
 ///
 /// `consultationsProvider`(인박스 화면 전용)는 [ConsultationRepository.watch]
 /// 를 그대로 구독하는데, 실서버 구현은 배지처럼 몇 초마다 다시 읽는 폴링
@@ -45,61 +47,46 @@ final _consultationMissionsProvider =
       return ref.watch(consultationRepositoryProvider).fetch();
     }, name: 'consultationMissions');
 
-/// A category of 오늘 할 일 — the card opens on this grid; tapping one
-/// drills into its own missions.
-enum TodoCategory {
-  /// 미처리 상담 요청.
-  consultation,
-
-  /// 건강 신호(나트륨·당류·이행률)로 확인이 필요한 고객.
-  feedback,
-
-  /// 최근 보낸 프로그램이 없는 고객.
-  program,
-
-  /// 이번 주 리포트를 챙길 고객.
-  report;
-
-  String label(AppLocalizations l) => switch (this) {
-    TodoCategory.consultation => l.dashTodoConsultation,
-    TodoCategory.feedback => l.dashTodoFeedback,
-    TodoCategory.program => l.dashTodoProgram,
-    TodoCategory.report => l.dashTodoReport,
-  };
-
-  IconData get icon => switch (this) {
-    TodoCategory.consultation => Icons.event_available_outlined,
-    TodoCategory.feedback => Icons.feedback_outlined,
-    TodoCategory.program => Icons.fitness_center,
-    TodoCategory.report => Icons.description_outlined,
-  };
-}
-
-/// One concrete item inside a [TodoCategory].
+/// One concrete 오늘 할 일 item — 상담 요청 하나, 건강 신호가 있는 고객
+/// 하나, 프로그램 미등록 고객 하나, 리포트 대상 고객 하나 등.
+///
+/// 카테고리별 그리드로 나누지 않고 한 리스트에 섞어 보여준다 — 앞의 알약
+/// [keyword] 가 무슨 일인지 말해 준다.
 class _Mission {
   const _Mission({
     required this.key,
+    required this.keyword,
+    required this.keywordColor,
     required this.title,
-    this.subtitle = '',
+    this.client,
+    required this.subtitle,
     required this.onTap,
   });
 
   /// Stable across a day — used for checked/dismissed/carry-over tracking.
   final String key;
+
+  /// 알약에 적을 짧은 낱말(상담/식단/운동/프로그램/리포트).
+  final String keyword;
+  final Color keywordColor;
+
+  /// 고객을 못 찾을 때(상담 요청 등록 회원) 쓸 표시 이름.
   final String title;
+
+  /// 로스터에 있는 고객이면 이름 옆에 성별·나이를 회색으로 붙인다.
+  final TrainerClient? client;
+
   final String subtitle;
   final VoidCallback onTap;
 }
 
-/// 오늘 할 일 — 카테고리 4개(상담 요청 확인·고객 피드백 확인·운동 프로그램
-/// 등록·리포트 작성)를 2×2 그리드로 먼저 보여주고, 하나를 고르면 그 칸 안에서
-/// 해당 카테고리의 미션 목록으로 바뀐다(상단 X로 그리드로 복귀).
+/// 오늘 할 일 — 상담 요청·건강 신호·프로그램 미등록·리포트 대상 고객을
+/// 한 리스트로 모아 보여준다.
 ///
-/// 체크(완료 처리, 회색+취소선)와 X(오늘 목록에서 제외)는 서로 다른
-/// 동작이다 — 체크는 "했다", X는 "오늘은 안 보이게" 다. 아래는 모두 이
-/// 세션이 로컬로만 기억하는 상태다: 실제 상담 수락/거절, 프로그램 전송,
-/// 리포트 발송은 각 화면(상담·AI 코칭·리포트)에서 해야 한다 — 여기 체크는
-/// "확인했다"는 트레이너 자신의 표시일 뿐이다.
+/// 체크(완료 처리, 회색+취소선)와 삭제(오늘 목록에서만 제외)는 서로 다른
+/// 동작이다. 아래는 모두 이 세션이 로컬로만 기억하는 상태다: 실제 상담
+/// 수락/거절, 프로그램 전송, 리포트 발송은 각 화면(상담·AI 코칭·리포트)에서
+/// 해야 한다 — 여기 체크는 "확인했다"는 트레이너 자신의 표시일 뿐이다.
 class TodayTasksCard extends ConsumerStatefulWidget {
   /// Creates the card. [entries] is the health-alert roster (같은 정의를
   /// 주의 고객 KPI 가 쓴다).
@@ -112,8 +99,6 @@ class TodayTasksCard extends ConsumerStatefulWidget {
 }
 
 class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
-  bool _expanded = true;
-  TodoCategory? _selected;
   Set<String> _checkedKeys = <String>{};
   Set<String> _dismissedKeys = <String>{};
   Set<String> _carriedOverKeys = <String>{};
@@ -188,7 +173,7 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
     ref.read(taskProgressVersionProvider.notifier).state++;
   }
 
-  Map<TodoCategory, List<_Mission>> _buildMissions(AppLocalizations l) {
+  List<_Mission> _buildMissions(AppLocalizations l) {
     final clients =
         ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
     final consultations =
@@ -203,284 +188,116 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
     );
     final activeClients = clients.where((c) => c.active);
 
-    return <TodoCategory, List<_Mission>>{
-      TodoCategory.consultation: <_Mission>[
-        for (final request in consultations.where((r) => r.isPending))
-          _Mission(
-            key: 'consultation-${request.id}',
-            title: request.memberName,
-            subtitle: l.dashTodoConsultationSubtitle,
-            onTap: () => context.go(AppRoutes.consultations),
+    return <_Mission>[
+      for (final request in consultations.where((r) => r.isPending))
+        _Mission(
+          key: 'consultation-${request.id}',
+          keyword: l.dashTodoConsultation,
+          keywordColor: AppColors.primary,
+          title: request.memberName,
+          subtitle: l.dashTodoConsultationSubtitle(
+            request.preferredDate.month,
+            request.preferredDate.day,
           ),
-      ],
-      TodoCategory.feedback: <_Mission>[
-        for (final entry in health)
-          _Mission(
-            key: 'feedback-${entry.primary.name}-${entry.client.id}',
-            title: entry.client.name,
-            subtitle: entry.primary.label(l),
-            onTap: () => context.go(
-              AppRoutes.clientDetail(
-                entry.client.id,
-                section: AttentionCard.sectionFor(entry.primary),
-              ),
+          onTap: () => context.go(AppRoutes.consultations),
+        ),
+      for (final entry in health)
+        _Mission(
+          key: 'feedback-${entry.primary.name}-${entry.client.id}',
+          keyword: entry.primary == ClientAlert.lowCompletion
+              ? l.dashTodoWorkout
+              : l.dashTodoDiet,
+          keywordColor: AppColors.overTarget,
+          title: entry.client.name,
+          client: entry.client,
+          subtitle: _feedbackSubtitle(l, entry),
+          onTap: () => context.go(
+            AppRoutes.clientDetail(
+              entry.client.id,
+              section: AttentionCard.sectionFor(entry.primary),
             ),
           ),
-      ],
-      TodoCategory.program: <_Mission>[
-        for (final client in missingProgram)
-          _Mission(
-            key: 'program-${client.id}',
-            title: client.name,
-            subtitle: l.dashTodoProgramSubtitle,
-            onTap: () => context.go(AppRoutes.coachingFor(client.id)),
-          ),
-      ],
-      TodoCategory.report: <_Mission>[
-        for (final client in activeClients)
-          _Mission(
-            key: 'report-${client.id}',
-            title: client.name,
-            subtitle: l.dashTodoReportSubtitle,
-            onTap: () => context.go(AppRoutes.reportFor(client.id)),
-          ),
-      ],
+        ),
+      for (final client in missingProgram)
+        _Mission(
+          key: 'program-${client.id}',
+          keyword: l.dashTodoProgram,
+          keywordColor: AppColors.primary,
+          title: client.name,
+          client: client,
+          subtitle: l.dashTodoProgramSubtitle,
+          onTap: () => context.go(AppRoutes.coachingFor(client.id)),
+        ),
+      for (final client in activeClients)
+        _Mission(
+          key: 'report-${client.id}',
+          keyword: l.dashTodoReport,
+          keywordColor: AppColors.primary,
+          title: client.name,
+          client: client,
+          subtitle: l.dashTodoReportSubtitle,
+          onTap: () => context.go(AppRoutes.reportFor(client.id)),
+        ),
+    ];
+  }
+
+  String _feedbackSubtitle(AppLocalizations l, AttentionClient entry) {
+    final client = entry.client;
+    return switch (entry.primary) {
+      ClientAlert.sodiumOver => l.dashTodoSodiumSubtitle(
+        client.sodiumMg,
+        sodiumTargetMg,
+      ),
+      ClientAlert.sugarOver => l.dashTodoSugarSubtitle(
+        client.sugarG.round(),
+        sugarTargetG,
+      ),
+      ClientAlert.lowCompletion ||
+      ClientAlert.unanswered => l.dashTodoCompletionSubtitle,
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final missionsByCategory = _buildMissions(l);
-    final allMissions = missionsByCategory.values.expand((m) => m);
-    final allKeys = <String>{for (final m in allMissions) m.key}
+    final missions = _buildMissions(l);
+    final allKeys = <String>{for (final m in missions) m.key}
       ..removeAll(_dismissedKeys);
     _initializeIfNewDay(allKeys);
+    final visible = missions.where((m) => allKeys.contains(m.key)).toList();
 
     final remaining = allKeys.difference(_checkedKeys).length;
     final allDone = allKeys.isNotEmpty && remaining == 0;
 
     return SectionCard(
       title: l.dashTodayTasks,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            allKeys.isEmpty || allDone
-                ? l.dashTasksReviewed
-                : l.dashTasksNeedReview(remaining),
-            style: TextStyle(
-              color: allKeys.isEmpty || allDone
-                  ? AppColors.success
-                  : AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          InkWell(
-            key: const ValueKey<String>('dashboard-tasks-toggle'),
-            borderRadius: const BorderRadius.all(AppRadius.sm),
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.xs),
-              child: Icon(
-                _expanded ? Icons.expand_less : Icons.expand_more,
-                size: 20,
-                color: AppColors.subtleForeground,
-              ),
-            ),
-          ),
-        ],
+      trailing: Text(
+        allKeys.isEmpty || allDone
+            ? l.dashTasksReviewed
+            : l.dashTasksNeedReview(remaining),
+        style: TextStyle(
+          color: allKeys.isEmpty || allDone
+              ? AppColors.success
+              : AppColors.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
-      child: !_expanded
-          ? const SizedBox.shrink()
-          : _selected == null
-          ? _CategoryGrid(
-              missionsByCategory: missionsByCategory,
-              checkedKeys: _checkedKeys,
-              onSelect: (c) => setState(() => _selected = c),
-            )
-          : _MissionListView(
-              category: _selected!,
-              missions: missionsByCategory[_selected!]!,
-              checkedKeys: _checkedKeys,
-              carriedOverKeys: _carriedOverKeys,
-              onBack: () => setState(() => _selected = null),
-              onToggle: (key) => _toggle(key, allKeys),
-              onDismiss: (key) => _dismiss(key, allKeys),
-            ),
-    );
-  }
-}
-
-class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({
-    required this.missionsByCategory,
-    required this.checkedKeys,
-    required this.onSelect,
-  });
-
-  final Map<TodoCategory, List<_Mission>> missionsByCategory;
-  final Set<String> checkedKeys;
-  final ValueChanged<TodoCategory> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 2.1,
-      children: <Widget>[
-        for (final category in TodoCategory.values)
-          _CategoryTile(
-            key: ValueKey<String>('dashboard-todo-category-${category.name}'),
-            category: category,
-            pending: (missionsByCategory[category] ?? const <_Mission>[])
-                .where((m) => !checkedKeys.contains(m.key))
-                .length,
-            onTap: () => onSelect(category),
-          ),
-      ],
-    );
-  }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    super.key,
-    required this.category,
-    required this.pending,
-    required this.onTap,
-  });
-
-  final TodoCategory category;
-  final int pending;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: const BorderRadius.all(AppRadius.md),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.borderStrong),
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          color: pending > 0
-              ? AppColors.primary.withValues(alpha: 0.05)
-              : AppColors.card,
-        ),
-        child: Row(
-          children: <Widget>[
-            Icon(category.icon, size: 20, color: AppColors.primary),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                category.label(l),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            if (pending > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: const BorderRadius.all(AppRadius.pill),
-                ),
-                child: Text(
-                  '+$pending',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+      child: visible.isEmpty
+          ? EmptyHint(message: l.dashTasksEmpty, icon: Icons.task_alt)
+          : Column(
+              children: <Widget>[
+                for (final mission in visible)
+                  _MissionRow(
+                    key: ValueKey<String>('dashboard-mission-${mission.key}'),
+                    mission: mission,
+                    checked: _checkedKeys.contains(mission.key),
+                    carriedOver: _carriedOverKeys.contains(mission.key),
+                    onToggle: () => _toggle(mission.key, allKeys),
+                    onDismiss: () => _dismiss(mission.key, allKeys),
                   ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MissionListView extends StatelessWidget {
-  const _MissionListView({
-    required this.category,
-    required this.missions,
-    required this.checkedKeys,
-    required this.carriedOverKeys,
-    required this.onBack,
-    required this.onToggle,
-    required this.onDismiss,
-  });
-
-  final TodoCategory category;
-  final List<_Mission> missions;
-  final Set<String> checkedKeys;
-  final Set<String> carriedOverKeys;
-  final VoidCallback onBack;
-  final ValueChanged<String> onToggle;
-  final ValueChanged<String> onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                category.label(l),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              ],
             ),
-            InkWell(
-              key: const ValueKey<String>('dashboard-todo-back'),
-              borderRadius: const BorderRadius.all(AppRadius.pill),
-              onTap: onBack,
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(
-                  Icons.close,
-                  size: 18,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (missions.isEmpty)
-          EmptyHint(message: l.dashTodoEmpty, icon: Icons.task_alt)
-        else
-          for (final mission in missions)
-            _MissionRow(
-              key: ValueKey<String>('dashboard-mission-${mission.key}'),
-              mission: mission,
-              checked: checkedKeys.contains(mission.key),
-              carriedOver: carriedOverKeys.contains(mission.key),
-              onToggle: () => onToggle(mission.key),
-              onDismiss: () => onDismiss(mission.key),
-            ),
-      ],
     );
   }
 }
@@ -506,6 +323,12 @@ class _MissionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nameStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w700,
+      color: checked ? AppColors.disabledForeground : AppColors.foreground,
+      decoration: checked ? TextDecoration.lineThrough : null,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
@@ -550,23 +373,45 @@ class _MissionRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: mission.keywordColor.withValues(alpha: 0.12),
+                    borderRadius: const BorderRadius.all(AppRadius.pill),
+                  ),
+                  child: Text(
+                    mission.keyword,
+                    style: TextStyle(
+                      color: mission.keywordColor,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        mission.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: checked ? AppColors.disabledForeground : null,
-                          decoration: checked
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
+                      mission.client == null
+                          ? Text(
+                              mission.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: nameStyle,
+                            )
+                          : ClientIdentity(
+                              client: mission.client!,
+                              nameStyle: nameStyle,
+                              demographicsStyle: nameStyle.copyWith(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.subtleForeground,
+                              ),
+                            ),
                       if (mission.subtitle.isNotEmpty)
                         Text(
                           mission.subtitle,
@@ -589,7 +434,7 @@ class _MissionRow extends StatelessWidget {
                   child: const Padding(
                     padding: EdgeInsets.all(4),
                     child: Icon(
-                      Icons.close,
+                      Icons.delete_outline,
                       size: 16,
                       color: AppColors.disabledForeground,
                     ),
