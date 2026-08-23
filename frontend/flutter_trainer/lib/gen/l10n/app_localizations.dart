@@ -518,11 +518,11 @@ abstract class AppLocalizations {
   /// **'Add session'**
   String get dashAddSchedule;
 
-  /// No description provided for @dashCreateAiRoutine.
+  /// No description provided for @dashActivityCreateRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Create AI routine'**
-  String get dashCreateAiRoutine;
+  /// **'Go create an AI routine'**
+  String get dashActivityCreateRoutine;
 
   /// No description provided for @dashLoadFailed.
   ///
@@ -653,8 +653,8 @@ abstract class AppLocalizations {
   /// No description provided for @dashActivityDifficultyDesc.
   ///
   /// In en, this message translates to:
-  /// **'These clients have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.'**
-  String get dashActivityDifficultyDesc;
+  /// **'{names} have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.'**
+  String dashActivityDifficultyDesc(String names);
 
   /// No description provided for @dashActivityInactiveTitle.
   ///
@@ -665,8 +665,8 @@ abstract class AppLocalizations {
   /// No description provided for @dashActivityInactiveDesc.
   ///
   /// In en, this message translates to:
-  /// **'No workout has been logged for these clients in the last 7 days. Reach out before it turns into churn.'**
-  String get dashActivityInactiveDesc;
+  /// **'{names} haven\'t logged a workout in the last 7 days. Reach out before it turns into churn.'**
+  String dashActivityInactiveDesc(String names);
 
   /// No description provided for @dashActivityDietFeedbackTitle.
   ///
@@ -677,26 +677,20 @@ abstract class AppLocalizations {
   /// No description provided for @dashActivityDietFeedbackDesc.
   ///
   /// In en, this message translates to:
-  /// **'These clients have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.'**
-  String get dashActivityDietFeedbackDesc;
+  /// **'{names} have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.'**
+  String dashActivityDietFeedbackDesc(String names);
 
-  /// No description provided for @dashActivityFeedbackTarget.
+  /// No description provided for @dashActivityMoreClients.
   ///
   /// In en, this message translates to:
-  /// **'For: {names}'**
-  String dashActivityFeedbackTarget(String names);
+  /// **'{shown} and {count} more'**
+  String dashActivityMoreClients(String shown, int count);
 
   /// No description provided for @dashAiSummaryTitle.
   ///
   /// In en, this message translates to:
   /// **'AI diagnosis'**
   String get dashAiSummaryTitle;
-
-  /// No description provided for @dashToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get dashToday;
 
   /// No description provided for @dashAiNoClients.
   ///
@@ -943,12 +937,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing scheduled today'**
   String get dashNoScheduleToday;
-
-  /// No description provided for @dashEmptySlot.
-  ///
-  /// In en, this message translates to:
-  /// **'Open slot'**
-  String get dashEmptySlot;
 
   /// No description provided for @weekdayMon.
   ///
@@ -4547,32 +4535,56 @@ abstract class AppLocalizations {
   /// No description provided for @dashTodoConsultation.
   ///
   /// In en, this message translates to:
-  /// **'Review consultation requests'**
+  /// **'Consult'**
   String get dashTodoConsultation;
 
-  /// No description provided for @dashTodoFeedback.
+  /// No description provided for @dashTodoDiet.
   ///
   /// In en, this message translates to:
-  /// **'Review client feedback'**
-  String get dashTodoFeedback;
+  /// **'Diet'**
+  String get dashTodoDiet;
+
+  /// No description provided for @dashTodoWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get dashTodoWorkout;
 
   /// No description provided for @dashTodoProgram.
   ///
   /// In en, this message translates to:
-  /// **'Register workout programs'**
+  /// **'Program'**
   String get dashTodoProgram;
 
   /// No description provided for @dashTodoReport.
   ///
   /// In en, this message translates to:
-  /// **'Write reports'**
+  /// **'Report'**
   String get dashTodoReport;
 
   /// No description provided for @dashTodoConsultationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Consultation request'**
-  String get dashTodoConsultationSubtitle;
+  /// **'Consultation request for {month}/{day}'**
+  String dashTodoConsultationSubtitle(int month, int day);
+
+  /// No description provided for @dashTodoSodiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium {sodiumMg}mg · target {targetMg}mg'**
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg);
+
+  /// No description provided for @dashTodoSugarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar {sugarG}g · target {targetG}g'**
+  String dashTodoSugarSubtitle(int sugarG, int targetG);
+
+  /// No description provided for @dashTodoCompletionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low completion · check recent records'**
+  String get dashTodoCompletionSubtitle;
 
   /// No description provided for @dashTodoProgramSubtitle.
   ///
@@ -4583,14 +4595,8 @@ abstract class AppLocalizations {
   /// No description provided for @dashTodoReportSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'This week\'s report'**
+  /// **'This week\'s report is due'**
   String get dashTodoReportSubtitle;
-
-  /// No description provided for @dashTodoEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing to review right now.'**
-  String get dashTodoEmpty;
 
   /// No description provided for @dashTaskDismissTitle.
   ///
@@ -4933,30 +4939,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t mark it done. Please try again.'**
   String get followUpCompleteFailed;
-
-  /// No description provided for @dashTaskReply.
-  ///
-  /// In en, this message translates to:
-  /// **'Reply'**
-  String get dashTaskReply;
-
-  /// No description provided for @dashTaskDiet.
-  ///
-  /// In en, this message translates to:
-  /// **'Diet'**
-  String get dashTaskDiet;
-
-  /// No description provided for @dashTaskWorkout.
-  ///
-  /// In en, this message translates to:
-  /// **'Workout'**
-  String get dashTaskWorkout;
-
-  /// No description provided for @dashTaskReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Review {name}: {alert}'**
-  String dashTaskReview(String alert, String name);
 
   /// No description provided for @programEditorDefaultName.
   ///

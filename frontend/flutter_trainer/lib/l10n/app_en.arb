@@ -105,7 +105,7 @@
   "authErrSignUpFailed": "Sign-up failed. Please try again in a moment.",
   "dashTitle": "Dashboard",
   "dashAddSchedule": "Add session",
-  "dashCreateAiRoutine": "Create AI routine",
+  "dashActivityCreateRoutine": "Go create an AI routine",
   "dashLoadFailed": "Couldn't load the dashboard",
   "dashTodayReservations": "Today's bookings",
   "dashUnitCount": "",
@@ -141,19 +141,34 @@
   "dashChurnRiskTitle": "Clients at churn risk",
   "dashChurnRiskEmpty": "No clients are at churn risk right now.",
   "dashActivityDifficultyTitle": "Low completion / churn risk detected",
-  "dashActivityDifficultyDesc": "These clients have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.",
-  "dashActivityInactiveTitle": "Inactive 7+ days",
-  "dashActivityInactiveDesc": "No workout has been logged for these clients in the last 7 days. Reach out before it turns into churn.",
-  "dashActivityDietFeedbackTitle": "Diet feedback pending",
-  "dashActivityDietFeedbackDesc": "These clients have a diet warning (sodium/sugar over target) but haven't gotten trainer feedback in 7 days. Leave a comment so they know it was seen.",
-  "dashActivityFeedbackTarget": "For: {names}",
-  "@dashActivityFeedbackTarget": {
+  "dashActivityDifficultyDesc": "{names} have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.",
+  "@dashActivityDifficultyDesc": {
     "placeholders": {
       "names": {"type": "String"}
     }
   },
+  "dashActivityInactiveTitle": "Inactive 7+ days",
+  "dashActivityInactiveDesc": "{names} haven't logged a workout in the last 7 days. Reach out before it turns into churn.",
+  "@dashActivityInactiveDesc": {
+    "placeholders": {
+      "names": {"type": "String"}
+    }
+  },
+  "dashActivityDietFeedbackTitle": "Diet feedback pending",
+  "dashActivityDietFeedbackDesc": "{names} have a diet warning (sodium/sugar over target) but haven't gotten trainer feedback in 7 days. Leave a comment so they know it was seen.",
+  "@dashActivityDietFeedbackDesc": {
+    "placeholders": {
+      "names": {"type": "String"}
+    }
+  },
+  "dashActivityMoreClients": "{shown} and {count} more",
+  "@dashActivityMoreClients": {
+    "placeholders": {
+      "shown": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
   "dashAiSummaryTitle": "AI diagnosis",
-  "dashToday": "Today",
   "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
   "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
   "dashAiLoading": "Reviewing diet, workouts, and recent conversations…",
@@ -213,7 +228,6 @@
   "dashSeeAll": "See all",
   "dashScheduleLoadFailed": "Couldn't load the schedule",
   "dashNoScheduleToday": "Nothing scheduled today",
-  "dashEmptySlot": "Open slot",
   "weekdayMon": "Mon",
   "weekdayTue": "Tue",
   "weekdayWed": "Wed",
@@ -1410,14 +1424,35 @@
   "dashTaskProgressTitle": "Task completion",
   "dashTaskProgressToday": "Done today",
   "dashTaskProgressCarriedOver": "Done (carried over)",
-  "dashTodoConsultation": "Review consultation requests",
-  "dashTodoFeedback": "Review client feedback",
-  "dashTodoProgram": "Register workout programs",
-  "dashTodoReport": "Write reports",
-  "dashTodoConsultationSubtitle": "Consultation request",
+  "dashTodoConsultation": "Consult",
+  "dashTodoDiet": "Diet",
+  "dashTodoWorkout": "Workout",
+  "dashTodoProgram": "Program",
+  "dashTodoReport": "Report",
+  "dashTodoConsultationSubtitle": "Consultation request for {month}/{day}",
+  "@dashTodoConsultationSubtitle": {
+    "placeholders": {
+      "month": {"type": "int"},
+      "day": {"type": "int"}
+    }
+  },
+  "dashTodoSodiumSubtitle": "Sodium {sodiumMg}mg · target {targetMg}mg",
+  "@dashTodoSodiumSubtitle": {
+    "placeholders": {
+      "sodiumMg": {"type": "int"},
+      "targetMg": {"type": "int"}
+    }
+  },
+  "dashTodoSugarSubtitle": "Sugar {sugarG}g · target {targetG}g",
+  "@dashTodoSugarSubtitle": {
+    "placeholders": {
+      "sugarG": {"type": "int"},
+      "targetG": {"type": "int"}
+    }
+  },
+  "dashTodoCompletionSubtitle": "Low completion · check recent records",
   "dashTodoProgramSubtitle": "No recent program sent",
-  "dashTodoReportSubtitle": "This week's report",
-  "dashTodoEmpty": "Nothing to review right now.",
+  "dashTodoReportSubtitle": "This week's report is due",
   "dashTaskDismissTitle": "Delete this item?",
   "dashTaskDismissBody": "It only disappears from today's list. Actually handling it (consultation, program, report) still happens on its own screen.",
   "churnNoRecentWorkout": "No workout logged in 7 days",
@@ -1479,11 +1514,6 @@
   "followUpLoadFailed": "Couldn't load follow-ups. Please try again.",
   "followUpSaveFailed": "Couldn't save the follow-up. Please try again.",
   "followUpCompleteFailed": "Couldn't mark it done. Please try again.",
-  "dashTaskReply": "Reply",
-  "dashTaskDiet": "Diet",
-  "dashTaskWorkout": "Workout",
-  "dashTaskReview": "Review {name}: {alert}",
-  "@dashTaskReview": {"placeholders": {"alert": {"type": "String"}, "name": {"type": "String"}}},
   "programEditorDefaultName": "{goal} program",
   "@programEditorDefaultName": {"placeholders": {"goal": {"type": "String"}}},
   "programEditorDefaultSession": "Session A",

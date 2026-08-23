@@ -237,7 +237,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashAddSchedule => 'Add session';
 
   @override
-  String get dashCreateAiRoutine => 'Create AI routine';
+  String get dashActivityCreateRoutine => 'Go create an AI routine';
 
   @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
@@ -308,33 +308,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'Low completion / churn risk detected';
 
   @override
-  String get dashActivityDifficultyDesc =>
-      'These clients have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.';
+  String dashActivityDifficultyDesc(String names) {
+    return '$names have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.';
+  }
 
   @override
   String get dashActivityInactiveTitle => 'Inactive 7+ days';
 
   @override
-  String get dashActivityInactiveDesc =>
-      'No workout has been logged for these clients in the last 7 days. Reach out before it turns into churn.';
+  String dashActivityInactiveDesc(String names) {
+    return '$names haven\'t logged a workout in the last 7 days. Reach out before it turns into churn.';
+  }
 
   @override
   String get dashActivityDietFeedbackTitle => 'Diet feedback pending';
 
   @override
-  String get dashActivityDietFeedbackDesc =>
-      'These clients have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.';
+  String dashActivityDietFeedbackDesc(String names) {
+    return '$names have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.';
+  }
 
   @override
-  String dashActivityFeedbackTarget(String names) {
-    return 'For: $names';
+  String dashActivityMoreClients(String shown, int count) {
+    return '$shown and $count more';
   }
 
   @override
   String get dashAiSummaryTitle => 'AI diagnosis';
-
-  @override
-  String get dashToday => 'Today';
 
   @override
   String get dashAiNoClients =>
@@ -492,9 +492,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashNoScheduleToday => 'Nothing scheduled today';
-
-  @override
-  String get dashEmptySlot => 'Open slot';
 
   @override
   String get weekdayMon => 'Mon';
@@ -2572,28 +2569,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashTaskProgressCarriedOver => 'Done (carried over)';
 
   @override
-  String get dashTodoConsultation => 'Review consultation requests';
+  String get dashTodoConsultation => 'Consult';
 
   @override
-  String get dashTodoFeedback => 'Review client feedback';
+  String get dashTodoDiet => 'Diet';
 
   @override
-  String get dashTodoProgram => 'Register workout programs';
+  String get dashTodoWorkout => 'Workout';
 
   @override
-  String get dashTodoReport => 'Write reports';
+  String get dashTodoProgram => 'Program';
 
   @override
-  String get dashTodoConsultationSubtitle => 'Consultation request';
+  String get dashTodoReport => 'Report';
+
+  @override
+  String dashTodoConsultationSubtitle(int month, int day) {
+    return 'Consultation request for $month/$day';
+  }
+
+  @override
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg) {
+    return 'Sodium ${sodiumMg}mg · target ${targetMg}mg';
+  }
+
+  @override
+  String dashTodoSugarSubtitle(int sugarG, int targetG) {
+    return 'Sugar ${sugarG}g · target ${targetG}g';
+  }
+
+  @override
+  String get dashTodoCompletionSubtitle =>
+      'Low completion · check recent records';
 
   @override
   String get dashTodoProgramSubtitle => 'No recent program sent';
 
   @override
-  String get dashTodoReportSubtitle => 'This week\'s report';
-
-  @override
-  String get dashTodoEmpty => 'Nothing to review right now.';
+  String get dashTodoReportSubtitle => 'This week\'s report is due';
 
   @override
   String get dashTaskDismissTitle => 'Delete this item?';
@@ -2784,20 +2797,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get followUpCompleteFailed =>
       'Couldn\'t mark it done. Please try again.';
-
-  @override
-  String get dashTaskReply => 'Reply';
-
-  @override
-  String get dashTaskDiet => 'Diet';
-
-  @override
-  String get dashTaskWorkout => 'Workout';
-
-  @override
-  String dashTaskReview(String alert, String name) {
-    return 'Review $name: $alert';
-  }
 
   @override
   String programEditorDefaultName(String goal) {
