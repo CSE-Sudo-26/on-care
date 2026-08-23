@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -234,10 +235,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashTitle => 'Dashboard';
 
   @override
-  String get dashAddSchedule => 'Add session';
+  String get dashActivityRecommendRoutine =>
+      'Try adjusting the routine in Program.';
 
   @override
-  String get dashCreateAiRoutine => 'Create AI routine';
+  String get dashActivityRecommendChat => 'Try checking in over Chat.';
+
+  @override
+  String get dashActivityRecommendDiet => 'Try leaving feedback in Diet.';
+
+  @override
+  String get dashActivityTabProgram => 'Program';
+
+  @override
+  String get dashActivityTabChat => 'Chat';
+
+  @override
+  String get dashActivityTabDiet => 'Diet';
 
   @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
@@ -286,10 +300,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashCheckSodiumCompletion => 'Check diet & completion';
 
   @override
-  String get dashAiSummaryTitle => 'AI coaching summary';
+  String get dashMessages => 'Messages';
 
   @override
-  String get dashToday => 'Today';
+  String get dashChurnRisk => 'Churn risk';
+
+  @override
+  String get dashChurnRiskNone => 'No churn risk';
+
+  @override
+  String get dashChurnRiskCheck => 'Review churn signals';
+
+  @override
+  String get dashChurnRiskTitle => 'Clients at churn risk';
+
+  @override
+  String get dashChurnRiskEmpty => 'No clients are at churn risk right now.';
+
+  @override
+  String get dashActivityDifficultyTitle =>
+      'Low completion / churn risk detected';
+
+  @override
+  String dashActivityDifficultyDesc(String names) {
+    return '$names have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.';
+  }
+
+  @override
+  String get dashActivityInactiveTitle => 'Inactive 7+ days';
+
+  @override
+  String dashActivityInactiveDesc(String names) {
+    return '$names haven\'t logged a workout in the last 7 days. Reach out before it turns into churn.';
+  }
+
+  @override
+  String get dashActivityDietFeedbackTitle => 'Diet feedback pending';
+
+  @override
+  String dashActivityDietFeedbackDesc(String names) {
+    return '$names have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.';
+  }
+
+  @override
+  String dashActivityMoreClients(String shown, int count) {
+    return '$shown and $count more';
+  }
+
+  @override
+  String get dashAiSummaryTitle => 'AI diagnosis';
 
   @override
   String get dashAiNoClients =>
@@ -449,7 +508,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashNoScheduleToday => 'Nothing scheduled today';
 
   @override
-  String get dashEmptySlot => 'Open slot';
+  String dashScheduleNowLabel(String time) {
+    return 'Now $time';
+  }
+
+  @override
+  String dashScheduleNextSession(String time, String name) {
+    return 'Next: $time · $name';
+  }
+
+  @override
+  String dashScheduleMinutesLeft(int minutes) {
+    return 'in $minutes min';
+  }
+
+  @override
+  String get dashPrepareClass => 'Prepare the session';
+
+  @override
+  String get dashLeaveMemo => 'Leave a memo';
+
+  @override
+  String get dashSessionSent => 'Sent';
+
+  @override
+  String get dashSessionPrepared => 'Prepared';
+
+  @override
+  String get dashSessionNoteWritten => 'Written';
+
+  @override
+  String get dashSessionSentNo => 'Not sent';
+
+  @override
+  String get dashSessionPreparedNo => 'Not prepared';
+
+  @override
+  String get dashSessionNoteNotWritten => 'Not written';
 
   @override
   String get weekdayMon => 'Mon';
@@ -2558,7 +2653,101 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashTasksEmpty => 'There are no new coaching tasks to review.';
+  String get dashTaskProgressTitle => 'Task completion';
+
+  @override
+  String get dashTaskProgressToday => 'Done today';
+
+  @override
+  String get dashTaskProgressCarriedOver => 'Done (carried over)';
+
+  @override
+  String get dashTodoConsultation => 'Consult';
+
+  @override
+  String get dashTodoDiet => 'Diet';
+
+  @override
+  String get dashTodoWorkout => 'Workout';
+
+  @override
+  String get dashTodoProgram => 'Program';
+
+  @override
+  String get dashTodoReport => 'Report';
+
+  @override
+  String dashTodoConsultationSubtitle(int month, int day) {
+    return 'Consultation request for $month/$day';
+  }
+
+  @override
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg) {
+    return 'Sodium ${sodiumMg}mg · target ${targetMg}mg';
+  }
+
+  @override
+  String dashTodoSugarSubtitle(int sugarG, int targetG) {
+    return 'Sugar ${sugarG}g · target ${targetG}g';
+  }
+
+  @override
+  String get dashTodoCompletionSubtitle =>
+      'Low completion · check recent records';
+
+  @override
+  String get dashTodoProgramSubtitle => 'No recent program sent';
+
+  @override
+  String get dashTodoReportSubtitle => 'This week\'s report is due';
+
+  @override
+  String get dashTaskDismissTitle => 'Delete this item?';
+
+  @override
+  String get dashTaskDismissBody =>
+      'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.';
+
+  @override
+  String get dashTaskCarriedOverTitle => 'Carried over';
+
+  @override
+  String get dashTaskCategoryDone => 'Done';
+
+  @override
+  String dashTaskCategoryRemaining(int count) {
+    return '+$count';
+  }
+
+  @override
+  String dashTaskUncheckTitle(String name) {
+    return 'Undo completion of \'$name\'?';
+  }
+
+  @override
+  String get dashTaskUncheckBody =>
+      'It also drops off the task progress chart.';
+
+  @override
+  String get dashTaskUncheckConfirm => 'Undo completion';
+
+  @override
+  String get churnNoRecentWorkout => 'No workout logged in 7 days';
+
+  @override
+  String get churnNoRecentFeedback => 'No trainer feedback in 7 days';
+
+  @override
+  String get churnConsecutiveCancel => '2 consecutive cancellations/no-shows';
+
+  @override
+  String get churnDietStopped => 'Diet logging stopped';
+
+  @override
+  String get churnGoalStagnant => 'Goal metric stagnant long-term';
+
+  @override
+  String get churnUnresolvedRequest => 'Unanswered message';
 
   @override
   String get navMessages => 'Messages';
@@ -2569,9 +2758,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesLoadFailed => 'Couldn\'t load conversations.';
-
-  @override
-  String get messagesConversations => 'Conversations';
 
   @override
   String get messagesEmpty => 'No conversations match these filters.';
@@ -2724,20 +2910,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get followUpCompleteFailed =>
       'Couldn\'t mark it done. Please try again.';
-
-  @override
-  String get dashTaskReply => 'Reply';
-
-  @override
-  String get dashTaskDiet => 'Diet';
-
-  @override
-  String get dashTaskWorkout => 'Workout';
-
-  @override
-  String dashTaskReview(String alert, String name) {
-    return 'Review $name: $alert';
-  }
 
   @override
   String programEditorDefaultName(String goal) {

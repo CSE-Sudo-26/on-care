@@ -24,7 +24,7 @@ void main() {
       await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
       await goTo(tester, AppRoutes.messagesFor('seed-client-1'));
 
-      expect(find.text('대화'), findsOneWidget);
+      expect(find.text('대화'), findsNothing);
       expect(find.textContaining('읽지 않음'), findsOneWidget);
       final detail = find.byKey(
         const ValueKey<String>('messages-client-detail-button'),
@@ -355,7 +355,7 @@ void main() {
       await goTo(tester, AppRoutes.messagesFor('seed-client-1'));
 
       expect(find.text('Messages'), findsWidgets);
-      expect(find.text('Conversations'), findsOneWidget);
+      expect(find.text('Conversations'), findsNothing);
       expect(find.textContaining('Unread'), findsOneWidget);
       expect(
         find.descendant(
@@ -366,7 +366,6 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('대화'), findsNothing);
       expect(find.text('프로그램'), findsNothing);
     });
   });
@@ -385,9 +384,11 @@ void main() {
 
     final context = tester.element(find.byType(Navigator).first);
     expect(
-      GoRouter.of(
-        context,
-      ).routerDelegate.currentConfiguration.uri.queryParameters['f'],
+      GoRouter.of(context)
+          .routerDelegate
+          .currentConfiguration
+          .uri
+          .queryParameters['f'],
       'unread',
     );
   });
