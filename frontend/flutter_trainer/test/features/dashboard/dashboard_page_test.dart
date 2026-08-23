@@ -379,7 +379,7 @@ void main() {
     await tester.tap(mission);
     await settle(tester);
 
-    expect(currentLocation(tester), AppRoutes.consultations);
+    expect(currentLocation(tester), AppRoutes.consultationsFromDashboard());
   });
 
   group('AttentionCard.sectionFor', () {

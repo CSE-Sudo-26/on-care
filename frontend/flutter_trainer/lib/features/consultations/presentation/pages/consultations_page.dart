@@ -31,7 +31,10 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// and the sidebar row is not rendered (see [consultationInboxEnabledProvider]).
 class ConsultationsPage extends ConsumerWidget {
   /// Creates the inbox page.
-  const ConsultationsPage({super.key});
+  const ConsultationsPage({super.key, this.returnTo});
+
+  /// Entry surface (`dashboard` or null/default schedule).
+  final String? returnTo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,6 +42,7 @@ class ConsultationsPage extends ConsumerWidget {
     final filter = ref.watch(consultationFilterProvider);
     final inbox = ref.watch(consultationsProvider);
     final pending = ref.watch(consultationPendingCountProvider).valueOrNull;
+    final fromDashboard = returnTo == 'dashboard';
 
     return PageScaffold(
       title: l.consultTitle,
@@ -60,9 +64,13 @@ class ConsultationsPage extends ConsumerWidget {
             alignment: AlignmentDirectional.centerStart,
             child: ActionButton(
               key: const ValueKey<String>('consultations-back-to-schedule'),
-              label: l.consultBackToSchedule,
+              label: fromDashboard
+                  ? l.consultBackToDashboard
+                  : l.consultBackToSchedule,
               icon: Icons.arrow_back,
-              onPressed: () => context.go(AppRoutes.schedule),
+              onPressed: () => context.go(
+                fromDashboard ? AppRoutes.dashboard : AppRoutes.schedule,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

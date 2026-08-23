@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
@@ -117,11 +118,12 @@ class _FakeConsultationRepository implements ConsultationRepository {
 
 Future<ProviderContainer> _pumpInbox(
   WidgetTester tester,
-  _FakeConsultationRepository repo,
-) => pumpTrainerApp(
+  _FakeConsultationRepository repo, {
+  String? at,
+}) => pumpTrainerApp(
   tester,
   token: 'demo-token',
-  at: AppRoutes.consultations,
+  at: at ?? AppRoutes.consultations,
   extraOverrides: <Override>[
     consultationRepositoryProvider.overrideWithValue(repo),
   ],
@@ -172,6 +174,34 @@ void main() {
     await settle(tester);
 
     expect(currentLocation(tester), AppRoutes.schedule);
+  });
+
+  testWidgets('dashboard entry returns to the dashboard', (tester) async {
+    await _pumpInbox(
+      tester,
+      _FakeConsultationRepository(),
+      at: AppRoutes.consultationsFromDashboard(),
+    );
+
+    expect(find.text('대시보드로 돌아가기'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+    );
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.dashboard);
+  });
+
+  testWidgets('consultations remain inside the schedule workspace', (
+    tester,
+  ) async {
+    await _pumpInbox(tester, _FakeConsultationRepository());
+
+    final shell = tester.widget<AppShell>(find.byType(AppShell));
+    final scheduleIndex = navDestinations.indexWhere(
+      (destination) => destination.route == AppRoutes.schedule,
+    );
+    expect(shell.navigationShell.currentIndex, scheduleIndex);
   });
 
   testWidgets('accepting sends the decision to the repository', (tester) async {

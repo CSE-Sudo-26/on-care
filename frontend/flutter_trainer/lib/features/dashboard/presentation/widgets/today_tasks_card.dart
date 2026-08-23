@@ -225,7 +225,7 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
             request.preferredDate.month,
             request.preferredDate.day,
           ),
-          onTap: () => context.go(AppRoutes.consultations),
+          onTap: () => context.go(AppRoutes.consultationsFromDashboard()),
         ),
       for (final entry in health)
         _Mission(

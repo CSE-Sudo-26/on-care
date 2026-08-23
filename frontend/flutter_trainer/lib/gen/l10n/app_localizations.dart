@@ -1772,6 +1772,12 @@ abstract class AppLocalizations {
   /// **'Back to schedule'**
   String get consultBackToSchedule;
 
+  /// No description provided for @consultBackToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to dashboard'**
+  String get consultBackToDashboard;
+
   /// No description provided for @consultPendingCount.
   ///
   /// In en, this message translates to:

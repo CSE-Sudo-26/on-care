@@ -33,13 +33,9 @@ class AppShell extends StatelessWidget {
   /// a nav destination.
   static int get myBranchIndex => navDestinations.length;
 
-  /// Branch index of 상담 요청. Sits after [myBranchIndex] so adding it
-  /// could not shift any existing branch. (#467)
-  static int get consultationsBranchIndex => myBranchIndex + 1;
-
   /// Branch index of 알림함. 상담 요청과 같은 이유로 맨 뒤에 붙인다 — 앞에
   /// 끼우면 `myBranchIndex` 가 밀려 푸터 선택이 조용히 깨진다. (#503)
-  static int get notificationsBranchIndex => consultationsBranchIndex + 1;
+  static int get notificationsBranchIndex => myBranchIndex + 1;
 
   void _goBranch(int index) {
     // Tapping the active destination resets it to its branch root (e.g.
