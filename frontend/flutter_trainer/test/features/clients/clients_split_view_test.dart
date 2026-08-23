@@ -7,6 +7,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 
 import '../../helpers/pump_app.dart';
@@ -86,6 +87,33 @@ void main() {
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
   });
 
+  testWidgets('고객 리스트 바로 위에 pill 필터·정렬 버튼이 있다', (tester) async {
+    await openWide(tester);
+
+    final search = find.byKey(clientSearchFieldKey);
+    final filter = find.byKey(const ValueKey<String>('clients-filter-button'));
+    final sort = find.byKey(const ValueKey<String>('clients-sort-button'));
+
+    final firstCard = find.byType(ClientCard).first;
+
+    expect(find.text('필터'), findsOneWidget);
+    expect(
+      tester.getTopLeft(filter).dy,
+      greaterThan(tester.getBottomLeft(search).dy),
+    );
+    expect(
+      tester.getBottomLeft(filter).dy,
+      lessThan(tester.getTopLeft(firstCard).dy),
+    );
+    expect(tester.getTopRight(filter).dx, lessThan(tester.getTopLeft(sort).dx));
+    expect(
+      tester.getTopLeft(filter).dx,
+      closeTo(tester.getTopLeft(firstCard).dx, 1),
+    );
+    expect(tester.getSize(filter).height, lessThanOrEqualTo(40));
+    expect(tester.getSize(sort).height, lessThanOrEqualTo(40));
+  });
+
   testWidgets('the roster card has visible space before the detail panel', (
     tester,
   ) async {
@@ -120,7 +148,7 @@ void main() {
     // which appears as a brief roster flash. The router consumes the first
     // pump; the second is the first frame that contains the detail route.
     expect(find.byType(ClientsPage), findsOneWidget);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
   });
 
   testWidgets('the close button collapses the panel back to the list', (
@@ -189,25 +217,37 @@ void main() {
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'diet'),
     );
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     expect(find.textContaining('3,428', findRichText: true), findsWidgets);
 
     // …switch to 박성호: same sub-tab, his data (2,400mg).
     await tester.tap(card('박성호'));
     await settle(tester);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     expect(find.textContaining('2,400', findRichText: true), findsWidgets);
   });
 
   testWidgets('고른 정렬은 고객을 열어도 그대로다 (#816)', (tester) async {
     await openWide(tester);
 
-    // 툴바의 정렬 메뉴에서 이름순을 고른다.
-    await tester.tap(find.text('정렬: 관리 우선'));
+    // 고객 목록 위의 pill 정렬 메뉴에서 이름순을 고른다.
+    await tester.tap(find.text('정렬: 관리 필요 우선'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('정렬: 이름순').last);
+    final sortButton = find.byKey(
+      const ValueKey<String>('clients-sort-button'),
+    );
+    final nameOptionFinder = find.text('이름 오름차순').last;
+    final nameOption = tester.widget<Text>(nameOptionFinder);
+    expect(find.byIcon(Icons.arrow_drop_up), findsOneWidget);
+    expect(
+      tester.getTopLeft(nameOptionFinder).dy,
+      greaterThan(tester.getBottomLeft(sortButton).dy),
+    );
+    expect(nameOption.style?.fontSize, 12.5);
+    expect(nameOption.style?.fontWeight, FontWeight.w600);
+    await tester.tap(nameOptionFinder);
     await tester.pumpAndSettle();
-    expect(find.text('정렬: 이름순'), findsOneWidget);
+    expect(find.text('정렬: 이름 오름차순'), findsOneWidget);
 
     // 목록에서 고객을 연다 — 여기서 새 라우트가 만들어진다.
     await scrollToCard(tester, '김민수');
@@ -216,8 +256,35 @@ void main() {
 
     // 예전에는 상세가 자기 `ClientsPage` 를 새로 만들면서 정렬이 '관리 우선'
     // 로 돌아갔다.
-    expect(find.text('정렬: 이름순'), findsOneWidget);
-    expect(find.text('정렬: 관리 우선'), findsNothing);
+    expect(find.text('정렬: 이름 오름차순'), findsOneWidget);
+    expect(find.text('정렬: 관리 필요 우선'), findsNothing);
+  });
+
+  testWidgets('활성 고객 우선은 실제 active 필드로 정렬한다', (tester) async {
+    await openWide(tester);
+    const countSummary = '15명 · 활성 13명';
+    expect(find.text(countSummary), findsWidgets);
+
+    await tester.tap(find.text('정렬: 관리 필요 우선'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('활성 고객 우선').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('정렬: 활성 고객 우선'), findsOneWidget);
+    final visibleCards = tester
+        .widgetList<ClientCard>(find.byType(ClientCard))
+        .toList(growable: false);
+    expect(visibleCards, isNotEmpty);
+    expect(visibleCards.every((card) => card.client.active), isTrue);
+
+    // 활성 우선은 휴면 고객을 숨기는 필터가 아니다. 명단 수를 유지한
+    // 채 활성 고객 뒤로 보낸다.
+    await scrollToCard(tester, '박성호');
+    final dormantCard = tester.widget<ClientCard>(
+      find.ancestor(of: find.text('박성호'), matching: find.byType(ClientCard)),
+    );
+    expect(dormantCard.client.active, isFalse);
+    expect(find.text(countSummary), findsWidgets);
   });
 
   testWidgets('대시보드에서 걸어 준 필터는 고객을 열어도 유지된다 (#816)', (tester) async {

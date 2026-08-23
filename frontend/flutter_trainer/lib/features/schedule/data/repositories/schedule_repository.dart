@@ -318,6 +318,8 @@ class DriftScheduleRepository implements ScheduleRepository {
                 'reps': item.reps,
                 'weight': item.weight,
                 'session': item.session,
+                'type': item.type,
+                'duration': item.duration,
               },
           ]),
         ),
@@ -367,6 +369,8 @@ class DriftScheduleRepository implements ScheduleRepository {
             'reps': item.reps,
             'weight': item.weight,
             'session': item.session,
+            'type': item.type,
+            'duration': item.duration,
           },
       ]);
       if (existing != null) {
@@ -504,6 +508,9 @@ class DriftScheduleRepository implements ScheduleRepository {
               id: 'hist-$id-${now.microsecondsSinceEpoch}',
               clientId: client.id,
               dateLabel: '${day.month}/${day.day}${isToday ? ' (오늘)' : ''}',
+              // 라벨과 같은 날을 견줄 수 있는 형태로도 남긴다 — 고객 상세의
+              // 날짜별 기록이 이 값으로 이력을 그날에 붙인다(#1025, #1114).
+              completedAt: Value(day),
               label: 'PT 세션 · 트레이너 지도',
               completionRate: 100,
               exercisesJson: jsonEncode(<String>[
@@ -646,6 +653,9 @@ class DriftScheduleRepository implements ScheduleRepository {
             weight: m['weight']! as String,
             // 세션 키가 없던 데모 데이터도 그대로 읽힌다(#709).
             session: m['session'] as String? ?? '',
+            // 이 키들이 없던 데모 데이터도 기본값으로 읽힌다(#1233).
+            type: m['type'] as String? ?? '근력',
+            duration: m['duration'] as String? ?? '',
           ),
         )
         .toList();

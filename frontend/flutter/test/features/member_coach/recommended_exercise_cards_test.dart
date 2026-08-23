@@ -165,6 +165,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('완료한 추천 운동은 글자가 흐려진다 (#1196)', (WidgetTester tester) async {
+    const CoachRoutine done = CoachRoutine(
+      id: 'done-routine',
+      name: '코어 스트레칭',
+      minutes: 10,
+      type: '스트레칭',
+      reason: '허리 부담 완화',
+      source: 'trainer',
+      completed: true,
+    );
+
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _aiRoutine,
+      done,
+    ]);
+
+    Color colorOf(String text) =>
+        tester.widget<Text>(find.text(text)).style!.color!;
+
+    // 남은 줄은 검정 그대로 — 다음에 할 것이 먼저 읽혀야 한다.
+    expect(colorOf(_aiRoutine.name), FigmaColors.ink);
+    expect(colorOf(done.name), isNot(FigmaColors.ink));
+    expect(colorOf(done.reason), isNot(colorOf(_aiRoutine.reason)));
+  });
+
   testWidgets('추천 개인운동 카드가 한 영역에 트레이너·AI 추천을 함께 담는다 (#782)', (
     WidgetTester tester,
   ) async {
@@ -390,7 +415,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('completeRoutine-seed-r2')));
+    await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')));
     await tester.pumpAndSettle();
     expect(find.text('루틴 수행 완료'), findsOneWidget);
     await tester.enterText(
@@ -402,7 +427,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final CoachRoutine completed = (await repository.fetchRoutines())
-        .firstWhere((CoachRoutine routine) => routine.id == 'seed-r2');
+        .firstWhere((CoachRoutine routine) => routine.id == 'seed-routine-user-demo-1');
     expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
     expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
     // 체크 박스는 그대로 있고 체크된 채로 남는다 — 한 일이 화면에서 사라지면
@@ -410,7 +435,7 @@ void main() {
     // 수 있으므로 잠기지 않는다 (#1131).
     final Checkbox box = tester.widget<Checkbox>(
       find.descendant(
-        of: find.byKey(const Key('completeRoutine-seed-r2')),
+        of: find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')),
         matching: find.byType(Checkbox),
       ),
     );

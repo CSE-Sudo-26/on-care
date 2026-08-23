@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -42,6 +43,25 @@ void main() {
   String currentLocation(WidgetTester tester) {
     final ctx = tester.element(find.byType(Navigator).first);
     return GoRouter.of(ctx).routerDelegate.currentConfiguration.uri.toString();
+  }
+
+  /// 오늘 할 일은 상담·건강 신호·프로그램 미등록·리포트 대상을 한 리스트로
+  /// 섞어 보여준다 — 행 key(`dashboard-mission-<prefix>-...`) 접두사로 찾는다.
+  Finder findMissionRow(String prefix) => find.byWidgetPredicate((widget) {
+    final key = widget.key;
+    return key is ValueKey<String> &&
+        key.value.startsWith('dashboard-mission-$prefix-');
+  });
+
+  /// 오늘 할 일은 카테고리별 아코디언이다 — 기본은 접혀 있어, 그 안의 미션
+  /// 행을 보거나 누르기 전에 헤더를 한 번 펼쳐야 한다.
+  Future<void> expandTaskCategory(WidgetTester tester, String title) async {
+    final toggle = find.byKey(
+      ValueKey<String>('dashboard-category-toggle-$title'),
+    );
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
   }
 
   /// 주의 고객 검증이 쓰는 고정 로스터. (#907)
@@ -121,17 +141,26 @@ void main() {
     ]);
     await settle(tester);
 
-    expect(find.text('복구 고객'), findsWidgets);
+    // 복구된 고객의 이름은 오늘 할 일 리스트를 스크롤해야 보인다 — 새로
+    // 고쳐 그렸다는 사실은 KPI 로 확인한다.
+    final myClients = tester.widget<StatCard>(
+      find.ancestor(of: find.text('담당 고객'), matching: find.byType(StatCard)),
+    );
+    expect(myClients.value, '1');
     expect(find.text('대시보드를 불러오지 못했어요'), findsNothing);
   });
 
   testWidgets('the KPI row reports the seeded numbers', (tester) async {
     await openDashboard(tester);
 
-    expect(find.text('오늘 예약'), findsOneWidget);
     expect(find.text('담당 고객'), findsOneWidget);
-    expect(find.text('답장 필요'), findsOneWidget);
+    // '메시지' 는 사이드바 내비게이션 항목명과도 겹친다 — KPI 카드 안에서만 찾는다.
+    expect(
+      find.descendant(of: find.byType(StatCard), matching: find.text('메시지')),
+      findsOneWidget,
+    );
     expect(find.text('주의 고객'), findsOneWidget);
+    expect(find.text('이탈 위험'), findsOneWidget);
 
     // 13 of the 15 seeded clients are active; 박성호 and 문가영 are the
     // two 휴면 fixtures. 답장 대기는 **회원이 마지막으로 말한** 스레드다 —
@@ -163,7 +192,9 @@ void main() {
   testWidgets('a KPI deep-links into the pre-filtered roster', (tester) async {
     await openDashboard(tester);
 
-    await tester.tap(find.text('답장 필요'));
+    await tester.tap(
+      find.descendant(of: find.byType(StatCard), matching: find.text('메시지')),
+    );
     await settle(tester);
     // The number and the list it opens have to be the same claim.
     expect(currentLocation(tester), contains('f=unread'));
@@ -173,58 +204,95 @@ void main() {
     await openDashboard(tester);
 
     expect(find.text('오늘의 일정'), findsOneWidget);
-    expect(find.text('김민수 남성 · 35세 · 1:1 PT'), findsWidgets);
+    // ClientIdentity 가 이름과 성별·나이(회색)를 별도 Text 로 그린다.
+    expect(find.text('김민수'), findsWidgets);
+    expect(find.text('남성 · 35세'), findsWidgets);
+    expect(find.text('1:1 PT'), findsWidgets);
     expect(find.text('완료'), findsWidgets);
-    // Gaps are shown but muted — a free hour is information.
-    expect(find.text('빈 시간'), findsWidgets);
+    // 빈 시간(공백 슬롯)은 이제 아예 그리지 않는다 — 예약된 것만 보여준다.
+    expect(find.textContaining('빈 시간'), findsNothing);
   });
 
-  testWidgets('주의 고객 rows carry the reason and open the section that '
-      'fixes it', (tester) async {
+  testWidgets('오늘의 일정 행은 자신이 가리키는 세션을 선택해 연다', (tester) async {
+    await openDashboard(tester);
+
+    final rows = find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith(
+            'dashboard-schedule-',
+          ),
+    );
+    expect(rows, findsWidgets);
+    final target = rows.at(1);
+    final targetKey = tester.widget(target).key! as ValueKey<String>;
+    final sessionId = targetKey.value.substring('dashboard-schedule-'.length);
+
+    await tester.ensureVisible(target);
+    await tester.tap(target);
+    await settle(tester);
+
+    expect(currentLocation(tester), contains('session=$sessionId'));
+    expect(
+      find.byKey(ValueKey<String>('schedule-session-$sessionId')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<ScheduleWeekTimetable>(find.byType(ScheduleWeekTimetable))
+          .selectedSessionId,
+      sessionId,
+    );
+  });
+
+  testWidgets('오늘 할 일은 건강 신호가 있는 고객을 미션으로 보여주고 그 섹션으로 연결한다', (tester) async {
     await openDashboard(tester, extraOverrides: attentionRosterOverrides());
+    await expandTaskCategory(tester, '식단');
 
-    expect(find.text('확인 필요 고객'), findsOneWidget);
-    // 신호를 가진 회원은 열이다 — 건강 신호 여덟에 답장 대기 둘. 위의 `주의 고객`
-    // 수(여덟)보다 이 목록이 넓은 것이 정상이다. 카드는 다섯 줄까지만 세우고
-    // 나머지는 링크로 넘긴다.
-    expect(find.text('+5명'), findsOneWidget);
-
-    // The badge is a client's FIRST alert, and health reasons sort ahead
-    // of 답장 대기, so every visible row leads with a health one.
-    expect(find.text('나트륨 초과'), findsWidgets);
+    // 건강 신호 여덟(나트륨 5 · 당류 1 · 이행률 2) 전부가 미션이 된다.
+    // 답장 대기 둘은 건강 신호가 아니라서 오늘 할 일에 없다(#907).
+    expect(findMissionRow('feedback-sodiumOver'), findsNWidgets(5));
     expect(find.text('답장 대기'), findsNothing);
 
-    await tester.tap(find.text('나트륨 초과').first);
+    final mission = findMissionRow('feedback-sodiumOver').first;
+    await tester.ensureVisible(mission);
+    await tester.tap(mission);
     await settle(tester);
     expect(currentLocation(tester), contains('/diet'));
   });
 
-  testWidgets(
-    'the AI summary names a client and gives a specific exercise focus',
-    (tester) async {
-      await openDashboard(tester);
-
-      expect(find.text('AI 코칭 요약'), findsOneWidget);
-      // 머리말은 1순위 회원의 이름을 부른다. 그게 누구인지는 그날의 수치가
-      // 정하므로(#767 이후 초과 폭 순) 이름을 박지 않는다 — 박아 두면 시드가
-      // 조금만 움직여도 깨지고, 정작 검증하려는 건 "이름을 부른다" 는 것이다.
-      expect(find.textContaining('고객을 먼저 확인하고'), findsWidgets);
-      expect(find.text('오늘 운동 중심'), findsWidgets);
-      expect(find.textContaining('중강도 걷기'), findsWidgets);
-      expect(find.text('판단 근거'), findsWidgets);
-    },
-  );
-
-  testWidgets('AI 루틴 만들기 opens the coaching workspace', (tester) async {
+  testWidgets('AI 진단 spells out the three activity-feedback signals', (
+    tester,
+  ) async {
     await openDashboard(tester);
 
-    final button = find.text('AI 루틴 만들기').first;
-    await tester.ensureVisible(button);
-    await tester.pumpAndSettle();
-    await tester.tap(button);
-    await settle(tester);
-    expect(currentLocation(tester), AppRoutes.coaching);
+    expect(find.text('AI 진단'), findsOneWidget);
+    expect(find.text('이행률 저조·이탈 위험 감지'), findsOneWidget);
+    expect(find.text('7일 이상 활동 저조'), findsOneWidget);
+    expect(find.text('식단 피드백 미완료'), findsOneWidget);
+    expect(find.textContaining('난이도를 낮추고'), findsOneWidget);
   });
+
+  for (final scenario in <({String kind, String route})>[
+    (kind: 'difficultyReview', route: '/coaching'),
+    (kind: 'inactiveSevenDays', route: '/messages'),
+    (kind: 'dietFeedbackPending', route: '/diet'),
+  ]) {
+    testWidgets('AI 진단의 ${scenario.kind} 버튼이 그 활동에 맞는 화면으로 이동한다', (
+      tester,
+    ) async {
+      await openDashboard(tester);
+
+      final button = find.byKey(
+        ValueKey<String>('ai-summary-cta-${scenario.kind}'),
+      );
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await settle(tester);
+      expect(currentLocation(tester), contains(scenario.route));
+    });
+  }
 
   testWidgets('the dashboard renders derived tasks without fake completion', (
     tester,
@@ -236,115 +304,116 @@ void main() {
     expect(find.textContaining('/ 5 완료'), findsNothing);
   });
 
-  testWidgets('wide dashboard follows the 4-3-1 card layout', (tester) async {
+  testWidgets('wide dashboard follows the 4-KPI + 2-column body layout', (
+    tester,
+  ) async {
     await openDashboard(tester);
 
     expect(find.byType(StatCard), findsNWidgets(4));
     final actionRow = tester.widget<Row>(
       find.byKey(const ValueKey<String>('dashboard-action-row')),
     );
-    expect(actionRow.children.whereType<Expanded>(), hasLength(3));
-    expect(find.text('AI 코칭 요약'), findsOneWidget);
+    expect(actionRow.children.whereType<Expanded>(), hasLength(2));
+    expect(find.text('AI 진단'), findsOneWidget);
   });
 
-  testWidgets('today tasks show one item from each available action type', (
-    tester,
-  ) async {
-    await openDashboard(tester);
-
-    expect(
-      find.byKey(const ValueKey<String>('dashboard-task-unanswered')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('dashboard-task-lowCompletion')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('dashboard-task-sodiumOver')),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('today tasks prefer different clients for each action type', (
-    tester,
-  ) async {
-    final allAlerts = makeClient(
-      id: 'all-alerts',
-      name: '중복 고객',
+  testWidgets('오늘 할 일은 각 미션에 맞는 고객만 보여준다', (tester) async {
+    final feedbackClient = makeClient(
+      id: 'feedback-client',
+      name: '식단 고객',
       sodiumMg: 2500,
-      weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
     );
-    final replyOnly = makeClient(id: 'reply-only', name: '답장 고객');
-    final workoutOnly = makeClient(
-      id: 'workout-only',
+    final programClient = makeClient(
+      id: 'program-client',
       name: '운동 고객',
-      weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
+      lastRoutine: '-',
     );
-    final dietOnly = makeClient(id: 'diet-only', name: '식단 고객', sodiumMg: 2500);
     await openDashboard(
       tester,
       extraOverrides: <Override>[
         clientsProvider.overrideWith(
           (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
-            allAlerts,
-            replyOnly,
-            workoutOnly,
-            dietOnly,
+            feedbackClient,
+            programClient,
           ]),
         ),
         unreadCountsProvider.overrideWith(
-          (ref) => Stream<Map<String, int>>.value(const <String, int>{
-            'all-alerts': 1,
-            'reply-only': 1,
-          }),
+          (ref) => Stream<Map<String, int>>.value(const <String, int>{}),
         ),
       ],
     );
+    await expandTaskCategory(tester, '식단');
+    await expandTaskCategory(tester, '프로그램');
 
     expect(
       find.descendant(
-        of: find.byKey(const ValueKey<String>('dashboard-task-unanswered')),
-        matching: find.textContaining('중복 고객'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('dashboard-task-lowCompletion')),
-        matching: find.textContaining('운동 고객'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('dashboard-task-sodiumOver')),
+        of: findMissionRow('feedback'),
         matching: find.textContaining('식단 고객'),
       ),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: findMissionRow('program'),
+        matching: find.textContaining('운동 고객'),
+      ),
+      findsOneWidget,
+    );
+    // 운동 고객은 프로그램 미등록 미션에만 있고, 식단 미션에는 없다.
+    expect(
+      find.descendant(
+        of: findMissionRow('feedback'),
+        matching: find.textContaining('운동 고객'),
+      ),
+      findsNothing,
+    );
   });
 
-  for (final scenario in <({String task, String route})>[
-    (task: 'unanswered', route: '/messages?client='),
-    (task: 'lowCompletion', route: '/workout'),
-    (task: 'sodiumOver', route: '/diet'),
+  for (final scenario in <({String prefix, String category, String route})>[
+    (prefix: 'feedback-sodiumOver', category: '식단', route: '/diet'),
+    (prefix: 'program', category: '프로그램', route: '/coaching'),
+    (prefix: 'report', category: '리포트', route: '/reports'),
   ]) {
-    testWidgets('today ${scenario.task} task opens its action destination', (
-      tester,
-    ) async {
-      await openDashboard(tester);
-
-      final task = find.byKey(
-        ValueKey<String>('dashboard-task-${scenario.task}'),
+    testWidgets('${scenario.prefix} 미션을 누르면 해당 화면으로 이동한다', (tester) async {
+      final client = makeClient(
+        id: 'nav-client',
+        name: '이동 고객',
+        sodiumMg: 2500,
+        lastRoutine: '-',
       );
-      await tester.ensureVisible(task);
-      await tester.tap(task);
+      await openDashboard(
+        tester,
+        extraOverrides: <Override>[
+          clientsProvider.overrideWith(
+            (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[client]),
+          ),
+          unreadCountsProvider.overrideWith(
+            (ref) => Stream<Map<String, int>>.value(const <String, int>{}),
+          ),
+        ],
+      );
+      await expandTaskCategory(tester, scenario.category);
+
+      final mission = findMissionRow(scenario.prefix);
+      await tester.ensureVisible(mission);
+      await tester.tap(mission);
       await settle(tester);
 
       expect(currentLocation(tester), contains(scenario.route));
     });
   }
+
+  testWidgets('상담 요청 미션을 누르면 상담 인박스로 이동한다', (tester) async {
+    await openDashboard(tester);
+    await expandTaskCategory(tester, '상담');
+
+    final mission = findMissionRow('consultation');
+    await tester.ensureVisible(mission);
+    await tester.tap(mission);
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.consultations);
+  });
 
   group('AttentionCard.sectionFor', () {
     test('each alert opens the sub-tab that actually addresses it', () {

@@ -1,17 +1,11 @@
-import 'dart:math' as math;
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
-import 'package:oncare/design_system/charts/chart_reveal.dart';
-import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
-import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -31,15 +25,6 @@ import 'package:oncare/shared/widgets/chart_semantics.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
-
-/// Home's own "/목표(단위)" suffix style. Same look as the shared
-/// [kGoalSuffixStyle], one step larger so it scales with the rest of the Home
-/// type; the other tabs keep the shared 9px size.
-const TextStyle _kGoalSuffix = TextStyle(
-  fontSize: 12,
-  fontWeight: FontWeight.w600,
-  color: AppColors.mutedForeground,
-);
 
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
 ///
@@ -183,11 +168,7 @@ class _DashboardData extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          child: _ExerciseCard(
-            summary: summary,
-            showCharts: !summary.isEmpty,
-            onOpen: onExerciseTap,
-          ),
+          child: _ExerciseCard(onOpen: onExerciseTap),
         ),
         const Padding(
           padding: EdgeInsets.only(bottom: 20),
@@ -662,66 +643,32 @@ DateTime _thisMonday() {
   return d.subtract(Duration(days: d.weekday - 1));
 }
 
-/// 유형별 아이콘. 라벨·색은 운동 탭(`kindLabel`/`kindColor`)과 공유한다.
-IconData _kindIcon(ExerciseLoadKind kind) => switch (kind) {
-  ExerciseLoadKind.cardio => Icons.directions_run_rounded,
-  ExerciseLoadKind.strength => Icons.fitness_center_rounded,
-  ExerciseLoadKind.flexibility => Icons.self_improvement_rounded,
-};
-
-/// 유형의 **원래 단위** — 유산소·스트레칭은 분, 근력은 세트.
-String _kindUnit(AppLocalizations l, ExerciseLoadKind kind) => switch (kind) {
-  ExerciseLoadKind.cardio || ExerciseLoadKind.flexibility => l.unitMinutes,
-  ExerciseLoadKind.strength => l.unitSets,
-};
-
-/// The full-width 운동 card: activity metrics (time / kcal / count), the burn
-/// goal progress, and a weekly burned-calories trend chart with value labels.
+/// 홈의 운동 카드 — 제목 줄 아래에 운동 탭 `운동 현황 · 이번 주` 와 **같은
+/// 카드**를 그린다 (#1183).
+///
+/// 예전에는 왼쪽에 지표 네 줄, 오른쪽에 주간 소모 막대그래프를 두었다. 같은 한
+/// 주를 두 화면이 다른 그림으로 말하고 있었고, 홈에서 본 것과 운동 탭에서 본
+/// 것을 머릿속에서 다시 맞춰야 했다. 이제 그림도 하나다 — 값의 출처
+/// (`exerciseWeekViewProvider` · `exerciseLoadGoalsProvider`)는 예전부터 이미
+/// 같았다.
 class _ExerciseCard extends ConsumerWidget {
-  const _ExerciseCard({
-    required this.summary,
-    required this.showCharts,
-    required this.onOpen,
-  });
-  final DashboardSummary summary;
-  final bool showCharts;
+  const _ExerciseCard({required this.onOpen});
+
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    // 운동 탭과 같은 단일 소스(exerciseWeekViewProvider)에서 주간 수치·일별
-    // 칼로리를 읽어 홈 카드와 운동 탭이 항상 일치한다. 이 provider 는 오늘 체크한
-    // AI 추천 운동까지 이미 더한 값이라, 지표와 주간 추이 차트가 같이 움직인다.
+    // 운동 탭과 같은 단일 소스에서 읽어 두 화면이 항상 일치한다. 이 provider 는
+    // 오늘 체크한 AI 추천 운동까지 이미 더한 값이다.
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
       exerciseWeekViewProvider,
     );
     // 새로고침 중에는 직전 값을 계속 그린다 — 이미 맞는 그림을 지웠다 다시
     // 그리면 깜빡임만 는다.
     final ExerciseWeek? wk = weekAsync.valueOrNull;
-    // 지표는 운동 탭 `운동 현황 - 이번 주` 와 **같은 네 가지**다 (#1119).
-    // 예전에는 활동 시간·소모 칼로리·운동 일수를 MY 프로필 목표(주 3회·150분·
-    // 500kcal)와 견줬는데, 운동 탭은 유형별 주간 목표(ExerciseLoadGoals)를 쓰고
-    // 있어 같은 한 주를 두 화면이 다르게 말했다.
     // MY 건강 목표에서 저장한 값을 운동 탭과 함께 읽는다 (#1139).
     final ExerciseLoadGoals goals = ref.watch(exerciseLoadGoalsProvider);
-    final List<ExerciseDayLoad> loads = wk == null
-        ? const <ExerciseDayLoad>[]
-        : dayLoadsOfWeek(wk, _thisMonday());
-    double sumOf(ExerciseLoadKind k) => loads.fold<double>(
-      0,
-      (double a, ExerciseDayLoad d) => a + d.valueOf(k),
-    );
-    final double burned = wk == null
-        ? summary.exerciseCalories.toDouble()
-        : loads.fold<double>(
-            0,
-            (double a, ExerciseDayLoad d) => a + d.calories,
-          );
-    // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
-    // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
-    final int todayIdx = nowKst().weekday - 1;
-    final NumberFormat nf = NumberFormat('#,###');
 
     return _HomeCard(
       child: Column(
@@ -733,244 +680,43 @@ class _ExerciseCard extends ConsumerWidget {
             onOpen: onOpen,
           ),
           const SizedBox(height: 14),
-          // 지표 3개는 왼쪽에 세로로, 주간 추이 그래프는 오른쪽에 나란히 둔다.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                flex: 5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    _ExerciseStat(
-                      icon: Icons.local_fire_department_rounded,
-                      label: l.homeExerciseBurned,
-                      value: nf.format(burned),
-                      goal: nf.format(goals.weeklyBurnKcal),
-                      unit: l.unitKcal,
-                    ),
-                    for (final ExerciseLoadKind k
-                        in ExerciseLoadKind.values) ...<Widget>[
-                      const SizedBox(height: 10),
-                      _ExerciseStat(
-                        icon: _kindIcon(k),
-                        label: kindLabel(l, k),
-                        value: nf.format(sumOf(k).round()),
-                        goal: nf.format(goals.weeklyGoalOf(k).round()),
-                        unit: _kindUnit(l, k),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (showCharts) const SizedBox(width: 20),
-              if (showCharts)
-                Expanded(
-                  flex: 6,
-                  child: _ExerciseTrend(
-                    weekAsync: weekAsync,
-                    todayIndex: todayIdx,
-                    // 하루 목표. 운동 탭이 요일 막대에 긋는 것과 같은 선이다
-                    // (#1119) — 식단 그래프가 하루 목표를 그리는 것과 같은 뜻.
-                    dailyGoalCalories: goals.dailyBurnKcal,
-                    // 되짚는 대상은 파생 provider 가 아니라 실제로 서버를
-                    // 부르는 쪽이다 — 뷰만 무효화하면 캐시된 에러가 그대로
-                    // 다시 계산돼 아무 일도 일어나지 않는다.
-                    onRetry: () => ref.invalidate(exerciseWeekProvider),
-                  ),
-                ),
-            ],
-          ),
+          if (wk != null)
+            ExerciseWeekLoadCard(
+              key: const ValueKey<String>('dashboard-exercise-week'),
+              loads: dayLoadsOfWeek(wk, _thisMonday()),
+              goals: goals,
+              // 이미 홈 카드 안이다 — 카드 바탕을 한 겹 더 그리지 않는다.
+              surface: false,
+            )
+          else if (weekAsync.hasError)
+            _ExerciseUnavailable(
+              // 되짚는 대상은 파생 provider 가 아니라 실제로 서버를 부르는
+              // 쪽이다 — 뷰만 무효화하면 캐시된 에러가 그대로 다시 계산돼
+              // 아무 일도 일어나지 않는다.
+              onRetry: () => ref.invalidate(exerciseWeekProvider),
+            )
+          else
+            const _ExercisePlaceholder(),
         ],
       ),
     );
   }
 }
 
-/// 운동 카드 오른쪽의 주간 추이. 상태를 세 갈래로 나눈다 — 값이 있으면 그리고,
-/// 실패했으면 실패했다고 말하고, 아직이면 자리만 잡는다.
-///
-/// 예전에는 값이 없을 때 데모 상수(월 300 · 화 420 …)를 그렸다. `valueOrNull`
-/// 은 로딩과 에러를 똑같이 `null` 로 주므로 그 폴백은 첫 프레임이 아니라
-/// **요청이 실패한 동안 계속** 걸렸고, 운동 기록이 하나도 없는 회원의 홈에
-/// 오류 표시 하나 없이 "이만큼 태웠다" 는 막대가 남았다. 왼쪽 3지표는 서버가
-/// 준 주간 합계로 폴백하니, 지표와 그래프가 서로 다른 이야기를 했다(#962).
-class _ExerciseTrend extends StatelessWidget {
-  const _ExerciseTrend({
-    required this.weekAsync,
-    required this.todayIndex,
-    required this.dailyGoalCalories,
-    required this.onRetry,
-  });
+/// 주간 기록을 불러오지 못했을 때. 값을 지어내는 대신 못 불러왔다고 적고,
+/// 다시 시도할 자리를 준다 (#962).
+class _ExerciseUnavailable extends StatelessWidget {
+  const _ExerciseUnavailable({required this.onRetry});
 
-  final AsyncValue<ExerciseWeek> weekAsync;
-
-  /// 하루 목표 소모 칼로리 — 주간 목표 ÷ 7. (#1015)
-  final double dailyGoalCalories;
-
-  /// 오늘 요일(0=월 … 6=일).
-  final int todayIndex;
   final VoidCallback onRetry;
-
-  /// 차트가 차지하는 높이. 세 상태가 같은 높이를 써야 로딩에서 데이터로 바뀔 때
-  /// 카드가 튀지 않는다.
-  static const double _chartHeight = 96;
-
-  /// 서버가 준 일별 칼로리를 일곱 칸으로 맞춘다. 모자라는 칸은 0 이고, 아직
-  /// 오지 않은 요일도 0 이다.
-  static List<double> series(List<double> daily, int todayIndex) {
-    return <double>[
-      for (int i = 0; i < 7; i++)
-        if (i > todayIndex || i >= daily.length) 0 else daily[i],
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final ExerciseWeek? wk = weekAsync.valueOrNull;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          '${l.homeWeeklyExerciseTrend} (${l.unitKcal})',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 14.5,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.ink,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (wk != null)
-          _chart(context, l, wk)
-        else if (weekAsync.hasError)
-          _unavailable(l)
-        else
-          _placeholder(),
-      ],
-    );
-  }
-
-  Widget _chart(BuildContext context, AppLocalizations l, ExerciseWeek wk) {
-    final List<double> week = series(wk.dailyCalories, todayIndex);
-    final (double lo, double hi) = _barScale(week);
-    final List<String> days = weekDayLabels(l);
-    // 막대와 요일 라벨은 한 덩어리로 읽는다 — 낱개로는 `월` `화` 뿐이라
-    // 얼마나 태웠는지가 음성 안내에서 사라진다(#972).
-    return Semantics(
-      container: true,
-      label: chartSemanticsLabel(
-        l,
-        title: '${l.homeWeeklyExerciseTrend} (${l.unitKcal})',
-        points: chartSeriesPoints(
-          l,
-          values: week,
-          dayLabels: days,
-          format: (double v) => '${v.round()}${l.unitKcal}',
-          // 아직 오지 않은 요일은 0 으로 채워져 있다. 그 자리를 읽으면
-          // 그리지도 않은 막대를 말하게 된다.
-          upTo: todayIndex,
-        ),
-      ),
-      child: ExcludeSemantics(
-        // 목표치는 왼쪽 칸에 두 줄로 적는다 — 홈 탭 식단 영양 그래프와 같은
-        // 자리다 (#1071). 요일 라벨도 같은 만큼 밀려야 막대와 줄이 맞는다.
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ChartGoalAxis(
-              height: _chartHeight,
-              label:
-                  '${l.homeGoal}\n'
-                  '${NumberFormat('#,###').format(dailyGoalCalories.round())}',
-              lineBottom: dailyGoalCalories > lo && dailyGoalCalories < hi
-                  ? ((dailyGoalCalories - lo) /
-                            ((hi - lo) <= 0 ? 1 : (hi - lo))) *
-                        (_chartHeight - kExerciseBarLabelGap)
-                  : null,
-            ),
-            const SizedBox(width: chartGoalAxisGap),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  SizedBox(
-                    key: const ValueKey<String>('dashboard-exercise-chart'),
-                    height: _chartHeight,
-                    child: ChartReveal(
-                      duration: AppMotion.chartGrow,
-                      // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
-                      // 마스터 진행도는 선형으로 받는다.
-                      curve: Curves.linear,
-                      builder: (BuildContext context, double t) => CustomPaint(
-                        size: Size.infinite,
-                        painter: _ExerciseBarPainter(
-                          data: week,
-                          lo: lo,
-                          hi: hi,
-                          todayIndex: todayIndex,
-                          color: FigmaColors.primary,
-                          goal: dailyGoalCalories,
-                          progress: t,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: <Widget>[
-                      for (int i = 0; i < days.length; i++)
-                        Expanded(
-                          child: Center(
-                            // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
-                            // 원형 안에 흰색 요일 글씨로 표기한다.
-                            child: i == todayIndex
-                                ? Container(
-                                    width: 18,
-                                    height: 18,
-                                    alignment: Alignment.center,
-                                    decoration: const BoxDecoration(
-                                      color: FigmaColors.primary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      days[i],
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                    days[i],
-                                    style: const TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 불러오지 못했을 때. 값을 지어내는 대신 못 불러왔다고 적고, 다시 시도할
-  /// 자리를 준다.
-  Widget _unavailable(AppLocalizations l) {
     return SizedBox(
-      key: const ValueKey<String>('dashboard-exercise-chart-error'),
-      height: _chartHeight + 24,
+      key: const ValueKey<String>('dashboard-exercise-error'),
+      height: _kExerciseBodyHeight,
+      width: double.infinity,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -985,7 +731,7 @@ class _ExerciseTrend extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           TextButton(
-            key: const ValueKey<String>('dashboard-exercise-chart-retry'),
+            key: const ValueKey<String>('dashboard-exercise-retry'),
             onPressed: onRetry,
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
@@ -1005,117 +751,27 @@ class _ExerciseTrend extends StatelessWidget {
       ),
     );
   }
-
-  /// 아직 읽는 중. 자리만 잡아 두면 값이 도착했을 때 카드가 튀지 않는다.
-  Widget _placeholder() {
-    return Container(
-      key: const ValueKey<String>('dashboard-exercise-chart-loading'),
-      height: _chartHeight + 24,
-      decoration: BoxDecoration(
-        color: FigmaColors.primaryA(0.05),
-        borderRadius: BorderRadius.circular(10),
-      ),
-    );
-  }
 }
 
-/// [_ExerciseTrend.series] 를 테스트에서 부르기 위한 창구. 일곱 칸 정규화는
-/// 위젯을 띄우지 않고도 못박아 두고 싶은 규칙이다.
-@visibleForTesting
-List<double> exerciseTrendSeriesForTest(List<double> daily, int todayIndex) =>
-    _ExerciseTrend.series(daily, todayIndex);
-
-/// One activity metric in the 운동 card's left column: a blue icon chip with
-/// its label on the first line and the value underneath, per the Home layout
-/// reference. No tile chrome — the card itself is the surface.
-class _ExerciseStat extends StatelessWidget {
-  const _ExerciseStat({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.unit,
-    this.goal,
-  });
-  final IconData icon;
-  final String label;
-  final String value;
-  final String unit;
-
-  /// Optional small "/목표" suffix shown after the value (e.g. "/150분").
-  final String? goal;
+/// 아직 읽는 중. 자리만 잡아 두면 값이 도착했을 때 카드가 튀지 않는다.
+class _ExercisePlaceholder extends StatelessWidget {
+  const _ExercisePlaceholder();
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: FigmaColors.iconTint,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Icon(icon, size: 16, color: FigmaColors.primary),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        value,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.ink,
-                          letterSpacing: -0.3,
-                          height: 1,
-                        ),
-                      ),
-                      if (goal != null)
-                        Text(' /$goal$unit', maxLines: 1, style: _kGoalSuffix)
-                      else
-                        Text(
-                          ' $unit',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey<String>('dashboard-exercise-loading'),
+    height: _kExerciseBodyHeight,
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: FigmaColors.primaryA(0.05),
+      borderRadius: BorderRadius.circular(10),
+    ),
+  );
 }
+
+/// 실패·로딩 자리가 잡는 높이. 값이 도착하면 그 자리에 이번 주 카드가 서므로
+/// 같은 높이를 쓴다 — 카드가 튀지 않는다.
+double get _kExerciseBodyHeight => kActivityCardHeight;
 
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
@@ -1124,15 +780,6 @@ class _ExerciseStat extends StatelessWidget {
 /// 지표 카드의 초과 표시와 같은 두 색(dangerRed/statusWithinGoal)만 쓴다 —
 /// 카드는 2단계인데 그래프만 근접(주황) 3단계라, 초과가 아닌 날의 점이
 /// 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
-/// Padded scale for the exercise bar chart. The baseline sits well below the
-/// smallest bar so the difference between days is visually pronounced.
-(double, double) _barScale(List<double> d) {
-  final double hi = d.reduce(math.max);
-  // 0을 기준선으로 삼아 값이 0인 날은 막대가 0에 가깝게, 위쪽에 여유를 둬
-  // 막대가 카드 높이를 꽉 채우지 않도록 한다.
-  return (0, hi <= 0 ? 1 : hi * 1.3);
-}
-
 // ───────────────────────────────────────────────────── nutrition data ──
 
 class _NutData {
@@ -1271,108 +918,6 @@ HealthIndicator _indicatorFor(DashboardSummary s, _NutTabKind key) =>
 /// point. The goal is shown via the top label + point status colors, not a
 /// separate line. The [lo]/[hi] scale is padded away from zero so the line
 /// reads as a dynamic slope rather than a flat trace.
-/// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
-/// is pushed below the smallest value so day-to-day variation is pronounced;
-/// each bar carries its kcal value label, and today's bar is highlighted.
-/// 막대 꼭대기의 값 라벨이 차지하는 위쪽 여백. 목표선 높이 계산도 이 값을
-/// 빼야 왼쪽 칸의 목표치가 선과 같은 높이에 앉는다.
-const double kExerciseBarLabelGap = 20;
-
-class _ExerciseBarPainter extends CustomPainter {
-  _ExerciseBarPainter({
-    required this.data,
-    required this.lo,
-    required this.hi,
-    required this.todayIndex,
-    required this.color,
-    required this.goal,
-    this.progress = 1,
-  });
-
-  final List<double> data;
-  final double lo;
-  final double hi;
-
-  /// 오늘 요일 인덱스(0=월 … 6=일). 마지막 막대 고정이 아니라 이 막대를 강조한다.
-  final int todayIndex;
-  final Color color;
-
-  /// 하루 목표 소모 칼로리. 가로선은 이 목표선 하나뿐이다 (#1015).
-  final double goal;
-
-  /// 0 → 1 진입 애니메이션 진행도(선형). 막대는 월요일부터 차례로 바닥에서
-  /// 자라 오르고, 값 라벨은 해당 막대와 함께 페이드인한다.
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final double span = (hi - lo) <= 0 ? 1 : (hi - lo);
-    final int n = data.length;
-    final double slot = w / n;
-    final double barW = math.min(slot * 0.5, 22);
-    const double labelGap = kExerciseBarLabelGap;
-
-    // 가로선은 목표선 하나다 (#1015). 바닥에 긋던 축선은 지운다 — 막대가
-    // 이미 바닥을 그리고, 두 선이 같은 굵기라 어느 쪽이 목표인지 헷갈렸다.
-    final double span2 = span;
-    final double goalY = h - ((goal - lo) / span2) * (h - labelGap);
-    // 목표치는 그래프 왼쪽 칸(`ChartGoalAxis`)이 적는다 — 선 위 오른쪽 끝에
-    // 얹던 시절에는 목표에 가까운 막대의 꼭대기와 겹쳤다. (#1071)
-    if (goal > lo && goal < hi) {
-      ChartGoalLine.paint(canvas, y: goalY, left: 0, right: w);
-    }
-
-    for (int i = 0; i < n; i++) {
-      final double v = data[i];
-      // 막대별 진행도. 높이와 라벨 투명도를 같이 몰아 올리면 막대가
-      // 자라면서 값이 따라 붙는 것처럼 보인다.
-      final double t = chartStagger(progress, i, n);
-      final double bh = ((v - lo) / span) * (h - labelGap) * t;
-      final double cx = slot * i + slot / 2;
-      final double top = h - bh;
-      final bool today = i == todayIndex;
-      final Color c = today ? color : color.withValues(alpha: 0.30);
-      canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          Rect.fromLTWH(cx - barW / 2, top, barW, bh),
-          topLeft: const Radius.circular(5),
-          topRight: const Radius.circular(5),
-        ),
-        Paint()..color = c,
-      );
-      final TextPainter tp = TextPainter(
-        text: TextSpan(
-          text: NumberFormat('#,###').format(v),
-          style: TextStyle(
-            // 막대 위 숫자는 막대보다 작아야 한다 — 그래프는 흐름을 보는
-            // 자리고, 정확한 값은 상세에서 읽는다. (#1055)
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
-            color: (today ? color : const Color(0xFF9AA6B2)).withValues(
-              alpha: t,
-            ),
-          ),
-        ),
-        textDirection: ui.TextDirection.ltr,
-      )..layout();
-      final double lx = (cx - tp.width / 2).clamp(0.0, w - tp.width);
-      final double ly = math.max(0, top - tp.height - 3);
-      tp.paint(canvas, Offset(lx, ly));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ExerciseBarPainter old) =>
-      old.data != data ||
-      old.lo != lo ||
-      old.hi != hi ||
-      old.todayIndex != todayIndex ||
-      old.color != color ||
-      old.progress != progress;
-}
-
 // ───────────────────────────────────────────────────── recommended meals ──
 
 /// 추천을 누가 골랐는지. 트레이너가 짚어 준 식단과 AI 가 고른 식단은 회원이

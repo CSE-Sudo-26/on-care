@@ -16,7 +16,6 @@ class WeekTrendBar extends StatelessWidget {
     required this.loading,
     required this.current,
     this.warn = false,
-    this.goalFraction,
     this.valueWidth = 40,
   });
 
@@ -36,10 +35,6 @@ class WeekTrendBar extends StatelessWidget {
   /// 목표를 벗어난 주(이행률이 낮거나, 영양 지표가 목표를 넘었거나).
   final bool warn;
 
-  /// 눈금 위 목표의 위치(0~1). 막대가 이 선을 넘었는지가 곧 목표 초과다.
-  /// 목표가 눈금 끝과 같으면(이행률 100%) 선을 긋지 않는다 — 테두리와 겹친다.
-  final double? goalFraction;
-
   /// 값 칸 너비. 'kcal' 처럼 단위가 붙으면 넓혀 준다.
   final double valueWidth;
 
@@ -49,9 +44,11 @@ class WeekTrendBar extends StatelessWidget {
     // 쓰고 앞선 주는 흐리게 깔아, 색으로 초과 여부를 읽으면서도 어느 줄이
     // 이번 주인지 헷갈리지 않게 한다.
     final base = warn ? AppColors.overTarget : AppColors.primary;
+    // 목표를 넘긴 주는 지난 주라도 흐리게 깔지 않는다. 흐린 빨강은 분홍으로
+    // 보여, 정작 초과를 알아보라고 넣은 색이 가장 약하게 그려졌다(#1177).
     final tone = fraction == null
         ? AppColors.borderStrong
-        : current
+        : current || warn
         ? base
         : base.withValues(alpha: 0.35);
     return Padding(
@@ -83,21 +80,6 @@ class WeekTrendBar extends StatelessWidget {
                     widthFactor: (fraction ?? 0).clamp(0.0, 1.0),
                     child: Container(height: 9, color: tone),
                   ),
-                  // 목표선은 채움 위에 긋는다 — 아래 깔면 넘긴 주에서 가려져,
-                  // 정작 넘겼는지 봐야 할 때 보이지 않는다.
-                  if (goalFraction != null && goalFraction! < 1)
-                    FractionallySizedBox(
-                      widthFactor: goalFraction!,
-                      alignment: Alignment.centerLeft,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          width: 1.5,
-                          height: 9,
-                          color: AppColors.accentDark,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),

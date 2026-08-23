@@ -300,7 +300,26 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                   boxShadow: kCardShadow,
                 ),
                 child: m.pending
-                    ? const _TypingDots()
+                    // 점 세 개만 깜빡이면 무엇을 기다리는지 알 수 없다. 답이
+                    // 그 사람의 기록을 읽고 만들어지는 중이라는 것을 한 줄로
+                    // 말해 준다(#1180).
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const _TypingDots(),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              l.aicGeneratingReply,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w500,
+                                color: FigmaColors.textSub,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
                     : Text(
                         text,
                         style: const TextStyle(

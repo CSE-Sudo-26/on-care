@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -224,10 +225,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashTitle => '대시보드';
 
   @override
-  String get dashAddSchedule => '일정 추가';
+  String get dashActivityRecommendRoutine => '프로그램에서 루틴을 조정해보세요.';
 
   @override
-  String get dashCreateAiRoutine => 'AI 루틴 만들기';
+  String get dashActivityRecommendChat => '메시지에서 안부를 물어보세요.';
+
+  @override
+  String get dashActivityRecommendDiet => '식단에서 피드백을 남겨보세요.';
+
+  @override
+  String get dashActivityTabProgram => '프로그램';
+
+  @override
+  String get dashActivityTabChat => '메시지';
+
+  @override
+  String get dashActivityTabDiet => '식단';
 
   @override
   String get dashLoadFailed => '대시보드를 불러오지 못했어요';
@@ -276,10 +289,54 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashCheckSodiumCompletion => '식단·이행률 확인';
 
   @override
-  String get dashAiSummaryTitle => 'AI 코칭 요약';
+  String get dashMessages => '메시지';
 
   @override
-  String get dashToday => '오늘';
+  String get dashChurnRisk => '이탈 위험';
+
+  @override
+  String get dashChurnRiskNone => '이탈 위험 없음';
+
+  @override
+  String get dashChurnRiskCheck => '이탈 신호 확인';
+
+  @override
+  String get dashChurnRiskTitle => '이탈 위험 고객';
+
+  @override
+  String get dashChurnRiskEmpty => '지금은 이탈 위험 신호가 없어요.';
+
+  @override
+  String get dashActivityDifficultyTitle => '이행률 저조·이탈 위험 감지';
+
+  @override
+  String dashActivityDifficultyDesc(String names) {
+    return '$names 고객이 개인 운동 이행률이 낮거나 이탈 위험 신호(부정적 피드백 포함)를 보이고 있어요. 다음 세션 전에 난이도를 낮추고 최근 피드백을 확인해 주세요.';
+  }
+
+  @override
+  String get dashActivityInactiveTitle => '7일 이상 활동 저조';
+
+  @override
+  String dashActivityInactiveDesc(String names) {
+    return '$names 고객이 최근 7일 동안 운동 기록이 없어요. 이탈로 이어지기 전에 먼저 연락해서 재참여를 유도해 보세요.';
+  }
+
+  @override
+  String get dashActivityDietFeedbackTitle => '식단 피드백 미완료';
+
+  @override
+  String dashActivityDietFeedbackDesc(String names) {
+    return '$names 고객이 나트륨·당류 초과 등 식단 주의 신호가 있는데 최근 7일간 피드백을 받지 못했어요. 식단 코멘트를 남겨 확인했다는 걸 알려 주세요.';
+  }
+
+  @override
+  String dashActivityMoreClients(String shown, int count) {
+    return '$shown 외 $count명';
+  }
+
+  @override
+  String get dashAiSummaryTitle => 'AI 진단';
 
   @override
   String get dashAiNoClients =>
@@ -430,7 +487,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashNoScheduleToday => '오늘 등록된 일정이 없어요';
 
   @override
-  String get dashEmptySlot => '빈 시간';
+  String dashScheduleNowLabel(String time) {
+    return '지금 $time';
+  }
+
+  @override
+  String dashScheduleNextSession(String time, String name) {
+    return '다음 일정 $time · $name';
+  }
+
+  @override
+  String dashScheduleMinutesLeft(int minutes) {
+    return '$minutes분 뒤';
+  }
+
+  @override
+  String get dashPreparePt => 'PT 준비하기';
+
+  @override
+  String get dashLeaveMemo => '메모 남기기';
+
+  @override
+  String get dashSessionSent => '전송됨';
+
+  @override
+  String get dashSessionPrepared => '준비됨';
+
+  @override
+  String get dashSessionNoteWritten => '작성됨';
+
+  @override
+  String get dashSessionSentNo => '전송 안됨';
+
+  @override
+  String get dashSessionPreparedNo => '준비 안됨';
+
+  @override
+  String get dashSessionNoteNotWritten => '작성 안됨';
 
   @override
   String get weekdayMon => '월';
@@ -471,10 +564,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsManagementAttention => '관리 필요';
 
   @override
-  String get clientsSortPriority => '정렬: 관리 우선';
+  String get clientsFiltersClearAll => '전체 초기화';
 
   @override
-  String get clientsSortName => '정렬: 이름순';
+  String get clientsSortLabel => '정렬';
+
+  @override
+  String get clientsSortPriority => '관리 필요 우선';
+
+  @override
+  String get clientsSortName => '이름 오름차순';
+
+  @override
+  String get clientsSortNameDescending => '이름 내림차순';
+
+  @override
+  String get clientsSortRecentMessage => '최근 대화순';
+
+  @override
+  String get clientsSortActiveFirst => '활성 고객 우선';
+
+  @override
+  String get clientsFilterLabel => '필터';
 
   @override
   String clientsToolbarCount(int shown, int active) {
@@ -876,9 +987,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
-  String get consultHealthPurpose => '관리 목적';
-
-  @override
   String get consultPreferredTime => '희망 일시';
 
   @override
@@ -973,10 +1081,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietEmpty => '아직 기록된 식단이 없어요';
 
   @override
-  String get dietTodaySummary => '오늘 영양 요약';
+  String get dietDayEmpty => '기록 없음';
+
+  @override
+  String get dietMacros => '탄단지';
 
   @override
   String get clientNutritionSummary => '영양 요약';
+
+  @override
+  String get dietCalorieIntake => '오늘 섭취 칼로리';
 
   @override
   String get dietAchieveRate => '달성률';
@@ -997,7 +1111,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietAiAnalysis => 'AI 분석';
+  String get aiAnalysis => 'AI 분석';
+
+  @override
+  String get aiPeriodAnalysis => 'AI 기간 분석';
+
+  @override
+  String get aiAllAnalysis => 'AI 전체 분석';
 
   @override
   String dietAiOverSodium(int over) {
@@ -1048,10 +1168,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsTitle => '리포트';
 
   @override
-  String get reportsSubtitle => '이번 주 변화를 정리하고 고객에게 전달할 리포트를 작성하세요';
-
-  @override
-  String get reportsPrevWeek => '이전';
+  String get reportsSubtitle => '주간 변화를 확인하고 고객에게 전달하세요';
 
   @override
   String get reportsLoadFailed => '리포트를 불러오지 못했어요';
@@ -1110,6 +1227,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exBurnDayTitle => '소모';
+
+  @override
+  String get exBurnAllTitle => '평균 소모';
+
+  @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return '$month월 $week주차';
+  }
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '아직 연속 기록이 없어요';
 
   @override
   String get exTypeOther => '기타';
@@ -1199,11 +1332,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsDietTrend => '주간 식단 추이';
 
   @override
-  String reportsSodiumOverInline(int days) {
-    return '나트륨 초과 $days일';
-  }
-
-  @override
   String workoutDoneOfTotal(int total, int done) {
     return '$total개 중 $done개 완료';
   }
@@ -1237,18 +1365,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportBodySessions(int done, int booked) {
-    return 'PT 세션은 $done/$booked회 진행했어요.';
-  }
-
-  @override
   String reportBodyCompletionGood(int avg) {
-    return '이번 주 운동은 평균 $avg%로 잘 따라오셨어요.';
+    return '운동은 평균 $avg%로 잘 따라오셨어요.';
   }
 
   @override
   String reportBodyCompletionLow(int avg) {
-    return '이번 주 운동 이행률은 평균 $avg%였어요. 많이 바쁘셨나 봐요.';
+    return '운동 이행률은 평균 $avg%였어요. 많이 바쁘셨나 봐요.';
   }
 
   @override
@@ -1257,22 +1380,22 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportBodySodiumOver(int avg, int days) {
-    return '나트륨은 하루 평균 ${avg}mg으로 목표(2,000mg)를 $days일 넘겼어요. 국물을 절반만 남기셔도 하루 400~500mg은 줄어듭니다.';
+  String reportBodySodiumOver(String avg, String target, int days) {
+    return '나트륨은 하루 평균 ${avg}mg이었고, 목표(${target}mg)를 넘긴 날이 $days일이었어요. 국물을 절반만 남기셔도 하루 400~500mg은 줄어듭니다.';
   }
 
   @override
-  String reportBodySodiumOk(int avg) {
-    return '나트륨은 하루 평균 ${avg}mg으로 목표 안에서 잘 지키고 계세요.';
+  String reportBodySodiumOk(String avg, String target) {
+    return '나트륨은 하루 평균 ${avg}mg으로 목표(${target}mg) 안에서 잘 지키고 계세요.';
   }
 
   @override
-  String reportBodyCalories(int avg) {
+  String reportBodyCalories(String avg) {
     return '칼로리는 하루 평균 ${avg}kcal이에요.';
   }
 
   @override
-  String get reportBodyPraise => '이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!';
+  String get reportBodyPraise => '정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!';
 
   @override
   String get reportBodyEncourage =>
@@ -1280,7 +1403,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportBodyNoRecords =>
-      '이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. 다음 주 시작을 같이 잡아 봐요.';
+      '이 주에는 남은 기록이 없어서 정리해 드릴 내용이 없네요. 다음 주 시작을 같이 잡아 봐요.';
 
   @override
   String get schedTitle => '스케줄';
@@ -1467,6 +1590,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get progWeight => '중량';
+
+  @override
+  String get progType => '유형';
+
+  @override
+  String get progDuration => '시간(분)';
 
   @override
   String get progOptional => '선택';
@@ -2110,24 +2239,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get goalOther => '기타';
 
   @override
-  String get purposeWeight => '체중 관리';
-
-  @override
-  String get purposeChronic => '만성질환 관리';
-
-  @override
-  String get purposeRehab => '재활';
-
-  @override
-  String get purposeGeneral => '전반적 건강';
-
-  @override
-  String get purposeNone => '해당 없음';
-
-  @override
-  String get purposeOther => '기타';
-
-  @override
   String get slotMorning => '오전';
 
   @override
@@ -2301,6 +2412,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineAlreadyGone => '이미 삭제된 루틴이에요';
 
   @override
+  String get workoutPendingTitle => '아직 하지 않은 개인 운동';
+
+  @override
+  String get workoutUndatedTitle => '날짜를 알 수 없는 기록';
+
+  @override
+  String get workoutPendingCancel => '배정 취소';
+
+  @override
   String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
@@ -2440,7 +2560,99 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashTasksEmpty => '새로 확인할 코칭 업무가 없어요.';
+  String get dashTaskProgressTitle => '할 일 진행률';
+
+  @override
+  String get dashTaskProgressToday => '오늘 처리';
+
+  @override
+  String get dashTaskProgressCarriedOver => '이월 처리';
+
+  @override
+  String get dashTodoConsultation => '상담';
+
+  @override
+  String get dashTodoDiet => '식단';
+
+  @override
+  String get dashTodoWorkout => '운동';
+
+  @override
+  String get dashTodoProgram => '프로그램';
+
+  @override
+  String get dashTodoReport => '리포트';
+
+  @override
+  String dashTodoConsultationSubtitle(int month, int day) {
+    return '$month/$day 상담 요청';
+  }
+
+  @override
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg) {
+    return '나트륨 ${sodiumMg}mg · 목표 ${targetMg}mg';
+  }
+
+  @override
+  String dashTodoSugarSubtitle(int sugarG, int targetG) {
+    return '당류 ${sugarG}g · 목표 ${targetG}g';
+  }
+
+  @override
+  String get dashTodoCompletionSubtitle => '이행률 저조 · 최근 기록 확인';
+
+  @override
+  String get dashTodoProgramSubtitle => '최근 등록한 프로그램 없음';
+
+  @override
+  String get dashTodoReportSubtitle => '이번 주 리포트 작성 대상';
+
+  @override
+  String get dashTaskDismissTitle => '이 항목을 삭제할까요?';
+
+  @override
+  String get dashTaskDismissBody =>
+      '할 일 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
+
+  @override
+  String get dashTaskCarriedOverTitle => '지난 할 일';
+
+  @override
+  String get dashTaskCategoryDone => '완료';
+
+  @override
+  String dashTaskCategoryRemaining(int count) {
+    return '+$count';
+  }
+
+  @override
+  String dashTaskUncheckTitle(String name) {
+    return '\'$name\' 완료를 취소할까요?';
+  }
+
+  @override
+  String get dashTaskUncheckBody => '할 일 진행률에서도 빠져요.';
+
+  @override
+  String get dashTaskUncheckConfirm => '완료 취소';
+
+  @override
+  String get churnNoRecentWorkout => '최근 7일 운동 기록 없음';
+
+  @override
+  String get churnNoRecentFeedback => '최근 7일 트레이너 피드백 없음';
+
+  @override
+  String get churnConsecutiveCancel => 'PT 2회 연속 취소·노쇼';
+
+  @override
+  String get churnDietStopped => '식단 기록 중단';
+
+  @override
+  String get churnGoalStagnant => '목표 지표 장기간 정체';
+
+  @override
+  String get churnUnresolvedRequest => '미응답 메시지 있음';
 
   @override
   String get navMessages => '메시지';
@@ -2450,9 +2662,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messagesLoadFailed => '대화 목록을 불러오지 못했어요.';
-
-  @override
-  String get messagesConversations => '대화';
 
   @override
   String get messagesEmpty => '조건에 맞는 대화가 없어요.';
@@ -2596,20 +2805,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get followUpCompleteFailed => '완료 처리하지 못했어요. 잠시 후 다시 시도해 주세요';
-
-  @override
-  String get dashTaskReply => '답장';
-
-  @override
-  String get dashTaskDiet => '식단';
-
-  @override
-  String get dashTaskWorkout => '운동';
-
-  @override
-  String dashTaskReview(String alert, String name) {
-    return '$name $alert 확인';
-  }
 
   @override
   String programEditorDefaultName(String goal) {
@@ -2857,13 +3052,34 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsRecentWeeks => '최근 4주 평균';
 
   @override
-  String chartGoalLabel(String value) {
-    return '목표\n$value';
+  String get reportsWeekTotal => '주 합계';
+
+  @override
+  String reportsGoalOf(String value) {
+    return '목표 $value';
   }
 
   @override
-  String reportsGoalMarker(String value) {
-    return '│ 목표 $value';
+  String get reportsCompareWith => '지난 주 대비';
+
+  @override
+  String reportsMoreExercises(int count) {
+    return '+$count개';
+  }
+
+  @override
+  String reportsRecordedDays(int days) {
+    return '기록 $days일';
+  }
+
+  @override
+  String reportsAverageChip(String value) {
+    return '평균 $value';
+  }
+
+  @override
+  String chartGoalLabel(String value) {
+    return '목표\n$value';
   }
 
   @override
@@ -2873,6 +3089,39 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsAiTitle => 'AI 코칭 보조 · 리포트 요약';
+
+  @override
+  String get reportsAiNextWeek => '다음 주 코칭 제안';
+
+  @override
+  String get reportsActionSodium => '국물·절임 반찬을 절반만 남기도록 안내해 주세요.';
+
+  @override
+  String reportsActionSugar(String target) {
+    return '당류가 목표(${target}g)를 넘긴 날이 있어요. 음료·간식부터 짚어 주세요.';
+  }
+
+  @override
+  String get reportsActionLowCompletion => '루틴 난이도를 한 단계 낮춰 완수 경험을 먼저 만들어 주세요.';
+
+  @override
+  String get reportsActionHighCompletion =>
+      '페이스가 좋아요. 다음 주에는 세트 수나 중량을 한 단계 올려 보세요.';
+
+  @override
+  String reportsActionSkipped(String names) {
+    return '$names 대체 동작을 준비해 다음 세션에서 맞춰 주세요.';
+  }
+
+  @override
+  String reportsActionUnlogged(int days) {
+    return '기록이 없는 날이 $days일이었어요. 기록 습관을 먼저 잡아 주세요.';
+  }
+
+  @override
+  String reportsActionCalories(String target) {
+    return '칼로리가 목표(${target}kcal)보다 적어요. 단백질 한 끼 보완을 제안해 주세요.';
+  }
 
   @override
   String get reportsAiGenerated => 'AI 생성';

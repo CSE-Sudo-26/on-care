@@ -43,13 +43,6 @@ class AppColors {
   static const Color aiCardGradientStart = Color(0xFFDCEAF4);
   static const Color aiCardGradientEnd = Color(0xFF9DC3E0);
 
-  /// 운동 유형 3색 — 회원 앱 `운동 현황` 과 **같은 그림**을 트레이너 토큰으로
-  /// 옮긴 것이다(#943). 도넛·누적 막대·범례가 모두 이 셋을 쓴다.
-  ///
-  /// 명도로 갈라 둔 한 계열이다. 유형마다 다른 색상환을 쓰면 세 값이 서로 다른
-  /// 뜻을 가진 것처럼 보이는데, 셋은 **같은 운동 시간을 나눈 것**이다.
-  /// 순서는 언제나 유산소 → 근력 → 스트레칭이라 색을 외우지 않아도 자리로
-  /// 읽힌다.
   /// 탄단지 3색 — 회원 앱 식단 탭 `이번 달` 막대와 같은 램프다(#944).
   ///
   /// **한 색의 농담**이다. `오늘` 뷰가 칼로리 링과 탄단지 진행 바를 모두 브랜드
@@ -64,9 +57,23 @@ class AppColors {
   static const Color macroProtein = Color(0xFF79AECC);
   static const Color macroFat = Color(0xFFB7D6E7);
 
-  static const Color chartCardio = Color(0xFF2E7DAB);
-  static const Color chartStrength = Color(0xFF17435F);
-  static const Color chartStretching = Color(0xFFD6E7F3);
+  /// 운동 유형 3색 — 회원 앱 `운동 현황` 과 **같은 규칙**을 트레이너 색으로
+  /// 옮긴 것이다(#1168). 유산소 → 근력 → 스트레칭으로 **한 계열 안에서 점점
+  /// 연해진다**: 셋이 같은 축(운동 유형)이라 색상까지 흩어 놓으면 서로 무관한
+  /// 지표처럼 읽힌다. 진하기가 곧 순서다.
+  ///
+  /// 예전에는 유산소(#2E7DAB) → 근력(#17435F) → 스트레칭(#D6E7F3) 이라 가운데가
+  /// 가장 진했다. 순서와 진하기가 어긋나 색을 외워야만 읽혔고, 그 근력 남색은
+  /// 회원 앱 램프에 없는 값이라 두 화면이 같은 주를 다른 그림으로 말했다.
+  ///
+  /// 세 단계는 **흰 글자 대비**로 벌려 둔다 — 3.4 → 2.0 → 1.4. 회원 앱과 같은
+  /// 간격이라, 가장 연한 단계에서도 12시 방향의 흰 시작 아이콘이 보인다.
+  /// 소모 칼로리([exerciseChart] = [primary], 대비 4.5)는 이 램프보다 한 단계
+  /// 더 진하다 — 유형이 아니라 셋이 함께 만든 결과라 어느 단계와도 겹치면
+  /// 안 된다.
+  static const Color chartCardio = Color(0xFF3793C9);
+  static const Color chartStrength = Color(0xFF87BFDF);
+  static const Color chartStretching = Color(0xFFC2DEEF);
 
   /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 남색). MY 탭
   /// "이번 달 통계" 카드도 이 남색 톤을 쓴다.
@@ -156,9 +163,16 @@ class AppColors {
   /// 트레이너 화면에서 다른 세기로 보여주지 않는다.
   static const Color statusOver = statusDanger;
 
-  /// 식단 그래프 색. 파랑에서 초록으로 옮긴다 — 운동과 한눈에 갈라 보라는
-  /// 요구이므로 식단만 바꾸고 운동은 파랑을 지킨다.
-  static const Color dietChart = statusNormal;
+  /// 목표 **안쪽** 색. 회원 앱 `FigmaColors.statusWithinGoal` 과 같은 자리이고,
+  /// 값은 각 앱의 메인 색이다 — 회원 앱은 브랜드 파랑, 트레이너는 [primary].
+  ///
+  /// 초록이 아니다(#1168). 초록은 "정상" 으로 읽혀서 목표에 한참 못 미친 날까지
+  /// 괜찮다고 말한다. 회원 앱이 #1070 에서 초록을 걷어낸 것과 같은 이유다.
+  static const Color statusWithinGoal = primary;
+
+  /// 식단 그래프 색. 목표 안쪽과 같은 색이다 — 같은 카드의 칼로리 링·탄단지·
+  /// 나트륨·당류가 하나의 색으로 말하고, 초과만 [statusOver] 로 갈린다.
+  static const Color dietChart = statusWithinGoal;
 
   /// 운동 그래프 색. 앱별 브랜드 파랑을 그대로 쓴다.
   static const Color exerciseChart = primary;

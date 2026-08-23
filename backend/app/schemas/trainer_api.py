@@ -7,7 +7,7 @@ GET /trainer/me 응답:
 from __future__ import annotations
 
 from datetime import date as _date, datetime as _datetime
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import (
     BaseModel,
@@ -75,6 +75,9 @@ class TrainerClientOut(BaseModel):
     goal: str
     last_message: str
     last_time: str
+    #: ISO timestamp used by the roster's recent-message sort. The relative
+    #: label above is presentation-only and cannot be ordered reliably.
+    last_message_at: _datetime | None = None
     #: 트레이너 화면의 활성/휴면 배지. 담당 관계가 살아 있고(`TrainerClient.active`)
     #: 트레이너가 휴면으로 내리지 않은(`dormant=False`) 회원만 True 다. (#707)
     active: bool
@@ -188,8 +191,17 @@ class ClientDietEntryOut(BaseModel):
     """고객 식단 서브탭 한 끼 — 프론트 ClientDietEntry 계약 정렬."""
     meal: str        # 아침|점심|저녁|간식
     items: str       # 음식명 나열
+    # 회원이 자기 앱에서 보는 것과 같은 끼니 카드를 트레이너도 본다(#1166).
+    # 시각과 음식별 영양이 없으면 트레이너 화면은 이름 한 줄로 떨어져, 같은
+    # 끼니를 두 화면이 다른 수준으로 말한다. 회원 API(`DietEntryOut`)가 이미
+    # 같은 `foods_json` 을 그대로 흘려 보낸다 — 키도 그쪽과 같다.
+    time_label: str = ""
+    foods: list[dict[str, Any]] = []  # [{name, calories, sodium_mg, sugar_g}]
     calories: int
     sodium_mg: int
+    # 나트륨과 나란히 읽히는 값인데 이 응답에만 빠져 있어, 트레이너 끼니
+    # 카드가 당류를 하루 합계로만 볼 수 있었다(#1025).
+    sugar_g: float
     carbs_g: float
     protein_g: float
     fat_g: float
@@ -743,12 +755,18 @@ class ProgramItem(BaseModel):
     `session` 은 다중 세션 프로그램을 일정에 등록할 때 그 항목이 속한 세션
     이름이다(#709). 기존 행에는 이 키가 없고, 없으면 빈 문자열이라 예전처럼
     세션 구분 없는 목록으로 읽힌다.
+
+    `type`/`duration` 도 마찬가지로 없는 예전 행은 각각 기본값('근력'/'')으로
+    읽힌다 — 코칭 탭 `ProgramDraftExercise` 와 같은 어휘다(#1233). PT 완료
+    자동 기록과 프로그램 전송이 이 값으로 실제 소모 칼로리를 계산한다.
     """
     name: str = Field(min_length=1, max_length=100)
     sets: int = Field(default=0, ge=0, le=99)
     reps: str = Field(default="", max_length=30)
     weight: str = Field(default="", max_length=30)
     session: str = Field(default="", max_length=100)
+    type: RoutineType = "근력"
+    duration: str = Field(default="", max_length=30)
 
 
 #: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아 있어야

@@ -18,6 +18,7 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
     goal: _str(json['goal']),
     lastMessage: _str(json['last_message']),
     lastTime: _str(json['last_time']),
+    lastMessageAt: DateTime.tryParse(_str(json['last_message_at'])),
     active: json['active'] == true,
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
@@ -40,6 +41,13 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
     items: _str(json['items']),
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
+    timeLabel: _str(json['time_label']),
+    // 음식별 영양. 옛 서버는 주지 않으므로 비어 있으면 `items` 한 줄로 떨어진다.
+    foods: <ClientDietFood>[
+      for (final Object? food in (json['foods'] as List<Object?>?) ?? const <Object?>[])
+        if (food is Map<String, Object?>) ClientDietFood.fromJson(food),
+    ],
+    sugarG: _double(json['sugar_g']),
     carbsG: _double(json['carbs_g']),
     proteinG: _double(json['protein_g']),
     fatG: _double(json['fat_g']),
@@ -88,8 +96,8 @@ List<TrainerClient> prioritizeClients(
     // over target, the one mid-conversation is the one to open first.
     // Absent when the source has no chat signal (the real API's roster
     // endpoint doesn't carry one), which degrades to the incoming order.
-    final chat = (lastChatAt[b.$1.id] ?? epoch).compareTo(
-      lastChatAt[a.$1.id] ?? epoch,
+    final chat = (lastChatAt[b.$1.id] ?? b.$1.lastMessageAt ?? epoch).compareTo(
+      lastChatAt[a.$1.id] ?? a.$1.lastMessageAt ?? epoch,
     );
     if (chat != 0) return chat;
     return a.$2.compareTo(b.$2);

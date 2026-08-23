@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
@@ -391,6 +393,7 @@ def build_roster(
             goal=link.goal,
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
+            last_message_at=last_msg.created_at if last_msg else None,
             active=_roster_active(link),
             calories=calories,
             sodium_mg=sodium_mg,
@@ -442,6 +445,21 @@ def _food_names(foods_json: str | None) -> list[str]:
     return names
 
 
+def _foods(foods_json: str | None) -> list[dict[str, Any]]:
+    """끼니의 음식별 영양. 회원 API 가 흘려 보내는 것과 같은 배열이다. (#1166)
+
+    깨진 값은 빈 목록으로 본다 — 트레이너 화면은 그때 `items` 한 줄로 떨어져
+    예전과 같이 읽힌다.
+    """
+    try:
+        parsed = json.loads(foods_json or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
+
+
 def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietEntryOut]:
     """회원의 특정 날짜 식단(회원 실데이터)을 고객 식단 서브탭 형태로."""
     rows = db.scalars(
@@ -460,8 +478,14 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         out.append(ClientDietEntryOut(
             meal=_meal_kr(r.meal_type),
             items=items,
+            # 회원 앱 끼니 카드와 같은 재료를 그대로 넘긴다(#1166). 이름만 이어
+            # 붙인 `items` 로는 같은 500kcal 이 밥에서 왔는지 기름에서 왔는지
+            # 트레이너가 알 수 없다.
+            time_label=r.time_label or "",
+            foods=_foods(r.foods_json),
             calories=r.total_calories,
             sodium_mg=r.sodium_mg,
+            sugar_g=r.sugar_g,
             carbs_g=r.carbs_g,
             protein_g=r.protein_g,
             fat_g=r.fat_g,
@@ -523,6 +547,11 @@ def build_client_history(
             exercises=exercises,
             client_feedback=r.client_feedback,
             trainer_note=r.trainer_note,
+            # 배정 수행(`_assigned_history_out`)은 완료 시각을 함께 내려보내는데
+            # 이 갈래만 비워 두고 있었다. 받는 쪽은 그 값으로 기록을 날짜에
+            # 붙이므로, 비어 오면 화면에서 통째로 빠진다 — 이 표는 날짜를
+            # 갖고 있으니(`date`) 그날로 채운다. (#1114, #1025)
+            completed_at=_day_start(r.date),
         )))
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
@@ -1004,6 +1033,18 @@ def build_routines(
 
 class RoutineNotFound(Exception):
     """루틴이 없거나 이 트레이너·회원의 것이 아니다."""
+
+
+def _day_start(day: str) -> datetime | None:
+    """`YYYY-MM-DD` → 그날 0시. 형식이 틀리면 None.
+
+    이 표는 시각 없이 날짜만 들고 있다. 받는 쪽은 시각을 버리고 날짜만 보므로
+    (`historyInRange`) 0시로 세워도 뜻이 달라지지 않는다.
+    """
+    try:
+        return datetime.fromisoformat(f"{day}T00:00:00")
+    except ValueError:
+        return None
 
 
 def _owned_routine(
@@ -2329,8 +2370,32 @@ def _program_items(program_json: str) -> list[ProgramItem]:
             weight=str(m.get("weight", "")),
             # 이 키가 없는 예전 행은 세션 구분 없는 목록으로 그대로 읽힌다(#709).
             session=str(m.get("session", "") or ""),
+            # 이 키들이 없는 예전 행은 기본값으로 읽힌다(#1233).
+            type=m.get("type") or "근력",
+            duration=str(m.get("duration", "")),
         ))
     return out
+
+
+def _program_minutes_and_type(
+    items: Sequence[ProgramItem],
+) -> tuple[int, str | None]:
+    """프로그램 항목들을 (총 분, 가장 많은 유형)으로 요약한다. (#1233)
+
+    `_session_summary` 와 같은 규칙이다 — 분은 각 항목 `duration` 의 합,
+    유형은 가장 많은 유형. 항목이 하나도 없으면 유형은 None 이라 호출부가
+    기존 폴백(세션 유형 고정값)을 쓸 수 있다.
+    """
+    minutes = 0
+    counts: dict[str, int] = {}
+    for item in items:
+        try:
+            minutes += int(item.duration.strip())
+        except ValueError:
+            pass
+        counts[item.type] = counts.get(item.type, 0) + 1
+    type_ = max(counts, key=lambda t: counts[t]) if counts else None
+    return minutes, type_
 
 
 def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
@@ -3039,6 +3104,14 @@ def _add_member_exercise_log(
     ex_type = _SESSION_EXERCISE_TYPE.get(s.type)
     if s.member_id is None or ex_type is None or s.duration_minutes <= 0:
         return None
+    # 프로그램에 적힌 실제 운동 항목의 분·유형을 우선 쓴다 — 분을 하나도
+    # 적지 않은(예전) 프로그램만 슬롯 전체 길이·고정 유형으로 되돌아간다(#1233).
+    program_minutes, program_type_ko = _program_minutes_and_type(
+        _program_items(s.program_json)
+    )
+    minutes = program_minutes if program_minutes > 0 else s.duration_minutes
+    if program_type_ko is not None:
+        ex_type = exercise_types.normalize(program_type_ko)
     row = ExerciseSession(
         id=_derived_exercise_id(s.id),
         user_id=s.member_id,
@@ -3047,9 +3120,9 @@ def _add_member_exercise_log(
         week_start=exercise_service.monday_of_str(s.date),
         day_label=exercise_service.weekday_label_of(s.date),
         type=ex_type,
-        minutes=s.duration_minutes,
+        minutes=minutes,
         calories=exercise_service.estimate_calories(
-            ex_type, s.duration_minutes, _PT_INTENSITY
+            ex_type, minutes, _PT_INTENSITY
         ),
         intensity=_PT_INTENSITY,
         source="trainer_pt",
@@ -3100,6 +3173,8 @@ def send_session_program(
             sets=str(item.sets) if item.sets else "",
             reps=item.reps,
             weight=item.weight,
+            type=item.type,
+            duration=item.duration,
         )
         for index, item in enumerate(items)
     ]
@@ -3737,14 +3812,12 @@ def report_message(report: WeeklyReportOut) -> str:
 
     workout: list[str] = []
     if report.completion_avg is not None:
+        # `이번 주` 로 시작하지 않는다 — 지난 주 리포트에도 그대로 나가는
+        # 문장이고, 어느 주인지는 첫 줄의 날짜 범위가 이미 말한다(#1177).
         workout.append(
-            f"이번 주 운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
+            f"운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
             if report.completion_avg >= 70
-            else f"이번 주 운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
-        )
-    if report.sessions_booked:
-        workout.append(
-            f"PT 세션은 {report.sessions_done}/{report.sessions_booked}회 진행했어요."
+            else f"운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
         )
     skipped = _skipped_names(report)
     if skipped:
@@ -3757,12 +3830,17 @@ def report_message(report: WeeklyReportOut) -> str:
 
     diet: list[str] = []
     if report.sodium_avg is not None:
+        # 평균과 초과일을 한 문장에 뒤섞지 않는다. `평균 1,916mg으로 목표를
+        # 3일 넘겼어요` 는 평균이 목표를 넘긴 것처럼 읽힌다. 목표도 문장에
+        # 박아 두지 않는다 — 기준이 바뀌면 문장만 옛말을 한다(#1177).
         diet.append(
-            f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표(2,000mg)를 "
-            f"{report.sodium_over_days}일 넘겼어요. 국물을 절반만 남기셔도 "
+            f"나트륨은 하루 평균 {report.sodium_avg:,}mg이었고, "
+            f"목표({SODIUM_TARGET_MG:,}mg)를 넘긴 날이 "
+            f"{report.sodium_over_days}일이었어요. 국물을 절반만 남기셔도 "
             "하루 400~500mg은 줄어듭니다."
             if report.sodium_over_days > 0
-            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표 안에서 잘 지키고 계세요."
+            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 "
+            f"목표({SODIUM_TARGET_MG:,}mg) 안에서 잘 지키고 계세요."
         )
     recorded = [v for v in report.calories_week if v > 0]
     if recorded:
@@ -3776,12 +3854,12 @@ def report_message(report: WeeklyReportOut) -> str:
         # 인사말만 남았다 — 가리킬 '이 부분'이 없다. 기록이 없는 주에 격려부터
         # 하면 회원이 무엇을 하라는 말인지 알 수 없다.
         paragraphs.append(
-            "이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
+            "이 주에는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
             "다음 주 시작을 같이 잡아 봐요."
         )
     else:
         paragraphs.append(
-            "이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
+            "정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
             if good
             else "다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요."
         )
@@ -3802,16 +3880,38 @@ def _topic(word: str) -> str:
 
 
 def _skipped_names(report: WeeklyReportOut) -> list[str]:
-    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다."""
+    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다.
+
+    분량을 뗀 이름으로 묶는다 — 같은 스트레칭을 요일마다 건너뛰면 예전에는
+    `하체 스트레칭 10분, 하체 스트레칭 5분, 하체 스트레칭 15분` 이 되어, 서로
+    다른 운동 셋을 빠뜨린 것처럼 읽혔다(#1177).
+    """
     names: list[str] = []
     for day in report.days:
         for line in day.exercises:
             if "✗" not in line:
                 continue
-            name = line.replace("✗", "").strip()
+            name = exercise_base_name(line)
             if name and name not in names:
                 names.append(name)
     return names[:3]
+
+
+#: 운동 이름 뒤에 붙는 그날의 분량(`하체 스트레칭 10분`, `벤치프레스 40kg · 4세트`).
+_EXERCISE_AMOUNT_RE = re.compile(r"\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$")
+
+
+def exercise_base_name(line: str) -> str:
+    """운동 한 줄에서 분량 표기를 떼어 낸 이름.
+
+    초안·요약이 운동을 **묶어 세는** 자리에서는 분량이 같은 운동을 서로 다른
+    운동으로 갈라 놓는다. 앱의 `exerciseBaseName` 과 같은 규칙이다(#1177).
+    """
+    name = line.replace("✗", "").replace("✓", "").strip()
+    head, sep, _ = name.partition("·")
+    if sep:
+        name = head.strip()
+    return _EXERCISE_AMOUNT_RE.sub("", name).strip()
 
 
 # ---- 리포트 피드백 초안 (#821) ----

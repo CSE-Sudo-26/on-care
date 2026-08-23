@@ -1544,6 +1544,18 @@ abstract class AppLocalizations {
   /// **'Nearby gyms'**
   String get exNearbyGyms;
 
+  /// Hides the gym result list so the map fills the space
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse list'**
+  String get exGymListCollapse;
+
+  /// Brings the gym result list back under the map
+  ///
+  /// In en, this message translates to:
+  /// **'Expand list'**
+  String get exGymListExpand;
+
   /// No description provided for @exAiAnalysis.
   ///
   /// In en, this message translates to:
@@ -2093,7 +2105,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardDietBody.
   ///
   /// In en, this message translates to:
-  /// **'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.'**
+  /// **'Breakfast was nicely balanced. The jjamppong you had for lunch can be heavy on sodium and sugar, so drink plenty of water today. For the rest of the day, pair vegetables with protein to keep things balanced.'**
   String get coachCardDietBody;
 
   /// No description provided for @coachCardExerciseTag.
@@ -2105,13 +2117,13 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardExerciseTitle.
   ///
   /// In en, this message translates to:
-  /// **'Upper-body PT session 12 done'**
+  /// **'PT session 12 done'**
   String get coachCardExerciseTitle;
 
   /// No description provided for @coachCardExerciseBody.
   ///
   /// In en, this message translates to:
-  /// **'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.'**
+  /// **'Nice work finishing PT session 12 — keeping up a steady routine is what counts. As your coach advised, take your time with the rotator-cuff shoulder stretches and wind down with light cardio. Afterwards, rest and rehydrate rather than pushing on.'**
   String get coachCardExerciseBody;
 
   /// No description provided for @coachCardWaterTag.
@@ -2300,6 +2312,12 @@ abstract class AppLocalizations {
   /// **'Try asking'**
   String get aicQuickRepliesLabel;
 
+  /// Shown in the coach bubble while a tailored reply is being generated
+  ///
+  /// In en, this message translates to:
+  /// **'Writing your answer'**
+  String get aicGeneratingReply;
+
   /// No description provided for @aicQuickReply1.
   ///
   /// In en, this message translates to:
@@ -2462,48 +2480,6 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get exOptionOther;
 
-  /// No description provided for @exHealthPurpose.
-  ///
-  /// In en, this message translates to:
-  /// **'Health Management Purpose'**
-  String get exHealthPurpose;
-
-  /// No description provided for @exPurposeWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Weight Management'**
-  String get exPurposeWeight;
-
-  /// No description provided for @exPurposeChronic.
-  ///
-  /// In en, this message translates to:
-  /// **'Chronic Condition Management'**
-  String get exPurposeChronic;
-
-  /// No description provided for @exPurposeRehab.
-  ///
-  /// In en, this message translates to:
-  /// **'Pain or Rehabilitation'**
-  String get exPurposeRehab;
-
-  /// No description provided for @exPurposeGeneral.
-  ///
-  /// In en, this message translates to:
-  /// **'General Health Management'**
-  String get exPurposeGeneral;
-
-  /// No description provided for @exPurposeNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get exPurposeNone;
-
-  /// No description provided for @exHealthPurposeOtherHint.
-  ///
-  /// In en, this message translates to:
-  /// **'For example, back rehabilitation, knee pain, or cholesterol management'**
-  String get exHealthPurposeOtherHint;
-
   /// No description provided for @exOtherGoalHint.
   ///
   /// In en, this message translates to:
@@ -2576,17 +2552,11 @@ abstract class AppLocalizations {
   /// **'Please select an exercise goal.'**
   String get exGoalRequired;
 
-  /// No description provided for @exHealthPurposeRequired.
+  /// No description provided for @exOtherGoalDetailRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please select a health management purpose.'**
-  String get exHealthPurposeRequired;
-
-  /// No description provided for @exHealthPurposeInputRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Please enter a health management purpose.'**
-  String get exHealthPurposeInputRequired;
+  /// **'Please describe your specific exercise goal in the message.'**
+  String get exOtherGoalDetailRequired;
 
   /// No description provided for @exDateRequired.
   ///

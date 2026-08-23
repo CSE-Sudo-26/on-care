@@ -448,6 +448,15 @@ class _RecommendedExerciseRowState
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final CoachRoutine routine = widget.routine;
+    // 이미 한 운동은 글자를 한 단계 낮춘다 (#1196). 체크 박스 하나만으로는
+    // 여러 줄짜리 목록에서 어디까지 했는지 한눈에 갈리지 않는다 — 남은 줄이
+    // 검정으로 남아 있어야 다음에 할 것이 먼저 읽힌다.
+    final Color titleColor = routine.completed
+        ? FigmaColors.textSub
+        : FigmaColors.ink;
+    final Color detailColor = routine.completed
+        ? AppColors.mutedForeground
+        : AppColors.foreground;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -472,6 +481,7 @@ class _RecommendedExerciseRowState
               ),
               const SizedBox(width: 8),
               Expanded(
+                flex: 3,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -479,10 +489,10 @@ class _RecommendedExerciseRowState
                       routine.isProgramSession
                           ? routine.sessionName
                           : routine.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: FigmaColors.ink,
+                        color: titleColor,
                       ),
                     ),
                     // 운동 구성이 오면 그것을 보여 준다 — 이름만 이어 붙인
@@ -495,9 +505,9 @@ class _RecommendedExerciseRowState
                           exercise.detail.isEmpty
                               ? exercise.name
                               : '${exercise.name} · ${exercise.detail}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.foreground,
+                            color: detailColor,
                           ),
                         ),
                       ]
@@ -505,9 +515,9 @@ class _RecommendedExerciseRowState
                       const SizedBox(height: 2),
                       Text(
                         routine.reason,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: AppColors.foreground,
+                          color: detailColor,
                         ),
                       ),
                     ],
@@ -528,9 +538,13 @@ class _RecommendedExerciseRowState
                 ),
               ),
               const SizedBox(width: 8),
-              // 오른쪽 묶음도 접힌다. 고정 폭으로 두면 큰 글자 배율에서
-              // 운동 이름 쪽을 다 밀어낸 뒤에도 줄이 넘쳤다(#766).
-              Flexible(
+              // 오른쪽 묶음은 **제 몫을 다 차지한다** (#1153). `Flexible` 은
+              // 내용 크기로 줄어들어, 남은 자리가 그 오른쪽에 빈 칸으로 남았고
+              // 값이 카드 가운데에서 끝난 것처럼 보였다. 폭을 받아 두고 안에서
+              // 오른쪽 정렬하면 값이 카드 끝에 붙는다. 글자 배율이 커지면
+              // 아래 FittedBox 가 값부터 줄인다(#766).
+              Expanded(
+                flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[

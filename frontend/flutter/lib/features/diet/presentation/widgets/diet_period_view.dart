@@ -798,6 +798,10 @@ class _PeriodBars extends StatelessWidget {
             // 머리 카드와 막대 사이의 빈 칸 — 고른 날의 세로선이 여기까지
             // 올라와 회색 카드에 닿는다 (#1123).
             topGap: 14,
+            // 지표를 바꾸면 막대가 바닥에서 다시 자란다 (#1148). 칸 수만 보면
+            // 칼로리 → 나트륨처럼 개수가 같은 전환에서 그림만 슬쩍 바뀌어,
+            // 무엇이 달라졌는지 눈으로 따라갈 수가 없다.
+            revealKey: replayKey,
             // 날짜만 적으면 `26`, `9` 가 무슨 날인지 알 수 없다 — 달을 함께
             // 적는다 (#1123).
             labelBuilder: (int i) =>
@@ -837,9 +841,8 @@ class _PeriodBars extends StatelessWidget {
                           chartHeight * (values[i] / maxValue).clamp(0.0, 1.0),
                       pending: _isPending(i),
                       day: _dayAt(i),
-                      // 목표를 넘긴 날은 한 색(경고)으로 칠한다. 쌓은 막대까지
-                      // 빨갛게 물들이면 무엇이 얼마인지가 사라지므로, 탄단지가
-                      // 있는 날은 쌓은 색을 지키고 초과는 목표선과 툴팁이 말한다.
+                      // 목표를 넘긴 날은 빨강으로 칠한다 — 탄단지가 있는 날은
+                      // 파랑 세 단계 대신 빨강 세 단계로 쌓는다 (#1201).
                       over: hasGoal && values[i] > goal,
                       color: color,
                     ),
@@ -932,15 +935,30 @@ class _Bar extends StatelessWidget {
     //
     // 위에서부터 나머지·지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
     // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
+    // 목표를 넘긴 날은 **빨강 세 단계**로 쌓는다 (#1201). 예전에는 쌓은 막대를
+    // 파랑 그대로 두고 초과는 목표선과 툴팁만 말했는데, 같은 카드의 나트륨·당류와
+    // 오늘 화면이 이미 초과를 빨강으로 가르고 있어 칼로리만 어긋났다. 진하기
+    // 순서(탄 → 단 → 지)는 파랑 때와 같으므로 어느 칸이 무엇인지는 그대로 읽힌다.
     final List<({Color color, double kcal})>
     parts = <({Color color, double kcal})>[
       // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
       // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
       if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
-      if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
+      if (d.fatKcal > 0)
+        (
+          color: over ? FigmaColors.macroFatOver : FigmaColors.macroFat,
+          kcal: d.fatKcal,
+        ),
       if (d.proteinKcal > 0)
-        (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
-      if (d.carbsKcal > 0) (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
+        (
+          color: over ? FigmaColors.macroProteinOver : FigmaColors.macroProtein,
+          kcal: d.proteinKcal,
+        ),
+      if (d.carbsKcal > 0)
+        (
+          color: over ? FigmaColors.macroCarbsOver : FigmaColors.macroCarbs,
+          kcal: d.carbsKcal,
+        ),
     ];
     return ClipRRect(
       borderRadius: radius,

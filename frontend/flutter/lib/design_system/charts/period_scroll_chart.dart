@@ -82,6 +82,7 @@ class PeriodScrollChart extends StatefulWidget {
     this.goalBottom,
     this.goalLabel,
     this.topGap = 0,
+    this.revealKey,
     this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
   });
@@ -122,6 +123,14 @@ class PeriodScrollChart extends StatefulWidget {
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
+
+  /// 막대가 바닥에서 다시 자라는 조건. 기본은 칸 수라, 기간이 바뀔 때만 다시
+  /// 자란다. 지표를 바꿔도 다시 자라야 하는 화면(식단 나트륨·당류, #1148)은
+  /// 여기에 그 지표를 함께 넣어 준다.
+  ///
+  /// **막대를 고를 때 바뀌는 값을 넣지 말 것** — 누를 때마다 그래프가 다시
+  /// 자라 눌러 읽는 동작을 방해한다(#1058).
+  final Object? revealKey;
 
   /// 그래프 위에 얹을 빈 칸. 고른 날의 세로선이 이 칸까지 올라와 **위의 머리
   /// 카드에 닿는다** — 선이 중간에서 끊기면 그 카드가 어느 막대의 것인지
@@ -226,37 +235,45 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                       // 다시 자라면 눌러 읽는 동작을 방해한다.
                       // 막대는 빈 칸 아래에서만 자란다 — 빈 칸은 세로선이
                       // 머리 카드까지 올라갈 자리다.
-                      Padding(
-                        padding: EdgeInsets.only(top: widget.topGap),
-                        child: ChartReveal(
-                          replayKey: widget.count,
-                          builder: (BuildContext context, double t) => Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: <Widget>[
-                              for (int i = 0; i < widget.count; i++)
-                                SizedBox(
-                                  width: slot,
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () => widget.onSelected?.call(
-                                      widget.selectedIndex == i ? null : i,
-                                    ),
-                                    // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
-                                    // 자르지 않으면 막대가 줄어든 상자 밖으로
-                                    // 삐져나와 그대로 다 보인다.
-                                    child: ClipRect(
-                                      key: ValueKey<String>(
-                                        'period-bar-reveal-$i',
+                      // 자라는 막대 줄은 **바닥에 붙인다** (#1200). `Stack` 은
+                      // 자리를 정하지 않은 자식을 위쪽 모서리에 두므로, 높이가
+                      // t 를 따라 커지는 이 줄이 위에 매달린 채 아래로
+                      // 내려왔다 — 막대가 자라는 것이 아니라 그래프가 통째로
+                      // 내려오는 것처럼 보였다.
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: widget.topGap),
+                          child: ChartReveal(
+                            replayKey: widget.revealKey ?? widget.count,
+                            builder: (BuildContext context, double t) => Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: <Widget>[
+                                for (int i = 0; i < widget.count; i++)
+                                  SizedBox(
+                                    width: slot,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => widget.onSelected?.call(
+                                        widget.selectedIndex == i ? null : i,
                                       ),
-                                      child: Align(
-                                        alignment: Alignment.bottomCenter,
-                                        heightFactor: t,
-                                        child: widget.barBuilder(context, i),
+                                      // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
+                                      // 자르지 않으면 막대가 줄어든 상자 밖으로
+                                      // 삐져나와 그대로 다 보인다.
+                                      child: ClipRect(
+                                        key: ValueKey<String>(
+                                          'period-bar-reveal-$i',
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.bottomCenter,
+                                          heightFactor: t,
+                                          child: widget.barBuilder(context, i),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

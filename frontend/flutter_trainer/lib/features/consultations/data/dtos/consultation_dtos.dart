@@ -19,16 +19,6 @@ Map<String, String> exerciseGoalLabels(AppLocalizations l) => <String, String>{
   'other': l.goalOther,
 };
 
-/// 건강관리 목적 코드 → 화면 문구.
-Map<String, String> healthPurposeLabels(AppLocalizations l) => <String, String>{
-  'weight': l.purposeWeight,
-  'chronic': l.purposeChronic,
-  'rehab': l.purposeRehab,
-  'general': l.purposeGeneral,
-  'none': l.purposeNone,
-  'other': l.purposeOther,
-};
-
 /// 희망 시간대 코드 → 화면 문구.
 Map<String, String> preferredTimeLabels(AppLocalizations l) => <String, String>{
   'morning': l.slotMorning,
