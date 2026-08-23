@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -709,7 +710,7 @@ void main() {
       ); // 박성호: 트레이너가 답장함
     });
 
-    testWidgets('관리 필요와 배지별 세부 필터는 중복 선택되지 않는다', (tester) async {
+    testWidgets('모든 필터는 서로 해제하지 않고 독립적으로 선택된다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -720,25 +721,20 @@ void main() {
         find.byKey(const ValueKey<String>('clients-filter-button')),
       );
       await tester.pumpAndSettle();
+      for (final filter in RosterManagementFilter.values) {
+        await tester.tap(
+          find.byKey(ValueKey<String>('management-filter-${filter.name}')),
+        );
+        await settle(tester);
+      }
+      expect(find.text('필터 7'), findsOneWidget);
+
+      // 한 조건만 다시 누르면 나머지 선택은 그대로 유지된다.
       await tester.tap(
         find.byKey(const ValueKey<String>('management-filter-attention')),
       );
       await settle(tester);
-      expect(find.text('필터 1'), findsOneWidget);
-
-      // 통합 조건의 부분집합을 고르면 통합 chip 을 풀어, 같은 결과를
-      // 만드는 조건이 두 개로 세어지지 않게 한다.
-      await tester.tap(
-        find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
-      );
-      await settle(tester);
-      expect(find.text('필터 1'), findsOneWidget);
-
-      await tester.tap(
-        find.byKey(const ValueKey<String>('management-filter-attention')),
-      );
-      await settle(tester);
-      expect(find.text('필터 1'), findsOneWidget);
+      expect(find.text('필터 6'), findsOneWidget);
     });
 
     testWidgets('복수 필터는 OR 로 합쳐지고 전체 초기화로 한 번에 풀린다', (tester) async {

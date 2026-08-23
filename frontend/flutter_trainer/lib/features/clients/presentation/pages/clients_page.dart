@@ -526,17 +526,7 @@ class _FilterMenuButton extends StatelessWidget {
                           selected: selected.contains(value),
                           onTap: () {
                             setMenuState(() {
-                              final wasSelected = selected.remove(value);
-                              if (!wasSelected) {
-                                if (value == RosterManagementFilter.attention) {
-                                  selected.removeAll(_attentionDetailFilters);
-                                } else if (_attentionDetailFilters.contains(
-                                  value,
-                                )) {
-                                  selected.remove(
-                                    RosterManagementFilter.attention,
-                                  );
-                                }
+                              if (!selected.remove(value)) {
                                 selected.add(value);
                               }
                             });
@@ -563,23 +553,11 @@ class _FilterMenuButton extends StatelessWidget {
   }
 }
 
-/// `관리 필요`가 한 번에 포함하는 배지별 세부 신호.
-///
-/// 통합 조건과 그 부분집합을 같이 OR 로 고르면 결과는 같은데 필터
-/// 개수만 늘어난다. 한쪽을 고르면 다른 쪽을 풀어 버튼이 실제로 적용한
-/// 조건 수를 그대로 말하게 한다.
-const Set<RosterManagementFilter> _attentionDetailFilters =
-    <RosterManagementFilter>{
-      RosterManagementFilter.sodiumOver,
-      RosterManagementFilter.sugarOver,
-      RosterManagementFilter.lowCompletion,
-      RosterManagementFilter.unanswered,
-    };
-
 /// One multi-select filter option, shown and removed as a chip/tag (#1026).
 ///
 /// Selected chips stay in the same quiet navy/neutral family as unselected
-/// chips, using border, fill and check state instead of a heavy button fill.
+/// chips, using border, fill and text color instead of a heavy button fill or
+/// check icon. Toggling a chip therefore never shifts the surrounding options.
 class _ManagementFilterChip extends StatelessWidget {
   const _ManagementFilterChip({
     super.key,
@@ -618,10 +596,6 @@ class _ManagementFilterChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (selected) ...<Widget>[
-                const Icon(Icons.check, size: 14, color: AppColors.primary),
-                const SizedBox(width: AppSpacing.xs),
-              ],
               Text(
                 label,
                 style: TextStyle(
