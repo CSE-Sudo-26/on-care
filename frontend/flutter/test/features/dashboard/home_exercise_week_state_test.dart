@@ -1,8 +1,11 @@
-/// 홈 운동 카드 주간 추이의 세 상태 (#962).
+/// 홈 운동 카드의 세 상태 (#962 · #1183).
 ///
 /// 예전에는 값이 없으면 데모 상수 막대를 그렸다. `valueOrNull` 이 로딩과 에러를
 /// 똑같이 `null` 로 주기 때문에, 실 API 가 실패한 동안에도 "이만큼 태웠다" 는
-/// 막대가 오류 표시 없이 남았다. 세 상태가 각각 다른 것을 그리는지 못박는다.
+/// 그림이 오류 표시 없이 남았다. 세 상태가 각각 다른 것을 그리는지 못박는다.
+///
+/// 카드 본문은 이제 운동 탭 `이번 주` 카드 그대로다 — 값이 도착했을 때 그
+/// 카드가 서는지까지 함께 본다.
 library;
 
 import 'package:flutter/material.dart';
@@ -39,14 +42,14 @@ void main() {
     sodiumWarning: null,
   );
 
-  final Finder chart = find.byKey(
-    const ValueKey<String>('dashboard-exercise-chart'),
+  final Finder card = find.byKey(
+    const ValueKey<String>('dashboard-exercise-week'),
   );
   final Finder error = find.byKey(
-    const ValueKey<String>('dashboard-exercise-chart-error'),
+    const ValueKey<String>('dashboard-exercise-error'),
   );
   final Finder loading = find.byKey(
-    const ValueKey<String>('dashboard-exercise-chart-loading'),
+    const ValueKey<String>('dashboard-exercise-loading'),
   );
 
   Future<void> pumpHome(
@@ -58,9 +61,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          accountRepositoryProvider.overrideWithValue(
-            MockAccountRepository(),
-          ),
+          accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
           dashboardSummaryProvider.overrideWith((ref) async => summary),
           memberCoachRepositoryProvider.overrideWithValue(
             MockMemberCoachRepository(),
@@ -90,14 +91,14 @@ void main() {
     dailyCalories: daily,
   );
 
-  testWidgets('불러오지 못하면 막대 대신 실패를 말한다', (WidgetTester tester) async {
+  testWidgets('불러오지 못하면 카드 대신 실패를 말한다', (WidgetTester tester) async {
     await pumpHome(
       tester,
       AsyncValue<ExerciseWeek>.error(Exception('boom'), StackTrace.empty),
     );
 
     expect(error, findsOneWidget);
-    expect(chart, findsNothing);
+    expect(card, findsNothing);
     expect(find.text('주간 운동 기록을 불러오지 못했어요.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -109,7 +110,7 @@ void main() {
     );
 
     final Finder retry = find.byKey(
-      const ValueKey<String>('dashboard-exercise-chart-retry'),
+      const ValueKey<String>('dashboard-exercise-retry'),
     );
     expect(retry, findsOneWidget);
     await tester.tap(retry);
@@ -118,15 +119,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('읽는 중에는 자리만 잡고 막대를 그리지 않는다', (WidgetTester tester) async {
+  testWidgets('읽는 중에는 자리만 잡고 카드를 그리지 않는다', (WidgetTester tester) async {
     await pumpHome(tester, const AsyncValue<ExerciseWeek>.loading());
 
     expect(loading, findsOneWidget);
-    expect(chart, findsNothing);
+    expect(card, findsNothing);
     expect(error, findsNothing);
   });
 
-  testWidgets('기록이 없는 주는 빈 차트를 그린다', (WidgetTester tester) async {
+  testWidgets('기록이 없는 주도 카드는 선다', (WidgetTester tester) async {
     await pumpHome(
       tester,
       AsyncValue<ExerciseWeek>.data(
@@ -134,13 +135,13 @@ void main() {
       ),
     );
 
-    expect(chart, findsOneWidget);
+    expect(card, findsOneWidget);
     expect(error, findsNothing);
     expect(loading, findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('값이 있으면 그 값을 그린다', (WidgetTester tester) async {
+  testWidgets('값이 있으면 운동 탭 이번 주 카드를 그대로 그린다', (WidgetTester tester) async {
     await pumpHome(
       tester,
       AsyncValue<ExerciseWeek>.data(
@@ -148,33 +149,12 @@ void main() {
       ),
     );
 
-    expect(chart, findsOneWidget);
+    expect(card, findsOneWidget);
     expect(error, findsNothing);
-  });
-
-  group('series', () {
-    test('일곱 칸으로 맞추고 아직 오지 않은 요일은 비운다', () {
-      expect(
-        exerciseTrendSeriesForTest(
-          const <double>[10, 20, 30, 40, 50, 60, 70],
-          2,
-        ),
-        <double>[10, 20, 30, 0, 0, 0, 0],
-      );
-    });
-
-    test('모자라는 응답도 일곱 칸이 된다', () {
-      expect(
-        exerciseTrendSeriesForTest(const <double>[10, 20], 6),
-        <double>[10, 20, 0, 0, 0, 0, 0],
-      );
-    });
-
-    test('빈 응답은 전부 0 이다', () {
-      expect(
-        exerciseTrendSeriesForTest(const <double>[], 6),
-        <double>[0, 0, 0, 0, 0, 0, 0],
-      );
-    });
+    // 운동 탭 `이번 주` 카드의 머리와 유형별 줄이 그대로 온다 (#1183).
+    expect(find.text('이번 주 소모'), findsOneWidget);
+    expect(find.text('유산소'), findsOneWidget);
+    expect(find.text('근력'), findsOneWidget);
+    expect(find.text('스트레칭'), findsOneWidget);
   });
 }
