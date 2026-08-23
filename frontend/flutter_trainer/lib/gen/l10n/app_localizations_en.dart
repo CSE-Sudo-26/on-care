@@ -239,7 +239,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Try adjusting the routine in Program.';
 
   @override
-  String get dashActivityRecommendChat => 'Try checking in over Chat.';
+  String get dashActivityRecommendChat => 'Try checking in over Messages.';
 
   @override
   String get dashActivityRecommendDiet => 'Try leaving feedback in Diet.';
@@ -248,7 +248,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashActivityTabProgram => 'Program';
 
   @override
-  String get dashActivityTabChat => 'Chat';
+  String get dashActivityTabChat => 'Messages';
 
   @override
   String get dashActivityTabDiet => 'Diet';
@@ -523,7 +523,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => 'Prepare the session';
+  String get dashPreparePt => 'Prepare PT';
 
   @override
   String get dashLeaveMemo => 'Leave a memo';
@@ -585,10 +585,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsManagementAttention => 'Needs attention';
 
   @override
-  String get clientsSortPriority => 'Sort: priority';
+  String get clientsFiltersClearAll => 'Clear all';
 
   @override
-  String get clientsSortName => 'Sort: name';
+  String get clientsSortLabel => 'Sort';
+
+  @override
+  String get clientsSortPriority => 'Needs attention first';
+
+  @override
+  String get clientsSortName => 'Name A–Z';
+
+  @override
+  String get clientsSortNameDescending => 'Name Z–A';
+
+  @override
+  String get clientsSortRecentMessage => 'Recent conversations';
+
+  @override
+  String get clientsSortActiveFirst => 'Active clients first';
+
+  @override
+  String get clientsFilterLabel => 'Filters';
 
   @override
   String clientsToolbarCount(int shown, int active) {
@@ -1191,10 +1209,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsSubtitle =>
-      'Summarize this week\'s changes and prepare a report to share';
-
-  @override
-  String get reportsPrevWeek => 'Previous';
+      'Review the week\'s changes and share them with your client';
 
   @override
   String get reportsLoadFailed => 'Couldn\'t load reports';
@@ -1385,11 +1400,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsDietTrend => 'Weekly diet trend';
 
   @override
-  String reportsSodiumOverInline(int days) {
-    return '$days days over sodium';
-  }
-
-  @override
   String workoutDoneOfTotal(int total, int done) {
     return '$done of $total done';
   }
@@ -1423,18 +1433,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportBodySessions(int done, int booked) {
-    return 'We got through $done of $booked PT sessions.';
-  }
-
-  @override
   String reportBodyCompletionGood(int avg) {
-    return 'You kept up well this week — $avg% of your workouts done.';
+    return 'You kept up well — $avg% of your workouts done.';
   }
 
   @override
   String reportBodyCompletionLow(int avg) {
-    return 'Workout completion came in at $avg% this week. Sounds like a busy one.';
+    return 'Workout completion came in at $avg%. Sounds like a busy one.';
   }
 
   @override
@@ -1443,23 +1448,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportBodySodiumOver(int avg, int days) {
-    return 'Sodium averaged ${avg}mg a day, over the 2,000mg target on $days days. Leaving half the broth behind saves 400-500mg a day.';
+  String reportBodySodiumOver(String avg, String target, int days) {
+    return 'Sodium averaged ${avg}mg a day, and went over the ${target}mg target on $days days. Leaving half the broth behind saves 400-500mg a day.';
   }
 
   @override
-  String reportBodySodiumOk(int avg) {
-    return 'Sodium averaged ${avg}mg a day — comfortably inside your target.';
+  String reportBodySodiumOk(String avg, String target) {
+    return 'Sodium averaged ${avg}mg a day — comfortably inside the ${target}mg target.';
   }
 
   @override
-  String reportBodyCalories(int avg) {
+  String reportBodyCalories(String avg) {
     return 'Calories averaged ${avg}kcal a day.';
   }
 
   @override
   String get reportBodyPraise =>
-      'Great week — let\'s keep this pace next week!';
+      'Great work — let\'s keep this pace next week!';
 
   @override
   String get reportBodyEncourage =>
@@ -1467,7 +1472,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportBodyNoRecords =>
-      'There\'s nothing logged this week, so nothing to sum up. Let\'s plan next week\'s start together.';
+      'There\'s nothing logged for this week, so nothing to sum up. Let\'s plan next week\'s start together.';
 
   @override
   String get schedTitle => 'Schedule';
@@ -1649,6 +1654,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progWeight => 'Weight';
+
+  @override
+  String get progType => 'Type';
+
+  @override
+  String get progDuration => 'Duration (min)';
 
   @override
   String get progOptional => 'Optional';
@@ -2706,7 +2717,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashTaskDismissBody =>
-      'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.';
+      'It only disappears from the task list. Actually handling it (consultation, program, report) still happens on its own screen.';
 
   @override
   String get dashTaskCarriedOverTitle => 'Carried over';
@@ -3168,13 +3179,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRecentWeeks => 'Last 4 weekly averages';
 
   @override
-  String chartGoalLabel(String value) {
-    return 'Goal\n$value';
+  String get reportsWeekTotal => 'Week total';
+
+  @override
+  String reportsGoalOf(String value) {
+    return 'Goal $value';
   }
 
   @override
-  String reportsGoalMarker(String value) {
-    return '│ Goal $value';
+  String get reportsCompareWith => 'vs last week';
+
+  @override
+  String reportsMoreExercises(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String reportsRecordedDays(int days) {
+    return '$days days logged';
+  }
+
+  @override
+  String reportsAverageChip(String value) {
+    return 'Avg $value';
+  }
+
+  @override
+  String chartGoalLabel(String value) {
+    return 'Goal\n$value';
   }
 
   @override
@@ -3184,6 +3216,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsAiTitle => 'AI coaching assistant · Report summary';
+
+  @override
+  String get reportsAiNextWeek => 'Next week\'s coaching';
+
+  @override
+  String get reportsActionSodium =>
+      'Ask them to leave half the broth and the pickled sides.';
+
+  @override
+  String reportsActionSugar(String target) {
+    return 'Some days went over the ${target}g sugar target. Start with drinks and snacks.';
+  }
+
+  @override
+  String get reportsActionLowCompletion =>
+      'Drop the routine a notch so they finish it first.';
+
+  @override
+  String get reportsActionHighCompletion =>
+      'Good pace. Add a set or a little weight next week.';
+
+  @override
+  String reportsActionSkipped(String names) {
+    return 'Prepare alternatives for $names for the next session.';
+  }
+
+  @override
+  String reportsActionUnlogged(int days) {
+    return '$days days went unlogged. Build the logging habit first.';
+  }
+
+  @override
+  String reportsActionCalories(String target) {
+    return 'Intake is under the ${target}kcal target. Suggest one protein-led meal.';
+  }
 
   @override
   String get reportsAiGenerated => 'AI generated';

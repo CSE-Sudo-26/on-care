@@ -208,9 +208,60 @@ void main() {
       // 마지막은 다음 주 이야기로 끝난다(#755).
       expect(message, startsWith('김민수님,'));
       expect(message, contains('주간 리포트'));
-      expect(message, contains('PT 세션은 1/1회 진행했어요'));
-      expect(message, contains('이번 주 정말 잘하셨어요'));
+      // PT 진행 횟수는 적지 않는다 — 회원에게 보낼 글은 그 주에 무엇을 했고
+      // 무엇을 챙길지를 말하는 자리다(#1177).
+      expect(message, isNot(contains('PT 세션')));
+      // 지난 주 리포트에도 그대로 나가는 문장이라 `이번 주` 로 시작하지
+      // 않는다 — 어느 주인지는 첫 줄의 날짜 범위가 말한다(#1177).
+      expect(message, contains('정말 잘하셨어요'));
       expect(message, contains('\n\n'), reason: '한 덩어리가 아니라 문단으로 나뉘어야 한다');
+    });
+
+    test('건너뛴 운동은 분량을 떼고 한 번만 적는다 (#1177)', () {
+      // 같은 스트레칭을 요일마다 건너뛰면 예전에는 `하체 스트레칭 10분,
+      // 하체 스트레칭 5분, …` 이 되어 서로 다른 운동 셋을 빠뜨린 것처럼 읽혔다.
+      final report = WeeklyReport(
+        client: makeClient(name: '김민수'),
+        weekStart: monday,
+        sessionsBooked: 0,
+        sessionsDone: 0,
+        completionAvg: 80,
+        sodiumOverDays: 0,
+        sodiumAvg: 1500,
+        isCurrentWeek: true,
+        weekCompletion: const <int>[80, 80, 80, 80, 80, 80, 80],
+        days: const <ReportDay>[
+          ReportDay(completion: 80, exercises: <String>['하체 스트레칭 10분✗']),
+          ReportDay(completion: 80, exercises: <String>['하체 스트레칭 5분✗']),
+          ReportDay(completion: 80, exercises: <String>['벤치프레스 40kg · 4세트✗']),
+        ],
+      );
+
+      final message = reportMessage(_ko, report);
+      expect(message, contains('다만 하체 스트레칭, 벤치프레스는 건너뛰셨더라고요'));
+      expect(message, isNot(contains('10분')));
+    });
+
+    test('수치는 화면과 같은 서식으로, 목표는 상수에서 적는다 (#1177)', () {
+      final report = WeeklyReport(
+        client: makeClient(name: '김민수'),
+        weekStart: monday,
+        sessionsBooked: 0,
+        sessionsDone: 0,
+        completionAvg: 81,
+        sodiumOverDays: 3,
+        sodiumAvg: 1916,
+        isCurrentWeek: true,
+        caloriesWeek: const <int>[1531, 1531, 1531, 1531, 1531, 1531, 1531],
+      );
+
+      final message = reportMessage(_ko, report);
+      // 그래프가 `1,916mg` 이라고 적는 값을 문장만 `1916mg` 이라고 쓰면 회원은
+      // 다른 값으로 읽는다.
+      expect(message, contains('1,916mg'));
+      expect(message, contains('1,531kcal'));
+      // 평균이 목표 안이어도 넘긴 **날**이 있었다는 사실을 뒤섞지 않는다.
+      expect(message, contains('목표(2,000mg)를 넘긴 날이 3일'));
     });
 
     test('omits figures the client has no data for', () {

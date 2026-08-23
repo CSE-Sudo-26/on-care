@@ -93,11 +93,7 @@ class _ChurnRiskTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          // 이 목록의 각 카드만 이탈 위험임을 말해야 한다 — 프로필 원까지
-          // 빨강이면 "이 사람 자체가 위험 신호"로 읽혀 다른 화면의 파란
-          // 아바타와 뜻이 갈린다. 원은 원래 UI(파랑)로 두고, 테두리만
-          // 빨강으로 눈에 띄게 한다.
-          border: Border.all(color: AppColors.warning, width: 1.5),
+          border: Border.all(color: AppColors.borderStrong),
           borderRadius: const BorderRadius.all(AppRadius.md),
         ),
         child: Column(

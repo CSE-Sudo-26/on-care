@@ -1544,6 +1544,18 @@ abstract class AppLocalizations {
   /// **'Nearby gyms'**
   String get exNearbyGyms;
 
+  /// Hides the gym result list so the map fills the space
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse list'**
+  String get exGymListCollapse;
+
+  /// Brings the gym result list back under the map
+  ///
+  /// In en, this message translates to:
+  /// **'Expand list'**
+  String get exGymListExpand;
+
   /// No description provided for @exAiAnalysis.
   ///
   /// In en, this message translates to:

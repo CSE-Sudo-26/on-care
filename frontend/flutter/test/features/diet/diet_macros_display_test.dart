@@ -12,6 +12,7 @@ import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
+import '../../helpers/fixed_clock.dart';
 
 Widget _app(Widget home, {List<Override> overrides = const <Override>[]}) {
   return ProviderScope(
@@ -65,12 +66,33 @@ class _PastDateDietRepository extends FakeDietRepository {
 }
 
 Future<void> _selectDaysAgo(WidgetTester tester, [int days = 1]) async {
-  final selectedDate = nowKst().subtract(Duration(days: days));
-  await tester.tap(find.text('${selectedDate.day}'));
+  final DateTime now = nowKst();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime target = today.subtract(Duration(days: days));
+  // 스트립은 월요일에서 시작해 일요일로 끝나는 **한 주**만 보여 준다(#1059).
+  // 고르려는 날이 이번 주 밖이면 화살표로 그 주까지 옮긴 뒤 고른다 — 날짜만
+  // 두드리던 예전 방식은 지난 날이 이번 주에 하나도 없는 **월요일마다**
+  // 깨졌다.
+  final DateTime monday = today.subtract(
+    Duration(days: today.weekday - DateTime.monday),
+  );
+  for (
+    DateTime week = monday;
+    target.isBefore(week);
+    week = week.subtract(const Duration(days: 7))
+  ) {
+    await tester.tap(find.byTooltip('지난 주'));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.text('${target.day}'));
   await tester.pumpAndSettle();
 }
 
 void main() {
+  // 지난 날짜를 누르는 테스트다 — 오늘이 월요일이면 스트립(이번 주 월~일)에
+  // 어제가 없어 누를 칸이 사라진다. 오늘을 주 중간으로 고정한다 (#1209).
+  setUp(useFixedKstDate);
+
   test('mock account keeps updated health goals', () async {
     final MockAccountRepository repository = MockAccountRepository();
 

@@ -62,8 +62,10 @@ class FourWeekComplianceTrend extends ConsumerWidget {
               text: value == null ? '-' : '$value%',
               loading: weeks[i].isLoading,
               current: i == weeks.length - 1,
-              // 이행률이 이 아래면 주의로 본다 — 주의 배지와 같은 기준.
-              warn: value != null && value < 70,
+              // 낮은 주를 빨강으로 칠하지 않는다. 이 앱에서 빨강은 `목표 초과`
+              // 라는 다른 뜻으로 이미 쓰이고 있어(#690·#913), 이행률이 낮은 주가
+              // 나트륨을 넘긴 주와 같은 색이 되면 둘이 같은 일처럼 읽힌다.
+              // 낮다는 사실은 막대 길이와 값이 말한다(#1177).
             );
           }(),
       ],
