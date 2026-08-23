@@ -492,7 +492,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String dashScheduleNextSession(String time, String name) {
-    return '다음 수업 $time · $name';
+    return '다음 일정 $time · $name';
   }
 
   @override
@@ -501,7 +501,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => '수업 준비하기';
+  String get dashPreparePt => 'PT 준비하기';
 
   @override
   String get dashLeaveMemo => '메모 남기기';

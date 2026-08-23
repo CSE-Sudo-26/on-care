@@ -251,7 +251,7 @@
       "minutes": {"type": "int"}
     }
   },
-  "dashPrepareClass": "Prepare the session",
+  "dashPreparePt": "Prepare PT",
   "dashLeaveMemo": "Leave a memo",
   "dashSessionSent": "Sent",
   "dashSessionPrepared": "Prepared",

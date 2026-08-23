@@ -522,7 +522,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => 'Prepare the session';
+  String get dashPreparePt => 'Prepare PT';
 
   @override
   String get dashLeaveMemo => 'Leave a memo';
