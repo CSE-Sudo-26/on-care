@@ -1149,10 +1149,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsTitle => '리포트';
 
   @override
-  String get reportsSubtitle => '이번 주 변화를 정리하고 고객에게 전달할 리포트를 작성하세요';
-
-  @override
-  String get reportsPrevWeek => '이전';
+  String get reportsSubtitle => '주간 변화를 확인하고 고객에게 전달하세요';
 
   @override
   String get reportsLoadFailed => '리포트를 불러오지 못했어요';
@@ -1316,11 +1313,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsDietTrend => '주간 식단 추이';
 
   @override
-  String reportsSodiumOverInline(int days) {
-    return '나트륨 초과 $days일';
-  }
-
-  @override
   String workoutDoneOfTotal(int total, int done) {
     return '$total개 중 $done개 완료';
   }
@@ -1354,18 +1346,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportBodySessions(int done, int booked) {
-    return 'PT 세션은 $done/$booked회 진행했어요.';
-  }
-
-  @override
   String reportBodyCompletionGood(int avg) {
-    return '이번 주 운동은 평균 $avg%로 잘 따라오셨어요.';
+    return '운동은 평균 $avg%로 잘 따라오셨어요.';
   }
 
   @override
   String reportBodyCompletionLow(int avg) {
-    return '이번 주 운동 이행률은 평균 $avg%였어요. 많이 바쁘셨나 봐요.';
+    return '운동 이행률은 평균 $avg%였어요. 많이 바쁘셨나 봐요.';
   }
 
   @override
@@ -1374,22 +1361,22 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportBodySodiumOver(int avg, int days) {
-    return '나트륨은 하루 평균 ${avg}mg으로 목표(2,000mg)를 $days일 넘겼어요. 국물을 절반만 남기셔도 하루 400~500mg은 줄어듭니다.';
+  String reportBodySodiumOver(String avg, String target, int days) {
+    return '나트륨은 하루 평균 ${avg}mg이었고, 목표(${target}mg)를 넘긴 날이 $days일이었어요. 국물을 절반만 남기셔도 하루 400~500mg은 줄어듭니다.';
   }
 
   @override
-  String reportBodySodiumOk(int avg) {
-    return '나트륨은 하루 평균 ${avg}mg으로 목표 안에서 잘 지키고 계세요.';
+  String reportBodySodiumOk(String avg, String target) {
+    return '나트륨은 하루 평균 ${avg}mg으로 목표(${target}mg) 안에서 잘 지키고 계세요.';
   }
 
   @override
-  String reportBodyCalories(int avg) {
+  String reportBodyCalories(String avg) {
     return '칼로리는 하루 평균 ${avg}kcal이에요.';
   }
 
   @override
-  String get reportBodyPraise => '이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!';
+  String get reportBodyPraise => '정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!';
 
   @override
   String get reportBodyEncourage =>
@@ -1397,7 +1384,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportBodyNoRecords =>
-      '이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. 다음 주 시작을 같이 잡아 봐요.';
+      '이 주에는 남은 기록이 없어서 정리해 드릴 내용이 없네요. 다음 주 시작을 같이 잡아 봐요.';
 
   @override
   String get schedTitle => '스케줄';
@@ -3031,13 +3018,34 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsRecentWeeks => '최근 4주 평균';
 
   @override
-  String chartGoalLabel(String value) {
-    return '목표\n$value';
+  String get reportsWeekTotal => '주 합계';
+
+  @override
+  String reportsGoalOf(String value) {
+    return '목표 $value';
   }
 
   @override
-  String reportsGoalMarker(String value) {
-    return '│ 목표 $value';
+  String get reportsCompareWith => '지난 주 대비';
+
+  @override
+  String reportsMoreExercises(int count) {
+    return '+$count개';
+  }
+
+  @override
+  String reportsRecordedDays(int days) {
+    return '기록 $days일';
+  }
+
+  @override
+  String reportsAverageChip(String value) {
+    return '평균 $value';
+  }
+
+  @override
+  String chartGoalLabel(String value) {
+    return '목표\n$value';
   }
 
   @override
@@ -3047,6 +3055,39 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsAiTitle => 'AI 코칭 보조 · 리포트 요약';
+
+  @override
+  String get reportsAiNextWeek => '다음 주 코칭 제안';
+
+  @override
+  String get reportsActionSodium => '국물·절임 반찬을 절반만 남기도록 안내해 주세요.';
+
+  @override
+  String reportsActionSugar(String target) {
+    return '당류가 목표(${target}g)를 넘긴 날이 있어요. 음료·간식부터 짚어 주세요.';
+  }
+
+  @override
+  String get reportsActionLowCompletion => '루틴 난이도를 한 단계 낮춰 완수 경험을 먼저 만들어 주세요.';
+
+  @override
+  String get reportsActionHighCompletion =>
+      '페이스가 좋아요. 다음 주에는 세트 수나 중량을 한 단계 올려 보세요.';
+
+  @override
+  String reportsActionSkipped(String names) {
+    return '$names 대체 동작을 준비해 다음 세션에서 맞춰 주세요.';
+  }
+
+  @override
+  String reportsActionUnlogged(int days) {
+    return '기록이 없는 날이 $days일이었어요. 기록 습관을 먼저 잡아 주세요.';
+  }
+
+  @override
+  String reportsActionCalories(String target) {
+    return '칼로리가 목표(${target}kcal)보다 적어요. 단백질 한 끼 보완을 제안해 주세요.';
+  }
 
   @override
   String get reportsAiGenerated => 'AI 생성';

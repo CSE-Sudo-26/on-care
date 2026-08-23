@@ -1030,6 +1030,7 @@ class _BurnBar extends StatelessWidget {
     required this.width,
     required this.t,
     required this.dimmed,
+    this.parts = const <ExerciseLoadKind, double>{},
   });
 
   final double value;
@@ -1038,6 +1039,11 @@ class _BurnBar extends StatelessWidget {
   final double width;
   final double t;
   final bool dimmed;
+
+  /// 그 주의 유형별 시간(분). 막대 **높이**는 소모 칼로리이고, 막대 **안**은
+  /// 이 몫으로 나뉜다 — 식단의 칼로리 막대가 탄·단·지로 쌓이는 것과 같은
+  /// 규칙이다. 비어 있으면 한 색으로 채운다(#1177).
+  final Map<ExerciseLoadKind, double> parts;
 
   @override
   Widget build(BuildContext context) {
@@ -1051,14 +1057,37 @@ class _BurnBar extends StatelessWidget {
         ),
       );
     }
+    final double total = parts.values.fold<double>(
+      0,
+      (double a, double b) => a + b,
+    );
     return Opacity(
       opacity: dimmed ? 0.35 : 1,
-      child: Container(
-        width: width,
-        height: math.max((value / max).clamp(0.0, 1.0) * height * t, 3),
-        decoration: const BoxDecoration(
-          color: kBurnColor,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+        child: SizedBox(
+          width: width,
+          height: math.max((value / max).clamp(0.0, 1.0) * height * t, 3),
+          child: total <= 0
+              ? const ColoredBox(color: kBurnColor)
+              : Column(
+                  // 가로로 늘려야 한다 — 가운데 정렬(기본값)이면 조각마다 폭이
+                  // 0 이 되어 막대가 통째로 사라진다.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // 위에서부터 스트레칭·근력·유산소 순으로 쌓는다 — 바닥이
+                    // 늘 유산소라 주끼리 견줄 때 기준이 흔들리지 않는다.
+                    for (final ExerciseLoadKind k
+                        in ExerciseLoadKind.values.reversed)
+                      Expanded(
+                        flex: ((parts[k] ?? 0) * 100).round().clamp(
+                          0,
+                          1 << 30,
+                        ),
+                        child: ColoredBox(color: kindColor(k)),
+                      ),
+                  ],
+                ),
         ),
       ),
     );
@@ -1074,6 +1103,7 @@ class _WeekBucket {
     required this.calories,
     required this.cardioMinutes,
     required this.strengthSets,
+    required this.strengthMinutes,
     required this.flexibilityMinutes,
     required this.otherMinutes,
   });
@@ -1082,10 +1112,23 @@ class _WeekBucket {
   final double calories;
   final double cardioMinutes;
   final int strengthSets;
+
+  /// 근력에 쓴 **시간**. 화면에는 세트로 적지만, 막대를 유형별로 나눌 때는
+  /// 셋을 같은 단위(분)로 놓아야 몫이 뜻을 갖는다(#1177).
+  final double strengthMinutes;
+
   final double flexibilityMinutes;
 
   /// 목표가 없는 나머지 운동. 오늘·이번 주와 같이 분만 적는다.
   final double otherMinutes;
+
+  /// 막대를 나누는 몫 — 셋 모두 분이다.
+  Map<ExerciseLoadKind, double> get minutesByKind =>
+      <ExerciseLoadKind, double>{
+        ExerciseLoadKind.cardio: cardioMinutes,
+        ExerciseLoadKind.strength: strengthMinutes,
+        ExerciseLoadKind.flexibility: flexibilityMinutes,
+      };
 
   double valueOf(ExerciseLoadKind kind) => switch (kind) {
     ExerciseLoadKind.cardio => cardioMinutes,
@@ -1149,6 +1192,10 @@ class _AllPeriodView extends ConsumerWidget {
                   strengthSets: byWeek[m]!.fold<int>(
                     0,
                     (int a, ExerciseDayBar d) => a + d.strengthSets.round(),
+                  ),
+                  strengthMinutes: byWeek[m]!.fold<double>(
+                    0,
+                    (double a, ExerciseDayBar d) => a + d.strength,
                   ),
                   flexibilityMinutes: byWeek[m]!.fold<double>(
                     0,
@@ -1463,6 +1510,7 @@ class _WeeklyBurnChart extends StatelessWidget {
                                           child: Align(
                                             alignment: Alignment.bottomCenter,
                                             child: _BurnBar(
+                                              parts: weeks[i].minutesByKind,
                                               value: weeks[i].calories,
                                               max: max,
                                               height: chartH,

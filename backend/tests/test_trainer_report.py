@@ -693,8 +693,25 @@ def test_summary_evidence_quotes_only_screen_figures():
     lines = svc._evidence(_report())
 
     assert "운동 이행률 평균 87%" in lines
-    assert any("나트륨 평균 2288mg" in line for line in lines)
-    assert any("풀업 3세트" in line for line in lines)
+    # 수치는 화면과 같은 서식으로 적는다 — 그래프가 `2,288mg` 이라고 적는 값을
+    # 요약만 `2288mg` 이라고 쓰면 트레이너는 다른 값으로 읽는다(#1177).
+    assert any("나트륨 평균 2,288mg" in line for line in lines)
+    # 건너뛴 운동은 분량을 떼고 묶는다 — 같은 운동을 요일마다 건너뛴 것이
+    # 서로 다른 운동으로 읽히면 안 된다(#1177).
+    assert any("건너뛴 운동: 풀업" in line for line in lines)
+
+
+def test_summary_headline_does_not_call_an_over_week_on_target():
+    """평균이 목표 안이어도 사흘을 넘긴 주는 `목표 범위 안` 이 아니다(#1177)."""
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report(sodium_avg=1916, sodium_over_days=3, completion_avg=81)
+    summary = svc._rule_summary(report, svc._evidence(report))
+
+    assert "목표 범위 안" not in summary.headline
+    assert "나트륨 목표 초과 3일" in summary.headline
+    # 잘한 쪽도 함께 말한다 — 챙길 것만 남으면 보낼 만한 글이 못 된다.
+    assert "운동 이행률 81%" in summary.headline
 
 
 def test_summary_falls_back_when_model_invents_evidence():
@@ -743,7 +760,9 @@ def test_rule_summary_names_both_the_good_and_the_watch():
 
     assert out.generated_by == "rule"
     assert "87%" in out.headline
-    assert "2288mg" in out.headline
+    # 목표를 넘긴 주는 평균이 아니라 **넘긴 날 수**로 말한다 — 평균만 적으면
+    # 나흘을 넘긴 사실이 헤드라인에서 사라진다(#1177).
+    assert "나트륨 목표 초과 4일" in out.headline
 
 
 def test_rule_summary_without_records_does_not_invent_a_week():

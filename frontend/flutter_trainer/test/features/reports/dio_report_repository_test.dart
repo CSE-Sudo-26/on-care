@@ -94,6 +94,37 @@ void main() {
     expect(report.client.weekCompletion, client.weekCompletion);
   });
 
+  test('탄·단·지 계열도 같은 응답에서 읽는다 (#1177)', () async {
+    // 비교 그래프가 칼로리를 탄·단·지로 쌓는다. 백엔드는 이미 같은 응답에
+    // 실어 보내는데 앱이 버리고 있었다.
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        path,
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer(
+      (_) async => _ok(<String, dynamic>{
+        'week_start': '2026-08-03',
+        'sessions_booked': 0,
+        'sessions_done': 0,
+        'completion_avg': 80,
+        'sodium_over_days': 0,
+        'sodium_avg': 1500,
+        'calories_week': <int>[1800, 1900, 0, 0, 0, 0, 0],
+        'carbs_week': <double>[200.5, 210, 0, 0, 0, 0, 0],
+        'protein_week': <double>[88.4, 90, 0, 0, 0, 0, 0],
+        'fat_week': <double>[62.1, 60, 0, 0, 0, 0, 0],
+      }, path),
+    );
+
+    final report = await repo.watch(client: client, weekStart: weekStart).first;
+
+    expect(report.caloriesWeek.take(2), <int>[1800, 1900]);
+    expect(report.carbsWeek.take(2), <double>[200.5, 210]);
+    expect(report.proteinWeek.take(2), <double>[88.4, 90]);
+    expect(report.fatWeek.take(2), <double>[62.1, 60]);
+  });
+
   test('a null completion stays null rather than collapsing to 0%', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
