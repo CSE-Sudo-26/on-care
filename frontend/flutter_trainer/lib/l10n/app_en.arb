@@ -1512,7 +1512,7 @@
   "dashTodoProgramSubtitle": "No recent program sent",
   "dashTodoReportSubtitle": "This week's report is due",
   "dashTaskDismissTitle": "Delete this item?",
-  "dashTaskDismissBody": "It only disappears from today's list. Actually handling it (consultation, program, report) still happens on its own screen.",
+  "dashTaskDismissBody": "It only disappears from the task list. Actually handling it (consultation, program, report) still happens on its own screen.",
   "dashTaskCarriedOverTitle": "Carried over",
   "dashTaskCategoryDone": "Done",
   "dashTaskCategoryRemaining": "+{count}",

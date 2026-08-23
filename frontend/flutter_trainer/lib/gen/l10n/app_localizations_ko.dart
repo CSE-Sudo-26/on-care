@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2610,7 +2609,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashTaskDismissBody =>
-      '오늘 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
+      '할 일 목록에서만 사라져요. 실제 처리(상담·프로그램·리포트)는 각 화면에서 해야 해요.';
 
   @override
   String get dashTaskCarriedOverTitle => '지난 할 일';
