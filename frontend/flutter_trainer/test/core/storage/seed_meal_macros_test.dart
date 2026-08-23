@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 
 /// 데모 식단의 끼니 영양소. 트레이너가 식단 탭에서 코칭 근거로 읽는 값이라,
 /// 열량만 있고 탄단지가 0 이면 화면이 근거 없이 숫자만 보여 준다(#819).
@@ -55,8 +57,13 @@ void main() {
     final clients = await db.select(db.trainerClients).get();
     final meals = await db.select(db.clientDietEntries).get();
 
+    // 이 표는 이제 지난 날의 끼니도 담는다(#1025). 고객 행의 합계는 **오늘**
+    // 것이므로, 오늘 끼니만 골라 견줘야 같은 것을 견주는 것이 된다.
+    final String todayYmd = ymd(nowKst());
     for (final client in clients) {
-      final mine = meals.where((m) => m.clientId == client.id);
+      final mine = meals.where(
+        (m) => m.clientId == client.id && m.date == todayYmd,
+      );
       if (mine.isEmpty) continue;
       double sum(double Function(ClientDietEntryRow) pick) =>
           mine.fold<double>(0, (total, m) => total + pick(m));

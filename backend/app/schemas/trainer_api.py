@@ -190,6 +190,9 @@ class ClientDietEntryOut(BaseModel):
     items: str       # 음식명 나열
     calories: int
     sodium_mg: int
+    # 나트륨과 나란히 읽히는 값인데 이 응답에만 빠져 있어, 트레이너 끼니
+    # 카드가 당류를 하루 합계로만 볼 수 있었다(#1025).
+    sugar_g: float
     carbs_g: float
     protein_g: float
     fat_g: float
