@@ -23,7 +23,9 @@ const String _rejectNote = 'E2E 거절 사유 — 이번 주는 일정이 가득
 
 /// 사이드바 → 일정 → 상담 인박스.
 Future<void> _openInbox(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')));
+  await tester.tap(
+    find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')),
+  );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 
@@ -78,7 +80,8 @@ void main() {
         expect(row, isNotEmpty, reason: '회원의 요청이 트레이너 인박스에 없습니다.');
         expect(row['member_id'], memberId);
         expect(row['exercise_goal'], 'strength');
-        expect(row['health_purpose_type'], 'rehab');
+        // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
+        expect(row['health_purpose_type'], 'general');
         expect(row['preferred_time_slot'], 'evening');
         expect(row['status'], 'pending');
 
