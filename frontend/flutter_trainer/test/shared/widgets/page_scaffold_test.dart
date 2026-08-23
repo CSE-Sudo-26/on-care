@@ -39,6 +39,46 @@ void main() {
     expect(scrollState.position.pixels, 0);
   });
 
+  testWidgets('navigation reset ignores a scrollable that was unmounted', (
+    tester,
+  ) async {
+    final reset = ValueNotifier<int>(0);
+    final showScrollable = ValueNotifier<bool>(true);
+    addTearDown(reset.dispose);
+    addTearDown(showScrollable.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PageScrollResetScope(
+            notifier: reset,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: showScrollable,
+              builder: (context, show, _) => PageScaffold(
+                title: 'Page',
+                scrollable: show,
+                child: SizedBox(height: show ? 1600 : 100),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -500),
+    );
+    await tester.pump();
+
+    showScrollable.value = false;
+    await tester.pump();
+    reset.value++;
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
   for (final scrollable in <bool>[true, false]) {
     testWidgets('header and body share the same wide-screen alignment '
         'when scrollable is $scrollable', (tester) async {

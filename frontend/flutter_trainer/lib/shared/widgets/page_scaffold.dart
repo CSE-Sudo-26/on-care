@@ -61,7 +61,7 @@ class PageScaffold extends StatefulWidget {
 }
 
 class _PageScaffoldState extends State<PageScaffold> {
-  final Set<ScrollPosition> _topLevelPositions = <ScrollPosition>{};
+  final Set<ScrollableState> _topLevelScrollables = <ScrollableState>{};
   ValueNotifier<int>? _resetNotifier;
 
   @override
@@ -82,10 +82,9 @@ class _PageScaffoldState extends State<PageScaffold> {
 
   void _resetScroll() {
     if (!TickerMode.valuesOf(context).enabled) return;
-    _topLevelPositions.removeWhere(
-      (position) => !position.context.storageContext.mounted,
-    );
-    for (final position in _topLevelPositions) {
+    _topLevelScrollables.removeWhere((scrollable) => !scrollable.mounted);
+    for (final scrollable in _topLevelScrollables) {
+      final position = scrollable.position;
       if (position.hasPixels && position.pixels != position.minScrollExtent) {
         position.jumpTo(position.minScrollExtent);
       }
@@ -99,7 +98,7 @@ class _PageScaffoldState extends State<PageScaffold> {
     final notificationContext = notification.context;
     if (notificationContext != null) {
       final scrollable = Scrollable.maybeOf(notificationContext);
-      if (scrollable != null) _topLevelPositions.add(scrollable.position);
+      if (scrollable != null) _topLevelScrollables.add(scrollable);
     }
     return false;
   }
