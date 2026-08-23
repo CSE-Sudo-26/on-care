@@ -123,30 +123,78 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void _shiftWeek(int direction) =>
       _selectDay(_selectedDay.add(Duration(days: 7 * direction)));
 
-  String? _editingScheduleId;
-  String? _editingProgramId;
-
-  /// 메모만 고치는 편집기가 열린 세션. 프로그램 편집기와 자리를 나눠 쓰므로
-  /// 둘 중 하나만 열린다(#1011).
-  String? _editingNoteId;
-
-  /// New schedules use a sheet; existing schedules are edited in their card.
-  Future<void> _openSessionSheet() async {
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    if (clients.isEmpty) return;
-    await showModalBottomSheet<void>(
+  /// 정보량에 맞춰 커지되 화면을 다 채우지 않는 가운데 모달(#1250).
+  ///
+  /// 일정·프로그램·메모 편집과 새 일정 추가는 예전에 상세 패널 안에서
+  /// 그 자리에 펼치거나(카드 폭이 좁아 세트·횟수/시간·중량 칸이 잘렸다)
+  /// 화면 폭 그대로 쓰는 바텀시트를 썼다(세로로 화면 끝까지 꽉 찼다).
+  /// 최대 높이(화면의 85%)까지는 내용만큼만 커지고, 넘치면 그 안에서만
+  /// 스크롤한다. [scrollable] 을 false 로 두면 바깥 스크롤을 씌우지
+  /// 않는다 — [SessionSheet] 처럼 안에 이미 자기 스크롤이 있는 내용을
+  /// 이중으로 감싸면 높이 제약이 풀려 무한 높이 예외가 난다.
+  Future<void> _openCenteredDialog(
+    WidgetBuilder builder, {
+    bool scrollable = true,
+  }) {
+    return showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (context) => SessionSheet(
-        clientNames: clients.map((c) => c.name).toList(),
-        date: _selectedYmd,
-        existing: null,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
+          ),
+          child: scrollable
+              ? SingleChildScrollView(child: builder(dialogContext))
+              : builder(dialogContext),
+        ),
       ),
     );
+  }
+
+  /// 프로그램(또는 메모)을 가운데 모달로 연다.
+  Future<void> _openProgramEditor(
+    ScheduleSession session, {
+    required bool noteOnly,
+  }) {
+    return _openCenteredDialog(
+      (dialogContext) => SessionProgramEditor(
+        key: ValueKey<String>(
+          noteOnly
+              ? 'note-editor-${session.id}'
+              : 'program-editor-${session.id}',
+        ),
+        session: session,
+        noteOnly: noteOnly,
+        onSaved: () => Navigator.of(dialogContext).pop(),
+        onCancel: () => Navigator.of(dialogContext).pop(),
+      ),
+    );
+  }
+
+  /// 일정을 가운데 모달로 연다 — [existing] 이 없으면 `새 일정 추가`,
+  /// 있으면 `일정 수정`이다. [SessionSheet] 는 자기 안에 이미
+  /// `SingleChildScrollView` 가 있으므로 바깥 스크롤은 씌우지 않는다.
+  Future<void> _openScheduleDialog({ScheduleSession? existing}) {
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+    if (existing == null && clients.isEmpty) return Future<void>.value();
+    return _openCenteredDialog(scrollable: false, (dialogContext) {
+      return SessionSheet(
+        key: ValueKey<String>(
+          existing == null
+              ? 'new-session-editor'
+              : 'schedule-editor-${existing.id}',
+        ),
+        clientNames: clients.map((c) => c.name).toList(),
+        date: existing?.date ?? _selectedYmd,
+        existing: existing,
+        inline: true,
+        onSaved: () => Navigator.of(dialogContext).pop(),
+        onCancel: () => Navigator.of(dialogContext).pop(),
+      );
+    });
   }
 
   Future<void> _openReservationSlotsSheet() async {
@@ -254,10 +302,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(AppRadius.card),
         ),
-        title: Text(
-          l.schedCompleteTitle,
-          style: const TextStyle(fontSize: 17),
-        ),
+        title: Text(l.schedCompleteTitle, style: const TextStyle(fontSize: 17)),
         content: Text(
           l.schedCompleteConfirm(s.time, s.clientName),
           style: const TextStyle(fontSize: 14),
@@ -494,7 +539,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           label: l.schedNewSession,
           icon: Icons.add,
           primary: true,
-          onPressed: () => _openSessionSheet(),
+          onPressed: () => _openScheduleDialog(),
         ),
       ),
     );
@@ -674,8 +719,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final dateText = day == today
         ? l.labelToday
         : l.dateMonthDay(day.month, day.day);
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-
     return ListView(
       key: const Key('week-detail'),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -690,21 +733,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ],
         SessionCard(
           session: session,
-          onEditSchedule: () => setState(() {
-            _editingScheduleId = session.id;
-            _editingProgramId = null;
-            _editingNoteId = null;
-          }),
-          onEditProgram: () => setState(() {
-            _editingProgramId = session.id;
-            _editingScheduleId = null;
-            _editingNoteId = null;
-          }),
-          onEditNote: () => setState(() {
-            _editingNoteId = session.id;
-            _editingScheduleId = null;
-            _editingProgramId = null;
-          }),
+          onEditSchedule: () => _openScheduleDialog(existing: session),
+          onEditProgram: () => _openProgramEditor(session, noteOnly: false),
+          onEditNote: () => _openProgramEditor(session, noteOnly: true),
           onDelete: () => _confirmDelete(session),
           onChat: () => _openChat(session),
           onComplete: (session.isUpcoming && !isFuture)
@@ -719,33 +750,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           programDateLabel: dateText,
           sendingProgram: _sendingProgramId == session.id,
           onSendProgram: () => _sendProgram(session),
-          inlineEditor: _editingScheduleId == session.id
-              ? SessionSheet(
-                  key: ValueKey<String>('week-session-editor-${session.id}'),
-                  clientNames: clients.map((client) => client.name).toList(),
-                  date: session.date,
-                  existing: session,
-                  inline: true,
-                  onSaved: () => setState(() => _editingScheduleId = null),
-                  onCancel: () => setState(() => _editingScheduleId = null),
-                )
-              : _editingProgramId == session.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('week-program-editor-${session.id}'),
-                  session: session,
-                  onSaved: () => setState(() => _editingProgramId = null),
-                  onCancel: () => setState(() => _editingProgramId = null),
-                )
-              : _editingNoteId == session.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('week-note-editor-${session.id}'),
-                  session: session,
-                  // 같은 편집기의 메모만 모드다 — 운동 목록 없이 메모만 연다.
-                  noteOnly: true,
-                  onSaved: () => setState(() => _editingNoteId = null),
-                  onCancel: () => setState(() => _editingNoteId = null),
-                )
-              : null,
         ),
       ],
     );

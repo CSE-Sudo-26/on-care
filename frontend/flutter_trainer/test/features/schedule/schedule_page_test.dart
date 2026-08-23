@@ -899,12 +899,10 @@ void main() {
       );
       await settle(tester);
 
-      // Booking details stay inside the expanded schedule card. Program and
-      // trainer memo editing have their own separate action.
+      // 일정 수정은 상세 패널을 바꿔치는 대신 가운데 모달로 뜬다(#1250).
+      // 프로그램·메모 편집은 각자 다른 자리다.
       expect(
-        find.byKey(
-          const ValueKey<String>('week-session-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('schedule-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
@@ -950,15 +948,11 @@ void main() {
       await settle(tester);
 
       expect(
-        find.byKey(
-          const ValueKey<String>('week-program-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
-        find.byKey(
-          const ValueKey<String>('week-session-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('schedule-editor-seed-schedule-3')),
         findsNothing,
       );
       await tester.enterText(
@@ -986,9 +980,7 @@ void main() {
       await settle(tester);
 
       expect(
-        find.byKey(
-          const ValueKey<String>('week-program-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsNothing,
       );
       expect(find.textContaining('15:00\u201316:00'), findsWidgets);
@@ -1018,7 +1010,7 @@ void main() {
 
       // 운동 목록 없이 메모만 연다.
       expect(
-        find.byKey(const ValueKey<String>('week-note-editor-seed-schedule-3')),
+        find.byKey(const ValueKey<String>('note-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
