@@ -1211,77 +1211,91 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                flex: 6,
-                child: _HeadlineLine(
-                  caption: picked == null
-                      ? l.exBurnAllTitle
-                      : l.exWeekOfMonthLabel(
-                          picked.monday.month,
-                          _weekOfMonth(picked.monday),
-                        ),
-                  // 고른 주가 없으면 **지금 보이는 구간의 주 평균**이다.
-                  value: _valueOfGoal(
-                    locale,
-                    picked?.calories ?? visibleAverage,
-                    widget.goals.weeklyBurnKcal,
-                  ),
-                  unit: l.unitKcal,
-                ),
-              ),
-              // 고른 주의 내역은 kcal **오른쪽**에 붙는다 (#1129) — 그래프
-              // 아래에 따로 두면 구분선까지 필요해져 카드가 셋으로 갈렸다.
-              // 색 네모는 뺐다. 옆의 막대가 이미 색으로 말한다.
-              if (picked != null) ...<Widget>[
-                const SizedBox(width: 8),
+          // 머리줄은 **고른 주가 있든 없든 같은 높이**를 쓴다 (#1194).
+          // 오른쪽 내용이 한 줄(기간)에서 서너 줄(유형별 내역)로 바뀌는 만큼
+          // 아래 그래프 몫이 줄어, 막대를 고를 때마다 그래프가 작아졌다.
+          SizedBox(
+            height: _allPeriodHeaderHeight(context),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
                 Expanded(
-                  flex: 5,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      for (final ExerciseLoadKind k in ExerciseLoadKind.values)
-                        _AllPeriodDetailLine(
-                          text:
-                              '${kindLabel(l, k)} '
-                              '${kindValueText(l, k, picked.valueOf(k))}',
-                        ),
-                      if (picked.otherMinutes > 0)
-                        _AllPeriodDetailLine(
-                          text:
-                              '${l.exTypeOtherChip} '
-                              '${l.unitMinutesValue(picked.otherMinutes.round())}',
-                        ),
-                    ],
+                  flex: 6,
+                  child: _HeadlineLine(
+                    caption: picked == null
+                        ? l.exBurnAllTitle
+                        : l.exWeekOfMonthLabel(
+                            picked.monday.month,
+                            _weekOfMonth(picked.monday),
+                          ),
+                    // 고른 주가 없으면 **지금 보이는 구간의 주 평균**이다.
+                    value: _valueOfGoal(
+                      locale,
+                      picked?.calories ?? visibleAverage,
+                      widget.goals.weeklyBurnKcal,
+                    ),
+                    unit: l.unitKcal,
                   ),
                 ),
-              ],
-              if (picked == null && visible.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 8),
-                // 평균이 어느 구간의 것인지 숫자만으로는 알 수 없다 — 밀 때마다
-                // 바뀌는 값이라 기간을 옆에 붙여 둔다.
-                Expanded(
-                  flex: 4,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${DateFormat.Md(locale).format(visible.first.monday)}'
-                      ' ~ '
-                      '${DateFormat.Md(locale).format(visible.last.monday.add(const Duration(days: 6)))}',
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.textBody,
+                // 고른 주의 내역은 kcal **오른쪽**에 붙는다 (#1129) — 그래프
+                // 아래에 따로 두면 구분선까지 필요해져 카드가 셋으로 갈렸다.
+                // 색 네모는 뺐다. 옆의 막대가 이미 색으로 말한다.
+                if (picked != null) ...<Widget>[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 5,
+                    // `기타` 까지 네 줄이 되는 주도 있다 — 그때는 목록 전체가
+                    // 한 번에 줄어 같은 높이 안에 들어간다.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topRight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          for (final ExerciseLoadKind k
+                              in ExerciseLoadKind.values)
+                            _AllPeriodDetailLine(
+                              text:
+                                  '${kindLabel(l, k)} '
+                                  '${kindValueText(l, k, picked.valueOf(k))}',
+                            ),
+                          if (picked.otherMinutes > 0)
+                            _AllPeriodDetailLine(
+                              text:
+                                  '${l.exTypeOtherChip} '
+                                  '${l.unitMinutesValue(picked.otherMinutes.round())}',
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                ),
+                ],
+                if (picked == null && visible.isNotEmpty) ...<Widget>[
+                  const SizedBox(width: 8),
+                  // 평균이 어느 구간의 것인지 숫자만으로는 알 수 없다 — 밀 때마다
+                  // 바뀌는 값이라 기간을 옆에 붙여 둔다.
+                  Expanded(
+                    flex: 4,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${DateFormat.Md(locale).format(visible.first.monday)}'
+                        ' ~ '
+                        '${DateFormat.Md(locale).format(visible.last.monday.add(const Duration(days: 6)))}',
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.textBody,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -1308,6 +1322,14 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
   }
 }
 
+/// `전체` 카드 머리줄의 **고정 높이**.
+///
+/// 유형별 내역 세 줄이 들어가는 높이다. 고른 주가 없을 때도 같은 자리를
+/// 비워 두어, 막대를 골라도 그래프가 줄지 않는다 (#1194). 글자 배율을 따라
+/// 커지되 카드와 같은 선(1.6)에서 멈춘다.
+double _allPeriodHeaderHeight(BuildContext context) =>
+    44 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
+
 /// 고른 주의 유형별 내역 한 줄 — `유산소 195분`. 색 네모 없이 글자만 쓴다
 /// (#1129) — 색은 바로 옆 막대가 이미 말하고 있다.
 class _AllPeriodDetailLine extends StatelessWidget {
@@ -1316,19 +1338,17 @@ class _AllPeriodDetailLine extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 1),
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerRight,
-      child: Text(
-        text,
-        maxLines: 1,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: FigmaColors.textBody,
-        ),
+  Widget build(BuildContext context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerRight,
+    child: Text(
+      text,
+      maxLines: 1,
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        height: 1.25,
+        color: FigmaColors.textBody,
       ),
     ),
   );
