@@ -215,11 +215,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
     for (int i = 0; i < list.length; i++) {
       final ClientChatMessage m = list[i];
       final bool newDay =
-          showDemoBanners &&
-          m.id.startsWith('seed-') &&
-          (i == 0 || !_sameDay(list[i - 1].createdAt, m.createdAt));
+          i == 0 || !_sameDay(list[i - 1].createdAt, m.createdAt);
       if (newDay) {
-        if (i > 0) {
+        if (showDemoBanners && m.id.startsWith('seed-') && i > 0) {
           out
             ..add(
               _SentBanner(
@@ -230,13 +228,18 @@ class _ChatViewState extends ConsumerState<ChatView> {
             ..add(const SizedBox(height: AppSpacing.md));
         }
         out
-          ..add(
-            _SystemBanner(
-              key: ValueKey<String>('analyzed-before-${m.id}'),
-              clientName: widget.clientName,
-            ),
-          )
+          ..add(_DateDivider(date: m.createdAt))
           ..add(const SizedBox(height: AppSpacing.md));
+        if (showDemoBanners && m.id.startsWith('seed-')) {
+          out
+            ..add(
+              _SystemBanner(
+                key: ValueKey<String>('analyzed-before-${m.id}'),
+                clientName: widget.clientName,
+              ),
+            )
+            ..add(const SizedBox(height: AppSpacing.md));
+        }
       }
       out
         ..add(_Bubble(message: m, avatar: widget.clientAvatar))
@@ -305,8 +308,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
     }
   }
 
-  static bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  static bool _sameDay(DateTime a, DateTime b) {
+    final localA = a.toLocal();
+    final localB = b.toLocal();
+    return localA.year == localB.year &&
+        localA.month == localB.month &&
+        localA.day == localB.day;
+  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -609,6 +617,40 @@ class _SentBanner extends StatelessWidget {
   }
 }
 
+class _DateDivider extends StatelessWidget {
+  const _DateDivider({required this.date});
+
+  final DateTime date;
+
+  static const List<String> _weekdays = <String>[
+    '월요일',
+    '화요일',
+    '수요일',
+    '목요일',
+    '금요일',
+    '토요일',
+    '일요일',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final localDate = date.toLocal();
+    return Center(
+      child: Text(
+        '${localDate.year}년 ${localDate.month}월 ${localDate.day}일 ${_weekdays[localDate.weekday - 1]}',
+        key: ValueKey<String>(
+          'trainer-chat-date-${localDate.year}-${localDate.month}-${localDate.day}',
+        ),
+        style: const TextStyle(
+          color: AppColors.mutedForeground,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message, required this.avatar});
 
@@ -630,67 +672,56 @@ class _Bubble extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fromTrainer = message.fromTrainer;
-    final bubble = Column(
-      crossAxisAlignment: fromTrainer
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: fromTrainer ? AppColors.accent : AppColors.card,
-            border: fromTrainer
-                ? null
-                : Border.all(color: AppColors.borderStrong),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(16),
-              topRight: const Radius.circular(16),
-              bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
-              bottomRight: Radius.circular(fromTrainer ? 4 : 16),
+    final bubble = Container(
+      key: ValueKey<String>('trainer-message-bubble-${message.id}'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: fromTrainer ? AppColors.accent : AppColors.card,
+        border: fromTrainer ? null : Border.all(color: AppColors.borderStrong),
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
+          bottomRight: Radius.circular(fromTrainer ? 4 : 16),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            message.body,
+            style: TextStyle(
+              fontSize: 13.5,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+              color: fromTrainer
+                  ? AppColors.accentForeground
+                  : AppColors.foreground,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                message.body,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  height: 1.4,
-                  fontWeight: FontWeight.w500,
-                  color: fromTrainer
-                      ? AppColors.accentForeground
-                      : AppColors.foreground,
-                ),
+          if (message.attachment case final attachment?) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
+            // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
+            // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
+            if (attachment.isImage)
+              ChatImageAttachment(attachment: attachment)
+            else
+              _ChatPdfCard(
+                attachment: attachment,
+                onOpen: () => _openPdf(context, ref, attachment),
               ),
-              if (message.attachment case final attachment?) ...<Widget>[
-                const SizedBox(height: AppSpacing.sm),
-                // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
-                // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
-                // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
-                if (attachment.isImage)
-                  ChatImageAttachment(attachment: attachment)
-                else
-                  _ChatPdfCard(
-                    attachment: attachment,
-                    onOpen: () => _openPdf(context, ref, attachment),
-                  ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          message.timeLabel,
-          style: const TextStyle(
-            fontSize: 10,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-      ],
+          ],
+        ],
+      ),
+    );
+    final time = Text(
+      message.timeLabel,
+      key: ValueKey<String>('trainer-message-time-${message.id}'),
+      style: const TextStyle(fontSize: 10, color: AppColors.subtleForeground),
     );
 
     return LayoutBuilder(
@@ -704,6 +735,10 @@ class _Bubble extends ConsumerWidget {
             ClientAvatar(label: avatar, size: 28),
             const SizedBox(width: AppSpacing.sm),
           ],
+          if (fromTrainer) ...<Widget>[
+            time,
+            const SizedBox(width: AppSpacing.xs),
+          ],
           // `Flexible` 도 함께 둔다. 아주 좁은 폭에서는 아바타와 여백이
           // 먼저 자리를 가져가 비율로 계산한 상한보다도 남는 폭이 적을 수
           // 있는데, 그때는 상한이 아니라 남은 폭을 따라야 넘치지 않는다.
@@ -715,6 +750,10 @@ class _Bubble extends ConsumerWidget {
               child: bubble,
             ),
           ),
+          if (!fromTrainer) ...<Widget>[
+            const SizedBox(width: AppSpacing.xs),
+            time,
+          ],
         ],
       ),
     );

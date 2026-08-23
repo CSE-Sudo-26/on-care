@@ -505,7 +505,7 @@ void main() {
     expect(find.text('trainer:${_assignedTrainer.id}'), findsOneWidget);
   });
 
-  testWidgets('트레이너 채팅은 말풍선 아래 시간과 입력창을 표시하고 메시지를 전송한다', (
+  testWidgets('트레이너 채팅은 말풍선 가장자리 시간과 입력창을 표시하고 메시지를 전송한다', (
     WidgetTester tester,
   ) async {
     final repository = MockMemberCoachRepository();
@@ -559,16 +559,9 @@ void main() {
     final Finder trainerTime = find.byKey(
       const Key('coach-message-time-seed-m18'),
     );
-    // 본문은 그 말풍선 **안에서** 찾는다. '확인했어요' 로 화면 전체를 뒤지면
-    // 첫날 메시지까지 걸려, 그 메시지가 뷰포트에 들어오는 순간 다중 일치로
-    // 깨진다 (리뷰 지적).
-    final Finder trainerBody = find.descendant(
-      of: trainerBubble,
-      matching: find.byType(Text),
-    );
     expect(
-      tester.getTopLeft(trainerTime).dy,
-      greaterThan(tester.getBottomLeft(trainerBody).dy),
+      tester.getTopLeft(trainerTime).dx,
+      greaterThan(tester.getTopRight(trainerBubble).dx),
     );
     expect(
       tester.getBottomLeft(trainerAvatar).dy,

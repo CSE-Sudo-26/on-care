@@ -79,6 +79,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.';
 
   @override
+  String get schedDeleteMeansRemoveFinished =>
+      'Deleting erases the record. This session is already complete and can\'t be undone.';
+
+  @override
   String get scheduleStatusGap => 'Open';
 
   @override
@@ -975,6 +979,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultTitle => 'Consultation requests';
 
   @override
+  String get consultBackToSchedule => 'Back to schedule';
+
+  @override
+  String get consultBackToDashboard => 'Back to dashboard';
+
+  @override
   String consultPendingCount(int count) {
     return '$count pending';
   }
@@ -1485,12 +1495,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String schedDeleteConfirm(String time, String name) {
-    return 'Delete the $time session with $name?';
+    return 'Delete the $time PT session with $name?';
   }
 
   @override
   String get schedDeleteFailed =>
       'Couldn\'t delete the session. Please try again';
+
+  @override
+  String get schedCompleteTitle => 'Complete session';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return 'Mark the $time session with $name as complete?';
+  }
 
   @override
   String get schedCompleteFailed =>

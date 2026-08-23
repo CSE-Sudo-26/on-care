@@ -72,7 +72,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get schedDeleteMeansRemove => '기록까지 지웁니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+  String get schedDeleteMeansRemove => '기록이 지워집니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+
+  @override
+  String get schedDeleteMeansRemoveFinished =>
+      '기록이 지워집니다. 이미 완료한 일정이라 되돌릴 수 없어요.';
 
   @override
   String get scheduleStatusGap => '공백';
@@ -937,6 +941,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultTitle => '상담 요청';
 
   @override
+  String get consultBackToSchedule => '스케줄로 돌아가기';
+
+  @override
+  String get consultBackToDashboard => '대시보드로 돌아가기';
+
+  @override
   String consultPendingCount(int count) {
     return '대기 중 $count건';
   }
@@ -1415,11 +1425,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String schedDeleteConfirm(String time, String name) {
-    return '$time $name님 세션을 삭제할까요?';
+    return '$time $name님 PT 일정을 삭제할까요?';
   }
 
   @override
   String get schedDeleteFailed => '일정 삭제에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get schedCompleteTitle => '일정 완료';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return '$time $name님 세션을 완료할까요?';
+  }
 
   @override
   String get schedCompleteFailed => '완료 처리에 실패했어요. 다시 시도해 주세요';
