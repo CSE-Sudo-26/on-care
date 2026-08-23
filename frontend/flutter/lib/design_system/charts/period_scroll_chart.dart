@@ -82,6 +82,7 @@ class PeriodScrollChart extends StatefulWidget {
     this.goalBottom,
     this.goalLabel,
     this.topGap = 0,
+    this.revealKey,
     this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
   });
@@ -122,6 +123,14 @@ class PeriodScrollChart extends StatefulWidget {
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
+
+  /// 막대가 바닥에서 다시 자라는 조건. 기본은 칸 수라, 기간이 바뀔 때만 다시
+  /// 자란다. 지표를 바꿔도 다시 자라야 하는 화면(식단 나트륨·당류, #1148)은
+  /// 여기에 그 지표를 함께 넣어 준다.
+  ///
+  /// **막대를 고를 때 바뀌는 값을 넣지 말 것** — 누를 때마다 그래프가 다시
+  /// 자라 눌러 읽는 동작을 방해한다(#1058).
+  final Object? revealKey;
 
   /// 그래프 위에 얹을 빈 칸. 고른 날의 세로선이 이 칸까지 올라와 **위의 머리
   /// 카드에 닿는다** — 선이 중간에서 끊기면 그 카드가 어느 막대의 것인지
@@ -229,7 +238,7 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                       Padding(
                         padding: EdgeInsets.only(top: widget.topGap),
                         child: ChartReveal(
-                          replayKey: widget.count,
+                          replayKey: widget.revealKey ?? widget.count,
                           builder: (BuildContext context, double t) => Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: <Widget>[
