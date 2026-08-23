@@ -769,6 +769,9 @@
     }
   },
   "schedDeleteFailed": "Couldn't delete the session. Please try again",
+  "schedCompleteTitle": "Complete session",
+  "schedCompleteConfirm": "Mark the {time} session with {name} as complete?",
+  "@schedCompleteConfirm": {"placeholders": {"time": {"type": "String"}, "name": {"type": "String"}}},
   "schedCompleteFailed": "Couldn't mark it complete. Please try again",
   "schedTimeRange": "{start}\u2013{end}",
   "@schedTimeRange": {

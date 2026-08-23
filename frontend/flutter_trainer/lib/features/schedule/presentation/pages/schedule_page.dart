@@ -243,12 +243,45 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   }
 
   /// 완료 처리 — flips the session to 완료 and logs it to the client's
-  /// 운동기록. 확인 다이얼로그 없이 바로 처리한다 — 메모는 완료 뒤에도
-  /// 상세 패널에서 언제든 남길 수 있어, 누르는 순간 매번 빈 메모란을
-  /// 보여줄 이유가 없다(#1106).
+  /// 운동기록. 확인 다이얼로그를 거친다 — 완료는 예정에서만 갈리는 종료
+  /// 상태라 취소·노쇼처럼 되돌릴 UI가 없고, 잘못 눌러도 물릴 방법이
+  /// 없다(#1227). 메모는 이 다이얼로그가 아니라 완료 뒤 상세 패널에서
+  /// 언제든 남길 수 있어, 여기서는 빈 메모란을 보여주지 않는다.
   Future<void> _confirmComplete(ScheduleSession s) async {
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(
+          l.schedCompleteTitle,
+          style: const TextStyle(fontSize: 17),
+        ),
+        content: Text(
+          l.schedCompleteConfirm(s.time, s.clientName),
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: <Widget>[
+          ActionButton(
+            label: l.actionCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ActionButton(
+            key: const ValueKey<String>('session-complete-confirm'),
+            label: l.legendDone,
+            primary: true,
+            tone: AppColors.success,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(scheduleRepositoryProvider)

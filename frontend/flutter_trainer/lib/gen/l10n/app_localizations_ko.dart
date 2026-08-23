@@ -1417,6 +1417,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedDeleteFailed => '일정 삭제에 실패했어요. 다시 시도해 주세요';
 
   @override
+  String get schedCompleteTitle => '일정 완료';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return '$time $name님 세션을 완료할까요?';
+  }
+
+  @override
   String get schedCompleteFailed => '완료 처리에 실패했어요. 다시 시도해 주세요';
 
   @override

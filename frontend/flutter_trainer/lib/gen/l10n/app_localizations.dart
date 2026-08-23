@@ -2618,6 +2618,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t delete the session. Please try again'**
   String get schedDeleteFailed;
 
+  /// No description provided for @schedCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete session'**
+  String get schedCompleteTitle;
+
+  /// No description provided for @schedCompleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the {time} session with {name} as complete?'**
+  String schedCompleteConfirm(String time, String name);
+
   /// No description provided for @schedCompleteFailed.
   ///
   /// In en, this message translates to:
