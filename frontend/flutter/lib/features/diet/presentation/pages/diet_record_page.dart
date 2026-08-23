@@ -1141,12 +1141,18 @@ class _MacroTextLine extends StatelessWidget {
   final _NutritionSummaryItem item;
   final Color color;
 
+  /// 라벨이 차지하는 폭. `탄수화물`(네 글자)이 들어갈 만큼만 잡는다 — 값이
+  /// 라벨 바로 옆에서 시작하면서도 세 줄의 숫자가 세로로 가지런하다 (#1149).
+  /// 글자 배율을 따라가야 큰 글씨에서 라벨이 잘리지 않는다.
+  static const double _labelWidth = 56;
+
   @override
   Widget build(BuildContext context) {
     return Row(
       key: Key('nutrition-macro-${item.label}'),
       children: <Widget>[
-        Expanded(
+        SizedBox(
+          width: MediaQuery.textScalerOf(context).scale(_labelWidth),
           child: Text(
             item.label,
             maxLines: 1,
@@ -1158,13 +1164,13 @@ class _MacroTextLine extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 6),
-        // 글자 배율이 커지면 값부터 줄인다 — 라벨은 이미 말줄임이고, 이 줄이
-        // 넘치면 카드 오른쪽의 도넛을 밀어낸다.
+        const SizedBox(width: 4),
+        // 값은 라벨 바로 옆에서 시작한다. 글자 배율이 커지면 값부터 줄인다 —
+        // 이 줄이 넘치면 카드 오른쪽의 도넛을 밀어낸다.
         Flexible(
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
+            alignment: Alignment.centerLeft,
             child: Text.rich(
               TextSpan(
                 children: <InlineSpan>[
