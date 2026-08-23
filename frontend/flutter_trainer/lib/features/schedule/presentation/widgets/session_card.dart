@@ -32,6 +32,7 @@ class SessionCard extends ConsumerWidget {
     required this.session,
     required this.onEditSchedule,
     required this.onEditProgram,
+    required this.onGoToProgram,
     required this.onEditNote,
     required this.onDelete,
     required this.onChat,
@@ -47,6 +48,10 @@ class SessionCard extends ConsumerWidget {
   final ScheduleSession session;
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
+
+  /// 프로그램이 아직 없는 세션에서 그 고객의 코칭 탭으로 이동한다 — 이
+  /// 카드 안에서 프로그램을 짓지 않는다(#1247).
+  final VoidCallback onGoToProgram;
 
   /// 운동 목록 없이 메모만 여는 자리. 세션 종류와 상관없이 있다(#1011).
   final VoidCallback onEditNote;
@@ -243,7 +248,7 @@ class SessionCard extends ConsumerWidget {
                       ]
                     else if (s.isUpcoming) ...<Widget>[
                       // 예정 session without a plan yet.
-                      SessionNoPlanBox(onAdd: onEditProgram),
+                      SessionNoPlanBox(onGoToProgram: onGoToProgram),
                       const SizedBox(height: AppSpacing.md),
                     ],
                   if (s.note.isNotEmpty) ...<Widget>[
@@ -269,9 +274,11 @@ class SessionCard extends ConsumerWidget {
                     // 상담이면서 아직 메모가 없으면 `메모 추가` 는 위
                     // `SessionNoNoteBox` 안으로 옮겨 갔다(#1012).
                     showEditNote: !(noteOnly && s.note.trim().isEmpty),
-                    // 프로그램이 아직 비어 있으면 `프로그램 수정` 은 위
-                    // `SessionNoPlanBox` 안으로 옮겨 갔다(#1236).
-                    showEditProgram: s.program.isNotEmpty,
+                    // 프로그램이 비어 있으면 `SessionNoPlanBox` 가 코칭 탭
+                    // 바로가기를 대신 보여 준다(#1236). 이미 회원에게 보낸
+                    // 프로그램은 더 손댈 수 없어야 하므로도 세우지 않는다
+                    // (#1247).
+                    showEditProgram: s.program.isNotEmpty && !s.programSent,
                     onDelete: onDelete,
                     onCancel: onCancel,
                     onNoShow: onNoShow,

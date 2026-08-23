@@ -1582,6 +1582,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get progEditTitle => '프로그램 수정';
 
   @override
+  String get progAddTitle => '프로그램 추가';
+
+  @override
   String get progAddExercise => '운동 추가';
 
   @override

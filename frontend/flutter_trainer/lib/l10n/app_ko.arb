@@ -505,6 +505,7 @@
   "progInvalid": "운동 이름과 세트 수를 확인해 주세요",
   "progSaveFailed": "프로그램 저장에 실패했어요. 다시 시도해 주세요",
   "progEditTitle": "프로그램 수정",
+  "progAddTitle": "프로그램 추가",
   "progAddExercise": "운동 추가",
   "progNoteHint": "프로그램 진행 시 참고할 내용을 입력하세요",
   "progSaving": "저장 중...",
