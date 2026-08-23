@@ -919,6 +919,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultTitle => '상담 요청';
 
   @override
+  String get consultBackToSchedule => '스케줄로 돌아가기';
+
+  @override
   String consultPendingCount(int count) {
     return '대기 중 $count건';
   }

@@ -10,7 +10,6 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
-import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
@@ -153,20 +152,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ),
       builder: (context) => ReservationSlotsSheet(selectedDay: _selectedDay),
     );
-  }
-
-  Future<void> _openConsultationInbox() async {
-    final date = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (_) => const ConsultationInboxSheet(),
-    );
-    final day = date == null ? null : DateTime.tryParse(date);
-    if (day != null && mounted) _selectDay(day);
   }
 
   Future<void> _confirmDelete(ScheduleSession s) async {
@@ -419,7 +404,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         if (consultationInbox)
           ConsultationInboxAction(
             pending: pendingConsultations,
-            onTap: _openConsultationInbox,
+            onTap: () => context.go(AppRoutes.consultations),
           ),
       ],
       scrollable: false,

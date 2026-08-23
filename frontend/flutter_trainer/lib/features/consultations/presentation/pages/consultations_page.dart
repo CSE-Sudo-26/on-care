@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
@@ -51,59 +53,76 @@ class ConsultationsPage extends ConsumerWidget {
               filter == 'pending' ? 'all' : 'pending',
         ),
       ],
-      child: inbox.requests.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.only(top: AppSpacing.xxl),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-        error: (error, _) => _InboxMessage(
-          icon: Icons.error_outline,
-          title: l.consultLoadFailed,
-          detail: serverDetailOr(
-            l,
-            error is AppError ? error.message : null,
-            l.consultRetryLater,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ActionButton(
+              key: const ValueKey<String>('consultations-back-to-schedule'),
+              label: l.consultBackToSchedule,
+              icon: Icons.arrow_back,
+              onPressed: () => context.go(AppRoutes.schedule),
+            ),
           ),
-          action: ActionButton(
-            label: l.actionRetry,
-            onPressed: () => ref.invalidate(consultationsProvider),
-          ),
-        ),
-        data: (list) => list.isEmpty
-            ? _InboxMessage(
-                icon: Icons.inbox_outlined,
-                title: filter == 'pending'
-                    ? l.consultEmptyPending
-                    : l.consultEmptyHistory,
-                detail: l.consultEmptyHint,
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  for (final request in list) ...<Widget>[
-                    _RequestCard(
-                      key: ValueKey<String>('consultation-${request.id}'),
-                      request: request,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  // 서버는 한 쪽만 준다(#980). 상한에 닿았을 때만 버튼을 띄운다 —
-                  // 늘 보이면 더 없는데도 누를 것이 있는 것처럼 읽힌다.
-                  if (inbox.hasMore)
-                    Align(
-                      child: ActionButton(
-                        key: const ValueKey<String>('consultation-load-more'),
-                        label: l.consultLoadMore,
-                        icon: Icons.history,
-                        onPressed: inbox.loadingMore
-                            ? null
-                            : () => ref
-                                  .read(consultationsProvider.notifier)
-                                  .loadMore(),
-                      ),
-                    ),
-                ],
+          const SizedBox(height: AppSpacing.lg),
+          inbox.requests.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.only(top: AppSpacing.xxl),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => _InboxMessage(
+              icon: Icons.error_outline,
+              title: l.consultLoadFailed,
+              detail: serverDetailOr(
+                l,
+                error is AppError ? error.message : null,
+                l.consultRetryLater,
               ),
+              action: ActionButton(
+                label: l.actionRetry,
+                onPressed: () => ref.invalidate(consultationsProvider),
+              ),
+            ),
+            data: (list) => list.isEmpty
+                ? _InboxMessage(
+                    icon: Icons.inbox_outlined,
+                    title: filter == 'pending'
+                        ? l.consultEmptyPending
+                        : l.consultEmptyHistory,
+                    detail: l.consultEmptyHint,
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      for (final request in list) ...<Widget>[
+                        _RequestCard(
+                          key: ValueKey<String>('consultation-${request.id}'),
+                          request: request,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      // 서버는 한 쪽만 준다(#980). 상한에 닿았을 때만 버튼을 띄운다 —
+                      // 늘 보이면 더 없는데도 누를 것이 있는 것처럼 읽힌다.
+                      if (inbox.hasMore)
+                        Align(
+                          child: ActionButton(
+                            key: const ValueKey<String>(
+                              'consultation-load-more',
+                            ),
+                            label: l.consultLoadMore,
+                            icon: Icons.history,
+                            onPressed: inbox.loadingMore
+                                ? null
+                                : () => ref
+                                      .read(consultationsProvider.notifier)
+                                      .loadMore(),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -177,9 +196,6 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
       // 로케일을 모른다. (#501)
       title: request.memberName.isEmpty ? l.unknownMember : request.memberName,
-      // 상담 요청은 트레이너 한 사람 앞으로만 온다 — 예전의 "헬스장 문의" 갈래는
-      // 없어졌다.
-      trailing: _Tag(label: l.consultTargetTrainer, tone: AppColors.primary),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -433,35 +449,6 @@ class _Quote extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label, required this.tone});
-
-  final String label;
-  final Color tone;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: tone.withValues(alpha: 0.12),
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: tone,
-        ),
-      ),
     );
   }
 }

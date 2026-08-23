@@ -14,11 +14,10 @@ import 'package:oncare_trainer/features/auth/presentation/pages/trainer_sign_in_
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
-import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
+import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare_trainer/features/messages/presentation/pages/messages_page.dart';
 import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_page.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 const String _trainerEmail = 'trainer@oncare.com';
 const String _memberEmail = 'jisu@oncare.com';
@@ -79,9 +78,6 @@ String _location(WidgetTester tester) {
   final context = tester.element(find.byType(AppShell));
   return GoRouter.of(context).routeInformationProvider.value.uri.toString();
 }
-
-AppLocalizations _l10n(WidgetTester tester) =>
-    AppLocalizations.of(tester.element(find.byType(AppShell)));
 
 Future<void> _bootSignedOut(WidgetTester tester) async {
   final config = AppConfig.fromEnvironment();
@@ -355,24 +351,21 @@ void main() {
     await _bootSignedOut(tester);
     await _loginThroughUi(tester);
 
-    // 상담 요청은 사이드바 행이 아니라 **스케줄 탭의 인박스 시트**다 — 요청이
-    // 캘린더 일정이 되는 흐름이라 달력 옆으로 옮겼다(ce710418). (#692)
+    // 스케줄의 인박스 아이콘도 대시보드 할 일과 같은 상담 요청 페이지를 연다.
     await _openSidebar(tester, AppRoutes.schedule);
     await _pumpUntil(
       tester,
       find.byType(SchedulePage),
       step: 'schedule navigation',
     );
-    await tester.tap(find.text(_l10n(tester).consultTitle));
+    await tester.tap(find.byKey(const Key('consult-inbox-entry')));
     await _pumpUntil(
       tester,
-      find.byType(ConsultationInboxSheet),
-      step: 'consultation inbox sheet',
+      find.byType(ConsultationsPage),
+      step: 'consultation inbox page',
     );
 
-    // 키는 #640 의 트레이너 상담 E2E 가 붙여 둔 것을 그대로 쓴다. 같은 위젯에 스위트마다
-    // 다른 키를 붙이면 한쪽을 고칠 때 다른 쪽이 조용히 멀어진다.
-    final requestKey = ValueKey<String>('consult-request-$consultationId');
+    final requestKey = ValueKey<String>('consultation-$consultationId');
     await _pumpUntil(
       tester,
       find.byKey(requestKey),
@@ -384,7 +377,9 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byKey(requestKey),
-        matching: find.byKey(const Key('consult-reject')),
+        matching: find.byKey(
+          ValueKey<String>('consultation-reject-$consultationId'),
+        ),
       ),
     );
     await _pumpUntil(

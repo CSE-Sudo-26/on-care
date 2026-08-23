@@ -150,7 +150,7 @@ void main() {
     expect(find.text('거절'), findsOneWidget);
   });
 
-  testWidgets('badges every request as addressed to this trainer', (
+  testWidgets('does not repeat that every request targets a trainer', (
     tester,
   ) async {
     await _pumpInbox(
@@ -158,9 +158,20 @@ void main() {
       _FakeConsultationRepository(requests: <ConsultationRequest>[_request()]),
     );
 
-    // 요청은 트레이너 한 사람 앞으로만 온다 — "헬스장 문의" 갈래는 없어졌다.
-    expect(find.text('트레이너 지정'), findsOneWidget);
+    // 요청은 항상 트레이너 앞으로 오므로 카드마다 같은 배지를 반복하지 않는다.
+    expect(find.text('트레이너 지정'), findsNothing);
     expect(find.text('헬스장 문의'), findsNothing);
+  });
+
+  testWidgets('offers a route back to the schedule', (tester) async {
+    await _pumpInbox(tester, _FakeConsultationRepository());
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+    );
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.schedule);
   });
 
   testWidgets('accepting sends the decision to the repository', (tester) async {

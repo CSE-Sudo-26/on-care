@@ -444,6 +444,7 @@
   "coachSheetAsk": "Ask",
   "coachSheetAskAgain": "Ask again",
   "consultTitle": "Consultation requests",
+  "consultBackToSchedule": "Back to schedule",
   "consultPendingCount": "{count} pending",
   "@consultPendingCount": {
     "placeholders": {
