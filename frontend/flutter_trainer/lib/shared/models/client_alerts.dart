@@ -97,12 +97,13 @@ List<ClientAlert> alertsFor(TrainerClient client, {int unread = 0}) {
 /// 조금 넘긴 회원" 과 "이행률이 절반인 회원" 중 누가 더 급한지 견줄 수 있다.
 ///
 /// 답장 대기는 0 이다 — 건강 신호가 아니라 견줄 저울이 없고, 늘 마지막이다.
-double alertSeverity(TrainerClient client, ClientAlert alert) => switch (alert) {
-  ClientAlert.sodiumOver => client.sodiumMg / sodiumTargetMg,
-  ClientAlert.sugarOver => client.sugarG / sugarTargetG,
-  ClientAlert.lowCompletion => _completionRatio(client),
-  ClientAlert.unanswered => 0,
-};
+double alertSeverity(TrainerClient client, ClientAlert alert) =>
+    switch (alert) {
+      ClientAlert.sodiumOver => client.sodiumMg / sodiumTargetMg,
+      ClientAlert.sugarOver => client.sugarG / sugarTargetG,
+      ClientAlert.lowCompletion => _completionRatio(client),
+      ClientAlert.unanswered => 0,
+    };
 
 double _completionRatio(TrainerClient client) {
   final mean = recordedCompletionMean(client);

@@ -46,7 +46,7 @@ void main() {
     for (int i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));
       if (find
-          .byKey(const Key('nutrition-macro-progress-탄수화물'))
+          .byKey(const Key('nutrition-macro-progress-나트륨'))
           .evaluate()
           .isNotEmpty) {
         return;
@@ -73,11 +73,11 @@ void main() {
   testWidgets('영양 진행 바는 0에서 목표 비율까지 채워진다', (WidgetTester tester) async {
     await pumpDiet(tester);
 
-    final double atStart = filledWidth(tester, '탄수화물');
+    final double atStart = filledWidth(tester, '나트륨');
     await tester.pump(const Duration(milliseconds: 250));
-    final double midway = filledWidth(tester, '탄수화물');
+    final double midway = filledWidth(tester, '나트륨');
     await tester.pumpAndSettle();
-    final double settled = filledWidth(tester, '탄수화물');
+    final double settled = filledWidth(tester, '나트륨');
 
     expect(atStart, 0, reason: '첫 프레임부터 채워져 있다');
     expect(midway, greaterThan(atStart), reason: '바가 채워지지 않았다');
@@ -87,10 +87,10 @@ void main() {
   testWidgets('애니메이션이 꺼진 환경에서는 첫 프레임부터 다 채워져 있다', (WidgetTester tester) async {
     await pumpDiet(tester, disableAnimations: true);
 
-    final double atStart = filledWidth(tester, '탄수화물');
+    final double atStart = filledWidth(tester, '나트륨');
     expect(atStart, greaterThan(0));
 
     await tester.pump(const Duration(milliseconds: 250));
-    expect(filledWidth(tester, '탄수화물'), atStart);
+    expect(filledWidth(tester, '나트륨'), atStart);
   });
 }

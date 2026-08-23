@@ -44,6 +44,12 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
+#: 슬롯 종류별 기본 소요 시간(분). 회원 예약은 시각만 고를 뿐 시간을 따로
+#: 고르지 않으므로, 슬롯을 열 때 트레이너가 고른 종류가 이 값을 정한다 —
+#: 스케줄 탭에서 상담을 짧게 잡는 관례와 같다.
+_SESSION_DURATION_MINUTES = {"1:1 PT": 60, "상담": 30}
+
+
 def _slot_out(slot: TrainerReservationSlot) -> TrainerSlotOut:
     return TrainerSlotOut(
         id=slot.id,
@@ -52,6 +58,7 @@ def _slot_out(slot: TrainerReservationSlot) -> TrainerSlotOut:
         capacity=slot.capacity,
         remaining=0 if slot.is_closed else slot.remaining,
         is_closed=slot.is_closed,
+        session_type=slot.session_type,
     )
 
 
@@ -85,16 +92,19 @@ def list_trainer_slots(
 
 
 def create_slot(
-    db: Session, trainer_id: str, starts_at: datetime, capacity: int
+    db: Session, trainer_id: str, starts_at: datetime, session_type: str
 ) -> TrainerSlotOut:
     if _aware(starts_at) <= datetime.now(timezone.utc):
         raise SlotUnavailable("지난 시간에는 예약 슬롯을 만들 수 없습니다.")
+    # 슬롯은 늘 한 사람 몫이다 — 1:1 PT 이거나 상담이고, 여럿이 함께 듣는
+    # 자리는 없다(#1012). 정원 대신 종류를 고른다(#1083).
     slot = TrainerReservationSlot(
         id=f"slot-{uuid.uuid4().hex[:12]}",
         trainer_id=trainer_id,
         starts_at=starts_at,
-        capacity=capacity,
-        remaining=capacity,
+        capacity=1,
+        remaining=1,
+        session_type=session_type,
     )
     db.add(slot)
     db.commit()
@@ -119,23 +129,23 @@ def update_slot(
     if slot is None:
         raise SlotNotFound("예약 슬롯을 찾을 수 없습니다.")
 
-    booked = (
-        db.scalar(
-            select(func.count())
-            .select_from(TrainerReservation)
-            .where(
-                TrainerReservation.slot_id == slot.id,
-                TrainerReservation.status == "booked",
+    if "session_type" in fields:
+        booked = (
+            db.scalar(
+                select(func.count())
+                .select_from(TrainerReservation)
+                .where(
+                    TrainerReservation.slot_id == slot.id,
+                    TrainerReservation.status == "booked",
+                )
             )
+            or 0
         )
-        or 0
-    )
-    if "capacity" in fields:
-        capacity = fields["capacity"]
-        if capacity < booked:
-            raise CapacityConflict("이미 예약된 인원보다 정원을 줄일 수 없습니다.")
-        slot.capacity = capacity
-        slot.remaining = capacity - booked
+        if booked:
+            # 이미 예약이 걸린 자리는 종류를 바꾸지 않는다 — 회원은 예약할
+            # 때 본 종류(1:1 PT/상담)를 그대로 믿고 그 시간을 비워 둔다.
+            raise CapacityConflict("이미 예약된 자리의 종류는 바꿀 수 없습니다.")
+        slot.session_type = fields["session_type"]
     if "starts_at" in fields:
         starts_at = fields["starts_at"]
         if _aware(starts_at) <= datetime.now(timezone.utc):
@@ -298,8 +308,8 @@ def reserve(
         date=local.date().isoformat(),
         time=local.strftime("%H:%M"),
         client_name=member.name,
-        type="1:1 PT",
-        duration_minutes=60,
+        type=slot.session_type,
+        duration_minutes=_SESSION_DURATION_MINUTES.get(slot.session_type, 60),
         status="예정",
         note="회원 앱 예약",
         program_json="[]",

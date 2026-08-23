@@ -36,6 +36,11 @@ class ConsultationCreate(BaseModel):
     preferred_date: Date
     preferred_time_slot: PreferredTimeSlot
     message: str | None = Field(default=None, max_length=2000)
+    #: 식단·운동·신체 정보를 트레이너에게 보여 주는 데 동의했는가. (#1022)
+    #:
+    #: 기본값을 두지 않는다 — 빠뜨리면 422 다. 동의는 "안 보냈으니 승낙"이 될 수
+    #: 없고, 화면이 체크를 지우고 보내도 서버가 통과시키면 안 된다.
+    data_sharing_consent: bool
 
     @model_validator(mode="before")
     @classmethod

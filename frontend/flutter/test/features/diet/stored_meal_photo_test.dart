@@ -45,7 +45,8 @@ Future<void> _pump(WidgetTester tester, Dio dio) async {
         home: Scaffold(
           body: StoredMealPhoto(
             path: _path,
-            size: 52,
+            width: 52,
+            height: 52,
             fallback: Text(_fallbackText),
           ),
         ),
@@ -152,7 +153,8 @@ void main() {
             home: Scaffold(
               body: StoredMealPhoto(
                 path: _path,
-                size: 52,
+                width: 52,
+                height: 52,
                 fallback: Text(_fallbackText),
               ),
             ),

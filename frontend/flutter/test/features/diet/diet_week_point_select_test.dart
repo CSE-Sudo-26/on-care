@@ -1,0 +1,170 @@
+/// `이번 주` 꺾은선의 점을 고르면 머리 숫자가 그날 값으로 바뀐다 (#1122).
+///
+/// `전체` 막대와 같은 규칙이다 — 고른 날이 있으면 그날, 없으면 하루 평균.
+/// 점에서 먼 곳을 누르면 선택이 풀려 다시 평균으로 돌아온다.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/metric_trend_chart.dart';
+
+import '../../helpers/fake_diet_repository.dart';
+
+/// 날마다 다른 값을 주는 대역 — 고른 날과 평균이 갈려야 검증이 된다.
+class _VaryingDietRepository extends FakeDietRepository {
+  @override
+  Future<DietDay> fetchByDate(DateTime date) async => _dayOf(date);
+
+  @override
+  Future<DietDay> fetchToday() async => _dayOf(nowKst());
+
+  static DietDay _dayOf(DateTime date) {
+    final int calories = 1000 + date.day * 20;
+    return DietDay(
+      entries: <DietEntry>[
+        DietEntry(
+          id: 'e-${date.day}',
+          mealType: MealType.lunch,
+          timeLabel: '12:00',
+          foods: const <FoodItem>[],
+          totalCalories: calories,
+          sodiumMg: 800 + date.day * 5,
+          sugarG: 10,
+          carbsG: 100,
+          proteinG: 50,
+          fatG: 20,
+        ),
+      ],
+      totalCalories: calories,
+      totalSodiumMg: 800 + date.day * 5,
+      totalSugarG: 10,
+      macros: const DietMacros(
+        carbsPct: 50,
+        proteinPct: 30,
+        fatPct: 20,
+        carbsG: 100,
+        proteinG: 50,
+        fatG: 20,
+      ),
+      aiCoachMessage: '',
+    );
+  }
+}
+
+Widget _app() => ProviderScope(
+  overrides: <Override>[
+    dietRepositoryProvider.overrideWithValue(_VaryingDietRepository()),
+    accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
+  ],
+  child: const MaterialApp(
+    locale: Locale('ko'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: DietRecordPage(),
+  ),
+);
+
+void main() {
+  Future<void> openWeek(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(420, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+    await tester.pumpAndSettle();
+  }
+
+  /// 카드 머리에 적힌 첫 줄(`하루 평균 · 칼로리` 또는 `2026. 8. 17. · 칼로리`).
+  String headline(WidgetTester tester) => tester
+      .widgetList<Text>(
+        find.descendant(
+          of: find.byKey(const Key('diet-period-card')),
+          matching: find.byType(Text),
+        ),
+      )
+      .map((Text t) => t.data ?? t.textSpan?.toPlainText() ?? '')
+      .first;
+
+  /// 꺾은선에서 [index] 번째 점의 화면 좌표.
+  Offset pointAt(WidgetTester tester, int index, int count) {
+    final Rect box = tester.getRect(find.byType(MetricTrendChart));
+    // 목표 라벨 칸을 뺀 실제 그리기 영역의 왼쪽 끝을 찾는다.
+    final Rect paint = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(MetricTrendChart),
+            matching: find.byType(CustomPaint),
+          )
+          .first,
+    );
+    final double step = paint.width / (count - 1);
+    return Offset(paint.left + step * index, box.top + paint.height / 2);
+  }
+
+  testWidgets('점을 고르면 하루 평균 대신 그날 값이 뜬다', (WidgetTester tester) async {
+    await openWeek(tester);
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(DietRecordPage)),
+    );
+
+    expect(headline(tester), contains(l.dietPeriodAverage));
+
+    // 이번 주 월요일(첫 점)을 누른다.
+    await tester.tapAt(pointAt(tester, 0, 7));
+    await tester.pumpAndSettle();
+
+    expect(
+      headline(tester),
+      isNot(contains(l.dietPeriodAverage)),
+      reason: '점을 골랐는데 머리 문구가 하루 평균 그대로다',
+    );
+    expect(headline(tester), contains(l.dietCalories));
+
+    // 같은 점을 다시 누르면 선택이 풀린다.
+    await tester.tapAt(pointAt(tester, 0, 7));
+    await tester.pumpAndSettle();
+    expect(headline(tester), contains(l.dietPeriodAverage));
+  });
+
+  testWidgets('나트륨·당류에서도 같은 규칙이다', (WidgetTester tester) async {
+    await openWeek(tester);
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(DietRecordPage)),
+    );
+
+    await tester.tap(find.text(l.dietSodium).last);
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(pointAt(tester, 0, 7));
+    await tester.pumpAndSettle();
+
+    expect(headline(tester), contains(l.dietSodium));
+    expect(headline(tester), isNot(contains(l.dietPeriodAverage)));
+  });
+
+  testWidgets('지표를 바꾸면 고른 날이 풀린다', (WidgetTester tester) async {
+    await openWeek(tester);
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(DietRecordPage)),
+    );
+
+    await tester.tapAt(pointAt(tester, 0, 7));
+    await tester.pumpAndSettle();
+    expect(headline(tester), isNot(contains(l.dietPeriodAverage)));
+
+    await tester.tap(find.text(l.dietSugar).last);
+    await tester.pumpAndSettle();
+    expect(headline(tester), contains(l.dietPeriodAverage));
+  });
+}

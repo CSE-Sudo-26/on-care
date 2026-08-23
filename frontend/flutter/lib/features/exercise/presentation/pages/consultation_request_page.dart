@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/core/utils/portrait_date_picker.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
@@ -17,18 +18,12 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 enum _ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 
-enum _HealthPurpose { weight, chronic, rehab, general, none, other }
-
 enum _PreferredTime { morning, afternoon, evening, flexible }
 
 // 화면 선택지 → 서버 계약 enum. 순서가 같으므로 index 로 잇되, 길이가 어긋나면
 // 조용히 틀린 값이 나가므로 아래 assert 로 막는다.
 extension on _ExerciseGoal {
   ExerciseGoal get wire => ExerciseGoal.values[index];
-}
-
-extension on _HealthPurpose {
-  HealthPurposeType get wire => HealthPurposeType.values[index];
 }
 
 extension on _PreferredTime {
@@ -55,12 +50,9 @@ class ConsultationRequestPage extends ConsumerStatefulWidget {
 
 class _ConsultationRequestPageState
     extends ConsumerState<ConsultationRequestPage> {
-  final TextEditingController _healthPurposeController =
-      TextEditingController();
   final TextEditingController _messageController = TextEditingController();
 
   _ExerciseGoal? _exerciseGoal;
-  _HealthPurpose? _healthPurpose;
   DateTime? _preferredDate;
   _PreferredTime? _preferredTime;
   bool _attempted = false;
@@ -68,7 +60,6 @@ class _ConsultationRequestPageState
 
   @override
   void dispose() {
-    _healthPurposeController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -82,7 +73,7 @@ class _ConsultationRequestPageState
 
   Future<void> _selectDate() async {
     final DateTime today = DateUtils.dateOnly(nowKst());
-    final DateTime? selected = await showDatePicker(
+    final DateTime? selected = await showPortraitDatePicker(
       context: context,
       initialDate: _preferredDate ?? today,
       firstDate: today,
@@ -105,22 +96,29 @@ class _ConsultationRequestPageState
     }
   }
 
-  bool get _healthPurposeInputMissing =>
-      _healthPurpose == _HealthPurpose.other &&
-      _healthPurposeController.text.trim().isEmpty;
+  /// 운동 목표가 "기타"면 문의 내용에 구체적으로 적어야 한다 — 그 내용이
+  /// 서버로는 `health_purpose_detail`도 겸해서 나간다(#1112). 목표 선택
+  /// 하나로 줄었으니 상세를 받을 자리도 문의 내용 하나여야 한다.
+  bool get _otherGoalDetailMissing =>
+      _exerciseGoal == _ExerciseGoal.other &&
+      _messageController.text.trim().isEmpty;
+
+  /// 데이터 공유에 동의했는가. 신청은 회원이 하고 연결은 나중에 트레이너가
+  /// 수락하며 만들어진다 — 회원이 그 자리에 없으므로 동의는 여기서 받는다.
+  /// (#1022)
+  bool _dataSharingConsent = false;
 
   bool get _isValid =>
       _exerciseGoal != null &&
-      _healthPurpose != null &&
-      !_healthPurposeInputMissing &&
+      !_otherGoalDetailMissing &&
       _preferredDate != null &&
-      _preferredTime != null;
+      _preferredTime != null &&
+      _dataSharingConsent;
 
   Future<void> _submit({
     required Gym gym,
     required Trainer trainer,
     required Map<_ExerciseGoal, String> goalLabels,
-    required Map<_HealthPurpose, String> purposeLabels,
     required Map<_PreferredTime, String> timeLabels,
   }) async {
     if (_submitting) return;
@@ -135,6 +133,14 @@ class _ConsultationRequestPageState
     setState(() => _submitting = true);
     final DateTime now = nowKst();
     final String message = _messageController.text.trim();
+    final ExerciseGoal exerciseGoal = _exerciseGoal!.wire;
+    final HealthPurposeType healthPurposeType = healthPurposeFromExerciseGoal(
+      exerciseGoal,
+    );
+    // "기타"만 상세가 필요하다(서버 422 회피) — 그 상세는 문의 내용
+    // 그대로다. 나머지 목표는 매핑된 종류만으로 뜻이 충분하다.
+    final String? healthPurposeDetail =
+        healthPurposeType == HealthPurposeType.other ? message : null;
     final ConsultationRequest request = ConsultationRequest(
       id: 'consult-${now.microsecondsSinceEpoch}',
       trainerId: trainer.id,
@@ -142,11 +148,9 @@ class _ConsultationRequestPageState
       trainerRole: trainer.role,
       // 라벨이 아니라 계약 enum 을 담는다 — 라벨을 저장하면 서버에서 복원할 때
       // 문구를 만들 수 없다(#327).
-      exerciseGoal: _exerciseGoal!.wire,
-      healthPurposeType: _healthPurpose!.wire,
-      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
-          ? _healthPurposeController.text.trim()
-          : null,
+      exerciseGoal: exerciseGoal,
+      healthPurposeType: healthPurposeType,
+      healthPurposeDetail: healthPurposeDetail,
       preferredDate: _preferredDate!,
       preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
@@ -155,14 +159,13 @@ class _ConsultationRequestPageState
     );
     final ConsultationDraft draft = ConsultationDraft(
       trainerId: trainer.id,
-      exerciseGoal: _exerciseGoal!.wire,
-      healthPurposeType: _healthPurpose!.wire,
-      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
-          ? _healthPurposeController.text.trim()
-          : null,
+      exerciseGoal: exerciseGoal,
+      healthPurposeType: healthPurposeType,
+      healthPurposeDetail: healthPurposeDetail,
       preferredDate: _preferredDate!,
       preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
+      dataSharingConsent: _dataSharingConsent,
     );
 
     final ConsultationRequest? saved;
@@ -271,14 +274,6 @@ class _ConsultationRequestPageState
       _ExerciseGoal.health: l.exGoalHealth,
       _ExerciseGoal.other: l.exOptionOther,
     };
-    final Map<_HealthPurpose, String> purposeLabels = <_HealthPurpose, String>{
-      _HealthPurpose.weight: l.exPurposeWeight,
-      _HealthPurpose.chronic: l.exPurposeChronic,
-      _HealthPurpose.rehab: l.exPurposeRehab,
-      _HealthPurpose.general: l.exPurposeGeneral,
-      _HealthPurpose.none: l.exPurposeNone,
-      _HealthPurpose.other: l.exOptionOther,
-    };
     final Map<_PreferredTime, String> timeLabels = <_PreferredTime, String>{
       _PreferredTime.morning: l.exTimeMorning,
       _PreferredTime.afternoon: l.exTimeAfternoon,
@@ -298,7 +293,12 @@ class _ConsultationRequestPageState
           children: <Widget>[
             _TargetCard(gym: gym, trainer: trainer),
             const SizedBox(height: 12),
-            const _DataSharingNotice(),
+            _DataSharingNotice(
+              consented: _dataSharingConsent,
+              onChanged: (bool next) =>
+                  setState(() => _dataSharingConsent = next),
+              showRequired: _attempted && !_dataSharingConsent,
+            ),
             const SizedBox(height: 20),
             _ChoiceField<_ExerciseGoal>(
               chipKeyPrefix: 'consult-goal',
@@ -319,35 +319,6 @@ class _ConsultationRequestPageState
                 style: const TextStyle(
                   fontSize: 12.5,
                   color: AppColors.mutedForeground,
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            _ChoiceField<_HealthPurpose>(
-              key: const Key('health-purpose-options'),
-              chipKeyPrefix: 'consult-purpose',
-              title: l.exHealthPurpose,
-              values: _HealthPurpose.values,
-              labels: purposeLabels,
-              selected: _healthPurpose,
-              onSelected: (_HealthPurpose value) {
-                setState(() => _healthPurpose = value);
-              },
-              errorText: _attempted && _healthPurpose == null
-                  ? l.exHealthPurposeRequired
-                  : null,
-            ),
-            if (_healthPurpose == _HealthPurpose.other) ...<Widget>[
-              const SizedBox(height: 10),
-              TextField(
-                key: const Key('consult-purpose-other'),
-                controller: _healthPurposeController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: l.exHealthPurposeOtherHint,
-                  errorText: _attempted && _healthPurposeInputMissing
-                      ? l.exHealthPurposeInputRequired
-                      : null,
                 ),
               ),
             ],
@@ -380,9 +351,15 @@ class _ConsultationRequestPageState
             TextField(
               key: const Key('consult-message'),
               controller: _messageController,
+              onChanged: (_) => setState(() {}),
               minLines: 4,
               maxLines: 7,
-              decoration: InputDecoration(hintText: l.exConsultMessageHint),
+              decoration: InputDecoration(
+                hintText: l.exConsultMessageHint,
+                errorText: _attempted && _otherGoalDetailMissing
+                    ? l.exOtherGoalDetailRequired
+                    : null,
+              ),
             ),
             if (hasPending) ...<Widget>[
               const SizedBox(height: 14),
@@ -398,7 +375,6 @@ class _ConsultationRequestPageState
                         gym: gym,
                         trainer: trainer,
                         goalLabels: goalLabels,
-                        purposeLabels: purposeLabels,
                         timeLabels: timeLabels,
                       ),
                     ),
@@ -528,7 +504,19 @@ class _TargetCard extends StatelessWidget {
 /// 여기 없는 항목(예: 혈압·혈당)은 애초에 수집하지 않으므로 트레이너도 볼 수
 /// 없다.
 class _DataSharingNotice extends StatelessWidget {
-  const _DataSharingNotice();
+  const _DataSharingNotice({
+    required this.consented,
+    required this.onChanged,
+    required this.showRequired,
+  });
+
+  /// 동의했는가. 이 값은 화면 상태(`_dataSharingConsent`)가 들고 있다 — 제출
+  /// 가능 여부를 함께 판단해야 해서다. (#1022)
+  final bool consented;
+  final ValueChanged<bool> onChanged;
+
+  /// 제출을 눌렀는데 아직 동의하지 않았는가 — 그때만 빨간 안내를 붙인다.
+  final bool showRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -542,25 +530,75 @@ class _DataSharingNotice extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: FigmaColors.hairline),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(
-            Icons.info_outline,
-            size: 16,
-            color: FigmaColors.textSub,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l.exConsultDataSharingNotice,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: FigmaColors.textBody,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: FigmaColors.textSub,
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.exConsultDataSharingNotice,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: FigmaColors.textBody,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // 안내로 지나가지 않고 **동의를 받는다** — 수락되는 순간 넘어가는
+          // 것은 회원의 건강 기록이다. (#1022)
+          const SizedBox(height: 6),
+          InkWell(
+            key: const Key('consultDataSharingConsent'),
+            onTap: () => onChanged(!consented),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Checkbox(
+                  value: consented,
+                  onChanged: (bool? next) => onChanged(next ?? false),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  activeColor: FigmaColors.primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      l.exConsultDataSharingAgree,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          if (showRequired) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              l.exConsultDataSharingRequired,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: FigmaColors.dangerRed,
+              ),
+            ),
+          ],
         ],
       ),
     );

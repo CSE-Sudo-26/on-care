@@ -173,6 +173,20 @@ void main() {
     expect(sources, contains('나트륨 줄이기'));
   });
 
+  test('POST /ai-coach/chat answers the dinner quick reply with today\'s meal', () async {
+    // 빠른 질문 첫 줄. 일반적인 식단 안내가 아니라 오늘 점심(짬뽕) 기록과
+    // 이어지는 한 끼가 나와야 "맞춤"으로 읽힌다(#1180).
+    final res = await dio.post<Map<String, Object?>>(
+      '/ai-coach/chat',
+      data: <String, Object?>{'message': '오늘 저녁 메뉴 추천해줘'},
+    );
+    expect(res.statusCode, 200);
+    final reply = res.data!['reply']! as String;
+    expect(reply, contains('짬뽕'));
+    expect(reply, contains('닭가슴살 채소구이'));
+    expect(reply, contains('현미밥'));
+  });
+
   test('POST /ai-coach/chat rejects an empty message', () async {
     final res = await dio.post<Map<String, Object?>>(
       '/ai-coach/chat',

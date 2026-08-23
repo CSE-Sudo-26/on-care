@@ -212,7 +212,9 @@ void main() {
     // 점은 이제 **서버 미읽음을 따른다.** 예전에는 항상 켜져 있어서 읽을 것이
     // 없어도 남았다(#636).
     expect(notificationButton.showDot, isTrue);
-    expect(notificationButton.dotColor, FigmaColors.orange);
+    // 읽지 않은 알림은 `주의` 가 아니라 새 소식이다 — 주황은 같은 화면의
+    // 주의 색과 겹쳤다. 옆 채팅 버튼이 이미 쓰던 빨강으로 맞춘다. (#1060)
+    expect(notificationButton.dotColor, FigmaColors.redDot);
   });
 
   testWidgets('읽지 않은 알림이 없으면 벨에 점이 없다', (WidgetTester tester) async {
@@ -273,15 +275,20 @@ void main() {
     await tester.pump();
 
     expect(find.text('아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.'), findsOneWidget);
-    expect(find.text('오늘 예정된 일정이 없어요.'), findsOneWidget);
-    expect(find.text('0g'), findsNWidgets(3));
+    // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055) — 빈 상태 문구도 함께 없다.
+    expect(find.text('오늘 예정된 일정이 없어요.'), findsNothing);
+    // 탄단지는 홈 식단 카드에서 뺐다 (#1117) — 식단 탭이 말한다.
+    expect(find.text('0g'), findsNothing);
+    expect(find.text('탄수화물'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
       findsNothing,
     );
+    // 운동 카드는 요약이 비어도 이번 주 카드를 그린다 (#1183) — 주간 기록은
+    // 오늘 기록과 별개 소스라, 오늘이 비었다고 한 주가 빈 것은 아니다.
     expect(
-      find.byKey(const ValueKey<String>('dashboard-exercise-chart')),
-      findsNothing,
+      find.byKey(const ValueKey<String>('dashboard-exercise-week')),
+      findsOneWidget,
     );
     expect(tester.takeException(), isNull);
   });
@@ -333,7 +340,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // "칼로리" - "1,860" - "/2,000kcal" - "정상" 순으로 읽혀야 한다.
+    // "칼로리" - "1,860" - "/2,000kcal" 순으로 읽혀야 한다.
     expect(find.text('/2,000kcal'), findsOneWidget);
     expect(find.text('/2,000mg'), findsOneWidget);
     expect(find.text('/50g'), findsOneWidget);
@@ -389,7 +396,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('운동 카드는 프로필의 운동 목표 3종을 쓴다', (WidgetTester tester) async {
+  testWidgets('운동 카드는 운동 탭과 같은 유형별 주간 목표를 쓴다', (WidgetTester tester) async {
     await pumpDashboard(
       tester,
       load: () async => const DashboardSummary(
@@ -420,10 +427,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text(' /5일'), findsOneWidget);
-    expect(find.text(' /240분'), findsOneWidget);
-    expect(find.text(' /900kcal'), findsOneWidget);
-    expect(find.text(' /800kcal'), findsNothing);
+    // 홈은 운동 탭 `운동 현황 - 이번 주` 카드를 그대로 쓴다 (#1183) — 목표도
+    // 그 카드의 것이다. 프로필에 저장된 주 3회·240분·900kcal 은 이 카드의
+    // 기준이 아니다 — MY 목표를 이 값에 연결하는 것은 #1139 이 다룬다.
+    //
+    // 값과 목표는 한 덩어리(`Text.rich`)로 적히므로 부분 문자열로 찾는다.
+    expect(
+      find.textContaining('/2,100', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('/150분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/21세트', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/60분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/5일', findRichText: true), findsNothing);
+    expect(find.textContaining('/900', findRichText: true), findsNothing);
   });
 
   for (final width in <double>[360, 480, 800]) {
@@ -439,25 +456,30 @@ void main() {
 
       expect(find.text('식단 · 영양'), findsOneWidget);
       expect(find.text('1,860'), findsWidgets);
-      expect(find.text('203.6g'), findsOneWidget);
-      expect(find.text('109.3g'), findsOneWidget);
-      expect(find.text('66.5g'), findsOneWidget);
-      expect(find.text('45'), findsOneWidget);
-      expect(find.text('520'), findsWidgets);
-      expect(find.text('4'), findsWidgets);
+      // 탄단지는 홈에서 뺐다 (#1117).
+      expect(find.text('203.6g'), findsNothing);
+      expect(find.text('109.3g'), findsNothing);
+      expect(find.text('66.5g'), findsNothing);
       expect(find.text('주간 운동'), findsOneWidget);
-      expect(find.text('운동 시간'), findsOneWidget);
-      expect(find.text('소모 칼로리'), findsOneWidget);
-      expect(find.text('운동 일수'), findsOneWidget);
-      expect(find.text('운동 추이 (kcal)'), findsOneWidget);
-      expect(find.text('병원 정기검진'), findsOneWidget);
+      // 운동 카드 본문은 운동 탭 `이번 주` 카드 그대로다 (#1183) — 주간 소모
+      // 한 줄과 유형별 세 줄. 예전의 지표 네 줄·주간 추이 막대는 없다.
+      expect(find.text('이번 주 소모'), findsOneWidget);
+      expect(find.text('유산소'), findsOneWidget);
+      expect(find.text('근력'), findsOneWidget);
+      expect(find.text('스트레칭'), findsOneWidget);
+      expect(find.text('소모 칼로리'), findsNothing);
+      expect(find.text('운동 시간'), findsNothing);
+      expect(find.text('운동 일수'), findsNothing);
+      expect(find.text('운동 추이 (kcal)'), findsNothing);
+      // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055).
+      expect(find.text('병원 정기검진'), findsNothing);
       expect(find.textContaining('김치찌개·배추김치'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey<String>('dashboard-exercise-chart')),
+        find.byKey(const ValueKey<String>('dashboard-exercise-week')),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -490,7 +512,8 @@ void main() {
       final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
       // 헤더가 줄어들지 못하면 밀려난 더보기 링크부터 넘친다.
       expect(find.text(en.homeDetails), findsWidgets);
-      expect(find.text(en.homeAiAnalysisPill), findsWidgets);
+      // `AI 분석` 필은 뗐다 (#1055) — 헤더가 줄어들 수 있는 구조인지만 본다.
+      expect(find.text(en.homeDietNutritionTitle), findsWidgets);
       expect(tester.takeException(), isNull);
     });
   }

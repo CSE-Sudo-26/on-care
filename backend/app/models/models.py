@@ -105,6 +105,20 @@ class HealthProfile(Base):
     )
     weekly_burn_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # 운동 탭이 실제로 견주는 목표 (#1139) — 소모는 하루, 유형별은 한 주다.
+    # 근력을 주 7 로 나누면 "2.3세트" 라는 뜻 없는 수가 되어, 유형별은 주간을
+    # 원본으로 둔다.
+    daily_burn_kcal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_cardio_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    weekly_strength_sets: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    weekly_flexibility_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+
     # 온보딩 완료 여부(프론트 온보딩 게이팅용)
     onboarded: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -510,6 +524,12 @@ class ConsultationRequest(Base):
     health_purpose_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     preferred_date: Mapped[str] = mapped_column(String(10))
     preferred_time_slot: Mapped[str] = mapped_column(String(20))
+    #: 회원이 데이터 공유에 동의한 시각. 트레이너가 수락해 담당이 생기면 이
+    #: 값이 담당 링크로 옮겨 간다 — 회원은 신청할 때 동의하고, 연결은 나중에
+    #: 트레이너가 만든다. (#1022)
+    data_consent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), default="pending", server_default="pending"
@@ -692,6 +712,14 @@ class TrainerClient(Base):
     goal: Mapped[str] = mapped_column(String(200), default="")
     #: 담당 관계가 살아 있는가(해제 여부). 트레이너 화면의 배지가 아니다.
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    #: 회원이 식단·운동·신체 정보 공유에 동의한 시각. (#1022)
+    #:
+    #: 트레이너는 담당이 되는 순간 회원의 건강 기록을 읽는다. 그 동의를 언제
+    #: 받았는지 답할 수 있어야 하므로 링크에 함께 남긴다. 비어 있는 링크는 이
+    #: 기능 이전에 만들어진 것이다.
+    data_consent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     #: 트레이너의 관리 상태 — True 면 화면에 '휴면'으로 보인다.
     dormant: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
@@ -1281,6 +1309,14 @@ class TrainerReservationSlot(Base):
             "remaining >= 0 AND remaining <= capacity",
             name="ck_reservation_slot_remaining_range",
         ),
+        # 스케줄 탭의 `TrainerSchedule.type` 과 같은 계약값이다(#1083). 슬롯은
+        # 늘 한 사람 몫이라 정원을 고를 이유가 없어졌지만, 무슨 약속인지는
+        # 여전히 골라야 한다 — 회원 예약이 만드는 일정이 그 종류를 그대로
+        # 물려받는다.
+        CheckConstraint(
+            "session_type IN ('1:1 PT', '상담')",
+            name="ck_reservation_slot_session_type",
+        ),
         Index("ix_reservation_slots_trainer_starts", "trainer_id", "starts_at"),
     )
 
@@ -1291,6 +1327,9 @@ class TrainerReservationSlot(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     capacity: Mapped[int] = mapped_column(Integer)
     remaining: Mapped[int] = mapped_column(Integer)
+    session_type: Mapped[str] = mapped_column(
+        String(16), server_default="1:1 PT", default="1:1 PT"
+    )
     is_closed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=false(), default=False
     )

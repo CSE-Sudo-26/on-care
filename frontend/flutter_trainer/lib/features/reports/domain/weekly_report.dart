@@ -1,4 +1,5 @@
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/number_format.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -29,6 +30,9 @@ class WeeklyReport {
     this.sodiumWeek = const <int>[],
     this.caloriesWeek = const <int>[],
     this.sugarWeek = const <double>[],
+    this.carbsWeek = const <double>[],
+    this.proteinWeek = const <double>[],
+    this.fatWeek = const <double>[],
     this.days = const <ReportDay>[],
   });
 
@@ -72,6 +76,14 @@ class WeeklyReport {
 
   /// 그 주의 일별 당류(g). 소수를 유지한다.
   final List<double> sugarWeek;
+
+  /// 그 주의 일별 탄수화물·단백질·지방(g).
+  ///
+  /// 칼로리 총량만으로는 같은 2,000kcal 이 밥에서 왔는지 기름에서 왔는지
+  /// 알 수 없다 — 비교 그래프가 칼로리를 이 셋으로 쌓아 그린다(#1177).
+  final List<double> carbsWeek;
+  final List<double> proteinWeek;
+  final List<double> fatWeek;
 
   /// 요일별 상세(월→일). 이행률과 그날 배정된 운동을 함께 담는다 — 67% 가
   /// 어디서 나온 값인지 화면에서 보이게 하는 자료다(#754).
@@ -125,9 +137,7 @@ WeeklyReport buildWeeklyReport({
   final isThisWeek = start == weekStartOf(today ?? nowKst());
   final series = week ?? (isThisWeek ? WeekSeries.of(client) : null);
   // Same "recorded days only" rule the 주의 badge and 고객 검색 use.
-  final mean = series == null
-      ? null
-      : recordedMean(series.completion)?.round();
+  final mean = series == null ? null : recordedMean(series.completion)?.round();
 
   return WeeklyReport(
     isCurrentWeek: isThisWeek,
@@ -143,13 +153,19 @@ WeeklyReport buildWeeklyReport({
     sodiumWeek: series?.sodium ?? const <int>[],
     caloriesWeek: series?.calories ?? const <int>[],
     sugarWeek: series?.sugar ?? const <double>[],
+    carbsWeek: series?.carbs ?? const <double>[],
+    proteinWeek: series?.protein ?? const <double>[],
+    fatWeek: series?.fat ?? const <double>[],
   );
 }
 
 /// 리포트의 하루 — 이행률과 그날 배정된 운동.
 class ReportDay {
   /// Creates a day.
-  const ReportDay({required this.completion, this.exercises = const <String>[]});
+  const ReportDay({
+    required this.completion,
+    this.exercises = const <String>[],
+  });
 
   /// 그날 이행률(%). 0 은 기록이 없다는 뜻이다.
   final int completion;
@@ -174,6 +190,9 @@ class WeekSeries {
     required this.sodium,
     required this.calories,
     required this.sugar,
+    this.carbs = const <double>[],
+    this.protein = const <double>[],
+    this.fat = const <double>[],
     this.days = const <ReportDay>[],
   });
 
@@ -199,6 +218,11 @@ class WeekSeries {
 
   /// 일별 당류(g).
   final List<double> sugar;
+
+  /// 일별 탄수화물·단백질·지방(g).
+  final List<double> carbs;
+  final List<double> protein;
+  final List<double> fat;
 
   /// 요일별 상세. 데모는 drift 이력에서, 실서버는 리포트 응답에서 온다.
   final List<ReportDay> days;
@@ -239,9 +263,6 @@ String reportMessage(AppLocalizations l, WeeklyReport report) {
           : l.reportBodyCompletionLow(completion),
     );
   }
-  if (report.sessionsBooked > 0) {
-    workout.add(l.reportBodySessions(report.sessionsDone, report.sessionsBooked));
-  }
   final skipped = _skippedNames(report);
   if (skipped.isNotEmpty) {
     workout.add(l.reportBodySkipped(_topicParticle(skipped.join(', '))));
@@ -252,16 +273,21 @@ String reportMessage(AppLocalizations l, WeeklyReport report) {
   final sodium = report.sodiumAvg;
   if (sodium != null) {
     final over = report.sodiumOverDays ?? 0;
+    // 회원이 그대로 받는 문장이라 수치를 화면과 같은 서식으로 적는다 —
+    // `1916mg` 은 그래프의 `1,916mg` 과 다른 값처럼 읽힌다. 목표도 문장에
+    // 박아 두지 않는다: 기준이 바뀌면 문장만 옛말을 하게 된다(#1177).
+    final String avg = formatNumber(sodium);
+    final String target = formatNumber(sodiumTargetMg);
     diet.add(
       over > 0
-          ? l.reportBodySodiumOver(sodium, over)
-          : l.reportBodySodiumOk(sodium),
+          ? l.reportBodySodiumOver(avg, target, over)
+          : l.reportBodySodiumOk(avg, target),
     );
   }
   final recorded = report.caloriesWeek.where((v) => v > 0).toList();
   if (recorded.isNotEmpty) {
     final mean = recorded.fold<double>(0, (a, b) => a + b) / recorded.length;
-    diet.add(l.reportBodyCalories(mean.round()));
+    diet.add(l.reportBodyCalories(formatNumber(mean.round())));
   }
   if (diet.isNotEmpty) paragraphs.add(diet.join(' '));
 
@@ -276,30 +302,62 @@ String reportMessage(AppLocalizations l, WeeklyReport report) {
 }
 
 /// 그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다.
+///
+/// 분량을 뗀 이름으로 묶는다 — 같은 스트레칭을 요일마다 건너뛰면 예전에는
+/// `하체 스트레칭 10분, 하체 스트레칭 5분, 하체 스트레칭 15분` 이 되어, 서로
+/// 다른 운동 셋을 빠뜨린 것처럼 읽혔다(#1177).
 List<String> _skippedNames(WeeklyReport report) {
   final names = <String>[];
   for (final day in report.days) {
     for (final line in day.exercises) {
       if (!line.contains('✗')) continue;
-      final name = line.replaceAll('✗', '').trim();
+      final name = exerciseBaseName(line);
       if (name.isNotEmpty && !names.contains(name)) names.add(name);
     }
   }
   return names.take(3).toList(growable: false);
 }
 
+/// 운동 한 줄에서 분량 표기를 떼어 낸 이름.
+///
+/// 저장 규칙은 `하체 스트레칭 10분`, `벤치프레스 40kg · 4세트` 처럼 이름 뒤에
+/// 그날의 분량이 붙는다. 초안·요약이 운동을 **묶어 세는** 자리에서는 그 분량이
+/// 서로 다른 운동으로 갈라 놓는다.
+String exerciseBaseName(String line) {
+  var name = line.replaceAll('✗', '').replaceAll('✓', '').trim();
+  final cut = name.indexOf('·');
+  if (cut > 0) name = name.substring(0, cut).trim();
+  return name
+      .replaceAll(RegExp(r'\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$'), '')
+      .trim();
+}
+
 /// `은`/`는` 을 받침에 맞춰 붙인다.
 ///
 /// `은(는)` 은 사람이 쓴 글로 읽히지 않는다 — 회원이 그대로 받는 문장이라
 /// 기계가 쓴 티가 나는 자리를 남기지 않는다. 백엔드의 `_topic` 과 같은 규칙이다.
-String _topicParticle(String word) {
-  if (word.isEmpty) return word;
-  final last = word.codeUnitAt(word.length - 1);
-  final isHangul = last >= 0xAC00 && last <= 0xD7A3;
-  final hasBatchim = isHangul && (last - 0xAC00) % 28 != 0;
-  return '$word${hasBatchim ? '은' : '는'}';
-}
+String _topicParticle(String word) =>
+    '$word${hasFinalConsonant(word) ? '은' : '는'}';
 
+/// 마지막 글자를 소리 내어 읽었을 때 받침이 있는가.
+///
+/// 조사를 고르는 유일한 기준이다. 한글만 보던 때에는 `81%`·`1,916mg` 처럼
+/// 숫자·단위로 끝나는 말이 전부 받침 없음으로 떨어져, 요약 문장의 조사가
+/// 반쯤 어긋났다(#1177).
+bool hasFinalConsonant(String word) {
+  final trimmed = word.trim();
+  if (trimmed.isEmpty) return false;
+  final last = trimmed.codeUnitAt(trimmed.length - 1);
+  if (last >= 0xAC00 && last <= 0xD7A3) return (last - 0xAC00) % 28 != 0;
+  // 숫자로 끝나면 그 숫자를 읽은 소리로 본다 — 영·일·삼·육·칠·팔에 받침이 있다.
+  if (last >= 0x30 && last <= 0x39) {
+    return const <int>{0, 1, 3, 6, 7, 8}.contains(last - 0x30);
+  }
+  // 화면에 쓰는 단위는 모두 모음으로 끝나게 읽힌다(퍼센트·밀리그램·그램·
+  // 킬로칼로리). 그 밖의 라틴 문자도 같은 쪽으로 둔다 — 틀리더라도 `…를` 은
+  // `…을` 보다 눈에 덜 걸린다.
+  return false;
+}
 
 /// The trainer's own week — the numbers that answer "how am I doing?".
 class TrainerWeekStats {

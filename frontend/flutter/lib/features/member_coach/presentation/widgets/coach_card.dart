@@ -132,10 +132,7 @@ class CoachCard extends ConsumerWidget {
 /// 운동**이다. 그래서 추천할 것이 없는 날은 빈 카드를 만들지 않고 코칭 포인트만
 /// 남긴다 — AI 가 매번 운동을 억지로 만들어 낼 이유가 없다.
 class AiCoachingCard extends ConsumerWidget {
-  const AiCoachingCard({required this.coachingPoint, super.key});
-
-  /// 이번 코칭 포인트. 운동 주간 데이터의 `aiCoachMessage` 가 그대로 들어온다.
-  final String coachingPoint;
+  const AiCoachingCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,11 +142,14 @@ class AiCoachingCard extends ConsumerWidget {
     final List<CoachRoutine> routines =
         ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[];
     final MemberCoach? coach = ref.watch(memberCoachProvider).valueOrNull;
-    final String point = coachingPoint.trim();
 
-    // 코칭 포인트도 추천도 없으면 카드 자체를 그리지 않는다. 빈 카드는 자리만
-    // 차지하고 아무것도 알려 주지 않는다.
-    if (point.isEmpty && routines.isEmpty) return const SizedBox.shrink();
+    // 추천이 없으면 카드 자체를 그리지 않는다. 빈 카드는 자리만 차지하고
+    // 아무것도 알려 주지 않는다.
+    //
+    // 예전에는 이 카드가 `이번 코칭 포인트` 도 함께 말했다. 지금은 화면 위쪽의
+    // AI 맞춤 조언 카드가 그 말을 하므로 여기서는 뺐다 — 같은 말이 한 화면에
+    // 두 번 있으면 안 된다. (#1021)
+    if (routines.isEmpty) return const SizedBox.shrink();
 
     return Container(
       key: const Key('aiCoachingCard'),
@@ -164,16 +164,18 @@ class AiCoachingCard extends ConsumerWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
+              // 카드가 말하는 것은 `AI 코칭` 이 아니라 **추천 개인운동**이다
+              // (#1130). 제목이 곧 내용이라 아이콘도 운동 쪽으로 바꿨다.
               const Icon(
-                Icons.auto_awesome,
-                size: 16,
+                Icons.directions_run_rounded,
+                size: 18,
                 color: FigmaColors.primary,
               ),
               const SizedBox(width: 6),
               // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
               Flexible(
                 child: Text(
-                  l.coachAiCoaching,
+                  l.coachRoutineTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -185,47 +187,10 @@ class AiCoachingCard extends ConsumerWidget {
               ),
             ],
           ),
-          if (point.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 12),
-            Text(
-              l.coachPointsTitle,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.primary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              point,
-              style: const TextStyle(
-                fontSize: 13.5,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: FigmaColors.ink,
-              ),
-            ),
-          ],
           if (routines.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 14),
-            Text(
-              l.coachRoutineTitle,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.primary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l.coachRoutineSubtitle,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: AppColors.mutedForeground,
-              ),
-            ),
-            const SizedBox(height: 10),
+            // 카드 제목이 이미 `추천 개인운동` 이라 안에 같은 말을 또 두지
+            // 않는다. `PT 와 다음 PT 사이…` 안내도 뺐다 (#1130).
+            const SizedBox(height: 12),
             for (final (int index, CoachRoutine routine)
                 in routines.indexed) ...<Widget>[
               // 여러 세션짜리 프로그램은 첫 세션 위에 프로그램 이름을 한 번
@@ -238,11 +203,57 @@ class AiCoachingCard extends ConsumerWidget {
               _RecommendedExerciseRow(
                 routine: routine,
                 sourceLabel: routineSourceLabel(l, routine, coach),
+                // 담당이 배정한 것을 회원이 조용히 없애면 다음 상담에서 둘이
+                // 서로 다른 기록을 본다. 담당이 없을 때만 스스로 물린다. (#1020)
+                cancellable: coach == null,
               ),
               const SizedBox(height: 10),
             ],
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// 추천 운동을 했는지 표시하는 체크 박스. (#1021)
+///
+/// 체크한 것을 다시 누르면 **묻고 나서** 되돌린다 (#1131). 수행은 기록으로 남아
+/// 주간 시간·칼로리에 더해지고 트레이너에게도 보이므로, 조용히 지워지면 안 되지만
+/// 잘못 누른 체크를 풀 방법이 아예 없어도 안 된다.
+class _RoutineCheckbox extends StatelessWidget {
+  const _RoutineCheckbox({
+    super.key,
+    required this.done,
+    required this.saving,
+    required this.onCheck,
+  });
+
+  final bool done;
+  final bool saving;
+  final VoidCallback onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    if (saving) {
+      return const Padding(
+        padding: EdgeInsets.all(9),
+        child: SizedBox.square(
+          dimension: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return Semantics(
+      checked: done,
+      label: l.coachRoutineDone,
+      child: Checkbox(
+        value: done,
+        onChanged: (bool? _) => onCheck(),
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        activeColor: FigmaColors.primary,
       ),
     );
   }
@@ -269,12 +280,16 @@ class _RecommendedExerciseRow extends ConsumerStatefulWidget {
   const _RecommendedExerciseRow({
     required this.routine,
     required this.sourceLabel,
+    required this.cancellable,
   });
 
   /// 회원이 읽는 출처 한 줄 — `AI 추천 · 김트레이너 확인` 처럼.
   final String sourceLabel;
 
   final CoachRoutine routine;
+
+  /// 회원이 스스로 물릴 수 있는가 — 담당 트레이너가 없을 때만 참이다. (#1020)
+  final bool cancellable;
 
   @override
   ConsumerState<_RecommendedExerciseRow> createState() =>
@@ -284,6 +299,101 @@ class _RecommendedExerciseRow extends ConsumerStatefulWidget {
 class _RecommendedExerciseRowState
     extends ConsumerState<_RecommendedExerciseRow> {
   bool _saving = false;
+
+  /// 개인 운동 취소. 담당 트레이너가 없을 때만 화면에 나타난다 — 담당이 있으면
+  /// 취소는 트레이너의 일이라 서버도 403 으로 막는다. (#1020)
+  Future<void> _cancel() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final CoachRoutine routine = widget.routine;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        content: Text(l.coachRoutineCancelConfirm(routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const Key('confirmRoutineCancel'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.coachRoutineCancel),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(memberCoachRepositoryProvider).deleteRoutine(routine.id);
+      ref.invalidate(coachRoutinesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineCancelled)));
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineCancelFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// 체크를 되돌린다 — 묻고 나서 (#1131).
+  ///
+  /// 완료는 기록으로 남아 주간 시간·칼로리에 더해지고 트레이너에게도 보인다.
+  /// 잘못 누른 체크를 풀 방법이 없으면 하지 않은 운동이 그 숫자에 영원히 남아,
+  /// 회원과 트레이너가 서로 다른 기록을 보게 된다.
+  Future<void> _undoComplete() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final CoachRoutine routine = widget.routine;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        content: Text(l.coachRoutineUndoConfirm(routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const Key('confirmRoutineUndo'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.coachRoutineUndo),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(memberCoachRepositoryProvider)
+          .uncompleteRoutine(routine.id);
+      ref.invalidate(coachRoutinesProvider);
+      ref.invalidate(exerciseWeekProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineUndone)));
+      }
+    } on Object catch (error, stackTrace) {
+      debugPrint('uncompleteRoutine failed: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineUndoFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   Future<void> _complete() async {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -338,6 +448,15 @@ class _RecommendedExerciseRowState
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final CoachRoutine routine = widget.routine;
+    // 이미 한 운동은 글자를 한 단계 낮춘다 (#1196). 체크 박스 하나만으로는
+    // 여러 줄짜리 목록에서 어디까지 했는지 한눈에 갈리지 않는다 — 남은 줄이
+    // 검정으로 남아 있어야 다음에 할 것이 먼저 읽힌다.
+    final Color titleColor = routine.completed
+        ? FigmaColors.textSub
+        : FigmaColors.ink;
+    final Color detailColor = routine.completed
+        ? AppColors.mutedForeground
+        : AppColors.foreground;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -348,8 +467,21 @@ class _RecommendedExerciseRowState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              // 했는지 안 했는지는 체크 박스로 말한다 (#1021). 예전에는 오른쪽
+              // 아래에 `수행 완료` 버튼이 있었는데, 시간·유형 아래에 붙어 있어
+              // 무엇에 대한 버튼인지 한눈에 붙지 않았다. 체크 박스를 줄 맨
+              // 앞에 두면 "이 운동을 했다" 가 그 줄에서 바로 읽힌다.
+              _RoutineCheckbox(
+                key: Key('completeRoutine-${routine.id}'),
+                done: routine.completed,
+                saving: _saving,
+                onCheck: routine.completed ? _undoComplete : _complete,
+              ),
+              const SizedBox(width: 8),
               Expanded(
+                flex: 3,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -357,10 +489,10 @@ class _RecommendedExerciseRowState
                       routine.isProgramSession
                           ? routine.sessionName
                           : routine.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: FigmaColors.ink,
+                        color: titleColor,
                       ),
                     ),
                     // 운동 구성이 오면 그것을 보여 준다 — 이름만 이어 붙인
@@ -373,9 +505,9 @@ class _RecommendedExerciseRowState
                           exercise.detail.isEmpty
                               ? exercise.name
                               : '${exercise.name} · ${exercise.detail}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.foreground,
+                            color: detailColor,
                           ),
                         ),
                       ]
@@ -383,9 +515,9 @@ class _RecommendedExerciseRowState
                       const SizedBox(height: 2),
                       Text(
                         routine.reason,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: AppColors.foreground,
+                          color: detailColor,
                         ),
                       ),
                     ],
@@ -406,57 +538,54 @@ class _RecommendedExerciseRowState
                 ),
               ),
               const SizedBox(width: 8),
-              // 오른쪽 묶음도 접힌다. 고정 폭으로 두면 큰 글자 배율에서
-              // 운동 이름 쪽을 다 밀어낸 뒤에도 줄이 넘쳤다(#766).
-              Flexible(
+              // 오른쪽 묶음은 **제 몫을 다 차지한다** (#1153). `Flexible` 은
+              // 내용 크기로 줄어들어, 남은 자리가 그 오른쪽에 빈 칸으로 남았고
+              // 값이 카드 가운데에서 끝난 것처럼 보였다. 폭을 받아 두고 안에서
+              // 오른쪽 정렬하면 값이 카드 끝에 붙는다. 글자 배율이 커지면
+              // 아래 FittedBox 가 값부터 줄인다(#766).
+              Expanded(
+                flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[
-                    Text(
-                      '${routine.type} · '
-                      '${l.unitMinutesValue(routine.completedMinutes ?? routine.minutes)}',
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.primary,
+                    // 카드 오른쪽 끝에 한 줄로 붙인다 (#1130). 두 줄로
+                    // 접히면 첫 줄이 카드 가운데에서 끝나 어디에 걸린 값인지
+                    // 애매해진다.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${routine.type} · '
+                        '${l.unitMinutesValue(routine.completedMinutes ?? routine.minutes)}',
+                        maxLines: 1,
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.primary,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    if (routine.completed)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: Colors.green,
+                    // 아직 하지 않은 것만 물릴 수 있다 — 이미 한 운동을 목록에서
+                    // 지우면 기록과 화면이 갈린다.
+                    if (widget.cancellable && !routine.completed)
+                      TextButton(
+                        key: Key('cancelRoutine-${routine.id}'),
+                        onPressed: _saving ? null : _cancel,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          foregroundColor: AppColors.mutedForeground,
+                        ),
+                        child: Text(
+                          l.coachRoutineCancel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 4),
-                          Flexible(child: Text(l.coachRoutineDone)),
-                        ],
-                      )
-                    else
-                      SizedBox(
-                        height: 30,
-                        child: OutlinedButton(
-                          key: Key('completeRoutine-${routine.id}'),
-                          onPressed: _saving ? null : _complete,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                          ),
-                          child: _saving
-                              ? const SizedBox.square(
-                                  dimension: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  l.coachRoutineDone,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
                         ),
                       ),
                   ],
@@ -551,7 +680,9 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               key: const Key('routineCompletionMinutes'),
               controller: _minutesController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: l.coachRoutineMinutesLabel),
+              decoration: InputDecoration(
+                labelText: l.coachRoutineMinutesLabel,
+              ),
               validator: (String? value) {
                 final int? minutes = int.tryParse(value ?? '');
                 return minutes == null || minutes < 1 || minutes > 600

@@ -436,10 +436,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           _AssistantLabel(text: l.aiAnalysedData),
           const SizedBox(height: AppSpacing.md),
           _analysisRow(l.aiGoal, client.goal),
+          // 목표를 넘겼을 때만 꼬리표를 붙인다. 넘기지 않았다고 "적정" 이라
+          // 말하면, 목표에 한참 못 미친 값까지 적정이 된다(#1070).
           _analysisRow(
             l.aiTodaySodium,
             '${client.sodiumMg}mg'
-            '${client.sodiumOverBudget ? l.aiOverTarget : l.aiWithinTarget}',
+            '${client.sodiumOverBudget ? l.aiOverTarget : ''}',
             warn: client.sodiumOverBudget,
           ),
           _analysisRow(l.aiRecentRoutine, client.lastRoutine),
@@ -496,7 +498,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           const SizedBox(height: AppSpacing.xs),
           Text(
             l.aiConditionsAutoHint,
-            style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.mutedForeground,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           RoutineMinutesSlider(
@@ -739,7 +744,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: 3),
         Text(
           l.aiEditBlurb,
-          style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.mutedForeground,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         for (int index = 0; index < _edited.length; index++) ...<Widget>[
@@ -939,7 +947,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: 3),
         Text(
           l.aiEditsApplied,
-          style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppColors.mutedForeground,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         for (final exercise in _edited) ...<Widget>[
@@ -1094,7 +1105,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           Text(
             l.aiGoToChatHint,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ],
       ),
@@ -1456,7 +1470,10 @@ class _RecommendationStatusBanner extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             body,
-            style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
           if (analysis.frequentExercises.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),

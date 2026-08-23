@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 
 /// `전체` 그래프의 선택·보이는 구간 상태. (#1018)
@@ -77,7 +79,11 @@ class PeriodScrollChart extends StatefulWidget {
     required this.calloutBuilder,
     this.selectedIndex,
     this.onSelected,
-    this.goalOverlay,
+    this.goalBottom,
+    this.goalLabel,
+    this.topGap = 0,
+    this.revealKey,
+    this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
   });
 
@@ -104,11 +110,32 @@ class PeriodScrollChart extends StatefulWidget {
   final int? selectedIndex;
   final void Function(int? i)? onSelected;
 
-  /// 목표선. 칸 전체 폭에 걸쳐 그려지도록 스크롤 안쪽에 얹는다.
-  final Widget? goalOverlay;
+  /// 그래프 바닥에서 목표선까지의 거리. null 이면 목표선을 긋지 않는다.
+  /// 선은 칸 전체 폭에 걸쳐야 하므로 스크롤 **안쪽**에 얹고, 목표치 라벨은
+  /// 밀려도 늘 보이도록 스크롤 **바깥** 왼쪽 칸에 앉힌다. (#1071)
+  final double? goalBottom;
+
+  /// 왼쪽 칸에 앉는 두 줄 라벨(`목표` / 목표치).
+  final String? goalLabel;
+
+  /// 목표치 글씨 모양. 자리는 모든 그래프가 같고 색·굵기만 화면을 따른다.
+  final TextStyle goalLabelStyle;
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
+
+  /// 막대가 바닥에서 다시 자라는 조건. 기본은 칸 수라, 기간이 바뀔 때만 다시
+  /// 자란다. 지표를 바꿔도 다시 자라야 하는 화면(식단 나트륨·당류, #1148)은
+  /// 여기에 그 지표를 함께 넣어 준다.
+  ///
+  /// **막대를 고를 때 바뀌는 값을 넣지 말 것** — 누를 때마다 그래프가 다시
+  /// 자라 눌러 읽는 동작을 방해한다(#1058).
+  final Object? revealKey;
+
+  /// 그래프 위에 얹을 빈 칸. 고른 날의 세로선이 이 칸까지 올라와 **위의 머리
+  /// 카드에 닿는다** — 선이 중간에서 끊기면 그 카드가 어느 막대의 것인지
+  /// 말해 주지 못한다. (#1123)
+  final double topGap;
 
   @override
   State<PeriodScrollChart> createState() => _PeriodScrollChartState();
@@ -143,6 +170,24 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
   @override
   Widget build(BuildContext context) {
     if (widget.count == 0) return SizedBox(height: widget.height);
+    // 목표치 칸은 스크롤 바깥에 둔다 — 안에 두면 옆으로 밀 때 같이 흘러가
+    // 화면에서 사라진다.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        ChartGoalAxis(
+          height: widget.height,
+          label: widget.goalLabel,
+          lineBottom: widget.goalBottom,
+          style: widget.goalLabelStyle,
+        ),
+        const SizedBox(width: chartGoalAxisGap),
+        Expanded(child: _scroller(context)),
+      ],
+    );
+  }
+
+  Widget _scroller(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double viewport = constraints.maxWidth;
@@ -172,30 +217,65 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 SizedBox(
-                  height: widget.height,
+                  height: widget.height + widget.topGap,
                   child: Stack(
                     children: <Widget>[
-                      if (widget.goalOverlay != null) widget.goalOverlay!,
+                      if (widget.goalBottom != null)
+                        GoalLineOverlay(bottom: widget.goalBottom!),
                       if (widget.selectedIndex != null)
                         _SelectionLine(
                           left: slot * widget.selectedIndex! + slot / 2,
-                          height: widget.height,
+                          height: widget.height + widget.topGap,
                         ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: <Widget>[
-                          for (int i = 0; i < widget.count; i++)
-                            SizedBox(
-                              width: slot,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => widget.onSelected?.call(
-                                  widget.selectedIndex == i ? null : i,
-                                ),
-                                child: widget.barBuilder(context, i),
-                              ),
+                      // 막대는 바닥에서 자라 오른다 (#1058). 기간을 바꿔 들어온
+                      // 그림이 그냥 나타나면, 다른 기간에서 넘어왔는지 처음부터
+                      // 그랬는지 구분되지 않는다.
+                      //
+                      // 되감기는 칸 수가 바뀔 때만 한다 — 막대를 고를 때마다
+                      // 다시 자라면 눌러 읽는 동작을 방해한다.
+                      // 막대는 빈 칸 아래에서만 자란다 — 빈 칸은 세로선이
+                      // 머리 카드까지 올라갈 자리다.
+                      // 자라는 막대 줄은 **바닥에 붙인다** (#1200). `Stack` 은
+                      // 자리를 정하지 않은 자식을 위쪽 모서리에 두므로, 높이가
+                      // t 를 따라 커지는 이 줄이 위에 매달린 채 아래로
+                      // 내려왔다 — 막대가 자라는 것이 아니라 그래프가 통째로
+                      // 내려오는 것처럼 보였다.
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: widget.topGap),
+                          child: ChartReveal(
+                            replayKey: widget.revealKey ?? widget.count,
+                            builder: (BuildContext context, double t) => Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: <Widget>[
+                                for (int i = 0; i < widget.count; i++)
+                                  SizedBox(
+                                    width: slot,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => widget.onSelected?.call(
+                                        widget.selectedIndex == i ? null : i,
+                                      ),
+                                      // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
+                                      // 자르지 않으면 막대가 줄어든 상자 밖으로
+                                      // 삐져나와 그대로 다 보인다.
+                                      child: ClipRect(
+                                        key: ValueKey<String>(
+                                          'period-bar-reveal-$i',
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.bottomCenter,
+                                          heightFactor: t,
+                                          child: widget.barBuilder(context, i),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
+                          ),
+                        ),
                       ),
                     ],
                   ),

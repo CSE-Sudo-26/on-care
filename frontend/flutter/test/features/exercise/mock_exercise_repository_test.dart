@@ -62,7 +62,8 @@ void main() {
       final int expectedSessions = days.fold<int>(
         0,
         (int sum, FixtureDay d) =>
-            sum + d.doneExercises.map((FixtureExercise e) => e.type).toSet().length,
+            sum +
+            d.doneExercises.map((FixtureExercise e) => e.type).toSet().length,
       );
       expect(w.sessions.length, expectedSessions);
       expect(w.dailyMinutes, _minutesByWeekday(_friday));
@@ -116,16 +117,22 @@ void main() {
       expect(w.workoutCount, 1);
     });
 
-    test('daily == cardio + strength + stretching for every day', () async {
-      final ExerciseWeek w = await _repo().fetchThisWeek();
-      for (int i = 0; i < w.dailyMinutes.length; i++) {
-        expect(
-          w.cardioMinutes[i] + w.strengthMinutes[i] + w.stretchingMinutes[i],
-          w.dailyMinutes[i],
-          reason: '요일 index $i 유형 합이 일별 총합과 어긋납니다.',
-        );
-      }
-    });
+    test(
+      'daily == cardio + strength + stretching + other for every day',
+      () async {
+        final ExerciseWeek w = await _repo().fetchThisWeek();
+        for (int i = 0; i < w.dailyMinutes.length; i++) {
+          expect(
+            w.cardioMinutes[i] +
+                w.strengthMinutes[i] +
+                w.stretchingMinutes[i] +
+                w.otherMinutes[i],
+            w.dailyMinutes[i],
+            reason: '요일 index $i 유형 합이 일별 총합과 어긋납니다.',
+          );
+        }
+      },
+    );
 
     test('오늘 기록에는 오늘 라벨과 픽스처의 종목 이름이 붙는다', () async {
       final ExerciseWeek w = await _repo().fetchThisWeek();
@@ -228,10 +235,7 @@ void main() {
       expect(after.sessions.length, before.sessions.length); // 개수 불변
       expect(after.totalMinutes, before.totalMinutes + 30);
       expect(after.totalCalories, before.totalCalories + 180);
-      expect(
-        after.strengthMinutes[day],
-        before.strengthMinutes[day] + 30,
-      );
+      expect(after.strengthMinutes[day], before.strengthMinutes[day] + 30);
       expect(after.dailyMinutes[day], before.dailyMinutes[day] + 30);
     });
   });

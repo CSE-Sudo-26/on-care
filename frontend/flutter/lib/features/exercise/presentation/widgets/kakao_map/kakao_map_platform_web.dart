@@ -120,6 +120,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
   Object? _error;
   JSObject? _map;
   final List<JSObject> _markers = <JSObject>[];
+  web.ResizeObserver? _resize;
 
   @override
   void initState() {
@@ -135,6 +136,12 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     unawaited(_initialise());
   }
 
+  @override
+  void dispose() {
+    _resize?.disconnect();
+    super.dispose();
+  }
+
   Future<void> _initialise() async {
     try {
       await _ensureSdkLoaded();
@@ -147,11 +154,8 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   JSObject get _maps => _prop(_global('kakao')!, 'maps')!;
 
-  JSObject _latLng(double lat, double lng) =>
-      (_maps['LatLng'] as JSFunction).callAsConstructor<JSObject>(
-        lat.toJS,
-        lng.toJS,
-      );
+  JSObject _latLng(double lat, double lng) => (_maps['LatLng'] as JSFunction)
+      .callAsConstructor<JSObject>(lat.toJS, lng.toJS);
 
   void _createMap() {
     final JSObject options = JSObject()
@@ -165,14 +169,29 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
     // 플랫폼 뷰가 배치된 뒤 크기가 확정되므로 한 프레임 뒤 다시 계산시킨다.
     // 이걸 빼면 지도가 0×0 으로 잡혀 회색으로만 보인다.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      map.callMethod('relayout'.toJS);
-      map.callMethod(
-        'setCenter'.toJS,
-        _latLng(widget.centerLat, widget.centerLng),
-      );
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _relayout());
+    // 한 프레임 뒤 한 번으로는 모자란다. 시트가 올라오는 동안, 창을 줄였다
+    // 늘릴 때, 목록이 채워지며 폭이 바뀔 때 컨테이너 크기는 계속 달라지는데
+    // 카카오는 생성 시점 크기로 타일을 깔아 둔다 — 그래서 지도가 한쪽(대개
+    // 왼쪽 절반)만 그려지고 나머지는 빈 채로 남았다(#1072). 컨테이너 크기가
+    // 바뀔 때마다 relayout 을 걸어 항상 부모 폭을 채우게 한다.
+    final web.ResizeObserver observer = web.ResizeObserver(
+      ((JSArray<JSAny?> _, web.ResizeObserver _) => _relayout()).toJS,
+    );
+    observer.observe(_container);
+    _resize = observer;
+  }
+
+  /// 컨테이너 크기가 바뀐 뒤 지도에 다시 계산시키고 중심을 되돌린다.
+  /// relayout 만 하면 카카오가 새 크기의 좌상단을 기준으로 잡아 중심이 밀린다.
+  void _relayout() {
+    final JSObject? map = _map;
+    if (map == null || !mounted) return;
+    map.callMethod('relayout'.toJS);
+    map.callMethod(
+      'setCenter'.toJS,
+      _latLng(widget.centerLat, widget.centerLng),
+    );
   }
 
   /// 기존 마커를 지우고 [widget.markers] 로 다시 찍는다.

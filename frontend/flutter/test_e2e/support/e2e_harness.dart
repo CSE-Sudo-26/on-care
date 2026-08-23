@@ -34,14 +34,19 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:oncare/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String memberEmail = 'minsu@oncare.com';
 const String otherMemberEmail = 'jisu@oncare.com';
+
 /// 픽스처 전용. 정원 1 짜리 경쟁용 슬롯을 여는 데만 쓴다.
 const String trainerEmail = 'trainer@oncare.com';
 const String trainerId = 'trainer-demo';
+
+/// `trainer-demo` 가 소속된 헬스장. 상담 동선이 이 헬스장 상세를 거친다.
+const String consultationGymId = 'gym-oncare-sinchon';
 const String memberId = 'user-demo';
 const String otherMemberId = 'user-jisu';
 const String demoPassword = 'oncare123';
@@ -185,18 +190,17 @@ class E2eApi {
 
   /// 상담을 API 로 만든다. **UI 검증용이 아니라** 예외 케이스(중복·권한)용이다 —
   /// 그쪽은 화면이 아니라 서버 규칙을 보는 자리다.
-  Map<String, Object?> _consultationBody(String trainerId) =>
-      <String, Object?>{
-        'target_type': 'trainer',
-        'trainer_id': trainerId,
-        'exercise_goal': 'strength',
-        'health_purpose_type': 'rehab',
-        'preferred_date': DateTime.now()
-            .toIso8601String()
-            .substring(0, 10),
-        'preferred_time_slot': 'evening',
-        'message': 'E2E 예외 케이스',
-      };
+  Map<String, Object?> _consultationBody(String trainerId) => <String, Object?>{
+    'target_type': 'trainer',
+    'trainer_id': trainerId,
+    'exercise_goal': 'strength',
+    'health_purpose_type': 'rehab',
+    'preferred_date': DateTime.now().toIso8601String().substring(0, 10),
+    'preferred_time_slot': 'evening',
+    'message': 'E2E 예외 케이스',
+    // 동의 없이는 서버가 422 다 (#1022).
+    'data_sharing_consent': true,
+  };
 
   Future<Map<String, dynamic>> createConsultation({
     required String trainerId,
@@ -266,10 +270,7 @@ class E2eApi {
   }
 
   Future<void> deleteTrainerSession(String sessionId) async {
-    await _dio.delete<Object?>(
-      '/trainer/schedule/$sessionId',
-      options: _auth,
-    );
+    await _dio.delete<Object?>('/trainer/schedule/$sessionId', options: _auth);
   }
 
   Future<List<Map<String, dynamic>>> myReservations() =>
@@ -355,21 +356,19 @@ class E2eApi {
   Future<List<Map<String, dynamic>>> trainerThread(String memberId) =>
       _list('/trainer/clients/$memberId/chat');
 
-  /// 픽스처용 — 트레이너 계정으로 정원 [capacity] 짜리 슬롯을 연다.
-  ///
-  /// 마지막 좌석 경쟁은 **정원이 1 인 자리**에서만 정직하게 재현된다. 담당 회원 계정이
-  /// 둘뿐이라, 정원 2 짜리 자리에서는 한쪽이 먼저 자리를 채우는 순간 다른 쪽의 두 번째
-  /// 요청이 '중복' 으로 걸려 경쟁이 아니게 된다.
+  /// 픽스처용 — 트레이너 계정으로 슬롯을 연다. 정원은 늘 1이다(#1012) — 서버가
+  /// 무엇을 보내든 그렇게 만든다. [sessionType] 만 고른다(`1:1 PT`/`상담`,
+  /// #1083).
   Future<Map<String, dynamic>> createSlotAsTrainer({
     required DateTime startsAt,
-    required int capacity,
+    String sessionType = '1:1 PT',
   }) async {
     final Response<Map<String, dynamic>> res = await _dio
         .post<Map<String, dynamic>>(
           '/trainer/reservation-slots',
           data: <String, Object?>{
             'starts_at': startsAt.toUtc().toIso8601String(),
-            'capacity': capacity,
+            'session_type': sessionType,
           },
           options: _auth,
         );
@@ -543,7 +542,9 @@ String _describeOverflow(FlutterErrorDetails details) {
 void _watchForOverflow() {
   final void Function(FlutterErrorDetails)? logging = FlutterError.onError;
   FlutterError.onError = (FlutterErrorDetails details) {
-    if (_isRenderOverflow(details)) _renderOverflows.add(_describeOverflow(details));
+    if (_isRenderOverflow(details)) {
+      _renderOverflows.add(_describeOverflow(details));
+    }
     logging?.call(details);
   };
 
@@ -646,32 +647,49 @@ Future<void> openTrainerChat(WidgetTester tester) async {
   expect(page, findsWidgets, reason: '[$e2ePhase] 트레이너 채팅 화면이 열리지 않았습니다.');
 }
 
-/// 헬스장 탭 → 추천 트레이너 카드 → 상세 → 상담 신청 폼.
+/// 헬스장 탭(= 헬스장 찾기) → 헬스장 카드 → 상세 → 상담 보낼 트레이너 고르기 →
+/// 상담 신청 폼.
 ///
 /// 폼까지 UI 로 들어간다. 라우트를 직접 push 하면 "회원이 상담을 신청할 수 있다" 가
 /// 아니라 "그 화면이 열린다" 만 검증하게 된다. (#640)
+///
+/// 연결된 헬스장이 없는 회원의 헬스장 탭은 **찾기 화면 자체**다(#1133) — 예전의
+/// 추천 트레이너 레일은 그 상태에서 더 이상 없다.
 Future<void> openConsultationForm(WidgetTester tester, String targetId) async {
   await openGymTab(tester);
-  final Finder list = find.byKey(const Key('trainer-recommendation-list'));
-  await pumpUntil(tester, list, step: '추천 트레이너 목록');
+  final Finder card = find.byKey(const Key('gym-card-$consultationGymId'));
+  await pumpUntil(tester, find.byType(GymFinderView), step: '헬스장 찾기 화면');
 
   // 카드는 화면에 들어오기 전까지 **만들어지지 않는다**. `ensureVisible` 은 이미
   // 있는 위젯만 옮기므로, 지연 목록에서는 스크롤로 만들어 내야 한다.
-  final Finder card = find.byKey(ValueKey<String>('trainer-card-$targetId'));
-  await tester.scrollUntilVisible(
-    card,
-    240,
-    scrollable: find.descendant(of: list, matching: find.byType(Scrollable)),
-    maxScrolls: 60,
-  );
+  if (card.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      card,
+      240,
+      scrollable: find.descendant(
+        of: find.byType(GymFinderView),
+        matching: find.byType(Scrollable),
+      ),
+      maxScrolls: 60,
+    );
+  }
+  await tester.ensureVisible(card);
   await tester.pump();
   await tester.tap(card);
 
-  final Finder start = find.byKey(const Key('consult-start'));
-  await pumpUntil(tester, start, step: '상담 신청 버튼');
+  final Finder start = find.byKey(const Key('gym-consult-start'));
+  await pumpUntil(tester, start, step: '헬스장 상담 신청 버튼');
   await tester.ensureVisible(start);
   await tester.pump();
   await tester.tap(start);
+
+  // 상담은 트레이너 한 사람에게 간다 — 소속 트레이너 중에서 고른다.
+  final Finder pick = find.byKey(Key('gym-consult-trainer-$targetId'));
+  await pumpUntil(tester, pick, step: '상담 트레이너 고르기');
+  await tester.ensureVisible(pick);
+  await tester.pump();
+  await tester.tap(pick);
+
   // 폼의 **맨 위** 를 기다린다. 제출 버튼은 목록 끝이라 아직 만들어지지 않았다.
   await pumpUntil(
     tester,
@@ -711,7 +729,6 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
 Future<void> submitConsultation(
   WidgetTester tester, {
   required int goalIndex,
-  required int purposeIndex,
   required int timeIndex,
   required String message,
 }) async {
@@ -724,8 +741,20 @@ Future<void> submitConsultation(
     await tester.pump();
   }
 
+  // 데이터 공유 동의 없이는 보낼 수 없다 (#1022) — 수락되는 순간 넘어가는 것이
+  // 회원의 건강 기록이라, 신청 화면에서 동의를 받는다.
+  //
+  // 폼을 스크롤하기 **전에** 짚는다. 폼이 지연 목록이라 아래로 내려가면 맨 위의
+  // 동의 줄은 트리에서 사라진다.
+  final Finder consent = find.descendant(
+    of: find.byKey(const Key('consult-data-sharing-notice')),
+    matching: find.byType(Checkbox),
+  );
+  await pumpUntil(tester, consent, step: '데이터 공유 동의');
+  await tester.tap(consent);
+  await tester.pump();
+
   await tapChip('consult-goal', goalIndex);
-  await tapChip('consult-purpose', purposeIndex);
 
   final Finder date = await _revealInForm(
     tester,

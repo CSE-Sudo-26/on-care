@@ -233,12 +233,14 @@ void main() {
     expect(find.text(l.exConsultButton), findsNothing);
     expect(find.text(l.exViewConsultationRequest), findsNothing);
     expect(find.text(l.exMyGymSection), findsOneWidget);
+    // 담당 트레이너 이름은 이제 카드 안에 한 줄로 있다 (#1187) — 예전에는
+    // 예약 패널 머리에서만 스쳐 지나갔다.
     expect(
       find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),
-      findsNothing,
+      findsWidgets,
     );
 
-    expect(find.text(l.exAiSlotTitle), findsOneWidget);
+    expect(find.text(l.exTrainerAvailability(_trainer.name)), findsOneWidget);
     const double expectedBottomInset = 17; // 16px padding + 1px border.
     expect(
       tester.getBottomRight(myGymCard()).dy -
@@ -247,7 +249,7 @@ void main() {
     );
   });
 
-  testWidgets('gym finder result leads to the gym detail, not a fake send', (
+  testWidgets('연결된 헬스장이 없으면 찾기 화면이 그 자리에 있다 (#1133)', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(tester, hasMyGym: false);
@@ -255,14 +257,13 @@ void main() {
       tester.element(find.byType(Scaffold).first),
     );
 
-    await tester.tap(find.text(l.exFindGym));
-    await tester.pumpAndSettle();
-
-    expect(find.text('트레이너 채팅'), findsNothing);
+    // 찾기 버튼을 눌러 시트를 여는 단계가 없다 — 화면이 곧 찾기다.
+    expect(find.text(l.exFindGym), findsNothing);
+    expect(find.text(l.exNearbyGyms), findsOneWidget);
     // '건강 요약 전달' 은 보내는 곳 없이 성공 스낵바만 띄웠다 — 실제로 동작하는
     // 다음 걸음(헬스장 상세 → 상담 신청)으로 바꿨다(#787).
     expect(find.textContaining('건강 요약'), findsNothing);
-    expect(find.text(l.exGymDetailHint), findsWidgets);
+    expect(find.text('트레이너 채팅'), findsNothing);
   });
 
   testWidgets('pending consultation shows one action and reuses status UI', (
@@ -315,12 +316,14 @@ void main() {
     expect(find.text(_coach.name), findsOneWidget);
   });
 
-  testWidgets('connected trainer can open chat without a member gym link', (
+  testWidgets('연결 헬스장이 없으면 탭 안에 채팅 버튼을 두지 않는다 (#1132)', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(tester, hasMyGym: false, coach: _coach);
 
-    expect(find.byKey(const Key('gymTrainerChatButton')), findsOneWidget);
+    // 이 상태에서 할 일은 헬스장을 찾는 것이다. 담당 트레이너와의 채팅은
+    // 모든 탭 헤더에 있는 채팅 버튼이 맡는다.
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
   });
 
   testWidgets(
@@ -523,7 +526,7 @@ void main() {
     // 헬스장 카드는 남지만, 없는 트레이너의 빈 시간·예약 버튼은 사라진다.
     expect(myGymCard(), findsOneWidget);
     expect(reservationPanel(), findsNothing);
-    expect(find.text(l.exAiSlotTitle), findsNothing);
+    expect(find.text(l.exTrainerAvailability(_trainer.name)), findsNothing);
     // 내 카드에서만 빠질 뿐, 추천 트레이너 레일에는 그대로 남아 있어야 한다.
     expect(
       find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),

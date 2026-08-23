@@ -29,6 +29,20 @@ String healthPurposeToWire(HealthPurposeType p) => switch (p) {
   HealthPurposeType.other => 'other',
 };
 
+/// 회원이 고르는 목표는 하나뿐이다("운동 목표") — 예전에는 건강관리 목적을
+/// 따로 또 고르게 했는데, 둘이 왜 다른 선택이어야 하는지 회원 입장에서
+/// 구분할 근거가 없었다(#1112). 서버 계약(`health_purpose_type`)은 그대로
+/// 두고, 화면에서 고른 운동 목표로부터 이 값을 자동으로 채운다.
+HealthPurposeType healthPurposeFromExerciseGoal(ExerciseGoal goal) =>
+    switch (goal) {
+      ExerciseGoal.weightLoss => HealthPurposeType.weight,
+      ExerciseGoal.strength => HealthPurposeType.general,
+      ExerciseGoal.fitness => HealthPurposeType.general,
+      ExerciseGoal.posture => HealthPurposeType.rehab,
+      ExerciseGoal.health => HealthPurposeType.general,
+      ExerciseGoal.other => HealthPurposeType.other,
+    };
+
 String preferredTimeSlotToWire(PreferredTimeSlot t) => switch (t) {
   PreferredTimeSlot.morning => 'morning',
   PreferredTimeSlot.afternoon => 'afternoon',
@@ -47,6 +61,7 @@ class ConsultationDraft {
     required this.preferredDate,
     required this.preferredTimeSlot,
     required this.message,
+    this.dataSharingConsent = false,
   });
 
   /// 상담을 받을 트레이너. 헬스장에서 시작해도 소속 트레이너 중 한 명을 고른 뒤에
@@ -61,6 +76,12 @@ class ConsultationDraft {
   final PreferredTimeSlot preferredTimeSlot;
   final String? message;
 
+  /// 식단·운동·신체 정보를 이 트레이너에게 보여 주는 데 동의했는가. (#1022)
+  ///
+  /// 신청은 회원이 하고 연결은 나중에 트레이너가 수락하며 만들어진다. 회원이
+  /// 그 자리에 없으므로 동의는 **신청할 때** 받는다.
+  final bool dataSharingConsent;
+
   Map<String, Object?> toJson() {
     // other 목적에는 상세가 있어야 한다(서버 422). 여기서 막지 않으면 원인을 찾기
     // 어려운 422 로 돌아온다.
@@ -70,6 +91,11 @@ class ConsultationDraft {
     if (healthPurposeType == HealthPurposeType.other &&
         (healthPurposeDetail == null || healthPurposeDetail!.trim().isEmpty)) {
       throw ArgumentError('기타 건강관리 목적에는 상세 내용이 필요합니다.');
+    }
+    if (!dataSharingConsent) {
+      // 서버도 막지만(400) 여기서 먼저 막는다 — 동의 없이 보낸 요청이 트레이너
+      // 인박스에 남았다가 수락되면, 회원이 동의한 적 없는 기록이 넘어간다.
+      throw ArgumentError('식단·운동 기록 공유에 동의해야 상담을 신청할 수 있습니다.');
     }
     return _json();
   }
@@ -87,6 +113,7 @@ class ConsultationDraft {
         '${preferredDate.day.toString().padLeft(2, '0')}',
     'preferred_time_slot': preferredTimeSlotToWire(preferredTimeSlot),
     'message': message,
+    'data_sharing_consent': dataSharingConsent,
   };
 }
 

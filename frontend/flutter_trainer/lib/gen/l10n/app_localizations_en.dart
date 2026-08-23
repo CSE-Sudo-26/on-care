@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSave => 'Save';
 
   @override
+  String get actionSaved => 'Saved';
+
+  @override
   String get actionCancel => 'Cancel';
 
   @override
@@ -231,10 +234,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashTitle => 'Dashboard';
 
   @override
-  String get dashAddSchedule => 'Add session';
+  String get dashActivityRecommendRoutine =>
+      'Try adjusting the routine in Program.';
 
   @override
-  String get dashCreateAiRoutine => 'Create AI routine';
+  String get dashActivityRecommendChat => 'Try checking in over Messages.';
+
+  @override
+  String get dashActivityRecommendDiet => 'Try leaving feedback in Diet.';
+
+  @override
+  String get dashActivityTabProgram => 'Program';
+
+  @override
+  String get dashActivityTabChat => 'Messages';
+
+  @override
+  String get dashActivityTabDiet => 'Diet';
 
   @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
@@ -283,10 +299,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashCheckSodiumCompletion => 'Check diet & completion';
 
   @override
-  String get dashAiSummaryTitle => 'AI coaching summary';
+  String get dashMessages => 'Messages';
 
   @override
-  String get dashToday => 'Today';
+  String get dashChurnRisk => 'Churn risk';
+
+  @override
+  String get dashChurnRiskNone => 'No churn risk';
+
+  @override
+  String get dashChurnRiskCheck => 'Review churn signals';
+
+  @override
+  String get dashChurnRiskTitle => 'Clients at churn risk';
+
+  @override
+  String get dashChurnRiskEmpty => 'No clients are at churn risk right now.';
+
+  @override
+  String get dashActivityDifficultyTitle =>
+      'Low completion / churn risk detected';
+
+  @override
+  String dashActivityDifficultyDesc(String names) {
+    return '$names have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.';
+  }
+
+  @override
+  String get dashActivityInactiveTitle => 'Inactive 7+ days';
+
+  @override
+  String dashActivityInactiveDesc(String names) {
+    return '$names haven\'t logged a workout in the last 7 days. Reach out before it turns into churn.';
+  }
+
+  @override
+  String get dashActivityDietFeedbackTitle => 'Diet feedback pending';
+
+  @override
+  String dashActivityDietFeedbackDesc(String names) {
+    return '$names have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.';
+  }
+
+  @override
+  String dashActivityMoreClients(String shown, int count) {
+    return '$shown and $count more';
+  }
+
+  @override
+  String get dashAiSummaryTitle => 'AI diagnosis';
 
   @override
   String get dashAiNoClients =>
@@ -446,7 +507,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashNoScheduleToday => 'Nothing scheduled today';
 
   @override
-  String get dashEmptySlot => 'Open slot';
+  String dashScheduleNowLabel(String time) {
+    return 'Now $time';
+  }
+
+  @override
+  String dashScheduleNextSession(String time, String name) {
+    return 'Next: $time · $name';
+  }
+
+  @override
+  String dashScheduleMinutesLeft(int minutes) {
+    return 'in $minutes min';
+  }
+
+  @override
+  String get dashPreparePt => 'Prepare PT';
+
+  @override
+  String get dashLeaveMemo => 'Leave a memo';
+
+  @override
+  String get dashSessionSent => 'Sent';
+
+  @override
+  String get dashSessionPrepared => 'Prepared';
+
+  @override
+  String get dashSessionNoteWritten => 'Written';
+
+  @override
+  String get dashSessionSentNo => 'Not sent';
+
+  @override
+  String get dashSessionPreparedNo => 'Not prepared';
+
+  @override
+  String get dashSessionNoteNotWritten => 'Not written';
 
   @override
   String get weekdayMon => 'Mon';
@@ -487,10 +584,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsManagementAttention => 'Needs attention';
 
   @override
-  String get clientsSortPriority => 'Sort: priority';
+  String get clientsFiltersClearAll => 'Clear all';
 
   @override
-  String get clientsSortName => 'Sort: name';
+  String get clientsSortLabel => 'Sort';
+
+  @override
+  String get clientsSortPriority => 'Needs attention first';
+
+  @override
+  String get clientsSortName => 'Name A–Z';
+
+  @override
+  String get clientsSortNameDescending => 'Name Z–A';
+
+  @override
+  String get clientsSortRecentMessage => 'Recent conversations';
+
+  @override
+  String get clientsSortActiveFirst => 'Active clients first';
+
+  @override
+  String get clientsFilterLabel => 'Filters';
 
   @override
   String clientsToolbarCount(int shown, int active) {
@@ -530,9 +645,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get memberHealthSaveFailed =>
       'Couldn\'t save the member profile. Please try again';
-
-  @override
-  String get memberHealthTitle => 'Body and goals';
 
   @override
   String get memberHealthSaving => 'Saving…';
@@ -912,10 +1024,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultExerciseGoal => 'Training goal';
 
   @override
-  String get consultHealthPurpose => 'Health purpose';
+  String get consultPreferredTime => 'Preferred time';
 
   @override
-  String get consultPreferredTime => 'Preferred time';
+  String get consultMessage => 'Message';
 
   @override
   String get consultReject => 'Decline';
@@ -941,6 +1053,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workoutRecords => 'Workout log';
+
+  @override
+  String get workoutRecordsShowMore => 'Show more';
+
+  @override
+  String get workoutRecordsShowLess => 'Show less';
 
   @override
   String get workoutLoadFailed => 'Couldn\'t load the workout log';
@@ -1001,10 +1119,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietEmpty => 'No meals logged yet';
 
   @override
-  String get dietTodaySummary => 'Today\'s nutrition';
+  String get dietDayEmpty => 'No record';
+
+  @override
+  String get dietMacros => 'Macros';
 
   @override
   String get clientNutritionSummary => 'Nutrition summary';
+
+  @override
+  String get dietCalorieIntake => 'Calories today';
 
   @override
   String get dietAchieveRate => 'Progress';
@@ -1025,7 +1149,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dietAiAnalysis => 'AI analysis';
+  String get aiAnalysis => 'AI analysis';
+
+  @override
+  String get aiPeriodAnalysis => 'AI period analysis';
+
+  @override
+  String get aiAllAnalysis => 'AI all-time analysis';
 
   @override
   String dietAiOverSodium(int over) {
@@ -1078,10 +1208,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsSubtitle =>
-      'Summarize this week\'s changes and prepare a report to share';
-
-  @override
-  String get reportsPrevWeek => 'Previous';
+      'Review the week\'s changes and share them with your client';
 
   @override
   String get reportsLoadFailed => 'Couldn\'t load reports';
@@ -1136,6 +1263,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientPeriodGoal => 'Goal';
+
+  @override
+  String get exBurnTodayTitle => 'Burned today';
+
+  @override
+  String get exBurnWeekTitle => 'Burned this week';
+
+  @override
+  String get exBurnMonthTitle => 'Burned this month';
+
+  @override
+  String get exBurnDayTitle => 'Burned';
+
+  @override
+  String get exBurnAllTitle => 'Average burned';
+
+  @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return 'Week $week, $month/';
+  }
+
+  @override
+  String exStreakCheer(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days in a row!',
+      one: '1 day in a row!',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exStreakStart => 'No streak yet';
+
+  @override
+  String get exTypeOther => 'Other';
+
+  @override
+  String exSetsValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
 
   @override
   String clientPeriodLoggedDays(int days) {
@@ -1197,6 +1372,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsCompletionAvg => 'Workout completion';
 
   @override
+  String get reportsWeeklyCompletion => 'Weekly completion';
+
+  @override
   String get reportsCompletionByDay => 'Weekly workout completion';
 
   @override
@@ -1219,11 +1397,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsDietTrend => 'Weekly diet trend';
-
-  @override
-  String reportsSodiumOverInline(int days) {
-    return '$days days over sodium';
-  }
 
   @override
   String workoutDoneOfTotal(int total, int done) {
@@ -1259,18 +1432,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportBodySessions(int done, int booked) {
-    return 'We got through $done of $booked PT sessions.';
-  }
-
-  @override
   String reportBodyCompletionGood(int avg) {
-    return 'You kept up well this week — $avg% of your workouts done.';
+    return 'You kept up well — $avg% of your workouts done.';
   }
 
   @override
   String reportBodyCompletionLow(int avg) {
-    return 'Workout completion came in at $avg% this week. Sounds like a busy one.';
+    return 'Workout completion came in at $avg%. Sounds like a busy one.';
   }
 
   @override
@@ -1279,23 +1447,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportBodySodiumOver(int avg, int days) {
-    return 'Sodium averaged ${avg}mg a day, over the 2,000mg target on $days days. Leaving half the broth behind saves 400-500mg a day.';
+  String reportBodySodiumOver(String avg, String target, int days) {
+    return 'Sodium averaged ${avg}mg a day, and went over the ${target}mg target on $days days. Leaving half the broth behind saves 400-500mg a day.';
   }
 
   @override
-  String reportBodySodiumOk(int avg) {
-    return 'Sodium averaged ${avg}mg a day — comfortably inside your target.';
+  String reportBodySodiumOk(String avg, String target) {
+    return 'Sodium averaged ${avg}mg a day — comfortably inside the ${target}mg target.';
   }
 
   @override
-  String reportBodyCalories(int avg) {
+  String reportBodyCalories(String avg) {
     return 'Calories averaged ${avg}kcal a day.';
   }
 
   @override
   String get reportBodyPraise =>
-      'Great week — let\'s keep this pace next week!';
+      'Great work — let\'s keep this pace next week!';
 
   @override
   String get reportBodyEncourage =>
@@ -1303,10 +1471,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportBodyNoRecords =>
-      'There\'s nothing logged this week, so nothing to sum up. Let\'s plan next week\'s start together.';
+      'There\'s nothing logged for this week, so nothing to sum up. Let\'s plan next week\'s start together.';
 
   @override
   String get schedTitle => 'Schedule';
+
+  @override
+  String get schedDetailTitle => 'Session detail';
 
   @override
   String get schedDeleteTitle => 'Delete session';
@@ -1330,12 +1501,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get schedEmptyWeek => 'Nothing scheduled this week.';
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name (new)';
-  }
+  String get schedEmptyWeek => 'Nothing scheduled this week.';
 
   @override
   String get schedSlots => 'Booking slots';
@@ -1349,20 +1520,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schedEmptyDay =>
       'Nothing scheduled for this day.\nUse New session above to add one.';
-
-  @override
-  String get schedCompleteTitle => 'Mark session complete';
-
-  @override
-  String schedCompleteBody(String time, String name) {
-    return 'This marks the $time session with $name complete and logs it to their workout history.';
-  }
-
-  @override
-  String get schedNoteOptional => 'Trainer\'s note (optional)';
-
-  @override
-  String get schedCompleteAction => 'Mark complete';
 
   @override
   String get schedSaveFailed => 'Couldn\'t save the session. Please try again';
@@ -1443,6 +1600,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEditNote => 'Edit note';
 
   @override
+  String get schedAddNote => 'Add note';
+
+  @override
   String get schedNoNote => 'No note yet';
 
   @override
@@ -1520,9 +1680,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotPastTime =>
       'Booking slots can only be opened for future times.';
 
@@ -1536,23 +1693,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotStartTime => 'Start time';
 
   @override
-  String get slotCapacity => 'Capacity';
-
-  @override
-  String slotBookedNow(int count) {
-    return '$count booked';
-  }
-
-  @override
   String get slotUpdated => 'Booking slot updated.';
 
   @override
   String get slotCloseTitle => 'Close booking slot';
 
   @override
-  String slotCloseBody(int count) {
-    return 'The $count existing bookings stay; only new bookings stop.';
-  }
+  String get slotCloseBody =>
+      'Any existing booking stays; only new bookings stop.';
 
   @override
   String get slotClosed => 'New bookings closed.';
@@ -1579,14 +1727,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotEmpty => 'No booking slots open on this day.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return 'Closed · $booked booked';
-  }
+  String get slotClosedSummary => 'Closed';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '$booked booked · $remaining left';
-  }
+  String get slotBookedSummary => 'Booked';
+
+  @override
+  String get slotOpenSummary => 'Open';
 
   @override
   String get slotCloseAction => 'Close bookings';
@@ -2105,9 +2252,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiWithinTarget => ' · within target';
-
-  @override
   String get aiRecentRoutine => 'Recent routine';
 
   @override
@@ -2191,24 +2335,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalOther => 'Other';
 
   @override
-  String get purposeWeight => 'Weight management';
-
-  @override
-  String get purposeChronic => 'Chronic condition';
-
-  @override
-  String get purposeRehab => 'Rehabilitation';
-
-  @override
-  String get purposeGeneral => 'General wellbeing';
-
-  @override
-  String get purposeNone => 'None';
-
-  @override
-  String get purposeOther => 'Other';
-
-  @override
   String get slotMorning => 'Morning';
 
   @override
@@ -2285,9 +2411,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAskFailed => 'Couldn\'t send your question';
 
   @override
-  String get slotCapacityRange => 'Capacity must be between 1 and 100.';
-
-  @override
   String get slotFutureOnly =>
       'Booking slots can only be set for future times.';
 
@@ -2295,8 +2418,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slotNotFound => 'Booking slot not found.';
 
   @override
-  String get slotCapacityBelowBooked =>
-      'Capacity can\'t be lower than the number already booked.';
+  String get slotTypeLockedByBooking =>
+      'Can\'t change the type of a slot that\'s already booked.';
+
+  @override
+  String get slotSessionType => 'Type';
 
   @override
   String get authErrNotTrainer => 'Please sign in with a trainer account.';
@@ -2389,6 +2515,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineAlreadyGone => 'That routine is already gone';
+
+  @override
+  String get workoutPendingTitle => 'Not done yet';
+
+  @override
+  String get workoutUndatedTitle => 'Records without a date';
+
+  @override
+  String get workoutPendingCancel => 'Cancel assignment';
 
   @override
   String get routineUpdateFailed =>
@@ -2536,7 +2671,101 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashTasksEmpty => 'There are no new coaching tasks to review.';
+  String get dashTaskProgressTitle => 'Task completion';
+
+  @override
+  String get dashTaskProgressToday => 'Done today';
+
+  @override
+  String get dashTaskProgressCarriedOver => 'Done (carried over)';
+
+  @override
+  String get dashTodoConsultation => 'Consult';
+
+  @override
+  String get dashTodoDiet => 'Diet';
+
+  @override
+  String get dashTodoWorkout => 'Workout';
+
+  @override
+  String get dashTodoProgram => 'Program';
+
+  @override
+  String get dashTodoReport => 'Report';
+
+  @override
+  String dashTodoConsultationSubtitle(int month, int day) {
+    return 'Consultation request for $month/$day';
+  }
+
+  @override
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg) {
+    return 'Sodium ${sodiumMg}mg · target ${targetMg}mg';
+  }
+
+  @override
+  String dashTodoSugarSubtitle(int sugarG, int targetG) {
+    return 'Sugar ${sugarG}g · target ${targetG}g';
+  }
+
+  @override
+  String get dashTodoCompletionSubtitle =>
+      'Low completion · check recent records';
+
+  @override
+  String get dashTodoProgramSubtitle => 'No recent program sent';
+
+  @override
+  String get dashTodoReportSubtitle => 'This week\'s report is due';
+
+  @override
+  String get dashTaskDismissTitle => 'Delete this item?';
+
+  @override
+  String get dashTaskDismissBody =>
+      'It only disappears from the task list. Actually handling it (consultation, program, report) still happens on its own screen.';
+
+  @override
+  String get dashTaskCarriedOverTitle => 'Carried over';
+
+  @override
+  String get dashTaskCategoryDone => 'Done';
+
+  @override
+  String dashTaskCategoryRemaining(int count) {
+    return '+$count';
+  }
+
+  @override
+  String dashTaskUncheckTitle(String name) {
+    return 'Undo completion of \'$name\'?';
+  }
+
+  @override
+  String get dashTaskUncheckBody =>
+      'It also drops off the task progress chart.';
+
+  @override
+  String get dashTaskUncheckConfirm => 'Undo completion';
+
+  @override
+  String get churnNoRecentWorkout => 'No workout logged in 7 days';
+
+  @override
+  String get churnNoRecentFeedback => 'No trainer feedback in 7 days';
+
+  @override
+  String get churnConsecutiveCancel => '2 consecutive cancellations/no-shows';
+
+  @override
+  String get churnDietStopped => 'Diet logging stopped';
+
+  @override
+  String get churnGoalStagnant => 'Goal metric stagnant long-term';
+
+  @override
+  String get churnUnresolvedRequest => 'Unanswered message';
 
   @override
   String get navMessages => 'Messages';
@@ -2547,9 +2776,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesLoadFailed => 'Couldn\'t load conversations.';
-
-  @override
-  String get messagesConversations => 'Conversations';
 
   @override
   String get messagesEmpty => 'No conversations match these filters.';
@@ -2588,15 +2814,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientQuickProgram => 'Program';
 
   @override
+  String get clientQuickReport => 'Report';
+
+  @override
   String get clientHealthGoals => 'Body profile & goals';
 
   @override
-  String get clientTrainerMemo => 'Memo';
+  String get clientProfileSectionTitle => 'Body, goals & memo';
 
   @override
-  String clientTrainerMemoTitle(String name) {
-    return 'Memos on $name';
-  }
+  String get clientTrainerMemo => 'Memo';
 
   @override
   String get clientTrainerMemoHint =>
@@ -2701,20 +2928,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get followUpCompleteFailed =>
       'Couldn\'t mark it done. Please try again.';
-
-  @override
-  String get dashTaskReply => 'Reply';
-
-  @override
-  String get dashTaskDiet => 'Diet';
-
-  @override
-  String get dashTaskWorkout => 'Workout';
-
-  @override
-  String dashTaskReview(String alert, String name) {
-    return 'Review $name: $alert';
-  }
 
   @override
   String programEditorDefaultName(String goal) {
@@ -3000,13 +3213,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRecentWeeks => 'Last 4 weekly averages';
 
   @override
-  String chartGoalLabel(String value) {
-    return 'Goal\n$value';
+  String get reportsWeekTotal => 'Week total';
+
+  @override
+  String reportsGoalOf(String value) {
+    return 'Goal $value';
   }
 
   @override
-  String reportsGoalMarker(String value) {
-    return '│ Goal $value';
+  String get reportsCompareWith => 'vs last week';
+
+  @override
+  String reportsMoreExercises(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String reportsRecordedDays(int days) {
+    return '$days days logged';
+  }
+
+  @override
+  String reportsAverageChip(String value) {
+    return 'Avg $value';
+  }
+
+  @override
+  String chartGoalLabel(String value) {
+    return 'Goal\n$value';
   }
 
   @override
@@ -3016,6 +3250,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsAiTitle => 'AI coaching assistant · Report summary';
+
+  @override
+  String get reportsAiNextWeek => 'Next week\'s coaching';
+
+  @override
+  String get reportsActionSodium =>
+      'Ask them to leave half the broth and the pickled sides.';
+
+  @override
+  String reportsActionSugar(String target) {
+    return 'Some days went over the ${target}g sugar target. Start with drinks and snacks.';
+  }
+
+  @override
+  String get reportsActionLowCompletion =>
+      'Drop the routine a notch so they finish it first.';
+
+  @override
+  String get reportsActionHighCompletion =>
+      'Good pace. Add a set or a little weight next week.';
+
+  @override
+  String reportsActionSkipped(String names) {
+    return 'Prepare alternatives for $names for the next session.';
+  }
+
+  @override
+  String reportsActionUnlogged(int days) {
+    return '$days days went unlogged. Build the logging habit first.';
+  }
+
+  @override
+  String reportsActionCalories(String target) {
+    return 'Intake is under the ${target}kcal target. Suggest one protein-led meal.';
+  }
 
   @override
   String get reportsAiGenerated => 'AI generated';
@@ -3225,10 +3494,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get a11yRemoveCertification => 'Remove certification';
 
   @override
-  String get a11yPrevDay => 'Previous day';
+  String get a11yPrevWeek => 'Previous week';
 
   @override
-  String get a11yNextDay => 'Next day';
+  String get a11yNextWeek => 'Next week';
 
   @override
   String get a11ySendMessage => 'Send message';

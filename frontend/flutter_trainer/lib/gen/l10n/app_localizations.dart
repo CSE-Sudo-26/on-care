@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get actionSave;
 
+  /// No description provided for @actionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get actionSaved;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:
@@ -506,17 +512,41 @@ abstract class AppLocalizations {
   /// **'Dashboard'**
   String get dashTitle;
 
-  /// No description provided for @dashAddSchedule.
+  /// No description provided for @dashActivityRecommendRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Add session'**
-  String get dashAddSchedule;
+  /// **'Try adjusting the routine in Program.'**
+  String get dashActivityRecommendRoutine;
 
-  /// No description provided for @dashCreateAiRoutine.
+  /// No description provided for @dashActivityRecommendChat.
   ///
   /// In en, this message translates to:
-  /// **'Create AI routine'**
-  String get dashCreateAiRoutine;
+  /// **'Try checking in over Messages.'**
+  String get dashActivityRecommendChat;
+
+  /// No description provided for @dashActivityRecommendDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Try leaving feedback in Diet.'**
+  String get dashActivityRecommendDiet;
+
+  /// No description provided for @dashActivityTabProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get dashActivityTabProgram;
+
+  /// No description provided for @dashActivityTabChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get dashActivityTabChat;
+
+  /// No description provided for @dashActivityTabDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get dashActivityTabDiet;
 
   /// No description provided for @dashLoadFailed.
   ///
@@ -602,17 +632,89 @@ abstract class AppLocalizations {
   /// **'Check diet & completion'**
   String get dashCheckSodiumCompletion;
 
+  /// No description provided for @dashMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get dashMessages;
+
+  /// No description provided for @dashChurnRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Churn risk'**
+  String get dashChurnRisk;
+
+  /// No description provided for @dashChurnRiskNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No churn risk'**
+  String get dashChurnRiskNone;
+
+  /// No description provided for @dashChurnRiskCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Review churn signals'**
+  String get dashChurnRiskCheck;
+
+  /// No description provided for @dashChurnRiskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients at churn risk'**
+  String get dashChurnRiskTitle;
+
+  /// No description provided for @dashChurnRiskEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients are at churn risk right now.'**
+  String get dashChurnRiskEmpty;
+
+  /// No description provided for @dashActivityDifficultyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low completion / churn risk detected'**
+  String get dashActivityDifficultyTitle;
+
+  /// No description provided for @dashActivityDifficultyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.'**
+  String dashActivityDifficultyDesc(String names);
+
+  /// No description provided for @dashActivityInactiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive 7+ days'**
+  String get dashActivityInactiveTitle;
+
+  /// No description provided for @dashActivityInactiveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} haven\'t logged a workout in the last 7 days. Reach out before it turns into churn.'**
+  String dashActivityInactiveDesc(String names);
+
+  /// No description provided for @dashActivityDietFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet feedback pending'**
+  String get dashActivityDietFeedbackTitle;
+
+  /// No description provided for @dashActivityDietFeedbackDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.'**
+  String dashActivityDietFeedbackDesc(String names);
+
+  /// No description provided for @dashActivityMoreClients.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} and {count} more'**
+  String dashActivityMoreClients(String shown, int count);
+
   /// No description provided for @dashAiSummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI coaching summary'**
+  /// **'AI diagnosis'**
   String get dashAiSummaryTitle;
-
-  /// No description provided for @dashToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get dashToday;
 
   /// No description provided for @dashAiNoClients.
   ///
@@ -860,11 +962,71 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled today'**
   String get dashNoScheduleToday;
 
-  /// No description provided for @dashEmptySlot.
+  /// No description provided for @dashScheduleNowLabel.
   ///
   /// In en, this message translates to:
-  /// **'Open slot'**
-  String get dashEmptySlot;
+  /// **'Now {time}'**
+  String dashScheduleNowLabel(String time);
+
+  /// No description provided for @dashScheduleNextSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {time} · {name}'**
+  String dashScheduleNextSession(String time, String name);
+
+  /// No description provided for @dashScheduleMinutesLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'in {minutes} min'**
+  String dashScheduleMinutesLeft(int minutes);
+
+  /// No description provided for @dashPreparePt.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare PT'**
+  String get dashPreparePt;
+
+  /// No description provided for @dashLeaveMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave a memo'**
+  String get dashLeaveMemo;
+
+  /// No description provided for @dashSessionSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get dashSessionSent;
+
+  /// No description provided for @dashSessionPrepared.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepared'**
+  String get dashSessionPrepared;
+
+  /// No description provided for @dashSessionNoteWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Written'**
+  String get dashSessionNoteWritten;
+
+  /// No description provided for @dashSessionSentNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent'**
+  String get dashSessionSentNo;
+
+  /// No description provided for @dashSessionPreparedNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not prepared'**
+  String get dashSessionPreparedNo;
+
+  /// No description provided for @dashSessionNoteNotWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Not written'**
+  String get dashSessionNoteNotWritten;
 
   /// No description provided for @weekdayMon.
   ///
@@ -938,17 +1100,53 @@ abstract class AppLocalizations {
   /// **'Needs attention'**
   String get clientsManagementAttention;
 
+  /// No description provided for @clientsFiltersClearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get clientsFiltersClearAll;
+
+  /// No description provided for @clientsSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get clientsSortLabel;
+
   /// No description provided for @clientsSortPriority.
   ///
   /// In en, this message translates to:
-  /// **'Sort: priority'**
+  /// **'Needs attention first'**
   String get clientsSortPriority;
 
   /// No description provided for @clientsSortName.
   ///
   /// In en, this message translates to:
-  /// **'Sort: name'**
+  /// **'Name A–Z'**
   String get clientsSortName;
+
+  /// No description provided for @clientsSortNameDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Name Z–A'**
+  String get clientsSortNameDescending;
+
+  /// No description provided for @clientsSortRecentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent conversations'**
+  String get clientsSortRecentMessage;
+
+  /// No description provided for @clientsSortActiveFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Active clients first'**
+  String get clientsSortActiveFirst;
+
+  /// No description provided for @clientsFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get clientsFilterLabel;
 
   /// No description provided for @clientsToolbarCount.
   ///
@@ -1009,12 +1207,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save the member profile. Please try again'**
   String get memberHealthSaveFailed;
-
-  /// No description provided for @memberHealthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Body and goals'**
-  String get memberHealthTitle;
 
   /// No description provided for @memberHealthSaving.
   ///
@@ -1700,17 +1892,17 @@ abstract class AppLocalizations {
   /// **'Training goal'**
   String get consultExerciseGoal;
 
-  /// No description provided for @consultHealthPurpose.
-  ///
-  /// In en, this message translates to:
-  /// **'Health purpose'**
-  String get consultHealthPurpose;
-
   /// No description provided for @consultPreferredTime.
   ///
   /// In en, this message translates to:
   /// **'Preferred time'**
   String get consultPreferredTime;
+
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
 
   /// No description provided for @consultReject.
   ///
@@ -1759,6 +1951,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Workout log'**
   String get workoutRecords;
+
+  /// No description provided for @workoutRecordsShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get workoutRecordsShowMore;
+
+  /// No description provided for @workoutRecordsShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get workoutRecordsShowLess;
 
   /// No description provided for @workoutLoadFailed.
   ///
@@ -1868,17 +2072,29 @@ abstract class AppLocalizations {
   /// **'No meals logged yet'**
   String get dietEmpty;
 
-  /// No description provided for @dietTodaySummary.
+  /// No description provided for @dietDayEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s nutrition'**
-  String get dietTodaySummary;
+  /// **'No record'**
+  String get dietDayEmpty;
+
+  /// No description provided for @dietMacros.
+  ///
+  /// In en, this message translates to:
+  /// **'Macros'**
+  String get dietMacros;
 
   /// No description provided for @clientNutritionSummary.
   ///
   /// In en, this message translates to:
   /// **'Nutrition summary'**
   String get clientNutritionSummary;
+
+  /// No description provided for @dietCalorieIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories today'**
+  String get dietCalorieIntake;
 
   /// No description provided for @dietAchieveRate.
   ///
@@ -1904,11 +2120,23 @@ abstract class AppLocalizations {
   /// **'Sodium {value}mg'**
   String dietSodiumValue(int value);
 
-  /// No description provided for @dietAiAnalysis.
+  /// No description provided for @aiAnalysis.
   ///
   /// In en, this message translates to:
   /// **'AI analysis'**
-  String get dietAiAnalysis;
+  String get aiAnalysis;
+
+  /// No description provided for @aiPeriodAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI period analysis'**
+  String get aiPeriodAnalysis;
+
+  /// No description provided for @aiAllAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI all-time analysis'**
+  String get aiAllAnalysis;
 
   /// No description provided for @dietAiOverSodium.
   ///
@@ -1985,14 +2213,8 @@ abstract class AppLocalizations {
   /// No description provided for @reportsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Summarize this week\'s changes and prepare a report to share'**
+  /// **'Review the week\'s changes and share them with your client'**
   String get reportsSubtitle;
-
-  /// No description provided for @reportsPrevWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'Previous'**
-  String get reportsPrevWeek;
 
   /// No description provided for @reportsLoadFailed.
   ///
@@ -2077,6 +2299,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Goal'**
   String get clientPeriodGoal;
+
+  /// No description provided for @exBurnTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned today'**
+  String get exBurnTodayTitle;
+
+  /// No description provided for @exBurnWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this week'**
+  String get exBurnWeekTitle;
+
+  /// No description provided for @exBurnMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this month'**
+  String get exBurnMonthTitle;
+
+  /// No description provided for @exBurnDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned'**
+  String get exBurnDayTitle;
+
+  /// No description provided for @exBurnAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Average burned'**
+  String get exBurnAllTitle;
+
+  /// No description provided for @exWeekOfMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}, {month}/'**
+  String exWeekOfMonthLabel(int month, int week);
+
+  /// No description provided for @exStreakCheer.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day in a row!} other{{days} days in a row!}}'**
+  String exStreakCheer(int days);
+
+  /// No description provided for @exStreakStart.
+  ///
+  /// In en, this message translates to:
+  /// **'No streak yet'**
+  String get exStreakStart;
+
+  /// No description provided for @exTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get exTypeOther;
+
+  /// No description provided for @exSetsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
+  String exSetsValue(int count);
 
   /// No description provided for @clientPeriodLoggedDays.
   ///
@@ -2174,6 +2456,12 @@ abstract class AppLocalizations {
   /// **'Workout completion'**
   String get reportsCompletionAvg;
 
+  /// No description provided for @reportsWeeklyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly completion'**
+  String get reportsWeeklyCompletion;
+
   /// No description provided for @reportsCompletionByDay.
   ///
   /// In en, this message translates to:
@@ -2209,12 +2497,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weekly diet trend'**
   String get reportsDietTrend;
-
-  /// No description provided for @reportsSodiumOverInline.
-  ///
-  /// In en, this message translates to:
-  /// **'{days} days over sodium'**
-  String reportsSodiumOverInline(int days);
 
   /// No description provided for @workoutDoneOfTotal.
   ///
@@ -2270,22 +2552,16 @@ abstract class AppLocalizations {
   /// **'{name}, here\'s your weekly report for {range}.'**
   String reportBodyGreeting(String name, String range);
 
-  /// No description provided for @reportBodySessions.
-  ///
-  /// In en, this message translates to:
-  /// **'We got through {done} of {booked} PT sessions.'**
-  String reportBodySessions(int done, int booked);
-
   /// No description provided for @reportBodyCompletionGood.
   ///
   /// In en, this message translates to:
-  /// **'You kept up well this week — {avg}% of your workouts done.'**
+  /// **'You kept up well — {avg}% of your workouts done.'**
   String reportBodyCompletionGood(int avg);
 
   /// No description provided for @reportBodyCompletionLow.
   ///
   /// In en, this message translates to:
-  /// **'Workout completion came in at {avg}% this week. Sounds like a busy one.'**
+  /// **'Workout completion came in at {avg}%. Sounds like a busy one.'**
   String reportBodyCompletionLow(int avg);
 
   /// No description provided for @reportBodySkipped.
@@ -2297,25 +2573,25 @@ abstract class AppLocalizations {
   /// No description provided for @reportBodySodiumOver.
   ///
   /// In en, this message translates to:
-  /// **'Sodium averaged {avg}mg a day, over the 2,000mg target on {days} days. Leaving half the broth behind saves 400-500mg a day.'**
-  String reportBodySodiumOver(int avg, int days);
+  /// **'Sodium averaged {avg}mg a day, and went over the {target}mg target on {days} days. Leaving half the broth behind saves 400-500mg a day.'**
+  String reportBodySodiumOver(String avg, String target, int days);
 
   /// No description provided for @reportBodySodiumOk.
   ///
   /// In en, this message translates to:
-  /// **'Sodium averaged {avg}mg a day — comfortably inside your target.'**
-  String reportBodySodiumOk(int avg);
+  /// **'Sodium averaged {avg}mg a day — comfortably inside the {target}mg target.'**
+  String reportBodySodiumOk(String avg, String target);
 
   /// No description provided for @reportBodyCalories.
   ///
   /// In en, this message translates to:
   /// **'Calories averaged {avg}kcal a day.'**
-  String reportBodyCalories(int avg);
+  String reportBodyCalories(String avg);
 
   /// No description provided for @reportBodyPraise.
   ///
   /// In en, this message translates to:
-  /// **'Great week — let\'s keep this pace next week!'**
+  /// **'Great work — let\'s keep this pace next week!'**
   String get reportBodyPraise;
 
   /// No description provided for @reportBodyEncourage.
@@ -2327,7 +2603,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportBodyNoRecords.
   ///
   /// In en, this message translates to:
-  /// **'There\'s nothing logged this week, so nothing to sum up. Let\'s plan next week\'s start together.'**
+  /// **'There\'s nothing logged for this week, so nothing to sum up. Let\'s plan next week\'s start together.'**
   String get reportBodyNoRecords;
 
   /// No description provided for @schedTitle.
@@ -2335,6 +2611,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Schedule'**
   String get schedTitle;
+
+  /// No description provided for @schedDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session detail'**
+  String get schedDetailTitle;
 
   /// No description provided for @schedDeleteTitle.
   ///
@@ -2366,17 +2648,17 @@ abstract class AppLocalizations {
   /// **'{start}–{end}'**
   String schedTimeRange(String start, String end);
 
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
+
   /// No description provided for @schedEmptyWeek.
   ///
   /// In en, this message translates to:
   /// **'Nothing scheduled this week.'**
   String get schedEmptyWeek;
-
-  /// No description provided for @schedNewClientTag.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} (new)'**
-  String schedNewClientTag(String name);
 
   /// No description provided for @schedSlots.
   ///
@@ -2401,30 +2683,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing scheduled for this day.\nUse New session above to add one.'**
   String get schedEmptyDay;
-
-  /// No description provided for @schedCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark session complete'**
-  String get schedCompleteTitle;
-
-  /// No description provided for @schedCompleteBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This marks the {time} session with {name} complete and logs it to their workout history.'**
-  String schedCompleteBody(String time, String name);
-
-  /// No description provided for @schedNoteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer\'s note (optional)'**
-  String get schedNoteOptional;
-
-  /// No description provided for @schedCompleteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark complete'**
-  String get schedCompleteAction;
 
   /// No description provided for @schedSaveFailed.
   ///
@@ -2564,6 +2822,12 @@ abstract class AppLocalizations {
   /// **'Edit note'**
   String get schedEditNote;
 
+  /// No description provided for @schedAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get schedAddNote;
+
   /// No description provided for @schedNoNote.
   ///
   /// In en, this message translates to:
@@ -2702,12 +2966,6 @@ abstract class AppLocalizations {
   /// **'Sent {name} the PT program for {date}'**
   String schedSentProgramTo(String name, String date);
 
-  /// No description provided for @slotCapacityInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityInvalid;
-
   /// No description provided for @slotPastTime.
   ///
   /// In en, this message translates to:
@@ -2732,18 +2990,6 @@ abstract class AppLocalizations {
   /// **'Start time'**
   String get slotStartTime;
 
-  /// No description provided for @slotCapacity.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity'**
-  String get slotCapacity;
-
-  /// No description provided for @slotBookedNow.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} booked'**
-  String slotBookedNow(int count);
-
   /// No description provided for @slotUpdated.
   ///
   /// In en, this message translates to:
@@ -2759,8 +3005,8 @@ abstract class AppLocalizations {
   /// No description provided for @slotCloseBody.
   ///
   /// In en, this message translates to:
-  /// **'The {count} existing bookings stay; only new bookings stop.'**
-  String slotCloseBody(int count);
+  /// **'Any existing booking stays; only new bookings stop.'**
+  String get slotCloseBody;
 
   /// No description provided for @slotClosed.
   ///
@@ -2807,14 +3053,20 @@ abstract class AppLocalizations {
   /// No description provided for @slotClosedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Closed · {booked} booked'**
-  String slotClosedSummary(int booked);
+  /// **'Closed'**
+  String get slotClosedSummary;
+
+  /// No description provided for @slotBookedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked'**
+  String get slotBookedSummary;
 
   /// No description provided for @slotOpenSummary.
   ///
   /// In en, this message translates to:
-  /// **'{booked} booked · {remaining} left'**
-  String slotOpenSummary(int booked, int remaining);
+  /// **'Open'**
+  String get slotOpenSummary;
 
   /// No description provided for @slotCloseAction.
   ///
@@ -3728,12 +3980,6 @@ abstract class AppLocalizations {
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
 
-  /// No description provided for @aiWithinTarget.
-  ///
-  /// In en, this message translates to:
-  /// **' · within target'**
-  String get aiWithinTarget;
-
   /// No description provided for @aiRecentRoutine.
   ///
   /// In en, this message translates to:
@@ -3884,42 +4130,6 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get goalOther;
 
-  /// No description provided for @purposeWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Weight management'**
-  String get purposeWeight;
-
-  /// No description provided for @purposeChronic.
-  ///
-  /// In en, this message translates to:
-  /// **'Chronic condition'**
-  String get purposeChronic;
-
-  /// No description provided for @purposeRehab.
-  ///
-  /// In en, this message translates to:
-  /// **'Rehabilitation'**
-  String get purposeRehab;
-
-  /// No description provided for @purposeGeneral.
-  ///
-  /// In en, this message translates to:
-  /// **'General wellbeing'**
-  String get purposeGeneral;
-
-  /// No description provided for @purposeNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get purposeNone;
-
-  /// No description provided for @purposeOther.
-  ///
-  /// In en, this message translates to:
-  /// **'Other'**
-  String get purposeOther;
-
   /// No description provided for @slotMorning.
   ///
   /// In en, this message translates to:
@@ -4058,12 +4268,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send your question'**
   String get coachAskFailed;
 
-  /// No description provided for @slotCapacityRange.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityRange;
-
   /// No description provided for @slotFutureOnly.
   ///
   /// In en, this message translates to:
@@ -4076,11 +4280,17 @@ abstract class AppLocalizations {
   /// **'Booking slot not found.'**
   String get slotNotFound;
 
-  /// No description provided for @slotCapacityBelowBooked.
+  /// No description provided for @slotTypeLockedByBooking.
   ///
   /// In en, this message translates to:
-  /// **'Capacity can\'t be lower than the number already booked.'**
-  String get slotCapacityBelowBooked;
+  /// **'Can\'t change the type of a slot that\'s already booked.'**
+  String get slotTypeLockedByBooking;
+
+  /// No description provided for @slotSessionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get slotSessionType;
 
   /// No description provided for @authErrNotTrainer.
   ///
@@ -4231,6 +4441,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That routine is already gone'**
   String get routineAlreadyGone;
+
+  /// No description provided for @workoutPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not done yet'**
+  String get workoutPendingTitle;
+
+  /// No description provided for @workoutUndatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Records without a date'**
+  String get workoutUndatedTitle;
+
+  /// No description provided for @workoutPendingCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel assignment'**
+  String get workoutPendingCancel;
 
   /// No description provided for @routineUpdateFailed.
   ///
@@ -4478,11 +4706,173 @@ abstract class AppLocalizations {
   /// **'{count} to review'**
   String dashTasksNeedReview(int count);
 
-  /// No description provided for @dashTasksEmpty.
+  /// No description provided for @dashTaskProgressTitle.
   ///
   /// In en, this message translates to:
-  /// **'There are no new coaching tasks to review.'**
-  String get dashTasksEmpty;
+  /// **'Task completion'**
+  String get dashTaskProgressTitle;
+
+  /// No description provided for @dashTaskProgressToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Done today'**
+  String get dashTaskProgressToday;
+
+  /// No description provided for @dashTaskProgressCarriedOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Done (carried over)'**
+  String get dashTaskProgressCarriedOver;
+
+  /// No description provided for @dashTodoConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Consult'**
+  String get dashTodoConsultation;
+
+  /// No description provided for @dashTodoDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get dashTodoDiet;
+
+  /// No description provided for @dashTodoWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get dashTodoWorkout;
+
+  /// No description provided for @dashTodoProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get dashTodoProgram;
+
+  /// No description provided for @dashTodoReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get dashTodoReport;
+
+  /// No description provided for @dashTodoConsultationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation request for {month}/{day}'**
+  String dashTodoConsultationSubtitle(int month, int day);
+
+  /// No description provided for @dashTodoSodiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium {sodiumMg}mg · target {targetMg}mg'**
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg);
+
+  /// No description provided for @dashTodoSugarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar {sugarG}g · target {targetG}g'**
+  String dashTodoSugarSubtitle(int sugarG, int targetG);
+
+  /// No description provided for @dashTodoCompletionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low completion · check recent records'**
+  String get dashTodoCompletionSubtitle;
+
+  /// No description provided for @dashTodoProgramSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent program sent'**
+  String get dashTodoProgramSubtitle;
+
+  /// No description provided for @dashTodoReportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s report is due'**
+  String get dashTodoReportSubtitle;
+
+  /// No description provided for @dashTaskDismissTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this item?'**
+  String get dashTaskDismissTitle;
+
+  /// No description provided for @dashTaskDismissBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It only disappears from the task list. Actually handling it (consultation, program, report) still happens on its own screen.'**
+  String get dashTaskDismissBody;
+
+  /// No description provided for @dashTaskCarriedOverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried over'**
+  String get dashTaskCarriedOverTitle;
+
+  /// No description provided for @dashTaskCategoryDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get dashTaskCategoryDone;
+
+  /// No description provided for @dashTaskCategoryRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String dashTaskCategoryRemaining(int count);
+
+  /// No description provided for @dashTaskUncheckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completion of \'{name}\'?'**
+  String dashTaskUncheckTitle(String name);
+
+  /// No description provided for @dashTaskUncheckBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It also drops off the task progress chart.'**
+  String get dashTaskUncheckBody;
+
+  /// No description provided for @dashTaskUncheckConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completion'**
+  String get dashTaskUncheckConfirm;
+
+  /// No description provided for @churnNoRecentWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout logged in 7 days'**
+  String get churnNoRecentWorkout;
+
+  /// No description provided for @churnNoRecentFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainer feedback in 7 days'**
+  String get churnNoRecentFeedback;
+
+  /// No description provided for @churnConsecutiveCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'2 consecutive cancellations/no-shows'**
+  String get churnConsecutiveCancel;
+
+  /// No description provided for @churnDietStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet logging stopped'**
+  String get churnDietStopped;
+
+  /// No description provided for @churnGoalStagnant.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal metric stagnant long-term'**
+  String get churnGoalStagnant;
+
+  /// No description provided for @churnUnresolvedRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Unanswered message'**
+  String get churnUnresolvedRequest;
 
   /// No description provided for @navMessages.
   ///
@@ -4501,12 +4891,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load conversations.'**
   String get messagesLoadFailed;
-
-  /// No description provided for @messagesConversations.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversations'**
-  String get messagesConversations;
 
   /// No description provided for @messagesEmpty.
   ///
@@ -4574,23 +4958,29 @@ abstract class AppLocalizations {
   /// **'Program'**
   String get clientQuickProgram;
 
+  /// No description provided for @clientQuickReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get clientQuickReport;
+
   /// No description provided for @clientHealthGoals.
   ///
   /// In en, this message translates to:
   /// **'Body profile & goals'**
   String get clientHealthGoals;
 
+  /// No description provided for @clientProfileSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Body, goals & memo'**
+  String get clientProfileSectionTitle;
+
   /// No description provided for @clientTrainerMemo.
   ///
   /// In en, this message translates to:
   /// **'Memo'**
   String get clientTrainerMemo;
-
-  /// No description provided for @clientTrainerMemoTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Memos on {name}'**
-  String clientTrainerMemoTitle(String name);
 
   /// No description provided for @clientTrainerMemoHint.
   ///
@@ -4771,30 +5161,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t mark it done. Please try again.'**
   String get followUpCompleteFailed;
-
-  /// No description provided for @dashTaskReply.
-  ///
-  /// In en, this message translates to:
-  /// **'Reply'**
-  String get dashTaskReply;
-
-  /// No description provided for @dashTaskDiet.
-  ///
-  /// In en, this message translates to:
-  /// **'Diet'**
-  String get dashTaskDiet;
-
-  /// No description provided for @dashTaskWorkout.
-  ///
-  /// In en, this message translates to:
-  /// **'Workout'**
-  String get dashTaskWorkout;
-
-  /// No description provided for @dashTaskReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Review {name}: {alert}'**
-  String dashTaskReview(String alert, String name);
 
   /// No description provided for @programEditorDefaultName.
   ///
@@ -5288,17 +5654,47 @@ abstract class AppLocalizations {
   /// **'Last 4 weekly averages'**
   String get reportsRecentWeeks;
 
+  /// No description provided for @reportsWeekTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Week total'**
+  String get reportsWeekTotal;
+
+  /// No description provided for @reportsGoalOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal {value}'**
+  String reportsGoalOf(String value);
+
+  /// No description provided for @reportsCompareWith.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last week'**
+  String get reportsCompareWith;
+
+  /// No description provided for @reportsMoreExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String reportsMoreExercises(int count);
+
+  /// No description provided for @reportsRecordedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days logged'**
+  String reportsRecordedDays(int days);
+
+  /// No description provided for @reportsAverageChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg {value}'**
+  String reportsAverageChip(String value);
+
   /// No description provided for @chartGoalLabel.
   ///
   /// In en, this message translates to:
   /// **'Goal\n{value}'**
   String chartGoalLabel(String value);
-
-  /// No description provided for @reportsGoalMarker.
-  ///
-  /// In en, this message translates to:
-  /// **'│ Goal {value}'**
-  String reportsGoalMarker(String value);
 
   /// No description provided for @reportsWeeksAgo.
   ///
@@ -5311,6 +5707,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI coaching assistant · Report summary'**
   String get reportsAiTitle;
+
+  /// No description provided for @reportsAiNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week\'s coaching'**
+  String get reportsAiNextWeek;
+
+  /// No description provided for @reportsActionSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask them to leave half the broth and the pickled sides.'**
+  String get reportsActionSodium;
+
+  /// No description provided for @reportsActionSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Some days went over the {target}g sugar target. Start with drinks and snacks.'**
+  String reportsActionSugar(String target);
+
+  /// No description provided for @reportsActionLowCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop the routine a notch so they finish it first.'**
+  String get reportsActionLowCompletion;
+
+  /// No description provided for @reportsActionHighCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Good pace. Add a set or a little weight next week.'**
+  String get reportsActionHighCompletion;
+
+  /// No description provided for @reportsActionSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare alternatives for {names} for the next session.'**
+  String reportsActionSkipped(String names);
+
+  /// No description provided for @reportsActionUnlogged.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days went unlogged. Build the logging habit first.'**
+  String reportsActionUnlogged(int days);
+
+  /// No description provided for @reportsActionCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Intake is under the {target}kcal target. Suggest one protein-led meal.'**
+  String reportsActionCalories(String target);
 
   /// No description provided for @reportsAiGenerated.
   ///
@@ -5654,17 +6098,17 @@ abstract class AppLocalizations {
   /// **'Remove certification'**
   String get a11yRemoveCertification;
 
-  /// No description provided for @a11yPrevDay.
+  /// No description provided for @a11yPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous day'**
-  String get a11yPrevDay;
+  /// **'Previous week'**
+  String get a11yPrevWeek;
 
-  /// No description provided for @a11yNextDay.
+  /// No description provided for @a11yNextWeek.
   ///
   /// In en, this message translates to:
-  /// **'Next day'**
-  String get a11yNextDay;
+  /// **'Next week'**
+  String get a11yNextWeek;
 
   /// No description provided for @a11ySendMessage.
   ///

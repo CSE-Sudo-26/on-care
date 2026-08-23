@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +8,9 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -17,20 +21,56 @@ enum _GymSort { recommended, distance, rating }
 /// 최소값은 **완전히 접히지 않는 높이**다 — 결과가 있다는 사실과 첫 카드가 언제나
 /// 보여야 한다. 최대값은 검색창과 시스템 영역을 침범하지 않는 선이고, 중간값은
 /// 지도를 조금 남긴 채 여러 곳을 견주는 자리다.
-const double _kPanelMin = 0.42;
-const double _kPanelMid = 0.65;
-const double _kPanelMax = 0.9;
-
-class GymListPage extends ConsumerStatefulWidget {
+class GymListPage extends ConsumerWidget {
   const GymListPage({super.key});
 
   @override
-  ConsumerState<GymListPage> createState() => _GymListPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: FigmaColors.statBg,
+      appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        scrolledUnderElevation: 0,
+        title: Text(
+          l.exFindGym,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.ink,
+          ),
+        ),
+      ),
+      body: const SafeArea(top: false, child: GymFinderView()),
+    );
+  }
 }
 
-class _GymListPageState extends ConsumerState<GymListPage> {
+/// 헬스장 찾기 화면의 본체 — 검색 + 지도 + 결과 목록.
+///
+/// 페이지(`/gyms`)와 운동 탭의 헬스장 화면이 **같은 위젯**을 쓴다. 연결된
+/// 헬스장이 없는 회원에게 이 탭에서 할 일은 헬스장을 찾는 것뿐이라, 지도만 띄운
+/// 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면을 그대로 보여 준다(#1133).
+///
+/// 지도는 **자리에 고정**하고 그 아래 목록만 스크롤한다(#1135). 예전에는 지도
+/// 위에 결과 시트를 얹어 두어, 목록을 밀면 시트가 먼저 커지며 지도까지 함께
+/// 밀려 올라갔다. 목록을 상자로 한 번 더 감싸지도 않는다 — 좁은 화면에서 상자
+/// 안의 상자가 되어 카드가 더 좁아졌다.
+class GymFinderView extends ConsumerStatefulWidget {
+  const GymFinderView({super.key});
+
+  @override
+  ConsumerState<GymFinderView> createState() => _GymFinderViewState();
+}
+
+class _GymFinderViewState extends ConsumerState<GymFinderView> {
   String _query = '';
   _GymSort _sort = _GymSort.recommended;
+
+  /// 목록을 접었는지 (#1186). 처음 들어오면 지도와 목록이 함께 보이고, 접으면
+  /// 목록이 사라지며 그 자리를 지도가 받는다.
+  bool _listCollapsed = false;
 
   List<Gym> _visibleGyms(List<Gym> gyms) {
     final String query = _query.trim().toLowerCase();
@@ -53,213 +93,165 @@ class _GymListPageState extends ConsumerState<GymListPage> {
     };
   }
 
-  /// 지도 위를 덮는 결과 패널. 로딩·오류·빈 상태도 이 패널 안에서 보여 준다 —
-  /// 결과 영역이 통째로 사라지면 패널을 끌 자리가 없어진다.
-  Widget _resultsPanel(
-    BuildContext context,
-    ScrollController controller,
-    AsyncValue<List<Gym>> gymsAsync,
-  ) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return _ResultsPanel(
-      controller: controller,
-      header: gymsAsync.maybeWhen(
-        data: (List<Gym> gyms) => _ResultControls(
-          countLabel: l.exResultCount(_visibleGyms(gyms).length),
-          sort: _sort,
-          onSort: (_GymSort value) => setState(() => _sort = value),
-        ),
-        orElse: () => null,
-      ),
-      child: gymsAsync.when(
-        loading: () => const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 3)),
-          ),
-        ),
-        error: (Object _, StackTrace _) => SliverToBoxAdapter(
-          child: _LoadError(
-            message: l.exGymsLoadError,
-            onRetry: () => ref.invalidate(gymFinderResultsProvider),
-          ),
-        ),
-        data: (List<Gym> gyms) => _resultSliver(context, _visibleGyms(gyms)),
-      ),
-    );
-  }
-
-  /// 검색 결과 목록. 비어 있으면 같은 자리에 기존 빈 상태를 둔다.
-  Widget _resultSliver(BuildContext context, List<Gym> visible) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    if (visible.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: _EmptyResults(message: l.exNoSearchResults),
-        ),
-      );
-    }
-    return SliverList.separated(
-      itemCount: visible.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (BuildContext context, int index) => _GymListCard(
-        gym: visible[index],
-        onTap: () => context.push(AppRoutes.gymDetailPath(visible[index].id)),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     // 제휴 헬스장 + 카카오 Local 주변 헬스장(#329). 카카오 쪽만 좌표가 있어도
     // 지도는 뜨고, 카카오가 실패하면 제휴 목록만 남는다.
     final AsyncValue<List<Gym>> gymsAsync = ref.watch(gymFinderResultsProvider);
+    final List<Gym> visible = _visibleGyms(
+      gymsAsync.valueOrNull ?? const <Gym>[],
+    );
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        scrolledUnderElevation: 0,
-        title: Text(
-          l.exFindGym,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: FigmaColors.ink,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        top: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                children: <Widget>[
-                  _SearchField(
-                    hintText: l.exGymSearchPlaceholder,
-                    onChanged: (String value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 16),
-                  // 지도는 남는 높이를 전부 쓰고, 검색 결과 패널이 그 위를 덮는다.
-                  // 예전에는 지도(225) 아래 좁은 목록이 붙어 있어, 결과가 여러
-                  // 개면 그 좁은 칸 안에서 계속 스크롤해야 했다(#865).
-                  Expanded(
-                    child: Stack(
-                      children: <Widget>[
-                        Positioned.fill(
-                          child: _GymMap(
-                            gyms: _visibleGyms(
-                              gymsAsync.valueOrNull ?? const <Gym>[],
-                            ),
-                          ),
-                        ),
-                        DraggableScrollableSheet(
-                          // 처음 보이는 높이는 예전 목록 영역과 비슷하다 — 지도와
-                          // 결과를 함께 보는 지금의 균형을 그대로 둔다.
-                          initialChildSize: _kPanelMin,
-                          // **완전히 접히지 않는다.** 결과가 있다는 사실과 첫
-                          // 카드는 언제나 보여야 한다.
-                          minChildSize: _kPanelMin,
-                          maxChildSize: _kPanelMax,
-                          snap: true,
-                          snapSizes: const <double>[_kPanelMid],
-                          builder:
-                              (
-                                BuildContext context,
-                                ScrollController controller,
-                              ) =>
-                                  _resultsPanel(context, controller, gymsAsync),
-                        ),
-                      ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints outer) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _SearchField(
+                  hintText: l.exGymSearchPlaceholder,
+                  onChanged: (String value) => setState(() => _query = value),
+                ),
+                const SizedBox(height: 14),
+                // 지도는 자리에 고정된다 — 아래 목록을 아무리 밀어도 따라오지
+                // 않는다 (#1135). 목록을 접으면 그 자리를 지도가 받는다 (#1186).
+                _GymMap(gyms: visible, expanded: _listCollapsed),
+                const SizedBox(height: 16),
+                // 지도와 목록 사이의 구분 선 — 여기가 두 영역의 경계이고,
+                // 화살표가 그 경계에서 목록을 여닫는다 (#1186).
+                const Divider(height: 1, color: FigmaColors.hairline),
+                _NearbyHeader(
+                  title: l.exNearbyGyms,
+                  collapsed: _listCollapsed,
+                  onToggle: () =>
+                      setState(() => _listCollapsed = !_listCollapsed),
+                ),
+                if (!_listCollapsed) ...<Widget>[
+                  if (gymsAsync.hasValue)
+                    _ResultControls(
+                      countLabel: l.exResultCount(visible.length),
+                      sort: _sort,
+                      onSort: (_GymSort value) => setState(() => _sort = value),
                     ),
-                  ),
+                  const SizedBox(height: 10),
+                  // 남는 높이를 목록이 쓴다. 운동 탭처럼 **높이가 열린
+                  // 자리**(바깥이 스크롤 뷰)에 놓이면 남는 높이가 없으므로,
+                  // 화면의 절반쯤을 목록 몫으로 떼어 준다 — 그래야 지도가 자리에
+                  // 남고 목록만 구른다.
+                  if (outer.hasBoundedHeight)
+                    Expanded(child: _results(context, gymsAsync, visible))
+                  else
+                    SizedBox(
+                      height: math.max(
+                        MediaQuery.sizeOf(context).height * 0.45,
+                        280,
+                      ),
+                      child: _results(context, gymsAsync, visible),
+                    ),
                 ],
-              ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+
+  /// 결과 목록. 상자로 감싸지 않고 배경 위에 카드를 바로 쌓는다 (#1135).
+  Widget _results(
+    BuildContext context,
+    AsyncValue<List<Gym>> gymsAsync,
+    List<Gym> visible,
+  ) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return gymsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 3)),
+      ),
+      error: (Object _, StackTrace _) => _LoadError(
+        message: l.exGymsLoadError,
+        onRetry: () => ref.invalidate(gymFinderResultsProvider),
+      ),
+      data: (List<Gym> _) {
+        if (visible.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: _EmptyResults(message: l.exNoSearchResults),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.only(bottom: 20),
+          itemCount: visible.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (BuildContext context, int index) => _GymListCard(
+            key: Key('gym-card-${visible[index].id}'),
+            gym: visible[index],
+            onTap: () =>
+                context.push(AppRoutes.gymDetailPath(visible[index].id)),
+          ),
+        );
+      },
+    );
+  }
 }
 
-/// 지도를 덮는 검색 결과 패널. (#865)
+/// `주변 헬스장` 머리줄 — 제목과 목록을 여닫는 화살표 (#1186).
 ///
-/// 위로 끌면 결과가 화면 대부분을 쓰고, 아래로 내려도 [_kPanelMin] 아래로는
-/// 내려가지 않는다. 목록이 시트의 [controller] 를 그대로 쓰기 때문에 손가락
-/// 하나로 "패널이 먼저 커지고, 다 커진 뒤에는 목록이 스크롤되는" 흐름이
-/// 이어진다 — 두 개의 스크롤이 서로 잡아채지 않는다.
-class _ResultsPanel extends StatelessWidget {
-  const _ResultsPanel({
-    required this.controller,
-    required this.child,
-    this.header,
+/// 화살표는 목록이 열려 있으면 아래를(내릴 수 있다), 접혀 있으면 위를(다시
+/// 올릴 수 있다) 가리킨다.
+class _NearbyHeader extends StatelessWidget {
+  const _NearbyHeader({
+    required this.title,
+    required this.collapsed,
+    required this.onToggle,
   });
 
-  final ScrollController controller;
-
-  /// 결과 목록(또는 로딩·오류·빈 상태) sliver.
-  final Widget child;
-
-  /// 결과 개수와 정렬 — 최소 상태에서도 보여야 하는 줄이다.
-  final Widget? header;
+  final String title;
+  final bool collapsed;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 16,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: CustomScrollView(
-        controller: controller,
-        slivers: <Widget>[
-          SliverToBoxAdapter(
-            child: Column(
-              children: <Widget>[
-                // 끌 수 있다는 표시. 손잡이가 없으면 패널이 고정된 칸으로 읽힌다.
-                const Padding(
-                  padding: EdgeInsets.only(top: 10, bottom: 12),
-                  child: SizedBox(
-                    width: 40,
-                    height: 4,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Color(0xFFD9DEE5),
-                        borderRadius: BorderRadius.all(Radius.circular(2)),
-                      ),
-                    ),
-                  ),
-                ),
-                if (header != null) ...<Widget>[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: header!,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ],
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String label = collapsed ? l.exGymListExpand : l.exGymListCollapse;
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: FigmaColors.ink,
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            sliver: child,
+        ),
+        // 접힘 상태와 무엇을 할 수 있는지를 음성 안내에도 남긴다.
+        Semantics(
+          button: true,
+          expanded: !collapsed,
+          label: label,
+          child: IconButton(
+            key: const ValueKey<String>('gym-list-toggle'),
+            onPressed: onToggle,
+            tooltip: label,
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              collapsed
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              color: FigmaColors.textMuted,
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -370,16 +362,25 @@ class _ResultControls extends StatelessWidget {
   }
 }
 
-class _GymListCard extends StatelessWidget {
-  const _GymListCard({required this.gym, required this.onTap});
+/// 결과 목록의 헬스장 카드 하나.
+///
+/// 이름·거리·평점·영업시간과 태그 아래에 **그 헬스장 소속 트레이너 전원**을
+/// 적는다 (#1185) — 여기가 헬스장을 견주는 자리인데, 정작 누가 있는지는 상세로
+/// 들어가야 알 수 있었다.
+class _GymListCard extends ConsumerWidget {
+  const _GymListCard({required this.gym, required this.onTap, super.key});
 
   final Gym gym;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final BorderRadius radius = BorderRadius.circular(16);
+    // 트레이너를 아직 못 읽었거나 한 명도 없으면 이 부분은 통째로 없다 —
+    // 카드가 예전과 같은 모습으로 남는다.
+    final List<Trainer> trainers =
+        ref.watch(gymTrainersProvider(gym.id)).valueOrNull ?? const <Trainer>[];
     return Material(
       color: Colors.white,
       borderRadius: radius,
@@ -392,98 +393,112 @@ class _GymListCard extends StatelessWidget {
             borderRadius: radius,
             border: Border.all(color: FigmaColors.hairline),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.fitness_center,
-                  size: 21,
-                  color: FigmaColors.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      gym.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.ink,
-                      ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: FigmaColors.primaryA(0.10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 5),
-                    Row(
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.fitness_center,
+                      size: 21,
+                      color: FigmaColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          '${gym.distanceKm.toStringAsFixed(1)}km',
+                          gym.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 14,
-                          color: FigmaColors.orange,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          gym.rating.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
                             color: FigmaColors.ink,
                           ),
                         ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: <Widget>[
+                            Text(
+                              '${gym.distanceKm.toStringAsFixed(1)}km',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: FigmaColors.orange,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              gym.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          gym.weekdayHours == null
+                              ? gym.address
+                              : '${gym.address} · ${l.exGymWeekdayHours(gym.weekdayHours!)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                        if (gym.tags.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 9),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: <Widget>[
+                              for (final String tag in gym.tags.take(2))
+                                _TagChip(label: tag),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      gym.weekdayHours == null
-                          ? gym.address
-                          : '${gym.address} · ${l.exGymWeekdayHours(gym.weekdayHours!)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.mutedForeground,
-                      ),
+                  ),
+                  if (onTap != null) ...<Widget>[
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: FigmaColors.textFaint,
                     ),
-                    if (gym.tags.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 9),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: <Widget>[
-                          for (final String tag in gym.tags.take(2))
-                            _TagChip(label: tag),
-                        ],
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
-              if (onTap != null) ...<Widget>[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: FigmaColors.textFaint,
+              // 소속 트레이너는 카드 **폭 전체**를 쓴다 — 이름·직함과 추천
+              // 이유가 좁은 칸에서 두 번 접히지 않게.
+              for (final Trainer trainer in trainers) ...<Widget>[
+                const SizedBox(height: 9),
+                GymTrainerLine(
+                  key: Key('gym-trainer-${trainer.id}'),
+                  trainer: trainer,
                 ),
               ],
             ],
@@ -567,9 +582,12 @@ class _EmptyResults extends StatelessWidget {
 /// 목록에 보이는 헬스장을 카카오맵 핀으로 찍는다. `KAKAO_JS_KEY` 가 없거나
 /// SDK 로드가 실패하면 [_GymMiniMap] 그래픽으로 폴백한다(#329).
 class _GymMap extends StatelessWidget {
-  const _GymMap({required this.gyms});
+  const _GymMap({required this.gyms, this.expanded = false});
 
   final List<Gym> gyms;
+
+  /// 목록을 접어 지도만 남은 상태인지 (#1186). 목록이 쓰던 높이를 지도가 받는다.
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -578,8 +596,14 @@ class _GymMap extends StatelessWidget {
         .toList(growable: false);
 
     return SizedBox(
-      // 핀이 여러 개 들어가야 해서 폴백 그래픽(150)보다 1.5배 높게 잡는다.
-      height: 225,
+      // 핀이 여러 개 들어가야 해서 폴백 그래픽(150)보다 1.5배 높게 잡되, 화면이
+      // 낮으면 그만큼 낮춘다 — 지도가 고정된 자리를 차지하므로(#1135) 여기서
+      // 높이를 양보하지 않으면 작은 화면에서 목록이 설 자리가 없다.
+      height: expanded
+          // 목록이 접혔으면 지도가 화면을 넉넉히 쓴다 — 목록을 내린 이유가
+          // 지도를 크게 보기 위해서다.
+          ? math.min(520, MediaQuery.sizeOf(context).height * 0.55)
+          : math.min(225, MediaQuery.sizeOf(context).height * 0.28),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: KakaoMapView(

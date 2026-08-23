@@ -25,7 +25,7 @@ part of 'seed_data.dart';
 ///    걸리면 벌크업이 아니라 식습관 문제로 읽힌다. 나트륨 ÷ 칼로리는 1.5mg/kcal
 ///    을 넘지 않는다 — 그 위는 국물만 먹어야 나오는 값이다. 아래로는 제한이
 ///    없다(현미·닭가슴살 위주의 3,000kcal 는 0.6 근처가 정상이다).
-///  * `threadHandled: false` → 답장 대기.
+///  * **답장 대기는 스레드가 정한다** — 마지막 말이 회원 것이면 안읽음이다.
 ///
 /// Coverage this is meant to guarantee, by client:
 ///  1  김민수    나트륨 초과, 톱니형 이행률
@@ -56,8 +56,7 @@ const List<_Client> _clients = <_Client>[
     // 없는 문구('오늘 식단 전송됐어요')가 떴고, 그 다음에는 마지막 메시지의
     // 중간 토막을 잘라 써서 목록과 대화의 첫 마디가 서로 달랐다. 길이는 카드가
     // 알아서 줄임표로 자른다 — 여기서 미리 자르면 안 된다.
-    lastTime: '18:18',
-    threadHandled: true,
+    daysAgo: 0,
     active: true,
     // 김민수의 수치는 **여기에 없다.** 그는 사용자 앱의 데모 계정(`user-demo`)과
     // 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 각자 만들면 같은 날짜의 숫자가
@@ -75,11 +74,10 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[],
     sugarWeek: <double>[],
     diet: <_Meal>[],
-    aiRoutine: <_Routine>[
-      _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
-      _Routine('하체 스트레칭', 15, '유연성', '혈액순환 개선'),
-      _Routine('코어 강화', 10, '근력', '기초대사량 향상'),
-    ],
+    // 개인 운동도 픽스처가 정한다 (#1170) — 식단·이력과 같은 규칙이라 여기는
+    // 비워 두고 `seed_data.dart` 가 채운다. 예전에는 여기에 손으로 적어 두어,
+    // 같은 회원의 같은 목록을 회원 앱·고객 탭·프로그램 탭이 서로 다르게 말했다.
+    aiRoutine: <_Routine>[],
     // 운동 이력도 픽스처가 정한다. 예전에는 날짜 라벨이 `'7/12 (오늘)'` 로 박혀
     // 있어 데모를 언제 열든 7월 12일이 "오늘"이었다.
     history: <_History>[],
@@ -113,17 +111,9 @@ const List<_Client> _clients = <_Client>[
         '화 10:21',
       ),
       _Chat('client', '그 정도면 퇴근하고도 할 수 있을 것 같아요', '화 10:24'),
-      _Chat(
-        'trainer',
-        '혈압약 드시는 시간은 그대로시죠? 유산소가 그 시간과 겹치지 않게 잡을게요',
-        '화 10:26',
-      ),
+      _Chat('trainer', '혈압약 드시는 시간은 그대로시죠? 유산소가 그 시간과 겹치지 않게 잡을게요', '화 10:26'),
       _Chat('client', '네, 아침 8시 그대로예요', '화 10:29'),
-      _Chat(
-        'trainer',
-        '확인했어요. 화·목은 15분 저강도로 바꿔서 보냈습니다 🙂',
-        '화 10:34',
-      ),
+      _Chat('trainer', '확인했어요. 화·목은 15분 저강도로 바꿔서 보냈습니다 🙂', '화 10:34'),
       // 2일차.
       _Chat(
         'trainer',
@@ -174,7 +164,7 @@ const List<_Client> _clients = <_Client>[
     name: '이지수',
     avatar: '이',
     goal: '체력 강화 · 다이어트',
-    lastTime: '1시간 전',
+    daysAgo: 0,
     active: true,
     calories: 1680,
     sodiumMg: 1800,
@@ -214,7 +204,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['인터벌 런닝 25분 ✓', '스쿼트 3세트 ✓', '플랭크 10분 ✓'],
@@ -222,7 +212,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '심폐지구력 향상 중. 다음 주 런닝 강도 소폭 올릴 예정.',
       ),
       _History(
-        dateLabel: '7/9',
+        daysAgo: 3,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
         exercises: <String>['데드리프트 3세트', '런지 3세트', '코어 서킷'],
@@ -230,7 +220,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '',
       ),
       _History(
-        dateLabel: '7/7',
+        daysAgo: 5,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 67,
         exercises: <String>['런닝 25분 ✓', '스쿼트 ✓', '플랭크 ✗ (피로)'],
@@ -257,7 +247,7 @@ const List<_Client> _clients = <_Client>[
     name: '박성호',
     avatar: '박',
     goal: '근력 향상',
-    lastTime: '3일 전',
+    daysAgo: 3,
     active: false,
     calories: 2100,
     sodiumMg: 2400,
@@ -297,7 +287,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/7',
+        daysAgo: 5,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
         exercises: <String>['벤치프레스 4세트', '인클라인 덤벨 3세트', '트라이셉스 딥'],
@@ -305,7 +295,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '벤치 중량 62.5kg → 65kg 도전 가능. 다음 PT 때 시도 예정.',
       ),
       _History(
-        dateLabel: '7/5',
+        daysAgo: 7,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['벤치프레스 ✓', '데드리프트 ✗', '유산소 ✗'],
@@ -313,7 +303,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '',
       ),
       _History(
-        dateLabel: '7/3',
+        daysAgo: 9,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['벤치프레스 ✗', '데드리프트 ✗', '유산소 ✗'],
@@ -338,8 +328,7 @@ const List<_Client> _clients = <_Client>[
     name: '정하윤',
     avatar: '정',
     goal: '산후 체력 회복',
-    lastTime: '2시간 전',
-    threadHandled: true,
+    daysAgo: 0,
     active: true,
     calories: 1520,
     sodiumMg: 1650,
@@ -371,7 +360,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['걷기 25분 ✓', '골반 안정화 15분 ✓', '밴드 로우 12분 ✓'],
@@ -379,7 +368,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '2주 공백 후 복귀 성공. 다음 주부터 강도 10% 상향.',
       ),
       _History(
-        dateLabel: '7/9',
+        daysAgo: 3,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 50,
         exercises: <String>['걷기 25분 ✓', '골반 안정화 ✗ (아이 컨디션)'],
@@ -387,7 +376,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '',
       ),
       _History(
-        dateLabel: '7/6',
+        daysAgo: 6,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['걷기 ✗', '골반 안정화 ✗', '밴드 로우 ✗'],
@@ -408,8 +397,7 @@ const List<_Client> _clients = <_Client>[
     name: '최우진',
     avatar: '최',
     goal: '마라톤 완주 준비',
-    lastTime: '어제',
-    threadHandled: true,
+    daysAgo: 1,
     active: true,
     calories: 2600,
     sodiumMg: 1450,
@@ -458,7 +446,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['LSD 러닝 45분 ✓', '힙 힌지 12분 ✓', '스트레칭 10분 ✓'],
@@ -466,7 +454,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '7일 연속 100%. 과훈련 신호 없는지 다음 주 확인.',
       ),
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['인터벌 8세트 ✓', '코어 서킷 ✓', '스트레칭 ✓'],
@@ -487,8 +475,7 @@ const List<_Client> _clients = <_Client>[
     name: '강서연',
     avatar: '강',
     goal: '체지방 감량',
-    lastTime: '5시간 전',
-    threadHandled: true,
+    daysAgo: 0,
     active: true,
     calories: 2260,
     sodiumMg: 2750,
@@ -530,7 +517,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['걷기 ✗', '전신 서킷 ✗', '스트레칭 ✗'],
@@ -538,7 +525,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '평일 100% / 주말 0% 패턴 5주째. 주말용 15분 루틴으로 분리 검토.',
       ),
       _History(
-        dateLabel: '7/9',
+        daysAgo: 3,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['전신 서킷 20분 ✓', '걷기 30분 ✓', '스트레칭 10분 ✓'],
@@ -563,8 +550,7 @@ const List<_Client> _clients = <_Client>[
     name: '임도현',
     avatar: '임',
     goal: '목표 설정 전',
-    lastTime: '-',
-    threadHandled: true,
+    daysAgo: 0,
     active: true,
     calories: 0,
     sodiumMg: 0,
@@ -592,7 +578,7 @@ const List<_Client> _clients = <_Client>[
     name: '오세라',
     avatar: '오',
     goal: '고혈압 관리',
-    lastTime: '어제',
+    daysAgo: 1,
     active: true,
     calories: 2480,
     sodiumMg: 3250,
@@ -625,7 +611,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/8',
+        daysAgo: 4,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 20,
         exercises: <String>['걷기 ✓ (10분만)', '호흡 이완 ✗', '의자 스쿼트 ✗'],
@@ -633,7 +619,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '나트륨 3000 돌파 + 이행률 20%. 이번 주 안에 전화 상담 필요.',
       ),
       _History(
-        dateLabel: '7/6',
+        daysAgo: 6,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['걷기 ✓', '호흡 이완 ✗', '의자 스쿼트 ✗'],
@@ -654,7 +640,7 @@ const List<_Client> _clients = <_Client>[
     name: '배준혁',
     avatar: '배',
     goal: '수면 · 컨디션 개선',
-    lastTime: '30분 전',
+    daysAgo: 0,
     active: true,
     calories: 2050,
     sodiumMg: 2280,
@@ -686,7 +672,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/10',
+        daysAgo: 2,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 25,
         exercises: <String>['목·어깨 스트레칭 ✓', '걷기 ✗', '플랭크 ✗'],
@@ -694,7 +680,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '15분 루틴도 못 채우는 주가 반복. 5분 버전으로 낮춰볼 것.',
       ),
       _History(
-        dateLabel: '7/8',
+        daysAgo: 4,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['걷기 15분 ✓', '스트레칭 ✗', '플랭크 ✗'],
@@ -714,8 +700,7 @@ const List<_Client> _clients = <_Client>[
     name: '신유나',
     avatar: '신',
     goal: '재활 후 복귀',
-    lastTime: '3시간 전',
-    threadHandled: true,
+    daysAgo: 0,
     active: true,
     calories: 1590,
     sodiumMg: 1720,
@@ -756,7 +741,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['실내 자전거 20분 ✓', '레그 익스텐션 12분 ✓', '가동범위 10분 ✓'],
@@ -764,7 +749,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '3주 연속 개선. 다음 주 러닝머신 걷기 추가 검토.',
       ),
       _History(
-        dateLabel: '7/10',
+        daysAgo: 2,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 67,
         exercises: <String>['실내 자전거 ✓', '레그 익스텐션 ✓', '가동범위 ✗'],
@@ -785,8 +770,7 @@ const List<_Client> _clients = <_Client>[
     name: '한지호',
     avatar: '한',
     goal: '현 체중 유지',
-    lastTime: '어제',
-    threadHandled: true,
+    daysAgo: 1,
     active: true,
     calories: 1880,
     sodiumMg: 2010,
@@ -819,7 +803,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 67,
         exercises: <String>['경사 걷기 ✓', '풀업 어시스트 ✓', '스트레칭 ✗'],
@@ -840,7 +824,7 @@ const List<_Client> _clients = <_Client>[
     name: '문가영',
     avatar: '문',
     goal: '체력 회복',
-    lastTime: '3주 전',
+    daysAgo: 21,
     active: false,
     calories: 770,
     sodiumMg: 1030,
@@ -864,7 +848,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '6/21',
+        daysAgo: 21,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 33,
         exercises: <String>['걷기 20분 ✓', '스트레칭 ✗', '스쿼트 ✗'],
@@ -884,7 +868,7 @@ const List<_Client> _clients = <_Client>[
     name: '류태경',
     avatar: '류',
     goal: '벌크업',
-    lastTime: '1시간 전',
+    daysAgo: 0,
     active: true,
     calories: 3120,
     sodiumMg: 1950,
@@ -924,7 +908,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'PT 세션 · 트레이너 지도',
         completionRate: 100,
         exercises: <String>['스쿼트 5세트', '벤치프레스 5세트', '유산소 쿨다운'],
@@ -932,7 +916,7 @@ const List<_Client> _clients = <_Client>[
         trainerNote: '하는 날과 안 하는 날 편차가 큼. 주 4회 고정 스케줄 제안.',
       ),
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 0,
         exercises: <String>['스쿼트 ✗', '벤치프레스 ✗', '쿨다운 ✗'],
@@ -953,8 +937,7 @@ const List<_Client> _clients = <_Client>[
     name: '백서진',
     avatar: '백',
     goal: '식습관 개선',
-    lastTime: '어제',
-    threadHandled: true,
+    daysAgo: 1,
     active: true,
     calories: 1920,
     sodiumMg: 2680,
@@ -987,7 +970,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/12 (오늘)',
+        daysAgo: 0,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['러닝머신 30분 ✓', '근력 서킷 25분 ✓', '스트레칭 10분 ✓'],
@@ -1008,8 +991,7 @@ const List<_Client> _clients = <_Client>[
     name: '노은채',
     avatar: '노',
     goal: '운동 습관 만들기',
-    lastTime: '어제',
-    threadHandled: true,
+    daysAgo: 1,
     active: true,
     calories: 1280,
     sodiumMg: 1450,
@@ -1033,7 +1015,7 @@ const List<_Client> _clients = <_Client>[
     ],
     history: <_History>[
       _History(
-        dateLabel: '7/11 (어제)',
+        daysAgo: 1,
         label: 'AI 루틴 · 자율 운동',
         completionRate: 100,
         exercises: <String>['걷기 20분 ✓', '맨몸 스쿼트 8분 ✓', '스트레칭 10분 ✓'],

@@ -23,6 +23,7 @@ import 'package:oncare/features/member_coach/domain/repositories/member_coach_re
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/ai_advice_card.dart';
 
 class _GoalSyncHost extends StatefulWidget {
   const _GoalSyncHost();
@@ -80,6 +81,13 @@ class _SessionMemberCoachRepository implements MemberCoachRepository {
     String intensity = 'moderate',
     String memberNote = '',
   }) async => throw UnsupportedError('not used');
+
+  @override
+  Future<CoachRoutine> uncompleteRoutine(String routineId) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> deleteRoutine(String routineId) async {}
   @override
   Future<List<CoachSession>> fetchSessions() async => sessions;
   @override
@@ -98,7 +106,10 @@ class _SessionMemberCoachRepository implements MemberCoachRepository {
   Future<List<CoachInvite>> fetchInvites() async => const <CoachInvite>[];
 
   @override
-  Future<void> acceptInvite(String inviteId) async {}
+  Future<void> acceptInvite(
+    String inviteId, {
+    required bool dataSharingConsent,
+  }) async {}
 
   @override
   Future<void> rejectInvite(String inviteId) async {}
@@ -164,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('운동 탭 요약은 일수 카드를 제외한 운동 목표를 표시한다', (
+  testWidgets('운동 탭에는 주간 요약 카드가 없다 — 연속만 응원 문구로 남는다 (#1021)', (
     WidgetTester tester,
   ) async {
     await pumpExercise(
@@ -179,14 +190,47 @@ void main() {
       ),
     );
 
+    // 시간·칼로리는 바로 아래 그래프가 이미 말한다 — 카드로 한 번 더 적지
+    // 않는다. 목표는 그래프의 목표선이 말한다(#1015).
     expect(find.text('일수'), findsNothing);
-    expect(find.text('2 /5일'), findsNothing);
-    expect(find.text('100 /240분'), findsOneWidget);
-    expect(find.text('300 /900kcal'), findsOneWidget);
-    expect(find.text('연속'), findsOneWidget);
+    expect(find.text('100 /240분'), findsNothing);
+    expect(find.text('300 /900kcal'), findsNothing);
+
+    // 며칠 연속인지는 그래프가 말하지 못하므로 카드 머리에 남는다.
+    expect(find.textContaining('연속'), findsWidgets);
   });
 
-  testWidgets('운동 목표가 없으면 필드별 기본값을 표시한다', (WidgetTester tester) async {
+  testWidgets('기록 화면은 현황 → 조언 → PT 순서로 놓인다 (#1021)', (
+    WidgetTester tester,
+  ) async {
+    await pumpExercise(
+      tester,
+      profile: const UserProfile(
+        id: 'member',
+        name: '테스트',
+        email: 'member@example.com',
+      ),
+    );
+
+    // 걷어낸 것: 주간 요약 제목과 화면 맨 아래 담당 트레이너 카드.
+    expect(find.text('이번 주 운동 요약'), findsNothing);
+    expect(find.byKey(const Key('coachCard')), findsNothing);
+
+    // 더한 것: 운동 현황과 PT 카드 사이의 AI 맞춤 조언 카드. 식단 탭과 같은
+    // 위젯이라 카드 머리 문구도 같다.
+    final Finder advice = find.byType(AiAdviceCard);
+    expect(advice, findsOneWidget);
+    expect(find.text('AI 맞춤 조언'), findsOneWidget);
+
+    // 순서: 운동 현황 → 조언. 기간 토글이 현황 카드의 머리에 있다.
+    final double statusY = tester.getTopLeft(find.text('이번 주').first).dy;
+    final double adviceY = tester.getTopLeft(advice).dy;
+    expect(adviceY, greaterThan(statusY));
+  });
+
+  testWidgets('운동 목표는 그래프의 목표선이 말한다 (#1015, #1021)', (
+    WidgetTester tester,
+  ) async {
     await pumpExercise(
       tester,
       profile: const UserProfile(
@@ -198,9 +242,9 @@ void main() {
       ),
     );
 
-    expect(find.text('2 /4일'), findsNothing);
-    expect(find.text('100 /150분'), findsOneWidget);
-    expect(find.text('300 /800kcal'), findsOneWidget);
+    // 요약 카드가 없어졌으니 `100 /150분` 같은 문구도 없다.
+    expect(find.text('100 /150분'), findsNothing);
+    expect(find.text('300 /800kcal'), findsNothing);
   });
 
   testWidgets('트레이너가 완료한 PT 프로그램과 피드백을 표시한다', (WidgetTester tester) async {
@@ -254,7 +298,7 @@ void main() {
     expect(find.text('오른쪽 어깨 가동 범위를 확인해 주세요.'), findsOneWidget);
   });
 
-  testWidgets('MY에서 저장한 운동 목표가 열려 있던 홈·운동 탭에 반영된다', (
+  testWidgets('MY 에서 저장한 운동 목표가 열려 있던 홈·운동 탭에 반영된다 (#1139)', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
@@ -293,31 +337,43 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(' /3일'), findsOneWidget);
-    expect(find.text(' /150분'), findsOneWidget);
-    expect(find.text(' /500kcal'), findsOneWidget);
+    // 홈 운동 카드의 기준은 운동 탭 `운동 현황` 과 같은 ExerciseLoadGoals 다
+    // (#1119). 주간 소모 2,100kcal · 유산소 150분 · 근력 21세트 · 스트레칭 60분.
+    // 홈은 이제 그 카드를 그대로 쓰므로 값·목표가 한 덩어리로 적힌다 (#1183).
+    expect(find.textContaining('/2,100', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/150분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/21세트', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/60분', findRichText: true), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('openGoals')));
     await tester.pumpAndSettle();
+    // 운동 목표 네 칸: 일일 소모 · 주간 유산소 · 주간 근력 · 주간 스트레칭.
+    // 식단 여섯 칸 뒤에 온다.
     final Finder fields = find.byType(TextField);
-    await tester.enterText(fields.at(6), '5');
+    await tester.enterText(fields.at(6), '400');
     await tester.enterText(fields.at(7), '240');
-    await tester.enterText(fields.at(8), '900');
+    await tester.enterText(fields.at(8), '30');
+    await tester.enterText(fields.at(9), '90');
     final Finder save = find.text('저장');
     await tester.ensureVisible(save);
     await tester.tap(save);
     await tester.pumpAndSettle();
 
     expect(find.byType(HealthGoalsPage), findsNothing);
-    expect(find.text(' /5일'), findsOneWidget);
-    expect(find.text(' /240분'), findsOneWidget);
-    expect(find.text(' /900kcal'), findsOneWidget);
+    // 저장한 목표가 홈 카드의 기준으로 바로 들어온다 (#1139). 주간 소모는
+    // 하루 목표 × 7 이다.
+    expect(find.textContaining('/2,800', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/240분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/30세트', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/90분', findRichText: true), findsOneWidget);
+    expect(find.textContaining('/2,100', findRichText: true), findsNothing);
 
     await tester.tap(find.byKey(const Key('showExercise')));
     await tester.pumpAndSettle();
-    expect(find.text('2 /5일'), findsNothing);
-    expect(find.text('100 /240분'), findsOneWidget);
-    expect(find.text('300 /900kcal'), findsOneWidget);
+    // 운동 탭의 요약 카드는 없어졌다 — 바뀐 목표는 홈 카드와 그래프의 목표선이
+    // 말한다. (#1021)
+    expect(find.text('100 /240분'), findsNothing);
+    expect(find.text('300 /900kcal'), findsNothing);
 
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();

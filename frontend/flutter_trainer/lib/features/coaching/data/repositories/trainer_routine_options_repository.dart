@@ -69,9 +69,10 @@ class MockTrainerRoutineOptionsRepository
     // 합이 totalB 와 정확히 같게 한다. 앞 두 개의 상한도 "남은 운동에 최소
     // 1분씩은 남긴다"는 조건으로 둔다.
     final intervalMinutes = (totalB * 0.5).round().clamp(1, totalB - 2);
-    final squatMinutes = (totalB * 0.3)
-        .round()
-        .clamp(1, totalB - intervalMinutes - 1);
+    final squatMinutes = (totalB * 0.3).round().clamp(
+      1,
+      totalB - intervalMinutes - 1,
+    );
     final plankMinutes = totalB - intervalMinutes - squatMinutes;
 
     return RoutineOptions(

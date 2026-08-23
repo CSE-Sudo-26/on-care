@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
@@ -45,6 +47,7 @@ from app.services import (
     exercise_types,
     notification_service,
     routine_suggestion_service,
+    schedule_parse,
 )
 from app.services.coach import personal_ingest
 
@@ -102,18 +105,26 @@ def history_date_label(day: str) -> str:
 
 
 def relative_time_label(ts: datetime) -> str:
-    """채팅 최근시각 → 방금/N분 전/N시간 전/N일 전."""
-    now = datetime.now(timezone.utc)
+    """채팅 최근시각 → 오늘이면 HH:MM, 어제면 '어제', 그 전이면 YYYY-MM-DD.
+
+    카카오톡과 같은 규칙이다. 예전에는 "방금/N분 전/N시간 전/N일 전" 으로
+    흘러간 시간을 셌는데, 며칠씩 지난 대화에서 트레이너가 알고 싶은 것은
+    "얼마나 됐나" 가 아니라 **언제였나** 다 — 그건 운동·식단 기록과 맞춰
+    보려면 날짜여야 한다.
+
+    경계는 **KST 달력 날짜**로 가른다. 흘러간 초로 나누면 KST 새벽 1시에
+    받은 메시지가 23시간 전이라는 이유로 '오늘' 이 아니게 된다.
+    """
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
-    secs = (now - ts).total_seconds()
-    if secs < 60:
-        return "방금"
-    if secs < 3600:
-        return f"{int(secs // 60)}분 전"
-    if secs < 86400:
-        return f"{int(secs // 3600)}시간 전"
-    return f"{int(secs // 86400)}일 전"
+    local = clock.to_seoul(ts)
+    today = clock.to_seoul(datetime.now(timezone.utc)).date()
+    days = (today - local.date()).days
+    if days <= 0:
+        return local.strftime("%H:%M")
+    if days == 1:
+        return "어제"
+    return local.date().isoformat()
 
 
 def _local_date_iso(ts: datetime) -> str:
@@ -382,6 +393,7 @@ def build_roster(
             goal=link.goal,
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
+            last_message_at=last_msg.created_at if last_msg else None,
             active=_roster_active(link),
             calories=calories,
             sodium_mg=sodium_mg,
@@ -433,6 +445,21 @@ def _food_names(foods_json: str | None) -> list[str]:
     return names
 
 
+def _foods(foods_json: str | None) -> list[dict[str, Any]]:
+    """끼니의 음식별 영양. 회원 API 가 흘려 보내는 것과 같은 배열이다. (#1166)
+
+    깨진 값은 빈 목록으로 본다 — 트레이너 화면은 그때 `items` 한 줄로 떨어져
+    예전과 같이 읽힌다.
+    """
+    try:
+        parsed = json.loads(foods_json or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
+
+
 def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietEntryOut]:
     """회원의 특정 날짜 식단(회원 실데이터)을 고객 식단 서브탭 형태로."""
     rows = db.scalars(
@@ -451,8 +478,14 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         out.append(ClientDietEntryOut(
             meal=_meal_kr(r.meal_type),
             items=items,
+            # 회원 앱 끼니 카드와 같은 재료를 그대로 넘긴다(#1166). 이름만 이어
+            # 붙인 `items` 로는 같은 500kcal 이 밥에서 왔는지 기름에서 왔는지
+            # 트레이너가 알 수 없다.
+            time_label=r.time_label or "",
+            foods=_foods(r.foods_json),
             calories=r.total_calories,
             sodium_mg=r.sodium_mg,
+            sugar_g=r.sugar_g,
             carbs_g=r.carbs_g,
             protein_g=r.protein_g,
             fat_g=r.fat_g,
@@ -514,6 +547,11 @@ def build_client_history(
             exercises=exercises,
             client_feedback=r.client_feedback,
             trainer_note=r.trainer_note,
+            # 배정 수행(`_assigned_history_out`)은 완료 시각을 함께 내려보내는데
+            # 이 갈래만 비워 두고 있었다. 받는 쪽은 그 값으로 기록을 날짜에
+            # 붙이므로, 비어 오면 화면에서 통째로 빠진다 — 이 표는 날짜를
+            # 갖고 있으니(`date`) 그날로 채운다. (#1114, #1025)
+            completed_at=_day_start(r.date),
         )))
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
@@ -636,6 +674,65 @@ def _existing_message_out(
     return chat_message_out(message, viewer)
 
 
+#: 대화에서 읽어 낸 PT 의 종류·길이·표시. 길이는 트레이너 앱의 기본 한 시간을
+#: 따른다 — 문장에 "몇 분" 까지 적히는 일은 드물어 짐작하지 않는다.
+PT_SESSION_TYPE = "1:1 PT"
+_CHAT_SCHEDULE_MINUTES = 60
+_CHAT_SCHEDULE_NOTE = "대화에서 잡은 일정"
+
+
+def _schedule_from_chat(
+    db: Session, trainer_id: str, member_id: str, text: str, sent_at: datetime
+) -> None:
+    """트레이너가 대화에서 잡은 다음 PT 를 일정으로 남긴다. (#1061)
+
+    약속은 대화에서 잡히는데 그 말이 채팅 안에만 남아, 회원 앱의 `다음 PT
+    일정` 은 비어 있거나 지난 일정을 들고 있었다.
+
+    **트레이너가 보낸 말만** 본다. 회원이 제안한 시간은 아직 약속이 아니다 —
+    트레이너가 받아 주기 전에 일정으로 굳히면 오지 않을 시간을 잡아 둔다.
+
+    같은 날 같은 시각의 일정이 이미 있으면 아무것도 하지 않는다. 트레이너가
+    같은 약속을 두 번 말하는 것은 흔한 일이라, 그때마다 칸이 늘면 일정 화면이
+    중복으로 찬다.
+    """
+    parsed = schedule_parse.parse_schedule(
+        text, sent_on=clock.to_seoul(sent_at).date()
+    )
+    if parsed is None:
+        return
+    existing = db.scalar(
+        select(TrainerSchedule).where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.date == parsed.date,
+            TrainerSchedule.time == parsed.time,
+        )
+    )
+    if existing is not None:
+        return
+    member_name = db.scalar(select(User.name).where(User.id == member_id))
+    db.add(
+        TrainerSchedule(
+            id=f"sched-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            date=parsed.date,
+            time=parsed.time,
+            client_name=member_name or "",
+            type=PT_SESSION_TYPE,
+            duration_minutes=_CHAT_SCHEDULE_MINUTES,
+            status="예정",
+            # 어디서 온 일정인지 남긴다 — 사람이 만든 일정과 섞이면, 잘못
+            # 읽은 약속을 나중에 가려낼 수 없다.
+            note=_CHAT_SCHEDULE_NOTE,
+            program_json="[]",
+            sort_order=0,
+        )
+    )
+    db.flush()
+
+
 def send_message(
     db: Session, trainer_id: str, member_id: str, sender: str, text: str,
     viewer: str = "trainer", notify: str | None = None,
@@ -693,6 +790,9 @@ def send_message(
             if existing is not None:
                 return _existing_message_out(existing, text=text, viewer=viewer)
         raise
+
+    if sender == "trainer":
+        _schedule_from_chat(db, trainer_id, member_id, text, msg.created_at)
 
     if sender == "member":
         member_name = db.scalar(select(User.name).where(User.id == member_id))
@@ -935,6 +1035,18 @@ class RoutineNotFound(Exception):
     """루틴이 없거나 이 트레이너·회원의 것이 아니다."""
 
 
+def _day_start(day: str) -> datetime | None:
+    """`YYYY-MM-DD` → 그날 0시. 형식이 틀리면 None.
+
+    이 표는 시각 없이 날짜만 들고 있다. 받는 쪽은 시각을 버리고 날짜만 보므로
+    (`historyInRange`) 0시로 세워도 뜻이 달라지지 않는다.
+    """
+    try:
+        return datetime.fromisoformat(f"{day}T00:00:00")
+    except ValueError:
+        return None
+
+
 def _owned_routine(
     db: Session, trainer_id: str | None, member_id: str, routine_id: str
 ) -> TrainerRoutine:
@@ -996,6 +1108,37 @@ def delete_routine(
     배정의 일부가 아니다.
     """
     routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    db.delete(routine)
+    db.commit()
+
+
+class RoutineNotCancellable(Exception):
+    """담당 트레이너가 배정한 루틴을 회원이 직접 지우려 했다. (#1020)"""
+
+
+def delete_own_routine(db: Session, member_id: str, routine_id: str) -> None:
+    """회원이 자기 개인 운동을 지운다. **담당 트레이너가 없을 때만.** (#1020)
+
+    트레이너가 배정한 것을 회원이 조용히 없애면, 다음 상담에서 둘이 서로 다른
+    기록을 보게 된다. 담당이 있는 회원에게는 취소가 트레이너의 일이다.
+
+    담당 없이 AI 가 직접 추천한 개인운동(#782)은 승인할 사람이 없으므로 회원이
+    스스로 물릴 수 있어야 한다 — 그러지 않으면 한 번 뜬 추천을 지울 방법이 없다.
+
+    이미 수행한 기록은 남는다. 지우는 것은 **배정**이지 한 일이 아니다.
+    """
+    if get_member_trainer_id(db, member_id) is not None:
+        raise RoutineNotCancellable(
+            "담당 트레이너가 배정한 개인운동은 회원이 직접 취소할 수 없습니다."
+        )
+    routine = db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.id == routine_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    if routine is None:
+        raise RoutineNotFound("루틴을 찾을 수 없습니다.")
     db.delete(routine)
     db.commit()
 
@@ -1274,6 +1417,38 @@ def complete_assigned_routine(
     db.refresh(row)
     personal_ingest.refresh_exercise(db, member_id, session_id=row.id)
     return _routine_out(routine, row)
+
+
+def uncomplete_assigned_routine(
+    db: Session,
+    trainer_id: str | None,
+    member_id: str,
+    routine_id: str,
+) -> RoutineOut:
+    """완료 표시를 되돌린다 — 그 배정으로 만들어진 운동 기록을 지운다. (#1131)
+
+    회원이 체크를 잘못 눌렀을 때 되돌릴 방법이 없으면, 하지 않은 운동이 주간
+    시간·칼로리에 영원히 남는다. 완료는 배정 하나당 기록 하나(`assigned_routine_id`
+    unique)라 지울 대상도 하나다.
+
+    아직 완료하지 않은 배정에 대해서는 아무 일도 하지 않고 현재 상태를 돌려준다 —
+    같은 요청을 두 번 보내도 결과가 같다.
+    """
+    routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    row = db.scalar(
+        select(ExerciseSession).where(
+            ExerciseSession.assigned_routine_id == routine_id,
+            ExerciseSession.user_id == member_id,
+        )
+    )
+    if row is None:
+        return _routine_out(routine, None)
+    session_id = row.id
+    db.delete(row)
+    db.commit()
+    # 근거 문서도 함께 지운다 — 행이 사라지면 `_load` 가 None 을 돌려준다.
+    personal_ingest.refresh_exercise(db, member_id, session_id=session_id)
+    return _routine_out(routine, None)
 
 
 def update_assigned_routine_feedback(
@@ -3603,14 +3778,12 @@ def report_message(report: WeeklyReportOut) -> str:
 
     workout: list[str] = []
     if report.completion_avg is not None:
+        # `이번 주` 로 시작하지 않는다 — 지난 주 리포트에도 그대로 나가는
+        # 문장이고, 어느 주인지는 첫 줄의 날짜 범위가 이미 말한다(#1177).
         workout.append(
-            f"이번 주 운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
+            f"운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
             if report.completion_avg >= 70
-            else f"이번 주 운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
-        )
-    if report.sessions_booked:
-        workout.append(
-            f"PT 세션은 {report.sessions_done}/{report.sessions_booked}회 진행했어요."
+            else f"운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
         )
     skipped = _skipped_names(report)
     if skipped:
@@ -3623,12 +3796,17 @@ def report_message(report: WeeklyReportOut) -> str:
 
     diet: list[str] = []
     if report.sodium_avg is not None:
+        # 평균과 초과일을 한 문장에 뒤섞지 않는다. `평균 1,916mg으로 목표를
+        # 3일 넘겼어요` 는 평균이 목표를 넘긴 것처럼 읽힌다. 목표도 문장에
+        # 박아 두지 않는다 — 기준이 바뀌면 문장만 옛말을 한다(#1177).
         diet.append(
-            f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표(2,000mg)를 "
-            f"{report.sodium_over_days}일 넘겼어요. 국물을 절반만 남기셔도 "
+            f"나트륨은 하루 평균 {report.sodium_avg:,}mg이었고, "
+            f"목표({SODIUM_TARGET_MG:,}mg)를 넘긴 날이 "
+            f"{report.sodium_over_days}일이었어요. 국물을 절반만 남기셔도 "
             "하루 400~500mg은 줄어듭니다."
             if report.sodium_over_days > 0
-            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표 안에서 잘 지키고 계세요."
+            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 "
+            f"목표({SODIUM_TARGET_MG:,}mg) 안에서 잘 지키고 계세요."
         )
     recorded = [v for v in report.calories_week if v > 0]
     if recorded:
@@ -3642,12 +3820,12 @@ def report_message(report: WeeklyReportOut) -> str:
         # 인사말만 남았다 — 가리킬 '이 부분'이 없다. 기록이 없는 주에 격려부터
         # 하면 회원이 무엇을 하라는 말인지 알 수 없다.
         paragraphs.append(
-            "이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
+            "이 주에는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
             "다음 주 시작을 같이 잡아 봐요."
         )
     else:
         paragraphs.append(
-            "이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
+            "정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
             if good
             else "다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요."
         )
@@ -3668,16 +3846,38 @@ def _topic(word: str) -> str:
 
 
 def _skipped_names(report: WeeklyReportOut) -> list[str]:
-    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다."""
+    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다.
+
+    분량을 뗀 이름으로 묶는다 — 같은 스트레칭을 요일마다 건너뛰면 예전에는
+    `하체 스트레칭 10분, 하체 스트레칭 5분, 하체 스트레칭 15분` 이 되어, 서로
+    다른 운동 셋을 빠뜨린 것처럼 읽혔다(#1177).
+    """
     names: list[str] = []
     for day in report.days:
         for line in day.exercises:
             if "✗" not in line:
                 continue
-            name = line.replace("✗", "").strip()
+            name = exercise_base_name(line)
             if name and name not in names:
                 names.append(name)
     return names[:3]
+
+
+#: 운동 이름 뒤에 붙는 그날의 분량(`하체 스트레칭 10분`, `벤치프레스 40kg · 4세트`).
+_EXERCISE_AMOUNT_RE = re.compile(r"\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$")
+
+
+def exercise_base_name(line: str) -> str:
+    """운동 한 줄에서 분량 표기를 떼어 낸 이름.
+
+    초안·요약이 운동을 **묶어 세는** 자리에서는 분량이 같은 운동을 서로 다른
+    운동으로 갈라 놓는다. 앱의 `exerciseBaseName` 과 같은 규칙이다(#1177).
+    """
+    name = line.replace("✗", "").replace("✓", "").strip()
+    head, sep, _ = name.partition("·")
+    if sep:
+        name = head.strip()
+    return _EXERCISE_AMOUNT_RE.sub("", name).strip()
 
 
 # ---- 리포트 피드백 초안 (#821) ----

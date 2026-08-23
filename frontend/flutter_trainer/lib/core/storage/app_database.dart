@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 part 'app_database.g.dart';
 
-/// Generic key-value table. Holds tiny app-level state — currently the
-/// seed flag (`trainer_seeded_v1`).
+/// Generic key-value table. Holds tiny app-level state — the seed flag
+/// (`trainer_seeded_v<N>`, bumped whenever the seeded content changes)
+/// and the per-client chat read markers.
 class AppKeyValues extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
@@ -64,6 +65,29 @@ class ClientDietEntries extends Table {
   RealColumn get proteinG => real().withDefault(const Constant(0))();
   RealColumn get fatG => real().withDefault(const Constant(0))();
 
+  /// 그 끼니의 당류(g). 나트륨과 나란히 읽히는 값인데 여기만 빠져 있어,
+  /// 트레이너는 끼니 카드에서 나트륨만 보고 당류는 하루 합계로만 볼 수
+  /// 있었다(#1025).
+  RealColumn get sugarG => real().withDefault(const Constant(0))();
+
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`).
+  ///
+  /// 예전에는 이 표가 **오늘 하루**만 담아 날짜가 필요 없었다. 기간 뷰에서
+  /// 날짜를 눌러 그날 끼니를 펼치려면 어느 날 것인지 알아야 한다(#1025).
+  /// 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로 거르는
+  /// 조회에서는 걸리지 않는다.
+  TextColumn get date => text().withDefault(const Constant(''))();
+
+  /// 끼니를 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 끼니 배지 옆에 적는
+  /// 값이라 트레이너 화면에도 같은 자리가 있어야 한다(#1166).
+  TextColumn get timeLabel => text().withDefault(const Constant(''))();
+
+  /// 그 끼니의 **음식별** 영양(JSON 배열). 회원 앱은 음식 한 줄마다
+  /// `이름 · kcal · 나트륨 · 당류` 를 적는데, 트레이너 화면은 이름을 쉼표로
+  /// 이어 붙인 [items] 한 줄뿐이라 같은 끼니를 두 화면이 다른 수준으로
+  /// 말했다(#1166). 비어 있으면 예전처럼 [items] 만 읽는다.
+  TextColumn get foodsJson => text().withDefault(const Constant('[]'))();
+
   /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
   /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
   /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
@@ -96,12 +120,18 @@ class ClientRoutineHistory extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
   TextColumn get dateLabel => text()(); // "7/12 (오늘)"
+
   TextColumn get label => text()(); // "PT 세션 · 트레이너 지도"
   IntColumn get completionRate => integer()(); // 0..100
   TextColumn get exercisesJson => text()(); // ["레그프레스 3세트", ...]
   TextColumn get clientFeedback => text().withDefault(const Constant(''))();
   TextColumn get trainerNote => text().withDefault(const Constant(''))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  /// 실제로 운동을 마친 시각. `dateLabel` 은 화면에 그릴 문자열일 뿐이라
+  /// 기간으로 거를 수 없다 — 실 API 가 주는 `completed_at` 과 같은 값을
+  /// 데모도 들고 있어야 두 모드가 같은 목록을 보여 준다(#1114).
+  DateTimeColumn get completedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
@@ -258,7 +288,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -364,6 +394,30 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.carbsG);
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.proteinG);
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.fatG);
+      }
+      // v14: 운동 기록의 실제 완료 날짜(#1114). nullable 이라 기존 행은 날짜
+      // 없이 그대로 읽히고, 화면은 날짜를 모르는 기록을 기간과 무관하게 늘
+      // 보여 준다 — 모른다고 숨기면 데이터가 사라진 것처럼 보인다.
+      if (from < 14) {
+        await m.addColumn(
+          clientRoutineHistory,
+          clientRoutineHistory.completedAt,
+        );
+      }
+      // v15: 끼니의 당류와 날짜(#1025). 둘 다 기본값이 있어 기존 행도 그대로
+      // 읽히고, 다음 재시딩이 실제 값을 채운다. 날짜가 빈 행은 날짜로 거르는
+      // 조회에 걸리지 않으므로, 재시딩 전에는 기간 뷰의 끼니가 비어 보일 뿐
+      // 오늘 화면은 지금까지와 같다.
+      if (from < 15) {
+        await m.addColumn(clientDietEntries, clientDietEntries.sugarG);
+        await m.addColumn(clientDietEntries, clientDietEntries.date);
+      }
+      // v16: 끼니 시각과 음식별 영양. 회원 앱 끼니 카드와 같은 것을 트레이너도
+      // 읽는다(#1166). 기본값이 있어 재시딩 전 행도 그대로 읽히고, 그런 행은
+      // 예전처럼 `items` 한 줄만 보여 준다.
+      if (from < 16) {
+        await m.addColumn(clientDietEntries, clientDietEntries.timeLabel);
+        await m.addColumn(clientDietEntries, clientDietEntries.foodsJson);
       }
     },
   );

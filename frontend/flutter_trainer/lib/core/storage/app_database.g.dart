@@ -1361,6 +1361,50 @@ class $ClientDietEntriesTable extends ClientDietEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _sugarGMeta = const VerificationMeta('sugarG');
+  @override
+  late final GeneratedColumn<double> sugarG = GeneratedColumn<double>(
+    'sugar_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _timeLabelMeta = const VerificationMeta(
+    'timeLabel',
+  );
+  @override
+  late final GeneratedColumn<String> timeLabel = GeneratedColumn<String>(
+    'time_label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _foodsJsonMeta = const VerificationMeta(
+    'foodsJson',
+  );
+  @override
+  late final GeneratedColumn<String> foodsJson = GeneratedColumn<String>(
+    'foods_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _photoAssetMeta = const VerificationMeta(
     'photoAsset',
   );
@@ -1395,6 +1439,10 @@ class $ClientDietEntriesTable extends ClientDietEntries
     carbsG,
     proteinG,
     fatG,
+    sugarG,
+    date,
+    timeLabel,
+    foodsJson,
     photoAsset,
     sortOrder,
   ];
@@ -1473,6 +1521,30 @@ class $ClientDietEntriesTable extends ClientDietEntries
         fatG.isAcceptableOrUnknown(data['fat_g']!, _fatGMeta),
       );
     }
+    if (data.containsKey('sugar_g')) {
+      context.handle(
+        _sugarGMeta,
+        sugarG.isAcceptableOrUnknown(data['sugar_g']!, _sugarGMeta),
+      );
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    }
+    if (data.containsKey('time_label')) {
+      context.handle(
+        _timeLabelMeta,
+        timeLabel.isAcceptableOrUnknown(data['time_label']!, _timeLabelMeta),
+      );
+    }
+    if (data.containsKey('foods_json')) {
+      context.handle(
+        _foodsJsonMeta,
+        foodsJson.isAcceptableOrUnknown(data['foods_json']!, _foodsJsonMeta),
+      );
+    }
     if (data.containsKey('photo_asset')) {
       context.handle(
         _photoAssetMeta,
@@ -1530,6 +1602,22 @@ class $ClientDietEntriesTable extends ClientDietEntries
         DriftSqlType.double,
         data['${effectivePrefix}fat_g'],
       )!,
+      sugarG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}sugar_g'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+      timeLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_label'],
+      )!,
+      foodsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foods_json'],
+      )!,
       photoAsset: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}photo_asset'],
@@ -1559,6 +1647,29 @@ class ClientDietEntryRow extends DataClass
   final double proteinG;
   final double fatG;
 
+  /// 그 끼니의 당류(g). 나트륨과 나란히 읽히는 값인데 여기만 빠져 있어,
+  /// 트레이너는 끼니 카드에서 나트륨만 보고 당류는 하루 합계로만 볼 수
+  /// 있었다(#1025).
+  final double sugarG;
+
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`).
+  ///
+  /// 예전에는 이 표가 **오늘 하루**만 담아 날짜가 필요 없었다. 기간 뷰에서
+  /// 날짜를 눌러 그날 끼니를 펼치려면 어느 날 것인지 알아야 한다(#1025).
+  /// 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로 거르는
+  /// 조회에서는 걸리지 않는다.
+  final String date;
+
+  /// 끼니를 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 끼니 배지 옆에 적는
+  /// 값이라 트레이너 화면에도 같은 자리가 있어야 한다(#1166).
+  final String timeLabel;
+
+  /// 그 끼니의 **음식별** 영양(JSON 배열). 회원 앱은 음식 한 줄마다
+  /// `이름 · kcal · 나트륨 · 당류` 를 적는데, 트레이너 화면은 이름을 쉼표로
+  /// 이어 붙인 [items] 한 줄뿐이라 같은 끼니를 두 화면이 다른 수준으로
+  /// 말했다(#1166). 비어 있으면 예전처럼 [items] 만 읽는다.
+  final String foodsJson;
+
   /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
   /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
   /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
@@ -1575,6 +1686,10 @@ class ClientDietEntryRow extends DataClass
     required this.carbsG,
     required this.proteinG,
     required this.fatG,
+    required this.sugarG,
+    required this.date,
+    required this.timeLabel,
+    required this.foodsJson,
     this.photoAsset,
     required this.sortOrder,
   });
@@ -1590,6 +1705,10 @@ class ClientDietEntryRow extends DataClass
     map['carbs_g'] = Variable<double>(carbsG);
     map['protein_g'] = Variable<double>(proteinG);
     map['fat_g'] = Variable<double>(fatG);
+    map['sugar_g'] = Variable<double>(sugarG);
+    map['date'] = Variable<String>(date);
+    map['time_label'] = Variable<String>(timeLabel);
+    map['foods_json'] = Variable<String>(foodsJson);
     if (!nullToAbsent || photoAsset != null) {
       map['photo_asset'] = Variable<String>(photoAsset);
     }
@@ -1608,6 +1727,10 @@ class ClientDietEntryRow extends DataClass
       carbsG: Value(carbsG),
       proteinG: Value(proteinG),
       fatG: Value(fatG),
+      sugarG: Value(sugarG),
+      date: Value(date),
+      timeLabel: Value(timeLabel),
+      foodsJson: Value(foodsJson),
       photoAsset: photoAsset == null && nullToAbsent
           ? const Value.absent()
           : Value(photoAsset),
@@ -1630,6 +1753,10 @@ class ClientDietEntryRow extends DataClass
       carbsG: serializer.fromJson<double>(json['carbsG']),
       proteinG: serializer.fromJson<double>(json['proteinG']),
       fatG: serializer.fromJson<double>(json['fatG']),
+      sugarG: serializer.fromJson<double>(json['sugarG']),
+      date: serializer.fromJson<String>(json['date']),
+      timeLabel: serializer.fromJson<String>(json['timeLabel']),
+      foodsJson: serializer.fromJson<String>(json['foodsJson']),
       photoAsset: serializer.fromJson<String?>(json['photoAsset']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
@@ -1647,6 +1774,10 @@ class ClientDietEntryRow extends DataClass
       'carbsG': serializer.toJson<double>(carbsG),
       'proteinG': serializer.toJson<double>(proteinG),
       'fatG': serializer.toJson<double>(fatG),
+      'sugarG': serializer.toJson<double>(sugarG),
+      'date': serializer.toJson<String>(date),
+      'timeLabel': serializer.toJson<String>(timeLabel),
+      'foodsJson': serializer.toJson<String>(foodsJson),
       'photoAsset': serializer.toJson<String?>(photoAsset),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
@@ -1662,6 +1793,10 @@ class ClientDietEntryRow extends DataClass
     double? carbsG,
     double? proteinG,
     double? fatG,
+    double? sugarG,
+    String? date,
+    String? timeLabel,
+    String? foodsJson,
     Value<String?> photoAsset = const Value.absent(),
     int? sortOrder,
   }) => ClientDietEntryRow(
@@ -1674,6 +1809,10 @@ class ClientDietEntryRow extends DataClass
     carbsG: carbsG ?? this.carbsG,
     proteinG: proteinG ?? this.proteinG,
     fatG: fatG ?? this.fatG,
+    sugarG: sugarG ?? this.sugarG,
+    date: date ?? this.date,
+    timeLabel: timeLabel ?? this.timeLabel,
+    foodsJson: foodsJson ?? this.foodsJson,
     photoAsset: photoAsset.present ? photoAsset.value : this.photoAsset,
     sortOrder: sortOrder ?? this.sortOrder,
   );
@@ -1688,6 +1827,10 @@ class ClientDietEntryRow extends DataClass
       carbsG: data.carbsG.present ? data.carbsG.value : this.carbsG,
       proteinG: data.proteinG.present ? data.proteinG.value : this.proteinG,
       fatG: data.fatG.present ? data.fatG.value : this.fatG,
+      sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      date: data.date.present ? data.date.value : this.date,
+      timeLabel: data.timeLabel.present ? data.timeLabel.value : this.timeLabel,
+      foodsJson: data.foodsJson.present ? data.foodsJson.value : this.foodsJson,
       photoAsset: data.photoAsset.present
           ? data.photoAsset.value
           : this.photoAsset,
@@ -1707,6 +1850,10 @@ class ClientDietEntryRow extends DataClass
           ..write('carbsG: $carbsG, ')
           ..write('proteinG: $proteinG, ')
           ..write('fatG: $fatG, ')
+          ..write('sugarG: $sugarG, ')
+          ..write('date: $date, ')
+          ..write('timeLabel: $timeLabel, ')
+          ..write('foodsJson: $foodsJson, ')
           ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
@@ -1724,6 +1871,10 @@ class ClientDietEntryRow extends DataClass
     carbsG,
     proteinG,
     fatG,
+    sugarG,
+    date,
+    timeLabel,
+    foodsJson,
     photoAsset,
     sortOrder,
   );
@@ -1740,6 +1891,10 @@ class ClientDietEntryRow extends DataClass
           other.carbsG == this.carbsG &&
           other.proteinG == this.proteinG &&
           other.fatG == this.fatG &&
+          other.sugarG == this.sugarG &&
+          other.date == this.date &&
+          other.timeLabel == this.timeLabel &&
+          other.foodsJson == this.foodsJson &&
           other.photoAsset == this.photoAsset &&
           other.sortOrder == this.sortOrder);
 }
@@ -1754,6 +1909,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
   final Value<double> carbsG;
   final Value<double> proteinG;
   final Value<double> fatG;
+  final Value<double> sugarG;
+  final Value<String> date;
+  final Value<String> timeLabel;
+  final Value<String> foodsJson;
   final Value<String?> photoAsset;
   final Value<int> sortOrder;
   final Value<int> rowid;
@@ -1767,6 +1926,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
+    this.sugarG = const Value.absent(),
+    this.date = const Value.absent(),
+    this.timeLabel = const Value.absent(),
+    this.foodsJson = const Value.absent(),
     this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1781,6 +1944,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
+    this.sugarG = const Value.absent(),
+    this.date = const Value.absent(),
+    this.timeLabel = const Value.absent(),
+    this.foodsJson = const Value.absent(),
     this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1800,6 +1967,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Expression<double>? carbsG,
     Expression<double>? proteinG,
     Expression<double>? fatG,
+    Expression<double>? sugarG,
+    Expression<String>? date,
+    Expression<String>? timeLabel,
+    Expression<String>? foodsJson,
     Expression<String>? photoAsset,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
@@ -1814,6 +1985,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       if (carbsG != null) 'carbs_g': carbsG,
       if (proteinG != null) 'protein_g': proteinG,
       if (fatG != null) 'fat_g': fatG,
+      if (sugarG != null) 'sugar_g': sugarG,
+      if (date != null) 'date': date,
+      if (timeLabel != null) 'time_label': timeLabel,
+      if (foodsJson != null) 'foods_json': foodsJson,
       if (photoAsset != null) 'photo_asset': photoAsset,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
@@ -1830,6 +2005,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Value<double>? carbsG,
     Value<double>? proteinG,
     Value<double>? fatG,
+    Value<double>? sugarG,
+    Value<String>? date,
+    Value<String>? timeLabel,
+    Value<String>? foodsJson,
     Value<String?>? photoAsset,
     Value<int>? sortOrder,
     Value<int>? rowid,
@@ -1844,6 +2023,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       carbsG: carbsG ?? this.carbsG,
       proteinG: proteinG ?? this.proteinG,
       fatG: fatG ?? this.fatG,
+      sugarG: sugarG ?? this.sugarG,
+      date: date ?? this.date,
+      timeLabel: timeLabel ?? this.timeLabel,
+      foodsJson: foodsJson ?? this.foodsJson,
       photoAsset: photoAsset ?? this.photoAsset,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
@@ -1880,6 +2063,18 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     if (fatG.present) {
       map['fat_g'] = Variable<double>(fatG.value);
     }
+    if (sugarG.present) {
+      map['sugar_g'] = Variable<double>(sugarG.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (timeLabel.present) {
+      map['time_label'] = Variable<String>(timeLabel.value);
+    }
+    if (foodsJson.present) {
+      map['foods_json'] = Variable<String>(foodsJson.value);
+    }
     if (photoAsset.present) {
       map['photo_asset'] = Variable<String>(photoAsset.value);
     }
@@ -1904,6 +2099,10 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
           ..write('carbsG: $carbsG, ')
           ..write('proteinG: $proteinG, ')
           ..write('fatG: $fatG, ')
+          ..write('sugarG: $sugarG, ')
+          ..write('date: $date, ')
+          ..write('timeLabel: $timeLabel, ')
+          ..write('foodsJson: $foodsJson, ')
           ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
@@ -2466,6 +2665,17 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2477,6 +2687,7 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
     clientFeedback,
     trainerNote,
     sortOrder,
+    completedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2565,6 +2776,15 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2613,6 +2833,10 @@ class $ClientRoutineHistoryTable extends ClientRoutineHistory
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
     );
   }
 
@@ -2633,6 +2857,11 @@ class ClientRoutineHistoryRow extends DataClass
   final String clientFeedback;
   final String trainerNote;
   final int sortOrder;
+
+  /// 실제로 운동을 마친 시각. `dateLabel` 은 화면에 그릴 문자열일 뿐이라
+  /// 기간으로 거를 수 없다 — 실 API 가 주는 `completed_at` 과 같은 값을
+  /// 데모도 들고 있어야 두 모드가 같은 목록을 보여 준다(#1114).
+  final DateTime? completedAt;
   const ClientRoutineHistoryRow({
     required this.id,
     required this.clientId,
@@ -2643,6 +2872,7 @@ class ClientRoutineHistoryRow extends DataClass
     required this.clientFeedback,
     required this.trainerNote,
     required this.sortOrder,
+    this.completedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2656,6 +2886,9 @@ class ClientRoutineHistoryRow extends DataClass
     map['client_feedback'] = Variable<String>(clientFeedback);
     map['trainer_note'] = Variable<String>(trainerNote);
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
     return map;
   }
 
@@ -2670,6 +2903,9 @@ class ClientRoutineHistoryRow extends DataClass
       clientFeedback: Value(clientFeedback),
       trainerNote: Value(trainerNote),
       sortOrder: Value(sortOrder),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
     );
   }
 
@@ -2688,6 +2924,7 @@ class ClientRoutineHistoryRow extends DataClass
       clientFeedback: serializer.fromJson<String>(json['clientFeedback']),
       trainerNote: serializer.fromJson<String>(json['trainerNote']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
   }
   @override
@@ -2703,6 +2940,7 @@ class ClientRoutineHistoryRow extends DataClass
       'clientFeedback': serializer.toJson<String>(clientFeedback),
       'trainerNote': serializer.toJson<String>(trainerNote),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
   }
 
@@ -2716,6 +2954,7 @@ class ClientRoutineHistoryRow extends DataClass
     String? clientFeedback,
     String? trainerNote,
     int? sortOrder,
+    Value<DateTime?> completedAt = const Value.absent(),
   }) => ClientRoutineHistoryRow(
     id: id ?? this.id,
     clientId: clientId ?? this.clientId,
@@ -2726,6 +2965,7 @@ class ClientRoutineHistoryRow extends DataClass
     clientFeedback: clientFeedback ?? this.clientFeedback,
     trainerNote: trainerNote ?? this.trainerNote,
     sortOrder: sortOrder ?? this.sortOrder,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
   );
   ClientRoutineHistoryRow copyWithCompanion(
     ClientRoutineHistoryCompanion data,
@@ -2748,6 +2988,9 @@ class ClientRoutineHistoryRow extends DataClass
           ? data.trainerNote.value
           : this.trainerNote,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
     );
   }
 
@@ -2762,7 +3005,8 @@ class ClientRoutineHistoryRow extends DataClass
           ..write('exercisesJson: $exercisesJson, ')
           ..write('clientFeedback: $clientFeedback, ')
           ..write('trainerNote: $trainerNote, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
@@ -2778,6 +3022,7 @@ class ClientRoutineHistoryRow extends DataClass
     clientFeedback,
     trainerNote,
     sortOrder,
+    completedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2791,7 +3036,8 @@ class ClientRoutineHistoryRow extends DataClass
           other.exercisesJson == this.exercisesJson &&
           other.clientFeedback == this.clientFeedback &&
           other.trainerNote == this.trainerNote &&
-          other.sortOrder == this.sortOrder);
+          other.sortOrder == this.sortOrder &&
+          other.completedAt == this.completedAt);
 }
 
 class ClientRoutineHistoryCompanion
@@ -2805,6 +3051,7 @@ class ClientRoutineHistoryCompanion
   final Value<String> clientFeedback;
   final Value<String> trainerNote;
   final Value<int> sortOrder;
+  final Value<DateTime?> completedAt;
   final Value<int> rowid;
   const ClientRoutineHistoryCompanion({
     this.id = const Value.absent(),
@@ -2816,6 +3063,7 @@ class ClientRoutineHistoryCompanion
     this.clientFeedback = const Value.absent(),
     this.trainerNote = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClientRoutineHistoryCompanion.insert({
@@ -2828,6 +3076,7 @@ class ClientRoutineHistoryCompanion
     this.clientFeedback = const Value.absent(),
     this.trainerNote = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        clientId = Value(clientId),
@@ -2845,6 +3094,7 @@ class ClientRoutineHistoryCompanion
     Expression<String>? clientFeedback,
     Expression<String>? trainerNote,
     Expression<int>? sortOrder,
+    Expression<DateTime>? completedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2857,6 +3107,7 @@ class ClientRoutineHistoryCompanion
       if (clientFeedback != null) 'client_feedback': clientFeedback,
       if (trainerNote != null) 'trainer_note': trainerNote,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2871,6 +3122,7 @@ class ClientRoutineHistoryCompanion
     Value<String>? clientFeedback,
     Value<String>? trainerNote,
     Value<int>? sortOrder,
+    Value<DateTime?>? completedAt,
     Value<int>? rowid,
   }) {
     return ClientRoutineHistoryCompanion(
@@ -2883,6 +3135,7 @@ class ClientRoutineHistoryCompanion
       clientFeedback: clientFeedback ?? this.clientFeedback,
       trainerNote: trainerNote ?? this.trainerNote,
       sortOrder: sortOrder ?? this.sortOrder,
+      completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2917,6 +3170,9 @@ class ClientRoutineHistoryCompanion
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2935,6 +3191,7 @@ class ClientRoutineHistoryCompanion
           ..write('clientFeedback: $clientFeedback, ')
           ..write('trainerNote: $trainerNote, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5875,6 +6132,10 @@ typedef $$ClientDietEntriesTableCreateCompanionBuilder =
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
+      Value<double> sugarG,
+      Value<String> date,
+      Value<String> timeLabel,
+      Value<String> foodsJson,
       Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
@@ -5890,6 +6151,10 @@ typedef $$ClientDietEntriesTableUpdateCompanionBuilder =
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
+      Value<double> sugarG,
+      Value<String> date,
+      Value<String> timeLabel,
+      Value<String> foodsJson,
       Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
@@ -5946,6 +6211,26 @@ class $$ClientDietEntriesTableFilterComposer
 
   ColumnFilters<double> get fatG => $composableBuilder(
     column: $table.fatG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sugarG => $composableBuilder(
+    column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeLabel => $composableBuilder(
+    column: $table.timeLabel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get foodsJson => $composableBuilder(
+    column: $table.foodsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6014,6 +6299,26 @@ class $$ClientDietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get sugarG => $composableBuilder(
+    column: $table.sugarG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timeLabel => $composableBuilder(
+    column: $table.timeLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get foodsJson => $composableBuilder(
+    column: $table.foodsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
     builder: (column) => ColumnOrderings(column),
@@ -6060,6 +6365,18 @@ class $$ClientDietEntriesTableAnnotationComposer
 
   GeneratedColumn<double> get fatG =>
       $composableBuilder(column: $table.fatG, builder: (column) => column);
+
+  GeneratedColumn<double> get sugarG =>
+      $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get timeLabel =>
+      $composableBuilder(column: $table.timeLabel, builder: (column) => column);
+
+  GeneratedColumn<String> get foodsJson =>
+      $composableBuilder(column: $table.foodsJson, builder: (column) => column);
 
   GeneratedColumn<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
@@ -6119,6 +6436,10 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<String> timeLabel = const Value.absent(),
+                Value<String> foodsJson = const Value.absent(),
                 Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6132,6 +6453,10 @@ class $$ClientDietEntriesTableTableManager
                 carbsG: carbsG,
                 proteinG: proteinG,
                 fatG: fatG,
+                sugarG: sugarG,
+                date: date,
+                timeLabel: timeLabel,
+                foodsJson: foodsJson,
                 photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,
@@ -6147,6 +6472,10 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<String> timeLabel = const Value.absent(),
+                Value<String> foodsJson = const Value.absent(),
                 Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6160,6 +6489,10 @@ class $$ClientDietEntriesTableTableManager
                 carbsG: carbsG,
                 proteinG: proteinG,
                 fatG: fatG,
+                sugarG: sugarG,
+                date: date,
+                timeLabel: timeLabel,
+                foodsJson: foodsJson,
                 photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,
@@ -6452,6 +6785,7 @@ typedef $$ClientRoutineHistoryTableCreateCompanionBuilder =
       Value<String> clientFeedback,
       Value<String> trainerNote,
       Value<int> sortOrder,
+      Value<DateTime?> completedAt,
       Value<int> rowid,
     });
 typedef $$ClientRoutineHistoryTableUpdateCompanionBuilder =
@@ -6465,6 +6799,7 @@ typedef $$ClientRoutineHistoryTableUpdateCompanionBuilder =
       Value<String> clientFeedback,
       Value<String> trainerNote,
       Value<int> sortOrder,
+      Value<DateTime?> completedAt,
       Value<int> rowid,
     });
 
@@ -6519,6 +6854,11 @@ class $$ClientRoutineHistoryTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6576,6 +6916,11 @@ class $$ClientRoutineHistoryTableOrderingComposer
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ClientRoutineHistoryTableAnnotationComposer
@@ -6621,6 +6966,11 @@ class $$ClientRoutineHistoryTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ClientRoutineHistoryTableTableManager
@@ -6675,6 +7025,7 @@ class $$ClientRoutineHistoryTableTableManager
                 Value<String> clientFeedback = const Value.absent(),
                 Value<String> trainerNote = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientRoutineHistoryCompanion(
                 id: id,
@@ -6686,6 +7037,7 @@ class $$ClientRoutineHistoryTableTableManager
                 clientFeedback: clientFeedback,
                 trainerNote: trainerNote,
                 sortOrder: sortOrder,
+                completedAt: completedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6699,6 +7051,7 @@ class $$ClientRoutineHistoryTableTableManager
                 Value<String> clientFeedback = const Value.absent(),
                 Value<String> trainerNote = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientRoutineHistoryCompanion.insert(
                 id: id,
@@ -6710,6 +7063,7 @@ class $$ClientRoutineHistoryTableTableManager
                 clientFeedback: clientFeedback,
                 trainerNote: trainerNote,
                 sortOrder: sortOrder,
+                completedAt: completedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

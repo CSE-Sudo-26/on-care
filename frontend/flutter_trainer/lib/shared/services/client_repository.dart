@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
@@ -8,7 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
-    show prioritizeClients;
+    show prioritizeClients, sortByLatestMessage;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
@@ -16,6 +17,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_period.da
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
@@ -47,7 +49,16 @@ abstract interface class ClientRepository {
   /// [prioritizeClients]. Sources without a chat signal emit `{}`.
   Stream<Map<String, DateTime>> watchLastChatAt();
 
+  /// [clientId] 의 **오늘** 끼니.
   Stream<List<ClientDietEntry>> watchDiet(String clientId);
+
+  /// [clientId] 가 [date] 에 먹은 끼니. 기간 뷰에서 날짜를 눌러 그날을 펼칠
+  /// 때 쓴다(#1025). 기록이 없으면 빈 목록이다.
+  Future<List<ClientDietEntry>> fetchDietOn(String clientId, DateTime date);
+
+  /// [clientId] 가 [date] 에 한 운동 이름들. 끝의 `✓`/`✗` 가 수행 여부다 —
+  /// 운동 기록 카드가 쓰는 것과 같은 문자열이다(#1025).
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
   Future<RoutineHistoryEntry> updateHistoryFeedback(
     String clientId,
@@ -75,6 +86,14 @@ abstract interface class ClientRepository {
   /// 회원 앱 식단 탭의 기간 뷰와 같은 것을 트레이너에게도 준다. 두 구현 모두
   /// **주 단위 이력**에서 만든다 — 데모는 drift 의 일별 지표에서, 실서버는
   /// 리포트 응답(`calories_week` · `sodium_week` · `sugar_week`)에서.
+  /// 기간에 맞는 식단 조언. 회원 앱과 **같은 문장**이다 — 같은 회원의 같은
+  /// 기간을 두 화면이 다르게 말하면 상담에서 둘이 다른 이야기를 들고 앉는다.
+  /// (#1017)
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period);
+
+  /// 기간에 맞는 운동 조언. 식단(#1017)과 같은 규칙으로 서버가 만든다. (#1025)
+  Future<String> fetchExerciseAdvice(String clientId, ClientPeriod period);
+
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
@@ -264,9 +283,12 @@ class DriftClientRepository implements ClientRepository {
           saved.containsKey('weekly_exercise_minutes_goal')
           ? (saved['weekly_exercise_minutes_goal'] as num?)?.toInt()
           : 150,
+      // 주간 소모 목표의 기본값은 회원 앱과 같은 **하루 목표 × 7** 이다
+      // (`kWeeklyBurnKcal`). 1500 은 어느 화면도 쓰지 않는 값이라, 회원이 자기
+      // MY 에서 보는 목표와 트레이너의 회원 정보가 서로 달랐다. (#1170)
       weeklyBurnGoal: saved.containsKey('weekly_burn_goal')
           ? (saved['weekly_burn_goal'] as num?)?.toInt()
-          : 1500,
+          : kWeeklyBurnKcal.round(),
     );
   }
 
@@ -326,12 +348,72 @@ class DriftClientRepository implements ClientRepository {
     return <int>[minutes - strength - stretching, strength, stretching];
   }
 
+  /// 데모 픽스처. 김민수의 운동은 이 파일 하나가 정한다.
+  static final DemoFixture _fixture = DemoFixture.load();
+
+  /// 픽스처가 들고 있는 회원의 주간 운동. 유형·분·칼로리·**세트**를 픽스처에서
+  /// 그대로 옮긴다.
+  ///
+  /// 예전에는 이행률에서 분을 되만들고 요일로 유형을 나눴다. 같은 회원인데
+  /// 회원 앱은 픽스처를, 트레이너 화면은 재구성한 값을 보여, 근력 세트도 소모
+  /// 칼로리도 두 화면이 다른 수를 말했다. (#1077)
+  ClientExerciseWeek? _fixtureWeek(String clientId, DateTime monday) {
+    if (clientId != _fixture.trainerClientId) return null;
+    final DateTime today = nowKst();
+    final String mondayYmd = ymd(monday);
+    final List<FixtureDay> days = _fixture
+        .daysFor(today)
+        .where((FixtureDay d) => d.weekStart == mondayYmd)
+        .toList();
+    if (days.isEmpty) return null;
+
+    final List<int> minutes = List<int>.filled(7, 0);
+    final List<int> calories = List<int>.filled(7, 0);
+    final List<int> cardio = List<int>.filled(7, 0);
+    final List<int> strength = List<int>.filled(7, 0);
+    final List<int> stretching = List<int>.filled(7, 0);
+    final List<int> other = List<int>.filled(7, 0);
+    final List<int> sets = List<int>.filled(7, 0);
+    for (final FixtureDay day in days) {
+      final int i = DateTime.parse(day.date).weekday - 1;
+      for (final FixtureExercise e in day.doneExercises) {
+        minutes[i] += e.minutes;
+        calories[i] += e.calories;
+        switch (e.type) {
+          case 'strength':
+            strength[i] += e.minutes;
+            sets[i] += e.sets ?? setsFromStrengthMinutes(e.minutes);
+          case 'flexibility' || 'stretching' || 'yoga':
+            stretching[i] += e.minutes;
+          case 'cardio' || 'walking':
+            cardio[i] += e.minutes;
+          default:
+            other[i] += e.minutes;
+        }
+      }
+    }
+    return ClientExerciseWeek(
+      dayLabels: const ['월', '화', '수', '목', '금', '토', '일'],
+      dailyMinutes: minutes,
+      dailyCalories: calories,
+      cardioMinutes: cardio,
+      strengthMinutes: strength,
+      stretchingMinutes: stretching,
+      otherMinutes: other,
+      strengthSets: sets,
+      totalMinutes: minutes.fold(0, (int a, int b) => a + b),
+      totalCalories: calories.fold(0, (int a, int b) => a + b),
+    );
+  }
+
   @override
   Future<ClientExerciseWeek> fetchExerciseWeek(
     String clientId, {
     DateTime? weekStart,
   }) async {
     final monday = clientMondayOf(weekStart ?? nowKst());
+    final ClientExerciseWeek? fromFixture = _fixtureWeek(clientId, monday);
+    if (fromFixture != null) return fromFixture;
     final completion = await _weekCompletion(clientId, monday);
     final minutes = completion
         .map(_minutesFromCompletion)
@@ -392,6 +474,241 @@ class DriftClientRepository implements ClientRepository {
   }
 
   @override
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period) async {
+    // 데모는 서버 규칙(`diet_service.period_coach_message`)을 로컬 데이터로
+    // 흉내 낸다. 고정 문장을 돌려주면 어느 고객을 열어도 같은 말을 해서,
+    // 기간을 바꿨을 때 조언이 따라 바뀌는지도 볼 수 없다. (#1017)
+    if (period == ClientPeriod.today) {
+      // 오늘 것만 합친다. 이 표는 이제 지난 날의 끼니도 담으므로(#1025),
+      // 거르지 않으면 여러 달치 나트륨을 오늘 하루로 말하게 된다.
+      final entries =
+          await (_db.select(_db.clientDietEntries)
+                ..where((t) => t.clientId.equals(clientId))
+                ..where((t) => t.date.equals(ymd(nowKst()))))
+              .get();
+      final int sodium = entries.fold<int>(
+        0,
+        (int sum, ClientDietEntryRow row) => sum + row.sodiumMg,
+      );
+      return sodium > sodiumTargetMg
+          ? '나트륨이 목표치를 ${sodium - sodiumTargetMg}mg 초과했어요. '
+                '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
+          : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+    }
+
+    final ClientDietPeriod window = await fetchDietPeriod(
+      clientId,
+      clientRangeNow(period),
+    );
+    final List<ClientDietDay> logged = window.days
+        .where((ClientDietDay day) => day.calories > 0)
+        .toList();
+    if (logged.isEmpty) {
+      return period == ClientPeriod.week
+          ? '이번 주 식단 기록이 아직 없어요. 한 끼만 남겨도 흐름이 보여요.'
+          : '기록이 쌓이면 나트륨·칼로리 흐름을 짚어 드릴게요.';
+    }
+    final int over = logged
+        .where((ClientDietDay day) => day.sodiumMg > sodiumTargetMg)
+        .length;
+    final bool weekendHeavy = _weekendRuns(logged);
+    if (period == ClientPeriod.week) {
+      if (over >= 3) {
+        return '이번 주 $over일이나 나트륨 권장량을 넘었어요. '
+            '국물은 건더기 위주로 먹고 남은 며칠은 담백하게 가요.';
+      }
+      if (weekendHeavy) {
+        return '주중에는 잘 지키다가 주말에 나트륨이 확 올라요. '
+            '주말 외식은 한 끼만 정해 두면 흐름이 유지돼요.';
+      }
+      if (over > 0) {
+        return '이번 주 $over일만 권장량을 넘었어요. '
+            '나머지 날의 균형은 좋았으니 이 흐름을 이어가요.';
+      }
+      return '이번 주 내내 나트륨을 권장량 안에서 지켰어요. 아주 좋아요!';
+    }
+    if (weekendHeavy) {
+      return '기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요. '
+          '주말 한 끼만 담백하게 바꿔도 평균이 내려가요.';
+    }
+    if (over * 10 >= logged.length * 4) {
+      return '기록한 날의 ${(over * 100 / logged.length).round()}%가 나트륨 권장량을 넘었어요. '
+          '국·찌개 국물을 남기는 것부터 시작해 봐요.';
+    }
+    return '기록을 통틀어 나트륨이 대체로 권장량 안이에요. 지금 흐름이 좋아요.';
+  }
+
+  @override
+  Future<String> fetchExerciseAdvice(
+    String clientId,
+    ClientPeriod period,
+  ) async {
+    // 데모도 서버 규칙(`exercise_service.period_coach_message`)을 로컬 데이터로
+    // 흉내 낸다 — 고정 문장이면 기간을 바꿔도 조언이 그대로라, 이 화면이 무엇을
+    // 하는지 데모에서 보이지 않는다. (#1025)
+    final ClientExercisePeriod window = await _exercisePeriod(clientId, period);
+    // 기록이 없는 날은 0 으로 채워져 온다. 쉰 날과 적지 않은 날을 갈라 세려면
+    // 여기서 걸러야 서버(`daily_totals`)와 같은 수를 센다.
+    final List<ClientExerciseDay> logged = window.days
+        .where((ClientExerciseDay day) => day.minutes > 0)
+        .toList();
+    if (logged.isEmpty) {
+      return switch (period) {
+        ClientPeriod.week => '이번 주 운동 기록이 아직 없어요. 가벼운 산책 한 번도 흐름이 됩니다.',
+        ClientPeriod.month => '기록이 쌓이면 운동량과 유형의 흐름을 짚어 드릴게요.',
+        ClientPeriod.today => '아직 오늘 운동 기록이 없어요. 10분 걷기부터 시작해 볼까요?',
+      };
+    }
+
+    if (period == ClientPeriod.today) {
+      final ClientExerciseDay day = logged.last;
+      return '오늘 ${_mainTypeLabel(day)} 위주로 ${day.minutes}분, '
+          '${day.calories}kcal 를 썼어요. 마무리로 가볍게 스트레칭하면 회복이 빨라져요.';
+    }
+
+    final int totalMinutes = logged.fold<int>(
+      0,
+      (int sum, ClientExerciseDay day) => sum + day.minutes,
+    );
+    if (period == ClientPeriod.week) {
+      if (logged.length <= 1) {
+        return '이번 주는 ${logged.length}일 움직였어요. 한 번 더 나가면 흐름이 끊기지 않아요.';
+      }
+      final int cardio = logged.fold<int>(
+        0,
+        (int s, ClientExerciseDay d) => s + d.cardioMinutes,
+      );
+      final int strength = logged.fold<int>(
+        0,
+        (int s, ClientExerciseDay d) => s + d.strengthMinutes,
+      );
+      // 서버와 같은 8할 기준 — 한 유형에 쏠렸는지가 코칭의 첫 질문이다.
+      if (totalMinutes > 0 && cardio * 10 >= totalMinutes * 8) {
+        return '이번 주 ${logged.length}일 $totalMinutes분을 채웠는데 유산소에 몰려 있어요. '
+            '근력을 한 번 섞어 볼까요?';
+      }
+      if (totalMinutes > 0 && strength * 10 >= totalMinutes * 8) {
+        return '이번 주 ${logged.length}일 $totalMinutes분을 채웠는데 근력에 몰려 있어요. '
+            '유산소를 한 번 섞어 볼까요?';
+      }
+      return '이번 주 ${logged.length}일 동안 $totalMinutes분 운동했어요. '
+          '유형도 고르게 섞였네요. 이 흐름을 이어가요.';
+    }
+
+    // 전체 — 최근 4주와 그 이전을 견준다.
+    final DateTime recentFrom = logged.last.date.subtract(
+      const Duration(days: 27),
+    );
+    final List<int> recent = <int>[
+      for (final ClientExerciseDay d in logged)
+        if (!d.date.isBefore(recentFrom)) d.minutes,
+    ];
+    final List<int> earlier = <int>[
+      for (final ClientExerciseDay d in logged)
+        if (d.date.isBefore(recentFrom)) d.minutes,
+    ];
+    double mean(List<int> xs) =>
+        xs.isEmpty ? 0 : xs.fold<int>(0, (int a, int b) => a + b) / xs.length;
+    if (recent.isNotEmpty && earlier.isNotEmpty) {
+      if (mean(recent) > mean(earlier) * 1.1) {
+        return '최근 4주 운동량이 그 전보다 늘었어요. 지금 방식이 회원님께 맞는 것 같아요.';
+      }
+      if (mean(recent) < mean(earlier) * 0.9) {
+        return '최근 4주 들어 운동량이 줄고 있어요. 무엇이 달라졌는지 한 주만 되짚어 볼까요?';
+      }
+    }
+    return '기록을 통틀어 ${logged.length}일 $totalMinutes분을 움직였어요. '
+        '큰 기복 없이 이어가고 있어요.';
+  }
+
+  /// [period] 가 덮는 구간의 일별 운동 집계.
+  ///
+  /// 운동 이력은 서버도 데모도 **주 단위**라, 구간이 걸친 주를 각각 읽어 이어
+  /// 붙인다. `clientExercisePeriodProvider` 가 화면을 위해 하는 일과 같은데,
+  /// 조언은 위젯 없이도 같은 수를 세야 해서 여기에 한 벌 더 둔다.
+  Future<ClientExercisePeriod> _exercisePeriod(
+    String clientId,
+    ClientPeriod period,
+  ) async {
+    final ClientDateRange range = clientRangeNow(period, exercise: true);
+    final Map<String, ClientExerciseDay> byDate = <String, ClientExerciseDay>{};
+    int weeklyGoalMinutes = 0;
+    // 주를 한꺼번에 읽는다 — 위 provider 와 같은 이유다 (#1170).
+    final List<DateTime> mondays = clientRangeWeekStarts(range);
+    final List<ClientExerciseWeek> weeks = await Future.wait(
+      <Future<ClientExerciseWeek>>[
+        for (final DateTime monday in mondays)
+          fetchExerciseWeek(clientId, weekStart: monday),
+      ],
+    );
+    for (int w = 0; w < mondays.length; w++) {
+      final DateTime monday = mondays[w];
+      final ClientExerciseWeek week = weeks[w];
+      weeklyGoalMinutes = week.weeklyGoalMinutes;
+      for (var d = 0; d < 7; d++) {
+        final DateTime date = DateTime(
+          monday.year,
+          monday.month,
+          monday.day + d,
+        );
+        int at(List<int> xs) => d < xs.length ? xs[d] : 0;
+        byDate[ymd(date)] = ClientExerciseDay(
+          date: date,
+          minutes: at(week.dailyMinutes),
+          calories: at(week.dailyCalories),
+          cardioMinutes: at(week.cardioMinutes),
+          strengthMinutes: at(week.strengthMinutes),
+          stretchingMinutes: at(week.stretchingMinutes),
+          otherMinutes: at(week.otherMinutes),
+        );
+      }
+    }
+    return ClientExercisePeriod(
+      weeklyGoalMinutes: weeklyGoalMinutes,
+      range: range,
+      days: <ClientExerciseDay>[
+        for (final DateTime date in clientRangeDates(range))
+          byDate[ymd(date)] ?? ClientExerciseDay(date: date),
+      ],
+    );
+  }
+
+  /// 그날 가장 오래 한 유형의 이름. 같으면 유산소 → 근력 → 유연성 순이다.
+  String _mainTypeLabel(ClientExerciseDay day) {
+    final Map<String, int> byType = <String, int>{
+      '유산소': day.cardioMinutes,
+      '근력': day.strengthMinutes,
+      '유연성': day.stretchingMinutes,
+      '기타': day.otherMinutes,
+    };
+    String best = '유산소';
+    int bestMinutes = -1;
+    for (final MapEntry<String, int> e in byType.entries) {
+      if (e.value > bestMinutes) {
+        best = e.key;
+        bestMinutes = e.value;
+      }
+    }
+    return best;
+  }
+
+  /// 주말(토·일) 평균이 평일보다 뚜렷하게 높은지 — 서버와 같은 1.3배 기준.
+  bool _weekendRuns(List<ClientDietDay> days) {
+    final List<int> weekend = <int>[
+      for (final ClientDietDay day in days)
+        if (day.date.weekday >= DateTime.saturday) day.sodiumMg,
+    ];
+    final List<int> weekday = <int>[
+      for (final ClientDietDay day in days)
+        if (day.date.weekday < DateTime.saturday) day.sodiumMg,
+    ];
+    if (weekend.isEmpty || weekday.isEmpty) return false;
+    double mean(List<int> xs) =>
+        xs.fold<int>(0, (int a, int b) => a + b) / xs.length;
+    return mean(weekend) > mean(weekday) * 1.3;
+  }
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
@@ -427,27 +744,68 @@ class DriftClientRepository implements ClientRepository {
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
   @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) {
+    // 오늘 것만. 이 표는 이제 지난 날의 끼니도 담으므로(#1025), 거르지 않으면
+    // 오늘 화면이 사흘치를 한 번에 늘어놓는다.
+    final String todayYmd = ymd(nowKst());
     final query = _db.select(_db.clientDietEntries)
-      ..where((t) => t.clientId.equals(clientId))
+      ..where((t) => t.clientId.equals(clientId) & t.date.equals(todayYmd))
       ..orderBy(<OrderingTerm Function($ClientDietEntriesTable)>[
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
-    return query.watch().map(
-      (rows) => rows
-          .map(
-            (row) => ClientDietEntry(
-              meal: row.meal,
-              items: row.items,
-              calories: row.calories,
-              sodiumMg: row.sodiumMg,
-              carbsG: row.carbsG,
-              proteinG: row.proteinG,
-              fatG: row.fatG,
-              photoAsset: row.photoAsset,
-            ),
-          )
-          .toList(),
-    );
+    return query.watch().map((rows) => rows.map(_toDietEntry).toList());
+  }
+
+  @override
+  Future<List<ClientDietEntry>> fetchDietOn(
+    String clientId,
+    DateTime date,
+  ) async {
+    final query = _db.select(_db.clientDietEntries)
+      ..where((t) => t.clientId.equals(clientId) & t.date.equals(ymd(date)))
+      ..orderBy(<OrderingTerm Function($ClientDietEntriesTable)>[
+        (t) => OrderingTerm(expression: t.sortOrder),
+      ]);
+    return (await query.get()).map(_toDietEntry).toList();
+  }
+
+  @override
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date) async {
+    // 데모는 하루 지표에 그날 한 운동 이름을 함께 담아 둔다 — 기간 그래프가
+    // 읽는 것과 같은 표라, 그래프의 분 수와 여기 이름이 같은 날을 말한다.
+    final ClientDailyMetricRow? row =
+        await (_db.select(_db.clientDailyMetrics)
+              ..where((t) => t.clientId.equals(clientId))
+              ..where((t) => t.date.equals(ymd(date))))
+            .getSingleOrNull();
+    if (row == null) return const <String>[];
+    final Object? decoded = jsonDecode(row.exercisesJson);
+    if (decoded is! List<Object?>) return const <String>[];
+    return decoded.whereType<String>().toList(growable: false);
+  }
+
+  ClientDietEntry _toDietEntry(ClientDietEntryRow row) => ClientDietEntry(
+    meal: row.meal,
+    items: row.items,
+    calories: row.calories,
+    sodiumMg: row.sodiumMg,
+    timeLabel: row.timeLabel,
+    foods: _dietFoods(row.foodsJson),
+    sugarG: row.sugarG,
+    carbsG: row.carbsG,
+    proteinG: row.proteinG,
+    fatG: row.fatG,
+    photoAsset: row.photoAsset,
+  );
+
+  /// 시드가 넣어 둔 음식별 영양. 깨진 값은 없는 것으로 본다 — 끼니 카드는
+  /// 그때 `items` 한 줄로 떨어져 예전과 같이 읽힌다. (#1166)
+  static List<ClientDietFood> _dietFoods(String json) {
+    final Object? decoded = jsonDecode(json);
+    if (decoded is! List<Object?>) return const <ClientDietFood>[];
+    return <ClientDietFood>[
+      for (final Object? food in decoded)
+        if (food is Map<String, Object?>) ClientDietFood.fromJson(food),
+    ];
   }
 
   /// A client's workout history for the 운동기록 sub-tab, newest first
@@ -463,6 +821,7 @@ class DriftClientRepository implements ClientRepository {
       (rows) => rows
           .map(
             (row) => RoutineHistoryEntry(
+              id: row.id,
               dateLabel: row.dateLabel,
               label: row.label,
               completionRate: row.completionRate,
@@ -471,6 +830,7 @@ class DriftClientRepository implements ClientRepository {
                   .toList(),
               clientFeedback: row.clientFeedback,
               trainerNote: row.trainerNote,
+              completedAt: row.completedAt,
             ),
           )
           .toList(),
@@ -557,6 +917,24 @@ final prioritizedClientsProvider = Provider<AsyncValue<List<TrainerClient>>>((
       .whenData((clients) => prioritizeClients(clients, lastChatAt: lastChat));
 });
 
+/// 마지막 메시지가 새로운 순으로 정렬된 로스터 — 메시지 탭 목록이 쓴다.
+///
+/// [prioritizedClientsProvider] 와 나뉘어 있는 이유: 두 화면이 서로 다른
+/// 질문에 답한다. 고객 탭은 "누구를 먼저 챙길까"(주의 신호 우선), 메시지
+/// 탭은 "방금 무슨 말이 오갔나"(최신순)다. 한 provider 를 돌려 쓰면 둘 중
+/// 하나는 자기 화면과 맞지 않는 차례를 보게 된다.
+final recentlyMessagedClientsProvider =
+    Provider<AsyncValue<List<TrainerClient>>>((ref) {
+      final lastChat =
+          ref.watch(lastChatAtProvider).valueOrNull ??
+          const <String, DateTime>{};
+      return ref
+          .watch(clientsProvider)
+          .whenData(
+            (clients) => sortByLatestMessage(clients, lastChatAt: lastChat),
+          );
+    });
+
 /// Streams the last chat time per client (priority tiebreak).
 final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
   return ref.watch(clientRepositoryProvider).watchLastChatAt();
@@ -611,6 +989,51 @@ final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
   },
 );
 
+/// 기간별 식단 조언. 회원 앱 `dietAdviceProvider` 와 같은 서버 문장이다. (#1017)
+final clientDietAdviceProvider =
+    FutureProvider.family<String, ({String clientId, ClientPeriod period})>((
+      ref,
+      key,
+    ) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchDietAdvice(key.clientId, key.period);
+    });
+
+/// 한 고객이 [date] 에 먹은 끼니. 기간 뷰에서 펼친 날에만 읽는다(#1025).
+///
+/// `autoDispose` 다 — 날짜를 접으면 구독이 끝나고, 12주를 훑는 동안 읽은 날이
+/// 메모리에 쌓이지 않는다.
+final clientDietOnProvider = FutureProvider.autoDispose
+    .family<List<ClientDietEntry>, ({String clientId, DateTime date})>((
+      ref,
+      key,
+    ) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchDietOn(key.clientId, key.date);
+    });
+
+/// 한 고객이 [date] 에 한 운동 이름들. 펼친 날에만 읽는다(#1025).
+final clientExercisesOnProvider = FutureProvider.autoDispose
+    .family<List<String>, ({String clientId, DateTime date})>((ref, key) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchExercisesOn(key.clientId, key.date);
+    });
+
+/// 기간에 맞는 운동 조언. 식단(`clientDietAdviceProvider`)과 같은 모양이다.
+/// (#1025)
+final clientExerciseAdviceProvider =
+    FutureProvider.family<String, ({String clientId, ClientPeriod period})>((
+      ref,
+      key,
+    ) async {
+      return ref
+          .watch(clientRepositoryProvider)
+          .fetchExerciseAdvice(key.clientId, key.period);
+    });
+
 /// Streams a client's workout history for the 운동 sub-tab.
 final clientHistoryProvider =
     StreamProvider.family<List<RoutineHistoryEntry>, String>((ref, clientId) {
@@ -656,16 +1079,27 @@ final clientDietPeriodProvider = FutureProvider.autoDispose
 final clientExercisePeriodProvider = FutureProvider.autoDispose
     .family<ClientExercisePeriod, ClientPeriodKey>((ref, key) async {
       final repository = ref.watch(clientRepositoryProvider);
-      final ClientDateRange range = clientRangeFor(key.period, key.day);
+      final ClientDateRange range = clientRangeFor(
+        key.period,
+        key.day,
+        exercise: true,
+      );
       final Map<String, ClientExerciseDay> byDate =
           <String, ClientExerciseDay>{};
       // 목표는 주마다 같다 — 마지막으로 읽은 주의 값을 쓴다. (#1015)
       int weeklyGoalMinutes = 0;
-      for (final DateTime monday in clientRangeWeekStarts(range)) {
-        final ClientExerciseWeek week = await repository.fetchExerciseWeek(
-          key.clientId,
-          weekStart: monday,
-        );
+      // 주를 **한꺼번에** 읽는다 (#1170). `전체` 가 서른다섯 주라, 하나씩
+      // 기다리면 왕복이 그만큼 줄줄이 이어져 그래프가 늦게 선다.
+      final List<DateTime> mondays = clientRangeWeekStarts(range);
+      final List<ClientExerciseWeek> weeks = await Future.wait(
+        <Future<ClientExerciseWeek>>[
+          for (final DateTime monday in mondays)
+            repository.fetchExerciseWeek(key.clientId, weekStart: monday),
+        ],
+      );
+      for (int w = 0; w < mondays.length; w++) {
+        final DateTime monday = mondays[w];
+        final ClientExerciseWeek week = weeks[w];
         weeklyGoalMinutes = week.weeklyGoalMinutes;
         for (var d = 0; d < 7; d++) {
           final DateTime date = DateTime(
@@ -684,6 +1118,11 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
             cardioMinutes: at(week.cardioMinutes),
             strengthMinutes: at(week.strengthMinutes),
             stretchingMinutes: at(week.stretchingMinutes),
+            otherMinutes: at(week.otherMinutes),
+            // 서버가 세트를 주면 그 값, 아니면 분에서 환산한다.
+            strengthSets: d < week.strengthSets.length
+                ? week.strengthSets[d]
+                : setsFromStrengthMinutes(at(week.strengthMinutes)),
           );
         }
       }

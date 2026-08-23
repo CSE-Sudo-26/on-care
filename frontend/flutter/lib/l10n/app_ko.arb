@@ -28,7 +28,6 @@
   "homeMacroProtein": "단백질",
   "homeMacroFat": "지방",
   "homeMealChickenSalad": "닭가슴살 샐러드",
-  "homeAiAnalysisPill": "✦ AI 분석",
   "homeDetails": "자세히",
   "homeGoal": "목표",
   "homeDietNutritionTitle": "식단 · 영양",
@@ -37,41 +36,23 @@
   "homeWeeklyMetricTrend": "주간 {metric} 추이",
   "homeWeeklyExerciseTrend": "운동 추이",
   "homeExerciseTrendUnavailable": "주간 운동 기록을 불러오지 못했어요.",
-  "homeMetricOver": "초과",
-  "homeMetricNormal": "정상",
-  "dietAmountOver": "목표보다 {amount} 많아요",
-  "@dietAmountOver": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "dietAmountRemaining": "목표까지 {amount} 남았어요",
-  "@dietAmountRemaining": {
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "homeExerciseActiveTime": "운동 시간",
   "homeExerciseBurned": "소모 칼로리",
-  "homeExerciseDays": "운동 일수",
+  "homeMealSourceTrainer": "트레이너 추천",
+  "homeMealSourceAi": "AI 추천",
   "homeMealReasonSodium": "나트륨 조절에 좋아요",
   "homeMealTagLowSodium": "저나트륨",
   "homeMealBrownRiceBox": "현미 도시락",
   "homeMealReasonGlucose": "혈당 안정에 도움돼요",
-  "homeMealTagLowGi": "저GI",
+  "homeMealTagLowSugar": "저당류",
   "homeMealSalmon": "연어 구이 + 나물",
   "homeMealReasonOmega": "오메가3 + 식이섬유",
-  "homeMealTagHighProtein": "고단백",
+  "homeMealTagHighProtein": "고단백질",
   "homeMealTofu": "두부 채소 볶음",
   "homeMealReasonLowCal": "칼로리 낮고 포만감↑",
   "homeMealTagLowCal": "저칼로리",
   "homeMealNamulBibimbap": "나물 비빔밥",
   "homeMealReasonFiber": "식이섬유가 풍부해요",
-  "homeMealTagHighFiber": "고식이섬유",
+  "homeMealTagLowFat": "저지방",
   "homeRecBasisSodium": "최근 {days}일 평균 나트륨 {sodium}mg",
   "@homeRecBasisSodium": {
     "placeholders": {
@@ -84,18 +65,17 @@
     }
   },
   "homeRecBasisOverLimit": "권장 초과",
-  "homeRecMealsTitle": "이번 주 AI 추천 식단",
+  "homeRecMealsTitle": "추천 식단",
   "homeViewAll": "전체 보기",
   "homeScheduleDate": "{month}월 {day}일 {weekday}요일",
   "homeScheduleTitle": "오늘의 일정",
   "unitKcal": "kcal",
   "unitMinutes": "분",
-  "unitDays": "일",
+  "unitSets": "세트",
   "unitKcalValue": "{count} kcal",
   "unitMinutesValue": "{count}분",
   "dietTitle": "식단",
   "dietToday": "오늘로",
-  "dietWeekLabel": "{month}월 {week}주차",
   "dietWeekdayMon": "월",
   "dietWeekdayTue": "화",
   "dietWeekdayWed": "수",
@@ -115,8 +95,6 @@
   "dietEmptyLog": "기록된 식단이 없어요.\n사진으로 끼니를 추가해 보세요!",
   "dietLoadError": "식단 정보를 불러오지 못했어요.",
   "dietPeriodAverage": "하루 평균",
-  "dietPeriodTotal": "기간 합계",
-  "dietPeriodLoggedDays": "{days}일 기록",
   "dietPeriodEmpty": "이 기간에 기록된 식단이 없어요.",
   "dietPeriodRange": "{start} ~ {end}",
   "dietPeriodNoRecord": "기록 없음",
@@ -217,6 +195,12 @@
   "exNearbyGymsMapLabel": "내 주변 헬스장",
   "exWeekSummary": "이번 주 운동 요약",
   "exActivityTitle": "운동 현황",
+  "exWeekOfMonthLabel": "{month}월 {week}주차",
+  "exBurnTodayTitle": "오늘 소모",
+  "exBurnWeekTitle": "이번 주 소모",
+  "exBurnAllTitle": "평균 소모",
+  "exGoalValue": "목표 {value}",
+  "exLoadEmpty": "아직 기록이 없어요.",
   "exThisWeek": "이번 주",
   "exPeriodAll": "전체",
   "exExerciseContent": "운동 내용",
@@ -232,6 +216,11 @@
   "exStatCalories": "칼로리",
   "exStatStreak": "연속",
   "exUnitStreakDays": "일 연속",
+  "exStreakCheer": "{days}일 연속 운동 중이에요!",
+  "@exStreakCheer": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "exStreakStart": "오늘 운동으로 연속 기록을 시작해 봐요.",
   "exToday": "오늘",
   "exLoadError": "운동 정보를 불러오지 못했어요.",
   "exCompletedPtTitle": "오늘 완료한 PT",
@@ -272,7 +261,9 @@
   "exNoSearchResults": "검색 결과가 없어요.",
   "exTrainersLoadError": "트레이너 정보를 불러오지 못했어요.",
   "exGymSearchHint": "헬스장, 지역으로 검색",
-  "exNearbyGyms": "주변 헬스장 · O2O 연동",
+  "exNearbyGyms": "주변 헬스장",
+  "exGymListCollapse": "목록 접기",
+  "exGymListExpand": "목록 펼치기",
   "exAiAnalysis": "✦ AI 분석",
   "exNoGymMatch": "'{query}'에 맞는 헬스장이 없어요",
   "exGymsLoadError": "헬스장을 불러오지 못했어요.",
@@ -283,8 +274,7 @@
   "exGymWeekdayHours": "평일 {hours}",
   "exGymWeekendHours": "주말 {hours}",
   "exTrainerDedicated": "전담 트레이너",
-  "exAiSlotTitle": "✦ AI 추천 예약 시간",
-  "exTrainerAvailability": "{trainer} 빈 시간",
+  "exTrainerAvailability": "{trainer} 빈 예약 시간",
   "exSlotWhen": "{date} {time}",
   "@exSlotWhen": {
     "placeholders": {
@@ -296,15 +286,9 @@
       }
     }
   },
-  "exSlotRemaining": "잔여 {count}자리",
-  "@exSlotRemaining": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "exSlotFull": "예약 마감",
+  "exSlotTypePersonalTraining": "1:1 PT",
+  "exSlotTypeConsultation": "상담",
   "exSlotsEmpty": "예약 가능한 시간이 없어요",
   "exSlotsAllBooked": "예약 가능한 시간이 모두 찼어요",
   "exSlotsLoadError": "예약 시간을 불러오지 못했어요.",
@@ -380,6 +364,8 @@
       }
     }
   },
+  "myGymDetailTooltip": "헬스장 상세 보기",
+  "myTrainerDetailTooltip": "트레이너 상세 보기",
   "myGymDisconnectTooltip": "헬스장 연결 삭제",
   "myTrainerDisconnectTooltip": "트레이너 연결 삭제",
   "myNoTrainer": "담당 트레이너 없음",
@@ -413,10 +399,10 @@
   "coachHeaderSubtitle": "오늘의 맞춤 조언을 모아봤어요",
   "coachCardDietTag": "식단",
   "coachCardDietTitle": "아침 식단 훌륭, 점심 나트륨 주의",
-  "coachCardDietBody": "아침 식단은 훌륭했지만 점심 짬뽕의 나트륨·당류 부담이 크니, 수분을 충분히 섭취해 나트륨 배출을 도와주세요.",
+  "coachCardDietBody": "아침 식단은 균형 있게 잘 챙겼어요. 다만 점심으로 드신 짬뽕은 나트륨과 당류 부담이 있을 수 있으니, 오늘은 물을 충분히 섭취해 주세요. 이후 식사에서는 채소와 단백질을 함께 챙겨 균형을 맞춰보세요.",
   "coachCardExerciseTag": "운동",
-  "coachCardExerciseTitle": "12회차 상체 PT 완료",
-  "coachCardExerciseBody": "12회차 상체 PT를 잘 마쳤어요! 코치님 피드백대로 어깨 회전근개 스트레칭과 가벼운 유산소로 마무리를 추천합니다.",
+  "coachCardExerciseTitle": "12회차 PT 완료",
+  "coachCardExerciseBody": "12회차 PT를 잘 마쳤어요. 꾸준히 운동을 이어가고 있는 점이 좋습니다. 코치님 피드백대로 어깨 회전근개 스트레칭을 충분히 진행하고, 가벼운 유산소 운동으로 마무리해 주세요. 운동 후에는 무리한 활동보다 충분한 휴식과 수분 섭취로 회복을 도와주세요.",
   "coachCardWaterTag": "수분",
   "coachInviteTitle": "담당 요청이 왔어요",
   "coachInviteFrom": "{name} 트레이너",
@@ -451,6 +437,7 @@
   "aicMedicalDisclaimer": "AI 코치는 식단·운동 관리를 돕는 참고용이에요. 진단·처방이 아니니 증상이 있으면 전문의와 상담해 주세요.",
   "aicInputHint": "AI에게 무엇이든 물어보세요",
   "aicQuickRepliesLabel": "이런 걸 물어보세요",
+  "aicGeneratingReply": "맞춤 답변 생성 중",
   "aicQuickReply1": "오늘 저녁 메뉴 추천해줘",
   "aicQuickReply2": "오늘 운동은 얼마나 하면 좋을까?",
   "aicQuickReply3": "내 혈당 기록은 괜찮아?",
@@ -466,6 +453,14 @@
   "exTrainerConsultType": "트레이너 상담",
   "exAssignedTrainer": "담당 트레이너",
   "exConsultDataSharingNotice": "요청이 수락되면 이 트레이너가 회원님의 식단 기록, 운동 기록, 신체 정보와 건강 목표를 확인할 수 있어요.",
+  "exConsultDataSharingAgree": "위 내용을 확인했고, 식단·운동 기록과 신체 정보를 이 트레이너에게 공유하는 데 동의해요",
+  "exConsultDataSharingRequired": "공유에 동의해야 상담을 신청할 수 있어요",
+  "coachInviteConsentTitle": "담당 연결 전에 확인해 주세요",
+  "coachInviteConsentBody": "{name} 트레이너와 담당으로 연결되면, 회원님의 식단 기록·운동 기록·신체 정보와 건강 목표를 이 트레이너가 볼 수 있어요. 연결을 해제하면 열람 권한도 함께 사라져요.",
+  "@coachInviteConsentBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachInviteConsentAgree": "동의하고 연결",
   "exExerciseGoal": "운동 목표",
   "exGoalWeightLoss": "체중 감량",
   "exGoalStrength": "근력 향상",
@@ -473,13 +468,6 @@
   "exGoalPosture": "자세 교정",
   "exGoalHealth": "건강 관리",
   "exOptionOther": "기타",
-  "exHealthPurpose": "건강관리 목적",
-  "exPurposeWeight": "체중 관리",
-  "exPurposeChronic": "만성질환 관리",
-  "exPurposeRehab": "통증·재활",
-  "exPurposeGeneral": "일반 건강관리",
-  "exPurposeNone": "해당 없음",
-  "exHealthPurposeOtherHint": "허리디스크 재활, 무릎 통증 관리, 고지혈증 관리",
   "exOtherGoalHint": "구체적인 운동 목표는 문의 내용에 작성해주세요.",
   "exPreferredDate": "희망 날짜",
   "exSelectDate": "날짜를 선택해주세요",
@@ -492,8 +480,7 @@
   "exConsultMessageHint": "운동 경험이나 상담 시 참고할 내용을 자유롭게 작성해주세요.",
   "exSendConsultRequest": "상담 요청 보내기",
   "exGoalRequired": "운동 목표를 선택해주세요.",
-  "exHealthPurposeRequired": "건강관리 목적을 선택해주세요.",
-  "exHealthPurposeInputRequired": "건강관리 목적을 입력해주세요.",
+  "exOtherGoalDetailRequired": "구체적인 운동 목표를 문의 내용에 입력해주세요.",
   "exDateRequired": "희망 날짜를 선택해주세요.",
   "exTimeRequired": "희망 시간대를 선택해주세요.",
   "exConsultTargetNotFound": "상담 대상 정보를 찾을 수 없어요.",
@@ -604,7 +591,13 @@
   "coachCardSleepTag": "수면",
   "myHealthGoalsTitle": "건강 목표",
   "myGoalsDietSection": "식단 일일 목표",
-  "myGoalsExerciseSection": "주간 운동 목표",
+  "myGoalsExerciseSection": "운동 목표",
+  "myGoalBurnDaily": "일일 소모 칼로리 (kcal)",
+  "myGoalCardioWeekly": "주간 유산소 (분)",
+  "myGoalStrengthWeekly": "주간 근력 (세트)",
+  "myGoalFlexibilityWeekly": "주간 스트레칭 (분)",
+  "myGoalExerciseSuggestionNote": "권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 스트레칭 60분",
+  "myGoalExerciseApplySuggestion": "권장 비율로 채우기",
   "myGoalCalories": "일일 칼로리 제한 (kcal)",
   "myGoalSodium": "일일 나트륨 제한 (mg)",
   "myGoalSugar": "일일 당류 제한 (g)",
@@ -626,10 +619,8 @@
   "myPointsAiExercise": "AI 추천 운동 완료",
   "myPointsExerciseAdd": "운동 직접 추가",
   "coachAssignedTrainer": "담당 트레이너",
-  "coachAiCoaching": "AI 코칭",
   "coachPointsTitle": "이번 코칭 포인트",
   "coachRoutineTitle": "추천 개인운동",
-  "coachRoutineSubtitle": "PT 와 다음 PT 사이에 스스로 하는 운동이에요",
   "coachRoutineByTrainer": "트레이너 직접 추천",
   "coachRoutineAiChecked": "AI 추천 · {name} 확인",
   "coachRoutineAiAuto": "AI 자동 추천",
@@ -638,6 +629,20 @@
   "coachRoutineNetworkError": "네트워크 연결을 확인하고 다시 시도해 주세요",
   "coachRoutineLogFailed": "완료 기록에 실패했어요.",
   "coachRoutineDone": "수행 완료",
+  "coachRoutineUndo": "완료 취소",
+  "coachRoutineUndoConfirm": "'{name}' 완료를 취소할까요? 운동 기록에서도 빠져요.",
+  "@coachRoutineUndoConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineUndone": "완료를 취소했어요",
+  "coachRoutineUndoFailed": "완료 취소에 실패했어요.",
+  "coachRoutineCancel": "이 개인 운동 취소",
+  "coachRoutineCancelConfirm": "'{name}'을(를) 목록에서 지울까요? 이미 수행한 기록은 그대로 남아요.",
+  "@coachRoutineCancelConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "coachRoutineCancelled": "개인 운동을 취소했어요",
+  "coachRoutineCancelFailed": "개인 운동을 취소하지 못했어요",
   "coachRoutineMyNote": "내 메모: {note}",
   "coachRoutineTrainerFeedback": "트레이너 피드백: {feedback}",
   "coachRoutineCompleteTitle": "루틴 수행 완료",
@@ -665,6 +670,11 @@
   "alertJustNow": "방금",
   "exPtLogTitle": "오늘 완료한 PT",
   "exPtFeedbackTitle": "오늘의 피드백",
+  "exNextPtSchedule": "다음 PT · {when}",
+  "@exNextPtSchedule": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "exNextPtNone": "다음 PT 일정이 아직 없어요",
   "exDatedTitle": "{month}월 {day}일 {title}",
   "a11yChartSummary": "{title}. {detail}",
   "@a11yChartSummary": {"placeholders": {"title": {"type": "String"}, "detail": {"type": "String"}}},

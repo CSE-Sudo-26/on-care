@@ -1,8 +1,8 @@
-/// 탄단지 진행 바가 목표 초과를 색으로 말하는지 (#891).
+/// 탄단지 줄이 목표 초과를 색으로 말하는지 (#891, #1166).
 ///
-/// 바는 목표 지점에서 멈춘다(`ratio` 가 1.0 으로 잘린다). 색까지 그대로면
-/// **꽉 찬 것과 넘긴 것이 완전히 같은 그림**이라, 숫자를 읽지 않으면 구별할 수
-/// 없다. 같은 카드의 칼로리 링과 나트륨·당류 바는 이미 이렇게 갈린다.
+/// 바는 없어졌다 — 회원 앱처럼 값 옆에 목표를 적은 **글자 한 줄**이고, 색이 곧
+/// 초과 여부다(#1166). 세 항목이 각자 판단하므로 지방만 넘긴 날은 지방 줄만
+/// 빨개진다.
 ///
 /// 회원 앱과 같은 그림을 보여 주는 것이 이 카드의 존재 이유이므로(#698),
 /// 회원 화면에서 빨간 것은 트레이너 화면에서도 빨개야 한다(#690).
@@ -19,16 +19,24 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import '../../helpers/client_factory.dart';
 
 void main() {
-  /// [label] 항목의 진행 바에 칠해진 색들.
-  List<Color?> barColors(WidgetTester tester, String label) => tester
-      .widgetList<ColoredBox>(
-        find.descendant(
-          of: find.byKey(Key('client-nutrition-macro-$label')),
-          matching: find.byType(ColoredBox),
-        ),
-      )
-      .map((ColoredBox box) => box.color)
-      .toList();
+  /// [label] 줄의 **값**에 칠해진 색들. 목표(`/275g`)는 늘 흐린 회색이라
+  /// 초과 여부를 말하는 것은 앞의 값 하나다.
+  List<Color?> barColors(WidgetTester tester, String label) {
+    final List<Color?> out = <Color?>[];
+    for (final Text text in tester.widgetList<Text>(
+      find.descendant(
+        of: find.byKey(Key('client-nutrition-macro-$label')),
+        matching: find.byType(Text),
+      ),
+    )) {
+      for (final InlineSpan? span
+          in <InlineSpan?>[text.textSpan, ...?(text.textSpan as TextSpan?)?.children]) {
+        final Color? color = span?.style?.color;
+        if (color != null) out.add(color);
+      }
+    }
+    return out;
+  }
 
   Future<void> pumpCard(WidgetTester tester, TrainerClient client) async {
     await tester.pumpWidget(
@@ -59,13 +67,13 @@ void main() {
     expect(barColors(tester, '단백질'), isNot(contains(AppColors.overTarget)));
   });
 
-  testWidgets('목표 아래면 기존 남색을 유지한다', (WidgetTester tester) async {
+  testWidgets('목표 아래면 메인 색이다 (#1166)', (WidgetTester tester) async {
     await pumpCard(tester, makeClient(carbsG: 120, proteinG: 45, fatG: 45));
 
     for (final String label in <String>['탄수화물', '단백질', '지방']) {
       expect(
         barColors(tester, label),
-        contains(AppColors.primary.withValues(alpha: 0.65)),
+        contains(AppColors.statusWithinGoal.withValues(alpha: 0.65)),
         reason: label,
       );
       expect(barColors(tester, label), isNot(contains(AppColors.overTarget)));

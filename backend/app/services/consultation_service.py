@@ -103,6 +103,12 @@ def create_consultation(
 ) -> ConsultationOut:
     if payload.preferred_date < clock.today():
         raise InvalidConsultationRequest("상담 희망일은 오늘 이후여야 합니다.")
+    if not payload.data_sharing_consent:
+        # 동의 없이 신청을 받아 두면, 트레이너가 수락하는 순간 회원이 동의한 적
+        # 없는 기록이 넘어간다. (#1022)
+        raise InvalidConsultationRequest(
+            "식단·운동 기록 공유에 동의해야 상담을 신청할 수 있습니다."
+        )
 
     _validate_target(db, payload)
     if db.scalar(_pending_query(member_id, payload)) is not None:
@@ -122,6 +128,7 @@ def create_consultation(
         preferred_time_slot=payload.preferred_time_slot,
         message=payload.message,
         status="pending",
+        data_consent_at=_now(),
     )
     db.add(consultation)
     _notify_trainer_of_new_request(db, consultation, member_id)
@@ -436,7 +443,12 @@ def link_member_gym(db: Session, member_id: str, gym_id: str | None) -> None:
 
 
 def attach_member_to_trainer(
-    db: Session, trainer_id: str, member_id: str, *, goal: str = ""
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    *,
+    goal: str = "",
+    consented_at: datetime | None = None,
 ) -> None:
     """담당 링크를 만든다(커밋 없음). 활성 담당이 없는 회원에게만 부른다.
 
@@ -454,6 +466,9 @@ def attach_member_to_trainer(
     )
     if dormant is not None:
         dormant.active = True
+        # 다시 담당이 되는 것도 새 연결이다 — 그때의 동의로 갱신한다. (#1022)
+        if consented_at is not None:
+            dormant.data_consent_at = consented_at
         return
 
     last_order = db.scalar(
@@ -468,6 +483,7 @@ def attach_member_to_trainer(
             member_id=member_id,
             goal=goal,
             active=True,
+            data_consent_at=consented_at,
             sort_order=(last_order or 0) + 1,
         )
     )
@@ -512,6 +528,9 @@ def accept(
             trainer_id,
             row.member_id,
             goal=_GOAL_LABELS.get(row.exercise_goal, ""),
+            # 회원은 신청할 때 동의했고 연결은 지금 만들어진다 — 그 시각을
+            # 옮겨 적는다. (#1022)
+            consented_at=row.data_consent_at,
         )
     # 링크 생성 여부와는 별개 조건이다 — 이미 이 트레이너의 담당인 회원이 상담을
     # 새로 넣고 승인받는 경우에도 헬스장 연결은 이뤄져야 한다(리뷰).

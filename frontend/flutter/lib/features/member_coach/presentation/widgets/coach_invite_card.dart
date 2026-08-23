@@ -29,15 +29,47 @@ class CoachInviteCard extends ConsumerStatefulWidget {
 class _CoachInviteCardState extends ConsumerState<CoachInviteCard> {
   bool _busy = false;
 
+  /// 담당 연결 전에 무엇이 넘어가는지 알리고 동의를 받는다. (#1022)
+  ///
+  /// 수락하는 순간 트레이너가 회원의 식단·운동·신체 정보를 읽는다. 안내로
+  /// 지나가지 않고 동의를 받아야, 회원이 무엇에 동의했는지 나중에도 말할 수
+  /// 있다. 서버도 동의 없는 수락은 400 으로 막는다.
+  Future<bool> _confirmConsent(CoachInvite invite) async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool? agreed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        key: const Key('coachInviteConsentDialog'),
+        title: Text(l.coachInviteConsentTitle),
+        content: Text(l.coachInviteConsentBody(invite.trainerName)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const Key('coachInviteConsentAgree'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.coachInviteConsentAgree),
+          ),
+        ],
+      ),
+    );
+    return agreed ?? false;
+  }
+
   Future<void> _decide(CoachInvite invite, {required bool accept}) async {
     if (_busy) return;
     final AppLocalizations l = AppLocalizations.of(context);
+    // 동의는 수락에만 필요하다 — 거절은 아무것도 열지 않는다.
+    if (accept && !await _confirmConsent(invite)) return;
+    if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
       final repository = ref.read(memberCoachRepositoryProvider);
       if (accept) {
-        await repository.acceptInvite(invite.id);
+        await repository.acceptInvite(invite.id, dataSharingConsent: true);
       } else {
         await repository.rejectInvite(invite.id);
       }

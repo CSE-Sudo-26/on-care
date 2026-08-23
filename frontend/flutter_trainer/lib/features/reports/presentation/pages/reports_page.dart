@@ -15,6 +15,7 @@ import 'package:oncare_trainer/features/reports/presentation/widgets/report_clie
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_export_dialog.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_share_menu.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_summary_hint.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/report_week_nav.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
@@ -145,9 +146,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         )),
       );
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.reportsFeedbackSaved)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.reportsFeedbackSaved)));
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -183,23 +182,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     });
   }
 
-  /// `8월 3일 – 8월 9일`.
-  ///
-  /// 헤더의 주 이동 버튼은 **그 버튼이 데려갈 주**를 적는다. `이전` 만으로는
-  /// 어디로 가는지 알 수 없고, 여러 번 눌러 과거로 가면 지금 보고 있는 주가
-  /// 무엇인지도 헤더에서 사라졌다.
-  ///
-  /// `이전 주` 라고 쓰지 않는 이유는 그대로다 — 비교 카드의 `지난 주` 열과
-  /// 같은 말이 되어 어느 주를 보고 있는지 오히려 헷갈린다. 날짜 범위는 그
-  /// 셋(이번 주·지난 주·선택 주) 중 어느 것과도 겹치지 않는다.
-  static String _weekRangeLabel(AppLocalizations l, DateTime weekStart) {
-    final DateTime weekEnd = weekStart.add(const Duration(days: 6));
-    return l.dateRange(
-      l.dateMonthDay(weekStart.month, weekStart.day),
-      l.dateMonthDay(weekEnd.month, weekEnd.day),
-    );
-  }
-
   /// 요약을 피드백 입력창으로 옮긴다.
   ///
   /// 요약 카드는 넓은 화면에서 왼쪽 열로, 좁은 화면에서는 리포트 흐름 안으로
@@ -217,6 +199,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _feedbackDiffers = draft != _baseFor(l, report, savedDraft);
       _draftEpoch++;
     });
+  }
+
+  /// `8월 3일 – 8월 9일` — 카드 제목 줄에 적는 지금 보고 있는 주.
+  static String _weekRangeLabel(AppLocalizations l, DateTime weekStart) {
+    final DateTime weekEnd = weekStart.add(const Duration(days: 6));
+    return l.dateRange(
+      l.dateMonthDay(weekStart.month, weekStart.day),
+      l.dateMonthDay(weekEnd.month, weekEnd.day),
+    );
   }
 
   void _goToCurrentWeek() {
@@ -248,11 +239,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Future<void> _sendSelected(WeeklyReport report) {
     return _send(
       report,
-      _messageFor(
-        AppLocalizations.of(context),
-        report,
-        _savedDraftOf(report),
-      ),
+      _messageFor(AppLocalizations.of(context), report, _savedDraftOf(report)),
     );
   }
 
@@ -379,27 +366,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       scrollable: false,
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
-        // `이번 주` 는 지난 주를 볼 때만 나타난다. 날짜 버튼 **왼쪽**에 둔다 —
-        // 헤더 동작은 오른쪽 정렬이라, 오른쪽 끝에 끼우면 나타나는 순간 날짜
-        // 버튼과 공유 메뉴가 통째로 왼쪽으로 밀린다. 방금까지 누르던 자리가
-        // 움직이는 셈이라, 주를 몇 번 옮기다 보면 매번 눈으로 다시 찾게 된다.
-        // 왼쪽 끝에 두면 나타나고 사라지는 동안에도 나머지가 제자리를 지킨다.
-        if (_weekStart != weekStartOf(nowKst()))
-          ActionButton(
-            key: const ValueKey<String>('reports-go-this-week'),
-            label: l.reportsGoThisWeek,
-            icon: Icons.today_outlined,
-            onPressed: _goToCurrentWeek,
-          ),
-        ActionButton(
-          key: const ValueKey<String>('reports-prev-week'),
-          label: _weekRangeLabel(
-            l,
-            _weekStart.subtract(const Duration(days: 7)),
-          ),
-          icon: Icons.chevron_left,
-          onPressed: () => _shiftWeek(-1),
-        ),
+        // 주 이동은 통째로 리포트 카드 제목 줄에 있다 — 화살표도, 이번 주로
+        // 돌아가는 버튼도. 헤더에 두면 옮기는 대상과 버튼이 다른 줄에 서고,
+        // 날짜 버튼이 가운데 고객 검색 바의 폭을 먹어 다른 탭과 다른 모양으로
+        // 접혔다(#1177).
         ReportShareMenu(
           client: shareTarget,
           weekStart: _weekStart,
@@ -486,6 +456,18 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     // in demo, server-aggregated against the real API
                     // (only the backend has the member's full history).
                     final reportKey = (client: selected, weekStart: _weekStart);
+                    // 주 이동은 리포트를 못 읽은 화면에도 있어야 한다 —
+                    // 카드 안에만 두면 실패한 주에서 나갈 길이 사라진다.
+                    final bool isThisWeek =
+                        _weekStart == weekStartOf(nowKst());
+                    final Widget weekNav = ReportWeekNav(
+                      rangeLabel: _weekRangeLabel(l, _weekStart),
+                      onPrev: () => _shiftWeek(-1),
+                      // 앞으로는 이번 주까지만 간다 — 아직 오지 않은 주의
+                      // 리포트는 빈 화면이다.
+                      onNext: isThisWeek ? null : () => _shiftWeek(1),
+                      onThisWeek: isThisWeek ? null : _goToCurrentWeek,
+                    );
                     final reportAsync = ref.watch(
                       weeklyReportProvider(reportKey),
                     );
@@ -498,6 +480,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       loading: () => SectionCard(
                         title: l.reportsWeekly,
                         icon: Icons.description_outlined,
+                        trailing: weekNav,
                         child: const Padding(
                           padding: EdgeInsets.symmetric(
                             vertical: AppSpacing.xl,
@@ -508,6 +491,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       error: (e, _) => SectionCard(
                         title: l.reportsWeekly,
                         icon: Icons.description_outlined,
+                        trailing: weekNav,
                         child: EmptyHint(
                           message: l.reportsLoadFailed,
                           icon: Icons.error_outline,
@@ -548,6 +532,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           _feedbackDiffers = false;
                           _draftEpoch++;
                         }),
+                        weekNav: weekNav,
                         onUseSummaryAsDraft: (draft) =>
                             _useSummaryAsDraft(l, data, savedDraft, draft),
                         onFeedbackChanged: (text) {
@@ -596,12 +581,21 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     // 무엇이 뜨는지만 적는다 — 빈 칸으로 두면 왼쪽 열이 목록
                     // 아래에서 그냥 잘린 것처럼 보인다.
                     final Widget summarySlot = reportAsync.when(
-                      loading: () =>
-                          ReportSummaryHint(message: l.reportsAiLoading),
-                      error: (_, _) =>
-                          ReportSummaryHint(message: l.reportsAiUnavailable),
+                      // 아직 못 읽은 자리도 같은 크기로 채운다 — 요약이 도착할
+                      // 때 열이 흔들리지 않는다.
+                      loading: () => ReportSummaryHint(
+                        message: l.reportsAiLoading,
+                        fill: true,
+                      ),
+                      error: (_, _) => ReportSummaryHint(
+                        message: l.reportsAiUnavailable,
+                        fill: true,
+                      ),
                       data: (data) => ReportAiCard(
                         report: data,
+                        // 목록 아래 남는 자리를 채운다. 카드 안에서 스크롤하므로
+                        // 열이 화면 밖으로 자라지 않는다(#1177).
+                        fill: true,
                         onUseAsDraft: (draft) =>
                             _useSummaryAsDraft(l, data, savedDraft, draft),
                       ),
@@ -610,6 +604,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         SizedBox(
+                          key: const ValueKey<String>('reports-left-column'),
                           // 프로그램 탭의 왼쪽 고객 열과 같은 폭이다 — 두 탭이
                           // 같은 자리에 같은 목록을 놓는데 카드 폭만 달라
                           // 탭을 오갈 때 열이 흔들려 보였다. 줄어든 만큼은
@@ -618,17 +613,34 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           // 목록(5줄 고정)에 요약 카드가 더해지면 짧은 창에서는
                           // 열이 화면보다 길어진다. 이 열 안에서만 스크롤하게
                           // 두어 오른쪽 리포트와는 여전히 따로 움직인다.
-                          child: SingleChildScrollView(
-                            key: const ValueKey<String>('reports-left-scroll'),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                clientPicker,
-                                const SizedBox(height: AppSpacing.lg),
-                                summarySlot,
-                              ],
-                            ),
+                          child: LayoutBuilder(
+                            builder: (context, column) {
+                              // 목록 아래 남는 자리를 요약이 채운다. 자리가
+                              // 모자라면 열이 스크롤하고 요약은 제 높이를
+                              // 지킨다 — `Expanded` 만 쓰면 목록이 긴 창에서
+                              // 요약이 몇 픽셀짜리 띠로 눌린다(#1177).
+                              return SingleChildScrollView(
+                                key: const ValueKey<String>(
+                                  'reports-left-scroll',
+                                ),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: column.maxHeight,
+                                  ),
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        clientPicker,
+                                        const SizedBox(height: AppSpacing.lg),
+                                        Expanded(child: summarySlot),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: AppSpacing.lg),

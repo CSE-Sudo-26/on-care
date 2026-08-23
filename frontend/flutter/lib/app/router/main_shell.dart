@@ -205,6 +205,10 @@ class _MainShellState extends ConsumerState<MainShell>
                           onTap: () => _onTap(2),
                         ),
                         _Destination(
+                          // 운동 칸과 같이 열쇠를 준다 — 사람 아이콘은 이제
+                          // 헬스장 카드의 트레이너 줄에도 있어서(#1185),
+                          // 아이콘만으로는 이 칸을 지목할 수 없다.
+                          key: const ValueKey<String>('nav-my'),
                           icon: Icons.person_outline,
                           activeIcon: Icons.person,
                           label: l.navMyHealth,
@@ -427,9 +431,16 @@ class _RecordAddSheet extends StatelessWidget {
               ),
               Padding(
                 key: const Key('recordOptions'),
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                // 아래 여백이 0 이라 카드가 시트 끝에 붙어 잘려 보였다
+                // (#1154). 홈 인디케이터가 있는 기기에서는 `SafeArea` 가 그
+                // 위에 더 얹히지만, 없는 기기에서는 이 여백이 전부다.
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: Row(
                   children: <Widget>[
+                    // 두 갈래 모두 브랜드 파랑이다 (#1154). 예전에는 식단을
+                    // 초록으로 두었는데(#1060), 이 시트는 "무엇을 기록할까" 를
+                    // 고르는 자리라 색이 영역을 가르는 뜻으로 읽히지 않았다 —
+                    // 초록 하나만 남아 그 카드가 다른 성격처럼 보였다.
                     Expanded(
                       child: _RecordOption(
                         icon: Icons.restaurant,
@@ -447,9 +458,11 @@ class _RecordAddSheet extends StatelessWidget {
                     Expanded(
                       child: _RecordOption(
                         icon: Icons.fitness_center,
-                        iconColor: FigmaColors.green,
-                        iconBg: const Color(0xFFEAF8F2),
-                        borderColor: FigmaColors.green.withValues(alpha: 0.35),
+                        iconColor: FigmaColors.primary,
+                        iconBg: FigmaColors.softBlue,
+                        borderColor: FigmaColors.primary.withValues(
+                          alpha: 0.35,
+                        ),
                         title: l.navExercise,
                         subtitle: l.navExerciseOptionSub,
                         onTap: onExercise,

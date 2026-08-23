@@ -26,12 +26,17 @@ class ReportClientPicker extends StatefulWidget {
 }
 
 class _ReportClientPickerState extends State<ReportClientPicker> {
-  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이었고, 목표 한 줄이
-  /// 붙으면서(#898) 그만큼 높아졌다.
-  static const double _rowHeight = 70;
+  /// 한 줄 높이. 이름·나이와 목표 두 줄이다.
+  ///
+  /// 주간 이행률 막대가 한 줄 더 붙어 있던 때에는 92 였다(#1097). 그 막대는
+  /// 오른쪽 리포트가 같은 값을 훨씬 자세히 말하고 있어 목록에서는 뺐다(#1177).
+  static const double _rowHeight = 64;
 
   /// 한 번에 보여 줄 줄 수. 나머지는 스크롤한다.
-  static const int _visibleRows = 5;
+  ///
+  /// 줄이 낮아진 만큼 더 보여 준다 — 열 높이는 그대로 두고 한눈에 담기는
+  /// 고객만 다섯에서 일곱으로 늘어난다(#1177).
+  static const int _visibleRows = 7;
 
   /// 목록과 스크롤바가 같은 위치를 가리키도록 컨트롤러를 공유한다.
   final ScrollController _scroll = ScrollController();
@@ -52,7 +57,7 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
       title: l.navClients,
       icon: Icons.people_outline,
       dense: true,
-      // 다섯 명까지만 보여 주고 나머지는 스크롤한다. 로스터가 열다섯 명이면
+      // 일곱 명까지만 보여 주고 나머지는 스크롤한다. 로스터가 열다섯 명이면
       // 카드가 화면 높이를 다 먹어 오른쪽 리포트와 나란히 읽기 어려웠다.
       child: SizedBox(
         height: _rowHeight * _visibleRows,
@@ -68,6 +73,7 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
               final client = clients[index];
               final selected = client.id == selectedId;
               return Padding(
+                key: ValueKey<String>('report-client-${client.id}'),
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Material(
                   color: selected

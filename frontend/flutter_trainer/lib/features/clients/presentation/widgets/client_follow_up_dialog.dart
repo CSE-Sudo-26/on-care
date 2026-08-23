@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -141,7 +142,7 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
 
   Future<void> _pickDate() async {
     final DateTime today = todayKst();
-    final picked = await showDatePicker(
+    final picked = await showPortraitDatePicker(
       context: context,
       initialDate: _dueDate,
       // 지난 날짜로 새 할 일을 만들 이유가 없다 — 만드는 순간 '기한 지남'이다.
@@ -149,9 +150,7 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
       lastDate: today.add(_maxAhead),
     );
     if (picked == null || !mounted) return;
-    setState(
-      () => _dueDate = DateTime(picked.year, picked.month, picked.day),
-    );
+    setState(() => _dueDate = DateTime(picked.year, picked.month, picked.day));
   }
 
   String _contextLabel(AppLocalizations l, FollowUpContext context) =>
@@ -278,7 +277,9 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
                         children: <Widget>[
                           for (final task in list)
                             FollowUpRow(
-                              key: ValueKey<String>('client-follow-up-${task.id}'),
+                              key: ValueKey<String>(
+                                'client-follow-up-${task.id}',
+                              ),
                               task: task,
                               busy: _completing == task.id,
                               onComplete: () => _complete(task),

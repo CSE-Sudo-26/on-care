@@ -69,22 +69,28 @@ class MockTrainerRoutineSuggestionRepository
   final Map<String, List<RoutineSuggestion>> _pending =
       <String, List<RoutineSuggestion>>{};
 
+  /// 아직 검토하지 않은 **후보**다 — 이미 배정된 개인 운동
+  /// (`shared/demo_fixture` 의 `routines`)과 겹치지 않는 것으로 둔다 (#1170).
+  ///
+  /// 예전에는 `어깨 관절 보호 스트레칭`·`저강도 걷기` 였는데, 그 둘은 배정
+  /// 목록에도 있는 운동이라 같은 화면에서 "아직 안 보낸 후보" 와 "이미 보낸
+  /// 것" 으로 두 번 나왔다. 같은 운동이 두 상태를 동시에 가질 수는 없다.
   static const List<RoutineSuggestion> _seed = <RoutineSuggestion>[
     RoutineSuggestion(
-      id: 'demo-suggestion-shoulder',
-      name: '어깨 관절 보호 스트레칭',
-      minutes: 8,
-      type: '유연성',
-      reason: '회전근개와 어깨 안정화를 돕는 가벼운 스트레칭이에요. 통증이 있으면 멈추세요.',
-      evidence: <String>['최근 PT 피드백 반영', '최근 근력운동 비중 높음'],
+      id: 'demo-suggestion-interval',
+      name: '가벼운 인터벌 러닝',
+      minutes: 30,
+      type: '유산소',
+      reason: '빠르게 걷다 천천히 걷기를 번갈아 하는 회복 목적 유산소예요. 숨이 차면 속도를 낮추세요.',
+      evidence: <String>['혈압 관리 목표', '최근 근력운동 비중 높음'],
     ),
     RoutineSuggestion(
-      id: 'demo-suggestion-walking',
-      name: '저강도 걷기',
-      minutes: 20,
-      type: '유산소',
-      reason: '대화할 수 있는 속도로 걷는 회복 목적 유산소예요. 숨이 차면 속도를 낮추세요.',
-      evidence: <String>['혈압 관리 목표'],
+      id: 'demo-suggestion-thoracic',
+      name: '흉추 회전 스트레칭',
+      minutes: 10,
+      type: '유연성',
+      reason: '등 위쪽을 돌려 어깨 부담을 줄이는 스트레칭이에요. 통증이 있으면 멈추세요.',
+      evidence: <String>['최근 PT 피드백 반영'],
     ),
   ];
 
@@ -135,7 +141,7 @@ final trainerRoutineSuggestionRepositoryProvider =
 /// 하고, 승인·거절 뒤에는 이 provider 를 invalidate 해 다시 읽는다.
 final routineSuggestionsProvider =
     FutureProvider.family<List<RoutineSuggestion>, String>((ref, memberId) {
-      return ref.watch(trainerRoutineSuggestionRepositoryProvider).pending(
-        memberId,
-      );
+      return ref
+          .watch(trainerRoutineSuggestionRepositoryProvider)
+          .pending(memberId);
     }, name: 'routineSuggestions');

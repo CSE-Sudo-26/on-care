@@ -96,7 +96,7 @@ void main() {
 
   testWidgets('오늘 도넛은 원을 따라 점점 그려진다', (WidgetTester tester) async {
     await pumpExercise(tester);
-    await tester.tap(find.text('오늘'));
+    await tester.tap(find.byKey(const Key('exercise-period-tab-0')));
     await tester.pump();
 
     const Size size = Size.square(116);
@@ -114,9 +114,9 @@ void main() {
       ];
     }))!;
 
-    expect(ink[0], 0, reason: '첫 프레임부터 호가 그려져 있다');
+    // 트랙과 가운데 숫자는 첫 프레임부터 있다 — 자라는 것은 그 위의 호다.
     expect(ink[1], greaterThan(ink[0]), reason: '호가 뻗어 나가지 않았다');
-    expect(ink[2], greaterThan(ink[1]), reason: '호가 한 바퀴를 채우지 못했다');
+    expect(ink[2], greaterThan(ink[1]), reason: '호가 끝까지 자라지 않았다');
   });
 
   testWidgets('주간 스택 막대는 바닥에서 자라 오른다', (WidgetTester tester) async {
@@ -159,7 +159,7 @@ void main() {
     await tester.tap(find.text('전체'));
     await tester.pumpAndSettle();
 
-    // 전체는 12주치를 옆으로 밀어 보는 그래프다. 스크롤하는 그래프에서 막대가
+    // 전체는 여러 달치를 옆으로 밀어 보는 그래프다. 스크롤하는 그래프에서 막대가
     // 매번 자라 오르면 민 자리마다 다시 애니메이션이 돌아 읽기 어렵다 —
     // 여기서는 자라지 않는다.
     expect(find.byKey(const Key('exerciseAllPeriodChart')), findsOneWidget);

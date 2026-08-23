@@ -82,7 +82,8 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     final saved = widget.initialDraft;
     if (saved != null) {
       _draft = saved;
-      _nextId = saved.sessions.fold<int>(
+      _nextId =
+          saved.sessions.fold<int>(
             0,
             (count, session) => count + session.exercises.length,
           ) +
@@ -155,7 +156,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               key: const ValueKey<String>('program-editor-save'),
               label: widget.saving
                   ? l.progSaving
-                  : (widget.editingSaved ? l.programEditorSaveEdit : l.actionSave),
+                  : (widget.editingSaved
+                        ? l.programEditorSaveEdit
+                        : l.actionSave),
               onPressed: canSave && !widget.saving
                   ? () => widget.onSave!(_draft)
                   : null,

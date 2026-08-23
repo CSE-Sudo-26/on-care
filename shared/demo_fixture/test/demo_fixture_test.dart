@@ -55,12 +55,14 @@ void main() {
     }
   });
 
-  test('12주를 빈틈없이 덮는다', () {
+  test('기록 기간을 빈틈없이 덮는다', () {
     final List<FixtureDay> days = fixture.daysFor(DateTime(2026, 8, 16));
-    expect(fixture.historyWeeks, 12);
-    // 일요일에 열면 12주가 꽉 찬다(84일). 날짜가 하루도 겹치지 않아야 한다.
-    expect(days.length, 84);
-    expect(days.map((FixtureDay d) => d.date).toSet().length, 84);
+    // 몇 주를 들고 있는지는 픽스처가 정한다 — 여기 숫자를 적으면 기간을 늘릴
+    // 때마다 두 곳을 고쳐야 한다.
+    final int expected = fixture.historyWeeks * 7;
+    // 일요일에 열면 그 기간이 꽉 찬다. 날짜가 하루도 겹치지 않아야 한다.
+    expect(days.length, expected);
+    expect(days.map((FixtureDay d) => d.date).toSet().length, expected);
   });
 
   test('이행률은 루틴 항목에서 나온다 — 목록과 퍼센트가 갈라지지 않는다', () {

@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -39,6 +40,25 @@ class _RecordingRefreshClientRepository extends DriftClientRepository
     clientRefreshes.add(clientId);
   }
 }
+
+/// 로스터 목록을 [finder] 가 그려질 때까지 끌어 내린다.
+///
+/// 목록은 지연 생성이라 화면 밖 카드가 트리에 아예 없다. 아래쪽에 선 고객을
+/// 단언하려면 먼저 그려지게 해야 한다 — `.last`·`.first` 를 붙인 finder 를
+/// 그대로 넘기면 아직 한 건도 없는 동안 `Bad state: No element` 로 깨진다.
+Future<void> scrollToClient(
+  WidgetTester tester,
+  Finder finder,
+) => tester.scrollUntilVisible(
+  finder,
+  150,
+  scrollable: find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      )
+      .first,
+);
 
 void main() {
   group('ClientRepository', () {
@@ -308,7 +328,7 @@ void main() {
           }),
         ],
       );
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('client-data-refresh')),
@@ -316,7 +336,7 @@ void main() {
       await settle(tester);
 
       expect(repository.clientRefreshes, <String>['seed-client-1']);
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     });
 
     testWidgets('renders the roster with its size and priority order', (
@@ -335,24 +355,17 @@ void main() {
 
       // Priority order: sodium-over clients come first, so a client who
       // is under target is further down a now-long, lazily built list.
+      // 같은 신호를 든 고객끼리는 마지막 대화가 새로운 쪽이 앞이라, 사흘 전
+      // 대화가 마지막인 박성호는 첫 화면 아래에 선다.
       expect(find.text('김민수'), findsOneWidget);
-      expect(find.text('박성호'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('clients-roster-search')),
         findsNothing,
       );
       expect(find.byType(ClientSearchBar), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('이지수'),
-        150,
-        scrollable: find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is Scrollable &&
-                  widget.axisDirection == AxisDirection.down,
-            )
-            .first,
-      );
+      await scrollToClient(tester, find.text('박성호'));
+      expect(find.text('박성호'), findsOneWidget);
+      await scrollToClient(tester, find.text('이지수'));
       expect(find.text('이지수'), findsWidgets);
     });
 
@@ -378,6 +391,7 @@ void main() {
         at: AppRoutes.clients,
       );
 
+      await scrollToClient(tester, find.text('박성호'));
       final sunghoCard = find.ancestor(
         of: find.text('박성호'),
         matching: find.byType(ClientCard),
@@ -408,12 +422,16 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — both evidence tabs and the two quick actions are
-      // unique to it.
+      // Detail opened — both evidence tabs and the quick actions are
+      // unique to it. 신체·목표 now lives in the merged dialog, not a
+      // button of its own (#1024), and 메모 is icon-only.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
-      expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-      expect(find.text('메모'), findsOneWidget);
+      expect(find.text('리포트'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-detail-open-memo')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
@@ -525,17 +543,7 @@ void main() {
       final clientCard = find.byKey(
         const ValueKey<String>('client-seed-client-3'),
       );
-      await tester.scrollUntilVisible(
-        clientCard.last,
-        150,
-        scrollable: find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is Scrollable &&
-                  widget.axisDirection == AxisDirection.down,
-            )
-            .first,
-      );
+      await scrollToClient(tester, clientCard);
       expect(find.text('신규 고객'), findsNothing);
 
       await tester.tap(clientCard.last);
@@ -549,6 +557,234 @@ void main() {
       );
       expect(statusInkWell, findsOneWidget);
       expect(tester.widget<InkWell>(statusInkWell).onTap, isNotNull);
+    });
+
+    // #1026: 툴바 관리 필터가 단일 선택 팝업에서 복수 선택 chip 으로 바뀌었다.
+    testWidgets('나트륨 초과 필터를 고르면 해당 고객만 남는다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
+      );
+      await settle(tester);
+
+      // sodiumOverBudget (2000mg 초과) 재사용 — 시드의 박성호(2400mg)는
+      // 남고, 이지수(1800mg)는 사라진다. (김민수는 공유 픽스처가 오늘 값을
+      // 정하는 회원이라 날짜별로 값이 바뀌어 이 비교엔 쓰지 않는다 — #757.)
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      final seonghoCard = find.byKey(
+        const ValueKey<String>('client-seed-client-3'),
+      );
+      await scrollToClient(tester, seonghoCard);
+      expect(seonghoCard, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-2')),
+        findsNothing,
+      );
+
+      // 같은 chip 을 다시 누르면 선택이 풀린다 — 다중 선택의 개별 제거.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
+      );
+      await settle(tester);
+      expect(find.text('필터'), findsWidgets);
+      expect(find.text('필터 1'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('이지수'),
+        150,
+        scrollable: find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  widget.axisDirection == AxisDirection.down,
+            )
+            .first,
+      );
+      expect(find.text('이지수'), findsOneWidget);
+    });
+
+    testWidgets('당류 초과 필터를 고르면 해당 고객만 남는다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sugarOver')),
+      );
+      await settle(tester);
+
+      // sugarOverBudget (50g 초과) — 강서연(74g)은 남고, 이지수(38g)는
+      // 사라진다.
+      expect(find.text('강서연'), findsOneWidget);
+      expect(find.text('이지수'), findsNothing);
+    });
+
+    testWidgets('이행률 저조 배지 필터는 같은 ClientAlert 기준을 쓴다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+        // 주간 계열이 모두 채워진 시점으로 고정해 실행 요일에 따라
+        // 저조 배지가 달라지지 않게 한다.
+        seedClock: DateTime(2026, 8, 16),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-lowCompletion')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+
+      final lowCompletionCard = find.byKey(
+        const ValueKey<String>('client-seed-client-9'),
+      );
+      await scrollToClient(tester, lowCompletionCard);
+      expect(lowCompletionCard, findsOneWidget); // 배준혁: 주간 평균 60% 미만
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-2')),
+        findsNothing,
+      ); // 이지수: 이행률 정상
+    });
+
+    testWidgets('답장 대기 배지 필터는 실제 안 읽은 메시지 수를 쓴다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+        seedClock: DateTime(2026, 8, 16),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-unanswered')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+
+      final unansweredCard = find.byKey(
+        const ValueKey<String>('client-seed-client-8'),
+      );
+      await scrollToClient(tester, unansweredCard);
+      expect(unansweredCard, findsOneWidget); // 오세라: 회원이 마지막으로 보냄
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-3')),
+        findsNothing,
+      ); // 박성호: 트레이너가 답장함
+    });
+
+    testWidgets('모든 필터는 서로 해제하지 않고 독립적으로 선택된다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      for (final filter in RosterManagementFilter.values) {
+        await tester.tap(
+          find.byKey(ValueKey<String>('management-filter-${filter.name}')),
+        );
+        await settle(tester);
+      }
+      expect(find.text('필터 7'), findsOneWidget);
+
+      // 한 조건만 다시 누르면 나머지 선택은 그대로 유지된다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-attention')),
+      );
+      await settle(tester);
+      expect(find.text('필터 6'), findsOneWidget);
+    });
+
+    testWidgets('복수 필터는 OR 로 합쳐지고 전체 초기화로 한 번에 풀린다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      // 활성 + 휴면을 동시에 고르면 "둘 다 보기" 다 — AND 였다면 서로
+      // 배타적인 두 값이라 아무도 안 남았을 것이다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-active')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-dormant')),
+      );
+      await settle(tester);
+
+      expect(find.text('필터 2'), findsOneWidget);
+      expect(find.text('전체 초기화'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-1')),
+        findsOneWidget,
+      ); // 활성
+      final seonghoCard = find.byKey(
+        const ValueKey<String>('client-seed-client-3'),
+      );
+      await scrollToClient(tester, seonghoCard);
+      expect(seonghoCard, findsOneWidget); // 휴면
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('전체 초기화'));
+      await settle(tester);
+
+      // 초기화 버튼은 선택이 없을 때는 그려지지 않는다.
+      expect(find.text('전체 초기화'), findsNothing);
     });
   });
 }

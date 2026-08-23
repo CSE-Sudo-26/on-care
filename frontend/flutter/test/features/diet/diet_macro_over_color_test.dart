@@ -1,10 +1,10 @@
-/// 탄단지 진행 바가 목표 초과를 색으로 말하는지 (#890).
+/// 탄단지가 목표 초과를 색으로 말하는지 (#890).
 ///
-/// 바는 목표 지점에서 멈춘다(`gaugeValue` 가 1.0 으로 잘린다). 색까지 그대로면
-/// **꽉 찬 것과 넘긴 것이 완전히 같은 그림**이라, 숫자를 읽지 않으면 구별할 수
-/// 없다. 같은 카드의 칼로리와 아래의 나트륨·당류 바는 이미 이렇게 갈린다.
+/// 탄단지는 카드 머리에서 글자만으로 적는다(#1120) — 바가 없으니 **값의 색**이
+/// 초과를 말한다. 넘긴 항목은 빨강, 그 외는 브랜드 파랑이다. 같은 카드의
+/// 칼로리와 아래의 나트륨·당류 바도 같은 규칙을 쓴다.
 ///
-/// 달성률·칼로리 링은 이 파일의 관심사가 아니다 — 탄단지 바 색만 본다.
+/// 달성률·칼로리 링은 이 파일의 관심사가 아니다 — 탄단지 색만 본다.
 library;
 
 import 'package:flutter/material.dart';
@@ -65,16 +65,19 @@ class _MacroDietRepository extends FakeDietRepository {
 }
 
 void main() {
-  /// [label] 진행 바에 실제로 칠해진 색(맨 위 레이어).
-  Color? barColor(WidgetTester tester, String label) => tester
-      .widgetList<ColoredBox>(
-        find.descendant(
-          of: find.byKey(Key('nutrition-macro-progress-$label')),
-          matching: find.byType(ColoredBox),
-        ),
-      )
-      .last
-      .color;
+  /// [label] 줄의 **값**에 칠해진 색.
+  Color? barColor(WidgetTester tester, String label) {
+    final Text value = tester
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byKey(Key('nutrition-macro-$label')),
+            matching: find.byType(Text),
+          ),
+        )
+        .last;
+    final TextSpan span = value.textSpan! as TextSpan;
+    return (span.children!.first as TextSpan).style?.color;
+  }
 
   Future<void> pumpDiet(
     WidgetTester tester, {
@@ -114,19 +117,22 @@ void main() {
     expect(barColor(tester, '지방'), FigmaColors.dangerRed);
     expect(
       barColor(tester, '탄수화물'),
-      FigmaColors.primaryA(0.65),
+      FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
       reason: '탄수화물은 목표 아래인데 빨강이 됐습니다.',
     );
-    expect(barColor(tester, '단백질'), FigmaColors.primaryA(0.65));
+    expect(
+      barColor(tester, '단백질'),
+      FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
+    );
   });
 
-  testWidgets('목표 아래면 기존 색을 유지한다', (WidgetTester tester) async {
+  testWidgets('목표 아래면 브랜드 파랑이다 (#1070)', (WidgetTester tester) async {
     await pumpDiet(tester, carbsG: 120, proteinG: 45, fatG: 45);
 
     for (final String label in <String>['탄수화물', '단백질', '지방']) {
       expect(
         barColor(tester, label),
-        FigmaColors.primaryA(0.65),
+        FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
         reason: label,
       );
     }
@@ -139,7 +145,7 @@ void main() {
     for (final String label in <String>['탄수화물', '단백질', '지방']) {
       expect(
         barColor(tester, label),
-        FigmaColors.primaryA(0.65),
+        FigmaColors.statusWithinGoal.withValues(alpha: 0.65),
         reason: label,
       );
     }

@@ -74,9 +74,12 @@ class _FakeSuggestionRepository implements TrainerRoutineSuggestionRepository {
   }
 }
 
+// 검토 대기 후보의 이름은 **이미 배정된 개인 운동과 겹치지 않아야** 한다
+// (#1170). 같은 화면 위쪽의 `배정된 개인 운동` 목록에도 같은 이름이 있으면
+// `find.text` 가 둘을 잡아, 이 테스트가 무엇을 보고 있는지 알 수 없다.
 const RoutineSuggestion _shoulder = RoutineSuggestion(
   id: 's-shoulder',
-  name: '어깨 관절 보호 스트레칭',
+  name: '흉추 회전 스트레칭',
   minutes: 8,
   type: '유연성',
   reason: '회전근개와 어깨 안정화를 돕는 스트레칭이에요',

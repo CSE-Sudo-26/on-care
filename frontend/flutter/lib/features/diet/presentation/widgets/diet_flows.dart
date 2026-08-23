@@ -15,6 +15,7 @@ import 'package:oncare/features/diet/domain/entities/diet_analysis_failure.dart'
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -48,6 +49,9 @@ class DietMeal {
     required this.tags,
     required this.sodium,
     required this.sugar,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
     this.aiComment = '',
     this.photoAsset,
     this.photoUrl,
@@ -63,6 +67,13 @@ class DietMeal {
   final List<DietTag> tags;
   final int sodium;
   final double sugar;
+
+  /// 그 끼니의 탄·단·지(g). 끼니 카드 아래에 한 줄로 작게 적는다 (#1170) —
+  /// 하루 합계는 영양 요약 카드가 말하지만, 어느 끼니가 그 합계를 만들었는지는
+  /// 끼니 단위로 봐야 알 수 있다. 트레이너 화면의 같은 카드와 짝이다.
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
 
   /// Short per-meal AI feedback line shown under the food breakdown.
   final String aiComment;
@@ -979,6 +990,9 @@ class DietMealDetailPage extends ConsumerWidget {
     tags: const <DietTag>[],
     sodium: entry.sodiumMg,
     sugar: entry.sugarG,
+    carbsG: entry.carbsG,
+    proteinG: entry.proteinG,
+    fatG: entry.fatG,
   );
 
   @override
@@ -1133,6 +1147,19 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     }
   }
 
+  /// 수정 화면 상단의 큰 끼니 사진. 200 → 300 으로 키웠다 (#1125) — 이 화면에
+  /// 들어온 이유가 대개 "무엇을 먹었는지 다시 보려고" 라, 사진이 주인공이다.
+  MealPhotoView get _photo => MealPhotoView(
+    photoUrl: widget.meal.photoUrl,
+    photoAsset: widget.meal.photoAsset,
+    emoji: widget.meal.emoji,
+    background: widget.meal.thumbBg,
+    width: double.infinity,
+    height: 300,
+    borderRadius: 16,
+    emojiSize: 96,
+  );
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -1178,6 +1205,13 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
               children: <Widget>[
+                // 무엇을 고치는 끼니인지 사진으로 먼저 알아본다 — 숫자를
+                // 고치기 전에 눈으로 확인하는 순서가 자연스럽다. 사진이 없는
+                // 끼니는 큰 이모지 자리를 만들지 않고 지금까지처럼 연다. (#1053)
+                if (_photo.hasPhoto) ...<Widget>[
+                  _photo,
+                  const SizedBox(height: 12),
+                ],
                 _card(<Widget>[
                   _FieldLabel(l.dietMealInfo),
                   const SizedBox(height: 10),

@@ -52,10 +52,22 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('식단 · 영양'), findsOneWidget);
-    // 수치는 식단 하루치에서 온다 — 칼로리 1,067kcal, 탄수화물 120g (저녁 제외, #548).
+    // 수치는 식단 하루치에서 온다 — 칼로리 1,067kcal (저녁 제외, #548).
     expect(find.text('1,067'), findsWidgets);
-    expect(find.text('120g'), findsOneWidget);
-    expect(find.text('오늘의 일정'), findsOneWidget);
-    expect(find.text('병원 정기검진'), findsOneWidget);
+    // 탄단지는 홈 카드에서 뺐다 (#1117).
+    expect(find.text('120g'), findsNothing);
+    // 오늘의 일정 카드는 화면에서 내려 뒀다 (#1055).
+    expect(find.text('오늘의 일정'), findsNothing);
+  });
+
+  testWidgets('홈 헤더에 캘린더 버튼과 AI 분석 필이 없다 (#1055)', (WidgetTester tester) async {
+    await pumpApp(tester);
+
+    // 캘린더는 쓰지 않아 내려 뒀다 — 아이콘만 남으면 눌러도 아무 일이 없다.
+    expect(find.byIcon(Icons.calendar_today_outlined), findsNothing);
+    // 홈 요약은 대부분 AI 가 만든 것이라 필이 카드를 갈라 주지 못했다.
+    expect(find.textContaining('AI 분석'), findsNothing);
+    // 로고는 서비스 로고 그대로다 — 하트 아이콘은 자리를 지키던 임시값이었다.
+    expect(find.byIcon(Icons.favorite), findsNothing);
   });
 }

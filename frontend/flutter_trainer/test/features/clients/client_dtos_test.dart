@@ -32,6 +32,7 @@ void main() {
         'goal': '혈압 관리',
         'last_message': '점심 등록했어요',
         'last_time': '방금',
+        'last_message_at': '2026-08-23T09:30:00Z',
         'active': true,
         'calories': 1800,
         'sodium_mg': 2100,
@@ -56,6 +57,7 @@ void main() {
       expect(c.sodiumOverBudget, isTrue); // 2100 > 2000 target
       expect(c.weekCompletion, <int>[100, 80, 0, 60, 90, 0, 0]);
       expect(c.sodiumWeek, <int>[1900, 2200, 2100]);
+      expect(c.lastMessageAt, DateTime.utc(2026, 8, 23, 9, 30));
     });
 
     test('normalizes an integer sugar value to double', () {
@@ -211,6 +213,34 @@ void main() {
 
       expect(ordered.map((c) => c.sodiumMg).toList(), <int>[2500, 2600, 500]);
     });
+
+    test(
+      'uses the API chat timestamp when no source-side map is available',
+      () {
+        final old = _client('old', sodiumMg: 500);
+        final recent = TrainerClient(
+          id: 'recent',
+          name: 'recent',
+          avatar: 'r',
+          goal: '',
+          lastMessage: '',
+          lastTime: '방금',
+          lastMessageAt: DateTime.utc(2026, 8, 23),
+          active: true,
+          calories: 0,
+          sodiumMg: 500,
+          sugarG: 0,
+          lastRoutine: '',
+          weekCompletion: const <int>[],
+          sodiumWeek: const <int>[],
+        );
+
+        expect(
+          prioritizeClients(<TrainerClient>[old, recent]).map((c) => c.id),
+          <String>['recent', 'old'],
+        );
+      },
+    );
   });
 
   group('sugar warning threshold', () {

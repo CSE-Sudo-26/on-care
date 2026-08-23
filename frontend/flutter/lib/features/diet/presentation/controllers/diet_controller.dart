@@ -93,6 +93,20 @@ final dietPeriodProvider = FutureProvider.family<DietPeriod, DietDateRange>((
   );
 }, name: 'dietPeriod');
 
+/// 기간에 맞는 식단 조언 — GET /diet/advice. (#1017)
+///
+/// 기간을 바꾸는 것은 "무엇을 볼지" 를 바꾸는 일이다. 그래프만 갈아 끼우고
+/// 조언이 오늘 이야기로 남으면, 이번 주를 보고 있는데 "오늘 점심이 짰어요" 를
+/// 읽게 된다.
+///
+/// 구간 경계는 서버가 정한다 — 앱이 따로 계산해 넘기지 않는다.
+final dietAdviceProvider = FutureProvider.family<String, String>((
+  ref,
+  String period,
+) async {
+  return ref.watch(dietRepositoryProvider).fetchAdvice(period);
+}, name: 'dietAdvice');
+
 /// 홈 "AI 추천 식단" — GET /diet/recommendations.
 ///
 /// 홈 진입을 막지 않는 게 요구사항이라, 소비하는 쪽은 이 provider 가 값을 내기

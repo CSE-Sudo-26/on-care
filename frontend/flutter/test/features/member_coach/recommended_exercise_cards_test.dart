@@ -20,7 +20,6 @@ import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_she
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 코칭 포인트 — 운동 주간 데이터의 `aiCoachMessage` 자리에 들어가는 값.
-const String _coachingPoint = '오른쪽 어깨가 들리는 경향이 있어 어깨 안정화에 집중해요.';
 
 const MemberCoach _trainer = MemberCoach(
   trainerId: 'trainer-1',
@@ -133,12 +132,13 @@ Widget _chatApp(Widget home) => MaterialApp(
 void main() {
   Future<void> pumpRecommendationCards(
     WidgetTester tester,
-    List<CoachRoutine> routines,
-  ) async {
+    List<CoachRoutine> routines, {
+    MemberCoach? coach = _trainer,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          memberCoachProvider.overrideWith((ref) async => _trainer),
+          memberCoachProvider.overrideWith((ref) async => coach),
           coachRoutinesProvider.overrideWith((ref) async => routines),
           coachUnreadProvider.overrideWith((ref) async => 0),
         ],
@@ -152,7 +152,7 @@ void main() {
                 children: <Widget>[
                   Padding(
                     padding: EdgeInsets.all(24),
-                    child: AiCoachingCard(coachingPoint: _coachingPoint),
+                    child: AiCoachingCard(),
                   ),
                   CoachCard(),
                 ],
@@ -165,7 +165,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('코칭 포인트와 추천 개인운동이 한 영역에 함께 있다 (#782)', (
+  testWidgets('완료한 추천 운동은 글자가 흐려진다 (#1196)', (WidgetTester tester) async {
+    const CoachRoutine done = CoachRoutine(
+      id: 'done-routine',
+      name: '코어 스트레칭',
+      minutes: 10,
+      type: '스트레칭',
+      reason: '허리 부담 완화',
+      source: 'trainer',
+      completed: true,
+    );
+
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _aiRoutine,
+      done,
+    ]);
+
+    Color colorOf(String text) =>
+        tester.widget<Text>(find.text(text)).style!.color!;
+
+    // 남은 줄은 검정 그대로 — 다음에 할 것이 먼저 읽혀야 한다.
+    expect(colorOf(_aiRoutine.name), FigmaColors.ink);
+    expect(colorOf(done.name), isNot(FigmaColors.ink));
+    expect(colorOf(done.reason), isNot(colorOf(_aiRoutine.reason)));
+  });
+
+  testWidgets('추천 개인운동 카드가 한 영역에 트레이너·AI 추천을 함께 담는다 (#782)', (
     WidgetTester tester,
   ) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[
@@ -176,14 +201,16 @@ void main() {
     final Finder coaching = find.byType(AiCoachingCard);
 
     // 예전에는 조언(맨 위)과 추천 운동(맨 아래)이 멀리 떨어져 있었다.
-    expect(find.text('AI 코칭'), findsOneWidget);
+    // 카드 제목은 `AI 코칭` 이 아니라 내용 그대로 `추천 개인운동` 이다 (#1130).
+    expect(find.text('추천 개인운동'), findsOneWidget);
+    expect(find.text('AI 코칭'), findsNothing);
+    // `PT 와 다음 PT 사이…` 안내 문구도 뺐다.
+    expect(find.textContaining('다음 PT'), findsNothing);
+    // 코칭 포인트는 화면 위쪽의 AI 맞춤 조언 카드로 옮겼다 — 같은 말이 한
+    // 화면에 두 번 있으면 안 된다. (#1021)
     expect(
       find.descendant(of: coaching, matching: find.text('이번 코칭 포인트')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: coaching, matching: find.text(_coachingPoint)),
-      findsOneWidget,
+      findsNothing,
     );
     // 트레이너 추천과 AI 추천이 같은 목록에 있다 — 회원에게는 한 가지 질문이다.
     expect(
@@ -247,7 +274,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(
-              child: AiCoachingCard(coachingPoint: _coachingPoint),
+              child: AiCoachingCard(),
             ),
           ),
         ),
@@ -259,11 +286,13 @@ void main() {
     expect(find.textContaining('확인'), findsNothing);
   });
 
-  testWidgets('추천 운동이 없으면 코칭 포인트만 보여 준다 (#782)', (WidgetTester tester) async {
+  testWidgets('추천 운동이 없으면 카드를 그리지 않는다 (#782, #1021)', (
+    WidgetTester tester,
+  ) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[]);
 
-    expect(find.text('이번 코칭 포인트'), findsOneWidget);
-    expect(find.text(_coachingPoint), findsOneWidget);
+    // 코칭 포인트가 이 카드를 떠난 뒤로, 추천이 없으면 카드에 남는 말이 없다.
+    expect(find.text('AI 코칭'), findsNothing);
     // 빈 추천 카드를 만들지 않는다 — AI 가 매번 운동을 지어낼 이유가 없다.
     expect(find.text('추천 개인운동'), findsNothing);
     expect(find.text('현재 추천할 수 있는 AI 맞춤 운동이 없어요'), findsNothing);
@@ -380,13 +409,13 @@ void main() {
           locale: Locale('ko'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: AiCoachingCard(coachingPoint: _coachingPoint)),
+          home: Scaffold(body: AiCoachingCard()),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('completeRoutine-seed-r2')));
+    await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')));
     await tester.pumpAndSettle();
     expect(find.text('루틴 수행 완료'), findsOneWidget);
     await tester.enterText(
@@ -398,10 +427,20 @@ void main() {
     await tester.pumpAndSettle();
 
     final CoachRoutine completed = (await repository.fetchRoutines())
-        .firstWhere((CoachRoutine routine) => routine.id == 'seed-r2');
+        .firstWhere((CoachRoutine routine) => routine.id == 'seed-routine-user-demo-1');
     expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
     expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
-    expect(find.byKey(const Key('completeRoutine-seed-r2')), findsNothing);
+    // 체크 박스는 그대로 있고 체크된 채로 남는다 — 한 일이 화면에서 사라지면
+    // 무엇을 했는지 다시 확인할 데가 없다. (#1021) 다시 누르면 되묻고 되돌릴
+    // 수 있으므로 잠기지 않는다 (#1131).
+    final Checkbox box = tester.widget<Checkbox>(
+      find.descendant(
+        of: find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')),
+        matching: find.byType(Checkbox),
+      ),
+    );
+    expect(box.value, isTrue);
+    expect(box.onChanged, isNotNull);
     expect(completed.completedIntensity, 'high');
   });
 
@@ -704,6 +743,29 @@ void main() {
     expect(repository.paths, <String>['/chat/attachments/pdf-file']);
     expect(find.text('PDF를 열지 못했어요. 다시 시도해 주세요'), findsOneWidget);
   });
+
+  testWidgets('담당 트레이너가 없으면 개인 운동을 스스로 취소할 수 있다 (#1020)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(
+      tester,
+      <CoachRoutine>[_aiRoutine],
+      coach: null,
+    );
+
+    expect(find.byKey(Key('cancelRoutine-${_aiRoutine.id}')), findsOneWidget);
+  });
+
+  testWidgets('담당 트레이너가 있으면 취소는 트레이너의 일이다 (#1020)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, <CoachRoutine>[_aiRoutine]);
+
+    // 담당이 배정한 것을 회원이 조용히 없애면 다음 상담에서 둘이 서로 다른
+    // 기록을 본다 — 버튼 자체를 그리지 않는다(서버도 403 으로 막는다).
+    expect(find.byKey(Key('cancelRoutine-${_aiRoutine.id}')), findsNothing);
+  });
+
 }
 
 /// 내려받기가 항상 실패하는 저장소. 요청된 경로를 기록해 둔다.
