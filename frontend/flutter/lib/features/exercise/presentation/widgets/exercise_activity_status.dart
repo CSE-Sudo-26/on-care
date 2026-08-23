@@ -210,7 +210,7 @@ class _ExerciseActivityStatusState
             streakDays: widget.week.streakDays,
           )
         else if (period == 1)
-          _WeekView(loads: _loads, goals: _goals)
+          ExerciseWeekLoadCard(loads: _loads, goals: _goals)
         else
           _AllPeriodView(goals: _goals),
       ],
@@ -516,6 +516,17 @@ void paintRingCapIcon(
   tp.paint(canvas, Offset(at.dx - tp.width / 2, at.dy - tp.height / 2));
 }
 
+/// 한 바퀴를 넘긴 원호가 **다시 도는 몫**(0 이상 1 미만).
+///
+/// 넘친 몫을 1 에서 자르면 두 바퀴를 넘긴 순간(209%, 300% …) 끝이 12시로
+/// 되돌아가, 그 자리에 고정으로 얹는 유형 기호 아래 캡 표시가 숨는다 —
+/// 도넛이 그냥 꽉 찬 원으로만 보인다. 자르지 말고 **바퀴마다 감아 돌린다**
+/// (#1178). 209% 면 두 번째 바퀴의 9% 지점, 200%·300% 면 12시가 맞다.
+double ringOverflowTurn(double ratio) {
+  if (!ratio.isFinite) return 0;
+  return ratio - ratio.floorToDouble();
+}
+
 /// 원호의 **끝**에 얹는 얇고 작은 흰 `>`. 어디까지 왔는지와 어느 쪽으로 도는지를
 /// 함께 짚는다.
 ///
@@ -657,7 +668,7 @@ class _DonutPainter extends CustomPainter {
           ..strokeWidth = stroke
           ..color = color,
       );
-      final double over = math.min(filled - 1, 1);
+      final double over = ringOverflowTurn(filled);
       capAngle = -math.pi / 2 + math.pi * 2 * over;
       _paintCapShadow(canvas, c, r, stroke, capAngle);
       if (over > 0) {
@@ -760,31 +771,43 @@ class _DonutPainter extends CustomPainter {
 /// 링은 셋이 크기 순으로 겹친다(바깥 유산소 → 근력 → 스트레칭). 단위가 서로
 /// 다르니 높이를 나란히 두지 않고, 각자의 주간 목표에 대한 **달성률**만 같은
 /// 모양으로 겹쳐 보여 준다.
-class _WeekView extends StatefulWidget {
-  const _WeekView({required this.loads, required this.goals});
+/// 이번 주 = **주간 소모 칼로리 한 줄** + 유형별 목표 링 셋 + 그 값.
+///
+/// 홈 탭 운동 카드도 이 카드를 그대로 쓴다 (#1183) — 같은 한 주를 두 화면이
+/// 다른 그림으로 말하지 않게, 오늘 카드([ExerciseDayLoadCard])와 같은 방식으로
+/// 공개해 둔다.
+class ExerciseWeekLoadCard extends StatelessWidget {
+  const ExerciseWeekLoadCard({
+    required this.loads,
+    this.goals = kDefaultExerciseLoadGoals,
+    this.surface = true,
+    super.key,
+  });
 
   final List<ExerciseDayLoad> loads;
   final ExerciseLoadGoals goals;
 
-  @override
-  State<_WeekView> createState() => _WeekViewState();
-}
+  /// 흰 카드 바탕을 직접 그릴지. 홈처럼 **이미 카드 안**에 놓일 때는 끈다 —
+  /// 카드 안의 카드는 테두리가 두 겹으로 겹친다.
+  final bool surface;
 
-class _WeekViewState extends State<_WeekView> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final String locale = Localizations.localeOf(context).toString();
-    final List<ExerciseDayLoad> loads = widget.loads;
     if (loads.isEmpty) {
-      return _Card(child: Center(child: _Muted(l.exLoadEmpty)));
+      return _Card(
+        surface: surface,
+        child: Center(child: _Muted(l.exLoadEmpty)),
+      );
     }
-    final ExerciseLoadGoals g = widget.goals;
+    final ExerciseLoadGoals g = goals;
     final double weekKcal = loads.fold<double>(
       0,
       (double a, ExerciseDayLoad d) => a + d.calories,
     );
     return _Card(
+      surface: surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -957,7 +980,7 @@ class _RingsPainter extends CustomPainter {
             ..strokeWidth = stroke
             ..color = color,
         );
-        final double over = math.min(ratio - 1, 1);
+        final double over = ringOverflowTurn(ratio);
         capAngle = -math.pi / 2 + math.pi * 2 * over;
         _paintCapShadow(canvas, c, r, stroke, capAngle);
         if (over > 0) {
@@ -1235,77 +1258,91 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                flex: 6,
-                child: _HeadlineLine(
-                  caption: picked == null
-                      ? l.exBurnAllTitle
-                      : l.exWeekOfMonthLabel(
-                          picked.monday.month,
-                          _weekOfMonth(picked.monday),
-                        ),
-                  // 고른 주가 없으면 **지금 보이는 구간의 주 평균**이다.
-                  value: _valueOfGoal(
-                    locale,
-                    picked?.calories ?? visibleAverage,
-                    widget.goals.weeklyBurnKcal,
-                  ),
-                  unit: l.unitKcal,
-                ),
-              ),
-              // 고른 주의 내역은 kcal **오른쪽**에 붙는다 (#1129) — 그래프
-              // 아래에 따로 두면 구분선까지 필요해져 카드가 셋으로 갈렸다.
-              // 색 네모는 뺐다. 옆의 막대가 이미 색으로 말한다.
-              if (picked != null) ...<Widget>[
-                const SizedBox(width: 8),
+          // 머리줄은 **고른 주가 있든 없든 같은 높이**를 쓴다 (#1194).
+          // 오른쪽 내용이 한 줄(기간)에서 서너 줄(유형별 내역)로 바뀌는 만큼
+          // 아래 그래프 몫이 줄어, 막대를 고를 때마다 그래프가 작아졌다.
+          SizedBox(
+            height: _allPeriodHeaderHeight(context),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
                 Expanded(
-                  flex: 5,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      for (final ExerciseLoadKind k in ExerciseLoadKind.values)
-                        _AllPeriodDetailLine(
-                          text:
-                              '${kindLabel(l, k)} '
-                              '${kindValueText(l, k, picked.valueOf(k))}',
-                        ),
-                      if (picked.otherMinutes > 0)
-                        _AllPeriodDetailLine(
-                          text:
-                              '${l.exTypeOtherChip} '
-                              '${l.unitMinutesValue(picked.otherMinutes.round())}',
-                        ),
-                    ],
+                  flex: 6,
+                  child: _HeadlineLine(
+                    caption: picked == null
+                        ? l.exBurnAllTitle
+                        : l.exWeekOfMonthLabel(
+                            picked.monday.month,
+                            _weekOfMonth(picked.monday),
+                          ),
+                    // 고른 주가 없으면 **지금 보이는 구간의 주 평균**이다.
+                    value: _valueOfGoal(
+                      locale,
+                      picked?.calories ?? visibleAverage,
+                      widget.goals.weeklyBurnKcal,
+                    ),
+                    unit: l.unitKcal,
                   ),
                 ),
-              ],
-              if (picked == null && visible.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 8),
-                // 평균이 어느 구간의 것인지 숫자만으로는 알 수 없다 — 밀 때마다
-                // 바뀌는 값이라 기간을 옆에 붙여 둔다.
-                Expanded(
-                  flex: 4,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${DateFormat.Md(locale).format(visible.first.monday)}'
-                      ' ~ '
-                      '${DateFormat.Md(locale).format(visible.last.monday.add(const Duration(days: 6)))}',
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.textBody,
+                // 고른 주의 내역은 kcal **오른쪽**에 붙는다 (#1129) — 그래프
+                // 아래에 따로 두면 구분선까지 필요해져 카드가 셋으로 갈렸다.
+                // 색 네모는 뺐다. 옆의 막대가 이미 색으로 말한다.
+                if (picked != null) ...<Widget>[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 5,
+                    // `기타` 까지 네 줄이 되는 주도 있다 — 그때는 목록 전체가
+                    // 한 번에 줄어 같은 높이 안에 들어간다.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topRight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          for (final ExerciseLoadKind k
+                              in ExerciseLoadKind.values)
+                            _AllPeriodDetailLine(
+                              text:
+                                  '${kindLabel(l, k)} '
+                                  '${kindValueText(l, k, picked.valueOf(k))}',
+                            ),
+                          if (picked.otherMinutes > 0)
+                            _AllPeriodDetailLine(
+                              text:
+                                  '${l.exTypeOtherChip} '
+                                  '${l.unitMinutesValue(picked.otherMinutes.round())}',
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                ),
+                ],
+                if (picked == null && visible.isNotEmpty) ...<Widget>[
+                  const SizedBox(width: 8),
+                  // 평균이 어느 구간의 것인지 숫자만으로는 알 수 없다 — 밀 때마다
+                  // 바뀌는 값이라 기간을 옆에 붙여 둔다.
+                  Expanded(
+                    flex: 4,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${DateFormat.Md(locale).format(visible.first.monday)}'
+                        ' ~ '
+                        '${DateFormat.Md(locale).format(visible.last.monday.add(const Duration(days: 6)))}',
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.textBody,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -1332,6 +1369,14 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
   }
 }
 
+/// `전체` 카드 머리줄의 **고정 높이**.
+///
+/// 유형별 내역 세 줄이 들어가는 높이다. 고른 주가 없을 때도 같은 자리를
+/// 비워 두어, 막대를 골라도 그래프가 줄지 않는다 (#1194). 글자 배율을 따라
+/// 커지되 카드와 같은 선(1.6)에서 멈춘다.
+double _allPeriodHeaderHeight(BuildContext context) =>
+    44 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
+
 /// 고른 주의 유형별 내역 한 줄 — `유산소 195분`. 색 네모 없이 글자만 쓴다
 /// (#1129) — 색은 바로 옆 막대가 이미 말하고 있다.
 class _AllPeriodDetailLine extends StatelessWidget {
@@ -1340,19 +1385,17 @@ class _AllPeriodDetailLine extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 1),
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerRight,
-      child: Text(
-        text,
-        maxLines: 1,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: FigmaColors.textBody,
-        ),
+  Widget build(BuildContext context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerRight,
+    child: Text(
+      text,
+      maxLines: 1,
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        height: 1.25,
+        color: FigmaColors.textBody,
       ),
     ),
   );
@@ -1636,13 +1679,19 @@ class _ChartGridPainter extends CustomPainter {
 // ── 공통 조각 ──────────────────────────────────────────────────────────
 
 class _Card extends StatelessWidget {
-  const _Card({required this.child});
+  const _Card({required this.child, this.surface = true});
 
   final Widget child;
 
+  /// 흰 바탕·그림자·안쪽 여백을 직접 그릴지. 홈 카드 안에 놓일 때는 끈다 —
+  /// 높이 규칙만 남아 두 화면의 카드가 같은 크기로 선다.
+  final bool surface;
+
   @override
   Widget build(BuildContext context) => Container(
-    key: const Key('exerciseActivityCard'),
+    // 운동 탭의 카드만 이 열쇠를 갖는다 — 홈에 놓인 같은 카드까지 잡히면
+    // "카드가 하나" 를 세는 테스트가 두 개를 보게 된다.
+    key: surface ? const Key('exerciseActivityCard') : null,
     width: double.infinity,
     // 높이는 고정이되 **글자 배율을 따라간다**. 세 기간 카드가 같은 높이여야
     // 토글을 눌러도 화면이 출렁이지 않는데, 배율만 커지면 그 고정 높이 안에서
@@ -1650,15 +1699,19 @@ class _Card extends StatelessWidget {
     height:
         kActivityCardHeight *
         MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6),
-    padding: const EdgeInsets.symmetric(
-      horizontal: _kCardPaddingH,
-      vertical: _kCardPadding,
-    ),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: kCardShadow,
-    ),
+    padding: surface
+        ? const EdgeInsets.symmetric(
+            horizontal: _kCardPaddingH,
+            vertical: _kCardPadding,
+          )
+        : EdgeInsets.zero,
+    decoration: surface
+        ? BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: kCardShadow,
+          )
+        : null,
     child: child,
   );
 }
@@ -1746,19 +1799,23 @@ class _PeriodToggle extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey<String>('exercise-period-toggle'),
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: FigmaColors.statBg,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (int i = 0; i < labels.length; i++)
-          Flexible(
-            child: Semantics(
+  Widget build(BuildContext context) => FittedBox(
+    // 세 라벨은 줄이지 않는다 — `이번 주` 가 `이번…` 으로 잘려 무엇을 고르는
+    // 자리인지 사라졌다 (#1182). 폭이 모자라면 토글을 통째로 줄인다.
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerRight,
+    child: Container(
+      key: const ValueKey<String>('exercise-period-toggle'),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (int i = 0; i < labels.length; i++)
+            Semantics(
               button: true,
               selected: active == i,
               child: GestureDetector(
@@ -1769,7 +1826,7 @@ class _PeriodToggle extends StatelessWidget {
                   duration: const Duration(milliseconds: 160),
                   // 식단 탭 기간 토글과 **같은 크기**다 (#1126) — 같은 자리에
                   // 놓인 같은 조작이 탭마다 다르게 보이면 안 된다. 글자를 키운
-                  // 화면에서 세 탭이 줄을 넘기지 않도록 좁히는 규칙까지 같다.
+                  // 화면에서 여백을 좁히는 규칙까지 같다.
                   padding: EdgeInsets.symmetric(
                     horizontal: MediaQuery.textScalerOf(context).scale(1) > 1.3
                         ? 12
@@ -1785,7 +1842,7 @@ class _PeriodToggle extends StatelessWidget {
                   child: Text(
                     labels[i],
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -1797,8 +1854,8 @@ class _PeriodToggle extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }

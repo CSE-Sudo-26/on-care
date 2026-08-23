@@ -813,6 +813,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exNearbyGyms => 'Nearby gyms';
 
   @override
+  String get exGymListCollapse => 'Collapse list';
+
+  @override
+  String get exGymListExpand => 'Expand list';
+
+  @override
   String get exAiAnalysis => '✦ AI analysis';
 
   @override
@@ -1117,17 +1123,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachCardDietBody =>
-      'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.';
+      'Breakfast was nicely balanced. The jjamppong you had for lunch can be heavy on sodium and sugar, so drink plenty of water today. For the rest of the day, pair vegetables with protein to keep things balanced.';
 
   @override
   String get coachCardExerciseTag => 'Exercise';
 
   @override
-  String get coachCardExerciseTitle => 'Upper-body PT session 12 done';
+  String get coachCardExerciseTitle => 'PT session 12 done';
 
   @override
   String get coachCardExerciseBody =>
-      'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.';
+      'Nice work finishing PT session 12 — keeping up a steady routine is what counts. As your coach advised, take your time with the rotator-cuff shoulder stretches and wind down with light cardio. Afterwards, rest and rehydrate rather than pushing on.';
 
   @override
   String get coachCardWaterTag => 'Hydration';
@@ -1234,6 +1240,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aicQuickRepliesLabel => 'Try asking';
+
+  @override
+  String get aicGeneratingReply => 'Writing your answer';
 
   @override
   String get aicQuickReply1 => 'Recommend a dinner menu for today';

@@ -1332,6 +1332,11 @@ class LocalApiInterceptor extends Interceptor {
       return _badRequest(options, 'message is empty');
     }
 
+    // 답을 즉시 돌려주면 "맞춤 답변 생성 중" 표시가 한 프레임 만에 지나가,
+    // 답이 그 사람의 기록을 읽고 만들어진다는 것이 보이지 않는다(#1180).
+    // 실 서버는 그만한 시간이 걸리므로 데모도 같은 리듬으로 답한다.
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+
     final (String reply, List<String> sources) = _mockCoachReply(message);
     return _ok(options, <String, Object?>{'reply': reply, 'sources': sources});
   }
@@ -1358,6 +1363,20 @@ class LocalApiInterceptor extends Interceptor {
         '빠르게 걷기 같은 중강도 유산소를 주 5회, 하루 30분씩 해보세요. 여기에 주 2회 가벼운 근력 '
             '운동을 더하면 혈압·혈당 관리에 특히 좋아요. 식후 10분 걷기도 큰 도움이 됩니다. 🚶',
         <String>['고혈압과 운동', '유산소와 근력 균형'],
+      );
+    }
+    // 저녁 메뉴 추천은 빠른 질문 버튼의 첫 줄이다 — 일반론 대신 오늘 기록(점심
+    // 짬뽕)과 이어지는 한 끼를 답해야 "맞춤"으로 읽힌다(#1180).
+    if (has(<String>['저녁']) && has(<String>['메뉴', '먹', '추천'])) {
+      return (
+        '오늘은 점심에 짬뽕으로 나트륨과 당류를 많이 섭취했으니, 저녁은 싱겁고 단백질과 채소가 '
+            '풍부한 메뉴를 추천해요.\n'
+            '🍽️ 추천 메뉴: 닭가슴살 채소구이 + 현미밥\n\n'
+            '• 닭가슴살로 운동 후 단백질을 보충하고\n'
+            '• 다양한 채소로 식이섬유와 영양소를 챙겨주세요.\n'
+            '• 현미밥은 적당량 곁들여 균형 잡힌 한 끼로 드시면 좋아요.\n\n'
+            '오늘은 국물이나 양념이 많은 음식은 피하고, 물도 충분히 섭취해 주세요.',
+        <String>['DASH 식단 개요', '나트륨 줄이기'],
       );
     }
     if (has(<String>['뭐 먹', '식단', '점심', '저녁', '아침', '메뉴'])) {

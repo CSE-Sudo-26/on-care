@@ -12,6 +12,7 @@ import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
+import '../../helpers/fixed_clock.dart';
 
 Widget _app(Widget home, {List<Override> overrides = const <Override>[]}) {
   return ProviderScope(
@@ -88,6 +89,10 @@ Future<void> _selectDaysAgo(WidgetTester tester, [int days = 1]) async {
 }
 
 void main() {
+  // 지난 날짜를 누르는 테스트다 — 오늘이 월요일이면 스트립(이번 주 월~일)에
+  // 어제가 없어 누를 칸이 사라진다. 오늘을 주 중간으로 고정한다 (#1209).
+  setUp(useFixedKstDate);
+
   test('mock account keeps updated health goals', () async {
     final MockAccountRepository repository = MockAccountRepository();
 

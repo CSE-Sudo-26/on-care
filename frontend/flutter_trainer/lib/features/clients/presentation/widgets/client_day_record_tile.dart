@@ -71,6 +71,7 @@ class ClientDayRecordTile extends StatelessWidget {
     required this.details,
     required this.expanded,
     required this.onToggle,
+    this.toggleable = true,
     this.emptyLabel,
     this.extra,
   });
@@ -94,6 +95,10 @@ class ClientDayRecordTile extends StatelessWidget {
   /// 줄을 눌렀을 때. 기록이 없는 날은 [logged] 가 false 라 눌리지 않는다.
   final VoidCallback onToggle;
 
+  /// false면 화살표와 탭 동작 없이 상세를 항상 보여 준다.
+  /// `오늘` 화면은 기록을 바로 읽는 일반 박스라서 false를 쓴다.
+  final bool toggleable;
+
   /// 기록이 없을 때 요약 자리에 적을 말.
   final String? emptyLabel;
 
@@ -103,15 +108,16 @@ class ClientDayRecordTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final bool showDetails = logged && (expanded || !toggleable);
     return Column(
       key: ValueKey<String>('client-day-tile-${ymd(date)}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Semantics(
-          button: logged,
-          expanded: logged ? expanded : null,
+          button: logged && toggleable,
+          expanded: logged && toggleable ? expanded : null,
           child: InkWell(
-            onTap: logged ? onToggle : null,
+            onTap: logged && toggleable ? onToggle : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
@@ -168,26 +174,27 @@ class ClientDayRecordTile extends StatelessWidget {
                   ),
                   // 펼칠 것이 없는 날에도 자리는 남긴다 — 화살표만 빠지면
                   // 그 줄의 요약이 오른쪽으로 밀려 열이 어긋난다.
-                  SizedBox(
-                    width: 24,
-                    child: logged
-                        ? AnimatedRotation(
-                            turns: expanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 160),
-                            child: const Icon(
-                              Icons.expand_more,
-                              size: 20,
-                              color: AppColors.subtleForeground,
-                            ),
-                          )
-                        : null,
-                  ),
+                  if (toggleable)
+                    SizedBox(
+                      width: 24,
+                      child: logged
+                          ? AnimatedRotation(
+                              turns: expanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 160),
+                              child: const Icon(
+                                Icons.expand_more,
+                                size: 20,
+                                color: AppColors.subtleForeground,
+                              ),
+                            )
+                          : null,
+                    ),
                 ],
               ),
             ),
           ),
         ),
-        if (logged && expanded)
+        if (showDetails)
           Padding(
             // 펼친 속에 색을 깔지 않는다. 이 판은 이미 흰 카드이고, 안에서
             // 바탕색이 한 번 더 갈리면 카드 안에 카드가 있는 것처럼 읽힌다.

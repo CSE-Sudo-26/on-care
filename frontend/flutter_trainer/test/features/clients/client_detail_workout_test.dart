@@ -9,6 +9,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
@@ -382,6 +383,13 @@ void main() {
         const ValueKey<String>('exercise-daily-records'),
       );
       expect(records, findsOneWidget);
+      final Finder todayRow = find.byKey(
+        ValueKey<String>('client-day-tile-${ymd(todayKst())}'),
+      );
+      expect(
+        find.descendant(of: todayRow, matching: find.byIcon(Icons.expand_more)),
+        findsOneWidget,
+      );
       expect(
         find.descendant(
           of: records,
@@ -408,6 +416,13 @@ void main() {
       );
       expect(find.text('AI 전체 분석'), findsOneWidget);
       expect(find.text('AI 기간 분석'), findsNothing);
+      final Finder todayRow = find.byKey(
+        ValueKey<String>('client-day-tile-${ymd(todayKst())}'),
+      );
+      expect(
+        find.descendant(of: todayRow, matching: find.byIcon(Icons.expand_more)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {
@@ -418,8 +433,16 @@ void main() {
       expect(find.text('운동 현황'), findsOneWidget);
       expect(find.text('이번 주 완료율'), findsNothing);
 
-      // 오늘 줄은 처음부터 펼쳐져 있고, 그 안에 그날의 미션 카드가 선다.
+      // 오늘 줄은 토글이 아닌 일반 박스로 항상 펼쳐져 있다.
+      final Finder todayRow = find.byKey(
+        ValueKey<String>('client-day-tile-${ymd(todayKst())}'),
+      );
       expect(find.text(_todayRowLabel()), findsOneWidget);
+      expect(todayRow, findsOneWidget);
+      expect(
+        find.descendant(of: todayRow, matching: find.byIcon(Icons.expand_more)),
+        findsNothing,
+      );
       // 완료 배지 — 원형 게이지가 아니라 아이콘+글자 배지다(#1025).
       expect(find.text('100%'), findsWidgets);
       expect(find.text('트레이너 메모'), findsOneWidget); // 오늘 것만 메모가 있다
