@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -514,7 +513,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashSessionPrepared => '준비됨';
 
   @override
-  String get dashSessionNoteWritten => '작성됨';
+  String get dashSessionNoteWritten => '작성 완료';
 
   @override
   String get dashSessionSentNo => '전송 안됨';
@@ -523,7 +522,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashSessionPreparedNo => '준비 안됨';
 
   @override
-  String get dashSessionNoteNotWritten => '작성 안됨';
+  String get dashSessionNoteNotWritten => '메모 없음';
 
   @override
   String get weekdayMon => '월';
