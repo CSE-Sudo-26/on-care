@@ -205,13 +205,19 @@ class BurnDonut extends StatelessWidget {
                       child: Center(
                         // 목록 전체를 **한 번에** 줄인다 (#1170) — 줄마다 따로
                         // 줄이면 나란히 선 세 줄의 글자 크기가 제각각이 된다.
+                        //
+                        // 폭은 못 박지 않고 **가장 긴 줄에 맞춘다** (#1173).
+                        // 못 박으면 그보다 긴 값이 잘리는데, 바깥 `FittedBox`
+                        // 는 칸 안에서 잘린 것을 모른다.
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: SizedBox(
-                            width: 150,
+                          child: IntrinsicWidth(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              // 세 줄이 **같은 너비**로 서야 값의 오른쪽 끝이
+                              // 가지런하다 — 줄마다 제 너비면 값이 들쭉날쭉
+                              // 끝난다. (#1173)
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 for (final ExerciseKind kind
@@ -367,13 +373,19 @@ class BurnGoalRings extends StatelessWidget {
                       child: Center(
                         // 목록 전체를 **한 번에** 줄인다 (#1170) — 줄마다 따로
                         // 줄이면 나란히 선 세 줄의 글자 크기가 제각각이 된다.
+                        //
+                        // 폭은 못 박지 않고 **가장 긴 줄에 맞춘다** (#1173).
+                        // 못 박으면 그보다 긴 값이 잘리는데, 바깥 `FittedBox`
+                        // 는 칸 안에서 잘린 것을 모른다.
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: SizedBox(
-                            width: 150,
+                          child: IntrinsicWidth(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              // 세 줄이 **같은 너비**로 서야 값의 오른쪽 끝이
+                              // 가지런하다 — 줄마다 제 너비면 값이 들쭉날쭉
+                              // 끝난다. (#1173)
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 for (final ExerciseKind kind
@@ -510,42 +522,42 @@ class ActivityValueRow extends StatelessWidget {
           // 제각각이 된다 — 세 줄은 같은 성격의 값이라 같은 크기로 읽혀야
           // 한다. 좁아질 때는 목록 전체가 한 번에 줄어든다(부르는 쪽의
           // `FittedBox`).
-          Expanded(
-            flex: 5,
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.mutedForeground,
-              ),
+          //
+          // 칸을 `Expanded` 로 나누지도 않는다 (#1173). 나누면 값 칸이 글자보다
+          // 좁아질 수 있는데, 그때 글자는 줄어드는 대신 **잘린다** — 그리고
+          // 바깥 `FittedBox` 는 칸이 넘친 것을 모르니 줄여 주지도 않는다.
+          // 라벨과 값을 제 너비로 두고 그 사이를 [Spacer] 가 벌리면, 줄의 고유
+          // 너비가 곧 글자가 필요로 하는 너비라 바깥이 그만큼 줄여 준다.
+          Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
             ),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            flex: 4,
-            child: Text.rich(
-              TextSpan(
-                children: <InlineSpan>[
-                  TextSpan(text: value),
-                  if (g != null)
-                    TextSpan(
-                      text: g,
-                      style: const TextStyle(color: AppColors.mutedForeground),
-                    ),
-                ],
-              ),
-              maxLines: 1,
-              textAlign: TextAlign.right,
-              softWrap: false,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w800,
-                color: AppColors.foreground,
-                letterSpacing: -0.2,
-              ),
+          const SizedBox(width: 12),
+          const Spacer(),
+          Text.rich(
+            TextSpan(
+              children: <InlineSpan>[
+                TextSpan(text: value),
+                if (g != null)
+                  TextSpan(
+                    text: g,
+                    style: const TextStyle(color: AppColors.mutedForeground),
+                  ),
+              ],
+            ),
+            maxLines: 1,
+            softWrap: false,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+              letterSpacing: -0.2,
             ),
           ),
         ],
