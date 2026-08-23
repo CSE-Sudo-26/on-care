@@ -11,6 +11,7 @@ import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
+import '../../helpers/fixed_clock.dart';
 
 /// 짝수 날에만 기록이 있는 저장소 — 기간 평균이 **기록이 있는 날만으로**
 /// 나뉘는지 확인하기 위한 대역.
@@ -76,6 +77,10 @@ Widget _app({
 }
 
 void main() {
+  // 지난 날짜를 누르는 테스트다 — 오늘이 월요일이면 스트립(이번 주 월~일)에
+  // 어제가 없어 누를 칸이 사라진다. 오늘을 주 중간으로 고정한다 (#1209).
+  setUp(useFixedKstDate);
+
   group('dietPeriodProvider', () {
     test('기간의 모든 날을 담고, 평균은 기록이 있는 날만으로 나눈다', () async {
       final container = ProviderContainer(

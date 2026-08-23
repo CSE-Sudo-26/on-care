@@ -72,15 +72,17 @@
 
 | 지표 (연령대 · 조사연도) | 수치 |
 | --- | --- |
-| **당뇨병** 유병률 (19–39세 · ~2020) | 10년 새 **2배** (1.02% → 2.02%, 약 37만 명) |
-| **당뇨병 전단계** (19–39세 · ~2020) | **26.5%** (약 303만 명) |
-| **고혈압** 인지율 / 치료율 (20–39세 · 2022) | **36% / 35%** (전체 성인 77% / 74%) |
+| **2형 당뇨병** 유병률 (19–39세 · 2010→2020) | 1.02% → **2.02%** — 10년 새 2배 (2020년 372,726명) |
+| **당뇨병 전단계** (19–39세 · 2019–2022) | **21.8%** (약 303만 명 · 남성 26.5% / 여성 16.7%) |
+| 당뇨병 **인지율 / 치료율** (19–39세 당뇨 환자 · 2019–2022) | **43.3% / 34.6%** (혈당 조절률 29.6%) |
+| **고혈압** 유병 인구 (20–39세 · 2022) | 약 **89만 명** (전체 고혈압 환자 1,300만 명의 6.9%) |
+| 고혈압 **인지율 / 치료율** (20–39세 · 2022) | **36% / 35%** (전체 성인 77% / 74%) |
 | 고혈압 치료 **미순응** (20–39세 · 2022) | **84.9%** (20대는 24%만 꾸준히 치료) |
-| **유산소 신체활동** 실천율 (성인 전체 · 2014→2020) | 58.3% → **45.6%**, 좌식 7.5 → 8.6시간 |
+| **유산소 신체활동** 실천율 (성인 전체 · 2014→2020) | 58.3% → **45.6%**, 좌식 7.5 → **8.6시간** (20대 9.7시간) |
 
-<sub>※ 지표마다 연령대·조사연도가 다릅니다(신체활동은 성인 전체 추세). 동일 표본의 직접 비교가 아니라, 2030 중심의 만성질환 증가와 관리 공백을 함께 보여주는 근거로 제시합니다.</sub>
+<sub>※ 지표마다 연령대·조사연도·자료원이 다릅니다(2형 당뇨 유병률은 건보공단 청구자료, 나머지 질환 지표는 국민건강영양조사 기반 팩트시트, 신체활동은 성인 전체 추세). 동일 표본의 직접 비교가 아니라, 2030 중심의 만성질환 증가와 관리 공백을 함께 보여주는 근거로 제시합니다.</sub>
 
-<sub>Sources — [Diabetes Fact Sheets in Korea 2024](https://www.e-dmj.org/journal/view.php?number=2909) · [Korea Hypertension Fact Sheet 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11903208/) · [Physical Activity Trends, KNHANES](https://pmc.ncbi.nlm.nih.gov/articles/PMC9100085/) · [The Korea Herald](https://www.koreaherald.com/article/10478765)</sub>
+<sub>Sources — [Young Adults with T2DM in South Korea 2010–2020, *Diabetes Metab J* 2025](https://www.e-dmj.org/journal/view.php?number=2927) · [Diabetes Fact Sheets in Korea 2024](https://www.e-dmj.org/journal/view.php?number=2909) · [Korea Hypertension Fact Sheet 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11903208/) · [Physical Activity Trends, KNHANES](https://pmc.ncbi.nlm.nih.gov/articles/PMC9100085/) · [The Korea Herald](https://www.koreaherald.com/article/10478765)</sub>
 
 ---
 

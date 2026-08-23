@@ -18,11 +18,27 @@
 /// 기준이 9시간 어긋난다. 그 규칙은 `test/core/utils/clock_test.dart` 가 지킨다.
 library;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 /// KST 는 서머타임이 없다 — 언제나 UTC+9.
 const Duration kstOffset = Duration(hours: 9);
 
+/// 테스트가 "지금" 을 고정하는 자리. null 이면 실제 시각이다.
+///
+/// 날짜 스트립처럼 **오늘이 무슨 요일인지**에 따라 화면이 달라지는 곳을 재려면
+/// 오늘을 고정해야 한다. 고정하지 않으면 그 테스트는 요일에 매인다 — 지난
+/// 날짜를 고르는 테스트들이 스트립에 이번 주(월~일)만 있는 탓에 **월요일마다**
+/// 깨졌다 (#1209).
+///
+/// 앱 코드에서는 절대 건드리지 않는다. 테스트는 `test/helpers/fixed_clock.dart`
+/// 의 `useFixedKstDate` 로 쓰고, 그쪽이 끝나면 되돌린다.
+@visibleForTesting
+DateTime Function()? debugNowKstOverride;
+
 /// KST 기준 현재 시각.
 DateTime nowKst() {
+  final DateTime Function()? fixed = debugNowKstOverride;
+  if (fixed != null) return fixed();
   final DateTime seoul = DateTime.now().toUtc().add(kstOffset);
   // `isUtc` 를 떼어 로컬 `DateTime` 으로 만든다. 필드는 서울의 벽시계 그대로다.
   return DateTime(

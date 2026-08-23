@@ -516,6 +516,17 @@ void paintRingCapIcon(
   tp.paint(canvas, Offset(at.dx - tp.width / 2, at.dy - tp.height / 2));
 }
 
+/// 한 바퀴를 넘긴 원호가 **다시 도는 몫**(0 이상 1 미만).
+///
+/// 넘친 몫을 1 에서 자르면 두 바퀴를 넘긴 순간(209%, 300% …) 끝이 12시로
+/// 되돌아가, 그 자리에 고정으로 얹는 유형 기호 아래 캡 표시가 숨는다 —
+/// 도넛이 그냥 꽉 찬 원으로만 보인다. 자르지 말고 **바퀴마다 감아 돌린다**
+/// (#1178). 209% 면 두 번째 바퀴의 9% 지점, 200%·300% 면 12시가 맞다.
+double ringOverflowTurn(double ratio) {
+  if (!ratio.isFinite) return 0;
+  return ratio - ratio.floorToDouble();
+}
+
 /// 원호의 **끝**에 얹는 얇고 작은 흰 `>`. 어디까지 왔는지와 어느 쪽으로 도는지를
 /// 함께 짚는다.
 ///
@@ -657,7 +668,7 @@ class _DonutPainter extends CustomPainter {
           ..strokeWidth = stroke
           ..color = color,
       );
-      final double over = math.min(filled - 1, 1);
+      final double over = ringOverflowTurn(filled);
       capAngle = -math.pi / 2 + math.pi * 2 * over;
       _paintCapShadow(canvas, c, r, stroke, capAngle);
       if (over > 0) {
@@ -969,7 +980,7 @@ class _RingsPainter extends CustomPainter {
             ..strokeWidth = stroke
             ..color = color,
         );
-        final double over = math.min(ratio - 1, 1);
+        final double over = ringOverflowTurn(ratio);
         capAngle = -math.pi / 2 + math.pi * 2 * over;
         _paintCapShadow(canvas, c, r, stroke, capAngle);
         if (over > 0) {
@@ -1720,19 +1731,23 @@ class _PeriodToggle extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey<String>('exercise-period-toggle'),
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: FigmaColors.statBg,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (int i = 0; i < labels.length; i++)
-          Flexible(
-            child: Semantics(
+  Widget build(BuildContext context) => FittedBox(
+    // 세 라벨은 줄이지 않는다 — `이번 주` 가 `이번…` 으로 잘려 무엇을 고르는
+    // 자리인지 사라졌다 (#1182). 폭이 모자라면 토글을 통째로 줄인다.
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerRight,
+    child: Container(
+      key: const ValueKey<String>('exercise-period-toggle'),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (int i = 0; i < labels.length; i++)
+            Semantics(
               button: true,
               selected: active == i,
               child: GestureDetector(
@@ -1743,7 +1758,7 @@ class _PeriodToggle extends StatelessWidget {
                   duration: const Duration(milliseconds: 160),
                   // 식단 탭 기간 토글과 **같은 크기**다 (#1126) — 같은 자리에
                   // 놓인 같은 조작이 탭마다 다르게 보이면 안 된다. 글자를 키운
-                  // 화면에서 세 탭이 줄을 넘기지 않도록 좁히는 규칙까지 같다.
+                  // 화면에서 여백을 좁히는 규칙까지 같다.
                   padding: EdgeInsets.symmetric(
                     horizontal: MediaQuery.textScalerOf(context).scale(1) > 1.3
                         ? 12
@@ -1759,7 +1774,7 @@ class _PeriodToggle extends StatelessWidget {
                   child: Text(
                     labels[i],
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -1771,8 +1786,8 @@ class _PeriodToggle extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }
