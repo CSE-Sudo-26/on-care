@@ -4757,7 +4757,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashTaskDismissBody.
   ///
   /// In en, this message translates to:
-  /// **'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.'**
+  /// **'It only disappears from the task list. Actually handling it (consultation, program, report) still happens on its own screen.'**
   String get dashTaskDismissBody;
 
   /// No description provided for @dashTaskCarriedOverTitle.
