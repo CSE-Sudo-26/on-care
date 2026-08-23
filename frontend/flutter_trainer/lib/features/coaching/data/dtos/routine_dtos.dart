@@ -9,12 +9,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 유산소 / 근력 / 유연성 / 기타 네 가지다 (#996). 걷기는 유산소로, 요가·
 /// 스트레칭은 유연성으로 접혔다 — 없어진 정보는 **운동 이름**에 남는다
 /// ("저강도 걷기"는 이름이 걷기이고 유형이 유산소다).
-const List<String> kRoutineTypes = <String>[
-  '유산소',
-  '근력',
-  '유연성',
-  '기타',
-];
+const List<String> kRoutineTypes = <String>['유산소', '근력', '유연성', '기타'];
 
 /// 옛 유형 값 → 표준 유형. 화면이나 캐시에 남은 옛 값을 서버로 그대로 보내면
 /// 유형 하나 때문에 배정이 실패하거나 '근력'으로 뭉개진다. (#996)
@@ -54,6 +49,7 @@ AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
     type: _str(json['type']),
     reason: _str(json['reason']),
     source: _str(json['source']),
+    completed: json['completed'] == true,
   );
 }
 

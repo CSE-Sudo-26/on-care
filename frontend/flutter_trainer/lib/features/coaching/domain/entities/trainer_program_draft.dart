@@ -77,8 +77,8 @@ class TrainerProgramDraft {
         period: json['period'] as String? ?? '',
         memo: json['memo'] as String? ?? '',
         sessions: <ProgramSessionDraft>[
-          for (final (index, item) in
-              ((json['sessions'] as List<Object?>?) ?? const <Object?>[])
+          for (final (index, item)
+              in ((json['sessions'] as List<Object?>?) ?? const <Object?>[])
                   .indexed)
             programSessionFromJson(
               (item! as Map<Object?, Object?>).cast<String, Object?>(),

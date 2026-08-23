@@ -14,10 +14,30 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v18']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v25']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// The flag is `_v23` (was `_v22`): 운동 기록마다 실제 완료 날짜가 붙었다(#1114) —
+/// 날짜가 없으면 오늘·이번 주·전체를 골라도 목록이 그대로라, 같은 화면의
+/// 그래프와 목록이 서로 다른 기간을 이야기한다. `dateLabel` 도 이제 그 날짜에서
+/// 만들어, 시드에 박힌 채 7월에 머물던 문구가 사라졌다.
+///
+/// `_v22` fixed a second `createdAt` bug left by `_v21`: the day offset
+/// added a thread's `dayIndex` directly, but that value is only the
+/// message's position **within its own thread**, not a real day count —
+/// so a thread spanning several days (dayIndex 0·1·2) always sorted a
+/// few days ahead of a same-`daysAgo` single-day thread, no matter what
+/// either showed on screen(#1104). The day offset now anchors purely on
+/// `daysAgo`, with `dayIndex` only shifting earlier messages further
+/// back relative to the thread's own last message.
+///
+/// `_v21` fixed seed chat `createdAt`: the time-of-day component used to be
+/// the message's array index (`i`), unrelated to the `timeLabel` shown on
+/// screen (`'18:18'` 등) — 대화마다 메시지 수가 달라, 화면 시각이 전혀
+/// 다른 두 고객의 정렬 키가 같아지는 일이 흔했다(#1087). 이제 `timeLabel`을
+/// 실제로 읽어 분 단위로 쓴다.
 ///
 /// Behaviour mirrors the user app's date-aware seeder (see the user
 /// app's `seed_data.dart`):
@@ -33,10 +53,9 @@ part 'seed_clients.dart';
 /// 달랐다(#757). 그의 식단·이행률·날짜별 이력은 공유 픽스처에서 오고, 나머지 고객은
 /// 아래 생성기(`_dailyMetrics`)가 그대로 만든다.
 ///
-/// The flag is `_v18` (was `_v16`): 끼니마다 탄단지와 사진이 채워졌다(#819) — 열량만
-/// 있고 영양소가 0 이면 식단 탭이 근거 없이 숫자만 보여 주고, 사진이 없으면
-/// 이 제품의 핵심인 사진 인식을 데모에서 확인할 수 없다. 올리지 않으면
-/// 오늘 이미 접속한 브라우저는 날짜가 넘어갈 때까지 옛 값을 그대로 쓴다.
+/// `_v18` 은 끼니마다 탄단지와 사진을 채웠다(#819) — 열량만 있고 영양소가 0 이면
+/// 식단 탭이 근거 없이 숫자만 보여 주고, 사진이 없으면 이 제품의 핵심인 사진
+/// 인식을 데모에서 확인할 수 없다.
 /// `_v13` 은 요일마다 다른 루틴을 넣었다: each weekday now gets its own routine
 /// so a week no longer repeats one workout (#754). `_v12` first carried that day's
 /// exercise list for the report's 요일별 상세 (#754). `_v11` reached 12 weeks
@@ -84,11 +103,13 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v18') == today) return;
+  if (await db.readValue('trainer_seeded_v25') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
+  final DemoFixture demo = fixture ?? DemoFixture.load();
   final _FixtureClient fixtureClient = _FixtureClient(
-    (fixture ?? DemoFixture.load()).daysFor(now),
+    demo,
+    demo.daysFor(now),
     todayIndex,
   );
 
@@ -147,7 +168,11 @@ Future<void> seedIfEmpty(
               // 한쪽만 바뀌었다 — 김민수는 우연히 맞고 박성호는 회원이
               // 보낸 옛 메시지가 떠서, 목록이 고객마다 다른 말을 했다.
               lastMessage: _lastChatText(client.chat),
-              lastTime: client.lastTime,
+              // 시각도 같다 — 카카오톡처럼 오늘이면 시각, 어제는 `어제`,
+              // 그 전이면 날짜다. 문구를 픽스처에 적어 두면 하루만
+              // 지나도 거짓이 되므로, 며칠 전인지만 적고 심을 때마다
+              // 오늘 기준으로 다시 만든다.
+              lastTime: _lastTimeLabel(client, now),
               active: Value(client.active),
               caloriesToday: fromFixture
                   ? fixtureClient.today.calories
@@ -206,6 +231,12 @@ Future<void> seedIfEmpty(
               items: diet[i].items,
               calories: diet[i].calories,
               sodiumMg: diet[i].sodiumMg,
+              sugarG: Value(diet[i].sugarG),
+              timeLabel: Value(diet[i].timeLabel),
+              foodsJson: Value(diet[i].foodsJson),
+              // 날짜가 없는 끼니는 오늘 것이다 — 픽스처가 아닌 고객들은
+              // 오늘 하루치만 갖고 있다(#1025).
+              date: Value(diet[i].date ?? today),
               carbsG: Value(diet[i].carbsG),
               proteinG: Value(diet[i].proteinG),
               fatG: Value(diet[i].fatG),
@@ -214,15 +245,19 @@ Future<void> seedIfEmpty(
             ),
         ]);
 
+        // 김민수의 개인 운동은 픽스처가 정한다 (#1170).
+        final List<_Routine> aiRoutine = fromFixture
+            ? fixtureClient.routines
+            : client.aiRoutine;
         b.insertAll(db.clientAiRoutines, <ClientAiRoutinesCompanion>[
-          for (var i = 0; i < client.aiRoutine.length; i++)
+          for (var i = 0; i < aiRoutine.length; i++)
             ClientAiRoutinesCompanion.insert(
               id: 'seed-airoutine-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              name: client.aiRoutine[i].name,
-              minutes: client.aiRoutine[i].minutes,
-              type: client.aiRoutine[i].type,
-              reason: client.aiRoutine[i].reason,
+              name: aiRoutine[i].name,
+              minutes: aiRoutine[i].minutes,
+              type: aiRoutine[i].type,
+              reason: aiRoutine[i].reason,
               sortOrder: Value(i),
             ),
         ]);
@@ -235,13 +270,14 @@ Future<void> seedIfEmpty(
             ClientRoutineHistoryCompanion.insert(
               id: 'seed-history-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              dateLabel: history[i].dateLabel,
+              dateLabel: _historyLabel(now, history[i].daysAgo),
               label: history[i].label,
               completionRate: history[i].completionRate,
               exercisesJson: jsonEncode(history[i].exercises),
               clientFeedback: Value(history[i].clientFeedback),
               trainerNote: Value(history[i].trainerNote),
               sortOrder: Value(i),
+              completedAt: Value(_daysBefore(now, history[i].daysAgo)),
             ),
         ]);
 
@@ -252,6 +288,13 @@ Future<void> seedIfEmpty(
               : _dailyMetrics(client, now).toList(growable: false),
         );
 
+        // 스레드의 **마지막** 메시지가 daysAgo 를 앵커링한다 — dayIndex 는
+        // 그 스레드 안에서의 상대 순서일 뿐, 몇 번째 실제 날짜인지가
+        // 아니다. 마지막 메시지 자신의 dayIndex 를 기준(0)으로 삼아
+        // 각 메시지가 거기서 며칠 전인지로 환산한다(아래 참고).
+        final int lastDayIndex = client.chat.isEmpty
+            ? 0
+            : _lastChat(client.chat).dayIndex;
         b.insertAll(db.clientChatMessages, <ClientChatMessagesCompanion>[
           for (var i = 0; i < client.chat.length; i++)
             ClientChatMessagesCompanion.insert(
@@ -260,13 +303,48 @@ Future<void> seedIfEmpty(
               sender: client.chat[i].sender,
               body: client.chat[i].text,
               timeLabel: client.chat[i].timeLabel,
-              // Anchored at the fixed ancient epoch (oldest first, a
-              // minute apart) so any runtime reply — and any preserved
-              // reply from a previous day — always sorts after the seed.
-              // dayIndex 는 여러 날에 걸친 스레드를 실제로 날짜가 다른
-              // 시각으로 만든다 — 라벨만 갈라 두면 화면이 하루로 묶는다.
+              // Anchored at the fixed ancient epoch (oldest first) so any
+              // runtime reply — and any preserved reply from a previous
+              // day — always sorts after the seed. dayIndex 는 여러 날에
+              // 걸친 스레드를 실제로 날짜가 다른 시각으로 만든다 — 라벨만
+              // 갈라 두면 화면이 하루로 묶는다.
+              //
+              // 스레드**끼리의** 차례는 `daysAgo` 가 정한다. 예전에는
+              // 이 값이 빠져 있어, 목록을 최신순으로 세우면 화면에 뜬
+              // 시각(`오늘 18:18` · `2026-07-30`)과 순서가 어긋났다 —
+              // 3주 전 대화가 오늘 대화보다 위에 설 수 있었다.
+              // 실제 날짜로 옮기지 않고 epoch 안에서 미는 이유는, 런타임
+              // 답장(지금 시각)이 시드 뒤에 온다는 보장을 깨지 않기
+              // 위해서다.
+              //
+              // `dayIndex` 를 날짜 오프셋에 그대로 더하면 안 된다 — 그 값은
+              // 실제 며칠 전이 아니라 **그 스레드 안에서** 몇 번째 날인지일
+              // 뿐이다. 그대로 더하면 여러 날짜에 걸친 스레드(dayIndex
+              // 0·1·2)의 마지막 메시지가 daysAgo 가 같은 단일 날짜 스레드보다
+              // 항상 며칠 더 "미래"로 계산돼, 화면 시각과 무관하게 최신순
+              // 맨 위로 올라왔다(#1104). 마지막 메시지의 dayIndex 를 0 으로
+              // 삼아 상대적으로 며칠 전인지로 바꾼다 — 마지막 메시지는 정확히
+              // daysAgo 로 앵커링되고, 그 전 메시지들은 더 이른 날짜로 밀려
+              // 스레드 내부 순서는 그대로 유지된다.
+              //
+              // 시각 성분은 `timeLabel`에서 실제로 읽는다 — 예전에는 그
+              // 대화 안에서 몇 번째 메시지인지(`i`, 0·1·2…)를 그대로 분으로
+              // 썼는데, 그러면 화면에 박아둔 `'16:48'` 같은 문구와 무관한
+              // 값이 된다. 대화마다 메시지 수가 다르니, 예를 들어 `daysAgo`가
+              // 같고 마지막 메시지가 똑같이 "3개 중 세 번째"인 두 고객은
+              // 화면 시각이 전혀 달라도 정렬 키가 완전히 같아져, 최신순 목록이
+              // 시드에 적힌 순서 그대로 뒤섞여 나왔다(#1087). 초는 그 안에서만
+              // 배열 순서로 미세 조정한다 — 한 대화 안의 메시지는 이미
+              // 시간순으로 적혀 있어 순서가 그대로 유지된다.
               createdAt: chatEpoch.add(
-                Duration(days: client.chat[i].dayIndex, minutes: i),
+                Duration(
+                  days:
+                      _chatSpreadDays -
+                      client.daysAgo -
+                      (lastDayIndex - client.chat[i].dayIndex),
+                  minutes: _minutesOfDay(client.chat[i].timeLabel),
+                  seconds: i,
+                ),
               ),
             ),
         ]);
@@ -329,7 +407,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v18', today);
+    await db.putValue('trainer_seeded_v25', today);
   });
 }
 
@@ -344,21 +422,39 @@ class _Meal {
     this.items,
     this.calories,
     this.sodiumMg, {
+    this.sugarG = 0,
     this.carbsG = 0,
     this.proteinG = 0,
     this.fatG = 0,
     this.photoAsset,
+    this.date,
+    this.timeLabel = '',
+    this.foodsJson = '[]',
   });
   final String meal;
   final String items;
   final int calories;
   final int sodiumMg;
+
+  /// 그 끼니의 당류(g) — 나트륨과 나란히 읽는 값이다(#1025).
+  final double sugarG;
   final double carbsG;
   final double proteinG;
   final double fatG;
 
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`). 비우면 시딩이 오늘로 채운다 — 픽스처가
+  /// 아닌 고객들은 오늘 하루치만 갖고 있다(#1025).
+  final String? date;
+
   /// 데모에서 이 끼니로 보여 줄 번들 이미지. 없으면 사진 없이 그린다. (#819)
   final String? photoAsset;
+
+  /// 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 배지 옆에 적는 값이다. (#1166)
+  final String timeLabel;
+
+  /// 음식별 영양(JSON 배열). 회원 앱과 **같은 픽스처**에서 온다 — 같은 끼니의
+  /// 같은 음식이 두 화면에서 다른 수치로 읽히지 않는다. (#1166)
+  final String foodsJson;
 }
 
 class _Routine {
@@ -369,16 +465,31 @@ class _Routine {
   final String reason;
 }
 
+/// 김민수의 개인 운동 — **공유 픽스처**가 정한다. (#1170)
+///
+/// 회원 앱 `추천 개인운동`, 트레이너 고객 탭 `아직 하지 않은 개인 운동`,
+/// 프로그램 탭이 모두 같은 목록을 읽어야 한다. 예전에는 세 곳이 각자 적어 두어
+/// 같은 회원의 같은 날에 서로 다른 운동을 말했다.
+List<_Routine> _fixtureRoutines(DemoFixture fixture) => <_Routine>[
+  for (final FixtureRoutine r in fixture.routines)
+    _Routine(r.name, r.minutes, r.type, r.reason),
+];
+
 class _History {
   const _History({
-    required this.dateLabel,
+    required this.daysAgo,
     required this.label,
     required this.completionRate,
     required this.exercises,
     required this.clientFeedback,
     required this.trainerNote,
   });
-  final String dateLabel;
+
+  /// 며칠 전 운동인가 (0 = 오늘). 예전에는 `'7/11 (어제)'` 같은 표시용
+  /// 문자열만 들고 있어, 날이 바뀌어도 7월에 머물렀고 무엇보다 **날짜로 거를
+  /// 수가 없었다**(#1114). `_Client.daysAgo`·`_Chat.dayIndex` 와 같은 방식으로
+  /// 오늘 위에 얹으면 라벨과 필터가 늘 같은 날을 가리킨다.
+  final int daysAgo;
   final String label;
   final int completionRate;
   final List<String> exercises;
@@ -473,16 +584,20 @@ const int _fixtureClientId = 1;
 /// 여기에 계산은 없다 — 합계도 이행률도 픽스처 쪽 모델이 이미 갖고 있고, 이 클래스는
 /// 그것을 요일 자리에 놓거나 행 모양으로 바꾸기만 한다.
 class _FixtureClient {
-  _FixtureClient(this.days, this.todayIndex)
+  _FixtureClient(this._fixture, this.days, this.todayIndex)
     : today = days.last,
       _thisWeek = days
           .where((FixtureDay d) => d.weekStart == days.last.weekStart)
           .toList(growable: false);
 
+  final DemoFixture _fixture;
   final List<FixtureDay> days;
   final int todayIndex;
   final FixtureDay today;
   final List<FixtureDay> _thisWeek;
+
+  /// 배정된 개인 운동. 회원 앱·프로그램 탭과 같은 목록이다 (#1170).
+  List<_Routine> get routines => _fixtureRoutines(_fixture);
 
   double get carbsToday => _sumToday((FixtureMeal m) => m.carbsG);
   double get proteinToday => _sumToday((FixtureMeal m) => m.proteinG);
@@ -496,31 +611,56 @@ class _FixtureClient {
     return (total * 10).round() / 10;
   }
 
-  /// 오늘 끼니. 트레이너 화면은 끼니 이름과 음식 목록을 한 줄로 읽는다.
+  /// 픽스처가 가진 **모든 날**의 끼니. 트레이너 화면은 끼니 이름과 음식
+  /// 목록을 한 줄로 읽는다.
+  ///
+  /// 예전에는 오늘 것만 옮겼다. 기간 뷰에서 날짜를 눌러 그날 끼니를 펼치려면
+  /// 지난 날도 있어야 한다(#1025) — 픽스처는 이미 날마다 끼니를 들고 있었고,
+  /// 시딩만 오늘 하나를 집어 오고 있었다.
   List<_Meal> get diet => <_Meal>[
-    for (final FixtureMeal meal in today.meals)
-      _Meal(
-        _mealLabel(meal.mealType),
-        meal.foods.map((FixtureFood f) => f.name).join(', '),
-        meal.calories,
-        meal.sodiumMg,
-        carbsG: meal.carbsG,
-        proteinG: meal.proteinG,
-        fatG: meal.fatG,
-        // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
-        // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
-        photoAsset: meal.photoAsset,
-      ),
+    for (final FixtureDay day in days)
+      for (final FixtureMeal meal in day.meals)
+        _Meal(
+          _mealLabel(meal.mealType),
+          meal.foods.map((FixtureFood f) => f.name).join(', '),
+          meal.calories,
+          meal.sodiumMg,
+          date: day.date,
+          timeLabel: meal.timeLabel,
+          // 픽스처가 음식마다 들고 있는 영양을 그대로 옮긴다 — 회원 앱이 읽는
+          // 것과 **같은 JSON** 이다(`FixtureMeal.foodsJson`). (#1166)
+          foodsJson: meal.foodsJson(),
+          sugarG: meal.sugarG,
+          carbsG: meal.carbsG,
+          proteinG: meal.proteinG,
+          fatG: meal.fatG,
+          // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
+          // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
+          photoAsset: meal.photoAsset,
+        ),
   ];
 
-  /// 고객 상세의 최근 운동 이력. 가까운 날부터, 운동이 있던 날만.
+  /// 고객 상세의 운동 이력. 가까운 날부터, 운동이 있던 날만.
+  ///
+  /// 픽스처는 날짜를 이미 알고 있으므로 `daysAgo` 를 지어내지 않고 오늘과의
+  /// 차이로 센다 — 운동이 있던 날만 골라 담아 하루씩 이어지지 않는데, 자리
+  /// 번호를 날짜로 쓰면 라벨과 실제 날짜가 어긋난다(#1114).
+  ///
+  /// 예전에는 그중 최근 사흘만 가져왔다. 그때는 이 값을 읽는 화면이 `운동
+  /// 기록` 카드 목록 하나였고 최근 몇 건만 보여 주면 됐다. 지금은 날짜별
+  /// 기록이 이력을 그날에 붙이므로(#1025), 사흘 밖의 날을 펼치면 자리가
+  /// 비었다. 픽스처가 이미 이백 일치를 들고 있으니 지어내는 것이 아니라
+  /// 버리지 않는 것이다 — 고객 피드백·트레이너 메모는 큐레이션한 사흘에만
+  /// 있어 나머지 날에는 그 상자가 뜨지 않는다.
   List<_History> get history => <_History>[
-    for (final FixtureDay day
-        in days.reversed
-            .where((FixtureDay d) => d.exercises.isNotEmpty)
-            .take(3))
+    for (final FixtureDay day in days.reversed.where(
+      (FixtureDay d) => d.exercises.isNotEmpty,
+    ))
       _History(
-        dateLabel: _historyLabel(day),
+        daysAgo: _daysBetween(
+          DateTime.parse(day.date),
+          DateTime.parse(today.date),
+        ),
         label: day.routineLabel,
         completionRate: day.completion,
         exercises: <String>[
@@ -530,13 +670,6 @@ class _FixtureClient {
         trainerNote: day.trainerNote,
       ),
   ];
-
-  /// 날짜 라벨. 예전에는 `'7/12 (오늘)'` 처럼 박아 두어 날이 바뀌어도 그대로였다.
-  String _historyLabel(FixtureDay day) {
-    final DateTime date = DateTime.parse(day.date);
-    final String base = '${date.month}/${date.day}';
-    return day.date == today.date ? '$base (오늘)' : base;
-  }
 
   List<int> get caloriesWeek => _week<int>(0, (FixtureDay d) => d.calories);
   List<int> get sodiumWeek => _week<int>(0, (FixtureDay d) => d.sodiumMg);
@@ -738,7 +871,7 @@ class _Client {
     required this.name,
     required this.avatar,
     required this.goal,
-    required this.lastTime,
+    required this.daysAgo,
     required this.active,
     required this.calories,
     required this.sodiumMg,
@@ -758,10 +891,17 @@ class _Client {
   final String avatar;
   final String goal;
 
-  /// 목록에 뜨는 상대 시각. 대화는 고정된 옛 epoch 위에 심으므로
-  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 계산하면 "9500일 전" 이 된다 —
-  /// 이 스레드가 며칠 전 이야기인지는 픽스처가 정한다.
-  final String lastTime;
+  /// 스레드의 마지막 메시지가 **며칠 전**인가. 0 은 오늘이다.
+  ///
+  /// 문구(`2026-08-15`)를 그대로 적지 않는 이유: 데모는 날짜가 바뀔 때마다
+  /// 다시 심으므로 박아 둔 날짜는 하루만 지나도 거짓이 된다. 며칠 전인지만
+  /// 적어 두면 문구는 심을 때마다 오늘 기준으로 다시 만들어진다
+  /// ([_lastTimeLabel]).
+  ///
+  /// 대화 자체는 고정된 옛 epoch 위에 심으므로
+  /// (`chatEpoch.add(days: dayIndex, minutes: i)`) `createdAt` 에서 날짜를
+  /// 되읽을 수는 없다 — 그 값은 런타임 답장이 시드 뒤에 오도록 하는 용도다.
+  final int daysAgo;
   final bool active;
   final int calories;
   final int sodiumMg;
@@ -782,31 +922,105 @@ class _Client {
   final List<_Chat> chat;
 }
 
-/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
-/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+/// 스레드의 **마지막** 메시지.
 ///
-/// 순서는 목록 순서가 아니라 심는 시각 순이다(`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
+/// 순서는 목록 순서가 아니라 심는 시각 순이다
+/// (`chatEpoch.add(days: dayIndex, minutes: i)` 와 같은 규칙):
 /// 날짜(`dayIndex`)가 먼저고, 같은 날 안에서는 목록 순서가 늦은 쪽이 뒤다.
-String _lastChatText(List<_Chat> chat) {
-  if (chat.isEmpty) return '';
+_Chat _lastChat(List<_Chat> chat) {
   int last = 0;
   for (var i = 1; i < chat.length; i++) {
     if (chat[i].dayIndex >= chat[last].dayIndex) last = i;
   }
-  return chat[last].text;
+  return chat[last];
+}
+
+/// 스레드의 **마지막** 메시지 본문. 대화가 없으면 빈 문자열이다 —
+/// 화면이 그 자리에 "아직 대화가 없어요" 를 대신 그린다.
+String _lastChatText(List<_Chat> chat) =>
+    chat.isEmpty ? '' : _lastChat(chat).text;
+
+/// 시드 대화를 epoch 위에 펼칠 폭(일). `daysAgo` 를 여기서 빼서 자리를
+/// 잡으므로 가장 오래된 스레드(`daysAgo` 21)보다 넉넉해야 한다 — 음수가 되면
+/// epoch 앞으로 넘어가 스레드 차례가 뒤집힌다.
+const int _chatSpreadDays = 40;
+
+/// 목록 오른쪽 위에 뜨는 시각 — 카카오톡과 같은 규칙이다.
+///
+///  * 오늘  → 그 메시지의 시각(`18:18`)
+///  * 어제  → `어제`
+///  * 그 전 → 날짜(`2026-08-15`)
+///
+/// "3일 전" 처럼 흘러간 시간을 세지 않는다. 며칠씩 지난 대화에서 트레이너가
+/// 알고 싶은 것은 "얼마나 됐나" 가 아니라 **언제였나** 이고, 그건 운동·식단
+/// 기록과 맞춰 보려면 날짜여야 한다.
+///
+/// 백엔드 `trainer_service.relative_time_label` 과 같은 규칙이다 — 데모와 실
+/// API 가 같은 자리에 다른 모양을 그리면 안 된다.
+String _lastTimeLabel(_Client client, DateTime now) {
+  if (client.chat.isEmpty) return '-';
+  if (client.daysAgo == 0) return _clockOf(_lastChat(client.chat).timeLabel);
+  if (client.daysAgo == 1) return '어제';
+  return ymd(now.subtract(Duration(days: client.daysAgo)));
+}
+
+/// [daysAgo] 일 전의 날짜(시각은 0시). 성분으로 빼므로 서머타임이 있는
+/// 지역에서도 하루가 밀리지 않는다.
+DateTime _daysBefore(DateTime now, int daysAgo) =>
+    DateTime(now.year, now.month, now.day - daysAgo);
+
+/// [from] 이 [to] 보다 며칠 전인가. UTC 로 옮겨 빼는 이유는 서머타임이
+/// 시작하는 날 두 자정 사이가 23시간이라 `inDays` 가 하루를 잃기 때문이다 —
+/// `date_format.dart` 의 `dateLabel` 과 같은 계산이다.
+int _daysBetween(DateTime from, DateTime to) => DateTime.utc(
+  to.year,
+  to.month,
+  to.day,
+).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+
+/// 운동 기록 카드의 날짜 문구 — `'8/22 (오늘)'` · `'8/21 (어제)'` · `'8/19'`.
+///
+/// 저장된 완료 날짜에서 만든다. 예전에는 시드에 박아 둔 고정 문자열이라 날이
+/// 바뀌어도 7월에 머물렀고, 이제 기간 필터가 붙으면서 라벨과 필터가 서로 다른
+/// 날을 가리키는 것이 눈에 보이게 됐다(#1114).
+String _historyLabel(DateTime now, int daysAgo) {
+  final DateTime date = _daysBefore(now, daysAgo);
+  final String base = '${date.month}/${date.day}';
+  return switch (daysAgo) {
+    0 => '$base (오늘)',
+    1 => '$base (어제)',
+    _ => base,
+  };
+}
+
+/// `'화 10:26'` · `'6/21 12:40'` · `'18:18'` 에서 `HH:MM` 만 남긴다 — 라벨은
+/// 말풍선 옆에 그리려고 요일·날짜를 앞에 달고 있을 수 있다.
+String _clockOf(String timeLabel) {
+  final RegExpMatch? match = RegExp(
+    r'(\d{1,2}:\d{2})$',
+  ).firstMatch(timeLabel.trim());
+  return match?.group(1) ?? timeLabel;
+}
+
+/// `timeLabel` 의 `HH:MM` 을 자정 기준 분으로 읽는다 — 시드 메시지의
+/// `createdAt` 이 화면에 보이는 시각과 어긋나지 않게 하는 데 쓴다(#1087).
+/// 못 읽으면 0 — 그런 라벨은 시드 데이터에 없어야 하니 조용히 자정으로
+/// 미는 편이, 파싱 실패를 감추는 것보다 눈에 띈다(시간이 뭉친다).
+int _minutesOfDay(String timeLabel) {
+  final RegExpMatch? match = RegExp(
+    r'(\d{1,2}):(\d{2})$',
+  ).firstMatch(_clockOf(timeLabel).trim());
+  if (match == null) return 0;
+  final int hour = int.parse(match.group(1)!);
+  final int minute = int.parse(match.group(2)!);
+  return hour * 60 + minute;
 }
 
 /// 시드 스레드가 **답장된 상태로** 시작하는가 — 마지막 말이 트레이너 것이면.
 ///
-/// 순서 규칙은 [_lastChatText] 와 같다.
-bool _threadAnswered(_Client client) {
-  if (client.chat.isEmpty) return false;
-  int last = 0;
-  for (var i = 1; i < client.chat.length; i++) {
-    if (client.chat[i].dayIndex >= client.chat[last].dayIndex) last = i;
-  }
-  return client.chat[last].sender == 'trainer';
-}
+/// 순서 규칙은 [_lastChat] 이 정한다 — 미리보기·시각과 같은 "마지막" 을 본다.
+bool _threadAnswered(_Client client) =>
+    client.chat.isNotEmpty && _lastChat(client.chat).sender == 'trainer';
 
 class _Slot {
   const _Slot({

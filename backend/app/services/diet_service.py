@@ -11,6 +11,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import date as date_type, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -22,7 +23,7 @@ from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
     DietEntryOut, DietEntryUpdate, DietTodayResponse, calculate_macros,
 )
-from app.services import diet_photo_service
+from app.services import diet_photo_service, period_window
 from app.services.coach.personal_ingest import record_diet, refresh_diet
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,101 @@ def coach_message(total_sodium_mg: int, has_entries: bool) -> str:
     if not has_entries:
         return "아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?"
     return "균형 잡힌 하루였어요. 내일도 이대로 가요!"
+
+
+#: 기간 조언이 다루는 구간. 정의는 [period_window] 하나뿐이다 — 운동 조언
+#: (#1025)도 같은 구간을 봐야 해서 그리로 옮겼고, 여기서는 이름만 그대로
+#: 이어 준다(이미 이 이름으로 부르는 자리가 있다).
+PERIOD_TODAY = period_window.PERIOD_TODAY
+PERIOD_WEEK = period_window.PERIOD_WEEK
+PERIOD_ALL = period_window.PERIOD_ALL
+ALL_PERIOD_DAYS = period_window.ALL_PERIOD_DAYS
+period_bounds = period_window.period_bounds
+
+
+def _weekday_split(days: list[DietDayTotals]) -> tuple[list[int], list[int]]:
+    """(주중 나트륨, 주말 나트륨). 주말은 토·일이다."""
+    weekday = [d.sodium_mg for d in days if d.date.weekday() < 5]
+    weekend = [d.sodium_mg for d in days if d.date.weekday() >= 5]
+    return weekday, weekend
+
+
+def _avg(values: list[int]) -> float:
+    return sum(values) / len(values) if values else 0
+
+
+def period_coach_message(days: list[DietDayTotals], period: str) -> str:
+    """기간에 맞는 식단 조언. (#1017)
+
+    기간을 바꾸는 것은 "무엇을 볼지" 를 바꾸는 일이다. 그래프만 갈아 끼우고
+    조언이 오늘 이야기로 남으면, 이번 주를 보고 있는데 "오늘 점심이 짰어요" 를
+    읽게 되어 조언이 지금 화면과 무관한 말이 된다.
+    
+    기간마다 **재료가 다르다.** 오늘은 오늘 먹은 것, 이번 주는 요일별 편차와
+    초과한 날 수, 전체는 주 단위 추세다. 말투도 다르다 — 오늘은 다음 끼니를
+    제안하고, 이번 주·전체는 되짚어 준다.
+    """
+    if not days:
+        # 없는 기록으로 조언을 지어내지 않는다.
+        if period == PERIOD_WEEK:
+            return "이번 주 식단 기록이 아직 없어요. 한 끼만 남겨도 흐름이 보여요."
+        if period == PERIOD_ALL:
+            return "기록이 쌓이면 나트륨·칼로리 흐름을 짚어 드릴게요."
+        return "아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?"
+
+    over = [d for d in days if d.over_sodium]
+
+    if period == PERIOD_WEEK:
+        if len(over) >= 3:
+            return (
+                f"이번 주 {len(over)}일이나 나트륨 권장량을 넘었어요. "
+                "국물은 건더기 위주로 먹고 남은 며칠은 담백하게 가요."
+            )
+        weekday, weekend = _weekday_split(days)
+        if weekend and weekday and _avg(weekend) > _avg(weekday) * 1.3:
+            return (
+                "주중에는 잘 지키다가 주말에 나트륨이 확 올라요. "
+                "주말 외식은 한 끼만 정해 두면 흐름이 유지돼요."
+            )
+        if over:
+            return (
+                f"이번 주 {len(over)}일만 권장량을 넘었어요. "
+                "나머지 날의 균형은 좋았으니 이 흐름을 이어가요."
+            )
+        return "이번 주 내내 나트륨을 권장량 안에서 지켰어요. 아주 좋아요!"
+
+    if period == PERIOD_ALL:
+        # 최근 4주와 그 이전을 견준다 — 나아지는 중인지가 이 화면의 질문이다.
+        recent_from = days[-1].date - timedelta(days=27)
+        recent = [d.sodium_mg for d in days if d.date >= recent_from]
+        earlier = [d.sodium_mg for d in days if d.date < recent_from]
+        if earlier and recent:
+            if _avg(recent) < _avg(earlier) * 0.9:
+                return (
+                    "최근 4주 나트륨이 그 전보다 눈에 띄게 낮아졌어요. "
+                    "지금 방식이 회원님께 맞는 것 같아요."
+                )
+            if _avg(recent) > _avg(earlier) * 1.1:
+                return (
+                    "최근 4주 들어 나트륨이 다시 올라가고 있어요. "
+                    "무엇이 달라졌는지 한 주만 되짚어 볼까요?"
+                )
+        weekday, weekend = _weekday_split(days)
+        if weekend and weekday and _avg(weekend) > _avg(weekday) * 1.3:
+            return (
+                "기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요. "
+                "주말 한 끼만 담백하게 바꿔도 평균이 내려가요."
+            )
+        ratio = round(len(over) * 100 / len(days))
+        if ratio >= 40:
+            return (
+                f"기록한 날의 {ratio}%가 나트륨 권장량을 넘었어요. "
+                "국·찌개 국물을 남기는 것부터 시작해 봐요."
+            )
+        return "기록을 통틀어 나트륨이 대체로 권장량 안이에요. 지금 흐름이 좋아요."
+
+    # 오늘 — 지금까지와 같은 규칙이다.
+    return coach_message(days[-1].sodium_mg, True)
 
 
 def build_day(db: Session, user_id: str, date: str) -> DietTodayResponse:
@@ -179,6 +275,60 @@ def period_stats(db: Session, user_id: str, start: str, end: str) -> DietPeriodS
         avg_sugar_g=round(sum(d["sugar"] for d in daily.values()) / days_logged, 1),
         avg_calories=round(sum(d["calories"] for d in daily.values()) / days_logged),
     )
+
+
+@dataclass(frozen=True)
+class DietDayTotals:
+    """하루치 합계. 기간 조언이 날짜별 패턴을 보려면 평균만으로는 부족하다. (#1017)"""
+
+    date: date_type
+    calories: int
+    sodium_mg: int
+    sugar_g: float
+
+    @property
+    def over_sodium(self) -> bool:
+        return self.sodium_mg > DASH_SODIUM_LIMIT_MG
+
+
+def daily_totals(
+    db: Session, user_id: str, start: str, end: str
+) -> list[DietDayTotals]:
+    """[start, end] 구간의 **기록이 있는 날만** 날짜순으로. (#1017)
+
+    기록이 없는 날을 0 으로 채우지 않는다 — 안 먹은 날과 기록 안 한 날은 다른
+    말이고, 평균·패턴이 그 차이를 삼키면 조언이 사실과 어긋난다.
+    """
+    rows = db.scalars(
+        select(DietEntry)
+        .where(DietEntry.user_id == user_id)
+        .where(DietEntry.date >= start)
+        .where(DietEntry.date <= end)
+    ).all()
+
+    by_day: dict[str, dict[str, float]] = {}
+    for r in rows:
+        day = by_day.setdefault(r.date, {"calories": 0, "sodium": 0, "sugar": 0.0})
+        day["calories"] += r.total_calories
+        day["sodium"] += r.sodium_mg
+        day["sugar"] += r.sugar_g
+
+    out: list[DietDayTotals] = []
+    for iso in sorted(by_day):
+        try:
+            when = date_type.fromisoformat(iso)
+        except ValueError:
+            continue
+        totals = by_day[iso]
+        out.append(
+            DietDayTotals(
+                date=when,
+                calories=round(totals["calories"]),
+                sodium_mg=round(totals["sodium"]),
+                sugar_g=round(totals["sugar"], 1),
+            )
+        )
+    return out
 
 
 def find_by_idempotency(db: Session, user_id: str, key: str) -> DietEntry | None:

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
+
+#: `TrainerSchedule.type` 과 같은 계약값이다(#1083) — 번역하지 않는다.
+SessionType = Literal["1:1 PT", "상담"]
 
 
 class TrainerSlotOut(BaseModel):
@@ -12,11 +16,12 @@ class TrainerSlotOut(BaseModel):
     capacity: int
     remaining: int
     is_closed: bool = False
+    session_type: SessionType = "1:1 PT"
 
 
 class TrainerSlotCreate(BaseModel):
     starts_at: datetime
-    capacity: int = Field(ge=1, le=100)
+    session_type: SessionType = "1:1 PT"
 
     @model_validator(mode="after")
     def require_timezone(self) -> TrainerSlotCreate:
@@ -27,7 +32,7 @@ class TrainerSlotCreate(BaseModel):
 
 class TrainerSlotUpdate(BaseModel):
     starts_at: datetime | None = None
-    capacity: int | None = Field(default=None, ge=1, le=100)
+    session_type: SessionType | None = None
     is_closed: bool | None = None
 
     @model_validator(mode="after")

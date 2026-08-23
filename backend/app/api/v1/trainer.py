@@ -12,9 +12,9 @@ from __future__ import annotations
 import json
 import re
 from datetime import date as _date
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import PurePath
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy import func, select, update
@@ -35,7 +35,12 @@ from app.models.models import (
     TrainerProfile,
     User,
 )
-from app.schemas.exercise_api import ExerciseSessionOut, ExerciseWeekResponse
+from app.schemas.diet_api import DietAdviceResponse
+from app.schemas.exercise_api import (
+    ExerciseAdviceResponse,
+    ExerciseSessionOut,
+    ExerciseWeekResponse,
+)
 from app.schemas.consultation_api import (
     ConsultationAccept,
     ConsultationDecision,
@@ -75,6 +80,9 @@ from app.schemas.trainer_api import (
     TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import (
+    diet_service,
+    exercise_service,
+    period_window,
     chat_image_storage,
     consultation_service,
     trainer_client_invite_service,
@@ -479,6 +487,89 @@ def trainer_update_routine_feedback(
         )
     except trainer_service.RoutineNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/trainer/clients/{member_id}/diet-advice",
+    response_model=DietAdviceResponse,
+)
+def trainer_client_diet_advice(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    period: Annotated[
+        Literal["today", "week", "all"],
+        Query(description="조언이 다룰 구간 — 회원 앱 기간 토글과 같은 이름"),
+    ] = "today",
+) -> DietAdviceResponse:
+    """담당 고객의 기간별 식단 조언. 회원 앱과 **같은 문장**이다. (#1017)
+
+    같은 회원의 같은 기간을 두 화면이 다르게 말하면, 상담에서 둘이 서로 다른
+    이야기를 들고 앉게 된다.
+    """
+    _require_client(db, trainer.id, member_id)
+    start, end = diet_service.period_bounds(period)
+    days = diet_service.daily_totals(db, member_id, start, end)
+    return DietAdviceResponse(
+        period=period,
+        from_date=start,
+        to_date=end,
+        days_logged=len(days),
+        message=diet_service.period_coach_message(days, period),
+    )
+
+
+@router.get(
+    "/trainer/clients/{member_id}/exercise-advice",
+    response_model=ExerciseAdviceResponse,
+)
+def trainer_client_exercise_advice(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    period: Annotated[
+        Literal["today", "week", "all"],
+        Query(description="조언이 다룰 구간 — 화면 기간 토글과 같은 이름"),
+    ] = "today",
+) -> ExerciseAdviceResponse:
+    """담당 고객의 기간별 운동 조언. 식단 조언(#1017)과 같은 규칙이다. (#1025)
+
+    운동 기록은 날짜가 아니라 (그 주 월요일, 요일) 로 저장되므로, 구간이 걸치는
+    주를 모두 읽어 온 뒤 실제 날짜로 되돌려 거른다.
+    """
+    _require_client(db, trainer.id, member_id)
+    start, end = period_window.period_bounds(period)
+    weeks = _week_starts_between(start, end)
+    rows = db.scalars(
+        select(ExerciseSession).where(
+            ExerciseSession.user_id == member_id,
+            ExerciseSession.week_start.in_(weeks),
+        )
+    ).all()
+    days = exercise_service.daily_totals(list(rows), start, end)
+    return ExerciseAdviceResponse(
+        period=period,
+        from_date=start,
+        to_date=end,
+        days_logged=len(days),
+        message=exercise_service.period_coach_message(days, period),
+    )
+
+
+def _week_starts_between(start: str, end: str) -> list[str]:
+    """[start, end] 를 덮는 모든 주의 월요일.
+
+    구간의 첫날이 주 가운데면 그 주 월요일부터 담는다 — 월요일이 구간 밖이어도
+    그 주의 기록은 구간 안에 있을 수 있다.
+    """
+    first = _date.fromisoformat(monday_of_str(start))
+    last = _date.fromisoformat(end)
+    out: list[str] = []
+    cursor = first
+    while cursor <= last:
+        out.append(cursor.isoformat())
+        cursor += timedelta(days=7)
+    return out
 
 
 @router.get(

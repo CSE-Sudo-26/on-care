@@ -40,6 +40,25 @@ class _RecordingRefreshClientRepository extends DriftClientRepository
   }
 }
 
+/// 로스터 목록을 [finder] 가 그려질 때까지 끌어 내린다.
+///
+/// 목록은 지연 생성이라 화면 밖 카드가 트리에 아예 없다. 아래쪽에 선 고객을
+/// 단언하려면 먼저 그려지게 해야 한다 — `.last`·`.first` 를 붙인 finder 를
+/// 그대로 넘기면 아직 한 건도 없는 동안 `Bad state: No element` 로 깨진다.
+Future<void> scrollToClient(
+  WidgetTester tester,
+  Finder finder,
+) => tester.scrollUntilVisible(
+  finder,
+  150,
+  scrollable: find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      )
+      .first,
+);
+
 void main() {
   group('ClientRepository', () {
     late AppDatabase db;
@@ -308,7 +327,7 @@ void main() {
           }),
         ],
       );
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('client-data-refresh')),
@@ -316,7 +335,7 @@ void main() {
       await settle(tester);
 
       expect(repository.clientRefreshes, <String>['seed-client-1']);
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     });
 
     testWidgets('renders the roster with its size and priority order', (
@@ -335,24 +354,17 @@ void main() {
 
       // Priority order: sodium-over clients come first, so a client who
       // is under target is further down a now-long, lazily built list.
+      // 같은 신호를 든 고객끼리는 마지막 대화가 새로운 쪽이 앞이라, 사흘 전
+      // 대화가 마지막인 박성호는 첫 화면 아래에 선다.
       expect(find.text('김민수'), findsOneWidget);
-      expect(find.text('박성호'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('clients-roster-search')),
         findsNothing,
       );
       expect(find.byType(ClientSearchBar), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('이지수'),
-        150,
-        scrollable: find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is Scrollable &&
-                  widget.axisDirection == AxisDirection.down,
-            )
-            .first,
-      );
+      await scrollToClient(tester, find.text('박성호'));
+      expect(find.text('박성호'), findsOneWidget);
+      await scrollToClient(tester, find.text('이지수'));
       expect(find.text('이지수'), findsWidgets);
     });
 
@@ -378,6 +390,7 @@ void main() {
         at: AppRoutes.clients,
       );
 
+      await scrollToClient(tester, find.text('박성호'));
       final sunghoCard = find.ancestor(
         of: find.text('박성호'),
         matching: find.byType(ClientCard),
@@ -408,12 +421,16 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — both evidence tabs and the two quick actions are
-      // unique to it.
+      // Detail opened — both evidence tabs and the quick actions are
+      // unique to it. 신체·목표 now lives in the merged dialog, not a
+      // button of its own (#1024), and 메모 is icon-only.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
-      expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-      expect(find.text('메모'), findsOneWidget);
+      expect(find.text('리포트'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-detail-open-memo')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
@@ -525,17 +542,7 @@ void main() {
       final clientCard = find.byKey(
         const ValueKey<String>('client-seed-client-3'),
       );
-      await tester.scrollUntilVisible(
-        clientCard.last,
-        150,
-        scrollable: find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is Scrollable &&
-                  widget.axisDirection == AxisDirection.down,
-            )
-            .first,
-      );
+      await scrollToClient(tester, clientCard);
       expect(find.text('신규 고객'), findsNothing);
 
       await tester.tap(clientCard.last);

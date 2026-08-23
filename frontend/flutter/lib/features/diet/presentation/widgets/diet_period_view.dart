@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/core/utils/clock.dart';
-import 'package:oncare/design_system/charts/goal_line.dart';
 import 'package:oncare/design_system/charts/period_scroll_chart.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -18,6 +17,11 @@ import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 /// 식단 탭의 기간 뷰(이번 주 / 이번 달).
 ///
 /// 홈은 식단을 주간으로도 보여주는데 식단 탭에는 하루치밖에 없었다(#670). 운동
+/// 영양 요약 카드의 기준 높이. 오늘·이번 주·전체 세 화면이 함께 쓴다 — 기간
+/// 토글을 눌렀을 때 카드가 커졌다 작아지면 그 아래 내용이 그때마다 뛴다.
+/// 최소 높이라 글자 배율이 커지면 셋이 함께 커진다. (#1124)
+const double kDietSummaryCardHeight = 240;
+
 /// 탭의 `운동 현황` 과 같은 기간 토글 아래에서, 고른 지표(칼로리·나트륨·당류)의
 /// 일별 막대와 **하루 평균**을 보여준다. 합계가 아니라 평균을 머리 숫자로 두는
 /// 이유는 주(7일)와 달(30일)의 길이가 달라 합계끼리는 견줄 수 없기 때문이다.
@@ -79,12 +83,6 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
     _selection.reset();
     setState(() => _metric = m);
   }
-
-  double _averageOf(DietPeriod p, _Metric m) => switch (m) {
-    _Metric.calories => p.avgCalories,
-    _Metric.sodium => p.avgSodiumMg,
-    _Metric.sugar => p.avgSugarG,
-  };
 
   int _goalOf(_Metric m) {
     final UserProfile? p = widget.profile;
@@ -230,12 +228,7 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
                   // 카드 안에서 버튼(파랑 통일)과 그래프가 서로 다른 말을
                   // 한다 — 목표를 넘긴 막대만 색으로 튄다(#694).
                   color: FigmaColors.primary,
-                  average: _averageOf(period, _metric),
                   goal: _goalOf(_metric).toDouble(),
-                  total: period.days.fold<double>(
-                    0,
-                    (double a, DietPeriodDay d) => a + _valueOf(d, _metric),
-                  ),
                   values: <double>[
                     for (final DietPeriodDay d in period.days)
                       _valueOf(d, _metric),
@@ -266,9 +259,7 @@ class _PeriodBody extends StatelessWidget {
     required this.metricLabel,
     required this.unit,
     required this.color,
-    required this.average,
     required this.goal,
-    required this.total,
     required this.values,
     required this.dates,
     required this.format,
@@ -284,9 +275,7 @@ class _PeriodBody extends StatelessWidget {
   final String metricLabel;
   final String unit;
   final Color color;
-  final double average;
   final double goal;
-  final double total;
   final List<double> values;
   final List<DateTime> dates;
   final String Function(num) format;
@@ -312,241 +301,287 @@ class _PeriodBody extends StatelessWidget {
   String _dayHeadline(BuildContext context, DateTime date) =>
       DateFormat.yMd(Localizations.localeOf(context).toString()).format(date);
 
+  /// 머리 숫자 옆에 붙일 탄단지. [picked] 이 있으면 그날 값, 없으면 기록이
+  /// 있는 날의 하루 평균이다. 칼로리를 보고 있지 않거나(나트륨·당류) 서버가
+  /// 영양을 주지 않은 기간이면 null 이라 아무것도 붙지 않는다.
+  _Macros? _macrosFor(int? picked) {
+    final List<DietPeriodDay>? all = days;
+    if (metric != _Metric.calories || all == null) return null;
+    if (picked != null) {
+      final DietPeriodDay d = all[picked];
+      return d.hasMacros
+          ? _Macros(carbs: d.carbsG, protein: d.proteinG, fat: d.fatG)
+          : null;
+    }
+    final List<DietPeriodDay> logged = all
+        .where((DietPeriodDay d) => d.hasMacros)
+        .toList();
+    if (logged.isEmpty) return null;
+    double avg(double Function(DietPeriodDay) of) =>
+        logged.fold<double>(0, (double a, DietPeriodDay d) => a + of(d)) /
+        logged.length;
+    return _Macros(
+      carbs: avg((DietPeriodDay d) => d.carbsG),
+      protein: avg((DietPeriodDay d) => d.proteinG),
+      fat: avg((DietPeriodDay d) => d.fatG),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<String> labels = weekDayLabels(l);
-    // 이번 주(꺾은선)는 스크롤도 선택도 없다 — 일곱 칸이 이미 한 화면이다.
-    final bool selectable = !weekly;
-    return Container(
-      key: const Key('diet-period-card'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: kCardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: selection,
-                  builder: (BuildContext context, Widget? _) {
-                    final int? picked = selectable ? selection.selected : null;
-                    // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
-                    // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
-                    // 못한다. (#1018)
-                    final double value = picked == null
-                        ? (selectable ? selection.averageOf(values) : average)
-                        : values[picked];
-                    final bool over = goal > 0 && value > goal;
-                    return PeriodChartHeadline(
-                      selected: picked != null,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            picked == null
-                                ? '${l.dietPeriodAverage} · $metricLabel'
-                                : '${_dayHeadline(context, dates[picked])} · '
-                                      '$metricLabel',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.mutedForeground,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text.rich(
-                              TextSpan(
-                                children: <InlineSpan>[
-                                  TextSpan(
-                                    text: format(value),
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w800,
-                                      color: over
-                                          ? FigmaColors.dangerRed
-                                          : FigmaColors.ink,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: ' / ${format(goal)} $unit',
+    // 카드의 빈 곳을 누르면 고른 날이 풀려 다시 하루 평균이 뜬다 (#1123).
+    // 막대·점은 자기 탭을 먼저 받으므로 이 손짓은 그 밖의 자리에만 닿는다.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => selection.select(null),
+      child: Container(
+        key: const Key('diet-period-card'),
+        width: double.infinity,
+        // 오늘 카드와 같은 높이 (#1124) — 기간 토글을 눌러도 카드가 커졌다
+        // 작아지지 않는다.
+        constraints: const BoxConstraints(minHeight: kDietSummaryCardHeight),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: kCardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: selection,
+                    builder: (BuildContext context, Widget? _) {
+                      // 이번 주도 점을 골라 그날 값을 볼 수 있다 (#1122).
+                      // 스크롤이 없을 뿐, 머리 숫자가 평균과 하루를 오가는
+                      // 규칙은 `전체` 와 같다.
+                      final int? picked = selection.selected;
+                      // 평소에는 **보이는 구간의** 평균, 날을 고르면 그날의 값.
+                      // 보이지 않는 날까지 섞은 평균은 지금 화면을 설명하지
+                      // 못한다. (#1018)
+                      final double value = picked == null
+                          ? selection.averageOf(values)
+                          : values[picked];
+                      final bool over = goal > 0 && value > goal;
+                      // 칼로리를 볼 때만 탄단지를 곁들인다 — 나트륨·당류는
+                      // 탄단지로 쪼갤 수 있는 값이 아니다. 날을 고르면 그날의
+                      // 탄단지, 아니면 기록이 있는 날의 하루 평균이다. (#1121)
+                      final _Macros? macros = _macrosFor(picked);
+                      return PeriodChartHeadline(
+                        selected: picked != null,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    picked == null
+                                        ? '${l.dietPeriodAverage} · $metricLabel'
+                                        : '${_dayHeadline(context, dates[picked])} · '
+                                              '$metricLabel',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.mutedForeground,
                                     ),
                                   ),
+                                  const SizedBox(height: 5),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: <InlineSpan>[
+                                          TextSpan(
+                                            text: format(value),
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w800,
+                                              color: over
+                                                  ? FigmaColors.dangerRed
+                                                  : FigmaColors.ink,
+                                              letterSpacing: -0.5,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: ' / ${format(goal)} $unit',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.mutedForeground,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      maxLines: 1,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              maxLines: 1,
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              ListenableBuilder(
-                listenable: selection,
-                builder: (BuildContext context, Widget? _) {
-                  final int? picked = selectable ? selection.selected : null;
-                  final double value = picked == null
-                      ? (selectable ? selection.averageOf(values) : average)
-                      : values[picked];
-                  final bool over = goal > 0 && value > goal;
-                  final Color statusColor = over
-                      ? FigmaColors.dangerRed
-                      : FigmaColors.greenText;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      over
-                          ? '${l.homeGoal} ${l.homeMetricOver}'
-                          : l.homeMetricNormal,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: statusColor,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              Text(
-                l.dietPeriodLoggedDays(period.loggedDays),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.foreground,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '${l.dietPeriodTotal} ${format(total)} $unit',
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
+                            if (macros != null) ...<Widget>[
+                              const SizedBox(width: 12),
+                              _MacroDetail(macros: macros),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
-          const SizedBox(height: 14),
-          if (weekly)
-            Builder(
-              builder: (BuildContext context) {
-                final AppLocalizations l = AppLocalizations.of(context);
-                final List<String> days = <String>[
-                  for (final DateTime d in dates) labels[d.weekday - 1],
-                ];
-                final int today = _todayIndexIn(dates);
-                return MetricTrendChart(
-                  values: values,
-                  dayLabels: days,
-                  goal: goal,
-                  ticks: ticks,
-                  // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면(지난 주를
-                  // 보고 있으면) 마지막 칸까지 전부 그린다.
-                  todayIndex: today,
-                  replayKey: replayKey,
-                  // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로 시작한다.
-                  semanticsLabel: chartSemanticsLabel(
-                    l,
-                    title: metricLabel,
-                    points: chartSeriesPoints(
-                      l,
-                      values: values,
-                      dayLabels: days,
-                      format: (double v) => '${format(v)} $unit',
-                      upTo: today,
-                    ),
-                  ),
-                  goalLabel: '${l.homeGoal}\n${format(goal)}',
-                  formatTick: (double v) => format(v),
-                );
-              },
-            )
-          else
-            _PeriodBars(
-              values: values,
-              dates: dates,
-              goal: goal,
-              color: color,
-              replayKey: replayKey,
-              // 막대 툴팁이 "무슨 값을 얼마나" 라고 말하려면 지표 이름·단위와
-              // 숫자 서식이 카드 머리 숫자와 같아야 한다.
-              metricLabel: metricLabel,
-              unit: unit,
-              format: format,
-              selection: selection,
-              days: days,
-            ),
-          // 쌓은 색이 무엇을 뜻하는지는 범례가 말한다 — 툴팁은 올려야 보인다.
-          // 칼로리 지표에서는 `days` 가 언제나 넘어온다. 실서버가 영양을 주지
-          // 않아 모든 날이 한 색 막대인데도 3색 범례를 붙이면, 범례가 막대 색의
-          // 뜻을 잘못 설명한다(#956).
-          if (!weekly &&
-              (days?.any((DietPeriodDay d) => d.hasMacros) ?? false)) ...<Widget>[
-            const SizedBox(height: 10),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 16,
-              runSpacing: 6,
-              children: <Widget>[
-                _MacroLegend(
-                  color: FigmaColors.macroCarbs,
-                  label: l.homeMacroCarbs,
-                ),
-                _MacroLegend(
-                  color: FigmaColors.macroProtein,
-                  label: l.homeMacroProtein,
-                ),
-                _MacroLegend(
-                  color: FigmaColors.macroFat,
-                  label: l.homeMacroFat,
                 ),
               ],
             ),
+            // 기간 합계는 뺐다 (#1121). 주와 달은 길이가 달라 합계끼리 견줄 수
+            // 없고, 카드가 답해야 할 질문은 "하루에 얼마나" 하나다.
+            //
+            // 머리와 그래프 사이의 구분선도 뺐다 (#1123). 한 카드가 한 가지를
+            // 말하는데 선이 둘로 갈랐고, 고른 막대에서 머리 카드로 올라가는
+            // 세로선이 그 선에서 끊겼다. `전체` 는 그 빈 칸을 그래프가 들고
+            // 있어(topGap) 세로선이 머리 카드까지 닿는다.
+            SizedBox(height: weekly ? 14 : 0),
+            if (weekly)
+              Builder(
+                builder: (BuildContext context) {
+                  final AppLocalizations l = AppLocalizations.of(context);
+                  final List<String> days = <String>[
+                    for (final DateTime d in dates) labels[d.weekday - 1],
+                  ];
+                  final int today = _todayIndexIn(dates);
+                  return ListenableBuilder(
+                    listenable: selection,
+                    builder: (BuildContext context, Widget? _) =>
+                        MetricTrendChart(
+                          values: values,
+                          dayLabels: days,
+                          goal: goal,
+                          ticks: ticks,
+                          selectedIndex: selection.selected,
+                          onSelected: selection.select,
+                          // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면
+                          // (지난 주를 보고 있으면) 마지막 칸까지 전부 그린다.
+                          todayIndex: today,
+                          replayKey: replayKey,
+                          // 카드 머리의 `평균 · 칼로리` 와 같은 지표 이름으로
+                          // 시작한다.
+                          semanticsLabel: chartSemanticsLabel(
+                            l,
+                            title: metricLabel,
+                            points: chartSeriesPoints(
+                              l,
+                              values: values,
+                              dayLabels: days,
+                              format: (double v) => '${format(v)} $unit',
+                              upTo: today,
+                            ),
+                          ),
+                          goalLabel: '${l.homeGoal}\n${format(goal)}',
+                          formatTick: (double v) => format(v),
+                          // 남는 자리는 그래프가 쓴다 — 세 화면의 카드 높이를
+                          // 같게 두면서(#1124) 빈 칸을 만들지 않는다.
+                          height: 105,
+                        ),
+                  );
+                },
+              )
+            else
+              _PeriodBars(
+                values: values,
+                dates: dates,
+                goal: goal,
+                color: color,
+                replayKey: replayKey,
+                // 막대 툴팁이 "무슨 값을 얼마나" 라고 말하려면 지표 이름·단위와
+                // 숫자 서식이 카드 머리 숫자와 같아야 한다.
+                metricLabel: metricLabel,
+                unit: unit,
+                format: format,
+                selection: selection,
+                days: days,
+              ),
           ],
-        ],
+        ),
       ),
     );
   }
 }
+
+/// 머리 숫자 옆의 탄단지 한 덩어리. 막대를 쌓은 색을 그대로 써서, 예전 그래프
+/// 아래 범례가 하던 말(어느 색이 무엇인지)까지 여기서 함께 한다. (#1121)
+class _Macros {
+  const _Macros({
+    required this.carbs,
+    required this.protein,
+    required this.fat,
+  });
+
+  final double carbs;
+  final double protein;
+  final double fat;
+}
+
+class _MacroDetail extends StatelessWidget {
+  const _MacroDetail({required this.macros});
+
+  final _Macros macros;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<(String, double, Color)> rows = <(String, double, Color)>[
+      (l.homeMacroCarbs, macros.carbs, FigmaColors.macroCarbs),
+      (l.homeMacroProtein, macros.protein, FigmaColors.macroProtein),
+      (l.homeMacroFat, macros.fat, FigmaColors.macroFat),
+    ];
+    return Column(
+      key: const Key('diet-period-macros'),
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (final (String label, double value, Color color) in rows)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  _macroGrams(value),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// `204g` — 소수점은 버린다. 옆의 머리 숫자가 주인공이고 이 줄은 곁들이다.
+String _macroGrams(double v) => '${v.round()}g';
 
 /// 일별 막대. 목표선을 얇은 점선처럼 얹어 그날이 목표를 넘었는지 한눈에 보이게
 /// 하고, 목표를 넘은 날만 경고색으로 칠한다.
@@ -720,7 +755,9 @@ class _PeriodBars extends StatelessWidget {
     final DateFormat dayFormat = DateFormat.MMMEd(
       Localizations.localeOf(context).toString(),
     );
-    const double chartHeight = 120;
+    // 카드 높이를 오늘·이번 주와 같게 맞추기 위한 값이다 (#1124) —
+    // 여기서 1px 을 바꾸면 `전체` 카드 높이가 그만큼 달라진다.
+    const double chartHeight = 109;
     // 축 위쪽에 여유를 둔다. 목표를 넘은 날이 없으면 목표가 곧 최댓값이 되어
     // 목표선이 차트 맨 위(=바깥)에 놓여 잘려 보이지 않았다.
     final double peak = <double>[
@@ -752,15 +789,23 @@ class _PeriodBars extends StatelessWidget {
             selectedIndex: selection.selected,
             onSelected: selection.select,
             onVisibleRangeChanged: selection.setVisible,
-            // 목표선은 스크롤 안쪽에 얹는다 — 밀어도 막대와 같은 자리에서
-            // 같은 높이로 따라간다. (#1015)
-            goalOverlay: GoalLineOverlay(
-              visible: hasGoal,
-              bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-              label: '${l.homeGoal} ${format(goal)}',
-            ),
+            // 목표선은 스크롤 안쪽에 얹혀 밀어도 막대와 같은 높이를 따라가고
+            // (#1015), 목표치는 왼쪽 칸에 두 줄로 적힌다 (#1071).
+            goalBottom: hasGoal
+                ? chartHeight * (goal / maxValue).clamp(0.0, 1.0)
+                : null,
+            goalLabel: '${l.homeGoal}\n${format(goal)}',
+            // 머리 카드와 막대 사이의 빈 칸 — 고른 날의 세로선이 여기까지
+            // 올라와 회색 카드에 닿는다 (#1123).
+            topGap: 14,
+            // 지표를 바꾸면 막대가 바닥에서 다시 자란다 (#1148). 칸 수만 보면
+            // 칼로리 → 나트륨처럼 개수가 같은 전환에서 그림만 슬쩍 바뀌어,
+            // 무엇이 달라졌는지 눈으로 따라갈 수가 없다.
+            revealKey: replayKey,
+            // 날짜만 적으면 `26`, `9` 가 무슨 날인지 알 수 없다 — 달을 함께
+            // 적는다 (#1123).
             labelBuilder: (int i) =>
-                i % labelStep == 0 ? '${dates[i].day}' : '',
+                i % labelStep == 0 ? '${dates[i].month}/${dates[i].day}' : '',
             calloutBuilder: (BuildContext context, int i) =>
                 const SizedBox.shrink(),
             barBuilder: (BuildContext context, int i) => Padding(
@@ -891,17 +936,16 @@ class _Bar extends StatelessWidget {
     //
     // 위에서부터 나머지·지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
     // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
-    final List<({Color color, double kcal})> parts =
-        <({Color color, double kcal})>[
-          // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
-          // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
-          if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
-          if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
-          if (d.proteinKcal > 0)
-            (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
-          if (d.carbsKcal > 0)
-            (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
-        ];
+    final List<({Color color, double kcal})>
+    parts = <({Color color, double kcal})>[
+      // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
+      // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
+      if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
+      if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
+      if (d.proteinKcal > 0)
+        (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
+      if (d.carbsKcal > 0) (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
+    ];
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
@@ -924,38 +968,6 @@ class _Bar extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 탄단지 범례 한 칸.
-class _MacroLegend extends StatelessWidget {
-  const _MacroLegend({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      Container(
-        width: 9,
-        height: 9,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      const SizedBox(width: 6),
-      Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.mutedForeground,
-        ),
-      ),
-    ],
-  );
 }
 
 class _MetricPill extends StatelessWidget {

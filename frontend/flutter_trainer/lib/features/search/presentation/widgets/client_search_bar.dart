@@ -309,7 +309,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
         decoration: InputDecoration(
           isDense: true,
           filled: true,
-          fillColor: AppColors.inputBackground,
+          fillColor: AppColors.card,
           hintText: hint,
           hintStyle: const TextStyle(
             fontSize: 13,
@@ -339,9 +339,9 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
               : null,
           suffixIconConstraints: const BoxConstraints(minWidth: 40),
           contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          border: _fieldBorder,
-          enabledBorder: _fieldBorder,
-          focusedBorder: _fieldBorder,
+          border: _inlineFieldBorder,
+          enabledBorder: _inlineFieldBorder,
+          focusedBorder: _inlineFieldFocusedBorder,
         ),
         onChanged: _onQueryChanged,
         onSubmitted: (_) => _submit(facts),
@@ -380,11 +380,27 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
   }
 }
 
-/// Pill field with no visible border — the fill alone separates it from
-/// the header canvas, the way the roster's inputs do.
+/// Pill field with no visible border — used in the dialog form, where the
+/// field floats on the dimmed backdrop and needs nothing to stand out.
 const OutlineInputBorder _fieldBorder = OutlineInputBorder(
   borderRadius: BorderRadius.all(AppRadius.pill),
   borderSide: BorderSide.none,
+);
+
+/// The inline form's border. The header canvas is [AppColors.background]
+/// (`#F5F7FA`) and the input fill used to be [AppColors.inputBackground]
+/// (`#F2F4F7`) — two greys three steps apart, so the field read as a hint of
+/// a shape rather than a place to type. White fill plus a hairline is what
+/// separates it now.
+const OutlineInputBorder _inlineFieldBorder = OutlineInputBorder(
+  borderRadius: BorderRadius.all(AppRadius.pill),
+  borderSide: BorderSide(color: AppColors.borderStrong),
+);
+
+/// Focus state of the inline field — the brand navy, as elsewhere.
+const OutlineInputBorder _inlineFieldFocusedBorder = OutlineInputBorder(
+  borderRadius: BorderRadius.all(AppRadius.pill),
+  borderSide: BorderSide(color: AppColors.primary, width: 1.5),
 );
 
 /// The dropdown (and the dialog's body): matches, or why there are none,

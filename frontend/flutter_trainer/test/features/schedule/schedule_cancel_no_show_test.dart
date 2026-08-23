@@ -159,10 +159,11 @@ void main() {
 
     /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
     Future<void> openSession(WidgetTester tester, String name) async {
+      // 블록의 둘째 줄은 `이름 종류` 라 이름만으로는 정확히 맞지 않는다(#1010).
       final block = find
           .descendant(
             of: find.byType(ScheduleWeekTimetable),
-            matching: find.text(name),
+            matching: find.textContaining(name),
           )
           .first;
       await tester.ensureVisible(block);
@@ -267,7 +268,7 @@ void main() {
     testWidgets('삭제 확인 문구가 취소·노쇼를 가리킨다', (tester) async {
       await openSchedule(tester);
       await openSession(tester, '박성호');
-      final delete = find.text('삭제');
+      final delete = find.byKey(const ValueKey<String>('session-delete-chip'));
       await revealInPanel(tester, delete.first);
       await tester.tap(delete.first);
       await settle(tester);

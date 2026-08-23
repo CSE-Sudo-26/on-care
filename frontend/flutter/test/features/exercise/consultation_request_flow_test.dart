@@ -234,41 +234,40 @@ void main() {
     },
   );
 
-  testWidgets('validation includes required choices and other-purpose input', (
-    WidgetTester tester,
-  ) async {
-    await pumpRoute(
-      tester,
-      AppRoutes.consultationRequestPath(gymId: _gym.id, trainerId: _trainer.id),
-    );
-    final AppLocalizations l = _localizations(tester);
+  testWidgets(
+    'validation requires a goal, and "기타" requires a message detail (#1112)',
+    (WidgetTester tester) async {
+      await pumpRoute(
+        tester,
+        AppRoutes.consultationRequestPath(
+          gymId: _gym.id,
+          trainerId: _trainer.id,
+        ),
+      );
+      final AppLocalizations l = _localizations(tester);
 
-    await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
-    await tester.tap(find.text(l.exSendConsultRequest));
-    await tester.pump();
-    // 맨 아래에서 제출한 뒤라 상단의 에러 문구가 캐시 범위 밖으로 빠져 있다 —
-    // 다시 위로 스크롤해야 트리에 지어진다.
-    await _revealInForm(tester, find.text(l.exGoalRequired), -250);
-    expect(find.text(l.exGoalRequired), findsOneWidget);
-    expect(find.text(l.exHealthPurposeRequired), findsOneWidget);
+      await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
+      await tester.tap(find.text(l.exSendConsultRequest));
+      await tester.pump();
+      // 맨 아래에서 제출한 뒤라 상단의 에러 문구가 캐시 범위 밖으로 빠져 있다 —
+      // 다시 위로 스크롤해야 트리에 지어진다.
+      await _revealInForm(tester, find.text(l.exGoalRequired), -250);
+      expect(find.text(l.exGoalRequired), findsOneWidget);
 
-    await tester.tap(find.text(l.exGoalWeightLoss));
-    final Finder healthPurposeOther = find.descendant(
-      of: find.byKey(const Key('health-purpose-options')),
-      matching: find.text(l.exOptionOther),
-    );
-    await _revealInForm(tester, healthPurposeOther, 200);
-    await tester.tap(healthPurposeOther);
-    await tester.pump();
-    // "기타" 선택으로 그 아래 입력란·에러 문구가 새로 생겨 레이아웃이
-    // 밀린다 — 칩까지만 보이던 스크롤 위치에서는 아직 캐시 범위 밖일 수 있다.
-    await _revealInForm(tester, find.text(l.exHealthPurposeInputRequired), 150);
-    expect(find.text(l.exHealthPurposeInputRequired), findsOneWidget);
+      // 운동 목표 하나만 고른다 — 건강관리 목적은 더는 따로 없다(#1112).
+      await tester.tap(find.text(l.exOptionOther));
+      await tester.pump();
+      await _revealInForm(tester, find.text(l.exOtherGoalDetailRequired), 200);
+      expect(find.text(l.exOtherGoalDetailRequired), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).first, '무릎 통증 관리');
-    await tester.pump();
-    expect(find.text(l.exHealthPurposeInputRequired), findsNothing);
-  });
+      await tester.enterText(
+        find.byKey(const Key('consult-message')),
+        '무릎 통증 관리',
+      );
+      await tester.pump();
+      expect(find.text(l.exOtherGoalDetailRequired), findsNothing);
+    },
+  );
 
   testWidgets('valid submission completes, stores pending, and shows status', (
     WidgetTester tester,
@@ -279,9 +278,13 @@ void main() {
     );
     final AppLocalizations l = _localizations(tester);
 
+    // 데이터 공유 동의 없이는 보낼 수 없다 (#1022) — 수락되는 순간 넘어가는
+    // 것이 회원의 건강 기록이라 신청 화면에서 동의를 받는다. 동의 줄은 대상
+    // 카드 바로 아래(=화면 위쪽)에 있다.
+    await tester.tap(find.byKey(const Key('consultDataSharingConsent')));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text(l.exGoalWeightLoss));
-    await _revealInForm(tester, find.text(l.exPurposeNone), 180);
-    await tester.tap(find.text(l.exPurposeNone));
     await _revealInForm(tester, find.text(l.exSelectDate), 180);
     Finder dateMaterial = find
         .ancestor(
@@ -310,6 +313,7 @@ void main() {
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
     await _revealInForm(tester, find.text(l.exTimeAfternoon), 180);
     await tester.tap(find.text(l.exTimeAfternoon));
+
     await _revealInForm(tester, find.text(l.exSendConsultRequest), 220);
     await tester.tap(find.text(l.exSendConsultRequest));
     await tester.pumpAndSettle();

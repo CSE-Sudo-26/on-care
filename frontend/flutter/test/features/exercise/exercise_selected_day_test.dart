@@ -9,6 +9,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -165,11 +166,11 @@ void main() {
       find.text('${target.month}월 ${target.day}일 ${l.pageExerciseTitle}'),
       findsOneWidget,
     );
-    // 유형별 비중은 `운동 현황 > 오늘` 과 같은 도넛으로 그린다(#682) —
-    // 도넛 가운데의 총 시간과 범례의 유산소 시간이 함께 보인다.
-    expect(find.text(l.exTodayTotalTime), findsOneWidget);
+    // 유형별 값은 `운동 현황 > 오늘` 과 같은 카드로 그린다(#682). 소모
+    // 칼로리는 도넛 안에서 말하므로(#1127) 카드 자체로 가른다.
+    expect(find.byType(ExerciseDayLoadCard), findsWidgets);
     expect(find.text(l.exTypeCardio), findsWidgets);
-    expect(find.text('40'), findsWidgets);
+    expect(find.text(l.unitMinutesValue(40)), findsWidgets);
   });
 
   testWidgets('정말 기록이 없는 날에는 빈 문구가 그대로 나온다', (WidgetTester tester) async {

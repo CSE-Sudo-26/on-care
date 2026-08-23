@@ -36,7 +36,10 @@ class _FakeCoachRepository implements MemberCoachRepository {
   Future<List<CoachInvite>> fetchInvites() async => invites;
 
   @override
-  Future<void> acceptInvite(String inviteId) async {
+  Future<void> acceptInvite(
+    String inviteId, {
+    required bool dataSharingConsent,
+  }) async {
     if (failure case final AppError error) throw error;
     accepted.add(inviteId);
     invites = <CoachInvite>[];
@@ -80,6 +83,10 @@ class _FakeCoachRepository implements MemberCoachRepository {
     String intensity = 'moderate',
     String memberNote = '',
   }) async => throw UnimplementedError();
+
+  @override
+  Future<CoachRoutine> uncompleteRoutine(String routineId) async =>
+      throw UnimplementedError();
 
   @override
   Future<void> deleteRoutine(String routineId) async {}
@@ -163,6 +170,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // 연결 전에 무엇이 넘어가는지 알리고 동의를 받는다 (#1022).
+      expect(find.byKey(const Key('coachInviteConsentDialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('coachInviteConsentAgree')));
+      await tester.pumpAndSettle();
+
       expect(repository.accepted, <String>['tci-1']);
       expect(repository.rejected, isEmpty);
     });
@@ -192,8 +204,30 @@ void main() {
         find.byKey(const ValueKey<String>('coach-invite-accept-tci-1')),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('coachInviteConsentAgree')));
+      await tester.pumpAndSettle();
 
       expect(find.text('처리하지 못했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('coach-invite-accept-tci-1')),
+        findsOneWidget,
+      );
+    });
+    testWidgets('동의를 취소하면 연결하지 않는다 (#1022)', (tester) async {
+      final repository = _FakeCoachRepository(
+        invites: const <CoachInvite>[_invite],
+      );
+      await _pumpCard(tester, repository);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('coach-invite-accept-tci-1')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+
+      // 동의하지 않았으면 아무것도 열리지 않는다 — 요청은 그대로 남는다.
+      expect(repository.accepted, isEmpty);
       expect(
         find.byKey(const ValueKey<String>('coach-invite-accept-tci-1')),
         findsOneWidget,
@@ -205,7 +239,10 @@ void main() {
     test('실 API 는 수락 경로를 그대로 부른다', () async {
       final dio = _MockDio();
       when(
-        () => dio.post<Map<String, Object?>>('/me/coach/invites/tci-1/accept'),
+        () => dio.post<Map<String, Object?>>(
+          '/me/coach/invites/tci-1/accept',
+          data: any(named: 'data'),
+        ),
       ).thenAnswer(
         (_) async => _ok<Map<String, Object?>>(
           const <String, Object?>{},
@@ -213,10 +250,16 @@ void main() {
         ),
       );
 
-      await DioMemberCoachRepository(dio).acceptInvite('tci-1');
+      await DioMemberCoachRepository(
+        dio,
+      ).acceptInvite('tci-1', dataSharingConsent: true);
 
+      // 동의 여부를 함께 보낸다 — 서버가 동의 없는 수락을 400 으로 막는다. (#1022)
       verify(
-        () => dio.post<Map<String, Object?>>('/me/coach/invites/tci-1/accept'),
+        () => dio.post<Map<String, Object?>>(
+          '/me/coach/invites/tci-1/accept',
+          data: <String, Object?>{'data_sharing_consent': true},
+        ),
       ).called(1);
     });
 

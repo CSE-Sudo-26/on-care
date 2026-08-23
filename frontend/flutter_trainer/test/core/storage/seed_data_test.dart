@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 /// 시드가 읽는 것과 같은 픽스처. 사용자 앱 테스트도 같은 파일을 본다 — 두 앱의
 /// 단정이 같은 원본을 가리켜야 "같은 날짜, 같은 숫자"가 실제로 지켜진다(#757).
@@ -63,7 +65,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v18'), _todayString());
+      expect(await db.readValue('trainer_seeded_v25'), _todayString());
     });
 
     test(
@@ -293,15 +295,119 @@ void main() {
       expect(after.length, before.length);
     });
 
+    test('운동 기록에 실제 완료 날짜가 오늘 위에 얹혀 남는다 (#1114)', () async {
+      // 목요일에 고정한다 — 오늘·이번 주·전체가 서로 다른 개수를 골라야
+      // 기간 필터가 실제로 무언가를 거르는지 볼 수 있다. 2026-08-20 은 목요일.
+      final DateTime pinned = DateTime(2026, 8, 20, 10);
+      await seedIfEmpty(db, clock: pinned);
+
+      final rows =
+          await (db.select(db.clientRoutineHistory)
+                ..orderBy(<OrderingTerm Function($ClientRoutineHistoryTable)>[
+                  (t) => OrderingTerm(expression: t.sortOrder),
+                ]))
+              .get();
+      expect(rows, isNotEmpty);
+
+      final DateTime todayDate = DateTime(
+        pinned.year,
+        pinned.month,
+        pinned.day,
+      );
+      for (final row in rows) {
+        // 하나라도 비어 있으면 그 기록은 어느 기간에서도 걸러지지 않고
+        // 늘 따라다닌다 — 데모에서는 그런 행이 남아 있으면 안 된다.
+        expect(row.completedAt, isNotNull, reason: row.id);
+        final DateTime at = row.completedAt!;
+        expect(
+          at.isAfter(todayDate),
+          isFalse,
+          reason: '${row.id}: 아직 오지 않은 날의 운동 기록',
+        );
+        // 라벨과 날짜가 같은 날을 가리킨다. 예전에는 라벨이 시드에 박힌
+        // 고정 문자열이라 7월에 머물렀다.
+        final int daysAgo = todayDate
+            .difference(DateTime(at.year, at.month, at.day))
+            .inDays;
+        final String base = '${at.month}/${at.day}';
+        expect(row.dateLabel, switch (daysAgo) {
+          0 => '$base (오늘)',
+          1 => '$base (어제)',
+          _ => base,
+        }, reason: row.id);
+      }
+
+      // 고객마다 최신순이다 — `watchHistory` 가 `sortOrder` 로만 정렬하므로,
+      // 날짜가 그 차례를 거스르면 목록이 뒤죽박죽으로 보인다.
+      final Map<String, List<DateTime>> byClient = <String, List<DateTime>>{};
+      for (final row in rows) {
+        byClient
+            .putIfAbsent(row.clientId, () => <DateTime>[])
+            .add(row.completedAt!);
+      }
+      for (final MapEntry<String, List<DateTime>> entry in byClient.entries) {
+        final List<DateTime> dates = entry.value;
+        for (int i = 1; i < dates.length; i++) {
+          expect(
+            dates[i].isAfter(dates[i - 1]),
+            isFalse,
+            reason: '${entry.key}: 뒤 기록이 앞 기록보다 최신이다',
+          );
+        }
+      }
+
+      // 오늘 운동한 고객이 적어도 하나는 있어야 `오늘` 을 골랐을 때 데모가
+      // 빈 화면이 아니다.
+      expect(
+        rows.any(
+          (row) =>
+              DateTime(
+                row.completedAt!.year,
+                row.completedAt!.month,
+                row.completedAt!.day,
+              ) ==
+              todayDate,
+        ),
+        isTrue,
+      );
+    });
+
+    test('김민수의 운동 기록 날짜는 픽스처가 정한 그 날이다 (#1114)', () async {
+      // 그는 사용자 앱의 데모 계정과 같은 사람이라 날짜가 픽스처에서 온다.
+      // 자리 번호를 날짜로 쓰면(0,1,2일 전) 운동이 있던 날만 골라 담은 목록과
+      // 어긋나, 두 앱을 나란히 놓았을 때 같은 운동이 다른 날에 앉는다(#757).
+      final DateTime pinned = DateTime(2026, 8, 20, 10);
+      await seedIfEmpty(db, clock: pinned, fixture: _fixture);
+
+      final rows =
+          await (db.select(db.clientRoutineHistory)
+                ..where((t) => t.clientId.equals('seed-client-1'))
+                ..orderBy(<OrderingTerm Function($ClientRoutineHistoryTable)>[
+                  (t) => OrderingTerm(expression: t.sortOrder),
+                ]))
+              .get();
+
+      // 예전에는 최근 사흘만 시딩했다. 날짜별 기록이 이력을 그날에 붙이면서
+      // 사흘 밖의 날이 비어 보여, 픽스처가 가진 날을 모두 옮긴다(#1025).
+      final List<DateTime> expected = _fixture
+          .daysFor(pinned)
+          .reversed
+          .where((FixtureDay d) => d.exercises.isNotEmpty)
+          .map((FixtureDay d) => DateTime.parse(d.date))
+          .toList();
+
+      expect(rows.map((row) => row.completedAt).toList(), expected);
+    });
+
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v18', '2020-01-01');
+      await db.putValue('trainer_seeded_v25', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v18'), _todayString());
+      expect(await db.readValue('trainer_seeded_v25'), _todayString());
     });
 
     test(
@@ -343,6 +449,48 @@ void main() {
       },
     );
 
+    test('seed chat createdAt order matches the displayed timeLabel, not '
+        'array position (#1087)', () async {
+      // 강서연(6, '16:48') · 하윤(4, '14:31') · 유나(10, '13:25') ·
+      // 태경(13, '11:49') 은 모두 오늘(daysAgo: 0) 이고, 넷 다 대화의
+      // 마지막 메시지가 "3개 중 세 번째"다 — 예전 방식(배열 인덱스를
+      // 분으로 씀)이면 넷의 정렬 키가 완전히 같아져, 최신순 목록이
+      // 화면 시각과 무관하게 시드 선언 순서로 나왔다.
+      await seedIfEmpty(db);
+
+      final lastChatAt = await DriftClientRepository(
+        db,
+      ).watchLastChatAt().first;
+
+      DateTime at(int id) => lastChatAt['seed-client-$id']!;
+
+      // 16:48 > 14:31 > 13:25 > 11:49 — 화면에 보이는 시각 그대로다.
+      expect(at(6).isAfter(at(4)), isTrue, reason: '16:48 은 14:31 보다 최신');
+      expect(at(4).isAfter(at(10)), isTrue, reason: '14:31 은 13:25 보다 최신');
+      expect(at(10).isAfter(at(13)), isTrue, reason: '13:25 은 11:49 보다 최신');
+    });
+
+    test('a multi-day thread does not outrank a same-day thread with a '
+        'later clock time (#1104)', () async {
+      // 김민수(1, 마지막 메시지 '18:18', 여러 날에 걸친 스레드로 마지막
+      // 메시지의 dayIndex=2)와 이지수(2, '20:10', 단일 날짜 스레드로
+      // dayIndex=0)는 둘 다 daysAgo: 0(오늘)이다. dayIndex 를 날짜
+      // 오프셋에 그대로 더하던 예전 방식이면 김민수가 이지수보다
+      // "이틀 더 미래"로 계산돼, 20:10 보다 이른 18:18 이 최신순에서
+      // 위로 올라왔다.
+      await seedIfEmpty(db);
+
+      final lastChatAt = await DriftClientRepository(
+        db,
+      ).watchLastChatAt().first;
+
+      expect(
+        lastChatAt['seed-client-2']!.isAfter(lastChatAt['seed-client-1']!),
+        isTrue,
+        reason: '20:10(단일 날짜)이 18:18(다일 스레드)보다 최신이어야 한다',
+      );
+    });
+
     test('per-meal sums match each client\'s daily totals', () async {
       // The diet summary tiles read the client row's totals while the
       // meal cards read ClientDietEntries — the two sources must agree.
@@ -351,9 +499,14 @@ void main() {
       final clients = await db.select(db.trainerClients).get();
       expect(clients, isNotEmpty);
       for (final client in clients) {
-        final meals = await (db.select(
-          db.clientDietEntries,
-        )..where((t) => t.clientId.equals(client.id))).get();
+        // 이 표는 이제 지난 날의 끼니도 담는다(#1025). 고객 행의 합계는
+        // **오늘** 것이므로 오늘 끼니만 골라 견준다.
+        // where 를 두 번 걸면 drift 가 AND 로 잇는다.
+        final meals =
+            await (db.select(db.clientDietEntries)
+                  ..where((t) => t.clientId.equals(client.id))
+                  ..where((t) => t.date.equals(ymd(nowKst()))))
+                .get();
         final sodiumSum = meals.fold<int>(0, (s, m) => s + m.sodiumMg);
         final kcalSum = meals.fold<int>(0, (s, m) => s + m.calories);
         final carbsSum = meals.fold<double>(0, (s, m) => s + m.carbsG);
@@ -424,7 +577,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v18'), today);
+        expect(await db.readValue('trainer_seeded_v25'), today);
       },
     );
 
@@ -448,6 +601,39 @@ void main() {
           client.lastMessage,
           thread.isEmpty ? '' : thread.last.body,
           reason: '${client.name}(${client.id})의 미리보기가 스레드와 어긋난다',
+        );
+      }
+    });
+
+    test('목록 시각은 오늘이면 시각, 어제면 어제, 그 전이면 날짜다', () async {
+      // 카카오톡과 같은 규칙이다. 문구를 픽스처에 박아 두면 하루만 지나도
+      // 거짓이 되므로, 며칠 전인지만 적어 두고 심을 때마다 오늘 기준으로
+      // 다시 만든다 — 어느 날 데모를 열어도 어긋나지 않아야 한다.
+      final DateTime day = DateTime(2026, 8, 20);
+      await seedIfEmpty(db, clock: day);
+
+      final rows = <String, String>{
+        for (final c in await db.select(db.trainerClients).get())
+          c.id: c.lastTime,
+      };
+
+      // 김민수의 마지막 메시지는 오늘 18:18 이다.
+      expect(rows['seed-client-1'], '18:18');
+      // 최우진은 어제.
+      expect(rows['seed-client-5'], '어제');
+      // 박성호는 사흘 전 — 날짜로 정확히 말한다.
+      expect(rows['seed-client-3'], '2026-08-17');
+      // 문가영은 3주 전.
+      expect(rows['seed-client-12'], '2026-07-30');
+      // 임도현은 대화가 없다.
+      expect(rows['seed-client-7'], '-');
+
+      // 어떤 값도 "3일 전" 처럼 흘러간 시간을 세지 않는다.
+      for (final entry in rows.entries) {
+        expect(
+          entry.value.endsWith(' 전'),
+          isFalse,
+          reason: '${entry.key}: ${entry.value}',
         );
       }
     });
@@ -500,7 +686,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v18', '2020-01-01');
+      await db.putValue('trainer_seeded_v25', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

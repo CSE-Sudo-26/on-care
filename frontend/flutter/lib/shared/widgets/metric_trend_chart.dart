@@ -28,13 +28,16 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 /// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
 const Color kMetricTrendLine = Color(0xFFDDE2E8);
 
-/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+/// 목표 대비 상태색: 초과(빨강) / 그 외(브랜드 파랑).
+///
+/// 그 외를 초록으로 칠하지 않는다 — 초록은 "정상"으로 읽히는데, 목표에 한참
+/// 못 미친 값도 초과는 아니기 때문이다(#1070).
 ///
 /// 목표가 0 이면 초과로 보지 않는다. `v > goal` 만 두면 목표가 없는 지표의 **모든**
 /// 기록이 빨간 점이 되어, 같은 카드의 평균 뱃지(목표가 있을 때만 초과 판정)와 서로
 /// 다른 이야기를 한다.
 Color metricStatusColor(double v, double goal) =>
-    goal > 0 && v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
+    goal > 0 && v > goal ? FigmaColors.dangerRed : FigmaColors.statusWithinGoal;
 
 /// 월→일 요일 라벨. 홈 탭과 식단 탭이 **같은 문구**를 쓰도록 여기 둔다 — 한쪽만
 /// 하드코딩하면 영어 로케일에서 한글 요일이 그대로 남는다.
@@ -85,6 +88,8 @@ class MetricTrendChart extends StatelessWidget {
     this.goalLabel,
     required this.formatTick,
     this.height = 68,
+    this.selectedIndex,
+    this.onSelected,
     super.key,
   });
 
@@ -115,6 +120,14 @@ class MetricTrendChart extends StatelessWidget {
   final String Function(double) formatTick;
   final double height;
 
+  /// 고른 점. [onSelected] 를 준 화면에서만 뜻이 있다 — 고른 점은 굵은 고리로
+  /// 표시하고, 부르는 쪽은 머리 숫자를 그날 값으로 바꾼다. (#1122)
+  final int? selectedIndex;
+
+  /// 점을 누르면 그 index 로, 점에서 먼 곳을 누르면 null 로 부른다. null 이면
+  /// 그래프는 예전처럼 만질 수 없는 그림이다.
+  final ValueChanged<int?>? onSelected;
+
   @override
   Widget build(BuildContext context) {
     final (double lo, double hi) = metricTrendScale(
@@ -131,68 +144,56 @@ class MetricTrendChart extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            // 목표선의 실제 높이에 맞춰 라벨 하나. 칸은 목표가 없어도 자리를
-            // 지킨다 — 지표를 바꿀 때 그래프 폭이 흔들리지 않는다.
-            //
-            // 폭은 눈금 라벨이 쓰던 38 그대로다. `목표 2,000` 을 한 줄로 두면 이
-            // 칸이 넓어져야 하는데, 그러면 360px 영어 로케일에서 요일 라벨 줄이
-            // 넘친다. 두 줄로 접어 폭을 지킨다.
-            Builder(
-              builder: (BuildContext context) {
-                // 칸도 글씨 배율을 따라간다 (#1004). 38·26 으로 박아 두면 배율이
-                // 올라간 순간 `목표` 아래 줄(`2,000`)이 상자에 눌려 반만 보인다.
-                final TextScaler ts = MediaQuery.textScalerOf(context);
-                final double labelWidth = 38 * ts.scale(1);
-                // 두 줄(`목표` / 값)이 들어갈 높이를 글씨에서 잰다. 상수로 두면
-                // 배율이 오른 순간 아랫줄이 잘린다. (#1004)
-                final double labelHeight = ts.scale(_axisLabelSize) * 1.35 * 2;
-                return SizedBox(
-                  width: labelWidth,
-                  height: height,
-                  child: Stack(
-                    children: <Widget>[
-                      if (goalLabel != null &&
-                          goal > 0 &&
-                          goal >= lo &&
-                          goal <= hi)
-                        Positioned(
-                          right: 0,
-                          top:
-                              (height -
-                                      ((goal - lo) / (hi - lo)) * height -
-                                      labelHeight / 2)
-                                  .clamp(0.0, height - labelHeight),
-                          child: SizedBox(
-                            key: chartGoalLabelKey,
-                            height: labelHeight,
-                            child: Center(child: _AxisLabel(goalLabel!)),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
+            // 목표치 칸 — 이 그래프가 쓰던 배치를 [ChartGoalAxis] 로 옮겼고,
+            // 이제 두 앱의 모든 그래프가 같은 칸을 쓴다. (#1071)
+            ChartGoalAxis(
+              height: height,
+              label: goalLabel,
+              lineBottom:
+                  goalLabel != null && goal > 0 && goal >= lo && goal <= hi
+                  ? ((goal - lo) / ((hi - lo) <= 0 ? 1 : (hi - lo))) * height
+                  : null,
+              style: const TextStyle(
+                fontSize: _axisLabelSize,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+                color: AppColors.mutedForeground,
+              ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: chartGoalAxisGap),
             Expanded(
               child: Column(
                 children: <Widget>[
                   SizedBox(
                     height: height,
-                    child: ChartReveal(
-                      replayKey: replayKey,
-                      builder: (BuildContext context, double t) => CustomPaint(
-                        size: Size.infinite,
-                        painter: MetricTrendPainter(
-                          cur: values,
-                          goal: goal,
-                          ticks: ticks,
-                          lo: lo,
-                          hi: hi,
-                          todayIndex: todayIndex,
-                          progress: t,
-                        ),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints c) {
+                        final Widget chart = ChartReveal(
+                          replayKey: replayKey,
+                          builder: (BuildContext context, double t) =>
+                              CustomPaint(
+                                size: Size.infinite,
+                                painter: MetricTrendPainter(
+                                  cur: values,
+                                  goal: goal,
+                                  ticks: ticks,
+                                  lo: lo,
+                                  hi: hi,
+                                  todayIndex: todayIndex,
+                                  progress: t,
+                                  selectedIndex: selectedIndex,
+                                ),
+                              ),
+                        );
+                        final ValueChanged<int?>? onSelected = this.onSelected;
+                        if (onSelected == null) return chart;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (TapUpDetails d) =>
+                              onSelected(_hit(d.localPosition.dx, c.maxWidth)),
+                          child: chart,
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -240,30 +241,26 @@ class MetricTrendChart extends StatelessWidget {
   }
 }
 
-/// 목표선 라벨 칸. 높이가 글씨 배율을 따라 달라져서, 크기로 찾을 수 없다.
-const Key chartGoalLabelKey = ValueKey<String>('chart-goal-label');
+/// 누른 x 좌표에서 가장 가까운 점의 index. 점에서 멀면 null 이라 선택이 풀린다
+/// — 그래프 아무 데나 누르면 다시 평균으로 돌아온다. (#1122)
+extension on MetricTrendChart {
+  int? _hit(double dx, double width) {
+    if (values.length < 2 || width <= 0) return null;
+    final double step = width / (values.length - 1);
+    final int i = (dx / step).round().clamp(0, values.length - 1);
+    // 점에서 18px 안쪽만 그 점을 누른 것으로 본다. 반 칸까지 넓히면 그래프
+    // 어디를 눌러도 어느 점엔가 붙어, 선택을 풀 자리가 없어진다. (#1122)
+    if ((dx - i * step).abs() > 18) return null;
+    // 아직 그리지 않은(오늘 이후) 점은 고를 수 없다 — 0 을 그날 값이라고
+    // 말하게 된다.
+    if (i > todayIndex.clamp(0, values.length - 1)) return null;
+    // 고른 점을 다시 누르면 풀린다.
+    return i == selectedIndex ? null : i;
+  }
+}
 
 /// 축 라벨 글씨 크기. 라벨 칸 높이를 이 값에서 재므로 한 곳에 둔다. (#1004)
 const double _axisLabelSize = 10;
-
-class _AxisLabel extends StatelessWidget {
-  const _AxisLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    textAlign: TextAlign.right,
-    maxLines: 2,
-    style: const TextStyle(
-      fontSize: _axisLabelSize,
-      height: 1.35,
-      fontWeight: FontWeight.w600,
-      color: AppColors.mutedForeground,
-    ),
-  );
-}
 
 /// 꺾은선 본체. 홈 탭에 있던 `_TrendChartPainter` 를 그대로 옮긴 것이다.
 class MetricTrendPainter extends CustomPainter {
@@ -275,6 +272,7 @@ class MetricTrendPainter extends CustomPainter {
     required this.hi,
     required this.todayIndex,
     this.progress = 1,
+    this.selectedIndex,
   });
 
   final List<double> cur;
@@ -289,6 +287,9 @@ class MetricTrendPainter extends CustomPainter {
   /// 0 → 1 진입 애니메이션 진행도. 선은 월요일부터 오늘 쪽으로 이어지고,
   /// 각 데이터 포인트와 값 라벨은 선이 도달하는 순간 나타난다.
   final double progress;
+
+  /// 고른 점. 그 점만 고리를 둘러 어느 날을 보고 있는지 알린다. (#1122)
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -345,6 +346,16 @@ class MetricTrendPainter extends CustomPainter {
           : ((drawn - i) / 0.35 + 1).clamp(0.0, 1.0);
       if (a <= 0) continue;
       final Color sc = metricStatusColor(cur[i], goal);
+      if (i == selectedIndex) {
+        canvas.drawCircle(
+          pts[i],
+          8.5,
+          Paint()
+            ..color = sc.withValues(alpha: 0.45 * a)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
       _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2, alpha: a);
       _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc, alpha: a);
     }
@@ -398,5 +409,6 @@ class MetricTrendPainter extends CustomPainter {
       old.lo != lo ||
       old.hi != hi ||
       old.todayIndex != todayIndex ||
-      old.progress != progress;
+      old.progress != progress ||
+      old.selectedIndex != selectedIndex;
 }

@@ -14,7 +14,7 @@ const String kimMinsuFixtureJson = r'''
     "userAppSeedId": "user-demo",
     "trainerClientId": "seed-client-1"
   },
-  "historyWeeks": 12,
+  "historyWeeks": 35,
   "foods": {
     "oatmeal": {
       "name": "오트밀",
@@ -337,24 +337,49 @@ const String kimMinsuFixtureJson = r'''
       "dayMessage": "점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.",
       "exercises": [
         {
-          "name": "레그프레스 3세트",
+          "name": "벤치프레스 40kg · 4세트",
           "type": "strength",
-          "minutes": 25,
-          "calories": 150,
-          "done": true
+          "minutes": 12,
+          "calories": 72,
+          "done": true,
+          "sets": 4
         },
         {
-          "name": "레그컬 3세트",
+          "name": "덤벨 숄더프레스 10kg · 4세트",
           "type": "strength",
-          "minutes": 20,
-          "calories": 120,
-          "done": true
+          "minutes": 10,
+          "calories": 60,
+          "done": true,
+          "sets": 4
         },
         {
-          "name": "하체 스트레칭 15분",
-          "type": "flexibility",
+          "name": "랫풀다운 45kg · 4세트",
+          "type": "strength",
+          "minutes": 12,
+          "calories": 72,
+          "done": true,
+          "sets": 4
+        },
+        {
+          "name": "플랭크 60초 · 3세트",
+          "type": "strength",
+          "minutes": 6,
+          "calories": 36,
+          "done": true,
+          "sets": 3
+        },
+        {
+          "name": "마무리 러닝머신 15분",
+          "type": "cardio",
           "minutes": 15,
-          "calories": 45,
+          "calories": 135,
+          "done": true
+        },
+        {
+          "name": "하체 스트레칭 12분",
+          "type": "flexibility",
+          "minutes": 12,
+          "calories": 36,
           "done": true
         }
       ],
@@ -3367,6 +3392,5417 @@ const String kimMinsuFixtureJson = r'''
           ]
         }
       ]
+    },
+    {
+      "weeksAgo": 12,
+      "note": "야근이 많던 주 — 늦은 저녁은 기록이 비어 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 13,
+      "note": "기록을 막 시작한 주 — 아예 빠진 날이 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 14,
+      "note": "평소의 한 주 — 국물이 잦지만 기록은 성실하다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 15,
+      "note": "가볍게 간 한 주 — 세 지표가 모두 목표 안에 든다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 16,
+      "note": "회식이 몰린 주 — 칼로리와 당류가 함께 목표를 넘는다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 17,
+      "note": "코칭이 먹힌 주 — 국물을 줄여 나트륨이 목표 안으로 들어온다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 18,
+      "note": "평범한 한 주 — 구내식당 국물이 나트륨을 밀어 올린다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 19,
+      "note": "야근이 많던 주 — 늦은 저녁은 기록이 비어 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 20,
+      "note": "기록을 막 시작한 주 — 아예 빠진 날이 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 21,
+      "note": "평소의 한 주 — 국물이 잦지만 기록은 성실하다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 22,
+      "note": "가볍게 간 한 주 — 세 지표가 모두 목표 안에 든다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 23,
+      "note": "회식이 몰린 주 — 칼로리와 당류가 함께 목표를 넘는다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 24,
+      "note": "코칭이 먹힌 주 — 국물을 줄여 나트륨이 목표 안으로 들어온다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 25,
+      "note": "평범한 한 주 — 구내식당 국물이 나트륨을 밀어 올린다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 26,
+      "note": "야근이 많던 주 — 늦은 저녁은 기록이 비어 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 27,
+      "note": "기록을 막 시작한 주 — 아예 빠진 날이 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 28,
+      "note": "평소의 한 주 — 국물이 잦지만 기록은 성실하다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 29,
+      "note": "가볍게 간 한 주 — 세 지표가 모두 목표 안에 든다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 30,
+      "note": "회식이 몰린 주 — 칼로리와 당류가 함께 목표를 넘는다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-samgyeopsal"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-cake-latte"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 31,
+      "note": "코칭이 먹힌 주 — 국물을 줄여 나트륨이 목표 안으로 들어온다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 32,
+      "note": "평범한 한 주 — 구내식당 국물이 나트륨을 밀어 올린다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 33,
+      "note": "야근이 많던 주 — 늦은 저녁은 기록이 비어 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 40분",
+              "type": "cardio",
+              "minutes": 40,
+              "calories": 360,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 45분",
+              "type": "cardio",
+              "minutes": 45,
+              "calories": 405,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "weeksAgo": 34,
+      "note": "기록을 막 시작한 주 — 아예 빠진 날이 있다.",
+      "days": [
+        {
+          "weekday": 0,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 30분",
+              "type": "cardio",
+              "minutes": 30,
+              "calories": 270,
+              "done": true
+            },
+            {
+              "name": "코어 강화 10분",
+              "type": "strength",
+              "minutes": 10,
+              "calories": 60,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 1,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 2,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 3,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 35분",
+              "type": "cardio",
+              "minutes": 35,
+              "calories": 315,
+              "done": true
+            },
+            {
+              "name": "코어 강화 20분",
+              "type": "strength",
+              "minutes": 20,
+              "calories": 120,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 5분",
+              "type": "flexibility",
+              "minutes": 5,
+              "calories": 15,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-greek-yogurt-nuts"
+            },
+            {
+              "meal": "lunch-doenjang-rice"
+            }
+          ]
+        },
+        {
+          "weekday": 4,
+          "exercises": [],
+          "meals": []
+        },
+        {
+          "weekday": 5,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 25분",
+              "type": "cardio",
+              "minutes": 25,
+              "calories": 225,
+              "done": true
+            },
+            {
+              "name": "코어 강화 30분",
+              "type": "strength",
+              "minutes": 30,
+              "calories": 180,
+              "done": false
+            },
+            {
+              "name": "하체 스트레칭 15분",
+              "type": "flexibility",
+              "minutes": 15,
+              "calories": 45,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-oatmeal-banana"
+            },
+            {
+              "meal": "lunch-bibimbap"
+            },
+            {
+              "meal": "dinner-chicken-salad-sweet-potato"
+            },
+            {
+              "meal": "snack-coffee-nuts"
+            }
+          ]
+        },
+        {
+          "weekday": 6,
+          "label": "AI 루틴 · 자율 운동",
+          "pt": false,
+          "exercises": [
+            {
+              "name": "저강도 유산소 (걷기) 20분",
+              "type": "cardio",
+              "minutes": 20,
+              "calories": 180,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "flexibility",
+              "minutes": 10,
+              "calories": 30,
+              "done": false
+            }
+          ],
+          "meals": [
+            {
+              "meal": "breakfast-egg-strawberry"
+            },
+            {
+              "meal": "lunch-chicken-salad"
+            },
+            {
+              "meal": "dinner-salmon-brown-rice"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "routines": [
+    {
+      "id": "seed-routine-user-demo-0",
+      "name": "저강도 유산소 (걷기)",
+      "minutes": 30,
+      "type": "유산소",
+      "reason": "혈압 안정에 효과적",
+      "source": "ai"
+    },
+    {
+      "id": "seed-routine-user-demo-1",
+      "name": "하체 스트레칭",
+      "minutes": 15,
+      "type": "유연성",
+      "reason": "혈액순환 개선",
+      "source": "trainer"
+    },
+    {
+      "id": "seed-routine-user-demo-2",
+      "name": "코어 강화",
+      "minutes": 10,
+      "type": "근력",
+      "reason": "기초대사량 향상",
+      "source": "ai"
+    },
+    {
+      "id": "seed-routine-user-demo-3",
+      "name": "어깨 관절 보호 스트레칭",
+      "minutes": 8,
+      "type": "유연성",
+      "reason": "PT 피드백 반영 · 오른쪽 어깨 보호",
+      "source": "trainer"
     }
   ]
 }

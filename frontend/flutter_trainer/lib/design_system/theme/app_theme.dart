@@ -100,6 +100,16 @@ class AppTheme {
           borderRadius: BorderRadius.all(AppRadius.md),
         ),
       ),
+      // Material 3 기본 윤곽선은 화면 곳곳에서 유일하게 짙은 색으로
+      // 튀었다 — 다른 요소(입력창·다이얼로그·칩)는 전부 이 팔레트의
+      // 옅은 톤을 쓰는데 `OutlinedButton`만 테마를 안 받고 있었다.
+      // 화면마다 손으로 고치는 대신 여기 한 곳에서 앱 전역에 적용한다.
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.mutedForeground,
+          side: const BorderSide(color: AppColors.borderStrong),
+        ),
+      ),
     );
   }
 }

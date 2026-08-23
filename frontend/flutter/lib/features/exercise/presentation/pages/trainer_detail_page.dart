@@ -8,8 +8,10 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/connection_disconnect.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class TrainerDetailPage extends ConsumerWidget {
@@ -79,7 +81,7 @@ class TrainerDetailPage extends ConsumerWidget {
   }
 }
 
-class _TrainerDetails extends StatelessWidget {
+class _TrainerDetails extends ConsumerWidget {
   const _TrainerDetails({
     required this.trainer,
     required this.gym,
@@ -96,8 +98,28 @@ class _TrainerDetails extends StatelessWidget {
   final bool isMyTrainer;
   final bool hasPending;
 
+  /// 담당 트레이너 연결만 끊는다 — 헬스장은 그대로다. 끊었으면 이 화면을
+  /// 닫는다. 지운 대상의 상세에 남아 있으면 방금 무엇을 했는지 화면이 말해
+  /// 주지 못한다. (#1057)
+  Future<void> _disconnect(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    // 아직 읽는 중이면 `valueOrNull` 은 null 이라 확인 문구에서 헬스장 이름이
+    // 빠진다.
+    final Gym? myGym = await ref.read(myGymProvider.future);
+    if (!context.mounted) return;
+    final bool removed = await confirmDisconnect(
+      context,
+      ref,
+      message: l.myTrainerDisconnectConfirm(trainer.name, myGym?.name ?? ''),
+      disconnect: (GymRepository repo) => repo.disconnectMyTrainer(),
+    );
+    // go_router 의 pop 을 쓴다 — 상세는 라우터가 쌓은 화면이라, 그 안의
+    // Navigator 로는 돌아갈 곳이 없다고 나온다.
+    if (removed && context.mounted && context.canPop()) context.pop();
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final String intro = trainer.intro?.trim() ?? '';
     final String career = trainer.career?.trim() ?? '';
@@ -242,8 +264,7 @@ class _TrainerDetails extends StatelessWidget {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () =>
-                        context.push(AppRoutes.gymDetailPath(gym!.id)),
+                    onTap: () => context.push(AppRoutes.gymDetailPath(gym!.id)),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -314,6 +335,14 @@ class _TrainerDetails extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+            ],
+            if (isMyTrainer) ...<Widget>[
+              const SizedBox(height: 24),
+              // 목록 카드에서 삭제를 여기로 옮겼다 (#1057).
+              DisconnectButton(
+                label: l.myTrainerDisconnectTooltip,
+                onTap: () => _disconnect(context, ref),
               ),
             ],
             if (!isMyTrainer) ...<Widget>[

@@ -124,9 +124,6 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
                 ? elapsedWeekdays(nowKst()) - 1
                 : weekdayCount - 1,
             markToday: widget.report.isCurrentWeek,
-            // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
-            // 따라가게 한다.
-            replayKey: _metric,
             // 화면 위 제목과 같은 문구로 시작한다 — 음성 안내에서도 이 그래프가
             // 어느 지표의 것인지가 먼저 들린다(#972).
             semanticsLabel: chartSemanticsLabel(

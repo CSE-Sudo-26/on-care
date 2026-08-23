@@ -63,14 +63,9 @@ class TodayTimelineCard extends ConsumerWidget {
                     clientId: session.clientId,
                     clientName: session.clientName,
                   ),
-                  // 로스터에 없는 고객(상담으로 잡힌 가망 고객)은 이름 뒤에
-                  // `(신규)` 가 붙는다 — 스케줄 탭과 같은 표기다(#988).
-                  fallbackName: clientNameWithNewTag(
-                    l,
-                    clients,
-                    clientId: session.clientId,
-                    clientName: session.clientName,
-                  ),
+                  // 로스터에 없는 고객(상담으로 잡힌 가망 고객)도 이름만
+                  // 부른다 — 스케줄 탭과 같은 표기다(#1012).
+                  fallbackName: session.clientName,
                   imminent:
                       settings.sessionReminders &&
                       startsWithin(session, settings.reminderLeadMinutes),
@@ -96,7 +91,7 @@ class _Row extends StatelessWidget {
   final ScheduleSession session;
   final TrainerClient? client;
 
-  /// 로스터에서 못 찾은 고객을 부를 이름. 가망 고객이면 `(신규)` 가 붙는다.
+  /// 로스터에서 못 찾은 고객을 부를 이름.
   final String fallbackName;
 
   /// 시작이 알림 시점 안으로 들어온 세션인가. (#817)

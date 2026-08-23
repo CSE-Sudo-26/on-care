@@ -66,6 +66,7 @@ class ExerciseSession {
     this.memberNote = '',
     this.trainerFeedback = '',
     this.completedAt,
+    this.sets,
   });
 
   final String? id;
@@ -99,6 +100,9 @@ class ExerciseSession {
   final String trainerFeedback;
   final DateTime? completedAt;
 
+  /// 근력 기록의 세트 수. 없으면 분에서 환산한다.
+  final int? sets;
+
   /// 회원이 직접 남긴 일반 기록만 편집할 수 있다.
   bool get isEditable => source == ExerciseSource.member;
 
@@ -121,6 +125,7 @@ class ExerciseSession {
         memberNote: json['member_note'] as String? ?? '',
         trainerFeedback: json['trainer_feedback'] as String? ?? '',
         completedAt: DateTime.tryParse(json['completed_at'] as String? ?? ''),
+        sets: (json['sets'] as num?)?.toInt(),
       );
 }
 
@@ -137,6 +142,8 @@ class ExerciseWeek {
     this.cardioMinutes = const <double>[],
     this.strengthMinutes = const <double>[],
     this.stretchingMinutes = const <double>[],
+    this.otherMinutes = const <double>[],
+    this.strengthSets = const <double>[],
   });
 
   final List<ExerciseSession> sessions;
@@ -158,6 +165,16 @@ class ExerciseWeek {
   final List<double> cardioMinutes;
   final List<double> strengthMinutes;
   final List<double> stretchingMinutes;
+
+  /// 목표가 없는 나머지 운동(기타). 그래프에는 그리지 않고 분 수만 적는다 —
+  /// 무엇에 견줘야 할지 정해지지 않은 값을 막대로 쌓으면 다른 유형의 높이까지
+  /// 뜻을 잃는다.
+  final List<double> otherMinutes;
+
+  /// 요일별 **근력 세트 수**. 근력은 시간이 아니라 세트로 재는 운동이라, 분에서
+  /// 되짚어 계산하지 않고 기록한 값을 그대로 들고 다닌다. 이 값이 없는(옛)
+  /// 응답에서만 분으로 환산한다.
+  final List<double> strengthSets;
 
   /// Count of distinct days on which the user worked out, matching
   /// the prototype's "이번 주 N회" tile semantics. Derived from
@@ -214,6 +231,8 @@ class ExerciseWeek {
       stretchingMinutes: parseDoubleList('flexibility_minutes').isNotEmpty
           ? parseDoubleList('flexibility_minutes')
           : parseDoubleList('stretching_minutes'),
+      otherMinutes: parseDoubleList('other_minutes'),
+      strengthSets: parseDoubleList('strength_sets'),
     );
   }
 }

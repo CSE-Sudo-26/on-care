@@ -165,7 +165,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('코칭 포인트와 추천 개인운동이 한 영역에 함께 있다 (#782)', (
+  testWidgets('추천 개인운동 카드가 한 영역에 트레이너·AI 추천을 함께 담는다 (#782)', (
     WidgetTester tester,
   ) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[
@@ -176,7 +176,11 @@ void main() {
     final Finder coaching = find.byType(AiCoachingCard);
 
     // 예전에는 조언(맨 위)과 추천 운동(맨 아래)이 멀리 떨어져 있었다.
-    expect(find.text('AI 코칭'), findsOneWidget);
+    // 카드 제목은 `AI 코칭` 이 아니라 내용 그대로 `추천 개인운동` 이다 (#1130).
+    expect(find.text('추천 개인운동'), findsOneWidget);
+    expect(find.text('AI 코칭'), findsNothing);
+    // `PT 와 다음 PT 사이…` 안내 문구도 뺐다.
+    expect(find.textContaining('다음 PT'), findsNothing);
     // 코칭 포인트는 화면 위쪽의 AI 맞춤 조언 카드로 옮겼다 — 같은 말이 한
     // 화면에 두 번 있으면 안 된다. (#1021)
     expect(
@@ -386,7 +390,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('completeRoutine-seed-r2')));
+    await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')));
     await tester.pumpAndSettle();
     expect(find.text('루틴 수행 완료'), findsOneWidget);
     await tester.enterText(
@@ -398,19 +402,20 @@ void main() {
     await tester.pumpAndSettle();
 
     final CoachRoutine completed = (await repository.fetchRoutines())
-        .firstWhere((CoachRoutine routine) => routine.id == 'seed-r2');
+        .firstWhere((CoachRoutine routine) => routine.id == 'seed-routine-user-demo-1');
     expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
     expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
-    // 체크 박스는 그대로 있고 체크된 채로 잠긴다 — 한 일이 화면에서 사라지면
-    // 무엇을 했는지 다시 확인할 데가 없다. (#1021)
+    // 체크 박스는 그대로 있고 체크된 채로 남는다 — 한 일이 화면에서 사라지면
+    // 무엇을 했는지 다시 확인할 데가 없다. (#1021) 다시 누르면 되묻고 되돌릴
+    // 수 있으므로 잠기지 않는다 (#1131).
     final Checkbox box = tester.widget<Checkbox>(
       find.descendant(
-        of: find.byKey(const Key('completeRoutine-seed-r2')),
+        of: find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')),
         matching: find.byType(Checkbox),
       ),
     );
     expect(box.value, isTrue);
-    expect(box.onChanged, isNull);
+    expect(box.onChanged, isNotNull);
     expect(completed.completedIntensity, 'high');
   });
 

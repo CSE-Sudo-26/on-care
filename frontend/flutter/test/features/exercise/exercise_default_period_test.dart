@@ -16,12 +16,13 @@ import 'package:oncare/features/account/presentation/controllers/account_control
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 void main() {
-  // 요일마다 세 종류가 모두 있는 주 — 도넛에 세 조각, 막대에 세 층이 쌓인다.
+  // 요일마다 세 종류가 모두 있는 주.
   const ExerciseWeek week = ExerciseWeek(
     sessions: <ExerciseSession>[],
     dailyMinutes: <double>[60, 45, 70, 30, 55, 40, 65],
@@ -75,25 +76,26 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('첫 진입은 오늘 기준이다 — 오늘 도넛이 보인다', (WidgetTester tester) async {
+  testWidgets('첫 진입은 오늘 기준이다 — 오늘 카드가 보인다', (WidgetTester tester) async {
     await pumpExercise(tester);
     await tester.pumpAndSettle();
 
-    // `오늘` 은 도넛, `이번 주`·`이번 달` 은 막대다. 도넛에만 있는 라벨로 가른다.
-    expect(find.text('오늘 총 운동 시간'), findsOneWidget);
+    // 세 기간이 같은 카드 자리를 쓰므로 카드 종류로 가른다. 소모 칼로리
+    // 머리말은 도넛 안으로 들어갔다 (#1127).
+    expect(find.byType(ExerciseDayLoadCard), findsOneWidget);
   });
 
-  testWidgets('이번 주를 고르면 기존 주간 화면이 그대로 나온다', (WidgetTester tester) async {
+  testWidgets('이번 주를 고르면 주간 화면이 나온다', (WidgetTester tester) async {
     await pumpExercise(tester);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('이번 주'));
     await tester.pumpAndSettle();
-    expect(find.text('오늘 총 운동 시간'), findsNothing);
+    expect(find.byType(ExerciseDayLoadCard), findsNothing);
 
     // 오늘 ↔ 이번 주 왕복이 상태를 망가뜨리지 않는다.
-    await tester.tap(find.text('오늘'));
+    await tester.tap(find.byKey(const Key('exercise-period-tab-0')));
     await tester.pumpAndSettle();
-    expect(find.text('오늘 총 운동 시간'), findsOneWidget);
+    expect(find.byType(ExerciseDayLoadCard), findsOneWidget);
   });
 }

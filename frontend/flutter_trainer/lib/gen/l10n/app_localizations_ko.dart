@@ -105,6 +105,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get actionSave => '저장';
 
   @override
+  String get actionSaved => '저장됨';
+
+  @override
   String get actionCancel => '취소';
 
   @override
@@ -528,9 +531,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthSaveFailed => '고객 정보를 저장하지 못했어요. 다시 시도해 주세요';
 
   @override
-  String get memberHealthTitle => '고객 신체·목표 관리';
-
-  @override
   String get memberHealthSaving => '저장 중…';
 
   @override
@@ -874,7 +874,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultEmptyHistory => '상담 요청 이력이 없어요';
 
   @override
-  String get consultEmptyHint => '고객이 헬스장이나 나를 지정해 상담을 신청하면 여기에 표시돼요';
+  String get consultEmptyHint => '고객이 나를 지정해 상담을 신청하면 여기에 표시돼요';
 
   @override
   String get consultActionFailed => '상담을 처리하지 못했어요';
@@ -885,7 +885,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get consultRejected => '상담 요청을 반려했어요';
+  String get consultRejected => '상담 요청을 거절했어요';
 
   @override
   String get consultTargetTrainer => '트레이너 지정';
@@ -894,10 +894,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
-  String get consultHealthPurpose => '건강관리 목적';
+  String get consultPreferredTime => '희망 일시';
 
   @override
-  String get consultPreferredTime => '희망 일시';
+  String get consultMessage => '문의 내용';
 
   @override
   String get consultReject => '거절';
@@ -906,7 +906,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultApprove => '승인';
 
   @override
-  String get consultRejectTitle => '상담 요청 반려';
+  String get consultRejectTitle => '상담 요청 거절';
 
   @override
   String get consultRejectNotice => '입력한 사유는 고객에게 알림으로 전달돼요.';
@@ -915,13 +915,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectHint => '예) 이번 달은 정원이 찼어요';
 
   @override
-  String get consultRejectAction => '반려하기';
+  String get consultRejectAction => '거절하기';
 
   @override
   String get consultStatusApproved => '담당 고객으로 등록됨';
 
   @override
   String get workoutRecords => '운동 기록';
+
+  @override
+  String get workoutRecordsShowMore => '더보기';
+
+  @override
+  String get workoutRecordsShowLess => '접기';
 
   @override
   String get workoutLoadFailed => '운동 기록을 불러오지 못했어요';
@@ -982,10 +988,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietEmpty => '아직 기록된 식단이 없어요';
 
   @override
-  String get dietTodaySummary => '오늘 영양 요약';
+  String get dietDayEmpty => '기록 없음';
+
+  @override
+  String get dietMacros => '탄단지';
 
   @override
   String get clientNutritionSummary => '영양 요약';
+
+  @override
+  String get dietCalorieIntake => '오늘 섭취 칼로리';
 
   @override
   String get dietAchieveRate => '달성률';
@@ -1006,7 +1018,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietAiAnalysis => 'AI 분석';
+  String get aiAnalysis => 'AI 분석';
+
+  @override
+  String get aiPeriodAnalysis => 'AI 기간 분석';
+
+  @override
+  String get aiAllAnalysis => 'AI 전체 분석';
 
   @override
   String dietAiOverSodium(int over) {
@@ -1017,11 +1035,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
 
   @override
-  String get consultStatusRejected => '반려됨';
+  String get consultStatusRejected => '거절됨';
 
   @override
   String consultStatusRejectedWithNote(String note) {
-    return '반려됨 · $note';
+    return '거절됨 · $note';
   }
 
   @override
@@ -1109,6 +1127,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientPeriodGoal => '목표';
 
   @override
+  String get exBurnTodayTitle => '오늘 소모';
+
+  @override
+  String get exBurnWeekTitle => '이번 주 소모';
+
+  @override
+  String get exBurnMonthTitle => '이번 달 소모';
+
+  @override
+  String get exBurnDayTitle => '소모';
+
+  @override
+  String get exBurnAllTitle => '평균 소모';
+
+  @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return '$month월 $week주차';
+  }
+
+  @override
+  String exStreakCheer(int days) {
+    return '$days일 연속 운동 중이에요!';
+  }
+
+  @override
+  String get exStreakStart => '아직 연속 기록이 없어요';
+
+  @override
+  String get exTypeOther => '기타';
+
+  @override
+  String exSetsValue(int count) {
+    return '$count세트';
+  }
+
+  @override
   String clientPeriodLoggedDays(int days) {
     return '$days일 기록';
   }
@@ -1159,6 +1213,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsCompletionAvg => '운동 이행률';
+
+  @override
+  String get reportsWeeklyCompletion => '주간 이행률';
 
   @override
   String get reportsCompletionByDay => '주간 운동 이행률';
@@ -1272,6 +1329,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
+  String get schedDetailTitle => '상세 스케줄';
+
+  @override
   String get schedDeleteTitle => '일정 삭제';
 
   @override
@@ -1291,12 +1351,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
+  String schedBlockTime(String range, String duration) {
+    return '$range ($duration)';
+  }
 
   @override
-  String schedNewClientTag(String name) {
-    return '$name(신규)';
-  }
+  String get schedEmptyWeek => '이번 주에는 일정이 없어요.';
 
   @override
   String get schedSlots => '예약 슬롯';
@@ -1309,20 +1369,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedEmptyDay => '이 날짜에는 일정이 없어요.\n위의 「새 일정」으로 추가해 보세요.';
-
-  @override
-  String get schedCompleteTitle => '세션 완료 처리';
-
-  @override
-  String schedCompleteBody(String time, String name) {
-    return '$time $name님 세션을 완료로 표시하고 운동기록에 남길게요.';
-  }
-
-  @override
-  String get schedNoteOptional => '트레이너 메모 (선택)';
-
-  @override
-  String get schedCompleteAction => '완료 처리';
 
   @override
   String get schedSaveFailed => '일정 저장에 실패했어요. 다시 시도해 주세요';
@@ -1403,6 +1449,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEditNote => '메모 수정';
 
   @override
+  String get schedAddNote => '메모 추가';
+
+  @override
   String get schedNoNote => '아직 남긴 메모가 없어요';
 
   @override
@@ -1478,9 +1527,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
-
-  @override
   String get slotPastTime => '현재보다 이후 시간만 예약 슬롯으로 만들 수 있어요.';
 
   @override
@@ -1493,23 +1539,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotStartTime => '시작 시간';
 
   @override
-  String get slotCapacity => '정원';
-
-  @override
-  String slotBookedNow(int count) {
-    return '현재 예약 $count명';
-  }
-
-  @override
   String get slotUpdated => '예약 슬롯을 수정했습니다.';
 
   @override
   String get slotCloseTitle => '예약 슬롯 닫기';
 
   @override
-  String slotCloseBody(int count) {
-    return '이미 예약된 $count건의 일정은 유지되고, 신규 예약만 중단됩니다.';
-  }
+  String get slotCloseBody => '이미 잡힌 예약은 유지되고, 신규 예약만 중단됩니다.';
 
   @override
   String get slotClosed => '신규 예약을 닫았습니다.';
@@ -1535,14 +1571,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotEmpty => '이 날짜에 열린 예약 슬롯이 없습니다.';
 
   @override
-  String slotClosedSummary(int booked) {
-    return '예약 닫힘 · 예약 $booked명';
-  }
+  String get slotClosedSummary => '예약 닫힘';
 
   @override
-  String slotOpenSummary(int booked, int remaining) {
-    return '예약 $booked명 · 잔여 $remaining명';
-  }
+  String get slotBookedSummary => '예약됨';
+
+  @override
+  String get slotOpenSummary => '비어 있음';
 
   @override
   String get slotCloseAction => '예약 닫기';
@@ -2043,9 +2078,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiWithinTarget => ' · 적정';
-
-  @override
   String get aiRecentRoutine => '최근 루틴';
 
   @override
@@ -2110,24 +2142,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get goalOther => '기타';
-
-  @override
-  String get purposeWeight => '체중 관리';
-
-  @override
-  String get purposeChronic => '만성질환 관리';
-
-  @override
-  String get purposeRehab => '재활';
-
-  @override
-  String get purposeGeneral => '전반적 건강';
-
-  @override
-  String get purposeNone => '해당 없음';
-
-  @override
-  String get purposeOther => '기타';
 
   @override
   String get slotMorning => '오전';
@@ -2201,16 +2215,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachAskFailed => '질문을 보낼 수 없어요';
 
   @override
-  String get slotCapacityRange => '정원은 1명 이상 100명 이하이어야 합니다.';
-
-  @override
   String get slotFutureOnly => '현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.';
 
   @override
   String get slotNotFound => '예약 슬롯을 찾을 수 없습니다.';
 
   @override
-  String get slotCapacityBelowBooked => '이미 예약된 인원보다 정원을 줄일 수 없습니다.';
+  String get slotTypeLockedByBooking => '이미 예약된 자리의 종류는 바꿀 수 없습니다.';
+
+  @override
+  String get slotSessionType => '종류';
 
   @override
   String get authErrNotTrainer => '트레이너 계정으로 로그인해 주세요.';
@@ -2301,6 +2315,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineAlreadyGone => '이미 삭제된 루틴이에요';
+
+  @override
+  String get workoutPendingTitle => '아직 하지 않은 개인 운동';
+
+  @override
+  String get workoutUndatedTitle => '날짜를 알 수 없는 기록';
+
+  @override
+  String get workoutPendingCancel => '배정 취소';
 
   @override
   String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';
@@ -2492,15 +2515,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientQuickProgram => '프로그램';
 
   @override
+  String get clientQuickReport => '리포트';
+
+  @override
   String get clientHealthGoals => '고객 신체·목표 관리';
 
   @override
-  String get clientTrainerMemo => '메모';
+  String get clientProfileSectionTitle => '신체·목표·메모';
 
   @override
-  String clientTrainerMemoTitle(String name) {
-    return '$name님 메모';
-  }
+  String get clientTrainerMemo => '메모';
 
   @override
   String get clientTrainerMemoHint => '이 고객에 대해 기억할 내용을 적어 주세요';
@@ -3080,10 +3104,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get a11yRemoveCertification => '자격증 지우기';
 
   @override
-  String get a11yPrevDay => '이전 날';
+  String get a11yPrevWeek => '이전 주';
 
   @override
-  String get a11yNextDay => '다음 날';
+  String get a11yNextWeek => '다음 주';
 
   @override
   String get a11ySendMessage => '메시지 보내기';

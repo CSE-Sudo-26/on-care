@@ -12,6 +12,7 @@ import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
+import 'package:oncare_trainer/shared/widgets/period_scroll_chart.dart';
 
 Future<Map<String, String>> _perLocale(
   WidgetTester tester,
@@ -101,7 +102,6 @@ void main() {
         goal: 2000,
         ticks: <double>[0, 1750, 3500],
         todayIndex: 2,
-        replayKey: 'sodium',
         semanticsLabel: '나트륨 주간 추이. 월 1800mg',
         formatTick: metricTrendNumber,
       ),
@@ -135,26 +135,23 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('누적 막대는 막대마다 그날의 유형별 시간을 읽는다', (tester) async {
+  testWidgets('링은 유형별 달성률을 한 덩어리로 읽는다', (tester) async {
     final handle = tester.ensureSemantics();
     await _pump(
       tester,
-      const ActivityBarChart(
-        title: '운동 현황',
-        bars: <ActivityBar>[ActivityBar(30, 20, 0), ActivityBar(0, 0, 0)],
-        dayLabels: <String>['월', '화'],
-        todayIndex: 0,
+      const BurnGoalRings(
+        title: '이번 주 소모',
+        calories: 900,
+        split: ActivitySplit(
+          cardioMinutes: 75,
+          strengthSets: 7,
+          stretchingMinutes: 30,
+        ),
       ),
     );
 
-    expect(
-      _labelled('월'),
-      findsOneWidget,
-      reason: '막대가 시맨틱 트리에 아무것도 남기지 않았습니다.',
-    );
-    final label = _label(tester, '월');
-    expect(label, contains('30'));
-    expect(label, contains('20'));
+    expect(_labelled('유산소 50%'), findsOneWidget);
+    expect(_labelled('근력 33%'), findsOneWidget);
     handle.dispose();
   });
 
@@ -162,11 +159,12 @@ void main() {
     final handle = tester.ensureSemantics();
     await _pump(
       tester,
-      const ActivityBarChart(
+      BurnBarChart(
         title: '운동 현황',
-        bars: <ActivityBar>[ActivityBar(0, 0, 0), ActivityBar(0, 0, 0)],
-        dayLabels: <String>['월', '화'],
-        todayIndex: 0,
+        calories: const <int>[0, 0],
+        splits: const <ActivitySplit>[ActivitySplit(), ActivitySplit()],
+        dates: <DateTime>[DateTime(2026, 8, 17), DateTime(2026, 8, 18)],
+        selection: PeriodChartSelection(),
       ),
     );
 
@@ -178,18 +176,21 @@ void main() {
     final handle = tester.ensureSemantics();
     await _pump(
       tester,
-      const ActivityDonut(
-        title: '오늘 총 운동 시간',
-        segs: <ActivitySeg>[
-          ActivitySeg('유산소', 30, Color(0xFF000000)),
-          ActivitySeg('근력', 20, Color(0xFF111111)),
-        ],
+      const BurnDonut(
+        title: '오늘 소모',
+        calories: 411,
+        goal: 300,
+        split: ActivitySplit(
+          cardioMinutes: 15,
+          strengthSets: 15,
+          stretchingMinutes: 12,
+        ),
       ),
     );
 
-    // 도넛 오른쪽 열 머리글에도 같은 문구가 있다 — 합계까지 함께 읽는 노드를
+    // 도넛 오른쪽 열 머리글에도 같은 문구가 있다 — 숫자까지 함께 읽는 노드를
     // 지목한다.
-    expect(_labelled('오늘 총 운동 시간. 50'), findsOneWidget);
+    expect(_labelled('오늘 소모. 411kcal'), findsOneWidget);
     handle.dispose();
   });
 }

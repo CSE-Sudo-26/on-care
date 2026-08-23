@@ -111,6 +111,7 @@ class FixtureExercise {
     required this.minutes,
     required this.calories,
     required this.done,
+    this.sets,
   });
 
   factory FixtureExercise.fromJson(Map<String, Object?> json) =>
@@ -120,6 +121,7 @@ class FixtureExercise {
         minutes: (json['minutes']! as num).toInt(),
         calories: (json['calories']! as num).toInt(),
         done: json['done']! as bool,
+        sets: (json['sets'] as num?)?.toInt(),
       );
 
   final String name;
@@ -129,6 +131,11 @@ class FixtureExercise {
   final int minutes;
   final int calories;
   final bool done;
+
+  /// 근력 항목의 **세트 수**. 이름에 적힌 `4세트` 를 화면이 다시 세거나 분에서
+  /// 되짚어 계산하면 세 화면이 저마다 다른 수를 말한다 — 값으로 들고 다닌다.
+  /// 유산소·스트레칭은 분이 곧 값이라 null 이다.
+  final int? sets;
 
   /// 트레이너 화면이 쓰는 표기. 이행률과 이 목록이 같은 자리에서 나오므로
   /// "67%" 옆에 "3개 중 3개 완료" 가 놓이는 일이 없다(#754).
@@ -206,6 +213,47 @@ class FixtureDay {
       exercises.where((FixtureExercise e) => e.done).toList();
 }
 
+/// 김민수에게 배정된 개인 운동 하나. (#1170)
+///
+/// 회원 앱 `추천 개인운동`, 트레이너 고객 탭 `아직 하지 않은 개인 운동`,
+/// 트레이너 프로그램 탭이 **모두 이 목록 하나**를 읽는다. 예전에는 세 화면이
+/// 각자 목록을 들고 있어서, 같은 회원의 같은 날에 셋이 서로 다른 운동을 말했다.
+class FixtureRoutine {
+  /// Creates one assigned routine.
+  const FixtureRoutine({
+    required this.id,
+    required this.name,
+    required this.minutes,
+    required this.type,
+    required this.reason,
+    required this.source,
+  });
+
+  factory FixtureRoutine.fromJson(Map<String, Object?> json) => FixtureRoutine(
+    id: json['id']! as String,
+    name: json['name']! as String,
+    minutes: (json['minutes']! as num).toInt(),
+    type: json['type']! as String,
+    reason: json['reason']! as String,
+    source: json['source']! as String,
+  );
+
+  /// 실서버 시드가 쓰는 것과 같은 id. 두 앱이 같은 루틴을 같은 이름으로
+  /// 가리켜야 완료 표시가 어느 화면에서 눌려도 같은 줄에 붙는다.
+  final String id;
+
+  final String name;
+  final int minutes;
+
+  /// `유산소` | `근력` | `유연성` — 화면이 그대로 쓰는 한국어다.
+  final String type;
+
+  final String reason;
+
+  /// `ai` | `trainer` — 누가 정했는지. 회원 화면이 줄마다 출처를 적는다.
+  final String source;
+}
+
 /// 픽스처 파일 한 벌.
 class DemoFixture {
   DemoFixture._({
@@ -213,6 +261,7 @@ class DemoFixture {
     required this.userAppSeedId,
     required this.trainerClientId,
     required this.historyWeeks,
+    required this.routines,
     required Map<String, FixtureFood> foods,
     required Map<String, Map<String, Object?>> meals,
     required List<Map<String, Object?>> recent,
@@ -240,6 +289,11 @@ class DemoFixture {
       userAppSeedId: member['userAppSeedId']! as String,
       trainerClientId: member['trainerClientId']! as String,
       historyWeeks: (json['historyWeeks']! as num).toInt(),
+      routines: <FixtureRoutine>[
+        for (final Object? routine
+            in (json['routines'] as List<Object?>?) ?? const <Object?>[])
+          FixtureRoutine.fromJson(routine! as Map<String, Object?>),
+      ],
       foods: <String, FixtureFood>{
         for (final MapEntry<String, Object?> e
             in (json['foods']! as Map<String, Object?>).entries)
@@ -271,6 +325,9 @@ class DemoFixture {
 
   /// 픽스처가 덮는 주 수(이번 주 포함).
   final int historyWeeks;
+
+  /// 배정된 개인 운동. 세 화면이 같은 목록을 읽는다(#1170).
+  final List<FixtureRoutine> routines;
 
   final Map<String, FixtureFood> _foods;
   final Map<String, Map<String, Object?>> _meals;

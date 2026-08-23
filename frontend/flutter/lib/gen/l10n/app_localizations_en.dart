@@ -95,9 +95,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealChickenSalad => 'Chicken breast salad';
 
   @override
-  String get homeAiAnalysisPill => '✦ AI analysis';
-
-  @override
   String get homeDetails => 'Details';
 
   @override
@@ -125,32 +122,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load this week\'s workout history.';
 
   @override
-  String get homeMetricOver => 'Over';
-
-  @override
-  String get homeMetricNormal => 'On track';
-
-  @override
-  String dietAmountOver(String amount) {
-    return '$amount over the goal';
-  }
-
-  @override
-  String dietAmountRemaining(String amount) {
-    return '$amount remaining to the goal';
-  }
-
-  @override
-  String get homeExerciseActiveTime => 'Active time';
-
-  @override
   String get homeExerciseBurned => 'Calories';
 
   @override
-  String get homeExerciseDays => 'Workout days';
+  String get homeMealReasonSodium => 'Great for sodium control';
 
   @override
-  String get homeMealReasonSodium => 'Great for sodium control';
+  String get homeMealSourceTrainer => 'Trainer pick';
+
+  @override
+  String get homeMealSourceAi => 'AI pick';
 
   @override
   String get homeMealTagLowSodium => 'Low sodium';
@@ -162,7 +143,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonGlucose => 'Helps steady blood sugar';
 
   @override
-  String get homeMealTagLowGi => 'Low GI';
+  String get homeMealTagLowSugar => 'Low sugar';
 
   @override
   String get homeMealSalmon => 'Grilled salmon + greens';
@@ -189,7 +170,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealReasonFiber => 'Rich in dietary fiber';
 
   @override
-  String get homeMealTagHighFiber => 'High fiber';
+  String get homeMealTagLowFat => 'Low fat';
 
   @override
   String homeRecBasisSodium(int days, String sodium) {
@@ -200,7 +181,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecBasisOverLimit => 'over the daily limit';
 
   @override
-  String get homeRecMealsTitle => 'This week\'s AI meal picks';
+  String get homeRecMealsTitle => 'Recommended meals';
 
   @override
   String get homeViewAll => 'View all';
@@ -220,7 +201,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitMinutes => 'min';
 
   @override
-  String get unitDays => 'days';
+  String get unitSets => 'sets';
 
   @override
   String unitKcalValue(int count) {
@@ -245,11 +226,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietToday => 'Today';
-
-  @override
-  String dietWeekLabel(int month, int week) {
-    return 'Month $month, Week $week';
-  }
 
   @override
   String get dietWeekdayMon => 'Mon';
@@ -307,20 +283,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietPeriodAverage => 'Daily average';
-
-  @override
-  String get dietPeriodTotal => 'Period total';
-
-  @override
-  String dietPeriodLoggedDays(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days days logged',
-      one: '1 day logged',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get dietPeriodEmpty => 'No meals were logged in this period.';
@@ -626,6 +588,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exActivityTitle => 'Activity';
 
   @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return 'Week $week, $month/';
+  }
+
+  @override
+  String get exBurnTodayTitle => 'Burned today';
+
+  @override
+  String get exBurnWeekTitle => 'Burned this week';
+
+  @override
+  String get exBurnAllTitle => 'Average burned';
+
+  @override
+  String exGoalValue(String value) {
+    return 'Goal $value';
+  }
+
+  @override
+  String get exLoadEmpty => 'No records yet.';
+
+  @override
   String get exThisWeek => 'This week';
 
   @override
@@ -826,7 +810,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymSearchHint => 'Search by gym or area';
 
   @override
-  String get exNearbyGyms => 'Nearby Gyms · O2O';
+  String get exNearbyGyms => 'Nearby gyms';
 
   @override
   String get exAiAnalysis => '✦ AI analysis';
@@ -869,11 +853,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTrainerDedicated => 'Personal trainer';
 
   @override
-  String get exAiSlotTitle => '✦ AI recommended times';
-
-  @override
   String exTrainerAvailability(String trainer) {
-    return '$trainer\'s openings';
+    return '$trainer\'s open booking times';
   }
 
   @override
@@ -882,12 +863,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String exSlotRemaining(int count) {
-    return '$count left';
-  }
+  String get exSlotFull => 'Fully booked';
 
   @override
-  String get exSlotFull => 'Fully booked';
+  String get exSlotTypePersonalTraining => '1:1 PT';
+
+  @override
+  String get exSlotTypeConsultation => 'Consultation';
 
   @override
   String get exSlotsEmpty => 'No times available';
@@ -1029,6 +1011,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get myGymDetailTooltip => 'Gym details';
+
+  @override
+  String get myTrainerDetailTooltip => 'Trainer details';
+
+  @override
   String get myGymDisconnectTooltip => 'Disconnect gym';
 
   @override
@@ -1129,17 +1117,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachCardDietBody =>
-      'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.';
+      'Breakfast was nicely balanced. The jjamppong you had for lunch can be heavy on sodium and sugar, so drink plenty of water today. For the rest of the day, pair vegetables with protein to keep things balanced.';
 
   @override
   String get coachCardExerciseTag => 'Exercise';
 
   @override
-  String get coachCardExerciseTitle => 'Upper-body PT session 12 done';
+  String get coachCardExerciseTitle => 'PT session 12 done';
 
   @override
   String get coachCardExerciseBody =>
-      'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.';
+      'Nice work finishing PT session 12 — keeping up a steady routine is what counts. As your coach advised, take your time with the rotator-cuff shoulder stretches and wind down with light cardio. Afterwards, rest and rehydrate rather than pushing on.';
 
   @override
   String get coachCardWaterTag => 'Hydration';
@@ -1248,6 +1236,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aicQuickRepliesLabel => 'Try asking';
 
   @override
+  String get aicGeneratingReply => 'Writing your answer';
+
+  @override
   String get aicQuickReply1 => 'Recommend a dinner menu for today';
 
   @override
@@ -1294,6 +1285,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Once this trainer accepts your request, they\'ll be able to see your diet log, exercise log, and body info and health goals.';
 
   @override
+  String get exConsultDataSharingAgree =>
+      'I have read this and agree to share my meal and workout records and body information with this trainer';
+
+  @override
+  String get exConsultDataSharingRequired =>
+      'Please agree to sharing before requesting a consultation';
+
+  @override
+  String get coachInviteConsentTitle => 'Before you connect';
+
+  @override
+  String coachInviteConsentBody(String name) {
+    return 'Once $name becomes your trainer, they can see your meal records, workout records, body information and health goals. Disconnecting also revokes that access.';
+  }
+
+  @override
+  String get coachInviteConsentAgree => 'Agree and connect';
+
+  @override
   String get exExerciseGoal => 'Exercise Goal';
 
   @override
@@ -1313,28 +1323,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exOptionOther => 'Other';
-
-  @override
-  String get exHealthPurpose => 'Health Management Purpose';
-
-  @override
-  String get exPurposeWeight => 'Weight Management';
-
-  @override
-  String get exPurposeChronic => 'Chronic Condition Management';
-
-  @override
-  String get exPurposeRehab => 'Pain or Rehabilitation';
-
-  @override
-  String get exPurposeGeneral => 'General Health Management';
-
-  @override
-  String get exPurposeNone => 'None';
-
-  @override
-  String get exHealthPurposeOtherHint =>
-      'For example, back rehabilitation, knee pain, or cholesterol management';
 
   @override
   String get exOtherGoalHint =>
@@ -1375,12 +1363,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGoalRequired => 'Please select an exercise goal.';
 
   @override
-  String get exHealthPurposeRequired =>
-      'Please select a health management purpose.';
-
-  @override
-  String get exHealthPurposeInputRequired =>
-      'Please enter a health management purpose.';
+  String get exOtherGoalDetailRequired =>
+      'Please describe your specific exercise goal in the message.';
 
   @override
   String get exDateRequired => 'Please select a preferred date.';
@@ -1741,7 +1725,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalsDietSection => 'Daily diet goals';
 
   @override
-  String get myGoalsExerciseSection => 'Weekly exercise goals';
+  String get myGoalsExerciseSection => 'Exercise goals';
+
+  @override
+  String get myGoalBurnDaily => 'Daily calories burned (kcal)';
+
+  @override
+  String get myGoalCardioWeekly => 'Weekly cardio (min)';
+
+  @override
+  String get myGoalStrengthWeekly => 'Weekly strength (sets)';
+
+  @override
+  String get myGoalFlexibilityWeekly => 'Weekly stretching (min)';
+
+  @override
+  String get myGoalExerciseSuggestionNote =>
+      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week';
+
+  @override
+  String get myGoalExerciseApplySuggestion => 'Use suggested goals';
 
   @override
   String get myGoalCalories => 'Daily calorie limit (kcal)';
@@ -1811,17 +1814,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachAssignedTrainer => 'My trainer';
 
   @override
-  String get coachAiCoaching => 'AI coaching';
-
-  @override
   String get coachPointsTitle => 'This week\'s coaching points';
 
   @override
   String get coachRoutineTitle => 'Recommended solo workouts';
-
-  @override
-  String get coachRoutineSubtitle =>
-      'Workouts to do on your own between PT sessions';
 
   @override
   String get coachRoutineByTrainer => 'Recommended by your trainer';
@@ -1849,6 +1845,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachRoutineDone => 'Done';
+
+  @override
+  String get coachRoutineUndo => 'Undo';
+
+  @override
+  String coachRoutineUndoConfirm(String name) {
+    return 'Undo completing \'$name\'? It will be removed from your workout log too.';
+  }
+
+  @override
+  String get coachRoutineUndone => 'Completion undone';
+
+  @override
+  String get coachRoutineUndoFailed => 'Could not undo the completion.';
 
   @override
   String get coachRoutineCancel => 'Cancel this workout';

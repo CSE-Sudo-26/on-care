@@ -77,6 +77,7 @@ class FigmaColors {
   // 사용자앱 화면은 대부분 [FigmaColors] 를 읽으므로, 두 앱 공통 시맨틱 토큰을
   // 여기서도 같은 이름으로 꺼내 쓴다. 값의 출처는 [AppColors] 한 곳이다.
   static const Color statusNormal = AppColors.statusNormal;
+  static const Color statusWithinGoal = AppColors.statusWithinGoal;
   static const Color statusCaution = AppColors.statusCaution;
   static const Color statusCautionFill = AppColors.statusCautionFill;
   static const Color statusDanger = AppColors.statusDanger;
@@ -233,7 +234,16 @@ class HeartLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(Icons.favorite, size: size, color: color);
+    // 서비스 로고를 그대로 쓴다 — 하트 아이콘은 자리를 지키던 임시값이라,
+    // 로그인 화면과 홈 헤더가 서로 다른 그림으로 같은 서비스를 가리켰다. (#1055)
+    return Image.asset(
+      'assets/images/oncare-logo.png',
+      width: size,
+      height: size,
+      // 자산이 빠져도 헤더는 그려야 한다.
+      errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+          Icon(Icons.favorite, size: size, color: color),
+    );
   }
 }
 
@@ -245,7 +255,10 @@ class FigmaCircleButton extends StatelessWidget {
     required this.icon,
     this.onTap,
     this.showDot = false,
-    this.dotColor = FigmaColors.orange,
+    // 읽지 않은 알림은 `주의` 가 아니라 새 소식이다 — 같은 화면의 주황(주의)과
+    // 겹치지 않도록 빨강으로 둔다. 옆의 채팅 버튼이 이미 쓰던 그 빨강이라,
+    // 헤더의 두 점이 같은 색으로 같은 뜻을 말한다. (#1060)
+    this.dotColor = FigmaColors.redDot,
     this.size = 36,
     this.iconSize = 18,
     this.enabled = true,
@@ -383,13 +396,15 @@ class FigmaTabHeader extends StatelessWidget {
             onTap: onBell,
           ),
           const SizedBox(width: 10),
-          FigmaCircleButton(
-            icon: Icons.calendar_today_outlined,
-            tooltip: l.a11yOpenCalendar,
-            iconSize: 16,
-            onTap: onCalendar,
-          ),
-          const SizedBox(width: 10),
+          // 캘린더는 지금 쓰지 않는다. 되살릴 수 있어 지우지 않고 남겨 둔다.
+          // (#1055)
+          // FigmaCircleButton(
+          //   icon: Icons.calendar_today_outlined,
+          //   tooltip: l.a11yOpenCalendar,
+          //   iconSize: 16,
+          //   onTap: onCalendar,
+          // ),
+          // const SizedBox(width: 10),
           trailingAction,
         ],
       ),

@@ -196,15 +196,12 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    // 운동 목표 하나만 보인다 — 관리 목적은 회원이 고른 운동
+                    // 목표에서 자동으로 채워지는 값이라 따로 보여줄 이유가
+                    // 없다(#1112). "기타"의 상세는 문의 내용에 있다.
                     _Field(
                       label: l.consultExerciseGoal,
                       value: label(exerciseGoalLabels(l), request.goalCode),
-                    ),
-                    _Field(
-                      label: l.consultHealthPurpose,
-                      value: request.purposeDetail == null
-                          ? label(healthPurposeLabels(l), request.purposeCode)
-                          : '${label(healthPurposeLabels(l), request.purposeCode)} · ${request.purposeDetail}',
                     ),
                     _Field(
                       label: l.consultPreferredTime,
@@ -219,7 +216,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
           ),
           if (request.message != null) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
-            _Quote(text: request.message!),
+            _Quote(label: l.consultMessage, text: request.message!),
           ],
           if (!request.isPending) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
@@ -395,28 +392,47 @@ class _Field extends StatelessWidget {
 }
 
 /// The member's own note, set apart from the structured fields.
+///
+/// [label] 은 위의 다른 항목(운동 목표·관리 목적·희망 일시)과 같은 자리다 —
+/// 라벨 없이 인용구만 있으면 이 글이 회원이 직접 쓴 문의 내용이라는 것이
+/// 위 항목들과의 시각적 구분(색상 배경)에만 기대게 된다(#1092).
 class _Quote extends StatelessWidget {
-  const _Quote({required this.text});
+  const _Quote({required this.label, required this.text});
 
+  final String label;
   final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: const BoxDecoration(
-        color: AppColors.accentSurface,
-        borderRadius: BorderRadius.all(AppRadius.card),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 14,
-          height: 1.5,
-          color: AppColors.foreground,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.subtleForeground,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: const BoxDecoration(
+            color: AppColors.accentSurface,
+            borderRadius: BorderRadius.all(AppRadius.card),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: AppColors.foreground,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

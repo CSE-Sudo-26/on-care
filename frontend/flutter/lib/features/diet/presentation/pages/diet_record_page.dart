@@ -5,6 +5,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -13,7 +14,8 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
-import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart';
+import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
+import 'package:oncare/features/diet/presentation/widgets/week_strip_label.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -96,6 +98,9 @@ DietMeal _mealFromEntry(DietEntry e) {
     tags: const <DietTag>[],
     sodium: sodium,
     sugar: sugar,
+    carbsG: e.carbsG,
+    proteinG: e.proteinG,
+    fatG: e.fatG,
   );
 }
 
@@ -138,12 +143,23 @@ void resetDietTransientUiState(WidgetRef ref) {
 /// 30일이 보이고 나머지는 옆으로 밀어 본다. (#1018)
 const int kDietAllPeriodDays = 84;
 
+/// 기간 토글 → 서버가 아는 기간 이름. 화면과 서버가 같은 말을 쓴다. (#1017)
+String _advicePeriod(DietPeriodTab tab) => switch (tab) {
+  DietPeriodTab.day => 'today',
+  DietPeriodTab.week => 'week',
+  DietPeriodTab.month => 'all',
+};
+
 DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
   if (tab == DietPeriodTab.month) {
     // `이번 달` 이 아니라 `전체` 다 — 달이 바뀌었다고 앞의 기록이 사라지면
     // 추세를 볼 수 없다.
     return (
-      from: DateTime(today.year, today.month, today.day - kDietAllPeriodDays + 1),
+      from: DateTime(
+        today.year,
+        today.month,
+        today.day - kDietAllPeriodDays + 1,
+      ),
       to: DateTime(today.year, today.month, today.day),
     );
   }
@@ -173,12 +189,6 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     _selected = _today;
   }
 
-  int _weekOfMonth(DateTime d) {
-    final DateTime first = DateTime(d.year, d.month);
-    final int offset = first.weekday - 1; // days from Monday
-    return ((d.day + offset - 1) / 7).floor() + 1;
-  }
-
   DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
       dietRangeForTab(tab, today);
 
@@ -195,12 +205,16 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     final AppLocalizations l = AppLocalizations.of(context);
     final DietPeriodTab selectedPeriod = ref.watch(dietPeriodTabProvider);
     final DateTime today = _today;
-    // Window is always centred on today (+ whole-week shifts): 3 days before,
-    // today in the middle, 3 days after.
+    // 스트립은 늘 월요일에서 시작해 일요일로 끝난다 (#1059). 오늘을 가운데
+    // 두면 한 줄에 지난주 끝과 이번 주 앞이 섞여, `이번 주` 그래프가 세는
+    // 주와 달력이 보여 주는 주가 서로 어긋났다.
     final DateTime center = today.add(Duration(days: _weekShift * 7));
+    final DateTime monday = center.subtract(
+      Duration(days: center.weekday - DateTime.monday),
+    );
     final List<DateTime> days = List<DateTime>.generate(
       7,
-      (int i) => center.add(Duration(days: i - 3)),
+      (int i) => monday.add(Duration(days: i)),
     );
     final bool atToday = _weekShift == 0 && _selected == today;
     // 날짜를 옮기면 기간 토글이 사라진다 — 운동 탭이 오늘이 아닌 날에
@@ -241,9 +255,11 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: l.dietWeekLabel(
-                    center.month,
-                    _weekOfMonth(center),
+                  weekLabel: weekStripLabel(
+                    context,
+                    l,
+                    selected: _selected,
+                    today: today,
                   ),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
@@ -299,7 +315,21 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                       : Column(
                           children: <Widget>[
                             const SizedBox(height: 20),
-                            _AiFeedback(message: day.aiCoachMessage),
+                            // 기간 토글을 따라 조언도 바뀐다 (#1017). 지난
+                            // 날짜를 고른 동안에는 그날의 조언이다 — 기간
+                            // 토글이 숨겨져 있어 화면이 하루를 말하고 있다.
+                            _AiFeedback(
+                              message: atToday
+                                  ? ref
+                                            .watch(
+                                              dietAdviceProvider(
+                                                _advicePeriod(selectedPeriod),
+                                              ),
+                                            )
+                                            .valueOrNull ??
+                                        day.aiCoachMessage
+                                  : day.aiCoachMessage,
+                            ),
                             const SizedBox(height: 20),
                             _MealLog(
                               entries: day.entries,
@@ -364,9 +394,16 @@ class _PeriodToggle extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
+                    // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
+                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
+                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
+                    // (#1058)
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3
+                          ? 12
+                          : 18,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: active == tab
@@ -441,15 +478,9 @@ class _NutritionSectionHeader extends StatelessWidget {
           Flexible(
             child: Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text(
-                l.dietNutritionSummary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
+              child: SectionTitle(
+                icon: Icons.restaurant_outlined,
+                label: l.dietNutritionSummary,
               ),
             ),
           ),
@@ -799,25 +830,19 @@ class NutritionSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (showHeader) ...<Widget>[
-            Text(
-              l.dietNutritionSummary,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
+            SectionTitle(
+              icon: Icons.restaurant_outlined,
+              label: l.dietNutritionSummary,
             ),
             const SizedBox(height: 10),
           ],
+          // 카드는 하나다 (#1120). 나트륨·당류를 따로 뗀 카드에 두었더니
+          // 같은 하루를 세 장이 나눠 말했고, 탄단지 자리가 그만큼 비었다.
           _NutritionSummaryCard(
             calories: items[0],
-            calorieDifference: _formatInt((kcal - calorieGoal).abs()),
             carbs: items[5],
             protein: items[3],
             fat: items[4],
-          ),
-          const SizedBox(height: 12),
-          _NutritionStatusCards(
             sodium: items[1],
             sodiumDifference: _formatInt((sodium - sodiumGoal).abs()),
             sugar: items[2],
@@ -867,17 +892,25 @@ class _NutritionSummaryItem {
 class _NutritionSummaryCard extends StatelessWidget {
   const _NutritionSummaryCard({
     required this.calories,
-    required this.calorieDifference,
     required this.carbs,
     required this.protein,
     required this.fat,
+    required this.sodium,
+    required this.sodiumDifference,
+    required this.sugar,
+    required this.sugarDifference,
   });
 
   final _NutritionSummaryItem calories;
-  final String calorieDifference;
   final _NutritionSummaryItem carbs;
   final _NutritionSummaryItem protein;
   final _NutritionSummaryItem fat;
+  final _NutritionSummaryItem sodium;
+
+  /// 목표를 넘긴 만큼(절대값). 라벨 오른쪽에 `+1,429mg` 로 붙는다.
+  final String sodiumDifference;
+  final _NutritionSummaryItem sugar;
+  final String sugarDifference;
 
   @override
   Widget build(BuildContext context) {
@@ -886,26 +919,44 @@ class _NutritionSummaryCard extends StatelessWidget {
     // 카드의 칼로리와 아래의 나트륨·당류는 이미 이렇게 갈린다 — 탄단지 바만
     // 예외였다(#890). 세 항목이 각자 판단하므로 지방만 넘긴 날은 지방 바만
     // 빨개진다.
-    // 정상은 초록이다 (#1019). 바로 아래 나트륨·당류 카드가 이미 초록으로
-    // 말하는데 여기만 파랑이면, 파랑이 "정상"인지 "다른 종류의 지표"인지 알 수
-    // 없다. 위아래로 붙어 있는 카드가 같은 상태를 다른 색으로 칠할 이유가 없다.
+    // 초과가 아닌 쪽은 브랜드 파랑이다 (#1070). 예전에는 초록이었는데, 초록은
+    // "정상"으로 읽혀서 목표에 한참 못 미친 날까지 괜찮다고 말했다. 아래
+    // 나트륨·당류 카드도 같은 규칙을 쓴다.
     Color macroColor(_NutritionSummaryItem item) => item.isOverGoal
         ? FigmaColors.statusOver
-        : FigmaColors.statusNormal.withValues(alpha: 0.65);
-    final List<_MacroProgressData> macros = <_MacroProgressData>[
-      _MacroProgressData(item: carbs, color: macroColor(carbs)),
-      _MacroProgressData(item: protein, color: macroColor(protein)),
-      _MacroProgressData(item: fat, color: macroColor(fat)),
+        : FigmaColors.statusWithinGoal.withValues(alpha: 0.65);
+    final List<_NutritionSummaryItem> macros = <_NutritionSummaryItem>[
+      carbs,
+      protein,
+      fat,
+    ];
+    // 아래 줄은 이제 나트륨·당류가 쓴다 (#1120) — 탄단지가 있던 자리다.
+    // 나트륨·당류는 옅게 두지 않는다 — 탄단지와 달리 그 자체가 경고 지표라
+    // 목표 안쪽일 때도 색이 또렷해야 한다(예전 상태 카드와 같은 값).
+    Color mineralColor(_NutritionSummaryItem item) =>
+        item.isOverGoal ? FigmaColors.statusOver : FigmaColors.statusWithinGoal;
+    final List<_MacroProgressData> minerals = <_MacroProgressData>[
+      _MacroProgressData(
+        item: sodium,
+        color: mineralColor(sodium),
+        difference: sodiumDifference,
+      ),
+      _MacroProgressData(
+        item: sugar,
+        color: mineralColor(sugar),
+        difference: sugarDifference,
+      ),
     ];
     final AppLocalizations l = AppLocalizations.of(context);
     final Color calorieColor = calories.isOverGoal
         ? FigmaColors.statusOver
-        : FigmaColors.statusNormal;
-    final String calorieStatus = calories.isOverGoal
-        ? l.dietAmountOver('$calorieDifference ${calories.unit}')
-        : l.dietAmountRemaining('$calorieDifference ${calories.unit}');
+        : FigmaColors.statusWithinGoal;
     return Container(
       key: const Key('nutrition-summary-card'),
+      // 오늘·이번 주·전체가 같은 크기여야 토글을 눌러도 화면이 튀지 않는다
+      // (#1124). 글자 배율이 커지면 셋 다 함께 커진다 — 최소 높이라 넘치지
+      // 않는다.
+      constraints: const BoxConstraints(minHeight: kDietSummaryCardHeight),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -958,17 +1009,15 @@ class _NutritionSummaryCard extends StatelessWidget {
                         maxLines: 1,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      calorieStatus,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: calories.isOverGoal
-                            ? FigmaColors.dangerRed
-                            : AppColors.foreground,
-                      ),
-                    ),
+                    // 탄단지는 칼로리 숫자와 도넛 사이에 놓는다 (#1120) —
+                    // 칼로리가 무엇으로 채워졌는지가 그 숫자 바로 아래에서
+                    // 읽혀야 한다. 바는 두지 않는다. 옆의 도넛이 이미 달성률을
+                    // 그리고 있어, 좁은 왼쪽 칸에 바까지 넣으면 읽을 것만 는다.
+                    const SizedBox(height: 10),
+                    for (final _NutritionSummaryItem m in macros) ...<Widget>[
+                      _MacroTextLine(item: m, color: macroColor(m)),
+                      if (m != macros.last) const SizedBox(height: 4),
+                    ],
                   ],
                 ),
               ),
@@ -984,9 +1033,9 @@ class _NutritionSummaryCard extends StatelessWidget {
               if (constraints.maxWidth < 280) {
                 return Column(
                   children: <Widget>[
-                    for (final _MacroProgressData macro in macros) ...<Widget>[
-                      _MacroProgressItem(macro: macro),
-                      if (macro != macros.last) const SizedBox(height: 12),
+                    for (final _MacroProgressData m in minerals) ...<Widget>[
+                      _MacroProgressItem(macro: m),
+                      if (m != minerals.last) const SizedBox(height: 12),
                     ],
                   ],
                 );
@@ -996,11 +1045,11 @@ class _NutritionSummaryCard extends StatelessWidget {
                 children: <Widget>[
                   for (
                     int index = 0;
-                    index < macros.length;
+                    index < minerals.length;
                     index++
                   ) ...<Widget>[
-                    Expanded(child: _MacroProgressItem(macro: macros[index])),
-                    if (index < macros.length - 1) const SizedBox(width: 10),
+                    Expanded(child: _MacroProgressItem(macro: minerals[index])),
+                    if (index < minerals.length - 1) const SizedBox(width: 10),
                   ],
                 ],
               );
@@ -1075,10 +1124,81 @@ class _CalorieCircularProgress extends StatelessWidget {
 }
 
 class _MacroProgressData {
-  const _MacroProgressData({required this.item, required this.color});
+  const _MacroProgressData({
+    required this.item,
+    required this.color,
+    this.difference,
+  });
 
   final _NutritionSummaryItem item;
   final Color color;
+
+  /// 목표를 넘긴 만큼. 있으면 라벨 오른쪽에 `+1,429mg` 로 붙는다 (#1070).
+  final String? difference;
+}
+
+/// 카드 머리의 탄단지 한 줄 — `탄수화물 204 /275g`. 바 없이 글자만 쓴다.
+class _MacroTextLine extends StatelessWidget {
+  const _MacroTextLine({required this.item, required this.color});
+
+  final _NutritionSummaryItem item;
+  final Color color;
+
+  /// 라벨이 차지하는 폭. `탄수화물`(네 글자)이 들어갈 만큼만 잡는다 — 값이
+  /// 라벨 바로 옆에서 시작하면서도 세 줄의 숫자가 세로로 가지런하다 (#1149).
+  /// 글자 배율을 따라가야 큰 글씨에서 라벨이 잘리지 않는다.
+  static const double _labelWidth = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      key: Key('nutrition-macro-${item.label}'),
+      children: <Widget>[
+        SizedBox(
+          width: MediaQuery.textScalerOf(context).scale(_labelWidth),
+          child: Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        // 값은 라벨 바로 옆에서 시작한다. 글자 배율이 커지면 값부터 줄인다 —
+        // 이 줄이 넘치면 카드 오른쪽의 도넛을 밀어낸다.
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
+                  TextSpan(
+                    text: item.value,
+                    // 초과면 빨강 — 바가 없으니 색이 그 말을 대신한다 (#890).
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / ${item.goal}${item.unit}',
+                    style: kGoalSuffixStyle,
+                  ),
+                ],
+              ),
+              maxLines: 1,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _MacroProgressItem extends StatelessWidget {
@@ -1092,8 +1212,22 @@ class _MacroProgressItem extends StatelessWidget {
       key: Key('nutrition-macro-${macro.item.label}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          macro.item.label,
+        Text.rich(
+          TextSpan(
+            children: <InlineSpan>[
+              TextSpan(text: macro.item.label),
+              // 초과분은 라벨 오른쪽에 한 단계 작은 빨간 글씨로 (#1070).
+              if (macro.item.isOverGoal && macro.difference != null)
+                TextSpan(
+                  text: ' +${macro.difference}${macro.item.unit}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.dangerRed,
+                  ),
+                ),
+            ],
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -1181,244 +1315,6 @@ class _NutritionProgressBar extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _NutritionStatusCards extends StatelessWidget {
-  const _NutritionStatusCards({
-    required this.sodium,
-    required this.sodiumDifference,
-    required this.sugar,
-    required this.sugarDifference,
-  });
-
-  final _NutritionSummaryItem sodium;
-  final String sodiumDifference;
-  final _NutritionSummaryItem sugar;
-  final String sugarDifference;
-
-  @override
-  Widget build(BuildContext context) {
-    // 나트륨·당류는 같은 카드에 나란히 놓인 같은 성격의 지표다. "정상"을 서로
-    // 다른 색으로 말하면 안 돼서 규칙을 하나로 맞춘다 — 정상 초록, 초과 빨강.
-    final Widget sodiumCard = _NutritionStatusCard(
-      key: const Key('nutrition-sodium-status'),
-      item: sodium,
-      difference: sodiumDifference,
-      progressColor: sodium.isOverGoal
-          ? FigmaColors.statusOver
-          : FigmaColors.statusNormal,
-    );
-    final Widget sugarCard = _NutritionStatusCard(
-      key: const Key('nutrition-sugar-status'),
-      item: sugar,
-      difference: sugarDifference,
-      progressColor: sugar.isOverGoal
-          ? FigmaColors.statusOver
-          : FigmaColors.statusNormal,
-    );
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        if (constraints.maxWidth < 310) {
-          return Column(
-            children: <Widget>[
-              sodiumCard,
-              const SizedBox(height: 10),
-              sugarCard,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(child: sodiumCard),
-            const SizedBox(width: 10),
-            Expanded(child: sugarCard),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _NutritionStatusCard extends StatelessWidget {
-  const _NutritionStatusCard({
-    required this.item,
-    required this.difference,
-    required this.progressColor,
-    super.key,
-  });
-
-  final _NutritionSummaryItem item;
-  final String difference;
-  final Color progressColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final Color statusColor = item.isOverGoal
-        ? FigmaColors.statusOver
-        : FigmaColors.statusNormal;
-    final String differenceText = item.isOverGoal
-        ? l.dietAmountOver('$difference${item.unit}')
-        : l.dietAmountRemaining('$difference${item.unit}');
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: item.isOverGoal
-              ? FigmaColors.statusOver.withValues(alpha: 0.32)
-              : FigmaColors.statusNormal.withValues(alpha: 0.18),
-        ),
-        boxShadow: kCardShadow,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _VerticalNutritionProgressBar(
-            key: Key('nutrition-status-vertical-progress-${item.label}'),
-            progress: item.gaugeValue,
-            color: progressColor,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Icon(
-                      item.isOverGoal
-                          ? Icons.warning_amber_rounded
-                          : Icons.check_circle_outline_rounded,
-                      size: 16,
-                      color: statusColor,
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        item.label,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.foreground,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(
-                          text: item.value,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: item.isOverGoal
-                                ? FigmaColors.dangerRed
-                                : FigmaColors.ink,
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' / ${item.goal}${item.unit}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    item.isOverGoal
-                        ? '${l.homeGoal} ${l.homeMetricOver}'
-                        : l.homeMetricNormal,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  differenceText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: item.isOverGoal
-                        ? FigmaColors.dangerRed
-                        : AppColors.foreground,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VerticalNutritionProgressBar extends StatelessWidget {
-  const _VerticalNutritionProgressBar({
-    required this.progress,
-    required this.color,
-    super.key,
-  });
-
-  final double progress;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    const double barWidth = 8;
-    const double barHeight = 104;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        width: barWidth,
-        height: barHeight,
-        child: Stack(
-          children: <Widget>[
-            const Positioned.fill(child: ColoredBox(color: FigmaColors.track)),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: ChartReveal(
-                duration: AppMotion.meterFill,
-                replayKey: progress,
-                builder: (BuildContext context, double t) => SizedBox(
-                  width: barWidth,
-                  height: barHeight * progress.clamp(0.0, 1.0) * t,
-                  child: ColoredBox(color: color),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -1752,26 +1648,48 @@ class _MealCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: <Widget>[
+                    // 같은 탭의 기간 그래프·나트륨 카드와 같은 색을 쓴다.
+                    // 한 탭 안에서 같은 뜻이 두 색을 쓰지 않게 한다. (#1053,
+                    // 색은 #1070 에서 초록 → 브랜드 파랑)
                     _TotalPill(
                       label: l.dietCalories,
                       value: '${_formatInt(meal.total)} ${l.unitKcal}',
-                      color: FigmaColors.primary,
+                      color: FigmaColors.statusWithinGoal,
                     ),
                     _TotalPill(
                       label: l.dietSodium,
                       value: '${_formatInt(meal.sodium)} ${l.dietUnitMg}',
-                      // 좋으면 파란계열, 나트륨이 과다하면 빨간계열.
+                      // 나트륨이 과다하면 빨강, 그 외는 브랜드 파랑.
                       color: meal.sodium > 1000
                           ? FigmaColors.dangerRed
-                          : FigmaColors.primary,
+                          : FigmaColors.statusWithinGoal,
                     ),
                     _TotalPill(
                       label: l.dietSugar,
                       value: '${_formatG(meal.sugar)} ${l.dietUnitG}',
-                      color: FigmaColors.primary,
+                      color: FigmaColors.statusWithinGoal,
                     ),
                   ],
                 ),
+                // 탄단지는 알약 아래 한 줄로 작게 (#1170). 하루 합계는 위
+                // 영양 요약 카드가 말하지만, 어느 끼니가 그 합계를 만들었는지는
+                // 끼니 단위로 봐야 알 수 있다 — 트레이너 화면의 같은 카드와
+                // 짝이라 두 화면이 같은 수준으로 읽힌다.
+                if (meal.carbsG > 0 || meal.proteinG > 0 || meal.fatG > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${l.homeMacroCarbs} ${_formatG(meal.carbsG)}g · '
+                    '${l.homeMacroProtein} ${_formatG(meal.proteinG)}g · '
+                    '${l.homeMacroFat} ${_formatG(meal.fatG)}g',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textBody,
+                    ),
+                  ),
+                ],
                 if (meal.aiComment.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 10),
                   _MealAiNote(text: meal.aiComment),
@@ -1788,53 +1706,20 @@ class _MealCard extends StatelessWidget {
 /// Meal thumbnail: the photo the member uploaded, then the bundled demo
 /// asset, then the meal-type emoji chip.
 ///
-/// 실서버에서는 회원이 올린 사진(`photoUrl`)이 온다. 번들 자산은 실서버에 붙으면
-/// 늘 비어 있던 데모 값이라 뒤로 물린다. (#699)
+/// 고르는 순서는 [MealPhotoView] 가 안다 — 수정 화면 상단의 큰 사진과 같은
+/// 규칙을 쓴다. (#1053)
 class _MealThumb extends StatelessWidget {
   const _MealThumb({required this.meal});
   final DietMeal meal;
 
   @override
-  Widget build(BuildContext context) {
-    final String? url = meal.photoUrl;
-    if (url != null && url.isNotEmpty) {
-      return StoredMealPhoto(
-        path: url,
-        size: 52,
-        fallback: _assetOrEmojiThumb(),
-      );
-    }
-    return _assetOrEmojiThumb();
-  }
-
-  Widget _assetOrEmojiThumb() {
-    final String? asset = meal.photoAsset;
-    if (asset != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          asset,
-          width: 52,
-          height: 52,
-          fit: BoxFit.cover,
-          // Fall back to the emoji chip if the bundled asset is missing.
-          errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
-              _emojiThumb(),
-        ),
-      );
-    }
-    return _emojiThumb();
-  }
-
-  Widget _emojiThumb() => Container(
+  Widget build(BuildContext context) => MealPhotoView(
+    photoUrl: meal.photoUrl,
+    photoAsset: meal.photoAsset,
+    emoji: meal.emoji,
+    background: meal.thumbBg,
     width: 52,
     height: 52,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: meal.thumbBg,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text(meal.emoji, style: const TextStyle(fontSize: 24)),
   );
 }
 

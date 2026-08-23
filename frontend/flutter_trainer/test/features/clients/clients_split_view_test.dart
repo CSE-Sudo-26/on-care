@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
@@ -149,7 +148,7 @@ void main() {
     // which appears as a brief roster flash. The router consumes the first
     // pump; the second is the first frame that contains the detail route.
     expect(find.byType(ClientsPage), findsOneWidget);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
   });
 
   testWidgets('the close button collapses the panel back to the list', (
@@ -218,13 +217,13 @@ void main() {
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'diet'),
     );
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     expect(find.textContaining('3,428', findRichText: true), findsWidgets);
 
     // …switch to 박성호: same sub-tab, his data (2,400mg).
     await tester.tap(card('박성호'));
     await settle(tester);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     expect(find.textContaining('2,400', findRichText: true), findsWidgets);
   });
 
@@ -332,7 +331,9 @@ void main() {
     expect(rendered.first.client.sodiumOverBudget, isTrue);
   });
 
-  testWidgets('낮은 이행률이어도 고객 목록 진행 바와 퍼센트는 남색을 유지한다', (tester) async {
+  testWidgets('고객 리스트 카드에 더 이상 주간 이행률 바가 없다 (#1024)', (tester) async {
+    // 이 지표는 식단·운동을 나누지 않은 공용 값이라 "주간 이행률"과 "운동
+    // 이행률"이 실제로는 같은 하나였다 — 카드에서 통째로 걷어냈다.
     await openWide(tester);
     await scrollToCard(tester, '배준혁');
 
@@ -340,24 +341,13 @@ void main() {
       of: find.text('배준혁'),
       matching: find.byType(ClientCard),
     );
-    final progress = tester.widget<LinearProgressIndicator>(
+    expect(
       find.descendant(
         of: clientCard,
         matching: find.byType(LinearProgressIndicator),
       ),
+      findsNothing,
     );
-
-    expect(progress.color, AppColors.primary);
-
-    final percentage = tester.widget<Text>(
-      find.descendant(
-        of: clientCard,
-        matching: find.byWidgetPredicate(
-          (widget) => widget is Text && (widget.data?.endsWith('%') ?? false),
-        ),
-      ),
-    );
-    expect(percentage.style?.color, AppColors.primary);
   });
 
   testWidgets('the panel location is a path that encodes the section', (
@@ -395,8 +385,13 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('나트륨 초과'), findsWidgets);
-    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
-    expect(find.text('메모'), findsOneWidget);
+    // 신체·목표는 메모와 한 대화상자로 합쳐졌고, 메모 버튼은 프로필 줄의
+    // 아이콘 버튼으로 옮겨 갔다(#1024).
+    expect(find.text('리포트'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('client-detail-open-memo')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a percent-encoded id round-trips through the path', (

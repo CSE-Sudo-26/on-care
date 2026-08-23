@@ -61,7 +61,7 @@ void main() {
     expect(find.text(goal), findsOneWidget);
   });
 
-  testWidgets('프로그램 회원 목록 행은 마지막 루틴과 함께 목표를 보여 준다', (tester) async {
+  testWidgets('프로그램 회원 목록 행은 상대시간 없이 목표를 보여 준다', (tester) async {
     await openTab(tester, AppRoutes.coaching);
 
     final Finder row = find.byKey(
@@ -69,8 +69,10 @@ void main() {
     );
     expect(row, findsOneWidget);
     // 루틴을 보낸 적 있는 고객이다 — 전에는 이때 목표가 사라졌다.
-    expect(find.descendant(of: row, matching: find.text('오늘')), findsOneWidget);
     expect(find.descendant(of: row, matching: find.text(goal)), findsOneWidget);
+    // 마지막 루틴 시각(`오늘`)은 더 이상 줄에 없다 — 이행률보다 시선을 먼저
+    // 가져가서 지웠다. (#1027)
+    expect(find.descendant(of: row, matching: find.text('오늘')), findsNothing);
   });
 
   testWidgets('리포트 고객 선택 목록 행에 고객 목표가 보인다', (tester) async {

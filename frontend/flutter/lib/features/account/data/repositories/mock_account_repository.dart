@@ -13,15 +13,26 @@ class MockAccountRepository implements AccountRepository {
     email: 'minsu@oncare.com',
     phone: '010-1234-5678',
     birthDate: '1990-01-15',
+    // 트레이너 앱의 김민수와 같은 사람이다 — 성별과 목표가 두 앱에서 같아야
+    // 한다 (#1140).
+    gender: 'male',
+    goals: '혈압 관리 · 체중 감량',
     dailyCalories: 2000,
     dailySodiumMg: 2000,
     dailySugarG: 50,
     dailyCarbsG: 275,
     dailyProteinG: 100,
     dailyFatG: 55,
-    weeklyWorkoutGoal: UserProfile.defaultWeeklyWorkoutGoal,
-    weeklyExerciseMinutesGoal: UserProfile.defaultWeeklyExerciseMinutesGoal,
-    weeklyBurnGoal: UserProfile.defaultWeeklyBurnGoal,
+    // 데모 회원의 운동 목표는 권장값 그대로 둔다 — 화면은 이 값을 쓰지 않고
+    // (#1139) 트레이너 앱이 읽는 자리라, 비워 두면 로스터에서 목표가 없다고
+    // 읽힌다.
+    //
+    // 주간 소모는 **하루 목표 × 7** 이다(300 × 7). 500 은 하루 목표가
+    // 500kcal 이던 시절에 주간 칸으로 옮겨 적힌 값이라, 운동 탭 도넛이 재는
+    // 2,100kcal 과도 트레이너 화면의 회원 정보와도 어긋났다. (#1170)
+    weeklyWorkoutGoal: 3,
+    weeklyExerciseMinutesGoal: 150,
+    weeklyBurnGoal: 2100,
   );
 
   UserProfile _profile;
@@ -119,6 +130,10 @@ class MockAccountRepository implements AccountRepository {
     GoalUpdate? weeklyWorkoutGoal,
     GoalUpdate? weeklyExerciseMinutesGoal,
     GoalUpdate? weeklyBurnGoal,
+    GoalUpdate? dailyBurnKcal,
+    GoalUpdate? weeklyCardioMinutes,
+    GoalUpdate? weeklyStrengthSets,
+    GoalUpdate? weeklyFlexibilityMinutes,
   }) async {
     _profile = UserProfile(
       id: _profile.id,
@@ -155,6 +170,18 @@ class MockAccountRepository implements AccountRepository {
       weeklyBurnGoal: weeklyBurnGoal == null
           ? _profile.weeklyBurnGoal
           : weeklyBurnGoal.value,
+      dailyBurnKcal: dailyBurnKcal == null
+          ? _profile.dailyBurnKcal
+          : dailyBurnKcal.value,
+      weeklyCardioMinutes: weeklyCardioMinutes == null
+          ? _profile.weeklyCardioMinutes
+          : weeklyCardioMinutes.value,
+      weeklyStrengthSets: weeklyStrengthSets == null
+          ? _profile.weeklyStrengthSets
+          : weeklyStrengthSets.value,
+      weeklyFlexibilityMinutes: weeklyFlexibilityMinutes == null
+          ? _profile.weeklyFlexibilityMinutes
+          : weeklyFlexibilityMinutes.value,
     );
     return _profile;
   }

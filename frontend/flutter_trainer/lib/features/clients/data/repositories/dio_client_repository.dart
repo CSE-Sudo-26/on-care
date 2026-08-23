@@ -122,6 +122,47 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   /// 리포트는 한 주의 일별 칼로리·나트륨·당류를 한 번에 주므로, 한 달이라도
   /// 요청은 다섯 번 남짓이다. 두 경로 모두 같은 `diet_entries` 를 읽는다.
   @override
+  Future<String> fetchDietAdvice(String clientId, ClientPeriod period) async {
+    final String wire = switch (period) {
+      ClientPeriod.today => 'today',
+      ClientPeriod.week => 'week',
+      ClientPeriod.month => 'all',
+    };
+    try {
+      final response = await _dio.get<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/diet-advice',
+        queryParameters: <String, Object?>{'period': wire},
+      );
+      return (response.data?['message'] as String?) ?? '';
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
+
+  @override
+  Future<String> fetchExerciseAdvice(
+    String clientId,
+    ClientPeriod period,
+  ) async {
+    // 식단 조언과 같은 계약이다(#1017, #1025) — 두 카드가 한 화면에 나란히
+    // 서므로 같은 이름으로 같은 것을 묻는다.
+    final String wire = switch (period) {
+      ClientPeriod.today => 'today',
+      ClientPeriod.week => 'week',
+      ClientPeriod.month => 'all',
+    };
+    try {
+      final response = await _dio.get<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/exercise-advice',
+        queryParameters: <String, Object?>{'period': wire},
+      );
+      return (response.data?['message'] as String?) ?? '';
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
+
+  @override
   Future<ClientDietPeriod> fetchDietPeriod(
     String clientId,
     ClientDateRange range,
@@ -214,6 +255,28 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
     '/trainer/clients/${Uri.encodeComponent(clientId)}/diet',
     clientDietEntryFromJson,
   );
+
+  @override
+  Future<List<String>> fetchExercisesOn(String clientId, DateTime date) async {
+    // 주 단위 응답의 `sessions` 에 그날 한 운동 이름이 실려 온다. 그 주를 한 번
+    // 읽어 해당 요일만 고른다 — 날짜별 엔드포인트를 따로 두지 않아도 된다.
+    final ClientExerciseWeek week = await fetchExerciseWeek(
+      clientId,
+      weekStart: clientMondayOf(date),
+    );
+    final int index = date.weekday - 1;
+    if (index < 0 || index >= week.dayLabels.length) return const <String>[];
+    return week.itemsByDayLabel[week.dayLabels[index]] ?? const <String>[];
+  }
+
+  @override
+  Future<List<ClientDietEntry>> fetchDietOn(String clientId, DateTime date) =>
+      // 같은 엔드포인트가 `date` 를 받는다 — 날짜를 주지 않으면 오늘이다.
+      _getList(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/diet',
+        clientDietEntryFromJson,
+        query: <String, String>{'date': ymd(date)},
+      );
 
   Future<List<RoutineHistoryEntry>> _fetchHistory(String clientId) => _getList(
     '/trainer/clients/${Uri.encodeComponent(clientId)}/history',

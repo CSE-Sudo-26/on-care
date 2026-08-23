@@ -14,12 +14,42 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 좁아지면 **이 알약이 먼저 줄어든다.** 이름과 상태는 잘리면 안 되는 값이라,
 /// 글자를 자르는 대신 `FittedBox` 로 통째로 작게 그린다.
 class SessionTypeChip extends StatelessWidget {
-  const SessionTypeChip({super.key, required this.label, required this.muted});
+  const SessionTypeChip({
+    super.key,
+    required this.label,
+    required this.muted,
+    this.prominent = false,
+    this.outlined = false,
+    this.compact = false,
+  });
 
   final String label;
 
   /// 끝난 세션인가. 상태 칩과 같은 기준으로 함께 물러난다.
   final bool muted;
+
+  /// 상세 카드의 프로필 줄에 서는가. (#1012)
+  ///
+  /// 그 자리는 오른쪽이 통째로 비어 있어 알약이 줄어들 이유가 없다. 시간표
+  /// 블록처럼 좁은 자리에서 쓰는 치수 그대로 두면, 넓은 자리에서 이 값만
+  /// 유독 작게 읽힌다 — **표현은 그대로 두고 치수만 키운다.**
+  final bool prominent;
+
+  /// 시간표 블록 안에 서는가. (#1013)
+  ///
+  /// 블록의 둘째 줄은 이름과 종류가 나눠 쓰는 한 줄이라, 상세 카드의 알약을
+  /// 그대로 앉히면 이름이 밀린다. **표현은 그대로 두고 치수만 줄인다** — 두
+  /// 자리가 다른 모양을 쓰면 같은 값을 두 번 익혀야 한다.
+  ///
+  /// 줄 높이는 건드리지 않는다. 글씨가 이름보다 한 단계 작아, 여백과 윤곽선을
+  /// 더해도 이름 줄 안에 들어간다 — 알약 때문에 줄이 두꺼워지면 30분 블록에서
+  /// 이름 줄이 통째로 사라진다(#1010).
+  final bool compact;
+
+  /// 채우지 않고 윤곽선만 두른다(상담). 색을 하나 더 들이는 대신 **채움과
+  /// 비움**으로 종류를 가른다 — 헤더의 `예약 슬롯` 버튼과 같은 표현이라, 화면이
+  /// 이미 쓰고 있는 어휘를 그대로 빌린다(#1013).
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -28,26 +58,30 @@ class SessionTypeChip extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         key: const ValueKey<String>('session-type-chip'),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 2,
+        padding: EdgeInsets.symmetric(
+          horizontal: prominent ? AppSpacing.md : (compact ? 5 : AppSpacing.sm),
+          vertical: prominent ? 3 : (compact ? 1 : 2),
         ),
         decoration: BoxDecoration(
           color: muted
               ? AppColors.inputBackground
-              : AppColors.primary.withValues(alpha: 0.10),
+              : (outlined
+                    ? AppColors.card
+                    : AppColors.primary.withValues(alpha: 0.10)),
           borderRadius: const BorderRadius.all(AppRadius.pill),
           border: Border.all(
             color: muted
                 ? AppColors.border
-                : AppColors.primary.withValues(alpha: 0.25),
+                : AppColors.primary.withValues(alpha: outlined ? 0.45 : 0.25),
           ),
         ),
         child: Text(
           label,
           maxLines: 1,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: prominent ? 12.5 : (compact ? 10.5 : 11),
+            // 줄 높이를 글꼴 기본값에 맡기면 알약이 이름 줄보다 두꺼워진다.
+            height: compact ? 1.05 : null,
             fontWeight: FontWeight.w800,
             color: muted ? AppColors.disabledForeground : AppColors.primary,
           ),
@@ -68,16 +102,19 @@ class SessionStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 예정(파랑) · 완료(회색) · 취소/노쇼(빨강)로 갈라 둔다. 진행되지 않은
-    // 세션이 완료와 같은 회색이면 "끝난 수업" 으로 읽히고, 예정과 같은 파랑이면
+    // 예정(파랑) · 완료(초록) · 취소/노쇼(빨강)로 갈라 둔다. 진행되지 않은
+    // 세션이 완료와 같은 색이면 "끝난 수업" 으로 읽히고, 예정과 같은 파랑이면
     // 아직 할 일로 읽힌다 — 둘 다 사실이 아니다(#871).
+    //
+    // 완료를 회색으로 두었더니 시간표 블록의 초록 띠와 어긋났다. 같은 사실을
+    // 두 자리가 다른 색으로 말하면 어느 쪽을 믿어야 할지 알 수 없다(#1012).
     final Color fg = switch (status) {
-      ScheduleStatus.done => AppColors.disabledForeground,
+      ScheduleStatus.done => AppColors.success,
       ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
       _ => AppColors.accent,
     };
     final Color bg = switch (status) {
-      ScheduleStatus.done => AppColors.inputBackground,
+      ScheduleStatus.done => AppColors.success.withValues(alpha: 0.12),
       ScheduleStatus.cancelled ||
       ScheduleStatus.noShow => AppColors.warning.withValues(alpha: 0.12),
       _ => AppColors.accentSurface,

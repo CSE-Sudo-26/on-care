@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get actionSave;
 
+  /// No description provided for @actionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get actionSaved;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:
@@ -1046,12 +1052,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the member profile. Please try again'**
   String get memberHealthSaveFailed;
 
-  /// No description provided for @memberHealthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Body and goals'**
-  String get memberHealthTitle;
-
   /// No description provided for @memberHealthSaving.
   ///
   /// In en, this message translates to:
@@ -1736,17 +1736,17 @@ abstract class AppLocalizations {
   /// **'Training goal'**
   String get consultExerciseGoal;
 
-  /// No description provided for @consultHealthPurpose.
-  ///
-  /// In en, this message translates to:
-  /// **'Health purpose'**
-  String get consultHealthPurpose;
-
   /// No description provided for @consultPreferredTime.
   ///
   /// In en, this message translates to:
   /// **'Preferred time'**
   String get consultPreferredTime;
+
+  /// No description provided for @consultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get consultMessage;
 
   /// No description provided for @consultReject.
   ///
@@ -1795,6 +1795,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Workout log'**
   String get workoutRecords;
+
+  /// No description provided for @workoutRecordsShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get workoutRecordsShowMore;
+
+  /// No description provided for @workoutRecordsShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get workoutRecordsShowLess;
 
   /// No description provided for @workoutLoadFailed.
   ///
@@ -1904,17 +1916,29 @@ abstract class AppLocalizations {
   /// **'No meals logged yet'**
   String get dietEmpty;
 
-  /// No description provided for @dietTodaySummary.
+  /// No description provided for @dietDayEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s nutrition'**
-  String get dietTodaySummary;
+  /// **'No record'**
+  String get dietDayEmpty;
+
+  /// No description provided for @dietMacros.
+  ///
+  /// In en, this message translates to:
+  /// **'Macros'**
+  String get dietMacros;
 
   /// No description provided for @clientNutritionSummary.
   ///
   /// In en, this message translates to:
   /// **'Nutrition summary'**
   String get clientNutritionSummary;
+
+  /// No description provided for @dietCalorieIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories today'**
+  String get dietCalorieIntake;
 
   /// No description provided for @dietAchieveRate.
   ///
@@ -1940,11 +1964,23 @@ abstract class AppLocalizations {
   /// **'Sodium {value}mg'**
   String dietSodiumValue(int value);
 
-  /// No description provided for @dietAiAnalysis.
+  /// No description provided for @aiAnalysis.
   ///
   /// In en, this message translates to:
   /// **'AI analysis'**
-  String get dietAiAnalysis;
+  String get aiAnalysis;
+
+  /// No description provided for @aiPeriodAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI period analysis'**
+  String get aiPeriodAnalysis;
+
+  /// No description provided for @aiAllAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI all-time analysis'**
+  String get aiAllAnalysis;
 
   /// No description provided for @dietAiOverSodium.
   ///
@@ -2114,6 +2150,66 @@ abstract class AppLocalizations {
   /// **'Goal'**
   String get clientPeriodGoal;
 
+  /// No description provided for @exBurnTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned today'**
+  String get exBurnTodayTitle;
+
+  /// No description provided for @exBurnWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this week'**
+  String get exBurnWeekTitle;
+
+  /// No description provided for @exBurnMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned this month'**
+  String get exBurnMonthTitle;
+
+  /// No description provided for @exBurnDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Burned'**
+  String get exBurnDayTitle;
+
+  /// No description provided for @exBurnAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Average burned'**
+  String get exBurnAllTitle;
+
+  /// No description provided for @exWeekOfMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}, {month}/'**
+  String exWeekOfMonthLabel(int month, int week);
+
+  /// No description provided for @exStreakCheer.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day in a row!} other{{days} days in a row!}}'**
+  String exStreakCheer(int days);
+
+  /// No description provided for @exStreakStart.
+  ///
+  /// In en, this message translates to:
+  /// **'No streak yet'**
+  String get exStreakStart;
+
+  /// No description provided for @exTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get exTypeOther;
+
+  /// No description provided for @exSetsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
+  String exSetsValue(int count);
+
   /// No description provided for @clientPeriodLoggedDays.
   ///
   /// In en, this message translates to:
@@ -2209,6 +2305,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Workout completion'**
   String get reportsCompletionAvg;
+
+  /// No description provided for @reportsWeeklyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly completion'**
+  String get reportsWeeklyCompletion;
 
   /// No description provided for @reportsCompletionByDay.
   ///
@@ -2372,6 +2474,12 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get schedTitle;
 
+  /// No description provided for @schedDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session detail'**
+  String get schedDetailTitle;
+
   /// No description provided for @schedDeleteTitle.
   ///
   /// In en, this message translates to:
@@ -2402,17 +2510,17 @@ abstract class AppLocalizations {
   /// **'{start}–{end}'**
   String schedTimeRange(String start, String end);
 
+  /// No description provided for @schedBlockTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} ({duration})'**
+  String schedBlockTime(String range, String duration);
+
   /// No description provided for @schedEmptyWeek.
   ///
   /// In en, this message translates to:
   /// **'Nothing scheduled this week.'**
   String get schedEmptyWeek;
-
-  /// No description provided for @schedNewClientTag.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} (new)'**
-  String schedNewClientTag(String name);
 
   /// No description provided for @schedSlots.
   ///
@@ -2437,30 +2545,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing scheduled for this day.\nUse New session above to add one.'**
   String get schedEmptyDay;
-
-  /// No description provided for @schedCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark session complete'**
-  String get schedCompleteTitle;
-
-  /// No description provided for @schedCompleteBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This marks the {time} session with {name} complete and logs it to their workout history.'**
-  String schedCompleteBody(String time, String name);
-
-  /// No description provided for @schedNoteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer\'s note (optional)'**
-  String get schedNoteOptional;
-
-  /// No description provided for @schedCompleteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark complete'**
-  String get schedCompleteAction;
 
   /// No description provided for @schedSaveFailed.
   ///
@@ -2600,6 +2684,12 @@ abstract class AppLocalizations {
   /// **'Edit note'**
   String get schedEditNote;
 
+  /// No description provided for @schedAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get schedAddNote;
+
   /// No description provided for @schedNoNote.
   ///
   /// In en, this message translates to:
@@ -2738,12 +2828,6 @@ abstract class AppLocalizations {
   /// **'Sent {name} the PT program for {date}'**
   String schedSentProgramTo(String name, String date);
 
-  /// No description provided for @slotCapacityInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityInvalid;
-
   /// No description provided for @slotPastTime.
   ///
   /// In en, this message translates to:
@@ -2768,18 +2852,6 @@ abstract class AppLocalizations {
   /// **'Start time'**
   String get slotStartTime;
 
-  /// No description provided for @slotCapacity.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity'**
-  String get slotCapacity;
-
-  /// No description provided for @slotBookedNow.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} booked'**
-  String slotBookedNow(int count);
-
   /// No description provided for @slotUpdated.
   ///
   /// In en, this message translates to:
@@ -2795,8 +2867,8 @@ abstract class AppLocalizations {
   /// No description provided for @slotCloseBody.
   ///
   /// In en, this message translates to:
-  /// **'The {count} existing bookings stay; only new bookings stop.'**
-  String slotCloseBody(int count);
+  /// **'Any existing booking stays; only new bookings stop.'**
+  String get slotCloseBody;
 
   /// No description provided for @slotClosed.
   ///
@@ -2843,14 +2915,20 @@ abstract class AppLocalizations {
   /// No description provided for @slotClosedSummary.
   ///
   /// In en, this message translates to:
-  /// **'Closed · {booked} booked'**
-  String slotClosedSummary(int booked);
+  /// **'Closed'**
+  String get slotClosedSummary;
+
+  /// No description provided for @slotBookedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked'**
+  String get slotBookedSummary;
 
   /// No description provided for @slotOpenSummary.
   ///
   /// In en, this message translates to:
-  /// **'{booked} booked · {remaining} left'**
-  String slotOpenSummary(int booked, int remaining);
+  /// **'Open'**
+  String get slotOpenSummary;
 
   /// No description provided for @slotCloseAction.
   ///
@@ -3764,12 +3842,6 @@ abstract class AppLocalizations {
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
 
-  /// No description provided for @aiWithinTarget.
-  ///
-  /// In en, this message translates to:
-  /// **' · within target'**
-  String get aiWithinTarget;
-
   /// No description provided for @aiRecentRoutine.
   ///
   /// In en, this message translates to:
@@ -3895,42 +3967,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get goalOther;
-
-  /// No description provided for @purposeWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Weight management'**
-  String get purposeWeight;
-
-  /// No description provided for @purposeChronic.
-  ///
-  /// In en, this message translates to:
-  /// **'Chronic condition'**
-  String get purposeChronic;
-
-  /// No description provided for @purposeRehab.
-  ///
-  /// In en, this message translates to:
-  /// **'Rehabilitation'**
-  String get purposeRehab;
-
-  /// No description provided for @purposeGeneral.
-  ///
-  /// In en, this message translates to:
-  /// **'General wellbeing'**
-  String get purposeGeneral;
-
-  /// No description provided for @purposeNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get purposeNone;
-
-  /// No description provided for @purposeOther.
-  ///
-  /// In en, this message translates to:
-  /// **'Other'**
-  String get purposeOther;
 
   /// No description provided for @slotMorning.
   ///
@@ -4070,12 +4106,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send your question'**
   String get coachAskFailed;
 
-  /// No description provided for @slotCapacityRange.
-  ///
-  /// In en, this message translates to:
-  /// **'Capacity must be between 1 and 100.'**
-  String get slotCapacityRange;
-
   /// No description provided for @slotFutureOnly.
   ///
   /// In en, this message translates to:
@@ -4088,11 +4118,17 @@ abstract class AppLocalizations {
   /// **'Booking slot not found.'**
   String get slotNotFound;
 
-  /// No description provided for @slotCapacityBelowBooked.
+  /// No description provided for @slotTypeLockedByBooking.
   ///
   /// In en, this message translates to:
-  /// **'Capacity can\'t be lower than the number already booked.'**
-  String get slotCapacityBelowBooked;
+  /// **'Can\'t change the type of a slot that\'s already booked.'**
+  String get slotTypeLockedByBooking;
+
+  /// No description provided for @slotSessionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get slotSessionType;
 
   /// No description provided for @authErrNotTrainer.
   ///
@@ -4243,6 +4279,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That routine is already gone'**
   String get routineAlreadyGone;
+
+  /// No description provided for @workoutPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not done yet'**
+  String get workoutPendingTitle;
+
+  /// No description provided for @workoutUndatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Records without a date'**
+  String get workoutUndatedTitle;
+
+  /// No description provided for @workoutPendingCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel assignment'**
+  String get workoutPendingCancel;
 
   /// No description provided for @routineUpdateFailed.
   ///
@@ -4586,23 +4640,29 @@ abstract class AppLocalizations {
   /// **'Program'**
   String get clientQuickProgram;
 
+  /// No description provided for @clientQuickReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get clientQuickReport;
+
   /// No description provided for @clientHealthGoals.
   ///
   /// In en, this message translates to:
   /// **'Body profile & goals'**
   String get clientHealthGoals;
 
+  /// No description provided for @clientProfileSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Body, goals & memo'**
+  String get clientProfileSectionTitle;
+
   /// No description provided for @clientTrainerMemo.
   ///
   /// In en, this message translates to:
   /// **'Memo'**
   String get clientTrainerMemo;
-
-  /// No description provided for @clientTrainerMemoTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Memos on {name}'**
-  String clientTrainerMemoTitle(String name);
 
   /// No description provided for @clientTrainerMemoHint.
   ///
@@ -5624,17 +5684,17 @@ abstract class AppLocalizations {
   /// **'Remove certification'**
   String get a11yRemoveCertification;
 
-  /// No description provided for @a11yPrevDay.
+  /// No description provided for @a11yPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous day'**
-  String get a11yPrevDay;
+  /// **'Previous week'**
+  String get a11yPrevWeek;
 
-  /// No description provided for @a11yNextDay.
+  /// No description provided for @a11yNextWeek.
   ///
   /// In en, this message translates to:
-  /// **'Next day'**
-  String get a11yNextDay;
+  /// **'Next week'**
+  String get a11yNextWeek;
 
   /// No description provided for @a11ySendMessage.
   ///

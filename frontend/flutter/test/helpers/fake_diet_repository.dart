@@ -201,6 +201,15 @@ class FakeDietRepository implements DietRepository {
   }
 
   @override
+  Future<String> fetchAdvice(String period) async => switch (period) {
+    // 기간마다 다른 말을 한다 — 화면이 기간을 바꿔도 조언이 그대로면 안 된다.
+    // (#1017)
+    'week' => '이번 주 3일이나 나트륨 권장량을 넘었어요. 남은 며칠은 담백하게 가요.',
+    'all' => '기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요.',
+    _ => _aiCoachMessage,
+  };
+
+  @override
   Future<MealRecommendations> fetchRecommendations() async {
     // 목업/데모 모드는 개인화 근거가 없다(로그인하지 않은 둘러보기). 서버 연동
     // 이전과 완전히 같은 카드·순서·문구가 나오도록 기본 추천을 그대로 돌려준다.

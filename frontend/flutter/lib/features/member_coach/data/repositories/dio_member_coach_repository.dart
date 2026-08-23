@@ -66,6 +66,22 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   }
 
   @override
+  Future<CoachRoutine> uncompleteRoutine(String routineId) async {
+    try {
+      final Response<Map<String, Object?>> response = await _dio.delete(
+        '/me/coach/routines/$routineId/complete',
+      );
+      final Map<String, Object?>? data = response.data;
+      if (data == null) {
+        throw const FormatException('Missing routine.');
+      }
+      return coachRoutineFromJson(data);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
   Future<void> deleteRoutine(String routineId) async {
     try {
       await _dio.delete<void>('/me/coach/routines/$routineId');
@@ -152,17 +168,28 @@ class DioMemberCoachRepository implements MemberCoachRepository {
       _getList('/me/coach/invites', coachInviteFromJson);
 
   @override
-  Future<void> acceptInvite(String inviteId) =>
-      _decideInvite(inviteId, 'accept');
+  Future<void> acceptInvite(
+    String inviteId, {
+    required bool dataSharingConsent,
+  }) => _decideInvite(
+    inviteId,
+    'accept',
+    body: <String, Object?>{'data_sharing_consent': dataSharingConsent},
+  );
 
   @override
   Future<void> rejectInvite(String inviteId) =>
       _decideInvite(inviteId, 'reject');
 
-  Future<void> _decideInvite(String inviteId, String action) async {
+  Future<void> _decideInvite(
+    String inviteId,
+    String action, {
+    Map<String, Object?>? body,
+  }) async {
     try {
       await _dio.post<Map<String, Object?>>(
         '/me/coach/invites/${Uri.encodeComponent(inviteId)}/$action',
+        data: body,
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);

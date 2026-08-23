@@ -6,7 +6,6 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 
 import '../../helpers/pump_app.dart';
@@ -109,15 +108,12 @@ void main() {
       expect(box.size.width, greaterThan(0));
       expect(box.size.height, greaterThan(0));
 
-      // 범례 셋이 탄·단·지 순서다.
-      final List<ActivityLegend> legends = tester
-          .widgetList<ActivityLegend>(find.byType(ActivityLegend))
-          .toList();
-      expect(legends.map((ActivityLegend x) => x.color).toList(), <Color>[
-        AppColors.macroCarbs,
-        AppColors.macroProtein,
-        AppColors.macroFat,
-      ]);
+      // 어느 색이 무엇인지는 카드 **머리**의 탄단지 줄이 말한다 — 그래프
+      // 아래 범례는 뺐다(#1167). 한 카드가 같은 말을 두 번 하지 않는다.
+      expect(
+        find.byKey(const ValueKey<String>('client-diet-period-macros')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('나트륨으로 바꾸면 쌓지 않는다', (tester) async {
@@ -131,14 +127,18 @@ void main() {
       await tester.tap(find.text(l.metricSodium));
       await tester.pumpAndSettle();
 
-      // 나트륨에는 쌓을 성분이 없다 — 한 색 막대로 돌아가고 범례도 사라진다.
+      // 나트륨에는 쌓을 성분이 없다 — 한 색 막대로 돌아가고 머리의 탄단지
+      // 줄도 사라진다.
       expect(
         find.byWidgetPredicate(
           (Widget w) => w is ColoredBox && w.color == AppColors.macroCarbs,
         ),
         findsNothing,
       );
-      expect(find.byType(ActivityLegend), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('client-diet-period-macros')),
+        findsNothing,
+      );
     });
 
     testWidgets('이름과 아이콘은 섹션 헤더가 들고, 카드는 그림만 그린다', (tester) async {

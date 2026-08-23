@@ -120,8 +120,10 @@ const List<NavDestination> navDestinations = <NavDestination>[
   ),
   NavDestination(
     label: NavLabel.reports,
-    icon: Icons.insights_outlined,
-    activeIcon: Icons.insights,
+    // 고객 상세의 '리포트' 버튼과 같은 막대그래프다 — 같은 화면으로 가는 두
+    // 자리가 서로 다른 그림이면 같은 곳인 줄 모른다.
+    icon: Icons.bar_chart_outlined,
+    activeIcon: Icons.bar_chart,
     route: AppRoutes.reports,
   ),
 ];

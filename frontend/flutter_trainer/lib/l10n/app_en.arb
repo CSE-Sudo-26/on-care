@@ -51,6 +51,7 @@
   "navReports": "Reports",
   "navConsultations": "Requests",
   "actionSave": "Save",
+  "actionSaved": "Saved",
   "actionCancel": "Cancel",
   "actionEdit": "Edit",
   "actionDelete": "Delete",
@@ -262,7 +263,6 @@
   "clientsAddFailed": "Couldn't add the client. Please try again",
   "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
   "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
-  "memberHealthTitle": "Body and goals",
   "memberHealthSaving": "Saving…",
   "memberHealthGender": "Gender",
   "memberHealthGenderUnset": "Not set",
@@ -416,8 +416,8 @@
   "consultRejected": "Request declined",
   "consultTargetTrainer": "Direct request",
   "consultExerciseGoal": "Training goal",
-  "consultHealthPurpose": "Health purpose",
   "consultPreferredTime": "Preferred time",
+  "consultMessage": "Message",
   "consultReject": "Decline",
   "consultApprove": "Approve",
   "consultRejectTitle": "Decline request",
@@ -426,6 +426,8 @@
   "consultRejectAction": "Decline",
   "consultStatusApproved": "Added as a client",
   "workoutRecords": "Workout log",
+  "workoutRecordsShowMore": "Show more",
+  "workoutRecordsShowLess": "Show less",
   "workoutLoadFailed": "Couldn't load the workout log",
   "workoutEmpty": "No workouts logged yet",
   "routinesAssigned": "Assigned routines",
@@ -461,8 +463,10 @@
   "trainerNote": "Trainer's note",
   "dietLoadFailed": "Couldn't load meals",
   "dietEmpty": "No meals logged yet",
-  "dietTodaySummary": "Today's nutrition",
+  "dietDayEmpty": "No record",
+  "dietMacros": "Macros",
   "clientNutritionSummary": "Nutrition summary",
+  "dietCalorieIntake": "Calories today",
   "dietAchieveRate": "Progress",
   "dietAmountOver": "{amount} over the goal",
   "@dietAmountOver": {
@@ -488,7 +492,9 @@
       }
     }
   },
-  "dietAiAnalysis": "AI analysis",
+  "aiAnalysis": "AI analysis",
+  "aiPeriodAnalysis": "AI period analysis",
+  "aiAllAnalysis": "AI all-time analysis",
   "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's routine would help.",
   "@dietAiOverSodium": {
     "placeholders": {
@@ -588,6 +594,32 @@
   "clientPeriodMonth": "All",
   "clientPeriodAverage": "Daily average",
   "clientPeriodGoal": "Goal",
+  "exBurnTodayTitle": "Burned today",
+  "exBurnWeekTitle": "Burned this week",
+  "exBurnMonthTitle": "Burned this month",
+  "exBurnDayTitle": "Burned",
+  "exBurnAllTitle": "Average burned",
+  "exWeekOfMonthLabel": "Week {week}, {month}/",
+  "@exWeekOfMonthLabel": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "week": { "type": "int" }
+    }
+  },
+  "exStreakCheer": "{days, plural, =1{1 day in a row!} other{{days} days in a row!}}",
+  "@exStreakCheer": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "exStreakStart": "No streak yet",
+  "exTypeOther": "Other",
+  "exSetsValue": "{count, plural, =1{1 set} other{{count} sets}}",
+  "@exSetsValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "clientPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
   "@clientPeriodLoggedDays": {
     "placeholders": {
@@ -618,6 +650,7 @@
     }
   },
   "reportsCompletionAvg": "Workout completion",
+  "reportsWeeklyCompletion": "Weekly completion",
   "reportsCompletionByDay": "Weekly workout completion",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
   "reportsMetricTrend": "{metric} trend",
@@ -665,6 +698,7 @@
   "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your routine and send it over.",
   "reportBodyNoRecords": "There's nothing logged this week, so nothing to sum up. Let's plan next week's start together.",
   "schedTitle": "Schedule",
+  "schedDetailTitle": "Session detail",
   "schedDeleteTitle": "Delete session",
   "schedDeleteConfirm": "Delete the {time} session with {name}?",
   "@schedDeleteConfirm": {
@@ -690,33 +724,22 @@
       }
     }
   },
-  "schedEmptyWeek": "Nothing scheduled this week.",
-  "schedNewClientTag": "{name} (new)",
-  "@schedNewClientTag": {
+  "schedBlockTime": "{range} ({duration})",
+  "@schedBlockTime": {
     "placeholders": {
-      "name": {
+      "range": {
+        "type": "String"
+      },
+      "duration": {
         "type": "String"
       }
     }
   },
+  "schedEmptyWeek": "Nothing scheduled this week.",
   "schedSlots": "Booking slots",
   "schedNewSession": "New session",
   "schedLoadFailed": "Couldn't load the schedule",
   "schedEmptyDay": "Nothing scheduled for this day.\nUse New session above to add one.",
-  "schedCompleteTitle": "Mark session complete",
-  "schedCompleteBody": "This marks the {time} session with {name} complete and logs it to their workout history.",
-  "@schedCompleteBody": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "schedNoteOptional": "Trainer's note (optional)",
-  "schedCompleteAction": "Mark complete",
   "schedSaveFailed": "Couldn't save the session. Please try again",
   "schedAddTitle": "Add a session",
   "schedEditTitle": "Edit session",
@@ -744,6 +767,7 @@
   "schedRepeatConflictHint": "Nothing was created. Change the time, or clear the sessions that clash.",
   "schedNote": "Trainer's note",
   "schedEditNote": "Edit note",
+  "schedAddNote": "Add note",
   "schedNoNote": "No note yet",
   "schedNoteOnlyHint": "A consultation is recorded as a note, not a program.",
   "schedNoteHint": "Anything to prepare, or notes about this client",
@@ -794,30 +818,13 @@
       }
     }
   },
-  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
   "slotEditTitle": "Edit booking slot",
   "slotStartTime": "Start time",
-  "slotCapacity": "Capacity",
-  "slotBookedNow": "{count} booked",
-  "@slotBookedNow": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "slotUpdated": "Booking slot updated.",
   "slotCloseTitle": "Close booking slot",
-  "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
-  "@slotCloseBody": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "slotCloseBody": "Any existing booking stays; only new bookings stop.",
   "slotClosed": "New bookings closed.",
   "slotActionFailed": "Couldn't complete the request. Please try again in a moment.",
   "slotManageTitle": "Manage booking slots",
@@ -832,25 +839,9 @@
   "slotOpenAction": "Open",
   "slotReload": "Reload",
   "slotEmpty": "No booking slots open on this day.",
-  "slotClosedSummary": "Closed · {booked} booked",
-  "@slotClosedSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      }
-    }
-  },
-  "slotOpenSummary": "{booked} booked · {remaining} left",
-  "@slotOpenSummary": {
-    "placeholders": {
-      "booked": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
+  "slotClosedSummary": "Closed",
+  "slotBookedSummary": "Booked",
+  "slotOpenSummary": "Open",
   "slotCloseAction": "Close bookings",
   "myCareerInvalid": "Enter years of experience between 0 and 80.",
   "myProfileSaveFailed": "Couldn't save your profile.",
@@ -1164,7 +1155,6 @@
       }
     }
   },
-  "aiWithinTarget": " · within target",
   "aiRecentRoutine": "Recent routine",
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
@@ -1196,12 +1186,6 @@
   "goalPosture": "Posture",
   "goalHealth": "General health",
   "goalOther": "Other",
-  "purposeWeight": "Weight management",
-  "purposeChronic": "Chronic condition",
-  "purposeRehab": "Rehabilitation",
-  "purposeGeneral": "General wellbeing",
-  "purposeNone": "None",
-  "purposeOther": "Other",
   "slotMorning": "Morning",
   "slotAfternoon": "Afternoon",
   "slotEvening": "Evening",
@@ -1232,10 +1216,10 @@
   "coachDemoUnavailable": "AI coaching isn't available in demo mode",
   "coachNotMyClient": "That isn't one of your clients",
   "coachAskFailed": "Couldn't send your question",
-  "slotCapacityRange": "Capacity must be between 1 and 100.",
   "slotFutureOnly": "Booking slots can only be set for future times.",
   "slotNotFound": "Booking slot not found.",
-  "slotCapacityBelowBooked": "Capacity can't be lower than the number already booked.",
+  "slotTypeLockedByBooking": "Can't change the type of a slot that's already booked.",
+  "slotSessionType": "Type",
   "authErrNotTrainer": "Please sign in with a trainer account.",
   "aiBasisGoalCompletion": "{goal} · based on {rate}% completion",
   "@aiBasisGoalCompletion": {
@@ -1322,6 +1306,9 @@
     }
   },
   "routineAlreadyGone": "That routine is already gone",
+  "workoutPendingTitle": "Not done yet",
+  "workoutUndatedTitle": "Records without a date",
+  "workoutPendingCancel": "Cancel assignment",
   "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
   "routineUpdated": "Routine updated",
   "routineDeleteTitle": "Delete this routine?",
@@ -1446,10 +1433,10 @@
   "messagesSelectPrompt": "Select a client from the list to start a conversation.",
   "clientQuickMessages": "Messages",
   "clientQuickProgram": "Program",
+  "clientQuickReport": "Report",
   "clientHealthGoals": "Body profile & goals",
+  "clientProfileSectionTitle": "Body, goals & memo",
   "clientTrainerMemo": "Memo",
-  "clientTrainerMemoTitle": "Memos on {name}",
-  "@clientTrainerMemoTitle": {"placeholders": {"name": {"type": "String"}}},
   "clientTrainerMemoHint": "Note what you want to remember about this member",
   "clientTrainerMemoAdd": "Add memo",
   "clientTrainerMemoEmpty": "No memos yet.",
@@ -1655,7 +1642,7 @@
   "unitGram": "g",
   "a11yRemoveExercise": "Remove exercise",
   "a11yRemoveCertification": "Remove certification",
-  "a11yPrevDay": "Previous day",
-  "a11yNextDay": "Next day",
+  "a11yPrevWeek": "Previous week",
+  "a11yNextWeek": "Next week",
   "a11ySendMessage": "Send message"
 }
