@@ -29,6 +29,7 @@ class SessionManageRow extends StatelessWidget {
     required this.hasNote,
     required this.hasProgram,
     this.showEditNote = true,
+    this.showEditProgram = true,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -58,6 +59,11 @@ class SessionManageRow extends StatelessWidget {
   /// 없으면 그 자리는 [SessionNoNoteBox] 안으로 옮겨 갔다 — 이 줄에 또
   /// 세우면 같은 동작이 두 자리에서 보인다.
   final bool showEditNote;
+
+  /// `프로그램 수정` 을 이 줄에 세우는가. 프로그램이 아직 비어 있으면 그
+  /// 자리는 [SessionNoPlanBox] 안으로 옮겨 갔다 — 이 줄에 또 세우면 같은
+  /// 동작이 두 자리에서 보인다(#1236).
+  final bool showEditProgram;
 
   final VoidCallback onDelete;
   final VoidCallback onChat;
@@ -112,7 +118,7 @@ class SessionManageRow extends StatelessWidget {
         iconOnly: true,
         onTap: onEditSchedule,
       ),
-      if (hasProgram)
+      if (hasProgram && showEditProgram)
         _ActionChip(
           key: const ValueKey<String>('session-edit-program-chip'),
           icon: Icons.fitness_center,
