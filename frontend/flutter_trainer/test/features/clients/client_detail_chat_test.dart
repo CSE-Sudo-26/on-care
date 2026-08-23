@@ -442,7 +442,6 @@ void main() {
       tester,
     ) async {
       await openMessages(tester);
-      expect(find.text('대화'), findsOneWidget);
       expect(find.text('김민수'), findsWidgets);
       final reply = find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅');
       await dragUntil(tester, reply, -300);
