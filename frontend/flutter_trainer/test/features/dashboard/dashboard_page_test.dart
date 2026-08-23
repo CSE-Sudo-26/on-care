@@ -44,13 +44,23 @@ void main() {
     return GoRouter.of(ctx).routerDelegate.currentConfiguration.uri.toString();
   }
 
-  /// 오늘 할 일 행의 key 는 이제 `dashboard-task-<alert>-<clientId>` 다 —
-  /// 어느 고객이 골렸는지는 로스터에 달려 있어 접두사로만 찾는다.
-  Finder findTaskRow(String alertName) => find.byWidgetPredicate((widget) {
+  /// 오늘 할 일은 카테고리(`dashboard-todo-category-<name>`)를 먼저 보여
+  /// 주고, 고르면 그 안에서 미션(`dashboard-mission-<prefix>-...`)이 뜬다.
+  Finder findCategoryTile(String categoryName) =>
+      find.byKey(ValueKey<String>('dashboard-todo-category-$categoryName'));
+
+  Finder findMissionRow(String prefix) => find.byWidgetPredicate((widget) {
     final key = widget.key;
     return key is ValueKey<String> &&
-        key.value.startsWith('dashboard-task-$alertName-');
+        key.value.startsWith('dashboard-mission-$prefix-');
   });
+
+  Future<void> openTodoCategory(WidgetTester tester, String categoryName) async {
+    final tile = findCategoryTile(categoryName);
+    await tester.ensureVisible(tile);
+    await tester.tap(tile);
+    await tester.pump();
+  }
 
   /// 주의 고객 검증이 쓰는 고정 로스터. (#907)
   ///
@@ -129,7 +139,12 @@ void main() {
     ]);
     await settle(tester);
 
-    expect(find.text('복구 고객'), findsWidgets);
+    // 오늘 할 일이 카테고리 그리드로 접혀 있어 이름은 그 안(고객 피드백
+    // 확인)에 들어가야 보인다 — 새로 고쳐 그렸다는 사실은 KPI 로 확인한다.
+    final myClients = tester.widget<StatCard>(
+      find.ancestor(of: find.text('담당 고객'), matching: find.byType(StatCard)),
+    );
+    expect(myClients.value, '1');
     expect(find.text('대시보드를 불러오지 못했어요'), findsNothing);
   });
 
@@ -196,41 +211,34 @@ void main() {
     expect(find.text('빈 시간'), findsWidgets);
   });
 
-  testWidgets('주의 고객 rows carry the reason and open the section that '
-      'fixes it', (tester) async {
-    await openDashboard(tester, extraOverrides: attentionRosterOverrides());
-
-    expect(find.text('확인 필요 고객'), findsOneWidget);
-    // 신호를 가진 회원은 열이다 — 건강 신호 여덟에 답장 대기 둘. 위의 `주의 고객`
-    // 수(여덟)보다 이 목록이 넓은 것이 정상이다. 카드는 다섯 줄까지만 세우고
-    // 나머지는 링크로 넘긴다.
-    expect(find.text('+5명'), findsOneWidget);
-
-    // The badge is a client's FIRST alert, and health reasons sort ahead
-    // of 답장 대기, so every visible row leads with a health one.
-    expect(find.text('나트륨 초과'), findsWidgets);
-    expect(find.text('답장 대기'), findsNothing);
-
-    await tester.tap(find.text('나트륨 초과').first);
-    await settle(tester);
-    expect(currentLocation(tester), contains('/diet'));
-  });
-
   testWidgets(
-    'the AI summary names a client and gives a specific exercise focus',
+    '고객 피드백 확인 카테고리는 건강 신호가 있는 고객만 보여주고 그 섹션으로 연결한다',
     (tester) async {
-      await openDashboard(tester);
+      await openDashboard(tester, extraOverrides: attentionRosterOverrides());
+      await openTodoCategory(tester, 'feedback');
 
-      expect(find.text('AI 진단'), findsOneWidget);
-      // 머리말은 1순위 회원의 이름을 부른다. 그게 누구인지는 그날의 수치가
-      // 정하므로(#767 이후 초과 폭 순) 이름을 박지 않는다 — 박아 두면 시드가
-      // 조금만 움직여도 깨지고, 정작 검증하려는 건 "이름을 부른다" 는 것이다.
-      expect(find.textContaining('고객을 먼저 확인하고'), findsWidgets);
-      expect(find.text('오늘 운동 중심'), findsWidgets);
-      expect(find.textContaining('중강도 걷기'), findsWidgets);
-      expect(find.text('판단 근거'), findsWidgets);
+      // 건강 신호 여덟(나트륨 5 · 당류 1 · 이행률 2) 전부가 미션이 된다.
+      // 답장 대기 둘은 건강 신호가 아니라서 이 카테고리에 없다(#907).
+      expect(find.text('나트륨 초과'), findsNWidgets(5));
+      expect(find.text('답장 대기'), findsNothing);
+
+      await tester.tap(find.text('나트륨 초과').first);
+      await settle(tester);
+      expect(currentLocation(tester), contains('/diet'));
     },
   );
+
+  testWidgets('AI 진단 spells out the three activity-feedback signals', (
+    tester,
+  ) async {
+    await openDashboard(tester);
+
+    expect(find.text('AI 진단'), findsOneWidget);
+    expect(find.text('이행률 저조·이탈 위험 감지'), findsOneWidget);
+    expect(find.text('7일 이상 활동 저조'), findsOneWidget);
+    expect(find.text('식단 피드백 미완료'), findsOneWidget);
+    expect(find.textContaining('난이도를 낮추고'), findsOneWidget);
+  });
 
   testWidgets('AI 루틴 만들기 opens the coaching workspace', (tester) async {
     await openDashboard(tester);
@@ -253,104 +261,124 @@ void main() {
     expect(find.textContaining('/ 5 완료'), findsNothing);
   });
 
-  testWidgets('wide dashboard follows the 4-3-1 card layout', (tester) async {
+  testWidgets('wide dashboard follows the 4-KPI + 2-column body layout', (
+    tester,
+  ) async {
     await openDashboard(tester);
 
     expect(find.byType(StatCard), findsNWidgets(4));
     final actionRow = tester.widget<Row>(
       find.byKey(const ValueKey<String>('dashboard-action-row')),
     );
-    expect(actionRow.children.whereType<Expanded>(), hasLength(3));
+    expect(actionRow.children.whereType<Expanded>(), hasLength(2));
     expect(find.text('AI 진단'), findsOneWidget);
   });
 
-  testWidgets('today tasks show one item from each available action type', (
-    tester,
-  ) async {
+  testWidgets(
+    '카테고리는 각자의 대상 고객만 미션으로 세고, X 로 그리드로 돌아간다',
+    (tester) async {
+      final feedbackClient = makeClient(
+        id: 'feedback-client',
+        name: '식단 고객',
+        sodiumMg: 2500,
+      );
+      final programClient = makeClient(
+        id: 'program-client',
+        name: '운동 고객',
+        lastRoutine: '-',
+      );
+      await openDashboard(
+        tester,
+        extraOverrides: <Override>[
+          clientsProvider.overrideWith(
+            (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+              feedbackClient,
+              programClient,
+            ]),
+          ),
+          unreadCountsProvider.overrideWith(
+            (ref) => Stream<Map<String, int>>.value(const <String, int>{}),
+          ),
+        ],
+      );
+
+      await openTodoCategory(tester, 'feedback');
+      expect(
+        find.descendant(
+          of: findMissionRow('feedback'),
+          matching: find.textContaining('식단 고객'),
+        ),
+        findsOneWidget,
+      );
+      // 프로그램 미등록 고객은 이 카테고리에 없다.
+      expect(find.textContaining('운동 고객'), findsNothing);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('dashboard-todo-back')),
+      );
+      await tester.pump();
+
+      await openTodoCategory(tester, 'program');
+      expect(
+        find.descendant(
+          of: findMissionRow('program'),
+          matching: find.textContaining('운동 고객'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  for (final scenario in <({String category, String prefix, String route})>[
+    (category: 'feedback', prefix: 'feedback-sodiumOver', route: '/diet'),
+    (category: 'program', prefix: 'program', route: '/coaching'),
+    (category: 'report', prefix: 'report', route: '/reports'),
+  ]) {
+    testWidgets(
+      '${scenario.category} 카테고리 미션을 누르면 해당 화면으로 이동한다',
+      (tester) async {
+        final client = makeClient(
+          id: 'nav-client',
+          name: '이동 고객',
+          sodiumMg: 2500,
+          lastRoutine: '-',
+        );
+        await openDashboard(
+          tester,
+          extraOverrides: <Override>[
+            clientsProvider.overrideWith(
+              (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+                client,
+              ]),
+            ),
+            unreadCountsProvider.overrideWith(
+              (ref) => Stream<Map<String, int>>.value(const <String, int>{}),
+            ),
+          ],
+        );
+
+        await openTodoCategory(tester, scenario.category);
+        final mission = findMissionRow(scenario.prefix);
+        await tester.ensureVisible(mission);
+        await tester.tap(mission);
+        await settle(tester);
+
+        expect(currentLocation(tester), contains(scenario.route));
+      },
+    );
+  }
+
+  testWidgets('상담 요청 확인 카테고리는 상담 인박스로 이동한다', (tester) async {
     await openDashboard(tester);
 
-    expect(findTaskRow('unanswered'), findsOneWidget);
-    expect(findTaskRow('lowCompletion'), findsOneWidget);
-    expect(findTaskRow('sodiumOver'), findsOneWidget);
+    await openTodoCategory(tester, 'consultation');
+    final mission = findMissionRow('consultation');
+    await tester.ensureVisible(mission);
+    await tester.tap(mission);
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.consultations);
   });
-
-  testWidgets('today tasks prefer different clients for each action type', (
-    tester,
-  ) async {
-    final allAlerts = makeClient(
-      id: 'all-alerts',
-      name: '중복 고객',
-      sodiumMg: 2500,
-      weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
-    );
-    final replyOnly = makeClient(id: 'reply-only', name: '답장 고객');
-    final workoutOnly = makeClient(
-      id: 'workout-only',
-      name: '운동 고객',
-      weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
-    );
-    final dietOnly = makeClient(id: 'diet-only', name: '식단 고객', sodiumMg: 2500);
-    await openDashboard(
-      tester,
-      extraOverrides: <Override>[
-        clientsProvider.overrideWith(
-          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
-            allAlerts,
-            replyOnly,
-            workoutOnly,
-            dietOnly,
-          ]),
-        ),
-        unreadCountsProvider.overrideWith(
-          (ref) => Stream<Map<String, int>>.value(const <String, int>{
-            'all-alerts': 1,
-            'reply-only': 1,
-          }),
-        ),
-      ],
-    );
-
-    expect(
-      find.descendant(
-        of: findTaskRow('unanswered'),
-        matching: find.textContaining('중복 고객'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: findTaskRow('lowCompletion'),
-        matching: find.textContaining('운동 고객'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: findTaskRow('sodiumOver'),
-        matching: find.textContaining('식단 고객'),
-      ),
-      findsOneWidget,
-    );
-  });
-
-  for (final scenario in <({String task, String route})>[
-    (task: 'unanswered', route: '/messages?client='),
-    (task: 'lowCompletion', route: '/workout'),
-    (task: 'sodiumOver', route: '/diet'),
-  ]) {
-    testWidgets('today ${scenario.task} task opens its action destination', (
-      tester,
-    ) async {
-      await openDashboard(tester);
-
-      final task = findTaskRow(scenario.task);
-      await tester.ensureVisible(task);
-      await tester.tap(task);
-      await settle(tester);
-
-      expect(currentLocation(tester), contains(scenario.route));
-    });
-  }
 
   group('AttentionCard.sectionFor', () {
     test('each alert opens the sub-tab that actually addresses it', () {
