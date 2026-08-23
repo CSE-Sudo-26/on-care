@@ -39,6 +39,17 @@ void main() {
     sodiumWarning: null,
   );
 
+  /// 한 주 통째로 기록이 없는 경우 — 요일 배열 자체가 비어 있다.
+  const ExerciseWeek emptyWeek = ExerciseWeek(
+    sessions: <ExerciseSession>[],
+    dailyMinutes: <double>[],
+    dayLabels: <String>[],
+    totalMinutes: 0,
+    totalCalories: 0,
+    streakDays: 0,
+    aiCoachMessage: '',
+  );
+
   ExerciseWeek weekWith(List<double> daily) => ExerciseWeek(
     sessions: const <ExerciseSession>[],
     dailyMinutes: const <double>[0, 0, 0, 0, 0, 0, 0],
@@ -83,7 +94,7 @@ void main() {
   Finder labelled(String needle) =>
       find.bySemanticsLabel(RegExp(RegExp.escape(needle)));
 
-  testWidgets('주간 소모 칼로리 그래프가 요일별 값을 말한다', (WidgetTester tester) async {
+  testWidgets('이번 주 카드가 유형별 달성률을 말한다', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     await pumpHome(
       tester,
@@ -92,25 +103,22 @@ void main() {
       ),
     );
 
+    // 링 셋은 낱개로는 색 원일 뿐이라, 세 유형의 달성률을 한 덩어리로 읽는다.
     expect(
-      labelled('300kcal'),
+      labelled('유산소'),
       findsWidgets,
-      reason: '막대 그래프가 시맨틱 트리에 아무것도 남기지 않았습니다.',
+      reason: '이번 주 카드가 시맨틱 트리에 아무것도 남기지 않았습니다.',
     );
-    expect(labelled('월 300kcal'), findsWidgets);
+    expect(labelled('근력'), findsWidgets);
+    expect(labelled('스트레칭'), findsWidgets);
     handle.dispose();
   });
 
   testWidgets('기록이 없는 주는 비어 있다고 말한다', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
-    await pumpHome(
-      tester,
-      AsyncValue<ExerciseWeek>.data(
-        weekWith(const <double>[0, 0, 0, 0, 0, 0, 0]),
-      ),
-    );
+    await pumpHome(tester, const AsyncValue<ExerciseWeek>.data(emptyWeek));
 
-    // 값 없이 조용한 그래프는 "0kcal 태웠다" 와 구분되지 않는다.
+    // 값 없이 조용한 카드는 "0kcal 태웠다" 와 구분되지 않는다.
     expect(labelled('기록이 없어요'), findsWidgets);
     handle.dispose();
   });
@@ -119,9 +127,7 @@ void main() {
     final SemanticsHandle handle = tester.ensureSemantics();
     await pumpHome(
       tester,
-      AsyncValue<ExerciseWeek>.data(
-        weekWith(const <double>[0, 0, 0, 0, 0, 0, 0]),
-      ),
+      const AsyncValue<ExerciseWeek>.data(emptyWeek),
       locale: const Locale('en'),
     );
 
