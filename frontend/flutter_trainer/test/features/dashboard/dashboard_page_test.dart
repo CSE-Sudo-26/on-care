@@ -44,6 +44,14 @@ void main() {
     return GoRouter.of(ctx).routerDelegate.currentConfiguration.uri.toString();
   }
 
+  /// 오늘 할 일 행의 key 는 이제 `dashboard-task-<alert>-<clientId>` 다 —
+  /// 어느 고객이 골렸는지는 로스터에 달려 있어 접두사로만 찾는다.
+  Finder findTaskRow(String alertName) => find.byWidgetPredicate((widget) {
+    final key = widget.key;
+    return key is ValueKey<String> &&
+        key.value.startsWith('dashboard-task-$alertName-');
+  });
+
   /// 주의 고객 검증이 쓰는 고정 로스터. (#907)
   ///
   /// 건강 신호 여덟(나트륨 5 · 당류 1 · 이행률 2)과 답장 대기 둘. 기대값을
@@ -128,10 +136,14 @@ void main() {
   testWidgets('the KPI row reports the seeded numbers', (tester) async {
     await openDashboard(tester);
 
-    expect(find.text('오늘 예약'), findsOneWidget);
     expect(find.text('담당 고객'), findsOneWidget);
-    expect(find.text('답장 필요'), findsOneWidget);
+    // '메시지' 는 사이드바 내비게이션 항목명과도 겹친다 — KPI 카드 안에서만 찾는다.
+    expect(
+      find.descendant(of: find.byType(StatCard), matching: find.text('메시지')),
+      findsOneWidget,
+    );
     expect(find.text('주의 고객'), findsOneWidget);
+    expect(find.text('이탈 위험'), findsOneWidget);
 
     // 13 of the 15 seeded clients are active; 박성호 and 문가영 are the
     // two 휴면 fixtures. 답장 대기는 **회원이 마지막으로 말한** 스레드다 —
@@ -163,7 +175,9 @@ void main() {
   testWidgets('a KPI deep-links into the pre-filtered roster', (tester) async {
     await openDashboard(tester);
 
-    await tester.tap(find.text('답장 필요'));
+    await tester.tap(
+      find.descendant(of: find.byType(StatCard), matching: find.text('메시지')),
+    );
     await settle(tester);
     // The number and the list it opens have to be the same claim.
     expect(currentLocation(tester), contains('f=unread'));
@@ -173,7 +187,10 @@ void main() {
     await openDashboard(tester);
 
     expect(find.text('오늘의 일정'), findsOneWidget);
-    expect(find.text('김민수 남성 · 35세 · 1:1 PT'), findsWidgets);
+    // #1012 스케줄 탭과 같은 알약 두 장으로 바뀌어, 종류는 더 이상 이름과
+    // 한 Text 로 합쳐지지 않는다 — 이름·종류·상태를 각각 확인한다.
+    expect(find.text('김민수 남성 · 35세'), findsWidgets);
+    expect(find.text('1:1 PT'), findsWidgets);
     expect(find.text('완료'), findsWidgets);
     // Gaps are shown but muted — a free hour is information.
     expect(find.text('빈 시간'), findsWidgets);
@@ -204,7 +221,7 @@ void main() {
     (tester) async {
       await openDashboard(tester);
 
-      expect(find.text('AI 코칭 요약'), findsOneWidget);
+      expect(find.text('AI 진단'), findsOneWidget);
       // 머리말은 1순위 회원의 이름을 부른다. 그게 누구인지는 그날의 수치가
       // 정하므로(#767 이후 초과 폭 순) 이름을 박지 않는다 — 박아 두면 시드가
       // 조금만 움직여도 깨지고, 정작 검증하려는 건 "이름을 부른다" 는 것이다.
@@ -244,7 +261,7 @@ void main() {
       find.byKey(const ValueKey<String>('dashboard-action-row')),
     );
     expect(actionRow.children.whereType<Expanded>(), hasLength(3));
-    expect(find.text('AI 코칭 요약'), findsOneWidget);
+    expect(find.text('AI 진단'), findsOneWidget);
   });
 
   testWidgets('today tasks show one item from each available action type', (
@@ -252,18 +269,9 @@ void main() {
   ) async {
     await openDashboard(tester);
 
-    expect(
-      find.byKey(const ValueKey<String>('dashboard-task-unanswered')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('dashboard-task-lowCompletion')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('dashboard-task-sodiumOver')),
-      findsOneWidget,
-    );
+    expect(findTaskRow('unanswered'), findsOneWidget);
+    expect(findTaskRow('lowCompletion'), findsOneWidget);
+    expect(findTaskRow('sodiumOver'), findsOneWidget);
   });
 
   testWidgets('today tasks prefer different clients for each action type', (
@@ -304,21 +312,21 @@ void main() {
 
     expect(
       find.descendant(
-        of: find.byKey(const ValueKey<String>('dashboard-task-unanswered')),
+        of: findTaskRow('unanswered'),
         matching: find.textContaining('중복 고객'),
       ),
       findsOneWidget,
     );
     expect(
       find.descendant(
-        of: find.byKey(const ValueKey<String>('dashboard-task-lowCompletion')),
+        of: findTaskRow('lowCompletion'),
         matching: find.textContaining('운동 고객'),
       ),
       findsOneWidget,
     );
     expect(
       find.descendant(
-        of: find.byKey(const ValueKey<String>('dashboard-task-sodiumOver')),
+        of: findTaskRow('sodiumOver'),
         matching: find.textContaining('식단 고객'),
       ),
       findsOneWidget,
@@ -335,9 +343,7 @@ void main() {
     ) async {
       await openDashboard(tester);
 
-      final task = find.byKey(
-        ValueKey<String>('dashboard-task-${scenario.task}'),
-      );
+      final task = findTaskRow(scenario.task);
       await tester.ensureVisible(task);
       await tester.tap(task);
       await settle(tester);
