@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -239,7 +238,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Try adjusting the routine in Program.';
 
   @override
-  String get dashActivityRecommendChat => 'Try checking in over Chat.';
+  String get dashActivityRecommendChat => 'Try checking in over Messages.';
 
   @override
   String get dashActivityRecommendDiet => 'Try leaving feedback in Diet.';
@@ -248,7 +247,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashActivityTabProgram => 'Program';
 
   @override
-  String get dashActivityTabChat => 'Chat';
+  String get dashActivityTabChat => 'Messages';
 
   @override
   String get dashActivityTabDiet => 'Diet';
@@ -2706,7 +2705,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashTaskDismissBody =>
-      'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.';
+      'It only disappears from the task list. Actually handling it (consultation, program, report) still happens on its own screen.';
 
   @override
   String get dashTaskCarriedOverTitle => 'Carried over';
