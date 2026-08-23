@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1054,7 +1053,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'The reason you write is sent to the member as a notification.';
 
   @override
-  String get consultRejectHint => 'e.g. We\'re fully booked this month';
+  String get consultRejectHint =>
+      'e.g. I have another appointment at your requested time.';
 
   @override
   String get consultRejectAction => 'Decline';
