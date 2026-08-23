@@ -25,6 +25,23 @@ class ExerciseSessionOut(BaseModel):
     completed_at: datetime | None = None
 
 
+class ExerciseAdviceResponse(BaseModel):
+    """기간에 맞는 운동 조언. (#1025)
+
+    식단 조언(`DietAdviceResponse`, #1017)과 같은 모양이다 — 두 카드가 한 화면에
+    나란히 서므로 응답도 같은 말을 같은 이름으로 해야 한다.
+
+    기간 경계도 함께 돌려준다. 화면이 "무슨 구간을 두고 한 말인가" 를 보여 줄 수
+    있어야 하고, 앱과 서버가 서로 다른 주를 셌는지도 이 값으로 드러난다.
+    """
+
+    period: str
+    from_date: str
+    to_date: str
+    days_logged: int
+    message: str
+
+
 class ExerciseWeekResponse(BaseModel):
     sessions: list[ExerciseSessionOut]
     daily_minutes: list[int]

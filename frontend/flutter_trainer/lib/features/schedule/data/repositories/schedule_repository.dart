@@ -504,6 +504,9 @@ class DriftScheduleRepository implements ScheduleRepository {
               id: 'hist-$id-${now.microsecondsSinceEpoch}',
               clientId: client.id,
               dateLabel: '${day.month}/${day.day}${isToday ? ' (오늘)' : ''}',
+              // 라벨과 같은 날을 견줄 수 있는 형태로도 남긴다 — 고객 상세의
+              // 날짜별 기록이 이 값으로 이력을 그날에 붙인다(#1025, #1114).
+              completedAt: Value(day),
               label: 'PT 세션 · 트레이너 지도',
               completionRate: 100,
               exercisesJson: jsonEncode(<String>[

@@ -970,6 +970,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietEmpty => '아직 기록된 식단이 없어요';
 
   @override
+  String get dietDayEmpty => '기록 없음';
+
+  @override
+  String get dietMacros => '탄단지';
+
+  @override
   String get dietTodaySummary => '오늘 영양 요약';
 
   @override
@@ -994,7 +1000,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietAiAnalysis => 'AI 분석';
+  String get aiAnalysis => 'AI 분석';
+
+  @override
+  String get aiPeriodAnalysis => 'AI 기간 분석';
+
+  @override
+  String get aiAllAnalysis => 'AI 전체 분석';
 
   @override
   String dietAiOverSodium(int over) {
@@ -2269,6 +2281,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineAlreadyGone => '이미 삭제된 루틴이에요';
+
+  @override
+  String get workoutPendingTitle => '아직 하지 않은 개인 운동';
+
+  @override
+  String get workoutUndatedTitle => '날짜를 알 수 없는 기록';
+
+  @override
+  String get workoutPendingCancel => '배정 취소';
 
   @override
   String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';

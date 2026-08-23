@@ -609,7 +609,8 @@ class _MacroBar extends StatelessWidget {
               // 식단 그래프의 정상 막대는 카드가 말하는 `정상` 과 같은
               // 초록이다([AppColors.dietChart] = statusNormal). 예전에는 브랜드
               // 남색이라, 같은 날이 카드에서는 초록 · 그래프에서는 남색이었다.
-              // (#1027)
+              // (#1027) 운동 그래프(파랑)와 색으로 갈리는 것도 이 값이다(#1025).
+
               : AppColors.dietChart.withValues(alpha: 0.85),
           borderRadius: radius,
         ),
@@ -684,13 +685,15 @@ class _MetricPill extends StatelessWidget {
       selected: active,
       child: Container(
         decoration: BoxDecoration(
+          // 식단 카드 전체가 초록 계열이다 — 고른 지표 버튼도 같은 색으로
+          // 맞춘다(#1025).
           color: active
-              ? AppColors.primary.withValues(alpha: 0.12)
+              ? AppColors.dietChart.withValues(alpha: 0.12)
               : AppColors.inputBackground,
           borderRadius: const BorderRadius.all(AppRadius.pill),
           border: Border.all(
             color: active
-                ? AppColors.primary.withValues(alpha: 0.35)
+                ? AppColors.dietChart.withValues(alpha: 0.35)
                 : const Color(0x00000000),
           ),
           boxShadow: active ? kCardShadow : null,
@@ -710,7 +713,9 @@ class _MetricPill extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: active ? AppColors.primary : AppColors.mutedForeground,
+                  color: active
+                      ? AppColors.dietChart
+                      : AppColors.mutedForeground,
                 ),
               ),
             ),

@@ -65,6 +65,19 @@ class ClientDietEntries extends Table {
   RealColumn get proteinG => real().withDefault(const Constant(0))();
   RealColumn get fatG => real().withDefault(const Constant(0))();
 
+  /// 그 끼니의 당류(g). 나트륨과 나란히 읽히는 값인데 여기만 빠져 있어,
+  /// 트레이너는 끼니 카드에서 나트륨만 보고 당류는 하루 합계로만 볼 수
+  /// 있었다(#1025).
+  RealColumn get sugarG => real().withDefault(const Constant(0))();
+
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`).
+  ///
+  /// 예전에는 이 표가 **오늘 하루**만 담아 날짜가 필요 없었다. 기간 뷰에서
+  /// 날짜를 눌러 그날 끼니를 펼치려면 어느 날 것인지 알아야 한다(#1025).
+  /// 기본값이 빈 문자열이라 재시딩 전 행도 그대로 읽히고, 날짜로 거르는
+  /// 조회에서는 걸리지 않는다.
+  TextColumn get date => text().withDefault(const Constant(''))();
+
   /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
   /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
   /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
@@ -97,6 +110,7 @@ class ClientRoutineHistory extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
   TextColumn get dateLabel => text()(); // "7/12 (오늘)"
+
   TextColumn get label => text()(); // "PT 세션 · 트레이너 지도"
   IntColumn get completionRate => integer()(); // 0..100
   TextColumn get exercisesJson => text()(); // ["레그프레스 3세트", ...]
@@ -264,7 +278,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -379,6 +393,14 @@ class AppDatabase extends _$AppDatabase {
           clientRoutineHistory,
           clientRoutineHistory.completedAt,
         );
+      }
+      // v15: 끼니의 당류와 날짜(#1025). 둘 다 기본값이 있어 기존 행도 그대로
+      // 읽히고, 다음 재시딩이 실제 값을 채운다. 날짜가 빈 행은 날짜로 거르는
+      // 조회에 걸리지 않으므로, 재시딩 전에는 기간 뷰의 끼니가 비어 보일 뿐
+      // 오늘 화면은 지금까지와 같다.
+      if (from < 15) {
+        await m.addColumn(clientDietEntries, clientDietEntries.sugarG);
+        await m.addColumn(clientDietEntries, clientDietEntries.date);
       }
     },
   );

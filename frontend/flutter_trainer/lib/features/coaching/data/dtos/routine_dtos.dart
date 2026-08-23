@@ -49,6 +49,7 @@ AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
     type: _str(json['type']),
     reason: _str(json['reason']),
     source: _str(json['source']),
+    completed: json['completed'] == true,
   );
 }
 
