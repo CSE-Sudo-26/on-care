@@ -9,12 +9,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show weekdayCount;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/client_report_view.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/metric_comparison_section.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/report_client_picker.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_export_dialog.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/report_week_nav.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/week_trend_bar.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -22,6 +31,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
+import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
@@ -152,10 +162,12 @@ void main() {
         widget.decoration?.hintText == '고객에게 전달할 코칭 피드백을 작성하세요.',
   );
 
-  /// 이전 주 이동 버튼. 라벨이 그 버튼이 데려갈 주의 날짜 범위라(#897)
-  /// 고정된 글자로는 집을 수 없다.
+  /// 리포트 카드 제목 줄의 주 이동 화살표. 헤더가 아니라 카드 안에 있다(#1177).
   final Finder prevWeek = find.byKey(
-    const ValueKey<String>('reports-prev-week'),
+    const ValueKey<String>('report-week-prev'),
+  );
+  final Finder nextWeek = find.byKey(
+    const ValueKey<String>('report-week-next'),
   );
 
   Future<ProviderContainer> openReports(
@@ -185,23 +197,65 @@ void main() {
     expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
     expect(find.text('트레이너 피드백'), findsOneWidget);
     expect(find.text('다음 주'), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('completion-comparison-chart')),
-        matching: find.byType(BarSeriesChart),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('sodium-comparison-chart')),
-        matching: find.byType(BarSeriesChart),
-      ),
-      findsOneWidget,
-    );
+    // 비교 그래프는 지표 넷을 한 자리에서 돌려 쓴다 — 알약 버튼이 그 넷이다.
+    // 운동 상자와 식단 상자가 각자의 지표를 들고 나란히 선다.
+    for (final metric in <String>[
+      'burned',
+      'cardio',
+      'strength',
+      'stretching',
+    ]) {
+      expect(
+        find.byKey(ValueKey<String>('compare-exercise-$metric')),
+        findsOneWidget,
+      );
+    }
+    for (final metric in <String>['calories', 'sodium', 'sugar']) {
+      expect(
+        find.byKey(ValueKey<String>('compare-diet-$metric')),
+        findsOneWidget,
+      );
+    }
     // Defaults to the first client rather than an empty right pane.
     expect(find.text('김민수님 주간 리포트'), findsOneWidget);
-    expect(find.text('남성 · 35세'), findsWidgets);
+    // 카드 안에 고객 신상을 다시 적지 않는다 — 왼쪽 목록에서 방금 고른
+    // 고객이고, 카드 제목이 이미 누구의 리포트인지 말한다(#1177).
+    expect(
+      find.descendant(
+        of: find.byType(ClientReportView),
+        matching: find.text('남성 · 35세'),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('비교 상자는 알약 버튼으로 지표를 갈아 끼운다 (#1177)', (tester) async {
+    await openReports(tester);
+
+    // 식단 상자는 칼로리로 열리고, 막대는 탄·단·지로 쌓이므로 그 셋이
+    // 무엇인지 적어 준다. 고객 목록에도 `체지방 감량` 같은 목표가 있어 비교
+    // 상자 안으로 범위를 좁혀 본다.
+    Finder inBox(String text) => find.descendant(
+      of: find.byType(MetricComparisonSection),
+      matching: find.textContaining(text),
+    );
+    expect(inBox('탄수화물'), findsOneWidget);
+    expect(inBox('단백질'), findsOneWidget);
+    expect(inBox('지방'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('compare-diet-sugar')));
+    await settle(tester);
+    expect(inBox('탄수화물'), findsNothing);
+
+    // 운동 상자는 따로 움직인다 — 식단 지표를 바꿔도 그대로다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('compare-exercise-cardio')),
+    );
+    await settle(tester);
+    expect(
+      find.byKey(const ValueKey<String>('compare-exercise-cardio')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('공유는 상단에서 전송과 PDF 내보내기를 함께 보여 준다 (#735)', (tester) async {
@@ -321,7 +375,7 @@ void main() {
     await openReports(tester);
 
     final Finder leftColumn = find.byKey(
-      const ValueKey<String>('reports-left-scroll'),
+      const ValueKey<String>('reports-left-column'),
     );
     final Finder summaryTitle = find.text('AI 코칭 보조 · 리포트 요약');
     expect(summaryTitle, findsOneWidget);
@@ -350,6 +404,21 @@ void main() {
     );
   });
 
+  testWidgets('짧은 창에서도 요약 카드가 띠로 눌리지 않는다 (#1177)', (tester) async {
+    // 목록이 열을 거의 다 쓰는 높이다. `Expanded` 만 쓰면 요약이 몇 픽셀짜리
+    // 띠가 되어 내용이 넘치고, 렌더 오버플로가 난다.
+    await openReports(tester, size: const Size(1600, 700));
+
+    expect(tester.takeException(), isNull);
+    final Finder summary = find.text('AI 코칭 보조 · 리포트 요약');
+    expect(summary, findsOneWidget);
+    // 열은 그 대신 스스로 스크롤한다.
+    expect(
+      find.byKey(const ValueKey<String>('reports-left-scroll')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('좁은 화면 목록에서는 요약 자리에 무엇이 뜨는지 알린다 (#897)', (tester) async {
     await openReports(tester, size: const Size(700, 1000));
 
@@ -358,43 +427,80 @@ void main() {
     expect(find.text('피드백으로 가져오기'), findsNothing);
   });
 
-  testWidgets('주 이동 버튼은 그 버튼이 데려갈 주의 날짜 범위를 적는다 (#897)', (tester) async {
+  testWidgets('주 이동은 리포트 카드 제목 줄에서 하고, 보고 있는 주를 적는다 (#1177)', (tester) async {
     await openReports(tester);
 
-    final DateTime target = weekStartOf(
-      nowKst(),
-    ).subtract(const Duration(days: 7));
-    final DateTime end = target.add(const Duration(days: 6));
+    String rangeOf(DateTime start) {
+      final DateTime end = start.add(const Duration(days: 6));
+      return '${start.month}월 ${start.day}일 – ${end.month}월 ${end.day}일';
+    }
+
+    final DateTime thisWeek = weekStartOf(nowKst());
+    // 헤더가 아니라 카드 안이다 — 제목과 같은 줄에서 지금 보고 있는 주를 적는다.
     expect(
-      tester.widget<ActionButton>(prevWeek).label,
-      '${target.month}월 ${target.day}일 – ${end.month}월 ${end.day}일',
+      find.descendant(
+        of: find.byType(ClientReportView),
+        matching: find.text(rangeOf(thisWeek)),
+      ),
+      findsOneWidget,
     );
 
     await tester.tap(prevWeek);
     await settle(tester);
 
-    // 한 주 더 뒤로 가면 라벨도 한 주 앞선 범위를 가리킨다.
-    final DateTime next = target.subtract(const Duration(days: 7));
-    final DateTime nextEnd = next.add(const Duration(days: 6));
-    expect(
-      tester.widget<ActionButton>(prevWeek).label,
-      '${next.month}월 ${next.day}일 – ${nextEnd.month}월 ${nextEnd.day}일',
-    );
+    final DateTime lastWeek = thisWeek.subtract(const Duration(days: 7));
+    expect(find.text(rangeOf(lastWeek)), findsOneWidget);
+    expect(find.text(rangeOf(thisWeek)), findsNothing);
+
+    // 오른쪽 화살표로 되돌아온다.
+    await tester.tap(nextWeek);
+    await settle(tester);
+    expect(find.text(rangeOf(thisWeek)), findsOneWidget);
   });
 
-  testWidgets('과거 주차에서는 미래 이동 없이 이번 주로 복귀할 수 있다', (tester) async {
+  testWidgets('가장 최근 주에서는 다음 주 화살표가 죽어 있다 (#1177)', (tester) async {
     await openReports(tester);
 
-    expect(find.text('다음 주'), findsNothing);
-    expect(find.widgetWithText(ActionButton, '이번 주로'), findsNothing);
+    InkResponse arrow(Finder finder) => tester.widget<InkResponse>(finder);
+    expect(arrow(nextWeek).onTap, isNull, reason: '앞으로 갈 주가 없다');
+    expect(arrow(prevWeek).onTap, isNotNull);
+
+    await tester.tap(prevWeek);
+    await settle(tester);
+    expect(arrow(nextWeek).onTap, isNotNull);
+  });
+
+  testWidgets('`이번 주` 버튼은 주 이동 줄 안에 있고 이번 주에서는 아예 감춘다 (#1177, #1245)', (
+    tester,
+  ) async {
+    await openReports(tester);
+
+    final Finder currentWeek = find.byKey(
+      const ValueKey<String>('reports-go-this-week'),
+    );
+    // 헤더에는 더 이상 없다.
+    expect(
+      find.descendant(
+        of: find.byType(PageScaffold),
+        matching: find.widgetWithText(ActionButton, '이번 주로'),
+      ),
+      findsNothing,
+    );
+    // 스케줄 탭의 `오늘` 처럼 이번 주에는 버튼 자체를 그리지 않는다 — 회색
+    // 비활성이 아니라 미표시다. 자리는 고정폭 슬롯이 대신 지켜, 화살표는
+    // 밀리지 않는다.
+    expect(currentWeek, findsNothing);
 
     await tester.tap(prevWeek);
     await settle(tester);
 
-    final currentWeek = find.widgetWithText(ActionButton, '이번 주로');
-    expect(currentWeek, findsOneWidget);
-    expect(find.text('다음 주'), findsNothing);
-    // 비교 카드 두 곳과 최근 4주 목록에 같은 말이 쓰인다.
+    // 스케줄 탭의 `오늘` 처럼 두 화살표 사이에 선다 — 옮기는 대상과 같은 줄이다.
+    expect(
+      find.descendant(of: find.byType(ReportWeekNav), matching: currentWeek),
+      findsOneWidget,
+    );
+    expect(tester.widget<ActionButton>(currentWeek).onPressed, isNotNull);
+    // 비교 카드와 최근 4주 목록에 같은 말이 쓰인다.
     expect(find.text('선택 주'), findsWidgets);
 
     await tester.tap(currentWeek);
@@ -403,30 +509,24 @@ void main() {
     expect(currentWeek, findsNothing);
   });
 
-  testWidgets('`이번 주로` 는 날짜 버튼 왼쪽에 나타나고 날짜 버튼을 밀지 않는다', (tester) async {
+  testWidgets('헤더 검색 바가 다른 탭과 같은 인라인 모양이다 (#1177)', (tester) async {
     await openReports(tester);
 
-    // 지난 주로 옮기기 전의 자리를 재 둔다.
-    final Rect dateBefore = tester.getRect(prevWeek);
+    // 날짜 버튼이 헤더 폭을 먹던 때에는 가운데 검색 바가 아이콘으로 접혀,
+    // 리포트 탭만 다른 탭과 다른 모양이었다.
+    expect(find.byKey(clientSearchFieldKey), findsOneWidget);
+    expect(find.byKey(clientSearchIconKey), findsNothing);
+    // 대시보드에서 보는 것과 같은 폭·같은 안내 문구다.
+    final double reportsWidth = tester
+        .getSize(find.byKey(clientSearchFieldKey))
+        .width;
+    expect(find.text('고객·목표·최근 메시지·마지막 루틴 전송일 검색'), findsOneWidget);
 
-    await tester.tap(prevWeek);
-    await settle(tester);
-
-    final Finder goThisWeek = find.byKey(
-      const ValueKey<String>('reports-go-this-week'),
-    );
-    expect(goThisWeek, findsOneWidget);
-
-    // 날짜 버튼 왼쪽이다. 헤더 동작은 오른쪽 정렬이라, 오른쪽 끝에 끼우면
-    // 나타나는 순간 날짜 버튼이 통째로 왼쪽으로 밀려 방금까지 누르던 자리가
-    // 움직인다.
+    await goTo(tester, AppRoutes.dashboard);
     expect(
-      tester.getRect(goThisWeek).right,
-      lessThanOrEqualTo(tester.getRect(prevWeek).left + 0.5),
+      tester.getSize(find.byKey(clientSearchFieldKey)).width,
+      closeTo(reportsWidth, 0.5),
     );
-    // 날짜 버튼의 **오른쪽 모서리**가 그대로다. 왼쪽 모서리는 주가 바뀌며
-    // 라벨 길이가 달라져 함께 움직인다 — 자리를 지키는 것은 오른쪽이다.
-    expect(tester.getRect(prevWeek).right, closeTo(dateBefore.right, 0.5));
   });
 
   testWidgets('좁은 화면에서 고객 선택 시 목록 대신 상세를 바로 연다', (tester) async {
@@ -550,7 +650,7 @@ void main() {
     expect(find.text('이지수님 주간 리포트'), findsOneWidget);
   });
 
-  testWidgets('고객 목록에 공용 주간 이행률을 막대로 비교한다 (#1097)', (tester) async {
+  testWidgets('고객 목록은 이름·목표만 적고 이행률 막대는 두지 않는다 (#1177)', (tester) async {
     await openReports(
       tester,
       extraOverrides: <Override>[
@@ -559,34 +659,32 @@ void main() {
             makeClient(
               id: 'measured',
               name: '기록고객',
+              goal: '혈압 관리',
               weekCompletion: const <int>[80, 0, 60, 0, 0, 0, 0],
-            ),
-            makeClient(
-              id: 'empty',
-              name: '미기록고객',
-              weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0],
             ),
           ]),
         ),
       ],
     );
 
-    InlineBarValue completionOf(String id) => tester.widget<InlineBarValue>(
-      find.byKey(ValueKey<String>('report-client-completion-$id')),
+    // 같은 값을 오른쪽 리포트가 훨씬 자세히 말한다 — 고르는 자리에는 이름과
+    // 목표만 둔다.
+    expect(
+      find.byKey(const ValueKey<String>('report-client-completion-measured')),
+      findsNothing,
     );
-
-    final measured = completionOf('measured');
-    expect(measured.label, '주간 이행률');
-    expect(measured.fraction, 0.7);
-    expect(measured.text, '70%');
-
-    final empty = completionOf('empty');
-    expect(empty.fraction, isNull);
-    expect(empty.text, '데이터 부족');
-    expect(find.text('0%'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(ReportClientPicker),
+        matching: find.byType(InlineBarValue),
+      ),
+      findsNothing,
+    );
+    expect(find.text('기록고객'), findsWidgets);
+    expect(find.text('혈압 관리'), findsWidgets);
   });
 
-  testWidgets('좁은 리포트 고객 목록에서 이행률 막대가 overflow 나지 않는다 (#1097)', (tester) async {
+  testWidgets('좁은 리포트 고객 목록도 넘치지 않는다', (tester) async {
     await openReports(
       tester,
       size: const Size(700, 760),
@@ -605,7 +703,7 @@ void main() {
     );
 
     expect(
-      find.byKey(const ValueKey<String>('report-client-completion-narrow')),
+      find.byKey(const ValueKey<String>('report-client-narrow')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -619,7 +717,8 @@ void main() {
     // The preview box is the message body itself, so the trainer can
     // read it before sending rather than discovering it in the thread.
     expect(find.textContaining('주간 리포트'), findsWidgets);
-    expect(find.textContaining('PT 세션'), findsWidgets);
+    // PT 진행 횟수는 초안에서 뺐다 — 회원에게 보낼 글이 아니다(#1177).
+    expect(find.textContaining('PT 세션'), findsNothing);
     // 전송 경로는 화면에 하나뿐이다 — 본문에는 더 이상 전송 버튼이 없다.
     await openShareMenu(tester);
     expect(find.text('김민수님에게 전송'), findsOneWidget);
@@ -779,11 +878,11 @@ void main() {
   testWidgets('주를 가리키는 말은 이번 주·지난 주·선택 주 셋뿐이다', (tester) async {
     await openReports(tester);
 
-    // 헤더 버튼은 주 이름 대신 **그 버튼이 데려갈 주의 날짜 범위**를 적는다
-    // (#897). '이전 주' 라고 쓰면 비교 카드의 '지난 주' 열과 같은 말이 되어
-    // 어느 주를 보고 있는지 헷갈린다.
+    // 주 이동 줄은 주 이름 대신 **보고 있는 주의 날짜 범위**를 적는다.
+    // '이전 주' 라고 쓰면 비교 카드의 '지난 주' 열과 같은 말이 되어 어느 주를
+    // 보고 있는지 헷갈린다.
     expect(prevWeek, findsOneWidget);
-    expect(tester.widget<ActionButton>(prevWeek).label, contains(' – '));
+    expect(find.textContaining(' – '), findsWidgets);
     expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
 
     await tester.tap(prevWeek);
@@ -826,16 +925,34 @@ void main() {
     // 값이 있는 막대를 세면 나오므로 따로 적지 않는다.
     expect(find.text('최근 4주 평균'), findsOneWidget);
 
-    // 기록이 없는 날은 0% 가 아니라 기록이 없다고 말한다.
+    // 기록이 없는 날은 0% 가 아니라 기록이 없다고 말한다. 막대·꺾은선·값이 한
+    // 그림이라 글자는 캔버스에 그려진다 — 무엇을 비워 둘지는 그래프가 받는
+    // `missing` 이 정한다(#1177).
     expect(find.text('0%'), findsNothing);
-    expect(find.text('기록 없음'), findsWidgets);
+    final chart = tester.widget<BarLineChart>(
+      find.byKey(const ValueKey<String>('reports-completion-chart')),
+    );
+    // 규칙으로 확인한다 — 요일 번호를 못 박으면 월요일에 도는 CI 에서는
+    // 지나간 날이 하루뿐이라 기대값이 통째로 어긋난다.
+    final int elapsed = chart.pendingFrom ?? weekdayCount;
+    expect(elapsed, nowKst().weekday, reason: '아직 오지 않은 날은 비워 둔다');
+    for (var i = 0; i < elapsed; i++) {
+      expect(
+        chart.values[i],
+        weekCompletion[i] == 0 ? isNull : weekCompletion[i],
+        reason: '지난 날의 0 은 기록 없음이고, 그 밖은 그날 이행률이다',
+      );
+    }
+    expect(chart.emptyLabel, '기록 없음');
+    // 카드 제목 줄이 평균과 며칠을 나눈 값인지 함께 말한다.
+    expect(find.text('기록 $logged일'), findsOneWidget);
 
-    // 운동과 식단이 카드로 나뉘고, 각 카드 제목 줄에 그 카드의 수치가 남는다.
+    // 운동과 식단이 카드로 나뉜다.
     expect(find.text('주간 운동 이행률'), findsOneWidget);
     expect(find.text('주간 식단 추이'), findsOneWidget);
-    // 며칠인지는 어제가 어느 요일이냐에 따라 달라진다 — 그 수치가 카드 제목
-    // 줄에 남는다는 것이 요지다.
-    expect(find.textContaining('나트륨 초과'), findsOneWidget);
+    // 식단 카드 제목 옆에 지표 하나의 수치(`나트륨 초과 n일`)를 붙이지 않는다 —
+    // 카드가 식단 전체를 말하는 자리다(#1177).
+    expect(find.textContaining('나트륨 초과'), findsNothing);
   });
 
   testWidgets('요일 칸에 그날 한 운동 이름이 남는다 (#754)', (tester) async {
@@ -862,6 +979,21 @@ void main() {
     // 배지는 달리지 않는다. 트레이너가 이 문장을 어디까지 믿을지 알아야 한다.
     expect(find.text('AI 생성'), findsNothing);
     expect(find.textContaining('운동 이행률'), findsWidgets);
+  });
+
+  testWidgets('요약 카드가 다음 주 할 일까지 적어 아래를 채운다 (#1177)', (tester) async {
+    await openReports(tester);
+
+    // PT 세션 수는 옆 카드 제목 줄이 이미 말한다 — 요약에서 되풀이하지 않는다.
+    expect(find.textContaining('PT 세션 1/1회 완료'), findsNothing);
+    // 그 자리를 수치에서 곧바로 나오는 다음 주 할 일이 가져간다. 어떤 제안이
+    // 뜨는지는 그 주 수치에 달렸으므로 줄이 있다는 것만 본다 — 문구는
+    // `summaryCoachingActions` 테스트가 규칙으로 확인한다.
+    expect(find.text('다음 주 코칭 제안'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('reports-summary-action-0')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('요약을 피드백 초안으로 가져온다 (#755)', (tester) async {
@@ -963,6 +1095,63 @@ void main() {
 
     expect(drafts.saved, <String>['어깨 안정화 위주로 한 주 더 갑니다.']);
     expect(find.text('피드백 초안을 저장했어요.'), findsOneWidget);
+  });
+
+  testWidgets('지난 주 리포트에는 저장·되돌리기가 없다 (#1177)', (tester) async {
+    await openReports(tester);
+
+    expect(saveFeedback, findsOneWidget);
+    expect(find.text('초안으로 되돌리기'), findsOneWidget);
+
+    await tester.tap(prevWeek);
+    await settle(tester);
+
+    // 트레이너가 손볼 것은 이번 주에 보낼 글이다. 이미 지나간 주의 초안을
+    // 저장해 둘 자리는 없다.
+    expect(saveFeedback, findsNothing);
+    expect(find.text('초안으로 되돌리기'), findsNothing);
+    // 글은 그대로 읽을 수 있다 — 숨긴 것은 버튼뿐이다.
+    expect(feedbackField, findsOneWidget);
+  });
+
+  testWidgets('부제는 리포트를 쓰라고 하지 않고 확인해 전달하라고 말한다 (#1177)', (tester) async {
+    await openReports(tester);
+
+    expect(find.text('주간 변화를 확인하고 고객에게 전달하세요'), findsOneWidget);
+  });
+
+  testWidgets('식단 추이 막대는 목표를 넘긴 주만 빨강이고 목표 표기는 없다 (#1177)', (tester) async {
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith(
+          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+            makeClient(
+              id: 'salty-client',
+              name: '나트륨고객',
+              sodiumWeek: List<int>.filled(7, 2500),
+            ),
+          ]),
+        ),
+      ],
+    );
+
+    // 식단 카드는 리포트 열 아래쪽이라 먼저 보이는 곳까지 굴린다.
+    final Finder sodiumPill = find.byKey(
+      const ValueKey<String>('trend-metric-sodium'),
+    );
+    await tester.ensureVisible(sodiumPill);
+    await settle(tester);
+    await tester.tap(sodiumPill);
+    await settle(tester);
+
+    final bars = tester
+        .widgetList<WeekTrendBar>(find.byType(WeekTrendBar))
+        .toList();
+    expect(bars.where((b) => b.warn), isNotEmpty, reason: '목표를 넘긴 주가 있어야 한다');
+    // 세로선이 무엇인지 적어 주던 `│ 목표 …` 는 사라졌다 — 초과 여부는 색이
+    // 말한다.
+    expect(find.textContaining('│'), findsNothing);
   });
 
   testWidgets('저장에 실패해도 쓰던 문구는 입력창에 남는다 (#821)', (tester) async {

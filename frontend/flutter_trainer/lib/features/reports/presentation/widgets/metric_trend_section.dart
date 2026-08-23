@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays, weekdayCount, weekdayLabels;
@@ -10,6 +9,7 @@ import 'package:oncare_trainer/features/reports/presentation/widgets/four_week_m
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
+import 'package:oncare_trainer/shared/widgets/metric_pill.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -94,7 +94,7 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
             ),
             for (final metric in _TrendMetric.values) ...<Widget>[
               const SizedBox(width: AppSpacing.xs),
-              _MetricChip(
+              MetricPill(
                 key: ValueKey<String>('trend-metric-${metric.name}'),
                 label: _label(l, metric),
                 selected: metric == _metric,
@@ -159,38 +159,4 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
       ],
     );
   }
-}
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({
-    super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: selected ? AppColors.accentSurface : AppColors.inputBackground,
-    borderRadius: const BorderRadius.all(AppRadius.pill),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: const BorderRadius.all(AppRadius.pill),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.primary : AppColors.mutedForeground,
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    ),
-  );
 }

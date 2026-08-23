@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
@@ -117,11 +118,12 @@ class _FakeConsultationRepository implements ConsultationRepository {
 
 Future<ProviderContainer> _pumpInbox(
   WidgetTester tester,
-  _FakeConsultationRepository repo,
-) => pumpTrainerApp(
+  _FakeConsultationRepository repo, {
+  String? at,
+}) => pumpTrainerApp(
   tester,
   token: 'demo-token',
-  at: AppRoutes.consultations,
+  at: at ?? AppRoutes.consultations,
   extraOverrides: <Override>[
     consultationRepositoryProvider.overrideWithValue(repo),
   ],
@@ -150,7 +152,7 @@ void main() {
     expect(find.text('거절'), findsOneWidget);
   });
 
-  testWidgets('badges every request as addressed to this trainer', (
+  testWidgets('does not repeat that every request targets a trainer', (
     tester,
   ) async {
     await _pumpInbox(
@@ -158,9 +160,48 @@ void main() {
       _FakeConsultationRepository(requests: <ConsultationRequest>[_request()]),
     );
 
-    // 요청은 트레이너 한 사람 앞으로만 온다 — "헬스장 문의" 갈래는 없어졌다.
-    expect(find.text('트레이너 지정'), findsOneWidget);
+    // 요청은 항상 트레이너 앞으로 오므로 카드마다 같은 배지를 반복하지 않는다.
+    expect(find.text('트레이너 지정'), findsNothing);
     expect(find.text('헬스장 문의'), findsNothing);
+  });
+
+  testWidgets('offers a route back to the schedule', (tester) async {
+    await _pumpInbox(tester, _FakeConsultationRepository());
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+    );
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.schedule);
+  });
+
+  testWidgets('dashboard entry returns to the dashboard', (tester) async {
+    await _pumpInbox(
+      tester,
+      _FakeConsultationRepository(),
+      at: AppRoutes.consultationsFromDashboard(),
+    );
+
+    expect(find.text('대시보드로 돌아가기'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+    );
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.dashboard);
+  });
+
+  testWidgets('consultations remain inside the schedule workspace', (
+    tester,
+  ) async {
+    await _pumpInbox(tester, _FakeConsultationRepository());
+
+    final shell = tester.widget<AppShell>(find.byType(AppShell));
+    final scheduleIndex = navDestinations.indexWhere(
+      (destination) => destination.route == AppRoutes.schedule,
+    );
+    expect(shell.navigationShell.currentIndex, scheduleIndex);
   });
 
   testWidgets('accepting sends the decision to the repository', (tester) async {

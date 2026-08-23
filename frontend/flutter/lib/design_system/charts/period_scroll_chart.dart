@@ -235,37 +235,45 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                       // 다시 자라면 눌러 읽는 동작을 방해한다.
                       // 막대는 빈 칸 아래에서만 자란다 — 빈 칸은 세로선이
                       // 머리 카드까지 올라갈 자리다.
-                      Padding(
-                        padding: EdgeInsets.only(top: widget.topGap),
-                        child: ChartReveal(
-                          replayKey: widget.revealKey ?? widget.count,
-                          builder: (BuildContext context, double t) => Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: <Widget>[
-                              for (int i = 0; i < widget.count; i++)
-                                SizedBox(
-                                  width: slot,
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () => widget.onSelected?.call(
-                                      widget.selectedIndex == i ? null : i,
-                                    ),
-                                    // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
-                                    // 자르지 않으면 막대가 줄어든 상자 밖으로
-                                    // 삐져나와 그대로 다 보인다.
-                                    child: ClipRect(
-                                      key: ValueKey<String>(
-                                        'period-bar-reveal-$i',
+                      // 자라는 막대 줄은 **바닥에 붙인다** (#1200). `Stack` 은
+                      // 자리를 정하지 않은 자식을 위쪽 모서리에 두므로, 높이가
+                      // t 를 따라 커지는 이 줄이 위에 매달린 채 아래로
+                      // 내려왔다 — 막대가 자라는 것이 아니라 그래프가 통째로
+                      // 내려오는 것처럼 보였다.
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: widget.topGap),
+                          child: ChartReveal(
+                            replayKey: widget.revealKey ?? widget.count,
+                            builder: (BuildContext context, double t) => Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: <Widget>[
+                                for (int i = 0; i < widget.count; i++)
+                                  SizedBox(
+                                    width: slot,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => widget.onSelected?.call(
+                                        widget.selectedIndex == i ? null : i,
                                       ),
-                                      child: Align(
-                                        alignment: Alignment.bottomCenter,
-                                        heightFactor: t,
-                                        child: widget.barBuilder(context, i),
+                                      // 자라는 동안 위쪽이 잘려 보이도록 감싼다 —
+                                      // 자르지 않으면 막대가 줄어든 상자 밖으로
+                                      // 삐져나와 그대로 다 보인다.
+                                      child: ClipRect(
+                                        key: ValueKey<String>(
+                                          'period-bar-reveal-$i',
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.bottomCenter,
+                                          heightFactor: t,
+                                          child: widget.barBuilder(context, i),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

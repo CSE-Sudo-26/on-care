@@ -37,12 +37,6 @@ class FourWeekMetricTrend extends ConsumerWidget {
   /// 목표. 눈금과 주의 색의 기준을 겸한다.
   final double goal;
 
-  /// 눈금 끝은 목표의 1.5배. 목표를 눈금 끝으로 삼으면 — 김민수의 나트륨처럼
-  /// 네 주가 모두 목표를 넘은 경우 — 막대 넷이 전부 꽉 차 버려 어느 주가 더
-  /// 나빴는지가 사라진다. 여유를 두고 2/3 지점에 목표선을 그으면 초과 여부와
-  /// 주별 차이를 함께 읽는다.
-  static const double _headroom = 1.5;
-
   /// 값 뒤에 붙는 단위.
   final String unit;
 
@@ -67,28 +61,16 @@ class FourWeekMetricTrend extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                '${l.reportsRecentWeeks} · $label',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-            ),
-            // 세로선이 무엇인지 한 번은 적어 준다.
-            Text(
-              l.reportsGoalMarker('${metricTrendNumber(goal)}$unit'),
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.mutedForeground,
-              ),
-            ),
-          ],
+        // 목표 표기는 적지 않는다. 눈금 위 세로선과 초과한 주의 빨간 막대가
+        // 이미 같은 말을 하고 있었고, 줄 끝의 `│ 목표 2,000mg` 은 그 세로선과
+        // 겹쳐 읽혀 오히려 눈금처럼 보였다(#1177).
+        Text(
+          '${l.reportsRecentWeeks} · $label',
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.subtleForeground,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         for (var i = 0; i < weeks.length; i++)
@@ -99,8 +81,9 @@ class FourWeekMetricTrend extends ConsumerWidget {
             final mean = week == null ? null : recordedMean(values(week));
             return WeekTrendBar(
               label: labels[i],
-              fraction: mean == null ? null : mean / (goal * _headroom),
-              goalFraction: 1 / _headroom,
+              // 눈금 끝이 곧 목표다. 막대가 트랙을 다 채웠다는 것이 목표에
+              // 닿았다는 뜻이 되고, 넘긴 주는 꽉 찬 빨간 막대로 남는다(#1177).
+              fraction: mean == null ? null : mean / goal,
               text: mean == null
                   ? '-'
                   : '${metricTrendNumber(mean.round())}$unit',

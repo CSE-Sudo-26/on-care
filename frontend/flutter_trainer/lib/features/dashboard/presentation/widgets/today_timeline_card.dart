@@ -16,7 +16,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
-/// 상담은 "메모 남기기"로, 그 외(1:1 PT 등)는 "수업 준비하기"로 갈린다 —
+/// 상담은 "메모 남기기"로, 그 외(1:1 PT 등)는 "PT 준비하기"로 갈린다 —
 /// 상담엔 준비할 프로그램이 없고, PT엔 남길 상담 메모가 없다.
 bool _isConsultation(String type) => type.contains('상담');
 
@@ -82,6 +82,7 @@ class TodayTimelineCard extends ConsumerWidget {
               ],
               for (final session in booked)
                 _Row(
+                  key: ValueKey<String>('dashboard-schedule-${session.id}'),
                   session: session,
                   client: findClientIdentity(
                     clients,
@@ -94,7 +95,12 @@ class TodayTimelineCard extends ConsumerWidget {
                   imminent:
                       settings.sessionReminders &&
                       startsWithin(session, settings.reminderLeadMinutes),
-                  onTap: () => context.go(AppRoutes.scheduleAt()),
+                  onTap: () => context.go(
+                    AppRoutes.scheduleAt(
+                      date: session.date,
+                      sessionId: session.id,
+                    ),
+                  ),
                 ),
             ],
           );
@@ -188,7 +194,7 @@ class _NextUpBanner extends StatelessWidget {
                 borderRadius: BorderRadius.all(AppRadius.pill),
               ),
               textStyle: const TextStyle(
-                fontSize: 13.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -196,7 +202,7 @@ class _NextUpBanner extends StatelessWidget {
             label: Text(
               isConsultation || clientId == null
                   ? l.dashLeaveMemo
-                  : l.dashPrepareClass,
+                  : l.dashPreparePt,
             ),
           ),
         ],
@@ -207,6 +213,7 @@ class _NextUpBanner extends StatelessWidget {
 
 class _Row extends StatelessWidget {
   const _Row({
+    super.key,
     required this.session,
     required this.client,
     required this.fallbackName,

@@ -371,21 +371,28 @@ class _PeriodToggle extends StatelessWidget {
       DietPeriodTab.week: l.exThisWeek,
       DietPeriodTab.month: l.exPeriodAll,
     };
-    return Container(
-      key: const ValueKey<String>('diet-period-toggle'),
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: FigmaColors.statBg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (final DietPeriodTab tab in DietPeriodTab.values)
-            Flexible(
+    // 세 라벨은 **줄이지 않는다** (#1182). 칸마다 `Flexible` 로 접어 두었더니
+    // 좁은 줄에서 여백이 먼저 자리를 차지하고 글자가 줄임표로 사라져, 파란
+    // 알약과 빈 띠만 남았다. 토글은 필요한 만큼 폭을 갖고, 그래도 모자라면
+    // 통째로 줄여 세 라벨이 언제나 함께 보이게 한다.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      // 줄 오른쪽 끝에 붙는다 — 줄어들어도 자리를 지킨다.
+      alignment: Alignment.centerRight,
+      child: Container(
+        key: const ValueKey<String>('diet-period-toggle'),
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: FigmaColors.statBg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (final DietPeriodTab tab in DietPeriodTab.values)
               // 켜진 탭을 파란 알약으로만 알리면 어느 기간을 보고 있는지도,
               // 이게 누를 수 있는 자리인지도 음성 안내에 나오지 않는다(#972).
-              child: Semantics(
+              Semantics(
                 button: true,
                 selected: active == tab,
                 child: GestureDetector(
@@ -395,9 +402,9 @@ class _PeriodToggle extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
                     // 누를 자리가 글자에 딱 붙어 빠듯했다 — 좌우를 넓힌다.
-                    // 다만 글자를 키운 화면에서는 세 탭의 최소 폭 합이 남는
-                    // 폭을 넘겨 줄이 터지므로, 그때는 예전 값으로 돌아간다.
-                    // (#1058)
+                    // 다만 글자를 키운 화면에서는 세 탭의 폭 합이 커져 토글
+                    // 전체가 그만큼 줄어드므로, 그때는 좁은 값으로 돌아간다.
+                    // (#1058 · #1182)
                     padding: EdgeInsets.symmetric(
                       horizontal:
                           MediaQuery.textScalerOf(context).scale(1) > 1.3
@@ -414,7 +421,7 @@ class _PeriodToggle extends StatelessWidget {
                     child: Text(
                       labels[tab]!,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -426,8 +433,8 @@ class _PeriodToggle extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -487,7 +494,11 @@ class _NutritionSectionHeader extends StatelessWidget {
           // 토글은 카드 오른쪽 끝 — 운동 탭 '운동 현황' 과 같은 자리라 두 탭을
           // 오가며 같은 곳에서 기간을 바꾼다.
           if (showToggle)
+            // 토글 몫을 제목보다 넓게 잡는다 — 제목(`영양 요약`)은 접혀도
+            // 뜻이 남지만, 기간 라벨은 줄면 무엇을 고르는 자리인지 사라진다.
+            // 운동 탭 `운동 현황` 과 같은 몫이다. (#1182)
             Flexible(
+              flex: 2,
               child: _PeriodToggle(active: period, onChanged: onChanged),
             ),
         ],
@@ -1075,15 +1086,22 @@ class _CalorieCircularProgress extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
+          // 12시에서 지금 비율까지 **채워지며** 들어온다 (#1202) — 같은 앱의
+          // 운동 도넛·링과 두 탭의 막대·꺾은선이 모두 그렇게 등장하는데 이
+          // 도넛만 처음부터 완성된 채였다. 값이 바뀌면 그 값으로 다시 채운다.
           SizedBox.square(
             dimension: 92,
-            child: CircularProgressIndicator(
-              key: const Key('nutrition-calorie-progress'),
-              value: calories.gaugeValue,
-              strokeWidth: 9,
-              strokeCap: StrokeCap.round,
-              backgroundColor: FigmaColors.track,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+            child: ChartReveal(
+              replayKey: calories.gaugeValue,
+              builder: (BuildContext context, double t) =>
+                  CircularProgressIndicator(
+                    key: const Key('nutrition-calorie-progress'),
+                    value: calories.gaugeValue * t,
+                    strokeWidth: 9,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: FigmaColors.track,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
             ),
           ),
           // 링은 지름이 고정이라 글자 배율이 커지면 안쪽 두 줄이 원을 넘어선다

@@ -318,6 +318,8 @@ class DriftScheduleRepository implements ScheduleRepository {
                 'reps': item.reps,
                 'weight': item.weight,
                 'session': item.session,
+                'type': item.type,
+                'duration': item.duration,
               },
           ]),
         ),
@@ -367,6 +369,8 @@ class DriftScheduleRepository implements ScheduleRepository {
             'reps': item.reps,
             'weight': item.weight,
             'session': item.session,
+            'type': item.type,
+            'duration': item.duration,
           },
       ]);
       if (existing != null) {
@@ -649,6 +653,9 @@ class DriftScheduleRepository implements ScheduleRepository {
             weight: m['weight']! as String,
             // 세션 키가 없던 데모 데이터도 그대로 읽힌다(#709).
             session: m['session'] as String? ?? '',
+            // 이 키들이 없던 데모 데이터도 기본값으로 읽힌다(#1233).
+            type: m['type'] as String? ?? '근력',
+            duration: m['duration'] as String? ?? '',
           ),
         )
         .toList();
