@@ -178,7 +178,12 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _saving ? null : widget.onCancel,
-                  child: Text(l.actionCancel),
+                  // 좁은 화면에서 "프로그램 저장"이 두 줄로 접히던 것과
+                  // 같은 안전장치 — 잘리는 대신 통째로 줄어든다.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(l.actionCancel),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -186,7 +191,10 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                 child: FilledButton(
                   key: const ValueKey<String>('save-program'),
                   onPressed: _saving ? null : _save,
-                  child: Text(_saving ? l.progSaving : l.progSaveAction),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(_saving ? l.progSaving : l.progSaveAction),
+                  ),
                 ),
               ),
             ],
@@ -246,36 +254,45 @@ class _ProgramDraftFields extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
+              // "횟수/시간"("Reps/time")이 세 라벨 중 가장 길다 — 셋을
+              // 똑같이 나누면 그 라벨만 잘린다. 라벨 글씨를 살짝 줄이고
+              // 그 칸에 몫을 더 준다.
               Expanded(
+                flex: 3,
                 child: TextField(
                   key: ValueKey<String>('program-sets-$index'),
                   controller: draft.sets,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: l.progSets,
+                    labelStyle: const TextStyle(fontSize: 12),
                     isDense: true,
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
+                flex: 4,
                 child: TextField(
                   key: ValueKey<String>('program-reps-$index'),
                   controller: draft.reps,
                   decoration: InputDecoration(
                     labelText: l.progReps,
+                    labelStyle: const TextStyle(fontSize: 12),
                     isDense: true,
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
+                flex: 3,
                 child: TextField(
                   key: ValueKey<String>('program-weight-$index'),
                   controller: draft.weight,
                   decoration: InputDecoration(
                     labelText: l.progWeight,
                     hintText: l.progOptional,
+                    labelStyle: const TextStyle(fontSize: 12),
                     isDense: true,
                   ),
                 ),
