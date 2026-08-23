@@ -1,8 +1,8 @@
 /// 운동 현황 카드의 자리 규칙 (#1126 · #1127 · #1129).
 ///
 ///  * 기간 토글은 식단 탭의 것과 **같은 크기**다.
-///  * 오늘 화면은 유형별 값이 왼쪽, 소모 칼로리 도넛이 오른쪽이고, 도넛 옆에
-///    같은 숫자를 또 적지 않는다.
+///  * 오늘 화면은 소모 칼로리 도넛이 왼쪽, 유형별 값이 오른쪽이고(#1151),
+///    도넛 옆에 같은 숫자를 또 적지 않는다.
 ///  * 전체 화면에서 고른 주의 내역은 kcal 오른쪽에 붙고 색 네모는 없다.
 library;
 
@@ -55,7 +55,7 @@ Widget _app(int period) => ProviderScope(
 );
 
 void main() {
-  testWidgets('오늘: 유형별 값은 왼쪽, 도넛은 오른쪽 (#1127)', (WidgetTester tester) async {
+  testWidgets('오늘: 도넛은 왼쪽, 유형별 값은 오른쪽 (#1151)', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -76,16 +76,15 @@ void main() {
           .last,
     );
     expect(
-      cardio.right,
-      lessThan(donut.left),
-      reason: '유형별 값이 도넛 왼쪽에 있어야 한다',
+      donut.right,
+      lessThan(cardio.left),
+      reason: '도넛이 유형별 값 왼쪽에 있어야 한다',
     );
 
-    // 라벨과 값이 카드 양 끝으로 벌어지지 않는다 — 유형 줄 전체 폭이 카드의
-    // 절반을 넘지 않는다.
+    // 도넛과 상세가 한 덩어리로 가운데에 서고, 카드 양옆에 여백이 남는다.
     final Rect card = tester.getRect(find.byType(ExerciseDayLoadCard));
-    expect(cardio.left - card.left, greaterThan(8));
-    expect(donut.left - cardio.right, lessThan(card.width * 0.55));
+    expect(donut.left - card.left, greaterThan(8));
+    expect(card.right - cardio.right, greaterThan(8));
   });
 
   testWidgets('기간 토글은 식단 탭과 같은 크기다 (#1126)', (WidgetTester tester) async {
