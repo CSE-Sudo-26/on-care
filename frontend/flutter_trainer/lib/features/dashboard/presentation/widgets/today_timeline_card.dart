@@ -188,7 +188,7 @@ class _NextUpBanner extends StatelessWidget {
                 borderRadius: BorderRadius.all(AppRadius.pill),
               ),
               textStyle: const TextStyle(
-                fontSize: 13.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w800,
               ),
             ),
