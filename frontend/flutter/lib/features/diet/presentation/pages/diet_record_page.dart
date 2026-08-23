@@ -1075,15 +1075,22 @@ class _CalorieCircularProgress extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
+          // 12시에서 지금 비율까지 **채워지며** 들어온다 (#1202) — 같은 앱의
+          // 운동 도넛·링과 두 탭의 막대·꺾은선이 모두 그렇게 등장하는데 이
+          // 도넛만 처음부터 완성된 채였다. 값이 바뀌면 그 값으로 다시 채운다.
           SizedBox.square(
             dimension: 92,
-            child: CircularProgressIndicator(
-              key: const Key('nutrition-calorie-progress'),
-              value: calories.gaugeValue,
-              strokeWidth: 9,
-              strokeCap: StrokeCap.round,
-              backgroundColor: FigmaColors.track,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+            child: ChartReveal(
+              replayKey: calories.gaugeValue,
+              builder: (BuildContext context, double t) =>
+                  CircularProgressIndicator(
+                    key: const Key('nutrition-calorie-progress'),
+                    value: calories.gaugeValue * t,
+                    strokeWidth: 9,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: FigmaColors.track,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
             ),
           ),
           // 링은 지름이 고정이라 글자 배율이 커지면 안쪽 두 줄이 원을 넘어선다
