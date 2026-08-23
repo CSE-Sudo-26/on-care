@@ -1014,7 +1014,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectNotice => '입력한 사유는 고객에게 알림으로 전달돼요.';
 
   @override
-  String get consultRejectHint => '예) 이번 달은 정원이 찼어요';
+  String get consultRejectHint => '예) 요청하신 시간에 다른 일정이 있어요.';
 
   @override
   String get consultRejectAction => '거절하기';

@@ -316,7 +316,7 @@
   "consultApprove": "승인",
   "consultRejectTitle": "상담 요청 거절",
   "consultRejectNotice": "입력한 사유는 고객에게 알림으로 전달돼요.",
-  "consultRejectHint": "예) 이번 달은 정원이 찼어요",
+  "consultRejectHint": "예) 요청하신 시간에 다른 일정이 있어요.",
   "consultRejectAction": "거절하기",
   "consultStatusApproved": "담당 고객으로 등록됨",
   "workoutRecords": "운동 기록",
