@@ -1200,6 +1200,38 @@ void main() {
       expect(find.textContaining('📤 오늘 PT 프로그램을 보냈어요'), findsNothing);
     });
 
+    testWidgets('완료 chip asks for confirmation before processing (#1227)', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+      await openSession(tester, '박성호'); // 예정 session
+
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await settle(tester);
+
+      // 취소·노쇼처럼 완료도 종료 상태라 되돌릴 UI가 없다 — 확인 없이
+      // 바로 처리하지 않는다.
+      expect(find.text('일정 완료'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-complete-confirm')),
+        findsOneWidget,
+      );
+
+      // 취소를 누르면 처리되지 않고 예정 그대로 남는다.
+      await tester.tap(find.text('취소').last);
+      await settle(tester);
+      expect(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('완료 chip marks the session done and shows in 운동기록', (
       tester,
     ) async {
@@ -1218,11 +1250,14 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      // 확인 다이얼로그 없이 누르는 즉시 완료 처리된다 — 메모는 언제든
-      // 상세 패널에서 따로 남길 수 있어, 매번 빈 메모란을 거칠 이유가
-      // 없다(#1106).
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await settle(tester);
+      // 완료는 예정에서만 갈리는 종료 상태라 되돌릴 UI가 없다 — 확인
+      // 다이얼로그를 거친 뒤에야 처리된다(#1227).
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-confirm')),
       );
       await settle(tester);
 
@@ -1570,6 +1605,10 @@ void main() {
       );
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-confirm')),
       );
       await settle(tester);
 

@@ -1497,6 +1497,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t delete the session. Please try again';
 
   @override
+  String get schedCompleteTitle => 'Complete session';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return 'Mark the $time session with $name as complete?';
+  }
+
+  @override
   String get schedCompleteFailed =>
       'Couldn\'t mark it complete. Please try again';
 
