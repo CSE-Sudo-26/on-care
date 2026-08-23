@@ -242,8 +242,11 @@ class ExerciseDayLoadCard extends StatelessWidget {
             const SizedBox(height: 6),
           ],
           // 소모 칼로리는 도넛 **안에서** 말한다 (#1127) — 링 옆에 같은 숫자를
-          // 또 적으면 한 화면에서 같은 말이 두 번 나온다. 도넛은 오른쪽,
-          // 유형별 값은 왼쪽에 두고 라벨과 값이 멀어지지 않도록 폭을 묶는다.
+          // 또 적으면 한 화면에서 같은 말이 두 번 나온다.
+          //
+          // 도넛은 **왼쪽**, 유형별 값은 오른쪽이다 (#1151). 자리를 맞바꿨던
+          // 것을 되돌린다 — 원래 요청은 "둘을 가운데로 모아 카드 양옆에 여백을
+          // 두라" 는 뜻이었다. 라벨과 값은 폭을 묶어 서로 멀어지지 않게 한다.
           Expanded(
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints c) {
@@ -252,8 +255,18 @@ class ExerciseDayLoadCard extends StatelessWidget {
                   (c.maxWidth - 170).clamp(96.0, 150.0),
                 );
                 return Row(
+                  // 도넛과 상세를 한 덩어리로 가운데에 세운다 — 카드 양옆에
+                  // 같은 만큼 여백이 남는다 (#1151).
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Expanded(
+                    _BurnDonut(
+                      calories: load.calories,
+                      goal: goals.dailyBurnKcal,
+                      size: donut,
+                      locale: locale,
+                    ),
+                    const SizedBox(width: 16),
+                    Flexible(
                       child: Center(
                         child: ConstrainedBox(
                           // 라벨과 값이 카드 양 끝으로 벌어지지 않게 묶는다.
@@ -279,13 +292,6 @@ class ExerciseDayLoadCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    _BurnDonut(
-                      calories: load.calories,
-                      goal: goals.dailyBurnKcal,
-                      size: donut,
-                      locale: locale,
                     ),
                   ],
                 );

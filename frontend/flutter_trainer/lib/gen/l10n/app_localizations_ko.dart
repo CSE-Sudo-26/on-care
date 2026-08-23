@@ -876,9 +876,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
-  String get consultHealthPurpose => '관리 목적';
-
-  @override
   String get consultPreferredTime => '희망 일시';
 
   @override
@@ -2111,24 +2108,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get goalOther => '기타';
-
-  @override
-  String get purposeWeight => '체중 관리';
-
-  @override
-  String get purposeChronic => '만성질환 관리';
-
-  @override
-  String get purposeRehab => '재활';
-
-  @override
-  String get purposeGeneral => '전반적 건강';
-
-  @override
-  String get purposeNone => '해당 없음';
-
-  @override
-  String get purposeOther => '기타';
 
   @override
   String get slotMorning => '오전';
