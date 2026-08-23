@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 
@@ -199,19 +197,16 @@ class _BarLinePainter extends CustomPainter {
         }
         canvas.restore();
       } else {
-        final Paint fill = Paint();
-        // 목표를 넘긴 막대는 한 색으로 칠한다 — 그러데이션 위에 빨강을 얹으면
-        // 넘겼다는 사실이 색결에 묻힌다.
-        if (goal != null && value > goal!) {
-          fill.color = AppColors.overTarget;
-        } else {
-          fill.shader = ui.Gradient.linear(
-            Offset(rect.center.dx, rect.top),
-            Offset(rect.center.dx, rect.bottom),
-            <Color>[AppColors.chartStrength, AppColors.primary],
-          );
-        }
-        canvas.drawRRect(bar, fill);
+        // 한 색으로 칠한다. 위아래로 옅어지는 그러데이션은 막대마다 밝기가
+        // 달라 보여, 나란히 놓은 두 주의 높이를 견주기 전에 색부터 비교하게
+        // 만들었다. 색을 나누는 것은 조각을 일부러 쌓을 때뿐이다(#1177).
+        canvas.drawRRect(
+          bar,
+          Paint()
+            ..color = goal != null && value > goal!
+                ? AppColors.overTarget
+                : AppColors.primary,
+        );
       }
     }
 

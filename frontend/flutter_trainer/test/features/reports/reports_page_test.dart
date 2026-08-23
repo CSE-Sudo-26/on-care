@@ -19,6 +19,7 @@ import 'package:oncare_trainer/features/reports/presentation/widgets/client_repo
 import 'package:oncare_trainer/features/reports/presentation/widgets/metric_comparison_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_client_picker.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_export_dialog.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/report_week_nav.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/week_trend_bar.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
@@ -30,6 +31,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
+import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
@@ -472,7 +474,7 @@ void main() {
     expect(arrow(nextWeek).onTap, isNotNull);
   });
 
-  testWidgets('`이번 주로` 는 늘 같은 자리에 있고 이번 주에서는 죽어 있다 (#1177)', (
+  testWidgets('`이번 주` 버튼은 주 이동 줄 안에 있고 이번 주에서는 죽어 있다 (#1177)', (
     tester,
   ) async {
     await openReports(tester);
@@ -480,8 +482,21 @@ void main() {
     final Finder currentWeek = find.byKey(
       const ValueKey<String>('reports-go-this-week'),
     );
-    // 버튼이 생겼다 사라지면 옆의 공유 메뉴가 좌우로 밀린다 — 자리는 늘 있고,
-    // 갈 곳이 없을 때 회색으로 죽는다.
+    // 스케줄 탭의 `오늘` 처럼 두 화살표 사이에 선다 — 옮기는 대상과 같은 줄이다.
+    expect(
+      find.descendant(of: find.byType(ReportWeekNav), matching: currentWeek),
+      findsOneWidget,
+    );
+    // 헤더에는 더 이상 없다.
+    expect(
+      find.descendant(
+        of: find.byType(PageScaffold),
+        matching: find.widgetWithText(ActionButton, '이번 주로'),
+      ),
+      findsNothing,
+    );
+    // 버튼이 생겼다 사라지면 화살표가 좌우로 밀린다 — 자리는 늘 있고, 갈 곳이
+    // 없을 때 회색으로 죽는다.
     expect(currentWeek, findsOneWidget);
     expect(tester.widget<ActionButton>(currentWeek).onPressed, isNull);
 

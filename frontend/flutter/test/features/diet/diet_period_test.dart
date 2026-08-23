@@ -75,6 +75,37 @@ Widget _app({
   );
 }
 
+/// 지난 날짜 한 칸을 고른다.
+///
+/// 스트립은 월요일에서 시작해 일요일로 끝나는 **한 주**만 보여 준다(#1059).
+/// 고르려는 날이 이번 주 밖이면 화살표로 그 주까지 옮긴 뒤 고른다 — 날짜만
+/// 두드리면 지난 날이 이번 주에 하나도 없는 **월요일마다** 깨진다.
+Future<void> _tapPastDay(WidgetTester tester, int daysAgo) async {
+  final DateTime now = nowKst();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime target = today.subtract(Duration(days: daysAgo));
+  await _showWeekOf(tester, target);
+  await tester.tap(find.text('${target.day}').first);
+  await tester.pumpAndSettle();
+}
+
+/// [target] 이 든 주가 스트립에 보이도록 화살표로 옮긴다.
+Future<void> _showWeekOf(WidgetTester tester, DateTime target) async {
+  final DateTime now = nowKst();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime monday = today.subtract(
+    Duration(days: today.weekday - DateTime.monday),
+  );
+  for (
+    DateTime week = monday;
+    target.isBefore(week);
+    week = week.subtract(const Duration(days: 7))
+  ) {
+    await tester.tap(find.byTooltip('지난 주'));
+    await tester.pumpAndSettle();
+  }
+}
+
 void main() {
   group('dietPeriodProvider', () {
     test('기간의 모든 날을 담고, 평균은 기록이 있는 날만으로 나눈다', () async {
@@ -227,6 +258,7 @@ void main() {
       // (`!atToday && day.entries.isEmpty`) 제목 줄이 아예 없다. 대역은 어제·이틀
       // 전까지만 기록을 준다.
       final DateTime other = today.subtract(const Duration(days: 2));
+      await _showWeekOf(tester, other);
       await tester.tap(
         find.byKey(
           ValueKey<String>(
@@ -456,9 +488,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
 
-      final DateTime yesterday = nowKst().subtract(const Duration(days: 1));
-      await tester.tap(find.text('${yesterday.day}').first);
-      await tester.pumpAndSettle();
+      await _tapPastDay(tester, 1);
 
       // 운동 탭과 같은 규칙 — 오늘이 아닌 날은 그날 하루만 말한다.
       expect(
@@ -507,9 +537,7 @@ void main() {
       await tester.tap(find.byKey(const Key('diet-period-tab-week')));
       await tester.pumpAndSettle();
 
-      final DateTime yesterday = nowKst().subtract(const Duration(days: 1));
-      await tester.tap(find.text('${yesterday.day}').first);
-      await tester.pumpAndSettle();
+      await _tapPastDay(tester, 1);
 
       expect(
         find.byKey(const ValueKey<String>('diet-today-button')),

@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays, weekdayCount, weekdayLabels;
+    show weekdayCount;
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
-import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/four_week_compliance_trend.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/metric_comparison_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/metric_trend_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_ai_card.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_daily_detail.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_feedback_editor.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_completion_chart.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_exercise_minutes.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// One client's week, ready to send.
@@ -73,14 +71,6 @@ class ClientReportView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    // 지난 날인데 기록이 없는 요일. 아직 오지 않은 날과 구분해서 그린다.
-    final elapsed = report.isCurrentWeek
-        ? elapsedWeekdays(nowKst())
-        : weekdayCount;
-    final unlogged = <int>{
-      for (var i = 0; i < elapsed && i < report.weekCompletion.length; i++)
-        if (report.weekCompletion[i] == 0) i,
-    };
     final bool hasWeek = report.weekCompletion.length == weekdayCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,41 +142,7 @@ class ClientReportView extends StatelessWidget {
               // 계열은 리포트가 자기 주의 것을 들고 온다 — 보고 있는 주가
               // 어디든 같은 규칙으로 그린다(#752).
               if (hasWeek)
-                BarLineChart(
-                  key: const ValueKey<String>('reports-completion-chart'),
-                  // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
-                  // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
-                  values: <double?>[
-                    for (var i = 0; i < report.weekCompletion.length; i++)
-                      unlogged.contains(i)
-                          ? null
-                          : report.weekCompletion[i].toDouble(),
-                  ],
-                  labels: weekdayLabels(l),
-                  ceiling: 100,
-                  format: (double v) => '${v.round()}%',
-                  emptyLabel: l.chartNoRecord,
-                  // 아직 오지 않은 요일은 이번 주에만 있다.
-                  pendingFrom: report.isCurrentWeek
-                      ? elapsedWeekdays(nowKst())
-                      : null,
-                  semanticsLabel: chartSemanticsLabel(
-                    l,
-                    title: l.reportsCompletionByDay,
-                    points: chartSeriesPoints(
-                      l,
-                      values: <double>[
-                        for (final v in report.weekCompletion) v.toDouble(),
-                      ],
-                      dayLabels: weekdayLabels(l),
-                      format: (double v) => '${v.round()}%',
-                      upTo: (report.isCurrentWeek
-                              ? elapsedWeekdays(nowKst())
-                              : weekdayCount) -
-                          1,
-                    ),
-                  ),
-                )
+                WeeklyCompletionChart(report: report)
               else
                 EmptyHint(message: l.reportsNoWorkoutsThisWeek),
               if (hasWeek) ...<Widget>[

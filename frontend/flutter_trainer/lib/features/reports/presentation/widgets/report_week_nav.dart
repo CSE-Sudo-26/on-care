@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
-/// 리포트 카드의 주 이동 — `‹ 8월 17일 – 8월 23일 ›`.
+/// 리포트 카드의 주 이동 — `‹ 8월 17일 – 8월 23일 [이번 주] ›`.
+///
+/// 스케줄 탭의 날짜 줄과 같은 짜임이다(화살표 · 날짜 · 되돌리기 버튼 · 화살표).
+/// 두 탭이 같은 동작에 다른 모양을 쓸 이유가 없다.
 ///
 /// 헤더가 아니라 **리포트 카드 제목 줄**에 있다. 옮기는 것은 이 카드의
 /// 내용이지 화면 전체가 아니고, 헤더에 두면 날짜 버튼 하나가 가운데 고객
@@ -15,6 +19,7 @@ class ReportWeekNav extends StatelessWidget {
     required this.rangeLabel,
     required this.onPrev,
     required this.onNext,
+    required this.onThisWeek,
   });
 
   /// 보고 있는 주(`8월 17일 – 8월 23일`).
@@ -24,6 +29,9 @@ class ReportWeekNav extends StatelessWidget {
 
   /// 다음 주로. 가장 최근 주를 보고 있으면 null — 화살표가 회색으로 죽는다.
   final VoidCallback? onNext;
+
+  /// 이번 주로 돌아간다. 이미 이번 주면 null — 버튼은 자리를 지킨 채 죽는다.
+  final VoidCallback? onThisWeek;
 
   @override
   Widget build(BuildContext context) {
@@ -37,17 +45,27 @@ class ReportWeekNav extends StatelessWidget {
           tooltip: l.a11yPrevWeek,
           onTap: onPrev,
         ),
-        const SizedBox(width: AppSpacing.xs),
+        const SizedBox(width: AppSpacing.sm),
         Text(
           rangeLabel,
           maxLines: 1,
           style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: AppColors.mutedForeground,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: AppColors.foreground,
           ),
         ),
-        const SizedBox(width: AppSpacing.xs),
+        const SizedBox(width: AppSpacing.sm),
+        // 스케줄 탭의 `오늘` 과 같은 자리·같은 버튼이다. 헤더에 있던 때에는
+        // 옮기는 대상(리포트)과 버튼이 서로 다른 줄에 있어, 무엇을 이번 주로
+        // 되돌리는지 자리로 이어지지 않았다(#1177).
+        ActionButton(
+          key: const ValueKey<String>('reports-go-this-week'),
+          label: l.reportsThisWeek,
+          icon: Icons.today_outlined,
+          onPressed: onThisWeek,
+        ),
+        const SizedBox(width: AppSpacing.sm),
         _Chevron(
           navKey: const ValueKey<String>('report-week-next'),
           icon: Icons.chevron_right,

@@ -366,22 +366,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       scrollable: false,
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
-        // `이번 주로` 는 늘 같은 자리에 있다. 지난 주를 볼 때만 나타나던 때에는
-        // 버튼이 생겼다 없어지며 공유 메뉴가 좌우로 밀려, 주를 몇 번 옮기면
-        // 누르던 자리를 매번 눈으로 다시 찾아야 했다. 이번 주에서는 갈 곳이
-        // 없으므로 회색으로 죽여 둔다(#1177).
-        //
-        // 주를 옮기는 화살표는 헤더가 아니라 리포트 카드 제목 줄에 있다 —
-        // 날짜 버튼이 헤더 폭을 먹어 가운데 고객 검색 바가 다른 탭과 다른
-        // 모양으로 접혔다.
-        ActionButton(
-          key: const ValueKey<String>('reports-go-this-week'),
-          label: l.reportsGoThisWeek,
-          icon: Icons.today_outlined,
-          onPressed: _weekStart == weekStartOf(nowKst())
-              ? null
-              : _goToCurrentWeek,
-        ),
+        // 주 이동은 통째로 리포트 카드 제목 줄에 있다 — 화살표도, 이번 주로
+        // 돌아가는 버튼도. 헤더에 두면 옮기는 대상과 버튼이 다른 줄에 서고,
+        // 날짜 버튼이 가운데 고객 검색 바의 폭을 먹어 다른 탭과 다른 모양으로
+        // 접혔다(#1177).
         ReportShareMenu(
           client: shareTarget,
           weekStart: _weekStart,
@@ -470,14 +458,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     final reportKey = (client: selected, weekStart: _weekStart);
                     // 주 이동은 리포트를 못 읽은 화면에도 있어야 한다 —
                     // 카드 안에만 두면 실패한 주에서 나갈 길이 사라진다.
+                    final bool isThisWeek =
+                        _weekStart == weekStartOf(nowKst());
                     final Widget weekNav = ReportWeekNav(
                       rangeLabel: _weekRangeLabel(l, _weekStart),
                       onPrev: () => _shiftWeek(-1),
                       // 앞으로는 이번 주까지만 간다 — 아직 오지 않은 주의
                       // 리포트는 빈 화면이다.
-                      onNext: _weekStart.isBefore(weekStartOf(nowKst()))
-                          ? () => _shiftWeek(1)
-                          : null,
+                      onNext: isThisWeek ? null : () => _shiftWeek(1),
+                      onThisWeek: isThisWeek ? null : _goToCurrentWeek,
                     );
                     final reportAsync = ref.watch(
                       weeklyReportProvider(reportKey),
