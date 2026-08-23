@@ -118,7 +118,15 @@ class _WorkoutDetail extends ConsumerStatefulWidget {
 }
 
 class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
-  bool _expanded = false;
+  /// 한 번 `더보기` 를 누를 때마다 늘어나는 기록 수 — **한 주**다 (#1172).
+  ///
+  /// 예전에는 한 번 누르면 이력 전체(석 달치가 넘는다)가 한꺼번에 펼쳐져,
+  /// 프로그램 탭의 좁은 오른쪽 칸이 통째로 목록이 됐다. 지난 한 주를 보고 다음
+  /// 주를 짜는 것이 이 화면의 일이라, 한 주씩 내려가는 편이 그 일과 맞는다.
+  static const int _pageSize = 7;
+
+  /// 지금 보이는 기록 수. 접힌 기본값은 **가장 최근 하나**다.
+  int _shown = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -153,22 +161,36 @@ class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
                 icon: Icons.fitness_center_outlined,
               );
             }
-            final bool canExpand = entries.length > 1;
             // 이력은 이미 최신순이다(`clientHistoryProvider`) — 접힌 상태의
             // 첫 항목이 곧 가장 최근 기록이다.
-            final List<RoutineHistoryEntry> shown = _expanded
-                ? entries
-                : entries.take(1).toList(growable: false);
+            final int shownCount = _shown.clamp(1, entries.length);
+            final List<RoutineHistoryEntry> shown = entries
+                .take(shownCount)
+                .toList(growable: false);
+            // 두 버튼은 함께 설 수 있다 — 한 주를 펼친 상태에서는 더 내려갈
+            // 수도, 처음으로 접을 수도 있어야 한다.
+            final bool canExpand = shownCount < entries.length;
+            final bool canCollapse = shownCount > 1;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 for (final RoutineHistoryEntry entry in shown)
                   _DetailEntry(entry: entry),
-                if (canExpand)
+                if (canExpand || canCollapse)
                   _ExpandToggle(
-                    expanded: _expanded,
-                    onTap: () => setState(() => _expanded = !_expanded),
+                    // 첫 `더보기` 는 한 주를 통째로 연다(1 → 7). 그 뒤로는 누를
+                    // 때마다 한 주씩 더 내려간다.
+                    onExpand: canExpand
+                        ? () => setState(() {
+                            _shown = _shown <= 1
+                                ? _pageSize
+                                : _shown + _pageSize;
+                          })
+                        : null,
+                    onCollapse: canCollapse
+                        ? () => setState(() => _shown = 1)
+                        : null,
                   ),
               ],
             );
@@ -179,52 +201,95 @@ class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
   }
 }
 
-/// 상세 내역을 펼치고 접는 캐럿. 접혔을 땐 늘 아래(더 볼 게 있다)를,
-/// 펼치면 위(접을 수 있다)를 가리킨다 — 화살표 방향 자체가 상태를 말해서
-/// 옆에 적힌 글자를 안 읽어도 무엇을 누르는지 알 수 있다.
+/// 상세 내역을 한 주씩 펼치고, 처음으로 접는 줄. (#1172)
+///
+/// 두 버튼이 함께 설 수 있다 — 한 주를 펼친 상태에서는 더 내려갈 수도, 처음으로
+/// 접을 수도 있다. 화살표 방향이 곧 무엇을 하는 버튼인지라, 옆에 적힌 글자를 안
+/// 읽어도 알 수 있다.
 class _ExpandToggle extends StatelessWidget {
-  const _ExpandToggle({required this.expanded, required this.onTap});
+  const _ExpandToggle({this.onExpand, this.onCollapse});
 
-  final bool expanded;
-  final VoidCallback onTap;
+  /// 한 주 더 펼친다. 더 볼 것이 없으면 null 이고 버튼도 그리지 않는다.
+  final VoidCallback? onExpand;
+
+  /// 접힌 기본 상태(가장 최근 하나)로 돌아간다. 이미 접혀 있으면 null 이다.
+  final VoidCallback? onCollapse;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String label = expanded
-        ? l.workoutRecordsShowLess
-        : l.workoutRecordsShowMore;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
-      child: InkWell(
-        key: const ValueKey<String>('client-exercise-detail-toggle'),
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (onExpand case final VoidCallback tap)
+            _ToggleButton(
+              buttonKey: const ValueKey<String>(
+                'client-exercise-detail-toggle',
               ),
-              Icon(
-                expanded ? Icons.expand_less : Icons.expand_more,
-                size: 16,
-                color: AppColors.primary,
+              label: l.workoutRecordsShowMore,
+              icon: Icons.expand_more,
+              onTap: tap,
+            ),
+          if (onExpand != null && onCollapse != null)
+            const SizedBox(width: AppSpacing.sm),
+          if (onCollapse case final VoidCallback tap)
+            _ToggleButton(
+              buttonKey: const ValueKey<String>(
+                'client-exercise-detail-collapse',
               ),
-            ],
-          ),
-        ),
+              label: l.workoutRecordsShowLess,
+              icon: Icons.expand_less,
+              onTap: tap,
+            ),
+        ],
       ),
     );
   }
+}
+
+/// 펼치기·접기 버튼 하나.
+class _ToggleButton extends StatelessWidget {
+  const _ToggleButton({
+    required this.buttonKey,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final Key buttonKey;
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    key: buttonKey,
+    onTap: onTap,
+    borderRadius: const BorderRadius.all(AppRadius.sm),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: 4,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          Icon(icon, size: 16, color: AppColors.primary),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 이력 한 건 — 날짜·종류, 몇 개 중 몇 개를 했는지, 그리고 `ExerciseLine`
