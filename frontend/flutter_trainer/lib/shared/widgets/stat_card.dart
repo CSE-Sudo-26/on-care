@@ -17,7 +17,8 @@ enum StatTone {
   /// A target was exceeded — red, same as the member app.
   alert,
 
-  /// Worth a look but not urgent — orange.
+  /// Worth a look but not urgent — red, same as [alert] (#690: 주의도
+  /// 결국 빨강이다, 주황이던 시절의 문구만 남아 있었다).
   warn,
 
   /// On track — green.
@@ -39,6 +40,7 @@ class StatCard extends StatelessWidget {
     this.unit,
     this.hint,
     this.tone = StatTone.neutral,
+    this.solidIcon = false,
     this.onTap,
   });
 
@@ -59,6 +61,11 @@ class StatCard extends StatelessWidget {
 
   /// Semantic colour of the number.
   final StatTone tone;
+
+  /// Renders the leading glyph as a white icon on a solid tone-coloured
+  /// chip instead of a tone-tinted chip with a tone-coloured icon — for a
+  /// tile that needs to read as more urgent than the others in its row.
+  final bool solidIcon;
 
   /// Where this number leads.
   final VoidCallback? onTap;
@@ -109,10 +116,16 @@ class StatCard extends StatelessWidget {
                       height: 26,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: _iconColor.withValues(alpha: 0.12),
+                        color: solidIcon
+                            ? _iconColor
+                            : _iconColor.withValues(alpha: 0.12),
                         borderRadius: const BorderRadius.all(AppRadius.sm),
                       ),
-                      child: Icon(icon, size: 15, color: _iconColor),
+                      child: Icon(
+                        icon,
+                        size: 15,
+                        color: solidIcon ? Colors.white : _iconColor,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(

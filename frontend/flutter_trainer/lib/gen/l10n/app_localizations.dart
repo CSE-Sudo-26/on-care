@@ -512,17 +512,41 @@ abstract class AppLocalizations {
   /// **'Dashboard'**
   String get dashTitle;
 
-  /// No description provided for @dashAddSchedule.
+  /// No description provided for @dashActivityRecommendRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Add session'**
-  String get dashAddSchedule;
+  /// **'Try adjusting the routine in Program.'**
+  String get dashActivityRecommendRoutine;
 
-  /// No description provided for @dashCreateAiRoutine.
+  /// No description provided for @dashActivityRecommendChat.
   ///
   /// In en, this message translates to:
-  /// **'Create AI routine'**
-  String get dashCreateAiRoutine;
+  /// **'Try checking in over Chat.'**
+  String get dashActivityRecommendChat;
+
+  /// No description provided for @dashActivityRecommendDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Try leaving feedback in Diet.'**
+  String get dashActivityRecommendDiet;
+
+  /// No description provided for @dashActivityTabProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get dashActivityTabProgram;
+
+  /// No description provided for @dashActivityTabChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get dashActivityTabChat;
+
+  /// No description provided for @dashActivityTabDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get dashActivityTabDiet;
 
   /// No description provided for @dashLoadFailed.
   ///
@@ -608,17 +632,89 @@ abstract class AppLocalizations {
   /// **'Check diet & completion'**
   String get dashCheckSodiumCompletion;
 
+  /// No description provided for @dashMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get dashMessages;
+
+  /// No description provided for @dashChurnRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Churn risk'**
+  String get dashChurnRisk;
+
+  /// No description provided for @dashChurnRiskNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No churn risk'**
+  String get dashChurnRiskNone;
+
+  /// No description provided for @dashChurnRiskCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Review churn signals'**
+  String get dashChurnRiskCheck;
+
+  /// No description provided for @dashChurnRiskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients at churn risk'**
+  String get dashChurnRiskTitle;
+
+  /// No description provided for @dashChurnRiskEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients are at churn risk right now.'**
+  String get dashChurnRiskEmpty;
+
+  /// No description provided for @dashActivityDifficultyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low completion / churn risk detected'**
+  String get dashActivityDifficultyTitle;
+
+  /// No description provided for @dashActivityDifficultyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} have low workout completion or a churn-risk signal (including negative feedback). Lower the difficulty before the next session and check whether recent feedback was negative.'**
+  String dashActivityDifficultyDesc(String names);
+
+  /// No description provided for @dashActivityInactiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive 7+ days'**
+  String get dashActivityInactiveTitle;
+
+  /// No description provided for @dashActivityInactiveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} haven\'t logged a workout in the last 7 days. Reach out before it turns into churn.'**
+  String dashActivityInactiveDesc(String names);
+
+  /// No description provided for @dashActivityDietFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet feedback pending'**
+  String get dashActivityDietFeedbackTitle;
+
+  /// No description provided for @dashActivityDietFeedbackDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} have a diet warning (sodium/sugar over target) but haven\'t gotten trainer feedback in 7 days. Leave a comment so they know it was seen.'**
+  String dashActivityDietFeedbackDesc(String names);
+
+  /// No description provided for @dashActivityMoreClients.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} and {count} more'**
+  String dashActivityMoreClients(String shown, int count);
+
   /// No description provided for @dashAiSummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI coaching summary'**
+  /// **'AI diagnosis'**
   String get dashAiSummaryTitle;
-
-  /// No description provided for @dashToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get dashToday;
 
   /// No description provided for @dashAiNoClients.
   ///
@@ -866,11 +962,71 @@ abstract class AppLocalizations {
   /// **'Nothing scheduled today'**
   String get dashNoScheduleToday;
 
-  /// No description provided for @dashEmptySlot.
+  /// No description provided for @dashScheduleNowLabel.
   ///
   /// In en, this message translates to:
-  /// **'Open slot'**
-  String get dashEmptySlot;
+  /// **'Now {time}'**
+  String dashScheduleNowLabel(String time);
+
+  /// No description provided for @dashScheduleNextSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {time} · {name}'**
+  String dashScheduleNextSession(String time, String name);
+
+  /// No description provided for @dashScheduleMinutesLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'in {minutes} min'**
+  String dashScheduleMinutesLeft(int minutes);
+
+  /// No description provided for @dashPrepareClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare the session'**
+  String get dashPrepareClass;
+
+  /// No description provided for @dashLeaveMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave a memo'**
+  String get dashLeaveMemo;
+
+  /// No description provided for @dashSessionSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get dashSessionSent;
+
+  /// No description provided for @dashSessionPrepared.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepared'**
+  String get dashSessionPrepared;
+
+  /// No description provided for @dashSessionNoteWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Written'**
+  String get dashSessionNoteWritten;
+
+  /// No description provided for @dashSessionSentNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent'**
+  String get dashSessionSentNo;
+
+  /// No description provided for @dashSessionPreparedNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not prepared'**
+  String get dashSessionPreparedNo;
+
+  /// No description provided for @dashSessionNoteNotWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Not written'**
+  String get dashSessionNoteNotWritten;
 
   /// No description provided for @weekdayMon.
   ///
@@ -4508,11 +4664,173 @@ abstract class AppLocalizations {
   /// **'{count} to review'**
   String dashTasksNeedReview(int count);
 
-  /// No description provided for @dashTasksEmpty.
+  /// No description provided for @dashTaskProgressTitle.
   ///
   /// In en, this message translates to:
-  /// **'There are no new coaching tasks to review.'**
-  String get dashTasksEmpty;
+  /// **'Task completion'**
+  String get dashTaskProgressTitle;
+
+  /// No description provided for @dashTaskProgressToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Done today'**
+  String get dashTaskProgressToday;
+
+  /// No description provided for @dashTaskProgressCarriedOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Done (carried over)'**
+  String get dashTaskProgressCarriedOver;
+
+  /// No description provided for @dashTodoConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Consult'**
+  String get dashTodoConsultation;
+
+  /// No description provided for @dashTodoDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get dashTodoDiet;
+
+  /// No description provided for @dashTodoWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get dashTodoWorkout;
+
+  /// No description provided for @dashTodoProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get dashTodoProgram;
+
+  /// No description provided for @dashTodoReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get dashTodoReport;
+
+  /// No description provided for @dashTodoConsultationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation request for {month}/{day}'**
+  String dashTodoConsultationSubtitle(int month, int day);
+
+  /// No description provided for @dashTodoSodiumSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium {sodiumMg}mg · target {targetMg}mg'**
+  String dashTodoSodiumSubtitle(int sodiumMg, int targetMg);
+
+  /// No description provided for @dashTodoSugarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar {sugarG}g · target {targetG}g'**
+  String dashTodoSugarSubtitle(int sugarG, int targetG);
+
+  /// No description provided for @dashTodoCompletionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low completion · check recent records'**
+  String get dashTodoCompletionSubtitle;
+
+  /// No description provided for @dashTodoProgramSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent program sent'**
+  String get dashTodoProgramSubtitle;
+
+  /// No description provided for @dashTodoReportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s report is due'**
+  String get dashTodoReportSubtitle;
+
+  /// No description provided for @dashTaskDismissTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this item?'**
+  String get dashTaskDismissTitle;
+
+  /// No description provided for @dashTaskDismissBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It only disappears from today\'s list. Actually handling it (consultation, program, report) still happens on its own screen.'**
+  String get dashTaskDismissBody;
+
+  /// No description provided for @dashTaskCarriedOverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried over'**
+  String get dashTaskCarriedOverTitle;
+
+  /// No description provided for @dashTaskCategoryDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get dashTaskCategoryDone;
+
+  /// No description provided for @dashTaskCategoryRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String dashTaskCategoryRemaining(int count);
+
+  /// No description provided for @dashTaskUncheckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completion of \'{name}\'?'**
+  String dashTaskUncheckTitle(String name);
+
+  /// No description provided for @dashTaskUncheckBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It also drops off the task progress chart.'**
+  String get dashTaskUncheckBody;
+
+  /// No description provided for @dashTaskUncheckConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo completion'**
+  String get dashTaskUncheckConfirm;
+
+  /// No description provided for @churnNoRecentWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout logged in 7 days'**
+  String get churnNoRecentWorkout;
+
+  /// No description provided for @churnNoRecentFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainer feedback in 7 days'**
+  String get churnNoRecentFeedback;
+
+  /// No description provided for @churnConsecutiveCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'2 consecutive cancellations/no-shows'**
+  String get churnConsecutiveCancel;
+
+  /// No description provided for @churnDietStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet logging stopped'**
+  String get churnDietStopped;
+
+  /// No description provided for @churnGoalStagnant.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal metric stagnant long-term'**
+  String get churnGoalStagnant;
+
+  /// No description provided for @churnUnresolvedRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Unanswered message'**
+  String get churnUnresolvedRequest;
 
   /// No description provided for @navMessages.
   ///
@@ -4807,30 +5125,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t mark it done. Please try again.'**
   String get followUpCompleteFailed;
-
-  /// No description provided for @dashTaskReply.
-  ///
-  /// In en, this message translates to:
-  /// **'Reply'**
-  String get dashTaskReply;
-
-  /// No description provided for @dashTaskDiet.
-  ///
-  /// In en, this message translates to:
-  /// **'Diet'**
-  String get dashTaskDiet;
-
-  /// No description provided for @dashTaskWorkout.
-  ///
-  /// In en, this message translates to:
-  /// **'Workout'**
-  String get dashTaskWorkout;
-
-  /// No description provided for @dashTaskReview.
-  ///
-  /// In en, this message translates to:
-  /// **'Review {name}: {alert}'**
-  String dashTaskReview(String alert, String name);
 
   /// No description provided for @programEditorDefaultName.
   ///
