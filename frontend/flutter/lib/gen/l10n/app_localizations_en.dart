@@ -813,6 +813,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exNearbyGyms => 'Nearby gyms';
 
   @override
+  String get exGymListCollapse => 'Collapse list';
+
+  @override
+  String get exGymListExpand => 'Expand list';
+
+  @override
   String get exAiAnalysis => '✦ AI analysis';
 
   @override

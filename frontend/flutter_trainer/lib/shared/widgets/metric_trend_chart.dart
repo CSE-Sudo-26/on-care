@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/typography.dart';
 import 'package:oncare_trainer/shared/widgets/goal_line.dart';
 
 /// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
@@ -356,6 +357,10 @@ class MetricTrendPainter extends CustomPainter {
       text: TextSpan(
         text: s,
         style: TextStyle(
+          // `TextPainter` 는 위젯 트리 밖이라 앱 서체를 물려받지 않는다.
+          // 적어 주지 않으면 이 숫자만 시스템 기본 서체로 그려져, 같은 카드
+          // 안에서 서체가 갈린다(#1177).
+          fontFamily: AppTypography.fontFamily,
           fontSize: 10,
           fontWeight: FontWeight.w700,
           color: color,

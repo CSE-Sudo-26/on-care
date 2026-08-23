@@ -36,6 +36,8 @@ List<Map<String, Object?>> programToJson(List<ProgramItem> program) {
         'reps': item.reps,
         'weight': item.weight,
         'session': item.session,
+        'type': item.type,
+        'duration': item.duration,
       },
   ];
 }
@@ -52,6 +54,11 @@ List<ProgramItem> _programFromJson(Object? raw) {
           weight: _str(entry['weight']),
           // 세션 키가 없던 예전 일정은 빈 문자열 — 평면 목록으로 읽힌다(#709).
           session: _str(entry['session']),
+          // 이 키들이 없던 예전 일정은 기본값으로 읽힌다(#1233).
+          type: entry['type'] is String && (entry['type'] as String).isNotEmpty
+              ? entry['type'] as String
+              : '근력',
+          duration: _str(entry['duration']),
         ),
   ];
 }

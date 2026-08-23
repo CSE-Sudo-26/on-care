@@ -74,6 +74,13 @@ Widget _app() => ProviderScope(
 
 /// 오늘(마지막) 칸에서 **드러난** 높이. 자라는 것은 막대 자체가 아니라 그것을
 /// 감싼 `ClipRect` 다(`period-bar-reveal-N`).
+Finder _lastReveal() {
+  final List<DateTime> dates = dietRangeDates(
+    dietRangeForTab(DietPeriodTab.month, nowKst()),
+  );
+  return find.byKey(ValueKey<String>('period-bar-reveal-${dates.length - 1}'));
+}
+
 double _lastBarHeight(WidgetTester tester) {
   final List<DateTime> dates = dietRangeDates(
     dietRangeForTab(DietPeriodTab.month, nowKst()),
@@ -129,5 +136,23 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(_lastBarHeight(tester), greaterThan(0));
+  });
+
+  testWidgets('막대의 바닥은 자라는 동안 제자리다 (#1200)', (WidgetTester tester) async {
+    await openAll(tester);
+    // 자라는 줄이 위쪽 모서리에 매달려 있으면, 커지는 만큼 바닥이 **아래로**
+    // 내려간다 — 막대가 자라는 것이 아니라 그래프가 통째로 내려오는 그림이다.
+    final double growingBottom = tester.getRect(_lastReveal()).bottom;
+    final double growingHeight = _lastBarHeight(tester);
+
+    await tester.pumpAndSettle();
+    final double settledBottom = tester.getRect(_lastReveal()).bottom;
+
+    expect(growingHeight, lessThan(_lastBarHeight(tester)));
+    expect(
+      growingBottom,
+      moreOrLessEquals(settledBottom, epsilon: 0.5),
+      reason: '자라는 동안 막대의 바닥이 움직인다',
+    );
   });
 }

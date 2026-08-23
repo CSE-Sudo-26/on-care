@@ -656,6 +656,51 @@ def test_complete_session_adds_member_exercise_log(client, make_pt_session):
     assert derived[0]["type"] == "strength"
 
 
+def test_complete_session_exercise_log_uses_program_item_duration_and_type(
+    client, make_pt_session
+):
+    """프로그램 항목에 분·유형을 적으면 자동 기록이 슬롯 전체 길이·고정
+    유형('근력') 대신 그 값을 쓴다(#1233).
+    """
+    token = _tok(client)
+    mh = _member_h(client)
+
+    before = client.get("/v1/exercise/weeks/current", headers=mh).json()
+    sid = make_pt_session(
+        token,
+        time="20:35",
+        duration_minutes=60,
+        program=[
+            {
+                "name": "달리기", "sets": 1, "reps": "", "weight": "",
+                "type": "유산소", "duration": "10",
+            },
+            {
+                "name": "사이클", "sets": 1, "reps": "", "weight": "",
+                "type": "유산소", "duration": "15",
+            },
+            {
+                "name": "스쿼트", "sets": 3, "reps": "12회", "weight": "40kg",
+                "type": "근력", "duration": "10",
+            },
+        ],
+    )
+
+    done = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    assert done.status_code == 200, done.text
+
+    after = client.get("/v1/exercise/weeks/current", headers=mh).json()
+    # 슬롯은 60분이지만 항목 분의 합(10+15+10=35)을 쓴다.
+    assert after["total_minutes"] == before["total_minutes"] + 35
+    # 유산소 2건 > 근력 1건 — 가장 많은 유형을 쓴다(cardio=9kcal/분 x moderate 1.0).
+    assert after["total_calories"] == before["total_calories"] + 315
+
+    derived = [s for s in after["sessions"] if s["id"] == f"sched-ex-{sid}"]
+    assert len(derived) == 1
+    assert derived[0]["type"] == "cardio"
+    assert derived[0]["minutes"] == 35
+
+
 def test_complete_session_exercise_log_is_idempotent(client, make_pt_session):
     """재호출해도 회원 기록이 중복되지 않는다(결정론적 id)."""
     token = _tok(client)
@@ -822,6 +867,42 @@ def test_send_completed_program_assigns_routine_once(client, db_session, make_pt
     ).json()
     row = next(s for s in listed if s["id"] == sid)
     assert row["program_sent"] is True
+
+
+def test_send_completed_program_forwards_item_type_and_duration(
+    client, make_pt_session
+):
+    """전송된 프로그램의 운동 항목도 트레이너가 적은 type/분을 그대로 옮긴다(#1233).
+
+    이전에는 항목의 type/duration 이 배정 계약으로 넘어가지 않아, 서버가 늘
+    '근력'·분 0 으로 요약했다.
+    """
+    token = _tok(client)
+    sid = make_pt_session(
+        token,
+        time="19:40",
+        duration_minutes=50,
+        program=[
+            {
+                "name": "달리기", "sets": 1, "reps": "", "weight": "",
+                "type": "유산소", "duration": "20",
+            },
+        ],
+    )
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={"note": ""}, headers=_h(token))
+    sent = client.post(
+        f"/v1/trainer/schedule/{sid}/program/send",
+        json={"client_request_id": "send-type-1"},
+        headers=_h(token),
+    )
+    assert sent.status_code == 200, sent.text
+
+    routines = client.get(
+        "/v1/trainer/clients/user-jisu/routines", headers=_h(token)
+    ).json()
+    routine = next(r for r in routines if r["reason"] == "달리기")
+    assert routine["type"] == "유산소"
+    assert routine["minutes"] == 20
 
 
 def test_send_program_requires_a_linked_member_and_a_program(client, make_pt_session):

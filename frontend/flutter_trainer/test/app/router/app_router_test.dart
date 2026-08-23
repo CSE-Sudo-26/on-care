@@ -267,6 +267,20 @@ void main() {
       expect(find.text('자격증 · 인증'), findsOneWidget);
     });
 
+    testWidgets('the trainer brand opens the dashboard', (tester) async {
+      await withWideSurface(tester, () async {
+        await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+        await goTo(tester, AppRoutes.schedule);
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('sidebar-brand-home')),
+        );
+        await settle(tester);
+
+        expect(currentLocation(tester), AppRoutes.dashboard);
+      });
+    });
+
     for (final width in <double>[1280, 1920]) {
       testWidgets(
         'the six trainer workspaces fit a ${width.toInt()}px desktop',
