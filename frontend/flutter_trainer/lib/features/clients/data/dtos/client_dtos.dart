@@ -40,6 +40,12 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
     items: _str(json['items']),
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
+    timeLabel: _str(json['time_label']),
+    // 음식별 영양. 옛 서버는 주지 않으므로 비어 있으면 `items` 한 줄로 떨어진다.
+    foods: <ClientDietFood>[
+      for (final Object? food in (json['foods'] as List<Object?>?) ?? const <Object?>[])
+        if (food is Map<String, Object?>) ClientDietFood.fromJson(food),
+    ],
     sugarG: _double(json['sugar_g']),
     carbsG: _double(json['carbs_g']),
     proteinG: _double(json['protein_g']),

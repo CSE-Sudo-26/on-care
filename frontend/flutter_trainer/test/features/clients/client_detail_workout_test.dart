@@ -450,10 +450,10 @@ void main() {
         const ValueKey<String>('workout-pending-routines'),
       );
       expect(pending, findsOneWidget);
-      expect(find.text('저강도 유산소 · 20분'), findsOneWidget);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
 
       final Finder cancel = find.byKey(
-        const ValueKey<String>('workout-cancel-routine-demo-routine-1'),
+        const ValueKey<String>('workout-cancel-routine-seed-routine-user-demo-0'),
       );
       expect(cancel, findsOneWidget);
 
@@ -463,7 +463,7 @@ void main() {
       expect(find.text('루틴을 삭제할까요?'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await settle(tester);
-      expect(find.text('저강도 유산소 · 20분'), findsOneWidget);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
 
       // 확인하면 실제로 사라진다 — 데모 저장소가 배정을 들고 있어 취소가
       // 목록에 반영된다(#1020).
@@ -473,15 +473,15 @@ void main() {
         find.byKey(const ValueKey<String>('confirm-cancel-pending-routine')),
       );
       await settle(tester);
-      expect(find.text('저강도 유산소 · 20분'), findsNothing);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsNothing);
       // 나머지 배정은 그대로다.
-      expect(find.text('코어 서킷 · 15분'), findsOneWidget);
+      expect(find.text('하체 스트레칭 · 15분'), findsOneWidget);
 
       // 이번 주·전체는 지나간 기록을 되짚는 화면이라 '앞으로 할 일' 은 접는다.
       await tester.tap(find.byKey(const Key('client-period-week')));
       await settle(tester);
       expect(pending, findsNothing);
-      expect(find.text('코어 서킷 · 15분'), findsNothing);
+      expect(find.text('하체 스트레칭 · 15분'), findsNothing);
 
       await tester.tap(find.byKey(const Key('client-period-today')));
       await settle(tester);
@@ -499,7 +499,7 @@ void main() {
 
       await tester.tap(
         find.byKey(
-          const ValueKey<String>('workout-cancel-routine-demo-routine-1'),
+          const ValueKey<String>('workout-cancel-routine-seed-routine-user-demo-0'),
         ),
       );
       await settle(tester);
@@ -509,7 +509,7 @@ void main() {
       await settle(tester);
 
       // 배정만 사라지고 기록은 그대로다 — 한 일이 없던 일이 되지 않는다.
-      expect(find.text('저강도 유산소 · 20분'), findsNothing);
+      expect(find.text('저강도 유산소 (걷기) · 30분'), findsNothing);
       expect(find.text('트레이너 메모'), findsOneWidget);
       expect(find.byType(ExerciseLine).evaluate().length, linesBefore);
     });

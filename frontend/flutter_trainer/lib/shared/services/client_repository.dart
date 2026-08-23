@@ -283,9 +283,12 @@ class DriftClientRepository implements ClientRepository {
           saved.containsKey('weekly_exercise_minutes_goal')
           ? (saved['weekly_exercise_minutes_goal'] as num?)?.toInt()
           : 150,
+      // 주간 소모 목표의 기본값은 회원 앱과 같은 **하루 목표 × 7** 이다
+      // (`kWeeklyBurnKcal`). 1500 은 어느 화면도 쓰지 않는 값이라, 회원이 자기
+      // MY 에서 보는 목표와 트레이너의 회원 정보가 서로 달랐다. (#1170)
       weeklyBurnGoal: saved.containsKey('weekly_burn_goal')
           ? (saved['weekly_burn_goal'] as num?)?.toInt()
-          : 1500,
+          : kWeeklyBurnKcal.round(),
     );
   }
 
@@ -627,14 +630,20 @@ class DriftClientRepository implements ClientRepository {
     String clientId,
     ClientPeriod period,
   ) async {
-    final ClientDateRange range = clientRangeNow(period);
+    final ClientDateRange range = clientRangeNow(period, exercise: true);
     final Map<String, ClientExerciseDay> byDate = <String, ClientExerciseDay>{};
     int weeklyGoalMinutes = 0;
-    for (final DateTime monday in clientRangeWeekStarts(range)) {
-      final ClientExerciseWeek week = await fetchExerciseWeek(
-        clientId,
-        weekStart: monday,
-      );
+    // 주를 한꺼번에 읽는다 — 위 provider 와 같은 이유다 (#1170).
+    final List<DateTime> mondays = clientRangeWeekStarts(range);
+    final List<ClientExerciseWeek> weeks = await Future.wait(
+      <Future<ClientExerciseWeek>>[
+        for (final DateTime monday in mondays)
+          fetchExerciseWeek(clientId, weekStart: monday),
+      ],
+    );
+    for (int w = 0; w < mondays.length; w++) {
+      final DateTime monday = mondays[w];
+      final ClientExerciseWeek week = weeks[w];
       weeklyGoalMinutes = week.weeklyGoalMinutes;
       for (var d = 0; d < 7; d++) {
         final DateTime date = DateTime(
@@ -779,12 +788,25 @@ class DriftClientRepository implements ClientRepository {
     items: row.items,
     calories: row.calories,
     sodiumMg: row.sodiumMg,
+    timeLabel: row.timeLabel,
+    foods: _dietFoods(row.foodsJson),
     sugarG: row.sugarG,
     carbsG: row.carbsG,
     proteinG: row.proteinG,
     fatG: row.fatG,
     photoAsset: row.photoAsset,
   );
+
+  /// 시드가 넣어 둔 음식별 영양. 깨진 값은 없는 것으로 본다 — 끼니 카드는
+  /// 그때 `items` 한 줄로 떨어져 예전과 같이 읽힌다. (#1166)
+  static List<ClientDietFood> _dietFoods(String json) {
+    final Object? decoded = jsonDecode(json);
+    if (decoded is! List<Object?>) return const <ClientDietFood>[];
+    return <ClientDietFood>[
+      for (final Object? food in decoded)
+        if (food is Map<String, Object?>) ClientDietFood.fromJson(food),
+    ];
+  }
 
   /// A client's workout history for the 운동기록 sub-tab, newest first
   /// (seeded order).
@@ -1057,16 +1079,27 @@ final clientDietPeriodProvider = FutureProvider.autoDispose
 final clientExercisePeriodProvider = FutureProvider.autoDispose
     .family<ClientExercisePeriod, ClientPeriodKey>((ref, key) async {
       final repository = ref.watch(clientRepositoryProvider);
-      final ClientDateRange range = clientRangeFor(key.period, key.day);
+      final ClientDateRange range = clientRangeFor(
+        key.period,
+        key.day,
+        exercise: true,
+      );
       final Map<String, ClientExerciseDay> byDate =
           <String, ClientExerciseDay>{};
       // 목표는 주마다 같다 — 마지막으로 읽은 주의 값을 쓴다. (#1015)
       int weeklyGoalMinutes = 0;
-      for (final DateTime monday in clientRangeWeekStarts(range)) {
-        final ClientExerciseWeek week = await repository.fetchExerciseWeek(
-          key.clientId,
-          weekStart: monday,
-        );
+      // 주를 **한꺼번에** 읽는다 (#1170). `전체` 가 서른다섯 주라, 하나씩
+      // 기다리면 왕복이 그만큼 줄줄이 이어져 그래프가 늦게 선다.
+      final List<DateTime> mondays = clientRangeWeekStarts(range);
+      final List<ClientExerciseWeek> weeks = await Future.wait(
+        <Future<ClientExerciseWeek>>[
+          for (final DateTime monday in mondays)
+            repository.fetchExerciseWeek(key.clientId, weekStart: monday),
+        ],
+      );
+      for (int w = 0; w < mondays.length; w++) {
+        final DateTime monday = mondays[w];
+        final ClientExerciseWeek week = weeks[w];
         weeklyGoalMinutes = week.weeklyGoalMinutes;
         for (var d = 0; d < 7; d++) {
           final DateTime date = DateTime(

@@ -74,11 +74,10 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[],
     sugarWeek: <double>[],
     diet: <_Meal>[],
-    aiRoutine: <_Routine>[
-      _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
-      _Routine('하체 스트레칭', 15, '유연성', '혈액순환 개선'),
-      _Routine('코어 강화', 10, '근력', '기초대사량 향상'),
-    ],
+    // 개인 운동도 픽스처가 정한다 (#1170) — 식단·이력과 같은 규칙이라 여기는
+    // 비워 두고 `seed_data.dart` 가 채운다. 예전에는 여기에 손으로 적어 두어,
+    // 같은 회원의 같은 목록을 회원 앱·고객 탭·프로그램 탭이 서로 다르게 말했다.
+    aiRoutine: <_Routine>[],
     // 운동 이력도 픽스처가 정한다. 예전에는 날짜 라벨이 `'7/12 (오늘)'` 로 박혀
     // 있어 데모를 언제 열든 7월 12일이 "오늘"이었다.
     history: <_History>[],

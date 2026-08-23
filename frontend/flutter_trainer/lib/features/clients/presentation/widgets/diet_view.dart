@@ -160,6 +160,15 @@ class _TodayDiet extends ConsumerWidget {
   }
 }
 
+/// 끼니 한 장 — **회원 앱 식단 탭 끼니 카드와 같은 것**이다. (#1166)
+///
+/// 예전에는 음식 이름을 쉼표로 이어 붙인 한 줄과 끼니 합계뿐이었다. 회원은
+/// 자기 폰에서 음식마다 `이름 · kcal · 나트륨 · 당류` 를 보고 있는데 트레이너
+/// 화면에는 그 내역이 없어, 같은 끼니를 두 화면이 다른 수준으로 말했다.
+///
+///  * 머리: 끼니 배지 + 먹은 시각.
+///  * 가운데: 사진 + 음식 한 줄씩.
+///  * 아래: `칼로리 / 나트륨 / 당류` 알약 셋. 나트륨이 과다한 끼니만 빨강이다.
 class _MealCard extends StatelessWidget {
   const _MealCard({required this.entry});
 
@@ -169,112 +178,249 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
         boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // 회원이 올린 사진. 없으면 아무것도 그리지 않아 기존 카드 그대로다. (#699)
-          if (entry.photoUrl case final String path) ...<Widget>[
-            ClientMealPhoto(path: path),
-            const SizedBox(width: AppSpacing.md),
-          ]
-          // 데모에는 사진을 받아 올 백엔드가 없어 시드가 번들 이미지를
-          // 가리킨다. 실 API 모드에서는 위의 경로만 쓰인다(#819).
-          else if (entry.photoAsset case final String asset) ...<Widget>[
-            ClipRRect(
-              borderRadius: const BorderRadius.all(AppRadius.card),
-              child: Image.asset(
-                asset,
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-                // 자산이 빠져도 끼니 카드는 그대로 읽혀야 한다.
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          Row(
+            children: <Widget>[
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 2,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: AppColors.accentSurface,
+                    borderRadius: BorderRadius.all(AppRadius.pill),
+                  ),
+                  child: Text(
+                    entry.meal,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 2,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentSurface,
-                        borderRadius: BorderRadius.all(AppRadius.pill),
-                      ),
-                      child: Text(
-                        entry.meal,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.accent,
-                        ),
-                      ),
+              // 먹은 시각. 없는 기록(옛 시드·옛 응답)에는 아무것도 적지 않는다.
+              if (entry.timeLabel.isNotEmpty) ...<Widget>[
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    entry.timeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.mutedForeground,
                     ),
-                    const Spacer(),
-                    Text(
-                      '${entry.calories} kcal',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  entry.items,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.mutedForeground,
                   ),
-                ),
-                const SizedBox(height: 2),
-                // 나트륨과 당류는 나란히 읽는 값이다 — 여기만 나트륨뿐이라
-                // 끼니별 당류는 하루 합계로만 볼 수 있었다(#1025).
-                Text(
-                  '${l.dietSodiumValue(entry.sodiumMg)} · '
-                  '${l.metricSugar} ${_grams(entry.sugarG)}g',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.subtleForeground,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
-                    Text('${l.metricCarbs} ${_grams(entry.carbsG)}g'),
-                    Text('${l.metricProtein} ${_grams(entry.proteinG)}g'),
-                    Text('${l.metricFat} ${_grams(entry.fatG)}g'),
-                  ],
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // 회원이 올린 사진. 없으면 아무것도 그리지 않아 카드가 그대로
+              // 읽힌다. (#699)
+              if (entry.photoUrl case final String path) ...<Widget>[
+                ClientMealPhoto(path: path),
+                const SizedBox(width: AppSpacing.md),
+              ]
+              // 데모에는 사진을 받아 올 백엔드가 없어 시드가 번들 이미지를
+              // 가리킨다. 실 API 모드에서는 위의 경로만 쓰인다(#819).
+              else if (entry.photoAsset case final String asset) ...<Widget>[
+                ClipRRect(
+                  borderRadius: const BorderRadius.all(AppRadius.card),
+                  child: Image.asset(
+                    asset,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    // 자산이 빠져도 끼니 카드는 그대로 읽혀야 한다.
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+              ],
+              Expanded(
+                child: entry.foods.isEmpty
+                    // 음식별 영양이 없는 기록은 예전처럼 이름 한 줄이다.
+                    ? Text(
+                        entry.items,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                          color: AppColors.foreground,
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          for (final ClientDietFood f in entry.foods)
+                            _FoodLine(food: f),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: <Widget>[
+              _TotalPill(
+                label: l.metricCalories,
+                value: '${formatNumber(entry.calories)} ${l.unitKcal}',
+                color: AppColors.statusWithinGoal,
+              ),
+              _TotalPill(
+                label: l.metricSodium,
+                value: '${formatNumber(entry.sodiumMg)} mg',
+                // 나트륨이 과다한 끼니만 빨강. 회원 앱과 같은 기준(1,000mg)이라
+                // 회원이 빨갛게 본 끼니가 트레이너 화면에서도 빨갛다.
+                color: entry.sodiumMg > kMealSodiumWarnMg
+                    ? AppColors.statusOver
+                    : AppColors.statusWithinGoal,
+              ),
+              _TotalPill(
+                label: l.metricSugar,
+                value: '${_grams(entry.sugarG)} g',
+                color: AppColors.statusWithinGoal,
+              ),
+            ],
+          ),
+          // 탄단지는 알약 아래 한 줄로. 회원 앱 끼니 카드에는 없지만, 트레이너는
+          // 이 값을 보고 다음 식단을 고쳐 주므로 남긴다(#1025 에서 들어온 줄).
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '${l.metricCarbs} ${_grams(entry.carbsG)}g · '
+            '${l.metricProtein} ${_grams(entry.proteinG)}g · '
+            '${l.metricFat} ${_grams(entry.fatG)}g',
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.subtleForeground,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// 끼니 하나가 "과다" 로 갈리는 나트륨 선(mg). 회원 앱 끼니 카드와 같은 값이다.
+const int kMealSodiumWarnMg = 1000;
+
+/// `현미밥            320kcal · 5mg · 0.4g` — 음식 한 줄.
+///
+/// 이름은 말줄임으로, 영양 문자열은 **축소**로 접힌다 — `1,200mg` 이 `1,2…` 가
+/// 되면 다른 값으로 읽힌다. (회원 앱 #743)
+class _FoodLine extends StatelessWidget {
+  const _FoodLine({required this.food});
+
+  final ClientDietFood food;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: <Widget>[
+          Flexible(
+            child: Text(
+              food.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                '${formatNumber(food.calories)}kcal · '
+                '${formatNumber(food.sodiumMg)}mg · '
+                '${_grams(food.sugarG)}g',
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// `칼로리 520 kcal` — 끼니 합계 알약. 회원 앱과 같은 세 개다.
+class _TotalPill extends StatelessWidget {
+  const _TotalPill({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.10),
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+    ),
+    child: Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: '$label ',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color.withValues(alpha: 0.75),
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 String _grams(double value) => value == value.roundToDouble()

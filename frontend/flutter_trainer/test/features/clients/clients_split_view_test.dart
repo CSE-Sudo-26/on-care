@@ -120,7 +120,7 @@ void main() {
     // which appears as a brief roster flash. The router consumes the first
     // pump; the second is the first frame that contains the detail route.
     expect(find.byType(ClientsPage), findsOneWidget);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
   });
 
   testWidgets('the close button collapses the panel back to the list', (
@@ -189,13 +189,13 @@ void main() {
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'diet'),
     );
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     expect(find.textContaining('3,428', findRichText: true), findsWidgets);
 
     // …switch to 박성호: same sub-tab, his data (2,400mg).
     await tester.tap(card('박성호'));
     await settle(tester);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
     expect(find.textContaining('2,400', findRichText: true), findsWidgets);
   });
 

@@ -46,6 +46,32 @@ OUT_DART = _ROOT / "shared/demo_fixture/lib/src/fixture_json.g.dart"
 # 그대로 돌며 채운다.
 HISTORY_WEEKS = 35
 
+# ── 개인 운동(배정 루틴) ───────────────────────────────────────────────────
+# (id, 이름, 분, 유형, 이유, 출처)
+#
+# 회원 앱 `추천 개인운동`, 트레이너 고객 탭 `아직 하지 않은 개인 운동`, 트레이너
+# 프로그램 탭이 **모두 이 목록 하나**를 읽는다(#1170). 예전에는 세 화면이 각자
+# 목록을 들고 있어서, 같은 회원의 같은 날에 셋이 서로 다른 운동을 말했다 —
+# 회원 화면은 `코어 스트레칭 10분`, 고객 탭은 `코어 서킷 15분`, 프로그램 탭은
+# `코어 강화 10분` 이었다.
+#
+# 값은 백엔드 시드(`seed_member_data._ROUTINES['user-demo']`)를 따른다. 실 API
+# 모드에서 두 앱이 실제로 받는 것이 그 목록이므로, 데모가 다른 값을 보여 주면
+# 모드를 바꿀 때마다 화면이 달라진다.
+#
+# 유형은 화면이 그대로 쓰는 한국어다(유산소·근력·유연성). 회원 앱은 `유연성`,
+# 트레이너 그래프는 `스트레칭` 이라 부르지만 재는 값은 같다.
+ROUTINES: list[tuple[str, str, int, str, str, str]] = [
+    ("seed-routine-user-demo-0", "저강도 유산소 (걷기)", 30, "유산소",
+     "혈압 안정에 효과적", "ai"),
+    ("seed-routine-user-demo-1", "하체 스트레칭", 15, "유연성",
+     "혈액순환 개선", "trainer"),
+    ("seed-routine-user-demo-2", "코어 강화", 10, "근력",
+     "기초대사량 향상", "ai"),
+    ("seed-routine-user-demo-3", "어깨 관절 보호 스트레칭", 8, "유연성",
+     "PT 피드백 반영 · 오른쪽 어깨 보호", "trainer"),
+]
+
 # ── 음식 ───────────────────────────────────────────────────────────────────
 # (이름, 칼로리, 나트륨mg, 당류g, 탄수g, 단백g, 지방g)
 FOODS: dict[str, tuple[str, int, int, float, float, float, float]] = {
@@ -508,6 +534,17 @@ def build() -> dict:
         },
         "recent": recent,
         "weeks": weeks,
+        "routines": [
+            {
+                "id": rid,
+                "name": name,
+                "minutes": minutes,
+                "type": rtype,
+                "reason": reason,
+                "source": source,
+            }
+            for rid, name, minutes, rtype, reason, source in ROUTINES
+        ],
     }
 
 

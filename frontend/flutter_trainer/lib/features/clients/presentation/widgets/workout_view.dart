@@ -635,10 +635,14 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                         label: l.routineTypeCardio,
                         value: '${day.cardioMinutes}${l.unitMinutes}',
                       ),
-                    if (day.strengthMinutes > 0)
+                    // 근력은 **세트**로 읽는다 (#1170). 같은 40분이라도 12세트를
+                    // 한 날과 6세트를 하고 절반을 쉰 날이 같은 값이 되면, 분은
+                    // 근력이 얼마나였는지를 말해 주지 못한다 — 회원 앱도 근력만
+                    // 세트로 잰다(`ExerciseLoadKind.strength`).
+                    if (day.strengthSets > 0)
                       (
                         label: l.routineTypeStrength,
-                        value: '${day.strengthMinutes}${l.unitMinutes}',
+                        value: l.exSetsValue(day.strengthSets),
                       ),
                     if (day.stretchingMinutes > 0)
                       (

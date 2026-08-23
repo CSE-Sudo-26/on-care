@@ -98,6 +98,9 @@ DietMeal _mealFromEntry(DietEntry e) {
     tags: const <DietTag>[],
     sodium: sodium,
     sugar: sugar,
+    carbsG: e.carbsG,
+    proteinG: e.proteinG,
+    fatG: e.fatG,
   );
 }
 
@@ -1668,6 +1671,25 @@ class _MealCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                // 탄단지는 알약 아래 한 줄로 작게 (#1170). 하루 합계는 위
+                // 영양 요약 카드가 말하지만, 어느 끼니가 그 합계를 만들었는지는
+                // 끼니 단위로 봐야 알 수 있다 — 트레이너 화면의 같은 카드와
+                // 짝이라 두 화면이 같은 수준으로 읽힌다.
+                if (meal.carbsG > 0 || meal.proteinG > 0 || meal.fatG > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${l.homeMacroCarbs} ${_formatG(meal.carbsG)}g · '
+                    '${l.homeMacroProtein} ${_formatG(meal.proteinG)}g · '
+                    '${l.homeMacroFat} ${_formatG(meal.fatG)}g',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textBody,
+                    ),
+                  ),
+                ],
                 if (meal.aiComment.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 10),
                   _MealAiNote(text: meal.aiComment),
