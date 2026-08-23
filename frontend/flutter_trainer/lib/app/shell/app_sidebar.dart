@@ -328,9 +328,15 @@ class _NavTile extends StatelessWidget {
               children: <Widget>[
                 icon,
                 if (badgeCount != null && badgeCount! > 0)
+                  // width/height 를 명시해야 Stack 의 느슨한 제약과 무관하게
+                  // _Badge 가 항상 고정 20×20 정원으로 그려진다 — 없으면
+                  // 아이콘 위에 음수 오프셋으로 겹쳐 그리는 이 경계 조건에서
+                  // 배지가 살짝 세로로 긴 타원으로 찌그러진다.
                   Positioned(
                     top: -4,
                     right: -10,
+                    width: 20,
+                    height: 20,
                     child: _Badge(count: badgeCount!),
                   ),
               ],
