@@ -118,11 +118,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       _selectDay(_selectedDay.add(Duration(days: 7 * direction)));
 
   String? _editingScheduleId;
-  String? _editingProgramId;
-
-  /// 메모만 고치는 편집기가 열린 세션. 프로그램 편집기와 자리를 나눠 쓰므로
-  /// 둘 중 하나만 열린다(#1011).
-  String? _editingNoteId;
 
   /// New schedules use a sheet; existing schedules are edited in their card.
   Future<void> _openSessionSheet() async {
@@ -139,6 +134,44 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         clientNames: clients.map((c) => c.name).toList(),
         date: _selectedYmd,
         existing: null,
+      ),
+    );
+  }
+
+  /// 프로그램(또는 메모)을 시트로 연다.
+  ///
+  /// 예전에는 상세 패널 안에서 그 자리에 펼쳤는데, 패널 폭이 좁아 세트·
+  /// 횟수/시간·중량 칸이 잘렸다. 시트는 화면 폭을 그대로 쓰니 그 문제가
+  /// 애초에 생기지 않는다.
+  Future<void> _openProgramEditor(
+    ScheduleSession session, {
+    required bool noteOnly,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: SessionProgramEditor(
+              key: ValueKey<String>(
+                noteOnly
+                    ? 'note-editor-${session.id}'
+                    : 'program-editor-${session.id}',
+              ),
+              session: session,
+              noteOnly: noteOnly,
+              onSaved: () => Navigator.of(sheetContext).pop(),
+              onCancel: () => Navigator.of(sheetContext).pop(),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -658,21 +691,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ],
         SessionCard(
           session: session,
-          onEditSchedule: () => setState(() {
-            _editingScheduleId = session.id;
-            _editingProgramId = null;
-            _editingNoteId = null;
-          }),
-          onEditProgram: () => setState(() {
-            _editingProgramId = session.id;
-            _editingScheduleId = null;
-            _editingNoteId = null;
-          }),
-          onEditNote: () => setState(() {
-            _editingNoteId = session.id;
-            _editingScheduleId = null;
-            _editingProgramId = null;
-          }),
+          onEditSchedule: () => setState(() => _editingScheduleId = session.id),
+          onEditProgram: () => _openProgramEditor(session, noteOnly: false),
+          onEditNote: () => _openProgramEditor(session, noteOnly: true),
           onDelete: () => _confirmDelete(session),
           onChat: () => _openChat(session),
           onComplete: (session.isUpcoming && !isFuture)
@@ -696,22 +717,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   inline: true,
                   onSaved: () => setState(() => _editingScheduleId = null),
                   onCancel: () => setState(() => _editingScheduleId = null),
-                )
-              : _editingProgramId == session.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('week-program-editor-${session.id}'),
-                  session: session,
-                  onSaved: () => setState(() => _editingProgramId = null),
-                  onCancel: () => setState(() => _editingProgramId = null),
-                )
-              : _editingNoteId == session.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('week-note-editor-${session.id}'),
-                  session: session,
-                  // 같은 편집기의 메모만 모드다 — 운동 목록 없이 메모만 연다.
-                  noteOnly: true,
-                  onSaved: () => setState(() => _editingNoteId = null),
-                  onCancel: () => setState(() => _editingNoteId = null),
                 )
               : null,
         ),
