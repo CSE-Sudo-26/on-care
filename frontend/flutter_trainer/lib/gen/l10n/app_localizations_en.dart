@@ -1656,6 +1656,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progEditTitle => 'Edit program';
 
   @override
+  String get progAddTitle => 'Add program';
+
+  @override
   String get progAddExercise => 'Add exercise';
 
   @override

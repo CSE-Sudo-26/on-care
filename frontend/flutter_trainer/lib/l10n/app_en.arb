@@ -841,6 +841,7 @@
   "progInvalid": "Check the exercise name and set count",
   "progSaveFailed": "Couldn't save the program. Please try again",
   "progEditTitle": "Edit program",
+  "progAddTitle": "Add program",
   "progAddExercise": "Add exercise",
   "progNoteHint": "Notes to follow while running this program",
   "progSaving": "Saving...",

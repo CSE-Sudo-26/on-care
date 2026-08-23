@@ -808,9 +808,15 @@ void main() {
 
       await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
+      // 계획이 없으면 이 카드 안에서 고치는 자리(`프로그램 수정`)가 아니라
+      // 코칭 탭으로 나가는 자리(`프로그램 추가`)만 있다(#1247).
+      expect(
+        find.byKey(const ValueKey<String>('session-add-program-chip')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('session-edit-program-chip')),
-        findsOneWidget,
+        findsNothing,
       );
       // 메모 자리는 종류와 상관없이 있다(#1011).
       expect(
@@ -818,6 +824,42 @@ void main() {
         findsOneWidget,
       );
       expect(noteActionLabel(tester), '메모 추가');
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-add-program-chip')),
+      );
+      await settle(tester);
+
+      expect(currentLocation(tester), startsWith(AppRoutes.coaching));
+    });
+
+    testWidgets('이미 회원에게 보낸 프로그램은 프로그램 수정 아이콘이 없다 (#1247)', (tester) async {
+      await withWideSurface(tester, () async {
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.schedule,
+        );
+
+        await openSession(tester, '김민수');
+        expect(
+          find.byKey(const ValueKey<String>('session-edit-program-chip')),
+          findsOneWidget,
+        );
+
+        final send = find.byKey(
+          const ValueKey<String>('schedule-send-program'),
+        );
+        await tester.ensureVisible(send);
+        await tester.pumpAndSettle();
+        await tester.tap(send);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey<String>('session-edit-program-chip')),
+          findsNothing,
+        );
+      }, size: const Size(1100, 2000));
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {

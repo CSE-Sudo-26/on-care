@@ -60,9 +60,10 @@ class SessionManageRow extends StatelessWidget {
   /// 세우면 같은 동작이 두 자리에서 보인다.
   final bool showEditNote;
 
-  /// `프로그램 수정` 을 이 줄에 세우는가. 프로그램이 아직 비어 있으면 그
-  /// 자리는 [SessionNoPlanBox] 안으로 옮겨 갔다 — 이 줄에 또 세우면 같은
-  /// 동작이 두 자리에서 보인다(#1236).
+  /// `프로그램 수정` 을 이 줄에 세우는가. 프로그램이 아직 비어 있으면 코칭
+  /// 탭으로 가는 자리가 [SessionNoPlanBox] 안에 따로 있다(#1236) — 이
+  /// 줄에는 세울 것이 없다. 이미 회원에게 보낸 프로그램도 더 손댈 수 없어야
+  /// 하므로 세우지 않는다(#1247).
   final bool showEditProgram;
 
   final VoidCallback onDelete;

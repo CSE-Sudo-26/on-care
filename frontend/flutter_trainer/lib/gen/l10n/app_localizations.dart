@@ -2924,6 +2924,12 @@ abstract class AppLocalizations {
   /// **'Edit program'**
   String get progEditTitle;
 
+  /// No description provided for @progAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add program'**
+  String get progAddTitle;
+
   /// No description provided for @progAddExercise.
   ///
   /// In en, this message translates to:
