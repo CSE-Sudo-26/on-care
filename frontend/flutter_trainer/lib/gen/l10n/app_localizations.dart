@@ -4850,12 +4850,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load conversations.'**
   String get messagesLoadFailed;
 
-  /// No description provided for @messagesConversations.
-  ///
-  /// In en, this message translates to:
-  /// **'Conversations'**
-  String get messagesConversations;
-
   /// No description provided for @messagesEmpty.
   ///
   /// In en, this message translates to:

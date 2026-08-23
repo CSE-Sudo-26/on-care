@@ -829,7 +829,6 @@
   "navMessages": "메시지",
   "messagesSubtitle": "고객과 코칭 내용을 주고받고 빠르게 후속 조치하세요",
   "messagesLoadFailed": "대화 목록을 불러오지 못했어요.",
-  "messagesConversations": "대화",
   "messagesEmpty": "조건에 맞는 대화가 없어요.",
   "messagesFilterAll": "전체",
   "messagesFilterUnread": "읽지 않음",

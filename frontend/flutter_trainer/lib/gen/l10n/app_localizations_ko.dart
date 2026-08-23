@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2641,9 +2642,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messagesLoadFailed => '대화 목록을 불러오지 못했어요.';
-
-  @override
-  String get messagesConversations => '대화';
 
   @override
   String get messagesEmpty => '조건에 맞는 대화가 없어요.';
