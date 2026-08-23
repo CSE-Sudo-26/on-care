@@ -262,6 +262,8 @@
   "exTrainersLoadError": "트레이너 정보를 불러오지 못했어요.",
   "exGymSearchHint": "헬스장, 지역으로 검색",
   "exNearbyGyms": "주변 헬스장",
+  "exGymListCollapse": "목록 접기",
+  "exGymListExpand": "목록 펼치기",
   "exAiAnalysis": "✦ AI 분석",
   "exNoGymMatch": "'{query}'에 맞는 헬스장이 없어요",
   "exGymsLoadError": "헬스장을 불러오지 못했어요.",

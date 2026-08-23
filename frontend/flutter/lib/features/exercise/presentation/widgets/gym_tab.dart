@@ -13,6 +13,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
@@ -523,6 +524,20 @@ class _MyGymCard extends StatelessWidget {
               ),
             ),
           ),
+          // 담당 트레이너가 누구인지 카드에서 한 줄로 읽힌다 (#1187). 예전에는
+          // 예약 패널 문구에서 이름이 스쳐 지나갈 뿐이었다.
+          if (trainer != null) ...<Widget>[
+            const SizedBox(height: 12),
+            GymTrainerLine(
+              key: const Key('gym-trainer-line-mine'),
+              trainer: trainer!,
+              connected: true,
+              // 고를 이유가 아니라 이미 함께 하는 사람이다 — 추천 이유는 뺀다.
+              showReason: false,
+              onDetail: () =>
+                  context.push(AppRoutes.trainerDetailPath(trainer!.id)),
+            ),
+          ],
           // 담당 트레이너가 없으면 예약 패널을 숨긴다. 없는 사람의 빈 시간을
           // 고르고 예약 완료 메시지까지 보게 되는 상태를 막는다.
           if (trainer != null) ...<Widget>[
@@ -597,7 +612,9 @@ class _TrainerChatButton extends StatelessWidget {
       child: OutlinedButton.icon(
         key: const Key('gymTrainerChatButton'),
         onPressed: onTap,
-        icon: const Icon(Icons.chat_bubble_outline, size: 16),
+        // 이 버튼만 카드 안 다른 문구보다 커서 혼자 떠 보였다 — 글자와
+        // 아이콘을 한 단계씩 줄인다. (#1184)
+        icon: const Icon(Icons.chat_bubble_outline, size: 14),
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -649,6 +666,11 @@ class _TrainerChatButton extends StatelessWidget {
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor: FigmaColors.primary,
+          // 앱 서체를 **버리지 않는다** — 여기에 맨 `TextStyle` 을 주면
+          // fontFamily 까지 덮어써 한글이 기본 서체로 떨어진다.
+          textStyle: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontSize: 13),
           minimumSize: const Size(0, 44),
           side: BorderSide(color: FigmaColors.primaryA(0.25)),
           shape: RoundedRectangleBorder(

@@ -95,7 +95,7 @@ void main() {
       await open(find.byIcon(Icons.restaurant_outlined));
       await open(find.byKey(const ValueKey<String>('nav-exercise')));
       await open(find.byKey(const ValueKey<String>('exercise-subtab-1')));
-      await open(find.byIcon(Icons.person_outline));
+      await open(find.byKey(const ValueKey<String>('nav-my')));
 
       expect(overflows, isEmpty, reason: overflows.join('\n──────\n'));
     });
