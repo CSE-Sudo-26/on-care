@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -518,7 +517,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashSessionPrepared => '준비됨';
 
   @override
-  String get dashSessionNoteWritten => '작성됨';
+  String get dashSessionNoteWritten => '작성 완료';
 
   @override
   String get dashSessionSentNo => '전송 안됨';
@@ -527,7 +526,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashSessionPreparedNo => '준비 안됨';
 
   @override
-  String get dashSessionNoteNotWritten => '작성 안됨';
+  String get dashSessionNoteNotWritten => '메모 없음';
 
   @override
   String get weekdayMon => '월';
@@ -940,6 +939,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get consultTitle => '상담 요청';
+
+  @override
+  String get consultBackToSchedule => '스케줄로 돌아가기';
+
+  @override
+  String get consultBackToDashboard => '대시보드로 돌아가기';
 
   @override
   String consultPendingCount(int count) {
@@ -1425,6 +1430,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedDeleteFailed => '일정 삭제에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get schedCompleteTitle => '일정 완료';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return '$time $name님 세션을 완료할까요?';
+  }
 
   @override
   String get schedCompleteFailed => '완료 처리에 실패했어요. 다시 시도해 주세요';

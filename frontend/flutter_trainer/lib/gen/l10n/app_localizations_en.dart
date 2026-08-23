@@ -979,6 +979,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultTitle => 'Consultation requests';
 
   @override
+  String get consultBackToSchedule => 'Back to schedule';
+
+  @override
+  String get consultBackToDashboard => 'Back to dashboard';
+
+  @override
   String consultPendingCount(int count) {
     return '$count pending';
   }
@@ -1495,6 +1501,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schedDeleteFailed =>
       'Couldn\'t delete the session. Please try again';
+
+  @override
+  String get schedCompleteTitle => 'Complete session';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return 'Mark the $time session with $name as complete?';
+  }
 
   @override
   String get schedCompleteFailed =>

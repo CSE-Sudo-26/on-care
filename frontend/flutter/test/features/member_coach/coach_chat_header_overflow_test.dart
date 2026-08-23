@@ -1,8 +1,7 @@
 /// 트레이너 채팅 헤더가 넘치지 않는지 (#840).
 ///
-/// 헤더의 상태 점 + 부제가 든 `Row` 가 고정 폭이라, 부제가 길어지면 그대로
-/// 넘쳤다. 영어 부제(`Personal trainer · Available`)가 한국어(`담당 트레이너 ·
-/// 상담 가능`)보다 길어 같은 자리에서 먼저 샌다 — #743 과 같은 계열이다.
+/// 영어 부제(`Personal trainer · Available`)가 한국어보다 길어도 헤더가
+/// 넘치지 않아야 한다. #1235에서 불필요한 상태 점과 메뉴도 함께 걷어냈다.
 ///
 /// 430px 는 iPhone 15 Pro Max 의 논리 폭이다. E2E 로그에는
 /// `RenderFlex overflowed by 59 pixels on the right` 로 남아 있었다.
@@ -84,6 +83,73 @@ void main() {
       await pumpChat(tester, lang: 'en', size: const Size(430, 932));
 
       expect(find.text('김트레이너'), findsOneWidget);
+    });
+
+    testWidgets('상태 점과 동작하지 않는 메뉴가 없다', (WidgetTester tester) async {
+      await pumpChat(tester, lang: 'ko', size: const Size(430, 932));
+
+      expect(find.byIcon(Icons.more_vert), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SizedBox && widget.width == 7 && widget.height == 7,
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('날짜 구분선과 말풍선 가장자리 시간이 보인다', (WidgetTester tester) async {
+      await pumpChat(tester, lang: 'ko', size: const Size(430, 932));
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              RegExp(
+                r'^\d{4}년 \d{1,2}월 \d{1,2}일 [월화수목금토일]요일$',
+              ).hasMatch(widget.data ?? ''),
+        ),
+        findsAtLeastNWidgets(1),
+      );
+
+      final sentBubble = find.byKey(
+        const ValueKey<String>('coach-message-bubble-seed-m17'),
+      );
+      final sentTime = find.byKey(
+        const ValueKey<String>('coach-message-time-seed-m17'),
+      );
+      expect(
+        tester.getTopLeft(sentTime).dx,
+        lessThan(tester.getTopLeft(sentBubble).dx),
+      );
+      expect(find.text('18:16'), findsOneWidget);
+      expect(find.text('금 18:16'), findsNothing);
+
+      final receivedBubble = find.byKey(
+        const ValueKey<String>('coach-message-bubble-seed-m18'),
+      );
+      final receivedTime = find.byKey(
+        const ValueKey<String>('coach-message-time-seed-m18'),
+      );
+      expect(
+        tester.getTopLeft(receivedTime).dx,
+        greaterThan(tester.getTopRight(receivedBubble).dx),
+      );
+    });
+
+    testWidgets('새 메시지는 루틴 수신 배너 아래에 쌓인다', (WidgetTester tester) async {
+      await pumpChat(tester, lang: 'ko', size: const Size(430, 932));
+      await tester.enterText(find.byType(TextField), '확인했습니다');
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pumpAndSettle();
+
+      final banner = find.textContaining('루틴을 받았어요').last;
+      final sent = find.text('확인했습니다');
+      expect(banner, findsOneWidget);
+      expect(
+        tester.getTopLeft(banner).dy,
+        lessThan(tester.getTopLeft(sent).dy),
+      );
     });
   });
 }

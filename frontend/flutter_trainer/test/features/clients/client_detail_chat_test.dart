@@ -422,8 +422,20 @@ void main() {
       await tester.pump();
 
       expect(find.text('실제 고객 답장'), findsOneWidget);
+      expect(find.text('2026년 7월 31일 금요일'), findsOneWidget);
       expect(find.textContaining('AI가 김민수님의 식단'), findsNothing);
       expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
+
+      final bubble = find.byKey(
+        const ValueKey<String>('trainer-message-bubble-live-1'),
+      );
+      final time = find.byKey(
+        const ValueKey<String>('trainer-message-time-live-1'),
+      );
+      expect(
+        tester.getTopLeft(time).dx,
+        greaterThan(tester.getTopRight(bubble).dx),
+      );
     });
 
     Future<void> openMessages(WidgetTester tester) async {
@@ -446,6 +458,34 @@ void main() {
       final reply = find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅');
       await dragUntil(tester, reply, -300);
       expect(reply, findsOneWidget);
+    });
+
+    testWidgets('shows dates and places each time outside its bubble', (
+      tester,
+    ) async {
+      await openMessages(tester);
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              RegExp(
+                r'^\d{4}년 \d{1,2}월 \d{1,2}일 [월화수목금토일]요일$',
+              ).hasMatch(widget.data ?? ''),
+        ),
+        findsAtLeastNWidgets(1),
+      );
+
+      final sentBubble = find.byKey(
+        const ValueKey<String>('trainer-message-bubble-seed-chat-1-17'),
+      );
+      final sentTime = find.byKey(
+        const ValueKey<String>('trainer-message-time-seed-chat-1-17'),
+      );
+      expect(
+        tester.getTopLeft(sentTime).dx,
+        lessThan(tester.getTopLeft(sentBubble).dx),
+      );
     });
 
     testWidgets('sending a message appends it to the thread', (tester) async {

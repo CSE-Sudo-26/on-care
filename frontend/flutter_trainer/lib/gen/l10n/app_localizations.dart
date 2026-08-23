@@ -1808,6 +1808,18 @@ abstract class AppLocalizations {
   /// **'Consultation requests'**
   String get consultTitle;
 
+  /// No description provided for @consultBackToSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to schedule'**
+  String get consultBackToSchedule;
+
+  /// No description provided for @consultBackToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to dashboard'**
+  String get consultBackToDashboard;
+
   /// No description provided for @consultPendingCount.
   ///
   /// In en, this message translates to:
@@ -2641,6 +2653,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t delete the session. Please try again'**
   String get schedDeleteFailed;
+
+  /// No description provided for @schedCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete session'**
+  String get schedCompleteTitle;
+
+  /// No description provided for @schedCompleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the {time} session with {name} as complete?'**
+  String schedCompleteConfirm(String time, String name);
 
   /// No description provided for @schedCompleteFailed.
   ///
