@@ -151,7 +151,7 @@
   "dashScheduleNextSession": "다음 일정 {time} · {name}",
   "dashScheduleMinutesLeft": "{minutes}분 뒤",
   "dashPreparePt": "PT 준비하기",
-  "dashPrepareConsultation": "상담 준비하기",
+  "dashLeaveMemo": "메모 남기기",
   "dashSessionSent": "전송됨",
   "dashSessionPrepared": "준비됨",
   "dashSessionNoteWritten": "작성됨",

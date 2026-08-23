@@ -252,7 +252,7 @@
     }
   },
   "dashPreparePt": "Prepare PT",
-  "dashPrepareConsultation": "Prepare consultation",
+  "dashLeaveMemo": "Leave a memo",
   "dashSessionSent": "Sent",
   "dashSessionPrepared": "Prepared",
   "dashSessionNoteWritten": "Written",

@@ -525,7 +525,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashPreparePt => 'Prepare PT';
 
   @override
-  String get dashPrepareConsultation => 'Prepare consultation';
+  String get dashLeaveMemo => 'Leave a memo';
 
   @override
   String get dashSessionSent => 'Sent';

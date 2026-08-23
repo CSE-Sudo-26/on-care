@@ -986,11 +986,11 @@ abstract class AppLocalizations {
   /// **'Prepare PT'**
   String get dashPreparePt;
 
-  /// No description provided for @dashPrepareConsultation.
+  /// No description provided for @dashLeaveMemo.
   ///
   /// In en, this message translates to:
-  /// **'Prepare consultation'**
-  String get dashPrepareConsultation;
+  /// **'Leave a memo'**
+  String get dashLeaveMemo;
 
   /// No description provided for @dashSessionSent.
   ///

@@ -504,7 +504,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashPreparePt => 'PT 준비하기';
 
   @override
-  String get dashPrepareConsultation => '상담 준비하기';
+  String get dashLeaveMemo => '메모 남기기';
 
   @override
   String get dashSessionSent => '전송됨';
