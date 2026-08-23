@@ -578,10 +578,25 @@ void main() {
       // sodiumOverBudget (2000mg 초과) 재사용 — 시드의 박성호(2400mg)는
       // 남고, 이지수(1800mg)는 사라진다. (김민수는 공유 픽스처가 오늘 값을
       // 정하는 회원이라 날짜별로 값이 바뀌어 이 비교엔 쓰지 않는다 — #757.)
-      expect(find.text('박성호'), findsOneWidget);
-      expect(find.text('이지수'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      final seonghoCard = find.byKey(
+        const ValueKey<String>('client-seed-client-3'),
+      );
+      await scrollToClient(tester, seonghoCard);
+      expect(seonghoCard, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-2')),
+        findsNothing,
+      );
 
       // 같은 chip 을 다시 누르면 선택이 풀린다 — 다중 선택의 개별 제거.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
       );
@@ -650,11 +665,27 @@ void main() {
       );
       await settle(tester);
 
-      expect(find.text('김민수'), findsOneWidget); // 활성
-      expect(find.text('박성호'), findsOneWidget); // 휴면
       expect(find.text('필터 2'), findsOneWidget);
       expect(find.text('전체 초기화'), findsOneWidget);
 
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('client-seed-client-1')),
+        findsOneWidget,
+      ); // 활성
+      final seonghoCard = find.byKey(
+        const ValueKey<String>('client-seed-client-3'),
+      );
+      await scrollToClient(tester, seonghoCard);
+      expect(seonghoCard, findsOneWidget); // 휴면
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('전체 초기화'));
       await settle(tester);
 
