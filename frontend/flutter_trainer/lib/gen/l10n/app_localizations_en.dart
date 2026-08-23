@@ -234,9 +234,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashTitle => 'Dashboard';
 
   @override
-  String get dashAddSchedule => 'Add session';
-
-  @override
   String get dashActivityCreateRoutine => 'Go create an AI routine';
 
   @override

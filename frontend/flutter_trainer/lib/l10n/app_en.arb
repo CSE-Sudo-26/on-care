@@ -104,7 +104,6 @@
   "authErrInviteCodeRequired": "Enter the invite code you received from your gym",
   "authErrSignUpFailed": "Sign-up failed. Please try again in a moment.",
   "dashTitle": "Dashboard",
-  "dashAddSchedule": "Add session",
   "dashActivityCreateRoutine": "Go create an AI routine",
   "dashLoadFailed": "Couldn't load the dashboard",
   "dashTodayReservations": "Today's bookings",

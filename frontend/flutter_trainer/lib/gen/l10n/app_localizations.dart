@@ -512,12 +512,6 @@ abstract class AppLocalizations {
   /// **'Dashboard'**
   String get dashTitle;
 
-  /// No description provided for @dashAddSchedule.
-  ///
-  /// In en, this message translates to:
-  /// **'Add session'**
-  String get dashAddSchedule;
-
   /// No description provided for @dashActivityCreateRoutine.
   ///
   /// In en, this message translates to:

@@ -72,7 +72,6 @@
   "authErrInviteCodeRequired": "헬스장에서 받은 초대 코드를 입력해 주세요",
   "authErrSignUpFailed": "가입에 실패했어요. 잠시 후 다시 시도해 주세요.",
   "dashTitle": "대시보드",
-  "dashAddSchedule": "일정 추가",
   "dashActivityCreateRoutine": "AI 루틴 만들러 가기",
   "dashLoadFailed": "대시보드를 불러오지 못했어요",
   "dashTodayReservations": "오늘 예약",

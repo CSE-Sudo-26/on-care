@@ -224,9 +224,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashTitle => '대시보드';
 
   @override
-  String get dashAddSchedule => '일정 추가';
-
-  @override
   String get dashActivityCreateRoutine => 'AI 루틴 만들러 가기';
 
   @override
