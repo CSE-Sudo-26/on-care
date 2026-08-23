@@ -12,6 +12,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
+import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
@@ -225,7 +226,7 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
             request.preferredDate.month,
             request.preferredDate.day,
           ),
-          onTap: () => context.go(AppRoutes.consultationsFromDashboard()),
+          onTap: () => showConsultationsDialog(context),
         ),
       for (final entry in health)
         _Mission(

@@ -10,6 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
@@ -404,7 +405,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         if (consultationInbox)
           ConsultationInboxAction(
             pending: pendingConsultations,
-            onTap: () => context.go(AppRoutes.consultations),
+            onTap: () => showConsultationsDialog(context),
           ),
       ],
       scrollable: false,

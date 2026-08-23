@@ -351,7 +351,7 @@ void main() {
     await _bootSignedOut(tester);
     await _loginThroughUi(tester);
 
-    // 스케줄의 인박스 아이콘도 대시보드 할 일과 같은 상담 요청 페이지를 연다.
+    // 스케줄의 인박스 아이콘은 현재 스케줄 위에 상담 요청 모달을 연다.
     await _openSidebar(tester, AppRoutes.schedule);
     await _pumpUntil(
       tester,

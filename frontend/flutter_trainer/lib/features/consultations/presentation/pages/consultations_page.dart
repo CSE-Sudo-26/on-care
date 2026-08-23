@@ -31,10 +31,13 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// and the sidebar row is not rendered (see [consultationInboxEnabledProvider]).
 class ConsultationsPage extends ConsumerWidget {
   /// Creates the inbox page.
-  const ConsultationsPage({super.key, this.returnTo});
+  const ConsultationsPage({super.key, this.returnTo, this.modal = false});
 
   /// Entry surface (`dashboard` or null/default schedule).
   final String? returnTo;
+
+  /// Whether the inbox is being shown over its entry surface.
+  final bool modal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +47,7 @@ class ConsultationsPage extends ConsumerWidget {
     final pending = ref.watch(consultationPendingCountProvider).valueOrNull;
     final fromDashboard = returnTo == 'dashboard';
 
-    return PageScaffold(
+    final page = PageScaffold(
       title: l.consultTitle,
       subtitle: pending == null
           ? null
@@ -56,24 +59,33 @@ class ConsultationsPage extends ConsumerWidget {
           onPressed: () => ref.read(consultationFilterProvider.notifier).state =
               filter == 'pending' ? 'all' : 'pending',
         ),
+        if (modal)
+          IconButton(
+            key: const ValueKey<String>('consultations-close'),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+          ),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: ActionButton(
-              key: const ValueKey<String>('consultations-back-to-schedule'),
-              label: fromDashboard
-                  ? l.consultBackToDashboard
-                  : l.consultBackToSchedule,
-              icon: Icons.arrow_back,
-              onPressed: () => context.go(
-                fromDashboard ? AppRoutes.dashboard : AppRoutes.schedule,
+          if (!modal) ...<Widget>[
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ActionButton(
+                key: const ValueKey<String>('consultations-back-to-schedule'),
+                label: fromDashboard
+                    ? l.consultBackToDashboard
+                    : l.consultBackToSchedule,
+                icon: Icons.arrow_back,
+                onPressed: () => context.go(
+                  fromDashboard ? AppRoutes.dashboard : AppRoutes.schedule,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           inbox.requests.when(
             loading: () => const Padding(
               padding: EdgeInsets.only(top: AppSpacing.xxl),
@@ -133,8 +145,31 @@ class ConsultationsPage extends ConsumerWidget {
         ],
       ),
     );
+
+    if (!modal) return page;
+    return Dialog(
+      key: const ValueKey<String>('consultations-dialog'),
+      backgroundColor: AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(AppSpacing.xl),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.card),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: 960,
+        height: MediaQuery.sizeOf(context).height * .82,
+        child: page,
+      ),
+    );
   }
 }
+
+/// Opens the shared consultation inbox without leaving the current workspace.
+Future<void> showConsultationsDialog(BuildContext context) => showDialog<void>(
+  context: context,
+  builder: (_) => const ConsultationsPage(modal: true),
+);
 
 /// One request. Pending cards carry the 승인 / 거절 actions; decided ones
 /// keep their place under the 전체 filter as a read-only record.

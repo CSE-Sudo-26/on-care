@@ -664,7 +664,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('consultation inbox page opens from the schedule tab', (
+    testWidgets('consultation inbox dialog opens over the schedule tab', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -672,11 +672,15 @@ void main() {
       await tester.tap(find.byKey(const Key('consult-inbox-entry')));
       await settle(tester);
 
-      expect(currentLocation(tester), AppRoutes.consultations);
+      expect(currentLocation(tester), AppRoutes.schedule);
       expect(find.text('상담 요청'), findsWidgets);
       expect(
-        find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+        find.byKey(const ValueKey<String>('consultations-dialog')),
         findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+        findsNothing,
       );
       expect(find.byType(BottomSheet), findsNothing);
     });
