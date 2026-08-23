@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/shared/widgets/page_scroll_reset.dart';
 
 /// Standard frame for a console page: a sticky header (title, optional
 /// subtitle, an optional centred slot, right-aligned actions) above
@@ -10,7 +11,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 ///
 /// Every top-level page uses this so the header sits at the same height
 /// across branches — switching tabs shouldn't make the title jump.
-class PageScaffold extends StatelessWidget {
+class PageScaffold extends StatefulWidget {
   /// Creates a page frame.
   const PageScaffold({
     super.key,
@@ -56,25 +57,77 @@ class PageScaffold extends StatelessWidget {
   final EdgeInsets contentPadding;
 
   @override
-  Widget build(BuildContext context) {
-    final body = scrollable
-        ? SingleChildScrollView(
-            child: _capped(Padding(padding: contentPadding, child: child)),
-          )
-        : _capped(Padding(padding: contentPadding, child: child));
+  State<PageScaffold> createState() => _PageScaffoldState();
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _Header(
-          title: title,
-          subtitle: subtitle,
-          actions: actions,
-          center: headerCenter,
-          maxWidth: maxWidth,
-        ),
-        Expanded(child: body),
-      ],
+class _PageScaffoldState extends State<PageScaffold> {
+  final Set<ScrollableState> _topLevelScrollables = <ScrollableState>{};
+  ValueNotifier<int>? _resetNotifier;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = PageScrollResetScope.maybeOf(context);
+    if (identical(next, _resetNotifier)) return;
+    _resetNotifier?.removeListener(_resetScroll);
+    _resetNotifier = next;
+    _resetNotifier?.addListener(_resetScroll);
+  }
+
+  @override
+  void dispose() {
+    _resetNotifier?.removeListener(_resetScroll);
+    super.dispose();
+  }
+
+  void _resetScroll() {
+    if (!TickerMode.valuesOf(context).enabled) return;
+    _topLevelScrollables.removeWhere((scrollable) => !scrollable.mounted);
+    for (final scrollable in _topLevelScrollables) {
+      final position = scrollable.position;
+      if (position.hasPixels && position.pixels != position.minScrollExtent) {
+        position.jumpTo(position.minScrollExtent);
+      }
+    }
+  }
+
+  bool _rememberScroll(ScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    final notificationContext = notification.context;
+    if (notificationContext != null) {
+      final scrollable = Scrollable.maybeOf(notificationContext);
+      if (scrollable != null) _topLevelScrollables.add(scrollable);
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final body = widget.scrollable
+        ? SingleChildScrollView(
+            child: _capped(
+              Padding(padding: widget.contentPadding, child: widget.child),
+            ),
+          )
+        : _capped(Padding(padding: widget.contentPadding, child: widget.child));
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: _rememberScroll,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _Header(
+            title: widget.title,
+            subtitle: widget.subtitle,
+            actions: widget.actions,
+            center: widget.headerCenter,
+            maxWidth: widget.maxWidth,
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -82,7 +135,7 @@ class PageScaffold extends StatelessWidget {
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
+        constraints: BoxConstraints(maxWidth: widget.maxWidth),
         child: content,
       ),
     );
