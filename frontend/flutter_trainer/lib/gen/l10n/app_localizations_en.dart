@@ -523,7 +523,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => 'Prepare the session';
+  String get dashPreparePt => 'Prepare PT';
 
   @override
   String get dashLeaveMemo => 'Leave a memo';
@@ -585,10 +585,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsManagementAttention => 'Needs attention';
 
   @override
-  String get clientsSortPriority => 'Sort: priority';
+  String get clientsFiltersClearAll => 'Clear all';
 
   @override
-  String get clientsSortName => 'Sort: name';
+  String get clientsSortLabel => 'Sort';
+
+  @override
+  String get clientsSortPriority => 'Needs attention first';
+
+  @override
+  String get clientsSortName => 'Name A–Z';
+
+  @override
+  String get clientsSortNameDescending => 'Name Z–A';
+
+  @override
+  String get clientsSortRecentMessage => 'Recent conversations';
+
+  @override
+  String get clientsSortActiveFirst => 'Active clients first';
+
+  @override
+  String get clientsFilterLabel => 'Filters';
 
   @override
   String clientsToolbarCount(int shown, int active) {

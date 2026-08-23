@@ -493,7 +493,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String dashScheduleNextSession(String time, String name) {
-    return '다음 수업 $time · $name';
+    return '다음 일정 $time · $name';
   }
 
   @override
@@ -502,7 +502,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashPrepareClass => '수업 준비하기';
+  String get dashPreparePt => 'PT 준비하기';
 
   @override
   String get dashLeaveMemo => '메모 남기기';
@@ -564,10 +564,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsManagementAttention => '관리 필요';
 
   @override
-  String get clientsSortPriority => '정렬: 관리 우선';
+  String get clientsFiltersClearAll => '전체 초기화';
 
   @override
-  String get clientsSortName => '정렬: 이름순';
+  String get clientsSortLabel => '정렬';
+
+  @override
+  String get clientsSortPriority => '관리 필요 우선';
+
+  @override
+  String get clientsSortName => '이름 오름차순';
+
+  @override
+  String get clientsSortNameDescending => '이름 내림차순';
+
+  @override
+  String get clientsSortRecentMessage => '최근 대화순';
+
+  @override
+  String get clientsSortActiveFirst => '활성 고객 우선';
+
+  @override
+  String get clientsFilterLabel => '필터';
 
   @override
   String clientsToolbarCount(int shown, int active) {
