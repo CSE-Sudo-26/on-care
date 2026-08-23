@@ -428,10 +428,11 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('returns the 3 seeded suggestions in order per client', () async {
+    test('returns the seeded suggestions in order per client', () async {
       final repo = DriftAiRoutineRepository(db);
       final minsu = await repo.watchRoutine('seed-client-1').first;
-      expect(minsu.length, 3);
+      // 김민수의 개인 운동은 공유 픽스처가 정한다 — 네 건이다 (#1170).
+      expect(minsu.length, 4);
       expect(minsu.first.name, '저강도 유산소 (걷기)');
       expect(minsu.first.minutes, 30);
       expect(minsu.first.type, '유산소');
@@ -449,7 +450,7 @@ void main() {
             .watchRoutine('user-demo', clientName: '김민수')
             .first;
 
-        expect(minsu.length, 3);
+        expect(minsu.length, 4);
         expect(minsu.first.name, '저강도 유산소 (걷기)');
       },
     );
@@ -1451,8 +1452,9 @@ void main() {
     ) async {
       await openTab(tester);
 
-      // Remove all three seeded AI suggestions for 김민수.
-      for (var i = 0; i < 3; i++) {
+      // 김민수의 개인 운동을 모두 지운다 — 공유 픽스처가 정한 네 건이다
+      // (#1170).
+      for (var i = 0; i < 4; i++) {
         await _selectExerciseAction(tester, 'delete');
       }
 

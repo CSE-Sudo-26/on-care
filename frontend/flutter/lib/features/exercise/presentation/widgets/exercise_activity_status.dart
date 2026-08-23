@@ -288,27 +288,36 @@ class ExerciseDayLoadCard extends StatelessWidget {
                       child: SizedBox(
                         width: 150,
                         child: Center(
-                          child: ConstrainedBox(
-                            // 라벨과 값이 카드 양 끝으로 벌어지지 않게 묶는다.
-                            constraints: const BoxConstraints(maxWidth: 150),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                for (final ExerciseLoadKind k
-                                    in ExerciseLoadKind.values)
-                                  _KindTextRow(
-                                    label: kindLabel(l, k),
-                                    value: kindValueText(l, k, load.valueOf(k)),
-                                  ),
-                                if (load.otherMinutes > 0)
-                                  _KindTextRow(
-                                    label: l.exTypeOtherChip,
-                                    value: l.unitMinutesValue(
-                                      load.otherMinutes.round(),
+                          // 라벨과 값이 카드 양 끝으로 벌어지지 않게 묶고,
+                          // 좁아지면 목록을 **한 번에** 줄인다 (#1170) — 줄마다
+                          // 따로 줄이면 세 줄의 글자 크기가 제각각이 된다.
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: SizedBox(
+                              width: 150,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  for (final ExerciseLoadKind k
+                                      in ExerciseLoadKind.values)
+                                    _KindTextRow(
+                                      label: kindLabel(l, k),
+                                      value: kindValueText(
+                                        l,
+                                        k,
+                                        load.valueOf(k),
+                                      ),
                                     ),
-                                  ),
-                              ],
+                                  if (load.otherMinutes > 0)
+                                    _KindTextRow(
+                                      label: l.exTypeOtherChip,
+                                      value: l.unitMinutesValue(
+                                        load.otherMinutes.round(),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -414,46 +423,45 @@ class _KindTextRow extends StatelessWidget {
             ),
             const SizedBox(width: 7),
           ],
+          // **줄마다 따로 줄이지 않는다** (#1170). 칸마다 `FittedBox` 를 두면
+          // 긴 값(`180/150분`)만 더 작아져, 나란히 선 세 줄의 글자 크기가
+          // 제각각이 된다 — 세 줄은 같은 성격의 값이라 같은 크기로 읽혀야
+          // 한다. 좁아질 때는 목록 전체가 한 번에 줄어든다.
           Expanded(
             flex: 5,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                label,
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textBody,
-                ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: FigmaColors.textBody,
               ),
             ),
           ),
           const SizedBox(width: 6),
           Expanded(
             flex: 4,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    TextSpan(text: value),
-                    if (g != null)
-                      TextSpan(
-                        text: g,
-                        style: const TextStyle(color: FigmaColors.textBody),
-                      ),
-                  ],
-                ),
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
-                  letterSpacing: -0.2,
-                ),
+            child: Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
+                  TextSpan(text: value),
+                  if (g != null)
+                    TextSpan(
+                      text: g,
+                      style: const TextStyle(color: FigmaColors.textBody),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+              textAlign: TextAlign.right,
+              softWrap: false,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.ink,
+                letterSpacing: -0.2,
               ),
             ),
           ),
@@ -797,25 +805,39 @@ class _WeekViewState extends State<_WeekView> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        for (final ExerciseLoadKind k
-                            in ExerciseLoadKind.values)
-                          _KindTextRow(
-                            color: kindColor(k),
-                            label: kindLabel(l, k),
-                            value: '${_sum(loads, k).round()}',
-                            goal: '/${kindValueText(l, k, g.weeklyGoalOf(k))}',
+                    child: Center(
+                      // 목록 전체를 **한 번에** 줄인다 (#1170) — 줄마다 따로
+                      // 줄이면 나란히 선 세 줄의 글자 크기가 제각각이 된다.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: 170,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              for (final ExerciseLoadKind k
+                                  in ExerciseLoadKind.values)
+                                _KindTextRow(
+                                  color: kindColor(k),
+                                  label: kindLabel(l, k),
+                                  value: '${_sum(loads, k).round()}',
+                                  goal:
+                                      '/${kindValueText(l, k, g.weeklyGoalOf(k))}',
+                                ),
+                              // 기타는 목표가 없다 — 오늘 카드와 같이 분만 적는다.
+                              if (_otherSum(loads) > 0)
+                                _KindTextRow(
+                                  color: const Color(0xFFCBD6DE),
+                                  label: l.exTypeOtherChip,
+                                  value: l.unitMinutesValue(
+                                    _otherSum(loads).round(),
+                                  ),
+                                ),
+                            ],
                           ),
-                        // 기타는 목표가 없다 — 오늘 카드와 같이 분만 적는다.
-                        if (_otherSum(loads) > 0)
-                          _KindTextRow(
-                            color: const Color(0xFFCBD6DE),
-                            label: l.exTypeOtherChip,
-                            value: l.unitMinutesValue(_otherSum(loads).round()),
-                          ),
-                      ],
+                        ),
+                      ),
                     ),
                   ),
                 ],

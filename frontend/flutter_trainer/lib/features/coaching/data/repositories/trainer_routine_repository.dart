@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
@@ -92,25 +93,25 @@ class MockTrainerRoutineRepository implements TrainerRoutineRepository {
   /// 배정을 뿌리면 어느 고객을 열어도 같은 루틴이 있어 오히려 가짜처럼 보인다.
   static const List<String> _seededMembers = <String>['seed-client-1'];
 
-  /// 아직 하지 않은 개인 운동 둘. 하나는 AI 추천, 하나는 트레이너가 보낸 것이라
-  /// 두 출처가 화면에서 어떻게 갈리는지 함께 보인다.
-  static const List<AssignedRoutine> _seedRoutines = <AssignedRoutine>[
-    AssignedRoutine(
-      id: 'demo-routine-1',
-      name: '저강도 유산소',
-      minutes: 20,
-      type: '유산소',
-      reason: '어제 근력 위주였어요. 오늘은 가볍게 풀어 주세요.',
-      source: 'ai',
-    ),
-    AssignedRoutine(
-      id: 'demo-routine-2',
-      name: '코어 서킷',
-      minutes: 15,
-      type: '근력',
-      reason: '무릎 부담 없이 코어를 잡아 보죠.',
-      source: 'trainer',
-    ),
+  /// 배정된 개인 운동 — **공유 픽스처**가 정한다. (#1170)
+  ///
+  /// 예전에는 이 목록을 여기에 손으로 적어 두었다(`저강도 유산소 20분` ·
+  /// `코어 서킷 15분`). 회원 앱과 프로그램 탭도 각자 적어 두어서, 같은 회원의
+  /// 같은 날에 세 화면이 서로 다른 운동을 말했다. 이제 셋 다
+  /// `shared/demo_fixture` 의 `routines` 하나만 읽는다.
+  ///
+  /// AI 추천과 트레이너가 보낸 것이 섞여 있어, 두 출처가 화면에서 어떻게
+  /// 갈리는지도 그대로 보인다.
+  static final List<AssignedRoutine> _seedRoutines = <AssignedRoutine>[
+    for (final FixtureRoutine r in DemoFixture.load().routines)
+      AssignedRoutine(
+        id: r.id,
+        name: r.name,
+        minutes: r.minutes,
+        type: r.type,
+        reason: r.reason,
+        source: r.source,
+      ),
   ];
 
   List<AssignedRoutine> _listFor(String memberId) =>

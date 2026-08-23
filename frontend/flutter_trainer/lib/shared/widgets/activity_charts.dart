@@ -203,31 +203,36 @@ class BurnDonut extends StatelessWidget {
                     child: SizedBox(
                       width: 150,
                       child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 150),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              for (final ExerciseKind kind
-                                  in ExerciseKind.values)
-                                ActivityValueRow(
-                                  label: kindLabel(l, kind),
-                                  value: kindValueText(
-                                    l,
-                                    kind,
-                                    split.valueOf(kind),
+                        // 목록 전체를 **한 번에** 줄인다 (#1170) — 줄마다 따로
+                        // 줄이면 나란히 선 세 줄의 글자 크기가 제각각이 된다.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: SizedBox(
+                            width: 150,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                for (final ExerciseKind kind
+                                    in ExerciseKind.values)
+                                  ActivityValueRow(
+                                    label: kindLabel(l, kind),
+                                    value: kindValueText(
+                                      l,
+                                      kind,
+                                      split.valueOf(kind),
+                                    ),
                                   ),
-                                ),
-                              if (split.otherMinutes > 0)
-                                ActivityValueRow(
-                                  label: l.exTypeOther,
-                                  value: l.minutesShort(
-                                    split.otherMinutes.round(),
+                                if (split.otherMinutes > 0)
+                                  ActivityValueRow(
+                                    label: l.exTypeOther,
+                                    value: l.minutesShort(
+                                      split.otherMinutes.round(),
+                                    ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -360,31 +365,36 @@ class BurnGoalRings extends StatelessWidget {
                     child: SizedBox(
                       width: 150,
                       child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 150),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              for (final ExerciseKind kind
-                                  in ExerciseKind.values)
-                                ActivityValueRow(
-                                  color: kindColor(kind),
-                                  label: kindLabel(l, kind),
-                                  value: '${split.valueOf(kind).round()}',
-                                  goal:
-                                      '/${kindValueText(l, kind, weeklyGoalOf(kind))}',
-                                ),
-                              if (split.otherMinutes > 0)
-                                ActivityValueRow(
-                                  color: AppColors.borderStrong,
-                                  label: l.exTypeOther,
-                                  value: l.minutesShort(
-                                    split.otherMinutes.round(),
+                        // 목록 전체를 **한 번에** 줄인다 (#1170) — 줄마다 따로
+                        // 줄이면 나란히 선 세 줄의 글자 크기가 제각각이 된다.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: SizedBox(
+                            width: 150,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                for (final ExerciseKind kind
+                                    in ExerciseKind.values)
+                                  ActivityValueRow(
+                                    color: kindColor(kind),
+                                    label: kindLabel(l, kind),
+                                    value: '${split.valueOf(kind).round()}',
+                                    goal:
+                                        '/${kindValueText(l, kind, weeklyGoalOf(kind))}',
                                   ),
-                                ),
-                            ],
+                                if (split.otherMinutes > 0)
+                                  ActivityValueRow(
+                                    color: AppColors.borderStrong,
+                                    label: l.exTypeOther,
+                                    value: l.minutesShort(
+                                      split.otherMinutes.round(),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -495,48 +505,46 @@ class ActivityValueRow extends StatelessWidget {
             ),
             const SizedBox(width: 7),
           ],
+          // **줄마다 따로 줄이지 않는다** (#1170). 칸마다 `FittedBox` 를 두면
+          // 긴 값(`180/150분`)만 더 작아져, 나란히 선 세 줄의 글자 크기가
+          // 제각각이 된다 — 세 줄은 같은 성격의 값이라 같은 크기로 읽혀야
+          // 한다. 좁아질 때는 목록 전체가 한 번에 줄어든다(부르는 쪽의
+          // `FittedBox`).
           Expanded(
             flex: 5,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                label,
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.mutedForeground,
               ),
             ),
           ),
           const SizedBox(width: 6),
           Expanded(
             flex: 4,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    TextSpan(text: value),
-                    if (g != null)
-                      TextSpan(
-                        text: g,
-                        style: const TextStyle(
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                  ],
-                ),
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.foreground,
-                  letterSpacing: -0.2,
-                ),
+            child: Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
+                  TextSpan(text: value),
+                  if (g != null)
+                    TextSpan(
+                      text: g,
+                      style: const TextStyle(color: AppColors.mutedForeground),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+              textAlign: TextAlign.right,
+              softWrap: false,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.foreground,
+                letterSpacing: -0.2,
               ),
             ),
           ),
@@ -998,8 +1006,7 @@ void _paintCapChevron(
 ) {
   final double arm = stroke * 0.16;
   if (arm < 1.4) return;
-  final Offset at =
-      center + Offset(math.cos(angle), math.sin(angle)) * radius;
+  final Offset at = center + Offset(math.cos(angle), math.sin(angle)) * radius;
   canvas
     ..save()
     ..translate(at.dx, at.dy)

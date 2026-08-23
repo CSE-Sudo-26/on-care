@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v24']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v25']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -103,11 +103,13 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v24') == today) return;
+  if (await db.readValue('trainer_seeded_v25') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
+  final DemoFixture demo = fixture ?? DemoFixture.load();
   final _FixtureClient fixtureClient = _FixtureClient(
-    (fixture ?? DemoFixture.load()).daysFor(now),
+    demo,
+    demo.daysFor(now),
     todayIndex,
   );
 
@@ -243,15 +245,19 @@ Future<void> seedIfEmpty(
             ),
         ]);
 
+        // 김민수의 개인 운동은 픽스처가 정한다 (#1170).
+        final List<_Routine> aiRoutine = fromFixture
+            ? fixtureClient.routines
+            : client.aiRoutine;
         b.insertAll(db.clientAiRoutines, <ClientAiRoutinesCompanion>[
-          for (var i = 0; i < client.aiRoutine.length; i++)
+          for (var i = 0; i < aiRoutine.length; i++)
             ClientAiRoutinesCompanion.insert(
               id: 'seed-airoutine-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              name: client.aiRoutine[i].name,
-              minutes: client.aiRoutine[i].minutes,
-              type: client.aiRoutine[i].type,
-              reason: client.aiRoutine[i].reason,
+              name: aiRoutine[i].name,
+              minutes: aiRoutine[i].minutes,
+              type: aiRoutine[i].type,
+              reason: aiRoutine[i].reason,
               sortOrder: Value(i),
             ),
         ]);
@@ -401,7 +407,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v24', today);
+    await db.putValue('trainer_seeded_v25', today);
   });
 }
 
@@ -458,6 +464,16 @@ class _Routine {
   final String type;
   final String reason;
 }
+
+/// 김민수의 개인 운동 — **공유 픽스처**가 정한다. (#1170)
+///
+/// 회원 앱 `추천 개인운동`, 트레이너 고객 탭 `아직 하지 않은 개인 운동`,
+/// 프로그램 탭이 모두 같은 목록을 읽어야 한다. 예전에는 세 곳이 각자 적어 두어
+/// 같은 회원의 같은 날에 서로 다른 운동을 말했다.
+List<_Routine> _fixtureRoutines(DemoFixture fixture) => <_Routine>[
+  for (final FixtureRoutine r in fixture.routines)
+    _Routine(r.name, r.minutes, r.type, r.reason),
+];
 
 class _History {
   const _History({
@@ -568,16 +584,20 @@ const int _fixtureClientId = 1;
 /// 여기에 계산은 없다 — 합계도 이행률도 픽스처 쪽 모델이 이미 갖고 있고, 이 클래스는
 /// 그것을 요일 자리에 놓거나 행 모양으로 바꾸기만 한다.
 class _FixtureClient {
-  _FixtureClient(this.days, this.todayIndex)
+  _FixtureClient(this._fixture, this.days, this.todayIndex)
     : today = days.last,
       _thisWeek = days
           .where((FixtureDay d) => d.weekStart == days.last.weekStart)
           .toList(growable: false);
 
+  final DemoFixture _fixture;
   final List<FixtureDay> days;
   final int todayIndex;
   final FixtureDay today;
   final List<FixtureDay> _thisWeek;
+
+  /// 배정된 개인 운동. 회원 앱·프로그램 탭과 같은 목록이다 (#1170).
+  List<_Routine> get routines => _fixtureRoutines(_fixture);
 
   double get carbsToday => _sumToday((FixtureMeal m) => m.carbsG);
   double get proteinToday => _sumToday((FixtureMeal m) => m.proteinG);
