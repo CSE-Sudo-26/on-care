@@ -32,6 +32,7 @@
   "schedCancelledBy": "{source} · {date}",
   "@schedCancelledBy": {"placeholders": {"source": {"type": "String"}, "date": {"type": "String"}}},
   "schedDeleteMeansRemove": "Deleting erases the record. Use cancel or no-show for a PT that didn't happen.",
+  "schedDeleteMeansRemoveFinished": "Deleting erases the record. This session is already complete and can't be undone.",
   "scheduleStatusGap": "Open",
   "@scheduleStatusGap": {
     "description": "Display label for an empty slot in the trainer's day."
@@ -756,7 +757,7 @@
   "schedTitle": "Schedule",
   "schedDetailTitle": "Session detail",
   "schedDeleteTitle": "Delete session",
-  "schedDeleteConfirm": "Delete the {time} session with {name}?",
+  "schedDeleteConfirm": "Delete the {time} PT session with {name}?",
   "@schedDeleteConfirm": {
     "placeholders": {
       "time": {
@@ -768,6 +769,9 @@
     }
   },
   "schedDeleteFailed": "Couldn't delete the session. Please try again",
+  "schedCompleteTitle": "Complete session",
+  "schedCompleteConfirm": "Mark the {time} session with {name} as complete?",
+  "@schedCompleteConfirm": {"placeholders": {"time": {"type": "String"}, "name": {"type": "String"}}},
   "schedCompleteFailed": "Couldn't mark it complete. Please try again",
   "schedTimeRange": "{start}\u2013{end}",
   "@schedTimeRange": {
@@ -804,6 +808,9 @@
   "schedFieldTime": "Time",
   "schedMinuteSuffix": "min",
   "schedFieldDuration": "Duration",
+  "schedFieldStart": "Start",
+  "schedFieldEnd": "End",
+  "schedEndBeforeStart": "End time must be after the start time",
   "schedRepeat": "Repeat",
   "schedRepeatNone": "Does not repeat",
   "schedRepeatWeekly": "Weekly",
