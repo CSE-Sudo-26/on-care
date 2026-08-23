@@ -1101,10 +1101,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietEmpty => 'No meals logged yet';
 
   @override
-  String get dietTodaySummary => 'Today\'s nutrition';
+  String get dietDayEmpty => 'No record';
+
+  @override
+  String get dietMacros => 'Macros';
 
   @override
   String get clientNutritionSummary => 'Nutrition summary';
+
+  @override
+  String get dietCalorieIntake => 'Calories today';
 
   @override
   String get dietAchieveRate => 'Progress';
@@ -1125,7 +1131,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dietAiAnalysis => 'AI analysis';
+  String get aiAnalysis => 'AI analysis';
+
+  @override
+  String get aiPeriodAnalysis => 'AI period analysis';
+
+  @override
+  String get aiAllAnalysis => 'AI all-time analysis';
 
   @override
   String dietAiOverSodium(int over) {
@@ -1248,6 +1260,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exBurnDayTitle => 'Burned';
+
+  @override
+  String get exBurnAllTitle => 'Average burned';
+
+  @override
+  String exWeekOfMonthLabel(int month, int week) {
+    return 'Week $week, $month/';
+  }
+
+  @override
+  String exStreakCheer(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days in a row!',
+      one: '1 day in a row!',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exStreakStart => 'No streak yet';
 
   @override
   String get exTypeOther => 'Other';
@@ -2462,6 +2496,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineAlreadyGone => 'That routine is already gone';
+
+  @override
+  String get workoutPendingTitle => 'Not done yet';
+
+  @override
+  String get workoutUndatedTitle => 'Records without a date';
+
+  @override
+  String get workoutPendingCancel => 'Cancel assignment';
 
   @override
   String get routineUpdateFailed =>

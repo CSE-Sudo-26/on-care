@@ -2036,17 +2036,29 @@ abstract class AppLocalizations {
   /// **'No meals logged yet'**
   String get dietEmpty;
 
-  /// No description provided for @dietTodaySummary.
+  /// No description provided for @dietDayEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s nutrition'**
-  String get dietTodaySummary;
+  /// **'No record'**
+  String get dietDayEmpty;
+
+  /// No description provided for @dietMacros.
+  ///
+  /// In en, this message translates to:
+  /// **'Macros'**
+  String get dietMacros;
 
   /// No description provided for @clientNutritionSummary.
   ///
   /// In en, this message translates to:
   /// **'Nutrition summary'**
   String get clientNutritionSummary;
+
+  /// No description provided for @dietCalorieIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories today'**
+  String get dietCalorieIntake;
 
   /// No description provided for @dietAchieveRate.
   ///
@@ -2072,11 +2084,23 @@ abstract class AppLocalizations {
   /// **'Sodium {value}mg'**
   String dietSodiumValue(int value);
 
-  /// No description provided for @dietAiAnalysis.
+  /// No description provided for @aiAnalysis.
   ///
   /// In en, this message translates to:
   /// **'AI analysis'**
-  String get dietAiAnalysis;
+  String get aiAnalysis;
+
+  /// No description provided for @aiPeriodAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI period analysis'**
+  String get aiPeriodAnalysis;
+
+  /// No description provided for @aiAllAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI all-time analysis'**
+  String get aiAllAnalysis;
 
   /// No description provided for @dietAiOverSodium.
   ///
@@ -2269,6 +2293,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Burned'**
   String get exBurnDayTitle;
+
+  /// No description provided for @exBurnAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Average burned'**
+  String get exBurnAllTitle;
+
+  /// No description provided for @exWeekOfMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}, {month}/'**
+  String exWeekOfMonthLabel(int month, int week);
+
+  /// No description provided for @exStreakCheer.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day in a row!} other{{days} days in a row!}}'**
+  String exStreakCheer(int days);
+
+  /// No description provided for @exStreakStart.
+  ///
+  /// In en, this message translates to:
+  /// **'No streak yet'**
+  String get exStreakStart;
 
   /// No description provided for @exTypeOther.
   ///
@@ -4351,6 +4399,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That routine is already gone'**
   String get routineAlreadyGone;
+
+  /// No description provided for @workoutPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not done yet'**
+  String get workoutPendingTitle;
+
+  /// No description provided for @workoutUndatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Records without a date'**
+  String get workoutUndatedTitle;
+
+  /// No description provided for @workoutPendingCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel assignment'**
+  String get workoutPendingCancel;
 
   /// No description provided for @routineUpdateFailed.
   ///

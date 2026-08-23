@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v23']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v25']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -103,11 +103,13 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v23') == today) return;
+  if (await db.readValue('trainer_seeded_v25') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
+  final DemoFixture demo = fixture ?? DemoFixture.load();
   final _FixtureClient fixtureClient = _FixtureClient(
-    (fixture ?? DemoFixture.load()).daysFor(now),
+    demo,
+    demo.daysFor(now),
     todayIndex,
   );
 
@@ -229,6 +231,12 @@ Future<void> seedIfEmpty(
               items: diet[i].items,
               calories: diet[i].calories,
               sodiumMg: diet[i].sodiumMg,
+              sugarG: Value(diet[i].sugarG),
+              timeLabel: Value(diet[i].timeLabel),
+              foodsJson: Value(diet[i].foodsJson),
+              // 날짜가 없는 끼니는 오늘 것이다 — 픽스처가 아닌 고객들은
+              // 오늘 하루치만 갖고 있다(#1025).
+              date: Value(diet[i].date ?? today),
               carbsG: Value(diet[i].carbsG),
               proteinG: Value(diet[i].proteinG),
               fatG: Value(diet[i].fatG),
@@ -237,15 +245,19 @@ Future<void> seedIfEmpty(
             ),
         ]);
 
+        // 김민수의 개인 운동은 픽스처가 정한다 (#1170).
+        final List<_Routine> aiRoutine = fromFixture
+            ? fixtureClient.routines
+            : client.aiRoutine;
         b.insertAll(db.clientAiRoutines, <ClientAiRoutinesCompanion>[
-          for (var i = 0; i < client.aiRoutine.length; i++)
+          for (var i = 0; i < aiRoutine.length; i++)
             ClientAiRoutinesCompanion.insert(
               id: 'seed-airoutine-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              name: client.aiRoutine[i].name,
-              minutes: client.aiRoutine[i].minutes,
-              type: client.aiRoutine[i].type,
-              reason: client.aiRoutine[i].reason,
+              name: aiRoutine[i].name,
+              minutes: aiRoutine[i].minutes,
+              type: aiRoutine[i].type,
+              reason: aiRoutine[i].reason,
               sortOrder: Value(i),
             ),
         ]);
@@ -395,7 +407,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v23', today);
+    await db.putValue('trainer_seeded_v25', today);
   });
 }
 
@@ -410,21 +422,39 @@ class _Meal {
     this.items,
     this.calories,
     this.sodiumMg, {
+    this.sugarG = 0,
     this.carbsG = 0,
     this.proteinG = 0,
     this.fatG = 0,
     this.photoAsset,
+    this.date,
+    this.timeLabel = '',
+    this.foodsJson = '[]',
   });
   final String meal;
   final String items;
   final int calories;
   final int sodiumMg;
+
+  /// 그 끼니의 당류(g) — 나트륨과 나란히 읽는 값이다(#1025).
+  final double sugarG;
   final double carbsG;
   final double proteinG;
   final double fatG;
 
+  /// 이 끼니를 먹은 날(`YYYY-MM-DD`). 비우면 시딩이 오늘로 채운다 — 픽스처가
+  /// 아닌 고객들은 오늘 하루치만 갖고 있다(#1025).
+  final String? date;
+
   /// 데모에서 이 끼니로 보여 줄 번들 이미지. 없으면 사진 없이 그린다. (#819)
   final String? photoAsset;
+
+  /// 먹은 시각 문구(`08:30`). 회원 앱 끼니 카드가 배지 옆에 적는 값이다. (#1166)
+  final String timeLabel;
+
+  /// 음식별 영양(JSON 배열). 회원 앱과 **같은 픽스처**에서 온다 — 같은 끼니의
+  /// 같은 음식이 두 화면에서 다른 수치로 읽히지 않는다. (#1166)
+  final String foodsJson;
 }
 
 class _Routine {
@@ -434,6 +464,16 @@ class _Routine {
   final String type;
   final String reason;
 }
+
+/// 김민수의 개인 운동 — **공유 픽스처**가 정한다. (#1170)
+///
+/// 회원 앱 `추천 개인운동`, 트레이너 고객 탭 `아직 하지 않은 개인 운동`,
+/// 프로그램 탭이 모두 같은 목록을 읽어야 한다. 예전에는 세 곳이 각자 적어 두어
+/// 같은 회원의 같은 날에 서로 다른 운동을 말했다.
+List<_Routine> _fixtureRoutines(DemoFixture fixture) => <_Routine>[
+  for (final FixtureRoutine r in fixture.routines)
+    _Routine(r.name, r.minutes, r.type, r.reason),
+];
 
 class _History {
   const _History({
@@ -544,16 +584,20 @@ const int _fixtureClientId = 1;
 /// 여기에 계산은 없다 — 합계도 이행률도 픽스처 쪽 모델이 이미 갖고 있고, 이 클래스는
 /// 그것을 요일 자리에 놓거나 행 모양으로 바꾸기만 한다.
 class _FixtureClient {
-  _FixtureClient(this.days, this.todayIndex)
+  _FixtureClient(this._fixture, this.days, this.todayIndex)
     : today = days.last,
       _thisWeek = days
           .where((FixtureDay d) => d.weekStart == days.last.weekStart)
           .toList(growable: false);
 
+  final DemoFixture _fixture;
   final List<FixtureDay> days;
   final int todayIndex;
   final FixtureDay today;
   final List<FixtureDay> _thisWeek;
+
+  /// 배정된 개인 운동. 회원 앱·프로그램 탭과 같은 목록이다 (#1170).
+  List<_Routine> get routines => _fixtureRoutines(_fixture);
 
   double get carbsToday => _sumToday((FixtureMeal m) => m.carbsG);
   double get proteinToday => _sumToday((FixtureMeal m) => m.proteinG);
@@ -567,33 +611,51 @@ class _FixtureClient {
     return (total * 10).round() / 10;
   }
 
-  /// 오늘 끼니. 트레이너 화면은 끼니 이름과 음식 목록을 한 줄로 읽는다.
+  /// 픽스처가 가진 **모든 날**의 끼니. 트레이너 화면은 끼니 이름과 음식
+  /// 목록을 한 줄로 읽는다.
+  ///
+  /// 예전에는 오늘 것만 옮겼다. 기간 뷰에서 날짜를 눌러 그날 끼니를 펼치려면
+  /// 지난 날도 있어야 한다(#1025) — 픽스처는 이미 날마다 끼니를 들고 있었고,
+  /// 시딩만 오늘 하나를 집어 오고 있었다.
   List<_Meal> get diet => <_Meal>[
-    for (final FixtureMeal meal in today.meals)
-      _Meal(
-        _mealLabel(meal.mealType),
-        meal.foods.map((FixtureFood f) => f.name).join(', '),
-        meal.calories,
-        meal.sodiumMg,
-        carbsG: meal.carbsG,
-        proteinG: meal.proteinG,
-        fatG: meal.fatG,
-        // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
-        // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
-        photoAsset: meal.photoAsset,
-      ),
+    for (final FixtureDay day in days)
+      for (final FixtureMeal meal in day.meals)
+        _Meal(
+          _mealLabel(meal.mealType),
+          meal.foods.map((FixtureFood f) => f.name).join(', '),
+          meal.calories,
+          meal.sodiumMg,
+          date: day.date,
+          timeLabel: meal.timeLabel,
+          // 픽스처가 음식마다 들고 있는 영양을 그대로 옮긴다 — 회원 앱이 읽는
+          // 것과 **같은 JSON** 이다(`FixtureMeal.foodsJson`). (#1166)
+          foodsJson: meal.foodsJson(),
+          sugarG: meal.sugarG,
+          carbsG: meal.carbsG,
+          proteinG: meal.proteinG,
+          fatG: meal.fatG,
+          // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
+          // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
+          photoAsset: meal.photoAsset,
+        ),
   ];
 
-  /// 고객 상세의 최근 운동 이력. 가까운 날부터, 운동이 있던 날만.
+  /// 고객 상세의 운동 이력. 가까운 날부터, 운동이 있던 날만.
   ///
   /// 픽스처는 날짜를 이미 알고 있으므로 `daysAgo` 를 지어내지 않고 오늘과의
   /// 차이로 센다 — 운동이 있던 날만 골라 담아 하루씩 이어지지 않는데, 자리
   /// 번호를 날짜로 쓰면 라벨과 실제 날짜가 어긋난다(#1114).
+  ///
+  /// 예전에는 그중 최근 사흘만 가져왔다. 그때는 이 값을 읽는 화면이 `운동
+  /// 기록` 카드 목록 하나였고 최근 몇 건만 보여 주면 됐다. 지금은 날짜별
+  /// 기록이 이력을 그날에 붙이므로(#1025), 사흘 밖의 날을 펼치면 자리가
+  /// 비었다. 픽스처가 이미 이백 일치를 들고 있으니 지어내는 것이 아니라
+  /// 버리지 않는 것이다 — 고객 피드백·트레이너 메모는 큐레이션한 사흘에만
+  /// 있어 나머지 날에는 그 상자가 뜨지 않는다.
   List<_History> get history => <_History>[
-    for (final FixtureDay day
-        in days.reversed
-            .where((FixtureDay d) => d.exercises.isNotEmpty)
-            .take(3))
+    for (final FixtureDay day in days.reversed.where(
+      (FixtureDay d) => d.exercises.isNotEmpty,
+    ))
       _History(
         daysAgo: _daysBetween(
           DateTime.parse(day.date),

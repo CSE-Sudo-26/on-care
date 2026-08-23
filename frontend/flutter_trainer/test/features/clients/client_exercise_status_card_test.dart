@@ -108,7 +108,13 @@ void main() {
     await pump(tester, withSplit());
 
     expect(find.byType(BurnDonut), findsOneWidget);
-    expect(find.text('오늘 소모'), findsWidgets);
+    // 소모 칼로리는 도넛 **안**에서 말한다(#1166) — 링 옆에 같은 숫자를 또
+    // 적으면 한 화면에서 같은 말이 두 번 나온다. 그래서 `오늘 소모` 는 이제
+    // 화면의 글자가 아니라 도넛의 시맨틱 라벨에만 있다.
+    expect(
+      tester.widget<BurnDonut>(find.byType(BurnDonut)).title,
+      '오늘 소모',
+    );
     // 유산소·근력·스트레칭이 이름과 값으로 함께 읽힌다 — 소모 칼로리가
     // 무엇으로 채워졌는지가 화면에 있어야 한다.
     for (final String label in <String>['유산소', '근력', '스트레칭']) {
@@ -379,6 +385,22 @@ void main() {
     final Finder toggle = find.byKey(
       const ValueKey<String>('client-exercise-detail-toggle'),
     );
+    final Finder collapse = find.byKey(
+      const ValueKey<String>('client-exercise-detail-collapse'),
+    );
+
+    /// 한 주(7건)를 넘겨야 `더보기` 가 두 번 눌린다.
+    List<RoutineHistoryEntry> manyDays(int count) => <RoutineHistoryEntry>[
+      for (int i = 0; i < count; i++)
+        RoutineHistoryEntry(
+          dateLabel: '$i일 전 기록',
+          label: 'PT 세션',
+          completionRate: 100,
+          exercises: const <String>['레그프레스 3세트 × 12회 · 80kg ✓'],
+          clientFeedback: '',
+          trainerNote: '',
+        ),
+    ];
 
     testWidgets('접힌 기본 상태에는 최근 기록 하나만 보인다', (tester) async {
       await tester.pumpWidget(detailApp(history()));
@@ -389,9 +411,11 @@ void main() {
       expect(find.text('레그프레스 3세트 × 12회 · 80kg'), findsOneWidget);
       expect(toggle, findsOneWidget);
       expect(find.byIcon(Icons.expand_more), findsOneWidget);
+      // 접힌 상태에서는 접을 것이 없다 — 버튼도 없다.
+      expect(collapse, findsNothing);
     });
 
-    testWidgets('펼치면 전체 이력이, 다시 접으면 최근 하나만 보인다', (tester) async {
+    testWidgets('펼치면 남은 기록이, 접으면 최근 하나만 보인다', (tester) async {
       await tester.pumpWidget(detailApp(history()));
       await tester.pumpAndSettle();
 
@@ -401,13 +425,56 @@ void main() {
       expect(find.textContaining('오늘 기록'), findsOneWidget);
       expect(find.textContaining('어제 기록'), findsOneWidget);
       expect(find.text('데드리프트 4세트 × 8회 · 55kg'), findsOneWidget);
+      // 두 건뿐이라 더 펼칠 것이 없다 — `더보기` 는 사라지고 `접기` 만 남는다.
+      expect(toggle, findsNothing);
+      expect(collapse, findsOneWidget);
       expect(find.byIcon(Icons.expand_less), findsOneWidget);
 
-      await tester.tap(toggle);
+      await tester.tap(collapse);
       await tester.pumpAndSettle();
 
       expect(find.textContaining('오늘 기록'), findsOneWidget);
       expect(find.textContaining('어제 기록'), findsNothing);
+    });
+
+    testWidgets('더보기는 한 주씩 내려간다 (#1172)', (tester) async {
+      // 목록이 길어지면 버튼이 화면 밖으로 내려가 탭이 빗나간다.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(900, 4000);
+      addTearDown(tester.view.reset);
+      // 스무 건 — 한 주(7)로 두 번 내려가고도 남는다.
+      await tester.pumpWidget(detailApp(manyDays(20)));
+      await tester.pumpAndSettle();
+
+      Finder day(int i) => find.textContaining('$i일 전 기록');
+
+      // 접힌 기본은 가장 최근 하나다.
+      expect(day(0), findsOneWidget);
+      expect(day(1), findsNothing);
+
+      // 첫 `더보기` 는 한 주를 통째로 연다 — 전부가 아니다.
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(day(6), findsOneWidget);
+      expect(day(7), findsNothing);
+      // 더 내려갈 수도, 처음으로 접을 수도 있어야 한다.
+      expect(toggle, findsOneWidget);
+      expect(collapse, findsOneWidget);
+
+      // 또 누르면 한 주가 더 열린다.
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(day(13), findsOneWidget);
+      expect(day(14), findsNothing);
+      expect(toggle, findsOneWidget);
+      expect(collapse, findsOneWidget);
+
+      // `접기` 는 몇 주를 열었든 처음 상태로 되돌린다.
+      await tester.tap(collapse);
+      await tester.pumpAndSettle();
+      expect(day(0), findsOneWidget);
+      expect(day(1), findsNothing);
+      expect(collapse, findsNothing);
     });
 
     testWidgets('기록이 하나뿐이면 펼치기 버튼이 없다', (tester) async {
@@ -418,6 +485,7 @@ void main() {
 
       expect(find.textContaining('오늘 기록'), findsOneWidget);
       expect(toggle, findsNothing);
+      expect(collapse, findsNothing);
     });
   });
 }
