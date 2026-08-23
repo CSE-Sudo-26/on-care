@@ -1547,6 +1547,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldDuration => 'Duration';
 
   @override
+  String get schedFieldStart => 'Start';
+
+  @override
+  String get schedFieldEnd => 'End';
+
+  @override
+  String get schedEndBeforeStart => 'End time must be after the start time';
+
+  @override
   String get schedRepeat => 'Repeat';
 
   @override

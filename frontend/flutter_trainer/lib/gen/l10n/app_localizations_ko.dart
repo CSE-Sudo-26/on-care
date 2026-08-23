@@ -1475,6 +1475,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldDuration => '소요 시간';
 
   @override
+  String get schedFieldStart => '시작';
+
+  @override
+  String get schedFieldEnd => '종료';
+
+  @override
+  String get schedEndBeforeStart => '종료 시간은 시작 시간보다 늦어야 해요';
+
+  @override
   String get schedRepeat => '반복';
 
   @override
