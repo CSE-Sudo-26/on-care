@@ -490,10 +490,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsFiltersClearAll => 'Clear all';
 
   @override
-  String get clientsSortPriority => 'Sort: priority';
+  String get clientsSortLabel => 'Sort';
 
   @override
-  String get clientsSortName => 'Sort: name';
+  String get clientsSortPriority => 'Needs attention first';
+
+  @override
+  String get clientsSortName => 'Name A–Z';
+
+  @override
+  String get clientsSortNameDescending => 'Name Z–A';
+
+  @override
+  String get clientsSortRecentMessage => 'Recent conversations';
+
+  @override
+  String get clientsSortActiveFirst => 'Active clients first';
+
+  @override
+  String get clientsFilterLabel => 'Filters';
 
   @override
   String clientsToolbarCount(int shown, int active) {

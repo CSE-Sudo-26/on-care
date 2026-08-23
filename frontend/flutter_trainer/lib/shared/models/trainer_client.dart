@@ -35,6 +35,7 @@ class TrainerClient {
     required this.goal,
     required this.lastMessage,
     required this.lastTime,
+    this.lastMessageAt,
     required this.active,
     required this.calories,
     required this.sodiumMg,
@@ -75,6 +76,10 @@ class TrainerClient {
 
   /// Relative time label for [lastMessage] (e.g. 방금).
   final String lastTime;
+
+  /// Timestamp of the most recent chat message, when the source can provide
+  /// one. Unlike [lastTime], this is safe to use as a sorting key.
+  final DateTime? lastMessageAt;
 
   /// Whether the client is currently active.
   final bool active;

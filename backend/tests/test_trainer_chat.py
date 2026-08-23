@@ -1,6 +1,8 @@
 """트레이너 채팅 + 루틴 배정(#251). DB 필요(로컬 skip, CI 실행)."""
 from __future__ import annotations
 
+from datetime import datetime as _datetime
+
 import pytest
 
 
@@ -98,6 +100,8 @@ def test_send_message_reflects_in_thread_and_roster(client):
     roster = client.get("/v1/trainer/clients", headers=_h(token)).json()
     jisu = next(c for c in roster if c["id"] == "user-jisu")
     assert jisu["last_message"] == "다음 주 루틴 보냈어요!"
+    # 상대 시각 라벨이 아닌 실제 정렬 키를 로스터가 내려 준다.
+    assert _datetime.fromisoformat(jisu["last_message_at"]) is not None
 
 
 def test_empty_message_rejected(client):

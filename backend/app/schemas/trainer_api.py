@@ -75,6 +75,9 @@ class TrainerClientOut(BaseModel):
     goal: str
     last_message: str
     last_time: str
+    #: ISO timestamp used by the roster's recent-message sort. The relative
+    #: label above is presentation-only and cannot be ordered reliably.
+    last_message_at: _datetime | None = None
     #: 트레이너 화면의 활성/휴면 배지. 담당 관계가 살아 있고(`TrainerClient.active`)
     #: 트레이너가 휴면으로 내리지 않은(`dormant=False`) 회원만 True 다. (#707)
     active: bool

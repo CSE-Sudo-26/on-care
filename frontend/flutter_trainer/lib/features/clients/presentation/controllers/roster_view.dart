@@ -24,11 +24,17 @@ enum RosterManagementFilter {
 
 /// 로스터 정렬 기준.
 ///
-/// `메시지 최신순`/`활동순` 은 넣지 않는다 — `lastTime` 은 실제 타임스탬프가
-/// 아니라 "방금"/"3일 전" 같은 표시용 상대 시각 문자열이라 정렬 키로 쓸 수
-/// 없고(#1026 §6, Part B 소유), 활동순이 참조할 마지막 활동 시각 필드는
-/// 모델에 아예 없다.
-enum RosterSort { priority, name }
+/// `recentMessage` is backed by an actual chat timestamp: Drift's grouped
+/// `ChatMessage.createdAt`, or the API's `last_message_at`. `lastTime` remains
+/// display-only. A general activity/record sort is intentionally absent because
+/// the roster contract has no last-activity timestamp.
+enum RosterSort {
+  priority,
+  recentMessage,
+  activeFirst,
+  nameAscending,
+  nameDescending,
+}
 
 /// 고객 탭의 보기 설정 한 벌.
 class RosterView {
@@ -45,8 +51,10 @@ class RosterView {
   final RosterSort sort;
 
   /// Returns a copy with the given fields replaced.
-  RosterView copyWith({Set<RosterManagementFilter>? filters, RosterSort? sort}) =>
-      RosterView(filters: filters ?? this.filters, sort: sort ?? this.sort);
+  RosterView copyWith({
+    Set<RosterManagementFilter>? filters,
+    RosterSort? sort,
+  }) => RosterView(filters: filters ?? this.filters, sort: sort ?? this.sort);
 }
 
 /// 고객 탭의 정렬·관리 필터.

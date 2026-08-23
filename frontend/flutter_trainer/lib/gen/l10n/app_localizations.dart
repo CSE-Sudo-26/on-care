@@ -944,17 +944,47 @@ abstract class AppLocalizations {
   /// **'Clear all'**
   String get clientsFiltersClearAll;
 
+  /// No description provided for @clientsSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get clientsSortLabel;
+
   /// No description provided for @clientsSortPriority.
   ///
   /// In en, this message translates to:
-  /// **'Sort: priority'**
+  /// **'Needs attention first'**
   String get clientsSortPriority;
 
   /// No description provided for @clientsSortName.
   ///
   /// In en, this message translates to:
-  /// **'Sort: name'**
+  /// **'Name A–Z'**
   String get clientsSortName;
+
+  /// No description provided for @clientsSortNameDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Name Z–A'**
+  String get clientsSortNameDescending;
+
+  /// No description provided for @clientsSortRecentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent conversations'**
+  String get clientsSortRecentMessage;
+
+  /// No description provided for @clientsSortActiveFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Active clients first'**
+  String get clientsSortActiveFirst;
+
+  /// No description provided for @clientsFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get clientsFilterLabel;
 
   /// No description provided for @clientsToolbarCount.
   ///

@@ -87,6 +87,8 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     final clientsAsync = ref.watch(prioritizedClientsProvider);
     final unread =
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
+    final lastChatAt =
+        ref.watch(lastChatAtProvider).valueOrNull ?? const <String, DateTime>{};
     // Roster mutations exist only in demo/mock mode — the real backend has
     // no add-client endpoint (the roster is derived from trainer↔member
     // links), so hide the 신규 고객 등록 entry when hitting the real API.
@@ -128,15 +130,20 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
         final AppLocalizations l = AppLocalizations.of(context);
         var list = applyClientFilter(all, activeFilter, unread: unread);
         list = list
-            .where((client) => _matchesManagementFilters(
-                  client,
-                  view.filters,
-                  unread: unread,
-                ))
+            .where(
+              (client) => _matchesManagementFilters(
+                client,
+                view.filters,
+                unread: unread,
+              ),
+            )
             .toList(growable: false);
-        if (view.sort == RosterSort.name) {
-          list = [...list]..sort((a, b) => a.name.compareTo(b.name));
-        }
+        list = _sortRoster(
+          list,
+          view.sort,
+          lastChatAt: lastChatAt,
+          unread: unread,
+        );
         // An id that isn't on the roster (deleted client, stale link) is
         // NOT collapsed away: the detail view says "고객을 찾을 수 없어요"
         // instead. Silently showing the roster while the URL still names
@@ -230,8 +237,6 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                     _MemberManagementToolbar(
                       managementFilters: view.filters,
                       sort: view.sort,
-                      shownCount: list.length,
-                      activeCount: all.where((client) => client.active).length,
                       onFiltersChanged: (value) =>
                           ref.read(rosterViewProvider.notifier).state = view
                               .copyWith(filters: value),
@@ -241,11 +246,9 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                     ),
                   Expanded(
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(
+                      padding: const EdgeInsets.fromLTRB(
                         AppLayout.pagePadding,
-                        wide || selected == null
-                            ? AppSpacing.lg
-                            : AppLayout.pagePadding,
+                        AppSpacing.md,
                         AppLayout.pagePadding,
                         0,
                       ),
@@ -307,20 +310,62 @@ bool _matchesManagementFilters(
   );
 }
 
+/// Applies only sorts whose keys are present in the roster contract.
+///
+/// Management priority first groups clients with real health/unread alerts,
+/// preserving the incoming sodium/chat priority within each group. For recent
+/// messages, local demo data supplies the grouped chat timestamp through
+/// [lastChatAt], while API rows carry [TrainerClient.lastMessageAt]. Decorating
+/// with the original index makes equal/missing keys stable.
+List<TrainerClient> _sortRoster(
+  List<TrainerClient> clients,
+  RosterSort sort, {
+  required Map<String, DateTime> lastChatAt,
+  required Map<String, int> unread,
+}) {
+  final decorated = <(TrainerClient client, int index)>[
+    for (var i = 0; i < clients.length; i++) (clients[i], i),
+  ];
+  final epoch = DateTime.utc(1970);
+  decorated.sort((a, b) {
+    final int result;
+    switch (sort) {
+      case RosterSort.priority:
+        final aNeedsAttention = alertsFor(
+          a.$1,
+          unread: unread[a.$1.id] ?? 0,
+        ).isNotEmpty;
+        final bNeedsAttention = alertsFor(
+          b.$1,
+          unread: unread[b.$1.id] ?? 0,
+        ).isNotEmpty;
+        result = (bNeedsAttention ? 1 : 0).compareTo(aNeedsAttention ? 1 : 0);
+      case RosterSort.nameAscending:
+        result = a.$1.name.compareTo(b.$1.name);
+      case RosterSort.nameDescending:
+        result = b.$1.name.compareTo(a.$1.name);
+      case RosterSort.recentMessage:
+        final aAt = lastChatAt[a.$1.id] ?? a.$1.lastMessageAt ?? epoch;
+        final bAt = lastChatAt[b.$1.id] ?? b.$1.lastMessageAt ?? epoch;
+        result = bAt.compareTo(aAt);
+      case RosterSort.activeFirst:
+        result = (b.$1.active ? 1 : 0).compareTo(a.$1.active ? 1 : 0);
+    }
+    return result != 0 ? result : a.$2.compareTo(b.$2);
+  });
+  return <TrainerClient>[for (final item in decorated) item.$1];
+}
+
 class _MemberManagementToolbar extends StatelessWidget {
   const _MemberManagementToolbar({
     required this.managementFilters,
     required this.sort,
-    required this.shownCount,
-    required this.activeCount,
     required this.onFiltersChanged,
     required this.onSortChanged,
   });
 
   final Set<RosterManagementFilter> managementFilters;
   final RosterSort sort;
-  final int shownCount;
-  final int activeCount;
   final ValueChanged<Set<RosterManagementFilter>> onFiltersChanged;
   final ValueChanged<RosterSort> onSortChanged;
 
@@ -330,7 +375,7 @@ class _MemberManagementToolbar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
-        AppLayout.pagePadding,
+        AppSpacing.sm,
         AppLayout.pagePadding,
         0,
       ),
@@ -339,49 +384,18 @@ class _MemberManagementToolbar extends StatelessWidget {
         runSpacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          for (final value in RosterManagementFilter.values)
-            _ManagementFilterChip(
-              label: _managementLabel(l, value),
-              selected: managementFilters.contains(value),
-              onTap: () {
-                final next = Set<RosterManagementFilter>.of(managementFilters);
-                if (!next.remove(value)) next.add(value);
-                onFiltersChanged(next);
-              },
-            ),
-          if (managementFilters.isNotEmpty)
-            InkWell(
-              onTap: () => onFiltersChanged(const <RosterManagementFilter>{}),
-              borderRadius: const BorderRadius.all(AppRadius.sm),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: 4,
-                ),
-                child: Text(
-                  l.clientsFiltersClearAll,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ),
-            ),
-          _ToolbarMenu<RosterSort>(
+          _FilterMenuButton(
+            filters: managementFilters,
+            labelFor: (value) => _managementLabel(l, value),
+            onChanged: onFiltersChanged,
+          ),
+          _SortMenuButton<RosterSort>(
+            key: const ValueKey<String>('clients-sort-button'),
             value: sort,
-            label: _sortLabel(l, sort),
+            label: '${l.clientsSortLabel}: ${_sortLabel(l, sort)}',
             items: RosterSort.values,
             itemLabel: (value) => _sortLabel(l, value),
             onSelected: onSortChanged,
-          ),
-          Text(
-            l.clientsToolbarCount(shownCount, activeCount),
-            style: const TextStyle(
-              color: AppColors.subtleForeground,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ],
       ),
@@ -407,19 +421,134 @@ class _MemberManagementToolbar extends StatelessWidget {
     switch (value) {
       case RosterSort.priority:
         return l.clientsSortPriority;
-      case RosterSort.name:
+      case RosterSort.nameAscending:
         return l.clientsSortName;
+      case RosterSort.nameDescending:
+        return l.clientsSortNameDescending;
+      case RosterSort.recentMessage:
+        return l.clientsSortRecentMessage;
+      case RosterSort.activeFirst:
+        return l.clientsSortActiveFirst;
     }
+  }
+}
+
+class _FilterMenuButton extends StatelessWidget {
+  const _FilterMenuButton({
+    required this.filters,
+    required this.labelFor,
+    required this.onChanged,
+  });
+
+  final Set<RosterManagementFilter> filters;
+  final String Function(RosterManagementFilter value) labelFor;
+  final ValueChanged<Set<RosterManagementFilter>> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final selected = Set<RosterManagementFilter>.of(filters);
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, AppSpacing.xs),
+      style: const MenuStyle(
+        backgroundColor: WidgetStatePropertyAll<Color>(AppColors.card),
+        padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(EdgeInsets.zero),
+        shape: WidgetStatePropertyAll<OutlinedBorder>(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(AppRadius.md),
+            side: BorderSide(color: AppColors.borderStrong),
+          ),
+        ),
+      ),
+      menuChildren: <Widget>[
+        StatefulBuilder(
+          builder: (context, setMenuState) => SizedBox(
+            width: 360,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        l.clientsFilterLabel,
+                        style: const TextStyle(
+                          color: AppColors.foreground,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (selected.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            setMenuState(selected.clear);
+                            onChanged(const <RosterManagementFilter>{});
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.mutedForeground,
+                            textStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            minimumSize: const Size(0, 28),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                            ),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(l.clientsFiltersClearAll),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: <Widget>[
+                      for (final value in RosterManagementFilter.values)
+                        _ManagementFilterChip(
+                          key: ValueKey<String>(
+                            'management-filter-${value.name}',
+                          ),
+                          label: labelFor(value),
+                          selected: selected.contains(value),
+                          onTap: () {
+                            setMenuState(() {
+                              if (!selected.remove(value)) selected.add(value);
+                            });
+                            onChanged(Set<RosterManagementFilter>.of(selected));
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+      builder: (context, controller, child) => _PillToolbarButton(
+        key: const ValueKey<String>('clients-filter-button'),
+        label: filters.isEmpty
+            ? l.clientsFilterLabel
+            : '${l.clientsFilterLabel} ${filters.length}',
+        expanded: controller.isOpen,
+        onTap: controller.isOpen ? controller.close : controller.open,
+      ),
+    );
   }
 }
 
 /// One multi-select filter option, shown and removed as a chip/tag (#1026).
 ///
-/// Selected state doubles as the chip's own removal control — a check on
-/// one side, a close glyph on the other — so there's no separate "selected
-/// filters" row to keep in sync with the picker itself.
+/// Selected chips stay in the same quiet navy/neutral family as unselected
+/// chips, using border, fill and check state instead of a heavy button fill.
 class _ManagementFilterChip extends StatelessWidget {
   const _ManagementFilterChip({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -431,59 +560,55 @@ class _ManagementFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: const BorderRadius.all(AppRadius.pill),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.accentSurface,
-          borderRadius: const BorderRadius.all(AppRadius.pill),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+        hoverColor: selected ? AppColors.bannerEnd : AppColors.accentSurface,
+        focusColor: AppColors.bannerEnd,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (selected) ...<Widget>[
-              const Icon(
-                Icons.check,
-                size: 14,
-                color: AppColors.primaryForeground,
-              ),
-              const SizedBox(width: 3),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: selected
-                    ? AppColors.primaryForeground
-                    : AppColors.foreground,
-              ),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.accentSurface : AppColors.card,
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.borderStrong,
             ),
-            if (selected) ...<Widget>[
-              const SizedBox(width: 3),
-              const Icon(
-                Icons.close,
-                size: 14,
-                color: AppColors.primaryForeground,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (selected) ...<Widget>[
+                const Icon(Icons.check, size: 14, color: AppColors.primary),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: selected
+                      ? AppColors.primary
+                      : AppColors.mutedForeground,
+                ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ToolbarMenu<T> extends StatelessWidget {
-  const _ToolbarMenu({
+class _SortMenuButton<T> extends StatelessWidget {
+  const _SortMenuButton({
+    super.key,
     required this.value,
     required this.label,
     required this.items,
@@ -499,40 +624,144 @@ class _ToolbarMenu<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<T>(
-      initialValue: value,
-      onSelected: onSelected,
-      color: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(AppRadius.md),
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, AppSpacing.xs),
+      style: const MenuStyle(
+        backgroundColor: WidgetStatePropertyAll<Color>(AppColors.card),
+        padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(EdgeInsets.zero),
+        shape: WidgetStatePropertyAll<OutlinedBorder>(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(AppRadius.md),
+            side: BorderSide(color: AppColors.borderStrong),
+          ),
+        ),
       ),
-      itemBuilder: (context) => <PopupMenuEntry<T>>[
+      menuChildren: <Widget>[
         for (final item in items)
-          PopupMenuItem<T>(value: item, child: Text(itemLabel(item))),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: value == items.first
-              ? AppColors.inputBackground
-              : AppColors.accentSurface,
-          borderRadius: const BorderRadius.all(AppRadius.pill),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          MenuItemButton(
+            onPressed: () => onSelected(item),
+            style: const ButtonStyle(
+              minimumSize: WidgetStatePropertyAll<Size>(Size(220, 40)),
+              padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              ),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              overlayColor: WidgetStatePropertyAll<Color>(
+                AppColors.accentSurface,
+              ),
             ),
-            const SizedBox(width: 3),
-            const Icon(Icons.arrow_drop_down, size: 18),
-          ],
+            child: Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 22,
+                  child: item == value
+                      ? const Icon(
+                          Icons.check,
+                          size: 15,
+                          color: AppColors.primary,
+                        )
+                      : null,
+                ),
+                Text(
+                  itemLabel(item),
+                  style: TextStyle(
+                    color: item == value
+                        ? AppColors.primary
+                        : AppColors.mutedForeground,
+                    fontSize: 12.5,
+                    fontWeight: item == value
+                        ? FontWeight.w700
+                        : FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+      builder: (context, controller, child) => _PillToolbarButton(
+        label: label,
+        expanded: controller.isOpen,
+        onTap: controller.isOpen ? controller.close : controller.open,
+      ),
+    );
+  }
+}
+
+class _PillToolbarButton extends StatelessWidget {
+  const _PillToolbarButton({
+    super.key,
+    required this.label,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+        hoverColor: AppColors.accentSurface,
+        focusColor: AppColors.bannerEnd,
+        child: _PillToolbarSurface(
+          label: label,
+          active: expanded,
+          trailing: Icon(
+            expanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+            size: 18,
+            color: AppColors.foreground,
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _PillToolbarSurface extends StatelessWidget {
+  const _PillToolbarSurface({
+    required this.label,
+    required this.trailing,
+    this.active = false,
+  });
+
+  final String label;
+  final Widget trailing;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: active ? AppColors.accentSurface : AppColors.inputBackground,
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+        border: Border.all(
+          color: active ? AppColors.primary : AppColors.border,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.foreground,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          trailing,
+        ],
       ),
     );
   }

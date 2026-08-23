@@ -382,6 +382,7 @@ def build_roster(
             goal=link.goal,
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
+            last_message_at=last_msg.created_at if last_msg else None,
             active=_roster_active(link),
             calories=calories,
             sodium_mg=sodium_mg,

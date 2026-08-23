@@ -471,10 +471,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsFiltersClearAll => '전체 초기화';
 
   @override
-  String get clientsSortPriority => '정렬: 관리 우선';
+  String get clientsSortLabel => '정렬';
 
   @override
-  String get clientsSortName => '정렬: 이름순';
+  String get clientsSortPriority => '관리 필요 우선';
+
+  @override
+  String get clientsSortName => '이름 오름차순';
+
+  @override
+  String get clientsSortNameDescending => '이름 내림차순';
+
+  @override
+  String get clientsSortRecentMessage => '최근 대화순';
+
+  @override
+  String get clientsSortActiveFirst => '활성 고객 우선';
+
+  @override
+  String get clientsFilterLabel => '필터';
 
   @override
   String clientsToolbarCount(int shown, int active) {

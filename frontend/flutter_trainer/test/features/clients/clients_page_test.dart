@@ -559,7 +559,13 @@ void main() {
         at: AppRoutes.clients,
       );
 
-      await tester.tap(find.text('나트륨 초과'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
+      );
       await settle(tester);
 
       // sodiumOverBudget (2000mg 초과) 재사용 — 시드의 박성호(2400mg)는
@@ -569,8 +575,16 @@ void main() {
       expect(find.text('이지수'), findsNothing);
 
       // 같은 chip 을 다시 누르면 선택이 풀린다 — 다중 선택의 개별 제거.
-      await tester.tap(find.text('나트륨 초과'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sodiumOver')),
+      );
       await settle(tester);
+      expect(find.text('필터'), findsWidgets);
+      expect(find.text('필터 1'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('이지수'),
         150,
@@ -592,7 +606,13 @@ void main() {
         at: AppRoutes.clients,
       );
 
-      await tester.tap(find.text('당류 초과'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-sugarOver')),
+      );
       await settle(tester);
 
       // sugarOverBudget (50g 초과) — 강서연(74g)은 남고, 이지수(38g)는
@@ -608,15 +628,24 @@ void main() {
         at: AppRoutes.clients,
       );
 
+      await tester.tap(
+        find.byKey(const ValueKey<String>('clients-filter-button')),
+      );
+      await tester.pumpAndSettle();
       // 활성 + 휴면을 동시에 고르면 "둘 다 보기" 다 — AND 였다면 서로
       // 배타적인 두 값이라 아무도 안 남았을 것이다.
-      await tester.tap(find.text('활성'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-active')),
+      );
       await settle(tester);
-      await tester.tap(find.text('휴면'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('management-filter-dormant')),
+      );
       await settle(tester);
 
       expect(find.text('김민수'), findsOneWidget); // 활성
       expect(find.text('박성호'), findsOneWidget); // 휴면
+      expect(find.text('필터 2'), findsOneWidget);
       expect(find.text('전체 초기화'), findsOneWidget);
 
       await tester.tap(find.text('전체 초기화'));
