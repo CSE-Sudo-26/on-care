@@ -406,7 +406,6 @@
   "reportsShareNeedsFeedback": "피드백을 입력하면 전송할 수 있어요",
   "reportsShareNoClient": "리포트를 볼 고객을 먼저 선택해 주세요",
   "reportBodyGreeting": "{name}님, {range} 주간 리포트 정리해서 보내드려요.",
-  "reportBodySessions": "PT 세션은 {done}/{booked}회 진행했어요.",
   "reportBodyCompletionGood": "운동은 평균 {avg}%로 잘 따라오셨어요.",
   "reportBodyCompletionLow": "운동 이행률은 평균 {avg}%였어요. 많이 바쁘셨나 봐요.",
   "reportBodySkipped": "다만 {names} 건너뛰셨더라고요. 컨디션 때문이었다면 다음 세션 때 말씀해 주세요. 대체 동작으로 바꿔 둘게요.",

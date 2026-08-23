@@ -723,7 +723,8 @@ void main() {
     // The preview box is the message body itself, so the trainer can
     // read it before sending rather than discovering it in the thread.
     expect(find.textContaining('주간 리포트'), findsWidgets);
-    expect(find.textContaining('PT 세션'), findsWidgets);
+    // PT 진행 횟수는 초안에서 뺐다 — 회원에게 보낼 글이 아니다(#1177).
+    expect(find.textContaining('PT 세션'), findsNothing);
     // 전송 경로는 화면에 하나뿐이다 — 본문에는 더 이상 전송 버튼이 없다.
     await openShareMenu(tester);
     expect(find.text('김민수님에게 전송'), findsOneWidget);

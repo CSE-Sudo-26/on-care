@@ -3784,10 +3784,6 @@ def report_message(report: WeeklyReportOut) -> str:
             if report.completion_avg >= 70
             else f"운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
         )
-    if report.sessions_booked:
-        workout.append(
-            f"PT 세션은 {report.sessions_done}/{report.sessions_booked}회 진행했어요."
-        )
     skipped = _skipped_names(report)
     if skipped:
         workout.append(

@@ -1320,11 +1320,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportBodySessions(int done, int booked) {
-    return 'We got through $done of $booked PT sessions.';
-  }
-
-  @override
   String reportBodyCompletionGood(int avg) {
     return 'You kept up well — $avg% of your workouts done.';
   }

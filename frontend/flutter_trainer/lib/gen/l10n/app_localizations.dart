@@ -2360,12 +2360,6 @@ abstract class AppLocalizations {
   /// **'{name}, here\'s your weekly report for {range}.'**
   String reportBodyGreeting(String name, String range);
 
-  /// No description provided for @reportBodySessions.
-  ///
-  /// In en, this message translates to:
-  /// **'We got through {done} of {booked} PT sessions.'**
-  String reportBodySessions(int done, int booked);
-
   /// No description provided for @reportBodyCompletionGood.
   ///
   /// In en, this message translates to:

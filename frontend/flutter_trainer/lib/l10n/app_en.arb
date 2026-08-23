@@ -667,10 +667,6 @@
   "@reportBodyGreeting": {
     "placeholders": {"name": {"type": "String"}, "range": {"type": "String"}}
   },
-  "reportBodySessions": "We got through {done} of {booked} PT sessions.",
-  "@reportBodySessions": {
-    "placeholders": {"done": {"type": "int"}, "booked": {"type": "int"}}
-  },
   "reportBodyCompletionGood": "You kept up well — {avg}% of your workouts done.",
   "@reportBodyCompletionGood": {"placeholders": {"avg": {"type": "int"}}},
   "reportBodyCompletionLow": "Workout completion came in at {avg}%. Sounds like a busy one.",

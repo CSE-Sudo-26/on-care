@@ -1254,11 +1254,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportBodySessions(int done, int booked) {
-    return 'PT 세션은 $done/$booked회 진행했어요.';
-  }
-
-  @override
   String reportBodyCompletionGood(int avg) {
     return '운동은 평균 $avg%로 잘 따라오셨어요.';
   }

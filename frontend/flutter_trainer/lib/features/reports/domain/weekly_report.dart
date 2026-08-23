@@ -263,11 +263,6 @@ String reportMessage(AppLocalizations l, WeeklyReport report) {
           : l.reportBodyCompletionLow(completion),
     );
   }
-  if (report.sessionsBooked > 0) {
-    workout.add(
-      l.reportBodySessions(report.sessionsDone, report.sessionsBooked),
-    );
-  }
   final skipped = _skippedNames(report);
   if (skipped.isNotEmpty) {
     workout.add(l.reportBodySkipped(_topicParticle(skipped.join(', '))));
