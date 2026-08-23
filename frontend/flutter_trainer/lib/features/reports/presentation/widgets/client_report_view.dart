@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays, weekdayCount, weekdayLabels;
+    show weekdayCount;
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/four_week_compliance_trend.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/metric_comparison_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/metric_trend_section.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_ai_card.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_daily_detail.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_feedback_editor.dart';
-import 'package:oncare_trainer/features/reports/presentation/widgets/week_comparison.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_completion_chart.dart';
+import 'package:oncare_trainer/features/reports/presentation/widgets/weekly_exercise_minutes.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/client_identity.dart';
-import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// One client's week, ready to send.
@@ -30,6 +31,7 @@ class ClientReportView extends StatelessWidget {
     required this.onFeedbackChanged,
     required this.savingFeedback,
     required this.onSaveFeedback,
+    required this.weekNav,
   });
 
   final WeeklyReport report;
@@ -62,47 +64,25 @@ class ClientReportView extends StatelessWidget {
   /// 입력창의 현재 문구를 그 주의 초안으로 저장한다. (#821)
   final VoidCallback onSaveFeedback;
 
+  /// 카드 제목 줄에 놓을 주 이동. 리포트를 못 읽은 화면에도 같은 것이 놓여야
+  /// 해서 페이지가 만들어 넘긴다 — 실패한 주에 갇히면 나갈 길이 없다. (#1177)
+  final Widget weekNav;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final client = report.client;
-    // 지난 날인데 기록이 없는 요일. 아직 오지 않은 날과 구분해서 그린다.
-    final elapsed = report.isCurrentWeek
-        ? elapsedWeekdays(nowKst())
-        : weekdayCount;
-    final unlogged = <int>{
-      for (var i = 0; i < elapsed && i < report.weekCompletion.length; i++)
-        if (report.weekCompletion[i] == 0) i,
-    };
+    final bool hasWeek = report.weekCompletion.length == weekdayCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         SectionCard(
-          title: l.reportsClientWeekly(client.name),
+          title: l.reportsClientWeekly(report.client.name),
           icon: Icons.description_outlined,
-          trailing: Text(
-            report.rangeLabel(l),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.subtleForeground,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              ClientIdentity(
-                client: client,
-                nameStyle: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.foreground,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              WeekComparison(report: report),
-            ],
-          ),
+          // 고객 이름·나이는 적지 않는다 — 카드 제목이 이미 누구의 리포트인지
+          // 말하고, 왼쪽 목록에서 방금 고른 고객이다(#1177). 그 자리를 주
+          // 이동이 가져간다: 옮기는 것은 이 카드의 내용이다.
+          trailing: weekNav,
+          child: MetricComparisonSection(report: report),
         ),
         if (showSummary) ...<Widget>[
           const SizedBox(height: AppSpacing.lg),
@@ -115,25 +95,30 @@ class ClientReportView extends StatelessWidget {
           // 있으면 카드가 그만큼 세로로 늘어난다.
           // 되돌리기를 저장 옆에 둔다 — 입력창을 되돌릴 수단이 그 입력창 바로
           // 위에 있어야 한다.
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ActionButton(
-                label: l.reportsFeedbackRestore,
-                icon: Icons.undo,
-                onPressed: canRestoreDraft ? onRestoreDraft : null,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              ActionButton(
-                key: const ValueKey<String>('report-feedback-save'),
-                label: savingFeedback
-                    ? l.reportsFeedbackSaving
-                    : l.reportsFeedbackSave,
-                icon: Icons.save_outlined,
-                onPressed: savingFeedback ? null : onSaveFeedback,
-              ),
-            ],
-          ),
+          //
+          // 지난 주에는 둘 다 없다. 트레이너가 손볼 것은 이번 주에 보낼 글이고,
+          // 이미 지나간 주의 초안을 저장해 둘 자리는 없다(#1177).
+          trailing: report.isCurrentWeek
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    ActionButton(
+                      label: l.reportsFeedbackRestore,
+                      icon: Icons.undo,
+                      onPressed: canRestoreDraft ? onRestoreDraft : null,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    ActionButton(
+                      key: const ValueKey<String>('report-feedback-save'),
+                      label: savingFeedback
+                          ? l.reportsFeedbackSaving
+                          : l.reportsFeedbackSave,
+                      icon: Icons.save_outlined,
+                      onPressed: savingFeedback ? null : onSaveFeedback,
+                    ),
+                  ],
+                )
+              : null,
           child: ReportFeedbackEditor(
             key: ValueKey<String>(
               'feedback-${report.client.id}-'
@@ -148,55 +133,102 @@ class ClientReportView extends StatelessWidget {
         // 운동 이행률' 카드 안에 있어 제목과 내용이 서로 다른 말을 했다(#754).
         SectionCard(
           title: l.reportsCompletionByDay,
+          // 한 주를 요약하는 세 값은 제목 줄에 둔다. 카드 안에서 큰 숫자로
+          // 다시 보여 주면 그래프가 아래로 밀린다(#754 의 반복).
+          trailing: _WeekSummaryChips(report: report),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               // 계열은 리포트가 자기 주의 것을 들고 온다 — 보고 있는 주가
               // 어디든 같은 규칙으로 그린다(#752).
-              if (report.weekCompletion.length == weekdayCount)
-                BarSeriesChart(
-                  title: l.reportsCompletionByDay,
-                  values: report.weekCompletion,
-                  labels: weekdayLabels(AppLocalizations.of(context)),
-                  maxValue: 100,
-                  height: 80,
-                  showValues: true,
-                  valueSuffix: '%',
-                  // 아직 오지 않은 요일은 이번 주에만 있다.
-                  pendingFromIndex: report.isCurrentWeek
-                      ? elapsedWeekdays(nowKst())
-                      : null,
-                  // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
-                  // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
-                  missingIndices: unlogged,
-                )
+              if (hasWeek)
+                WeeklyCompletionChart(report: report)
               else
                 EmptyHint(message: l.reportsNoWorkoutsThisWeek),
-              if (report.weekCompletion.length == weekdayCount) ...<Widget>[
+              if (hasWeek) ...<Widget>[
                 const SizedBox(height: AppSpacing.md),
                 // 막대 바로 아래에 그날의 운동 내역. 67% 가 어디서 나온
                 // 값인지 같은 카드 안에서 답이 난다(#754).
                 ReportDailyDetail(report: report),
+                const Divider(
+                  height: AppSpacing.xl,
+                  thickness: 1,
+                  color: AppColors.border,
+                ),
+                // 이행률이 말하지 않는 값 — 그 주에 실제로 움직인 시간이다.
+                WeeklyExerciseMinutes(report: report),
+              ],
+              if (report.completionAvg != null) ...<Widget>[
+                const Divider(
+                  height: AppSpacing.xl,
+                  thickness: 1,
+                  color: AppColors.border,
+                ),
+                // 마지막 줄에 보고 있는 주를 앞선 세 주 옆에 놓는다. 며칠을
+                // 나눈 값인지는 따로 적지 않는다 — 값이 있는 막대를 세면
+                // 나온다(#754).
+                FourWeekComplianceTrend(report: report),
               ],
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
+          // `나트륨 초과 n일` 은 적지 않는다 — 카드 제목은 식단 전체를 말하는데
+          // 그 옆에 지표 하나의 수치만 붙어 있었고, 같은 값은 요약 카드의 근거
+          // 줄과 4주 막대의 빨강이 이미 말한다(#1177).
           title: l.reportsDietTrend,
-          trailing: Text(
-            l.reportsSodiumOverInline(report.sodiumOverDays ?? 0),
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: (report.sodiumOverDays ?? 0) > 2
-                  ? AppColors.overTarget
-                  : AppColors.subtleForeground,
-            ),
-          ),
           child: MetricTrendSection(report: report),
         ),
       ],
     );
   }
+}
+
+/// 평균 이행률 · 기록한 날 수 · PT 진행 — 그래프가 답하지 않는 세 값.
+class _WeekSummaryChips extends StatelessWidget {
+  const _WeekSummaryChips({required this.report});
+
+  final WeeklyReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    // PT 진행 횟수는 적지 않는다 — 이 카드가 말하는 것은 회원이 루틴을 얼마나
+    // 따라왔나이고, 세션 수는 스케줄 탭이 답한다(#1177).
+    final int? avg = report.completionAvg;
+    final int logged = report.weekCompletion.where((v) => v > 0).length;
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      alignment: WrapAlignment.end,
+      children: <Widget>[
+        if (avg != null) _Chip(label: l.reportsAverageChip('$avg%')),
+        if (logged > 0) _Chip(label: l.reportsRecordedDays(logged)),
+      ],
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: const BoxDecoration(
+      color: AppColors.inputBackground,
+      borderRadius: BorderRadius.all(AppRadius.pill),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppColors.mutedForeground,
+      ),
+    ),
+  );
 }

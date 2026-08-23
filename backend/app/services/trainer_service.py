@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from collections import defaultdict
@@ -392,6 +393,7 @@ def build_roster(
             goal=link.goal,
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
+            last_message_at=last_msg.created_at if last_msg else None,
             active=_roster_active(link),
             calories=calories,
             sodium_mg=sodium_mg,
@@ -3776,14 +3778,12 @@ def report_message(report: WeeklyReportOut) -> str:
 
     workout: list[str] = []
     if report.completion_avg is not None:
+        # `이번 주` 로 시작하지 않는다 — 지난 주 리포트에도 그대로 나가는
+        # 문장이고, 어느 주인지는 첫 줄의 날짜 범위가 이미 말한다(#1177).
         workout.append(
-            f"이번 주 운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
+            f"운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
             if report.completion_avg >= 70
-            else f"이번 주 운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
-        )
-    if report.sessions_booked:
-        workout.append(
-            f"PT 세션은 {report.sessions_done}/{report.sessions_booked}회 진행했어요."
+            else f"운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
         )
     skipped = _skipped_names(report)
     if skipped:
@@ -3796,12 +3796,17 @@ def report_message(report: WeeklyReportOut) -> str:
 
     diet: list[str] = []
     if report.sodium_avg is not None:
+        # 평균과 초과일을 한 문장에 뒤섞지 않는다. `평균 1,916mg으로 목표를
+        # 3일 넘겼어요` 는 평균이 목표를 넘긴 것처럼 읽힌다. 목표도 문장에
+        # 박아 두지 않는다 — 기준이 바뀌면 문장만 옛말을 한다(#1177).
         diet.append(
-            f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표(2,000mg)를 "
-            f"{report.sodium_over_days}일 넘겼어요. 국물을 절반만 남기셔도 "
+            f"나트륨은 하루 평균 {report.sodium_avg:,}mg이었고, "
+            f"목표({SODIUM_TARGET_MG:,}mg)를 넘긴 날이 "
+            f"{report.sodium_over_days}일이었어요. 국물을 절반만 남기셔도 "
             "하루 400~500mg은 줄어듭니다."
             if report.sodium_over_days > 0
-            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표 안에서 잘 지키고 계세요."
+            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 "
+            f"목표({SODIUM_TARGET_MG:,}mg) 안에서 잘 지키고 계세요."
         )
     recorded = [v for v in report.calories_week if v > 0]
     if recorded:
@@ -3815,12 +3820,12 @@ def report_message(report: WeeklyReportOut) -> str:
         # 인사말만 남았다 — 가리킬 '이 부분'이 없다. 기록이 없는 주에 격려부터
         # 하면 회원이 무엇을 하라는 말인지 알 수 없다.
         paragraphs.append(
-            "이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
+            "이 주에는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
             "다음 주 시작을 같이 잡아 봐요."
         )
     else:
         paragraphs.append(
-            "이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
+            "정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
             if good
             else "다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요."
         )
@@ -3841,16 +3846,38 @@ def _topic(word: str) -> str:
 
 
 def _skipped_names(report: WeeklyReportOut) -> list[str]:
-    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다."""
+    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다.
+
+    분량을 뗀 이름으로 묶는다 — 같은 스트레칭을 요일마다 건너뛰면 예전에는
+    `하체 스트레칭 10분, 하체 스트레칭 5분, 하체 스트레칭 15분` 이 되어, 서로
+    다른 운동 셋을 빠뜨린 것처럼 읽혔다(#1177).
+    """
     names: list[str] = []
     for day in report.days:
         for line in day.exercises:
             if "✗" not in line:
                 continue
-            name = line.replace("✗", "").strip()
+            name = exercise_base_name(line)
             if name and name not in names:
                 names.append(name)
     return names[:3]
+
+
+#: 운동 이름 뒤에 붙는 그날의 분량(`하체 스트레칭 10분`, `벤치프레스 40kg · 4세트`).
+_EXERCISE_AMOUNT_RE = re.compile(r"\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$")
+
+
+def exercise_base_name(line: str) -> str:
+    """운동 한 줄에서 분량 표기를 떼어 낸 이름.
+
+    초안·요약이 운동을 **묶어 세는** 자리에서는 분량이 같은 운동을 서로 다른
+    운동으로 갈라 놓는다. 앱의 `exerciseBaseName` 과 같은 규칙이다(#1177).
+    """
+    name = line.replace("✗", "").replace("✓", "").strip()
+    head, sep, _ = name.partition("·")
+    if sep:
+        name = head.strip()
+    return _EXERCISE_AMOUNT_RE.sub("", name).strip()
 
 
 # ---- 리포트 피드백 초안 (#821) ----

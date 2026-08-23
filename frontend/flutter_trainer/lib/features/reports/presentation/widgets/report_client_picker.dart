@@ -3,11 +3,9 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
-import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 주간 리포트를 볼 고객을 고르는 왼쪽 목록.
@@ -28,11 +26,17 @@ class ReportClientPicker extends StatefulWidget {
 }
 
 class _ReportClientPickerState extends State<ReportClientPicker> {
-  /// 한 줄 높이. 신원·목표 아래에 주간 이행률 막대가 한 줄 더 붙는다(#1097).
-  static const double _rowHeight = 92;
+  /// 한 줄 높이. 이름·나이와 목표 두 줄이다.
+  ///
+  /// 주간 이행률 막대가 한 줄 더 붙어 있던 때에는 92 였다(#1097). 그 막대는
+  /// 오른쪽 리포트가 같은 값을 훨씬 자세히 말하고 있어 목록에서는 뺐다(#1177).
+  static const double _rowHeight = 64;
 
   /// 한 번에 보여 줄 줄 수. 나머지는 스크롤한다.
-  static const int _visibleRows = 5;
+  ///
+  /// 줄이 낮아진 만큼 더 보여 준다 — 열 높이는 그대로 두고 한눈에 담기는
+  /// 고객만 다섯에서 일곱으로 늘어난다(#1177).
+  static const int _visibleRows = 7;
 
   /// 목록과 스크롤바가 같은 위치를 가리키도록 컨트롤러를 공유한다.
   final ScrollController _scroll = ScrollController();
@@ -53,7 +57,7 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
       title: l.navClients,
       icon: Icons.people_outline,
       dense: true,
-      // 다섯 명까지만 보여 주고 나머지는 스크롤한다. 로스터가 열다섯 명이면
+      // 일곱 명까지만 보여 주고 나머지는 스크롤한다. 로스터가 열다섯 명이면
       // 카드가 화면 높이를 다 먹어 오른쪽 리포트와 나란히 읽기 어려웠다.
       child: SizedBox(
         height: _rowHeight * _visibleRows,
@@ -105,30 +109,6 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
                                 // 어느 고객의 리포트를 열지 고르는 자리다 —
                                 // 이름만으로는 고를 근거가 되지 않는다(#898).
                                 ClientGoalLabel(client: client, fontSize: 11),
-                                const SizedBox(height: AppSpacing.xs),
-                                Builder(
-                                  builder: (context) {
-                                    final mean = recordedCompletionMean(client);
-                                    // API 경계에서 잘못된 값이 와도 막대와
-                                    // 숫자는 이행률의 범위(0~100%)를 벗어나지
-                                    // 않게 한다. 기록이 없으면 0%로 바꾸지 않는다.
-                                    final value = mean?.clamp(0.0, 100.0);
-                                    return InlineBarValue(
-                                      key: ValueKey<String>(
-                                        'report-client-completion-${client.id}',
-                                      ),
-                                      label: l.reportsWeeklyCompletion,
-                                      labelWidth: 58,
-                                      fraction: value == null
-                                          ? null
-                                          : value / 100,
-                                      text: value == null
-                                          ? l.reportsDataInsufficient
-                                          : '${value.round()}%',
-                                      valueWidth: value == null ? 60 : 40,
-                                    );
-                                  },
-                                ),
                               ],
                             ),
                           ),
