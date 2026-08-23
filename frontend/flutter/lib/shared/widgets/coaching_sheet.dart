@@ -216,7 +216,10 @@ class _CoachingSheet extends ConsumerWidget {
               ),
               Padding(
                 key: const Key('coachingSheetCta'),
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                // 아래 여백 0 이면 SafeArea 가 없는 기기·창(웹·안드로이드 제스처
+                // 바)에서 버튼이 시트 끝에 붙어 잘려 보인다(#1180). 좌우와 같은
+                // 여백을 두고, 홈 인디케이터가 있으면 SafeArea 가 더 밀어 준다.
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
