@@ -2780,6 +2780,24 @@ abstract class AppLocalizations {
   /// **'End time must be after the start time'**
   String get schedEndBeforeStart;
 
+  /// No description provided for @schedTimeRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get schedTimeRangeTitle;
+
+  /// No description provided for @schedTimeRangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get schedTimeRangeConfirm;
+
+  /// No description provided for @schedTimeRangeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid time (HH:mm)'**
+  String get schedTimeRangeInvalid;
+
   /// No description provided for @schedRepeat.
   ///
   /// In en, this message translates to:

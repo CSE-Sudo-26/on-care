@@ -25,6 +25,7 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
 /// 스케줄 tab — 트레이너의 주간 시간표. (#988)
@@ -141,28 +142,28 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.all(AppSpacing.lg),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: 560,
-                maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
-              ),
-              child: scrollable
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
+          ),
+          // 카드 밖으로 걸치면 잘리기 쉽다(모서리를 벗어난 만큼 다른
+          // 요소에 가려지거나 탭이 닿지 않았다) — 카드 안쪽, 오른쪽
+          // 위 구석에 둔다.
+          child: Stack(
+            children: <Widget>[
+              scrollable
                   ? SingleChildScrollView(child: builder(dialogContext))
                   : builder(dialogContext),
-            ),
-            // 취소와 같은 동작이다 — 그냥 닫는다. 카드 모서리에 살짝
-            // 걸치듯 띄워, 안쪽 내용의 여백을 쓰지 않는다.
-            Positioned(
-              top: -12,
-              right: -12,
-              child: _DialogCloseButton(
-                onTap: () => Navigator.of(dialogContext).pop(),
+              Positioned(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+                child: DialogCloseButton(
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -766,37 +767,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           onSendProgram: () => _sendProgram(session),
         ),
       ],
-    );
-  }
-}
-
-/// 가운데 모달 카드 모서리에 살짝 걸쳐 뜨는 닫기 버튼(#1250).
-///
-/// 취소와 같은 동작이라 그냥 `Navigator.pop` 한다 — 저장하지 않는다.
-class _DialogCloseButton extends StatelessWidget {
-  const _DialogCloseButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.card,
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: InkWell(
-        key: const ValueKey<String>('dialog-close'),
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.all(6),
-          child: Icon(
-            Icons.close,
-            size: 18,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-      ),
     );
   }
 }
