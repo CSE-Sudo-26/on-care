@@ -6,7 +6,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 
 void main() {
   test(
-    'v12 to v16 adds the daily macro·완료 날짜 columns and preserves rows',
+    'v12 to v17 adds the daily macro·완료 날짜 columns and preserves rows',
     () async {
       // v3~v5 에서 올라오는 경로는 v7 의 `createTable` 이 **현재 정의**로 표를
       // 만들어 버려, `from >= 7 && from < 13` 갈래를 지나가지 않는다. 이미
@@ -73,6 +73,31 @@ void main() {
             PRIMARY KEY (id)
           )
           ''');
+          // 이 표도 v1 부터 있었다. v17 이 여기에 성별·나이 컬럼을 붙이므로
+          // (신규 고객 등록), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
+          database.execute('''
+          CREATE TABLE trainer_clients (
+            id TEXT NOT NULL PRIMARY KEY,
+            name TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            goal TEXT NOT NULL,
+            last_message TEXT NOT NULL,
+            last_time TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+            calories_today INTEGER NOT NULL,
+            sodium_mg INTEGER NOT NULL,
+            sugar_g REAL NOT NULL,
+            carbs_g REAL NOT NULL DEFAULT 0,
+            protein_g REAL NOT NULL DEFAULT 0,
+            fat_g REAL NOT NULL DEFAULT 0,
+            last_routine TEXT NOT NULL,
+            week_completion_json TEXT NOT NULL,
+            sodium_week_json TEXT NOT NULL DEFAULT '[]',
+            calories_week_json TEXT NOT NULL DEFAULT '[]',
+            sugar_week_json TEXT NOT NULL DEFAULT '[]',
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )
+          ''');
           database.execute('PRAGMA user_version = 12');
         },
       );
@@ -82,7 +107,7 @@ void main() {
       final row = await db.select(db.clientDailyMetrics).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 16);
+      expect(version.read<int>('user_version'), 17);
       // 있던 값은 그대로 남는다.
       expect(row.clientId, 'seed-client-1');
       expect(row.date, '2026-08-18');
@@ -99,7 +124,7 @@ void main() {
   );
 
   test(
-    'v3 to v16 adds macro·주간 계열·취소·완료 날짜 columns and preserves rows',
+    'v3 to v17 adds macro·주간 계열·취소·완료 날짜 columns and preserves rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -200,7 +225,7 @@ void main() {
       final meal = await db.select(db.clientDietEntries).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 16);
+      expect(version.read<int>('user_version'), 17);
       expect(client.id, 'existing-client');
       expect(client.caloriesToday, 500);
       expect(client.sugarG, 12.0);
@@ -210,6 +235,11 @@ void main() {
       expect(client.sugarWeekJson, '[]');
       expect(client.proteinG, 0);
       expect(client.fatG, 0);
+      // v17 의 성별·나이는 회원 ID로 새로 연결되는 회원만 채운다(신규 고객
+      // 등록). 예전 행은 값 없이 그대로 남고, 표시는 예전처럼 roster 폴백을
+      // 쓴다.
+      expect(client.gender, isNull);
+      expect(client.age, isNull);
       expect(meal.id, 'existing-meal');
       expect(meal.items, '기존 식단');
       expect(meal.carbsG, 0);
@@ -269,7 +299,7 @@ void main() {
     },
   );
 
-  test('v4 to v16 preserves integer sugar and all client rows', () async {
+  test('v4 to v17 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
       setup: (database) {
         database.execute('''
@@ -368,7 +398,7 @@ void main() {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 16);
+    expect(version.read<int>('user_version'), 17);
     expect(clients, hasLength(2));
     expect(clients[0].name, '기존 회원 A');
     expect(clients[0].sugarG, 12.0);
@@ -379,10 +409,14 @@ void main() {
     expect(clients[1].proteinG, 35.5);
     expect(clients[0].caloriesWeekJson, '[]');
     expect(clients[1].sugarWeekJson, '[]');
+    // v17 의 성별·나이는 회원 ID로 새로 연결되는 회원만 채운다 — 예전 행은
+    // 값 없이 그대로 남는다.
+    expect(clients[0].gender, isNull);
+    expect(clients[1].age, isNull);
   });
 
   test(
-    'v5 to v16 adds the weekly calorie·sugar series to existing rows',
+    'v5 to v17 adds the weekly calorie·sugar series to existing rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -480,16 +514,20 @@ void main() {
       final client = await db.select(db.trainerClients).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 16);
+      expect(version.read<int>('user_version'), 17);
       // 기존 값은 그대로 두고, 새 계열만 기본값으로 붙는다.
       expect(client.sugarG, 17.8);
       expect(client.sodiumWeekJson, '[700,800]');
       expect(client.caloriesWeekJson, '[]');
       expect(client.sugarWeekJson, '[]');
+      // v17 의 성별·나이는 회원 ID로 새로 연결되는 회원만 채운다 — 예전 행은
+      // 값 없이 그대로 남는다.
+      expect(client.gender, isNull);
+      expect(client.age, isNull);
     },
   );
 
-  test('v14 to v16 adds the per-meal sugar·date columns and keeps rows', () async {
+  test('v14 to v17 adds the per-meal sugar·date columns and keeps rows', () async {
     // 끼니 표는 그동안 **오늘 하루**만 담아 날짜가 없었고, 당류도 하루 합계로만
     // 있었다(#1025). 컬럼이 늘어도 있던 끼니는 그대로 읽힌다.
     final executor = NativeDatabase.memory(
@@ -517,6 +555,31 @@ void main() {
           VALUES ('seed-diet-1', 'seed-client-1', '점심', '비빔밥',
                   720, 1320, 90.5, 28.0, 18.5, 0)
         ''');
+        // 이 표도 v1 부터 있었다. v17 이 여기에 성별·나이 컬럼을 붙이므로
+        // (신규 고객 등록), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
+        database.execute('''
+          CREATE TABLE trainer_clients (
+            id TEXT NOT NULL PRIMARY KEY,
+            name TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            goal TEXT NOT NULL,
+            last_message TEXT NOT NULL,
+            last_time TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+            calories_today INTEGER NOT NULL,
+            sodium_mg INTEGER NOT NULL,
+            sugar_g REAL NOT NULL,
+            carbs_g REAL NOT NULL DEFAULT 0,
+            protein_g REAL NOT NULL DEFAULT 0,
+            fat_g REAL NOT NULL DEFAULT 0,
+            last_routine TEXT NOT NULL,
+            week_completion_json TEXT NOT NULL,
+            sodium_week_json TEXT NOT NULL DEFAULT '[]',
+            calories_week_json TEXT NOT NULL DEFAULT '[]',
+            sugar_week_json TEXT NOT NULL DEFAULT '[]',
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
         database.execute('PRAGMA user_version = 14');
       },
     );
@@ -526,7 +589,7 @@ void main() {
     final row = await db.select(db.clientDietEntries).getSingle();
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 16);
+    expect(version.read<int>('user_version'), 17);
     expect(row.meal, '점심');
     expect(row.calories, 720);
     expect(row.carbsG, 90.5);
@@ -540,7 +603,7 @@ void main() {
     expect(row.foodsJson, '[]');
   });
 
-  test('v15 to v16 adds the per-meal time·foods columns and keeps rows', () async {
+  test('v15 to v17 adds the per-meal time·foods columns and keeps rows', () async {
     // 끼니 카드가 회원 앱과 같아지면서 시각과 음식별 영양이 필요해졌다(#1166).
     // 컬럼이 늘어도 있던 끼니는 그대로 읽히고, 새 값은 기본값이다.
     final executor = NativeDatabase.memory(
@@ -570,6 +633,31 @@ void main() {
           VALUES ('seed-diet-1', 'seed-client-1', '점심', '비빔밥',
                   720, 1320, 90.5, 28.0, 18.5, 12.5, '2026-08-23', 0)
         ''');
+        // 이 표도 v1 부터 있었다. v17 이 여기에 성별·나이 컬럼을 붙이므로
+        // (신규 고객 등록), 표가 없는 인공 DB 로는 그 갈래를 지날 수 없다.
+        database.execute('''
+          CREATE TABLE trainer_clients (
+            id TEXT NOT NULL PRIMARY KEY,
+            name TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            goal TEXT NOT NULL,
+            last_message TEXT NOT NULL,
+            last_time TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+            calories_today INTEGER NOT NULL,
+            sodium_mg INTEGER NOT NULL,
+            sugar_g REAL NOT NULL,
+            carbs_g REAL NOT NULL DEFAULT 0,
+            protein_g REAL NOT NULL DEFAULT 0,
+            fat_g REAL NOT NULL DEFAULT 0,
+            last_routine TEXT NOT NULL,
+            week_completion_json TEXT NOT NULL,
+            sodium_week_json TEXT NOT NULL DEFAULT '[]',
+            calories_week_json TEXT NOT NULL DEFAULT '[]',
+            sugar_week_json TEXT NOT NULL DEFAULT '[]',
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
         database.execute('PRAGMA user_version = 15');
       },
     );
@@ -579,7 +667,7 @@ void main() {
     final row = await db.select(db.clientDietEntries).getSingle();
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 16);
+    expect(version.read<int>('user_version'), 17);
     expect(row.meal, '점심');
     expect(row.sugarG, 12.5);
     expect(row.date, '2026-08-23');

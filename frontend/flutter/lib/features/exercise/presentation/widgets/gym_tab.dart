@@ -13,7 +13,6 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
-import 'package:oncare/features/exercise/presentation/widgets/consultation_request_card.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -31,20 +30,12 @@ class GymTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
-    // 트레이너 소속 헬스장 이름은 제휴 + 카카오를 모두 아는 목록에서 찾아야 한다.
-    // 제휴 목록만 보면 카카오 헬스장 소속 트레이너의 헬스장 이름이 빈칸이 된다(#329).
-    final AsyncValue<List<Gym>> knownGymsAsync = ref.watch(
-      gymFinderResultsProvider,
-    );
     final MemberCoach? assignedCoach = ref
         .watch(memberCoachProvider)
         .valueOrNull;
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
-    final ConsultationRequest? recentRequest = requests.isEmpty
-        ? null
-        : requests.first;
     ConsultationRequest? pendingRequest;
     for (final ConsultationRequest request in requests) {
       if (request.status == ConsultationStatus.pending) {
@@ -52,19 +43,11 @@ class GymTab extends ConsumerWidget {
         break;
       }
     }
-    final ConsultationRequest? displayedRequest =
-        pendingRequest ?? recentRequest;
     final bool showTrainerChat =
         assignedCoach != null && pendingRequest == null;
     final int unreadCoachMessages = showTrainerChat
         ? ref.watch(coachUnreadProvider).valueOrNull ?? 0
         : 0;
-
-    // "상담 요청 확인" 은 같은 화면 아래로 스크롤하는 대신 전체 내역 화면으로
-    // 옮긴다 — 요청이 누적될수록 카드 1건만으로는 지난 이력을 알 수 없었다
-    // (#948). `Scrollable.ensureVisible` 의존도 이걸로 없앤다.
-    void openConsultationHistory() =>
-        context.push(AppRoutes.consultationHistory);
 
     // 연결된 헬스장이 없으면 이 탭에서 할 일은 헬스장을 찾는 것뿐이다 —
     // 지도만 든 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면을 그대로 보여
@@ -81,32 +64,9 @@ class GymTab extends ConsumerWidget {
       );
     }
     if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
-      // 상담을 넣어 둔 상태는 그대로 보여 준다 — 헬스장이 아직 없는 회원에게
-      // 지금 진행 중인 일이 바로 그 상담이다.
-      if (displayedRequest == null) return const GymFinderView();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _RecentConsultationSection(
-                  request: displayedRequest,
-                  onSeeAll: openConsultationHistory,
-                ),
-                if (pendingRequest != null) ...<Widget>[
-                  const SizedBox(height: 14),
-                  _PendingConsultationButton(onTap: openConsultationHistory),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const GymFinderView(),
-        ],
-      );
+      // 상담 요청 내역은 검색창 옆 아이콘이 맡는다. 요청 직후 요약 카드를 여기
+      // 끼우면 검색창이 아래로 밀려 화면 구조가 바뀐다(#1287).
+      return const GymFinderView();
     }
 
     return Padding(
@@ -128,9 +88,6 @@ class GymTab extends ConsumerWidget {
             selectedSlot: selectedSlot,
             onSlot: onSlot,
             onRetry: () => ref.invalidate(myGymProvider),
-            onPendingConsultationTap: pendingRequest == null
-                ? null
-                : openConsultationHistory,
             onTrainerChatTap: showTrainerChat
                 ? () => openTrainerChatPage(
                     context,
@@ -139,62 +96,8 @@ class GymTab extends ConsumerWidget {
                 : null,
             unreadCoachMessages: unreadCoachMessages,
           ),
-          if (displayedRequest != null) ...<Widget>[
-            const SizedBox(height: 28),
-            _RecentConsultationSection(
-              request: displayedRequest,
-              onSeeAll: openConsultationHistory,
-            ),
-          ],
-          const SizedBox(height: 28),
-          _RecommendedGymSection(
-            // 이미 연결된 헬스장은 빠진 목록이다(#864) — 내 헬스장 카드는 위에
-            // 그대로 있으므로 정보가 사라지지 않는다.
-            gymsAsync: ref.watch(recommendedGymsProvider),
-            onMore: () => context.push(AppRoutes.gyms),
-            onRetry: () => ref.invalidate(nearbyGymsProvider),
-          ),
-          const SizedBox(height: 28),
-          _RecommendedTrainerSection(
-            trainersAsync: ref.watch(recommendedTrainersProvider),
-            gymNames: <String, String>{
-              for (final Gym gym in knownGymsAsync.valueOrNull ?? const <Gym>[])
-                gym.id: gym.name,
-            },
-            onMore: () => context.push(AppRoutes.trainers),
-            onRetry: () => ref.invalidate(recommendedTrainersProvider),
-          ),
         ],
       ),
-    );
-  }
-}
-
-/// 운동 탭의 상담 요청 요약 — 대기 중이거나 가장 최근 요청 1건만 보여준다.
-/// 전체 이력은 [ConsultationHistoryPage] 가 맡는다(#948).
-class _RecentConsultationSection extends StatelessWidget {
-  const _RecentConsultationSection({
-    required this.request,
-    required this.onSeeAll,
-  });
-
-  final ConsultationRequest request;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _SectionHeader(
-          title: l.exConsultStatusSection,
-          actionLabel: l.exSeeMore,
-          onAction: onSeeAll,
-        ),
-        const SizedBox(height: 10),
-        ConsultationRequestCard(request: request),
-      ],
     );
   }
 }
@@ -206,7 +109,6 @@ class _MyGymSection extends StatelessWidget {
     required this.selectedSlot,
     required this.onSlot,
     required this.onRetry,
-    required this.onPendingConsultationTap,
     required this.onTrainerChatTap,
     required this.unreadCoachMessages,
   });
@@ -218,7 +120,6 @@ class _MyGymSection extends StatelessWidget {
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
   final VoidCallback onRetry;
-  final VoidCallback? onPendingConsultationTap;
   final VoidCallback? onTrainerChatTap;
   final int unreadCoachMessages;
 
@@ -232,15 +133,28 @@ class _MyGymSection extends StatelessWidget {
       // 재시도 자리를 남긴다.
       data: (Gym? gym) => gym == null
           ? _SectionError(onRetry: onRetry)
-          : _MyGymCard(
-              gym: gym,
-              trainer: trainer,
-              selectedSlot: selectedSlot,
-              onSlot: onSlot,
-              onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
-              onPendingConsultationTap: onPendingConsultationTap,
-              onTrainerChatTap: onTrainerChatTap,
-              unreadCoachMessages: unreadCoachMessages,
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _MyGymCard(
+                  gym: gym,
+                  trainer: trainer,
+                  onGymTap: () =>
+                      context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onTrainerChatTap: onTrainerChatTap,
+                  unreadCoachMessages: unreadCoachMessages,
+                ),
+                if (trainer != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _ReservationPanel(
+                    key: const Key('my-gym-reservation-panel'),
+                    gym: gym,
+                    trainer: trainer!,
+                    selectedSlot: selectedSlot,
+                    onSlot: onSlot,
+                  ),
+                ],
+              ],
             ),
     );
   }
@@ -250,20 +164,14 @@ class _MyGymCard extends StatelessWidget {
   const _MyGymCard({
     required this.gym,
     required this.trainer,
-    required this.selectedSlot,
-    required this.onSlot,
     required this.onGymTap,
-    required this.onPendingConsultationTap,
     required this.onTrainerChatTap,
     required this.unreadCoachMessages,
   });
 
   final Gym gym;
   final Trainer? trainer;
-  final String? selectedSlot;
-  final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
-  final VoidCallback? onPendingConsultationTap;
   final VoidCallback? onTrainerChatTap;
   final int unreadCoachMessages;
 
@@ -272,6 +180,7 @@ class _MyGymCard extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
 
     return Container(
+      key: const Key('my-gym-info-card'),
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: _cardDecoration(),
@@ -369,21 +278,7 @@ class _MyGymCard extends StatelessWidget {
                   context.push(AppRoutes.trainerDetailPath(trainer!.id)),
             ),
           ],
-          // 담당 트레이너가 없으면 예약 패널을 숨긴다. 없는 사람의 빈 시간을
-          // 고르고 예약 완료 메시지까지 보게 되는 상태를 막는다.
-          if (trainer != null) ...<Widget>[
-            const SizedBox(height: 16),
-            _ReservationPanel(
-              gym: gym,
-              trainer: trainer!,
-              selectedSlot: selectedSlot,
-              onSlot: onSlot,
-            ),
-          ],
-          if (onPendingConsultationTap != null) ...<Widget>[
-            const SizedBox(height: 14),
-            _PendingConsultationButton(onTap: onPendingConsultationTap!),
-          ] else if (onTrainerChatTap != null) ...<Widget>[
+          if (onTrainerChatTap != null) ...<Widget>[
             const SizedBox(height: 14),
             _TrainerChatButton(
               unread: unreadCoachMessages,
@@ -391,34 +286,6 @@ class _MyGymCard extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _PendingConsultationButton extends StatelessWidget {
-  const _PendingConsultationButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: onTap,
-        style: FilledButton.styleFrom(
-          backgroundColor: FigmaColors.primary,
-          minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          l.exViewConsultationRequest,
-          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-        ),
       ),
     );
   }
@@ -520,6 +387,7 @@ class _TrainerChatButton extends StatelessWidget {
 /// 이 아니라 "찼음" 으로 읽히게 한다.
 class _ReservationPanel extends ConsumerStatefulWidget {
   const _ReservationPanel({
+    super.key,
     required this.gym,
     required this.trainer,
     required this.selectedSlot,
@@ -849,6 +717,9 @@ class _SlotNotice extends StatelessWidget {
   }
 }
 
+// 추천 목록은 미연결 상태의 GymFinderView가 전담한다. 연결 화면에서 다시
+// 노출하지 않되, 카드 구현은 별도 목록 화면 재사용을 위해 남겨 둔다.
+// ignore: unused_element
 class _RecommendedGymSection extends StatelessWidget {
   const _RecommendedGymSection({
     required this.gymsAsync,
@@ -994,6 +865,7 @@ class _GymRecommendationCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _RecommendedTrainerSection extends StatelessWidget {
   const _RecommendedTrainerSection({
     required this.trainersAsync,

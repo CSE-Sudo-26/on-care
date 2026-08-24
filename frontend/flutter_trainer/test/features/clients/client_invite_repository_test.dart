@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -6,6 +7,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 
@@ -69,16 +72,16 @@ void main() {
         }, '/trainer/member-lookup'),
       );
 
-      final found = await repo.lookup('  minsu@oncare.com ');
+      final found = await repo.lookup('  user-a3f9c81e4b2d ');
 
       expect(found.memberId, 'm1');
       expect(found.canInvite, isTrue);
       // 공백은 서버로 넘어가지 않는다 — 붙여넣기 한 번에 404 가 되면 트레이너는
-      // 이메일이 틀렸다고 읽는다.
+      // 회원 ID가 틀렸다고 읽는다.
       verify(
         () => dio.get<Map<String, Object?>>(
           '/trainer/member-lookup',
-          queryParameters: <String, Object?>{'email': 'minsu@oncare.com'},
+          queryParameters: <String, Object?>{'member_id': 'user-a3f9c81e4b2d'},
         ),
       ).called(1);
     });
@@ -92,7 +95,7 @@ void main() {
       ).thenThrow(_httpError(404, '/trainer/member-lookup'));
 
       expect(
-        () => repo.lookup('nobody@oncare.com'),
+        () => repo.lookup('user-no-such-member'),
         throwsA(isA<NotFoundError>()),
       );
     });
@@ -114,7 +117,7 @@ void main() {
         }, '/trainer/member-lookup'),
       );
 
-      expect((await repo.lookup('minsu@oncare.com')).canInvite, isFalse);
+      expect((await repo.lookup('user-a3f9c81e4b2d')).canInvite, isFalse);
     });
   });
 
@@ -254,17 +257,23 @@ void main() {
   });
 
   group('provider', () {
-    test('demo mode hides the entry point', () {
+    test('demo mode resolves the local (immediate-connect) source', () {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
       final container = ProviderContainer(
-        overrides: <Override>[appConfigProvider.overrideWithValue(_demoConfig)],
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(_demoConfig),
+          appDatabaseProvider.overrideWithValue(db),
+        ],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(clientInvitesEnabledProvider), isFalse);
-      expect(
-        container.read(clientInviteRepositoryProvider),
-        isA<DemoClientInviteRepository>(),
-      );
+      // 데모도 회원 ID로 찾아 연결할 수 있다 — 성별·나이를 트레이너가 입력
+      // 하는 등록 폼은 어느 모드에도 없다.
+      expect(container.read(clientInvitesEnabledProvider), isTrue);
+      final repo = container.read(clientInviteRepositoryProvider);
+      expect(repo, isA<DemoClientInviteRepository>());
+      expect(repo.connectsImmediately, isTrue);
     });
 
     test('real-API mode resolves the Dio source and shows the entry', () {
@@ -277,17 +286,66 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(clientInvitesEnabledProvider), isTrue);
-      expect(
-        container.read(clientInviteRepositoryProvider),
-        isA<DioClientInviteRepository>(),
-      );
+      final repo = container.read(clientInviteRepositoryProvider);
+      expect(repo, isA<DioClientInviteRepository>());
+      // 실 API 는 회원의 수락을 기다리는 요청만 보낸다 — 즉시 연결하지 않는다.
+      expect(repo.connectsImmediately, isFalse);
+    });
+  });
+
+  group('DemoClientInviteRepository', () {
+    late AppDatabase db;
+    late DemoClientInviteRepository demo;
+
+    setUp(() async {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      await seedIfEmpty(db);
+      demo = DemoClientInviteRepository(db);
+    });
+    tearDown(() => db.close());
+
+    test('finds a prospective member by their demo member id', () async {
+      // 대소문자는 같은 ID다 — 실 서비스의 `func.lower(User.id)` 비교와 같다.
+      final found = await demo.lookup('USER-8F2A41C9D6E3');
+
+      expect(found.name, '이수아');
+      expect(found.canInvite, isTrue);
     });
 
-    test('the demo source refuses to pretend a request was sent', () {
-      const demo = DemoClientInviteRepository();
+    test('an already-linked member id reports coachedByMe', () async {
+      // 이미 담당 중인 김민수(seed-client-1)의 회원 ID다 — 회원 앱 MY 탭이
+      // 데모 모드에서 보여주는 것과 같은 값이다.
+      final found = await demo.lookup('user-7d4e9a2c5f18');
 
-      // 데모에서 조용히 성공하면 실제로 회원에게 닿았다고 읽힌다.
-      expect(() => demo.invite('m1'), throwsA(isA<ValidationError>()));
+      expect(found.name, '김민수');
+      // 로스터 행의 id(seed-client-1)가 아니라 조회에 쓴 회원 ID가 그대로
+      // 나와야 한다 — 백엔드의 User.id 기반 응답 계약과 같은 모양이어야 한다.
+      expect(found.memberId, 'user-7d4e9a2c5f18');
+      expect(found.hasTrainer, isTrue);
+      expect(found.coachedByMe, isTrue);
+      expect(found.canInvite, isFalse);
+    });
+
+    test('an unknown member id is not found', () {
+      expect(demo.lookup('user-no-such-member'), throwsA(isA<NotFoundError>()));
+    });
+
+    test('invite connects immediately with the prospect\'s real profile', () async {
+      final found = await demo.lookup('user-1c7b93f04a58');
+      final invite = await demo.invite(found.memberId);
+
+      expect(invite.status, ClientInviteStatus.accepted);
+
+      final clients = await demo.lookup('user-1c7b93f04a58');
+      // 두 번째 조회는 이미 연결된 상태를 본다 — 중복 연결이 막힌다.
+      expect(clients.coachedByMe, isTrue);
+
+      final row = await (db.select(
+        db.trainerClients,
+      )..where((t) => t.id.equals(found.memberId))).getSingle();
+      // 트레이너가 지금 입력한 값이 아니라 회원이 이미 등록해 둔 실제 값이다.
+      expect(row.gender, 'male');
+      expect(row.age, isNotNull);
     });
   });
 }

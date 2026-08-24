@@ -7,7 +7,6 @@ class MemberLookup {
   const MemberLookup({
     required this.memberId,
     required this.name,
-    required this.email,
     required this.hasTrainer,
     required this.coachedByMe,
     required this.invitePending,
@@ -15,7 +14,6 @@ class MemberLookup {
 
   final String memberId;
   final String name;
-  final String email;
 
   /// 이미 활성 담당 트레이너가 있는가.
   final bool hasTrainer;
@@ -32,7 +30,6 @@ class MemberLookup {
   factory MemberLookup.fromJson(Map<String, Object?> json) => MemberLookup(
     memberId: json['member_id']! as String,
     name: json['name'] as String? ?? '',
-    email: json['email'] as String? ?? '',
     hasTrainer: json['has_trainer'] as bool? ?? false,
     coachedByMe: json['coached_by_me'] as bool? ?? false,
     invitePending: json['invite_pending'] as bool? ?? false,

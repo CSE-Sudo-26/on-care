@@ -297,7 +297,7 @@ void main() {
     },
   );
 
-  testWidgets('valid submission completes, stores pending, and shows status', (
+  testWidgets('valid submission stores pending and history shows status', (
     WidgetTester tester,
   ) async {
     await pumpRoute(
@@ -361,7 +361,14 @@ void main() {
 
     await tester.tap(find.text(l.exReturnExercise));
     await tester.pumpAndSettle();
-    expect(find.text(l.exConsultStatusSection), findsOneWidget);
+    // 운동 탭 본문에는 상담 요약을 다시 만들지 않는다(#1287). 내역 화면이
+    // 요청 상태를 확인하는 한 곳이다.
+    expect(find.text(l.exConsultStatusSection), findsNothing);
+    expect(find.text(l.exConsultPendingStatus), findsNothing);
+
+    router.go(AppRoutes.consultationHistory);
+    await tester.pumpAndSettle();
+    expect(find.text(l.exConsultHistoryTitle), findsOneWidget);
     expect(find.text(l.exConsultPendingStatus), findsOneWidget);
 
     router.go(AppRoutes.gymDetailPath(_gym.id));
