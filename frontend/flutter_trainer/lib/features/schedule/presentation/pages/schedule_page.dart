@@ -212,15 +212,12 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     });
   }
 
-  Future<void> _openReservationSlotsSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (context) => ReservationSlotsSheet(selectedDay: _selectedDay),
+  /// 예약 슬롯도 새 일정·일정 수정과 같은 가운데 모달로 연다 — 아래에서
+  /// 올라오는 바텀시트만 여기서 유독 다른 모양이었다.
+  Future<void> _openReservationSlotsSheet() {
+    return _openCenteredDialog(
+      scrollable: false,
+      (dialogContext) => ReservationSlotsSheet(selectedDay: _selectedDay),
     );
   }
 
