@@ -23,6 +23,7 @@ void main() {
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.schedule,
+      seedClock: DateTime(2026, 8, 24),
     );
   }
 
