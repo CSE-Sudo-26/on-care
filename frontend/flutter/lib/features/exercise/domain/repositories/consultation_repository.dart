@@ -17,6 +17,8 @@ abstract class ConsultationRepository {
   /// 최근 건이라 첫 쪽으로 충분하다. 그보다 오래된 대기 신청이 남아 있는 드문 경우는
   /// 접수 시 서버가 409 로 알려 주고, 컨트롤러가 그 응답으로 목록을 채운다.
   Future<List<ConsultationRequest>> fetchMine({int limit});
+
+  Future<void> cancel(String consultationId) async {}
 }
 
 /// 서버가 409 로 거절한 경우 — 같은 헬스장/트레이너에 대기 중인 신청이 이미 있다.

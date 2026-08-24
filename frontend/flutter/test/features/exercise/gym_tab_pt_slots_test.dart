@@ -121,27 +121,26 @@ void main() {
     return AppLocalizations.of(tester.element(find.byType(Scaffold).first));
   }
 
-  testWidgets('빈 자리에는 잔여 인원이 붙지 않고, 마감된 자리만 그 사실을 적는다', (
+  testWidgets('슬롯은 시간 범위를 표시하고 마감 문구 없이 두 열로 배치된다', (
     WidgetTester tester,
   ) async {
     final AppLocalizations l = await pumpTab(tester);
 
-    // 한 사람 몫뿐인 자리라 "잔여 N자리"가 성립하지 않는다 — 빈 칩에는 마감
-    // 문구 자리가 비어 있을 뿐, 칩 크기는 마감된 자리와 같다 (#1136).
     expect(find.textContaining('잔여'), findsNothing);
+    expect(find.text(l.exSlotFull), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('slot-chip-slot-open')),
         matching: find.byType(Text),
       ),
-      findsNWidgets(3),
+      findsNWidgets(2),
     );
     expect(
       tester.getSize(find.byKey(const ValueKey<String>('slot-chip-slot-open'))),
       tester.getSize(
         find.byKey(const ValueKey<String>('slot-chip-slot-booked')),
       ),
-      reason: '마감 문구가 붙은 칩만 크기가 달라진다',
+      reason: '비활성 색상 외에는 같은 슬롯 크기를 쓴다',
     );
     expect(
       find.descendant(
@@ -150,13 +149,14 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('slot-chip-slot-booked')),
-        matching: find.text(l.exSlotFull),
-      ),
-      findsOneWidget,
+    final Rect open = tester.getRect(
+      find.byKey(const ValueKey<String>('slot-chip-slot-open')),
     );
+    final Rect booked = tester.getRect(
+      find.byKey(const ValueKey<String>('slot-chip-slot-booked')),
+    );
+    expect(open.top, booked.top);
+    expect(open.width, closeTo(booked.width, 0.1));
   });
 
   testWidgets('빈 예약 시간 제목은 트레이너 이름을 그대로 쓴다', (WidgetTester tester) async {
