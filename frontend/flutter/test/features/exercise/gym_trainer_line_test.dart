@@ -2,8 +2,7 @@
 ///
 ///  * 찾기 목록의 헬스장 카드는 그곳 소속 트레이너를 전원 적는다 — 헬스장을
 ///    견주는 자리에서 누가 있는지가 카드 안에서 읽혀야 한다.
-///  * 연결된 내 헬스장 카드는 담당 트레이너를 `연결됨` 배지와 상세보기와 함께
-///    한 줄로 적는다.
+///  * 연결된 내 헬스장 카드는 담당 트레이너와 상세 이동을 한 줄로 적는다.
 ///  * 지도와 목록 사이의 화살표로 목록을 접으면 그 자리를 지도가 받는다.
 library;
 
@@ -105,22 +104,27 @@ void main() {
   }
 
   group('내 헬스장 카드의 담당 트레이너 줄 (#1187)', () {
-    testWidgets('이름·직함과 함께 연결됨·상세보기가 붙는다', (WidgetTester tester) async {
+    testWidgets('이름·직함과 함께 상세 이동 화살표가 붙는다', (WidgetTester tester) async {
       await pumpGymTab(tester);
 
       expect(find.byKey(const Key('gym-trainer-line-mine')), findsOneWidget);
       expect(find.text('김트레이너'), findsWidgets);
       expect(find.text('퍼스널 트레이너'), findsWidgets);
-      // 카드 머리와 트레이너 줄, 두 곳이 `연결됨` 을 말한다.
-      expect(find.text('연결됨'), findsNWidgets(2));
-      expect(find.text('상세보기'), findsOneWidget);
+      // 연결 상태는 카드 머리에서 한 번만 말한다.
+      expect(find.text('연결됨'), findsOneWidget);
+      expect(find.textContaining('상세보기'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('gymTrainerDetailButton')),
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
       // 이미 함께 하는 사람에게 고를 이유를 다시 적지 않는다.
       expect(find.textContaining('추천 이유'), findsNothing);
     });
 
-    testWidgets('연결됨은 이름 옆에, 상세보기는 줄 오른쪽 끝에 선다 (#1267)', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('상세 이동 화살표는 트레이너 줄 오른쪽 끝에 선다', (WidgetTester tester) async {
       await pumpGymTab(tester);
 
       final Finder line = find.byKey(const Key('gym-trainer-line-mine'));
@@ -128,24 +132,14 @@ void main() {
         of: line,
         matching: find.text('김트레이너'),
       );
-      final Finder badge = find.descendant(
-        of: line,
-        matching: find.byKey(const Key('gymTrainerConnectedBadge')),
-      );
       final Finder detail = find.descendant(
         of: line,
         matching: find.byKey(const Key('gymTrainerDetailButton')),
       );
 
-      // 배지는 이름에 붙어 있다 — 남는 폭만큼 떨어져 허공에 뜨지 않는다.
-      final double gap =
-          tester.getTopLeft(badge).dx - tester.getTopRight(name).dx;
-      expect(gap, lessThan(24));
-
-      // 상세보기는 줄 오른쪽 끝. 배지보다 오른쪽이고, 줄 끝과 거의 붙는다.
       expect(
         tester.getTopLeft(detail).dx,
-        greaterThan(tester.getTopRight(badge).dx),
+        greaterThan(tester.getTopRight(name).dx),
       );
       expect(
         tester.getBottomRight(line).dx - tester.getBottomRight(detail).dx,
@@ -153,10 +147,10 @@ void main() {
       );
     });
 
-    testWidgets('상세보기를 누르면 트레이너 상세로 간다', (WidgetTester tester) async {
+    testWidgets('상세 이동 화살표를 누르면 트레이너 상세로 간다', (WidgetTester tester) async {
       await pumpGymTab(tester);
 
-      await tester.tap(find.text('상세보기'));
+      await tester.tap(find.byKey(const Key('gymTrainerDetailButton')));
       await tester.pumpAndSettle();
 
       expect(find.byType(TrainerDetailPage), findsOneWidget);
@@ -166,7 +160,7 @@ void main() {
       await pumpGymTab(tester, myTrainer: null);
 
       expect(find.byKey(const Key('gym-trainer-line-mine')), findsNothing);
-      expect(find.text('상세보기'), findsNothing);
+      expect(find.byKey(const Key('gymTrainerDetailButton')), findsNothing);
     });
   });
 

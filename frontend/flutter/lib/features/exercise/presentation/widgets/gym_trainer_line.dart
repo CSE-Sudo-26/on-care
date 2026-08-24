@@ -11,21 +11,16 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 /// 있었다. 이름과 직함을 한 줄로 적고, 왜 추천하는지는 그 아래 배지로 붙인다.
 ///
 /// 같은 줄을 두 곳이 쓴다 — 헬스장 찾기 목록(소속 트레이너 전원)과 연결된 내
-/// 헬스장 카드(담당 한 명). 뒤쪽은 [connected] 로 `연결됨` 을 달고 [onDetail]
-/// 로 상세로 가는 길을 준다.
+/// 헬스장 카드(담당 한 명). 뒤쪽은 [onDetail]로 상세로 가는 길을 준다.
 class GymTrainerLine extends StatelessWidget {
   const GymTrainerLine({
     required this.trainer,
-    this.connected = false,
     this.showReason = true,
     this.onDetail,
     super.key,
   });
 
   final Trainer trainer;
-
-  /// 내 담당 트레이너인지. 헬스장 카드 머리의 `연결됨` 과 같은 배지를 단다.
-  final bool connected;
 
   /// 추천 이유를 배지로 적을지. 이미 연결된 트레이너에게는 고를 이유를 다시
   /// 말할 자리가 아니라 끈다.
@@ -36,7 +31,7 @@ class GymTrainerLine extends StatelessWidget {
   final VoidCallback? onDetail;
 
   /// 오른쪽에 배지나 버튼이 서는가. 그때는 이름·직함을 두 줄로 쌓는다.
-  bool get stacked => connected || onDetail != null;
+  bool get stacked => onDetail != null;
 
   Widget _name() => Text(
     trainer.name,
@@ -101,22 +96,7 @@ class GymTrainerLine extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          // `연결됨` 은 **이름 바로 오른쪽**에 붙는다 (#1267).
-                          // 오른쪽 끝에 두면 남는 폭만큼 이름에서 멀어져,
-                          // 누가 연결됐다는 말인지 이름과 묶여 읽히지 않았다.
-                          if (connected)
-                            Row(
-                              children: <Widget>[
-                                Flexible(child: _name()),
-                                const SizedBox(width: 6),
-                                _ConnectedBadge(
-                                  key: const Key('gymTrainerConnectedBadge'),
-                                  label: l.exConnected,
-                                ),
-                              ],
-                            )
-                          else
-                            _name(),
+                          _name(),
                           const SizedBox(height: 1),
                           _role(l),
                         ],
@@ -140,23 +120,17 @@ class GymTrainerLine extends StatelessWidget {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
-                    child: TextButton(
-                      key: const Key('gymTrainerDetailButton'),
-                      onPressed: onDetail,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: const Size(0, 32),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        l.exViewDetail,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.primary,
+                    child: Tooltip(
+                      message: l.myTrainerDetailTooltip,
+                      child: TextButton(
+                        key: const Key('gymTrainerDetailButton'),
+                        onPressed: onDetail,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
+                        child: const Icon(Icons.chevron_right, size: 20),
                       ),
                     ),
                   ),
@@ -190,37 +164,4 @@ class GymTrainerLine extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 헬스장 카드 머리의 `연결됨` 과 같은 배지 — 담당 트레이너 줄에도 같은 표시를
-/// 쓴다.
-class _ConnectedBadge extends StatelessWidget {
-  const _ConnectedBadge({required this.label, super.key});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: FigmaColors.primaryA(0.10),
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        const Icon(Icons.check_circle, size: 11, color: FigmaColors.primary),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.primary,
-          ),
-        ),
-      ],
-    ),
-  );
 }

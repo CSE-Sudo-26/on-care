@@ -13,6 +13,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/connected_gym_card.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -136,13 +137,21 @@ class _MyGymSection extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _MyGymCard(
+                ConnectedGymCard(
                   gym: gym,
                   trainer: trainer,
-                  onGymTap: () =>
-                      context.push(AppRoutes.gymDetailPath(gym.id)),
-                  onTrainerChatTap: onTrainerChatTap,
-                  unreadCoachMessages: unreadCoachMessages,
+                  onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onTrainerDetail: trainer == null
+                      ? null
+                      : () => context.push(
+                          AppRoutes.trainerDetailPath(trainer!.id),
+                        ),
+                  footer: onTrainerChatTap == null
+                      ? null
+                      : _TrainerChatButton(
+                          unread: unreadCoachMessages,
+                          onTap: onTrainerChatTap!,
+                        ),
                 ),
                 if (trainer != null) ...<Widget>[
                   const SizedBox(height: 12),
@@ -160,6 +169,8 @@ class _MyGymSection extends StatelessWidget {
   }
 }
 
+// TODO(#1313): remove after the shared card rollout is verified.
+// ignore: unused_element
 class _MyGymCard extends StatelessWidget {
   const _MyGymCard({
     required this.gym,
@@ -271,7 +282,6 @@ class _MyGymCard extends StatelessWidget {
             GymTrainerLine(
               key: const Key('gym-trainer-line-mine'),
               trainer: trainer!,
-              connected: true,
               // 고를 이유가 아니라 이미 함께 하는 사람이다 — 추천 이유는 뺀다.
               showReason: false,
               onDetail: () =>
@@ -441,7 +451,8 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     // 방금 잡은 예약이 '내 예약'에도 나타나야 취소가 걸린다. (#502)
     ref.invalidate(myReservationsProvider);
-    toast.show(l.exReserveConfirmedSlotGym(label, widget.gym.name),
+    toast.show(
+      l.exReserveConfirmedSlotGym(label, widget.gym.name),
       kind: AppToastKind.success,
     );
   }
@@ -488,9 +499,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     // 좌석이 돌아왔으므로 슬롯도 함께 다시 읽는다.
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     ref.invalidate(myReservationsProvider);
-    toast.show(l.exCancelDone(label),
-      kind: AppToastKind.success,
-    );
+    toast.show(l.exCancelDone(label), kind: AppToastKind.success);
   }
 
   @override
