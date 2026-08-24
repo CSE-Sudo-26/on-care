@@ -218,42 +218,39 @@ def _week_completion(hist_rows: list[RoutineHistory], monday: date) -> list[int]
 
 
 def _week_days(
-    hist_rows: list[RoutineHistory], monday: date, week: list[int]
+    rows: list[ExerciseSession], week: list[int]
 ) -> list[WeeklyReportDayOut]:
-    """요일별 이행률 + 그날 배정된 운동(월→일).
+    """요일별 이행률 + 그날 **실제로 한** 운동(월→일).
 
-    같은 날 기록이 여럿이면 이행률과 **같은 기록**의 운동을 쓴다 — 완료율은
-    최댓값을 택하므로, 다른 기록의 운동 목록을 붙이면 화면에서 67% 옆에 3/3
-    이 놓이는 어긋남이 생긴다.
+    운동 이름은 회원의 운동 기록에서 온다 — 배정 목록이 아니다(#1288). 예전에는
+    `routine_history` 를 읽었는데, 그 표에 쓰는 경로는 PT 세션 완료 하나뿐이라
+    PT 한 날 말고는 요일 칸이 늘 비어 있었다. 배정 루틴 수행도 회원이 혼자 한
+    운동도 전부 `exercise_sessions` 로 가므로, 읽을 곳은 여기다.
+
+    **미수행(✗) 표시를 붙이지 않는다.** 배정에는 날짜가 없어 — `exercise_date`
+    를 채우는 생성 경로가 없고 회원 목록에도 날짜 필터가 없다 — "그날 배정됐는데
+    안 했다" 를 만들 수 없다. 그날 남은 기록만 적는다.
+
+    [rows] 는 한 주치 기록이다. 운동 기록은 날짜가 아니라 (그 주 월요일, 요일)
+    로 저장되므로 요일 라벨만으로 자리가 정해진다.
     """
-    best: dict[str, RoutineHistory] = {}
-    for h in hist_rows:
-        current = best.get(h.date)
-        if current is None or h.completion_rate > current.completion_rate:
-            best[h.date] = h
-    out: list[WeeklyReportDayOut] = []
-    for i in range(7):
-        row = best.get((monday + timedelta(days=i)).isoformat())
-        out.append(
-            WeeklyReportDayOut(
-                completion=week[i] if i < len(week) else 0,
-                exercises=_exercise_names(row),
-            )
+    by_weekday: dict[int, list[str]] = {}
+    for row in rows:
+        if row.day_label not in exercise_service.WEEKDAY_LABELS:
+            continue
+        # 이름이 빈 기록은 그 컬럼이 생기기 전(#1276)의 것이다. 유형 라벨이라도
+        # 적어야 그날 무엇을 했는지가 칸에서 통째로 사라지지 않는다.
+        name = (row.name or "").strip() or exercise_types.normalize_ko(row.type)
+        by_weekday.setdefault(
+            exercise_service.WEEKDAY_LABELS.index(row.day_label), []
+        ).append(name)
+    return [
+        WeeklyReportDayOut(
+            completion=week[i] if i < len(week) else 0,
+            exercises=by_weekday.get(i, []),
         )
-    return out
-
-
-def _exercise_names(row: RoutineHistory | None) -> list[str]:
-    """저장된 운동 목록을 방어적으로 디코드. 깨진 값은 빈 목록으로."""
-    if row is None or not row.exercises_json:
-        return []
-    try:
-        names = json.loads(row.exercises_json)
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(names, list):
-        return []
-    return [n for n in names if isinstance(n, str)]
+        for i in range(7)
+    ]
 
 
 def _latest_by_member(db: Session, model, trainer_id: str, member_ids: list[str]):
@@ -3812,7 +3809,19 @@ def build_weekly_report(
         )
     ).all()
     week = _week_completion(hist, monday)
-    days = _week_days(hist, monday, week)
+    # 요일 칸은 회원의 실제 운동 기록에서 만든다(#1288). 기록이 (그 주 월요일,
+    # 요일) 로 저장되므로 월요일 하나로 한 주가 그대로 걸린다.
+    exercise_rows = db.scalars(
+        select(ExerciseSession)
+        .where(
+            ExerciseSession.user_id == member_id,
+            ExerciseSession.week_start == monday_str,
+        )
+        # 한 날에 여럿이면 한 순서로 적는다 — 정렬을 두지 않으면 같은 주를 두 번
+        # 열 때 칸 안의 줄 순서가 바뀐다.
+        .order_by(ExerciseSession.completed_at, ExerciseSession.id)
+    ).all()
+    days = _week_days(list(exercise_rows), week)
     recorded = [d for d in week if d > 0]
     # 기록이 하나도 없으면 null — 0% 로 보고하면 "아무것도 안 했다"는 거짓말이 된다.
     completion_avg = round(sum(recorded) / len(recorded)) if recorded else None

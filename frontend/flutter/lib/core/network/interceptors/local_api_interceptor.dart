@@ -1729,8 +1729,18 @@ class LocalApiInterceptor extends Interceptor {
       'weight_kg',
       'conditions',
       'goals',
+      // 목표 열 칸은 PUT /users/me/health-goals 가 쓰는 열과 같다 — 온보딩이
+      // 채운 값을 MY 건강 목표가 그대로 이어 고친다.
       'daily_calories',
       'daily_sodium_mg',
+      'daily_sugar_g',
+      'daily_carbs_g',
+      'daily_protein_g',
+      'daily_fat_g',
+      'daily_burn_kcal',
+      'weekly_cardio_minutes',
+      'weekly_strength_sets',
+      'weekly_flexibility_minutes',
     ]) {
       if (body[k] != null) patch[k] = body[k];
     }

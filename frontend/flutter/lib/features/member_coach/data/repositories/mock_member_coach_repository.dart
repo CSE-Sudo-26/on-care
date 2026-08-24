@@ -52,9 +52,8 @@ class MockMemberCoachRepository implements MemberCoachRepository {
       ),
   ];
 
-  /// 시드 메시지 정렬 기준점. 날짜 자체에는 의미가 없다 — 화면에 나오는 것은
-  /// `timeLabel` 이고, 이 값은 순서를 고정하는 용도다.
-  static final DateTime _seedEpoch = DateTime.utc(2026);
+  /// 트레이너 웹의 김민수 스레드와 공유하는 실제 날짜 기준점.
+  static final DateTime _seedEpoch = DateTime(2026);
 
   /// 담당 트레이너와의 대화 — **이미 진행 중인** 코칭의 사흘치 토막.
   ///
@@ -179,8 +178,16 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     sender: sender,
     body: body,
     timeLabel: timeLabel,
-    createdAt: _seedEpoch.add(Duration(days: day, minutes: index)),
+    createdAt: _seedEpoch.add(
+      Duration(days: day, minutes: _minutesOfDay(timeLabel)),
+    ),
   );
+
+  static int _minutesOfDay(String timeLabel) {
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeLabel);
+    if (match == null) throw FormatException('Invalid chat time: $timeLabel');
+    return int.parse(match.group(1)!) * 60 + int.parse(match.group(2)!);
+  }
 
   bool _read = false;
 
