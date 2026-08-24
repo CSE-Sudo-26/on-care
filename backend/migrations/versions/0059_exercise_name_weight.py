@@ -19,8 +19,8 @@
 화면 문구만이 아니라 저장값까지 그 말로 옮겼다. 0053 이 반대 방향으로 접었던
 것을 되돌리는 셈이다.
 
-Revision ID: 0058_exercise_name_weight
-Revises: 0057_exercise_session_sets
+Revision ID: 0059_exercise_name_weight
+Revises: 0058_reservation_slot_duration
 """
 from __future__ import annotations
 
@@ -29,8 +29,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0058_exercise_name_weight"
-down_revision: str | Sequence[str] | None = "0057_exercise_session_sets"
+revision: str = "0059_exercise_name_weight"
+down_revision: str | Sequence[str] | None = "0058_reservation_slot_duration"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
