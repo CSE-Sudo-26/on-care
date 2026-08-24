@@ -5882,11 +5882,23 @@ abstract class AppLocalizations {
   /// **'{days} days logged'**
   String reportsRecordedDays(int days);
 
-  /// No description provided for @reportsAverageChip.
+  /// No description provided for @reportsAdherenceChip.
   ///
   /// In en, this message translates to:
-  /// **'Avg {value}'**
-  String reportsAverageChip(String value);
+  /// **'Adherence avg {value}'**
+  String reportsAdherenceChip(String value);
+
+  /// No description provided for @reportsBurnByDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly calories burned'**
+  String get reportsBurnByDay;
+
+  /// No description provided for @reportsBurnEstimateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories burned are estimated from workout type, duration, and intensity.'**
+  String get reportsBurnEstimateNote;
 
   /// No description provided for @chartGoalLabel.
   ///
