@@ -328,7 +328,9 @@ void main() {
       final repo = DriftScheduleRepository(db);
       // A PAST session — completing it retro-logs the class. Future
       // sessions can't be completed (see the next test).
-      final yesterday = nowKst().subtract(const Duration(days: 1));
+      // 이번 주는 데모 일정으로 채워져 있다. 실행 요일에 따라 어제가 시드와
+      // 겹치지 않도록, 항상 시드 주간 밖의 지난 날짜를 쓴다.
+      final yesterday = nowKst().subtract(const Duration(days: 14));
       await repo.addSession(
         date: ymd(yesterday),
         clientName: '이지수',
