@@ -3461,7 +3461,7 @@ abstract class AppLocalizations {
   /// Section label in the health goals sheet.
   ///
   /// In en, this message translates to:
-  /// **'Daily diet goals'**
+  /// **'Diet goals'**
   String get myGoalsDietSection;
 
   /// Section label in the health goals sheet.

@@ -1874,7 +1874,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHealthGoalsTitle => 'Health goals';
 
   @override
-  String get myGoalsDietSection => 'Daily diet goals';
+  String get myGoalsDietSection => 'Diet goals';
 
   @override
   String get myGoalsExerciseSection => 'Exercise goals';

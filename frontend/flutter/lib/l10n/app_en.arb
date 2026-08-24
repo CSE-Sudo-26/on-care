@@ -1021,7 +1021,7 @@
   "@myHealthGoalsTitle": {
     "description": "Title of the health goals sheet."
   },
-  "myGoalsDietSection": "Daily diet goals",
+  "myGoalsDietSection": "Diet goals",
   "@myGoalsDietSection": {
     "description": "Section label in the health goals sheet."
   },

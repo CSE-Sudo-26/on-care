@@ -1820,7 +1820,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myHealthGoalsTitle => '건강 목표';
 
   @override
-  String get myGoalsDietSection => '식단 일일 목표';
+  String get myGoalsDietSection => '식단 목표';
 
   @override
   String get myGoalsExerciseSection => '운동 목표';
