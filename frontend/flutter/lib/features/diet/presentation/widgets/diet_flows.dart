@@ -1057,7 +1057,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     final String? id = widget.meal.id;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     if (id == null) {
       navigator.pop();
       return;
@@ -1089,10 +1089,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
-      showAppToastVia(messenger, l.dietSaved, kind: AppToastKind.success);
+      toast.show(l.dietSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      showAppToastVia(messenger, l.dietSaveFailed, kind: AppToastKind.error);
+      toast.show(l.dietSaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1128,7 +1128,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     if (!ok || !mounted) return;
 
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _busy = true);
     try {
       await ref.read(dietRepositoryProvider).deleteEntry(id);
@@ -1139,10 +1139,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
-      showAppToastVia(messenger, l.dietDeleted, kind: AppToastKind.success);
+      toast.show(l.dietDeleted, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      showAppToastVia(messenger, l.dietDeleteFailed, kind: AppToastKind.error);
+      toast.show(l.dietDeleteFailed, kind: AppToastKind.error);
     }
   }
 

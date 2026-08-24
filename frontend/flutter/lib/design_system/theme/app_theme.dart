@@ -37,7 +37,11 @@ class AppTheme {
     backgroundColor: AppColors.card,
   );
 
-  /// 토스트를 **떠 있는 형태**로 고정한다. (#1259)
+  /// `SnackBar` 을 **떠 있는 형태**로 고정한다. (#1259)
+  ///
+  /// 앱이 띄우는 알림은 [showAppToast] 로 화면 위쪽 오버레이에 뜬다. 이 테마는
+  /// 그 헬퍼를 거치지 않은 `showSnackBar` 호출을 위한 **그물**이다 — 기본값
+  /// 그대로 두면 아래에서 `+` 버튼과 겹치기 때문이다.
   ///
   /// Material 기본값(`SnackBarBehavior.fixed`)은 토스트를 하단 내비게이션 바
   /// 위에 각진 채로 붙인다. 그런데 이 앱의 `+` 버튼은 `Scaffold` 의 FAB 이
@@ -48,9 +52,6 @@ class AppTheme {
   /// 떠 있는 형태는 바 위젯 **전체**(= `+` 버튼까지)를 비켜서 놓이므로 셸 안팎
   /// 어디서 띄우든 자리가 맞는다 — 하단 바가 없는 로그인·온보딩 화면에서는
   /// 화면 아래 끝에서 [AppToastStyle.bottomGap] 만큼만 떨어진다.
-  ///
-  /// 호출부가 [showAppToast] 를 거치지 않고 `showSnackBar` 를 직접 불러도 이
-  /// 값이 적용된다 — 테마에 두는 까닭이 그것이다.
   static const SnackBarThemeData _snackBarTheme = SnackBarThemeData(
     behavior: SnackBarBehavior.floating,
     backgroundColor: AppToastStyle.background,

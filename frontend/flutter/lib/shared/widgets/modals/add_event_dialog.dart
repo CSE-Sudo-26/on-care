@@ -147,14 +147,12 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
 
   Future<void> _submit() async {
     if (_saving) return;
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     final title = _title.text.trim();
     // 날짜는 피커가 늘 채우므로 제목만 확인하면 된다.
     if (title.isEmpty) {
-      showAppToastVia(
-        messenger,
-        l.eventTitleRequired,
+      toast.show(l.eventTitleRequired,
         kind: AppToastKind.error,
       );
       return;
@@ -189,9 +187,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
       Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      showAppToastVia(
-        messenger,
-        _isEdit ? l.eventEditFailed : l.eventAddFailed,
+      toast.show(_isEdit ? l.eventEditFailed : l.eventAddFailed,
         kind: AppToastKind.error,
       );
     }

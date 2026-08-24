@@ -139,17 +139,17 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final int minutes = _minutes.round();
     if (minutes <= 0) {
-      showAppToastVia(messenger, l.exEnterDuration, kind: AppToastKind.error);
+      toast.show(l.exEnterDuration, kind: AppToastKind.error);
       return;
     }
     final ExerciseType type = _typeFromIndex(_type);
     final ExerciseSession? editing = widget.session;
     if (editing != null && editing.id == null) {
       // No id → PUT impossible; don't silently create a duplicate session.
-      showAppToastVia(messenger, l.exCannotEdit, kind: AppToastKind.error);
+      toast.show(l.exCannotEdit, kind: AppToastKind.error);
       return;
     }
     // Intensity is persisted now, so always recompute calories from the
@@ -185,14 +185,12 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       if (!mounted) return;
       ref.invalidate(exerciseWeekProvider);
       navigator.pop();
-      showAppToastVia(
-        messenger,
-        widget.isEdit ? l.exUpdated : l.exLogged,
+      toast.show(widget.isEdit ? l.exUpdated : l.exLogged,
         kind: AppToastKind.success,
       );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      showAppToastVia(messenger, l.exSaveFailed, kind: AppToastKind.error);
+      toast.show(l.exSaveFailed, kind: AppToastKind.error);
     }
   }
 

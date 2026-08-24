@@ -93,7 +93,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _finish() async {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _saving = true);
     try {
       final birth = _birthDate.text.trim();
@@ -113,7 +113,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      showAppToastVia(messenger, l.onboardSaveFailed, kind: AppToastKind.error);
+      toast.show(l.onboardSaveFailed, kind: AppToastKind.error);
     }
   }
 

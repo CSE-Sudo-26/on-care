@@ -88,7 +88,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
 
   Future<void> _delete(ScheduleEvent event) async {
     if (_deleting != null) return;
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     // 되돌릴 수 없으므로 확인을 한 번 받는다.
     final bool ok =
@@ -123,7 +123,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _deleting = null);
-      showAppToastVia(messenger, l.eventDeleteFailed, kind: AppToastKind.error);
+      toast.show(l.eventDeleteFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -132,7 +132,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
       _deleting = null;
       _events.removeWhere((ScheduleEvent e) => e.id == event.id);
     });
-    showAppToastVia(messenger, l.eventDeleted, kind: AppToastKind.success);
+    toast.show(l.eventDeleted, kind: AppToastKind.success);
   }
 
   Future<void> _add() async {

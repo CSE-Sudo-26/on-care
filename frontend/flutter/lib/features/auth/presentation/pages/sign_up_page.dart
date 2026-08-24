@@ -48,31 +48,25 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Future<void> _register() async {
     if (_loading) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final name = _name.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
     final confirm = _passwordConfirm.text;
     if (email.isEmpty || password.isEmpty) {
-      showAppToastVia(
-        messenger,
-        l.authMissingCredentials,
+      toast.show(l.authMissingCredentials,
         kind: AppToastKind.error,
       );
       return;
     }
     if (password.length < 8) {
-      showAppToastVia(
-        messenger,
-        l.signUpPasswordTooShort,
+      toast.show(l.signUpPasswordTooShort,
         kind: AppToastKind.error,
       );
       return;
     }
     if (password != confirm) {
-      showAppToastVia(
-        messenger,
-        l.signUpPasswordMismatch,
+      toast.show(l.signUpPasswordMismatch,
         kind: AppToastKind.error,
       );
       return;
@@ -91,10 +85,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       final msg = e.response?.statusCode == 409
           ? l.signUpEmailTaken
           : l.signUpFailed;
-      showAppToastVia(messenger, msg, kind: AppToastKind.error);
+      toast.show(msg, kind: AppToastKind.error);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      showAppToastVia(messenger, l.signUpFailed, kind: AppToastKind.error);
+      toast.show(l.signUpFailed, kind: AppToastKind.error);
     }
   }
 

@@ -40,13 +40,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Future<void> _login() async {
     if (_loading) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      showAppToastVia(
-        messenger,
-        l.authMissingCredentials,
+      toast.show(l.authMissingCredentials,
         kind: AppToastKind.error,
       );
       return;
@@ -61,14 +59,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      showAppToastVia(messenger, l.authSignInFailed, kind: AppToastKind.error);
+      toast.show(l.authSignInFailed, kind: AppToastKind.error);
     }
   }
 
   Future<void> _social(String provider) async {
     final AppLocalizations l = AppLocalizations.of(context);
     if (_loading) return;
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _loading = true);
     try {
       // 실기기 SDK(kakao/google) 연동 전까지는 데모 토큰을 보낸다. 실서버
@@ -80,9 +78,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      showAppToastVia(
-        messenger,
-        l.authSocialSignInFailed,
+      toast.show(l.authSocialSignInFailed,
         kind: AppToastKind.error,
       );
     }

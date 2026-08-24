@@ -65,7 +65,7 @@ class _CoachInviteCardState extends ConsumerState<CoachInviteCard> {
     // 동의는 수락에만 필요하다 — 거절은 아무것도 열지 않는다.
     if (accept && !await _confirmConsent(invite)) return;
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _busy = true);
     try {
       final repository = ref.read(memberCoachRepositoryProvider);
@@ -84,16 +84,14 @@ class _CoachInviteCardState extends ConsumerState<CoachInviteCard> {
           ..invalidate(coachSessionsProvider);
       }
       if (!mounted) return;
-      showAppToastVia(
-        messenger,
-        accept
+      toast.show(accept
             ? l.coachInviteAccepted(invite.trainerName)
             : l.coachInviteRejected,
         kind: AppToastKind.success,
       );
     } on AppError {
       if (!mounted) return;
-      showAppToastVia(messenger, l.coachInviteFailed, kind: AppToastKind.error);
+      toast.show(l.coachInviteFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

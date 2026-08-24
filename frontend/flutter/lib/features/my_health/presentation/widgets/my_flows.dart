@@ -414,7 +414,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _saving = true);
     try {
       await ref
@@ -433,10 +433,10 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
       if (!mounted) return;
       ref.invalidate(profileProvider);
       navigator.pop();
-      showAppToastVia(messenger, l.myProfileSaved, kind: AppToastKind.success);
+      toast.show(l.myProfileSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      showAppToastVia(messenger, l.mySaveFailed, kind: AppToastKind.error);
+      toast.show(l.mySaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -697,7 +697,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _saving = true);
     try {
       final UserProfile updatedProfile = await ref
@@ -721,14 +721,13 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
       ref.invalidate(dashboardSummaryProvider);
       navigator.pop();
-      // 시트를 닫은 **뒤에** 뜨는 알림이라 messenger 를 미리 잡아 두고 쓴다.
-      // 예전에는 이 자리만 위쪽 배너로 따로 떠 있었다 — 하단 토스트가 `+`
-      // 버튼과 겹치는 것을 이 화면에서만 피하려던 우회였다(#1259). 토스트가
-      // 바를 비키게 된 지금은 다른 화면과 같은 방식으로 알린다.
-      showAppToastVia(messenger, l.myGoalsSaved, kind: AppToastKind.success);
+      // 시트를 닫은 **뒤에** 뜨는 알림이라 손잡이를 미리 잡아 두고 쓴다.
+      // 예전에는 이 자리만 위쪽 배너로 따로 떠 있었다 — 닫기 버튼을 눌러야
+      // 사라지는 배너였다(#1259). 지금은 다른 화면과 같은 토스트로 알린다.
+      toast.show(l.myGoalsSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      showAppToastVia(messenger, l.mySaveFailed, kind: AppToastKind.error);
+      toast.show(l.mySaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1008,7 +1007,7 @@ class _NotificationSettingsPageState
     final int seq = (_requestSeq[key] ?? 0) + 1;
     _requestSeq[key] = seq;
     setState(() => _local[key] = value);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref
@@ -1022,9 +1021,7 @@ class _NotificationSettingsPageState
       // 되돌릴 곳은 **직전 값**이지 최초 조회값이 아니다. 한 번 저장에 성공한 뒤
       // 다음 저장이 실패하면 최초값으로 돌아가 서버와 어긋난다(리뷰).
       setState(() => _local[key] = previous);
-      showAppToastVia(
-        messenger,
-        l.myNotificationSaveFailed,
+      toast.show(l.myNotificationSaveFailed,
         kind: AppToastKind.error,
       );
     }
@@ -1142,7 +1139,7 @@ class SupportPage extends StatelessWidget {
 /// 앱이 없을 때, 사용자는 앱이 고장 난 것으로 읽는다. (#507)
 Future<void> _openExternal(BuildContext context, String url) async {
   final AppLocalizations l = AppLocalizations.of(context);
-  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  final AppToastHost toast = AppToastHost.of(context);
   bool opened = false;
   try {
     opened = await launchUrl(
@@ -1155,7 +1152,7 @@ Future<void> _openExternal(BuildContext context, String url) async {
     opened = false;
   }
   if (!opened) {
-    showAppToastVia(messenger, l.mySupportOpenFailed, kind: AppToastKind.error);
+    toast.show(l.mySupportOpenFailed, kind: AppToastKind.error);
   }
 }
 

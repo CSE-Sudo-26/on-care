@@ -142,17 +142,15 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
     if (_sending) return;
     final text = _input.text.trim();
     if (text.isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
+    // 문구와 같이 await 전에 잡아 둔다.
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     setState(() => _sending = true);
     try {
       await ref.read(memberCoachRepositoryProvider).sendMessage(text);
     } catch (_) {
       if (!mounted) return;
-      showAppToastVia(
-        messenger,
-        l.coachChatSendFailed,
+      toast.show(l.coachChatSendFailed,
         kind: AppToastKind.error,
       );
       return;
@@ -522,7 +520,7 @@ class _Bubble extends ConsumerWidget {
     CoachAttachment attachment,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     try {
       final bytes = await ref
           .read(chatPdfRepositoryProvider)
@@ -543,9 +541,7 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      showAppToastVia(
-        messenger,
-        l.coachChatPdfOpenFailed,
+      toast.show(l.coachChatPdfOpenFailed,
         kind: AppToastKind.error,
       );
     }

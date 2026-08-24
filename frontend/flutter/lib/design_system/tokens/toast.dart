@@ -29,8 +29,17 @@ class AppToastStyle {
 
   static const double maxWidth = 560;
 
-  /// 토스트가 화면 아래 끝(또는 하단 내비게이션 바)에서 떨어지는 거리.
+  /// 토스트가 상태바 아래에서 떨어지는 거리.
+  static const double topGap = AppSpacing.md;
+
+  /// 헬퍼를 거치지 않은 `SnackBar` 이 화면 아래 끝(또는 하단 내비게이션 바)에서
+  /// 떨어지는 거리. 앱이 띄우는 알림은 [showAppToast] 로 위쪽에 뜨고, 이 값은
+  /// 그 그물에만 쓰인다.
   static const double bottomGap = AppSpacing.md;
+
+  static const Duration enterDuration = Duration(milliseconds: 220);
+
+  static const Duration exitDuration = Duration(milliseconds: 180);
 
   static const Duration duration = Duration(seconds: 2);
 

@@ -69,8 +69,8 @@ Future<void> _tapSave(WidgetTester tester) async {
 
 void main() {
   // 건강 목표 저장 알림은 시트를 닫은 **뒤에** 도착한다. 예전에는 이 자리만
-  // 위쪽 배너로 떴는데, 하단 토스트가 `+` 버튼과 겹치는 것을 이 화면에서만
-  // 피하려던 우회였다(#1259). 지금은 다른 화면과 같은 토스트로 알린다.
+  // 위쪽 배너로 떠서 닫기 버튼을 눌러야 사라졌다(#1259). 지금은 다른 화면과
+  // 같은 토스트로 알린다.
   testWidgets('저장 성공 알림은 이전 화면에서 토스트로 뜬다', (tester) async {
     await _openHealthGoals(tester, MockAccountRepository());
 
@@ -78,16 +78,15 @@ void main() {
 
     expect(find.text('건강 목표가 저장되었어요'), findsOneWidget);
     expect(find.byType(MaterialBanner), findsNothing);
-    expect(find.byType(SnackBar), findsOneWidget);
-    // 아래쪽에 떠 있어야 한다 — 위쪽 배너로 되돌아가면 여기서 걸린다.
+    // 위쪽에 뜬다 — 아래로 되돌아가면 시트·하단 바에 가리므로 여기서 걸린다.
     final Size screen = tester.view.physicalSize / tester.view.devicePixelRatio;
     expect(
-      tester.getTopLeft(find.byType(SnackBar)).dy,
-      greaterThan(screen.height / 2),
+      tester.getRect(find.text('건강 목표가 저장되었어요')).center.dy,
+      lessThan(screen.height / 4),
     );
     expect(find.text('식단 일일 목표'), findsNothing);
 
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
 
@@ -98,10 +97,9 @@ void main() {
 
     expect(find.text('저장에 실패했어요. 잠시 후 다시 시도해 주세요'), findsOneWidget);
     expect(find.byType(MaterialBanner), findsNothing);
-    expect(find.byType(SnackBar), findsOneWidget);
     expect(find.text('식단 일일 목표'), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
 }

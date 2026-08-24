@@ -727,14 +727,14 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
 
   Future<void> _reserve(AppLocalizations l, TrainerSlot slot) async {
     if (_reserving != null) return;
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final String label = _when(context, l, slot.startsAt);
     setState(() => _reserving = slot.id);
     try {
       await ref.read(gymRepositoryProvider).reserve(slot.id);
     } catch (_) {
       if (mounted) setState(() => _reserving = null);
-      showAppToastVia(messenger, l.exReserveFailed, kind: AppToastKind.error);
+      toast.show(l.exReserveFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -743,9 +743,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     // 방금 잡은 예약이 '내 예약'에도 나타나야 취소가 걸린다. (#502)
     ref.invalidate(myReservationsProvider);
-    showAppToastVia(
-      messenger,
-      l.exReserveConfirmedSlotGym(label, widget.gym.name),
+    toast.show(l.exReserveConfirmedSlotGym(label, widget.gym.name),
       kind: AppToastKind.success,
     );
   }
@@ -756,7 +754,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
   /// 다른 회원이 잡을 수 있다. (#502)
   Future<void> _cancel(AppLocalizations l, MyReservation reservation) async {
     if (_reserving != null || _cancelling != null) return;
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final String label = _when(context, l, reservation.startsAt);
     final bool? ok = await showDialog<bool>(
       context: context,
@@ -784,7 +782,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
       await ref.read(gymRepositoryProvider).cancelReservation(reservation.id);
     } catch (_) {
       if (mounted) setState(() => _cancelling = null);
-      showAppToastVia(messenger, l.exCancelFailed, kind: AppToastKind.error);
+      toast.show(l.exCancelFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -792,9 +790,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     // 좌석이 돌아왔으므로 슬롯도 함께 다시 읽는다.
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     ref.invalidate(myReservationsProvider);
-    showAppToastVia(
-      messenger,
-      l.exCancelDone(label),
+    toast.show(l.exCancelDone(label),
       kind: AppToastKind.success,
     );
   }
