@@ -946,10 +946,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultNoPending => '대기 중인 요청이 없어요';
 
   @override
-  String get consultShowAll => '전체 보기';
+  String get consultFilterAll => '전체';
 
   @override
-  String get consultShowPending => '대기 중만';
+  String consultFilterPendingCount(int count) {
+    return '대기 $count';
+  }
 
   @override
   String get consultLoadMore => '지난 요청 더 보기';
@@ -981,10 +983,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejected => '상담 요청을 거절했어요';
 
   @override
+  String consultScheduleConflict(String name, String time) {
+    return '$name님 $time 일정과 겹쳐요';
+  }
+
+  @override
+  String get consultDecisionNote => '거절 사유';
+
+  @override
   String get consultTargetTrainer => '트레이너 지정';
 
   @override
   String get consultExerciseGoal => '운동 목표';
+
+  @override
+  String get consultHealthPurpose => '건강관리 목적';
 
   @override
   String get consultPreferredTime => '희망 일시';
@@ -1011,7 +1024,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectAction => '거절하기';
 
   @override
-  String get consultStatusApproved => '담당 고객으로 등록됨';
+  String get consultStatusPending => '대기중';
+
+  @override
+  String get consultStatusAccepted => '승인됨';
 
   @override
   String get workoutRecords => '운동 기록';
@@ -1129,11 +1145,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get consultStatusRejected => '거절됨';
-
-  @override
-  String consultStatusRejectedWithNote(String note) {
-    return '거절됨 · $note';
-  }
 
   @override
   String get dateToday => '오늘';

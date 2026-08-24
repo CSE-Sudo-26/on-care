@@ -42,12 +42,19 @@ class _FakeConsultationRepository implements ConsultationRepository {
   _FakeConsultationRepository({
     List<ConsultationRequest>? requests,
     this.failure,
+    this.acceptConflict,
   }) : requests = requests ?? <ConsultationRequest>[];
 
   List<ConsultationRequest> requests;
   final AppError? failure;
 
+  /// Set to make the next [accept] fail with a schedule conflict instead
+  /// of succeeding.
+  final ConsultationScheduleConflictError? acceptConflict;
+
   final List<String> accepted = <String>[];
+  final List<ConsultationSchedule?> acceptedSchedules =
+      <ConsultationSchedule?>[];
   final List<(String, String?)> rejected = <(String, String?)>[];
 
   @override
@@ -103,7 +110,9 @@ class _FakeConsultationRepository implements ConsultationRepository {
 
   @override
   Future<void> accept(String id, {ConsultationSchedule? schedule}) async {
+    if (acceptConflict != null) throw acceptConflict!;
     accepted.add(id);
+    acceptedSchedules.add(schedule);
     requests = requests
         .map((r) => r.id == id ? _request(id: id, status: 'accepted') : r)
         .toList();
@@ -214,6 +223,33 @@ void main() {
     await settle(tester);
 
     expect(repo.accepted, <String>['consult-1']);
+    // 희망 시각(`evening`)은 정확한 시간이 아니라 기본값(10:00)으로
+    // 잡는다 — 희망 일시로 실제 스케줄을 만드는 배선이 살아 있는지 본다.
+    final ConsultationSchedule? schedule = repo.acceptedSchedules.single;
+    expect(schedule?.date, '2026-08-12');
+    expect(schedule?.time, '10:00');
+    expect(schedule?.type, '상담');
+    expect(schedule?.durationMinutes, 30);
+  });
+
+  testWidgets('승인이 겹치면 스낵바 대신 버튼 옆에 인라인으로 안내한다', (tester) async {
+    final repo = _FakeConsultationRepository(
+      requests: <ConsultationRequest>[_request()],
+      acceptConflict: const ConsultationScheduleConflictError(
+        clientName: '이지수',
+        time: '10:00',
+      ),
+    );
+    await _pumpInbox(tester, repo);
+
+    await tester.tap(find.text('승인'));
+    await settle(tester);
+
+    expect(repo.accepted, isEmpty);
+    expect(find.textContaining('이지수'), findsOneWidget);
+    expect(find.textContaining('10:00'), findsOneWidget);
+    // 요청은 여전히 대기 중이라 승인·거절 버튼이 남아 있다.
+    expect(find.text('승인'), findsOneWidget);
   });
 
   for (final entry in <(String, String)>[
@@ -265,10 +301,12 @@ void main() {
     );
     await _pumpInbox(tester, repo);
     // 처리된 건은 '전체' 필터에서만 보인다.
-    await tester.tap(find.text('전체 보기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultation-filter-all')),
+    );
     await settle(tester);
 
-    expect(find.text('담당 고객으로 등록됨'), findsOneWidget);
+    expect(find.text('승인됨'), findsOneWidget);
     expect(find.text('승인'), findsNothing);
   });
 

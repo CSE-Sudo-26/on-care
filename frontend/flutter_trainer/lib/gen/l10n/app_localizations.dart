@@ -1808,17 +1808,17 @@ abstract class AppLocalizations {
   /// **'No pending requests'**
   String get consultNoPending;
 
-  /// No description provided for @consultShowAll.
+  /// No description provided for @consultFilterAll.
   ///
   /// In en, this message translates to:
   /// **'All'**
-  String get consultShowAll;
+  String get consultFilterAll;
 
-  /// No description provided for @consultShowPending.
+  /// No description provided for @consultFilterPendingCount.
   ///
   /// In en, this message translates to:
-  /// **'Pending only'**
-  String get consultShowPending;
+  /// **'Pending {count}'**
+  String consultFilterPendingCount(int count);
 
   /// No description provided for @consultLoadMore.
   ///
@@ -1874,6 +1874,18 @@ abstract class AppLocalizations {
   /// **'Request declined'**
   String get consultRejected;
 
+  /// No description provided for @consultScheduleConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlaps {name}\'s {time} session'**
+  String consultScheduleConflict(String name, String time);
+
+  /// No description provided for @consultDecisionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get consultDecisionNote;
+
   /// No description provided for @consultTargetTrainer.
   ///
   /// In en, this message translates to:
@@ -1885,6 +1897,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Training goal'**
   String get consultExerciseGoal;
+
+  /// No description provided for @consultHealthPurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Health management purpose'**
+  String get consultHealthPurpose;
 
   /// No description provided for @consultPreferredTime.
   ///
@@ -1934,11 +1952,17 @@ abstract class AppLocalizations {
   /// **'Decline'**
   String get consultRejectAction;
 
-  /// No description provided for @consultStatusApproved.
+  /// No description provided for @consultStatusPending.
   ///
   /// In en, this message translates to:
-  /// **'Added as a client'**
-  String get consultStatusApproved;
+  /// **'Pending'**
+  String get consultStatusPending;
+
+  /// No description provided for @consultStatusAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get consultStatusAccepted;
 
   /// No description provided for @workoutRecords.
   ///
@@ -2149,12 +2173,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Declined'**
   String get consultStatusRejected;
-
-  /// No description provided for @consultStatusRejectedWithNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Declined · {note}'**
-  String consultStatusRejectedWithNote(String note);
 
   /// No description provided for @dateToday.
   ///
