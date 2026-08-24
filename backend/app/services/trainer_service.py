@@ -2765,13 +2765,17 @@ def series_occurrences(
     return out
 
 
-def _conflicting_sessions(
+def conflicting_sessions(
     db: Session, trainer_id: str, slots: Sequence[tuple[str, str]]
 ) -> list[ScheduleSessionOut]:
     """[slots]((date, time) 쌍)과 같은 자리에 이미 있는 세션.
 
     취소·노쇼는 겹침이 아니다 — 그 시간은 비어 있다(#871). 공백 슬롯도 마찬가지로
     "빈 시간" 이라는 표시일 뿐이라 자리를 차지하지 않는다.
+
+    반복 생성 미리보기(`preview_recurring_sessions`)뿐 아니라 상담 승인
+    (`consultation_service.accept`)도 같은 겹침 판정을 쓴다 — 한 슬롯짜리 목록을
+    넘기면 단발 겹침 검사로도 쓸 수 있다.
     """
     if not slots:
         return []
@@ -2810,7 +2814,7 @@ def preview_recurring_sessions(
         until=None if until is None else date.fromisoformat(until),
     )
     iso = [day.isoformat() for day in dates]
-    return iso, _conflicting_sessions(db, trainer_id, [(day, time) for day in iso])
+    return iso, conflicting_sessions(db, trainer_id, [(day, time) for day in iso])
 
 
 def create_recurring_sessions(
@@ -2864,7 +2868,7 @@ def create_recurring_sessions(
         raise ScheduleError("반복할 요일과 종료 기준을 지정해 주세요.")
 
     iso = [day.isoformat() for day in dates]
-    conflicts = _conflicting_sessions(db, trainer_id, [(day, time) for day in iso])
+    conflicts = conflicting_sessions(db, trainer_id, [(day, time) for day in iso])
     if conflicts:
         raise ScheduleSeriesConflict(conflicts)
 

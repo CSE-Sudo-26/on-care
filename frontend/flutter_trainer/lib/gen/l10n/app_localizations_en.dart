@@ -983,10 +983,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultNoPending => 'No pending requests';
 
   @override
-  String get consultShowAll => 'All';
+  String get consultFilterAll => 'All';
 
   @override
-  String get consultShowPending => 'Pending only';
+  String consultFilterPendingCount(int count) {
+    return 'Pending $count';
+  }
 
   @override
   String get consultLoadMore => 'Load earlier requests';
@@ -1017,6 +1019,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get consultRejected => 'Request declined';
+
+  @override
+  String consultScheduleConflict(String name, String time) {
+    return 'Overlaps $name\'s $time session';
+  }
+
+  @override
+  String get consultDecisionNote => 'Reason';
 
   @override
   String get consultTargetTrainer => 'Direct request';
@@ -1054,7 +1064,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultRejectAction => 'Decline';
 
   @override
-  String get consultStatusApproved => 'Added as a client';
+  String get consultStatusPending => 'Pending';
+
+  @override
+  String get consultStatusAccepted => 'Approved';
 
   @override
   String get workoutRecords => 'Workout log';
@@ -1173,11 +1186,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get consultStatusRejected => 'Declined';
-
-  @override
-  String consultStatusRejectedWithNote(String note) {
-    return 'Declined · $note';
-  }
 
   @override
   String get dateToday => 'Today';
