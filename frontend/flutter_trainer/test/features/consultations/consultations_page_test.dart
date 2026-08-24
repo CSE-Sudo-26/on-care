@@ -21,6 +21,7 @@ ConsultationRequest _request({
   String name = '김민수',
   String status = 'pending',
   String? message = '상담 부탁드립니다.',
+  String timeCode = 'evening',
   DateTime? createdAt,
 }) => ConsultationRequest(
   id: id,
@@ -29,7 +30,7 @@ ConsultationRequest _request({
   goalCode: 'weight_loss',
   purposeCode: 'chronic',
   preferredDate: DateTime(2026, 8, 12),
-  preferredTimeCode: 'evening',
+  preferredTimeCode: timeCode,
   purposeDetail: '허리 통증을 고려해 주세요.',
   message: message,
   status: status,
@@ -213,9 +214,11 @@ void main() {
     expect(shell.navigationShell.currentIndex, scheduleIndex);
   });
 
-  testWidgets('accepting sends the decision to the repository', (tester) async {
+  testWidgets('accepting an exact preferred time books that slot', (
+    tester,
+  ) async {
     final repo = _FakeConsultationRepository(
-      requests: <ConsultationRequest>[_request()],
+      requests: <ConsultationRequest>[_request(timeCode: '19:00')],
     );
     await _pumpInbox(tester, repo);
 
@@ -223,14 +226,28 @@ void main() {
     await settle(tester);
 
     expect(repo.accepted, <String>['consult-1']);
-    // 희망 시각(`evening`)은 정확한 시간이 아니라 기본값(10:00)으로
-    // 잡는다 — 희망 일시로 실제 스케줄을 만드는 배선이 살아 있는지 본다.
     final ConsultationSchedule? schedule = repo.acceptedSchedules.single;
     expect(schedule?.date, '2026-08-12');
-    expect(schedule?.time, '10:00');
+    expect(schedule?.time, '19:00');
     expect(schedule?.type, '상담');
     expect(schedule?.durationMinutes, 30);
   });
+
+  testWidgets(
+    'accepting a flexible preferred time books no session (no guessed time to collide with an existing one)',
+    (tester) async {
+      final repo = _FakeConsultationRepository(
+        requests: <ConsultationRequest>[_request()],
+      );
+      await _pumpInbox(tester, repo);
+
+      await tester.tap(find.text('승인'));
+      await settle(tester);
+
+      expect(repo.accepted, <String>['consult-1']);
+      expect(repo.acceptedSchedules.single, isNull);
+    },
+  );
 
   testWidgets('승인이 겹치면 스낵바 대신 버튼 옆에 인라인으로 안내한다', (tester) async {
     final repo = _FakeConsultationRepository(

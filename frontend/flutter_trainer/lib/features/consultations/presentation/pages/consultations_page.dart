@@ -18,10 +18,6 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
-/// 승인 시 잡는 시간 — 희망 시각이 `flexible` 이거나 옛 morning/afternoon/
-/// evening 값이라 정확한 시각이 없을 때만 쓰인다.
-const String _defaultConsultationTime = '10:00';
-
 /// 승인이 만드는 세션의 소요 시간(분). 백엔드 기본값과 같다.
 const int _defaultConsultationDurationMinutes = 30;
 
@@ -240,8 +236,14 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     }
   }
 
-  /// 승인은 회원의 희망 일시로 실제 스케줄을 만든다 — 정확한 시각이 없으면
-  /// (`flexible` 또는 과거 morning/afternoon/evening 값) 기본 시간을 쓴다.
+  /// 승인은 회원이 정확한 시각을 준 경우에만(`HH:mm`, `flexible`·과거
+  /// morning/afternoon/evening 값 제외) 그 희망 일시로 실제 스케줄을 만든다.
+  /// 정확한 시각이 없는데 아무 시간이나 임의로 잡으면, 그 시간이 이미 다른
+  /// 일정으로 차 있을 때 승인 자체가 막혀 버린다 — 트레이너가 직접 시간을
+  /// 정하지 않은 요청을 시스템이 추측해 예약하는 셈이라 위험만 크고 얻는
+  /// 것이 없다. 이런 요청은 예전처럼 담당 편입·알림만 하고 스케줄은
+  /// 비워 둔다.
+  ///
   /// 겹치면 서버가 아무것도 만들지 않고 [ConsultationScheduleConflictError]
   /// 로 막는데, 그건 스낵바가 아니라 버튼 옆 인라인 문구로 보여준다.
   Future<void> _accept() async {
@@ -252,18 +254,19 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     final AppLocalizations l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final request = widget.request;
+    final String? startTime = preferredStartTime(request.preferredTimeCode);
     try {
       await acceptConsultation(
         ref,
         request.id,
-        schedule: ConsultationSchedule(
-          date: ymd(request.preferredDate),
-          time:
-              preferredStartTime(request.preferredTimeCode) ??
-              _defaultConsultationTime,
-          type: SessionType.consultation,
-          durationMinutes: _defaultConsultationDurationMinutes,
-        ),
+        schedule: startTime == null
+            ? null
+            : ConsultationSchedule(
+                date: ymd(request.preferredDate),
+                time: startTime,
+                type: SessionType.consultation,
+                durationMinutes: _defaultConsultationDurationMinutes,
+              ),
       );
       messenger.showSnackBar(
         SnackBar(content: Text(l.consultApproved(request.memberName))),
