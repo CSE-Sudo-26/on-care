@@ -1574,6 +1574,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEndBeforeStart => 'End time must be after the start time';
 
   @override
+  String get schedTimeRangeTitle => 'Select time';
+
+  @override
+  String get schedTimeRangeConfirm => 'Confirm';
+
+  @override
+  String get schedTimeRangeInvalid => 'Enter a valid time (HH:mm)';
+
+  @override
   String get schedRepeat => 'Repeat';
 
   @override
