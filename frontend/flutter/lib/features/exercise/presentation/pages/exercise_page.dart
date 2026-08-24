@@ -638,7 +638,7 @@ class _ExerciseDayDetail extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${s.minutes}${l.unitMinutes} · '
+                            '${_exerciseAmountLabel(l, s)} · '
                             '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
                             style: const TextStyle(
                               fontSize: 12.5,
@@ -708,13 +708,26 @@ class _ExerciseDayDetail extends StatelessWidget {
   }
 }
 
+/// 기록 한 줄이 말하는 **양**. 근력은 세트로, 나머지는 분으로 읽는다 —
+/// 홈 운동 카드·운동 현황 링·주간 목표가 이미 근력을 세트로 세므로, 목록만
+/// 분으로 적으면 같은 기록이 화면마다 다른 수로 보인다. (#1262)
+String _exerciseAmountLabel(AppLocalizations l, ExerciseSession s) {
+  if (s.type != ExerciseType.strength) {
+    return '${s.minutes}${l.unitMinutes}';
+  }
+  final int sets = s.sets ?? setsFromStrengthMinutes(s.minutes.toDouble());
+  return l.exSetsCount(sets);
+}
+
 /// 운동 유형 → 화면 라벨. 유형별 분해 카드와 같은 문구를 쓴다.
 String _exerciseTypeLabel(AppLocalizations l, ExerciseType type) =>
     switch (type) {
       ExerciseType.cardio || ExerciseType.walking => l.exTypeCardio,
       ExerciseType.strength => l.exTypeStrength,
-      ExerciseType.stretching || ExerciseType.yoga => l.exTypeStretching,
-      ExerciseType.other => l.exTypeCardio,
+      ExerciseType.stretching || ExerciseType.yoga => l.exTypeFlexibility,
+      // 기타는 기타라고 적는다 — 유산소로 적으면 하지 않은 운동을 한 것처럼
+      // 읽힌다.
+      ExerciseType.other => l.exTypeOtherChip,
     };
 
 /// 정말로 기록이 없는 날 — 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 낀다.

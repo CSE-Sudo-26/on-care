@@ -248,3 +248,111 @@ def test_week_start_rejects_empty_string(client):
         "/v1/exercise/weeks/current", params={"week_start": ""}, headers=h
     )
     assert r.status_code == 422
+
+
+# --- 근력 세트 (#1262) --------------------------------------------------------
+
+
+def test_strength_sets_persist_and_are_counted(client):
+    """회원이 적은 세트가 기록에도 주간 집계에도 그대로 남는다."""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "strength", "minutes": 36, "sets": 12,
+            "calories": 216, "day_label": "월",
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["sets"] == 12
+
+    week = client.get("/v1/exercise/weeks/current", headers=h).json()
+    assert week["strength_sets"][0] == 12
+
+
+def test_strength_sets_derived_from_minutes_when_absent(client):
+    """세트를 안 보낸 근력 기록은 분에서 환산해 센다 — 옛 기록도 같은 길이다."""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "strength", "minutes": 30, "calories": 180, "day_label": "화"},
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["sets"] is None
+
+    week = client.get("/v1/exercise/weeks/current", headers=h).json()
+    assert week["strength_sets"][1] == 10  # 30분 ÷ 3분
+
+
+def test_sets_ignored_for_non_strength_types(client):
+    """유산소를 세트로 세는 화면은 없다 — 값이 와도 기록에 남기지 않는다."""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 30, "sets": 12, "day_label": "수"},
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["sets"] is None
+
+    week = client.get("/v1/exercise/weeks/current", headers=h).json()
+    assert week["strength_sets"] == [0, 0, 0, 0, 0, 0, 0]
+
+
+def test_update_session_changes_sets(client):
+    h = _login(client)
+    sid = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "strength", "minutes": 36, "sets": 12,
+            "calories": 216, "day_label": "목",
+        },
+        headers=h,
+    ).json()["id"]
+
+    r = client.put(
+        f"/v1/exercise/sessions/{sid}",
+        json={
+            "type": "strength", "minutes": 45, "sets": 15,
+            "calories": 270, "day_label": "목",
+        },
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["sets"] == 15
+
+    week = client.get("/v1/exercise/weeks/current", headers=h).json()
+    assert week["strength_sets"][3] == 15
+
+
+def test_update_to_another_type_clears_sets(client):
+    """근력이던 기록을 유산소로 고치면 세트는 남지 않는다."""
+    h = _login(client)
+    sid = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "strength", "minutes": 36, "sets": 12,
+            "calories": 216, "day_label": "금",
+        },
+        headers=h,
+    ).json()["id"]
+
+    r = client.put(
+        f"/v1/exercise/sessions/{sid}",
+        json={"type": "cardio", "minutes": 36, "calories": 324, "day_label": "금"},
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["sets"] is None
+
+
+def test_add_session_rejects_nonpositive_sets(client):
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "strength", "minutes": 30, "sets": 0},
+        headers=h,
+    )
+    assert r.status_code == 422

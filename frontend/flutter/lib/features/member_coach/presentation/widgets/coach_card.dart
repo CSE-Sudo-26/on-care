@@ -594,9 +594,30 @@ class _RecommendedExerciseRowState
               ),
             ],
           ),
+          // 내가 남긴 메모도 트레이너 피드백과 **같은 모양의 상자**로 놓는다.
+          // 예전에는 맨 텍스트라 본문 기본 크기(카드 제목보다 크다)로 찍혀,
+          // 카드에서 메모만 혼자 커 보였다. 색만 달리해 누가 쓴 글인지
+          // 구분한다 — 내 메모는 흰 바탕, 트레이너 피드백은 파란 바탕.
           if (routine.memberNote.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            Text(l.coachRoutineMyNote(routine.memberNote)),
+            Container(
+              key: Key('routineMemberNote-${routine.id}'),
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: FigmaColors.hairline),
+              ),
+              child: Text(
+                l.coachRoutineMyNote(routine.memberNote),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: FigmaColors.textBody,
+                ),
+              ),
+            ),
           ],
           if (routine.trainerFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),

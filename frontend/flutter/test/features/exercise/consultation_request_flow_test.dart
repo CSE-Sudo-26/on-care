@@ -49,7 +49,7 @@ ConsultationRequest _request({String trainerId = 'trainer-consult'}) {
     healthPurposeType: HealthPurposeType.chronic,
     healthPurposeDetail: null,
     preferredDate: DateTime(2026, 7, 28),
-    preferredTimeSlot: PreferredTimeSlot.afternoon,
+    preferredTimeSlot: const PreferredTime.at(TimeOfDay(hour: 14, minute: 0)),
     message: null,
     status: ConsultationStatus.pending,
     createdAt: DateTime(2026, 7, 26),
@@ -269,6 +269,34 @@ void main() {
     },
   );
 
+  testWidgets(
+    'time is required unless "시간 협의" is picked, and no enum text leaks (#1256)',
+    (WidgetTester tester) async {
+      await pumpRoute(
+        tester,
+        AppRoutes.consultationRequestPath(
+          gymId: _gym.id,
+          trainerId: _trainer.id,
+        ),
+      );
+      final AppLocalizations l = _localizations(tester);
+
+      await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
+      await tester.tap(find.text(l.exSendConsultRequest));
+      await tester.pump();
+      await _revealInForm(tester, find.text(l.exTimeRequired), -100);
+      expect(find.text(l.exTimeRequired), findsOneWidget);
+      // 정확한 시각 대신 코드 원문(`PreferredTimeSlot.flexible` 같은)이 화면에
+      // 새어 나오면 안 된다.
+      expect(find.textContaining('PreferredTimeSlot'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('consult-time-flexible')));
+      await tester.pump();
+      expect(find.text(l.exTimeRequired), findsNothing);
+      expect(find.byKey(const Key('consult-time')), findsNothing);
+    },
+  );
+
   testWidgets('valid submission completes, stores pending, and shows status', (
     WidgetTester tester,
   ) async {
@@ -311,8 +339,14 @@ void main() {
         )
         .first;
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
-    await _revealInForm(tester, find.text(l.exTimeAfternoon), 180);
-    await tester.tap(find.text(l.exTimeAfternoon));
+    // "시간 협의"를 고른다 — 정확한 시각 입력(키보드 다이얼로그)은 별도
+    // 위젯 테스트에서 다룬다(#1256).
+    await _revealInForm(
+      tester,
+      find.byKey(const Key('consult-time-flexible')),
+      180,
+    );
+    await tester.tap(find.byKey(const Key('consult-time-flexible')));
 
     await _revealInForm(tester, find.text(l.exSendConsultRequest), 220);
     await tester.tap(find.text(l.exSendConsultRequest));

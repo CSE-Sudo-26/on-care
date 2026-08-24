@@ -19,13 +19,22 @@ Map<String, String> exerciseGoalLabels(AppLocalizations l) => <String, String>{
   'other': l.goalOther,
 };
 
-/// 희망 시간대 코드 → 화면 문구.
-Map<String, String> preferredTimeLabels(AppLocalizations l) => <String, String>{
-  'morning': l.slotMorning,
-  'afternoon': l.slotAfternoon,
-  'evening': l.slotEvening,
-  'flexible': l.slotFlexible,
-};
+/// 희망 시각 코드 → 화면 문구. `flexible` 이거나 `HH:MM` 정확한 시각이다(#1256).
+///
+/// 예전 morning/afternoon/evening 값이 이미 접수된 요청에 남아 있을 수 있어, 그
+/// 값을 포함해 패턴에 맞지 않는 코드는 전부 "시간 협의"로 떨어뜨린다 — 원문
+/// 코드를 그대로 보여주면 트레이너 화면에 `morning` 이 노출된다.
+final RegExp _kPreferredTimePattern = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$');
+
+String preferredTimeLabel(AppLocalizations l, String code) {
+  final RegExpMatch? match = _kPreferredTimePattern.firstMatch(code);
+  if (match == null) return l.slotFlexible;
+  final int hour = int.parse(match.group(1)!);
+  final String minute = match.group(2)!;
+  final String period = hour < 12 ? l.slotAm : l.slotPm;
+  final int hour12 = hour % 12 == 0 ? 12 : hour % 12;
+  return '$period $hour12:$minute';
+}
 
 /// `GET /v1/trainer/consultations` element → [ConsultationRequest].
 ///

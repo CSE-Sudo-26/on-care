@@ -19,16 +19,10 @@ import 'package:oncare/shared/widgets/app_toast.dart';
 
 enum _ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 
-enum _PreferredTime { morning, afternoon, evening, flexible }
-
 // 화면 선택지 → 서버 계약 enum. 순서가 같으므로 index 로 잇되, 길이가 어긋나면
 // 조용히 틀린 값이 나가므로 아래 assert 로 막는다.
 extension on _ExerciseGoal {
   ExerciseGoal get wire => ExerciseGoal.values[index];
-}
-
-extension on _PreferredTime {
-  PreferredTimeSlot get wire => PreferredTimeSlot.values[index];
 }
 
 class ConsultationRequestPage extends ConsumerStatefulWidget {
@@ -55,7 +49,10 @@ class _ConsultationRequestPageState
 
   _ExerciseGoal? _exerciseGoal;
   DateTime? _preferredDate;
-  _PreferredTime? _preferredTime;
+
+  /// "시간 협의"를 골랐는가. 고르면 [_preferredTimeOfDay] 는 쓰지 않는다(#1256).
+  bool _timeFlexible = false;
+  TimeOfDay? _preferredTimeOfDay;
   bool _attempted = false;
   bool _submitting = false;
 
@@ -97,6 +94,29 @@ class _ConsultationRequestPageState
     }
   }
 
+  /// 정확한 시각 선택. 다이얼(시계판) 대신 **키보드 입력**을 기본으로 연다 —
+  /// 회원이 시각을 이미 알고 있는 상태로 오는 화면이라 다이얼보다 빠르다(#1256).
+  Future<void> _selectTime() async {
+    final TimeOfDay? selected = await showTimePicker(
+      context: context,
+      initialTime: _preferredTimeOfDay ?? const TimeOfDay(hour: 10, minute: 0),
+      initialEntryMode: TimePickerEntryMode.input,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: const TimePickerThemeData(
+              backgroundColor: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (selected != null && mounted) {
+      setState(() => _preferredTimeOfDay = selected);
+    }
+  }
+
   /// 운동 목표가 "기타"면 문의 내용에 구체적으로 적어야 한다 — 그 내용이
   /// 서버로는 `health_purpose_detail`도 겸해서 나간다(#1112). 목표 선택
   /// 하나로 줄었으니 상세를 받을 자리도 문의 내용 하나여야 한다.
@@ -113,14 +133,13 @@ class _ConsultationRequestPageState
       _exerciseGoal != null &&
       !_otherGoalDetailMissing &&
       _preferredDate != null &&
-      _preferredTime != null &&
+      (_timeFlexible || _preferredTimeOfDay != null) &&
       _dataSharingConsent;
 
   Future<void> _submit({
     required Gym gym,
     required Trainer trainer,
     required Map<_ExerciseGoal, String> goalLabels,
-    required Map<_PreferredTime, String> timeLabels,
   }) async {
     if (_submitting) return;
     setState(() => _attempted = true);
@@ -142,6 +161,9 @@ class _ConsultationRequestPageState
     // 그대로다. 나머지 목표는 매핑된 종류만으로 뜻이 충분하다.
     final String? healthPurposeDetail =
         healthPurposeType == HealthPurposeType.other ? message : null;
+    final PreferredTime preferredTime = _timeFlexible
+        ? const PreferredTime.flexible()
+        : PreferredTime.at(_preferredTimeOfDay!);
     final ConsultationRequest request = ConsultationRequest(
       id: 'consult-${now.microsecondsSinceEpoch}',
       trainerId: trainer.id,
@@ -153,7 +175,7 @@ class _ConsultationRequestPageState
       healthPurposeType: healthPurposeType,
       healthPurposeDetail: healthPurposeDetail,
       preferredDate: _preferredDate!,
-      preferredTimeSlot: _preferredTime!.wire,
+      preferredTimeSlot: preferredTime,
       message: message.isEmpty ? null : message,
       status: ConsultationStatus.pending,
       createdAt: now,
@@ -164,7 +186,7 @@ class _ConsultationRequestPageState
       healthPurposeType: healthPurposeType,
       healthPurposeDetail: healthPurposeDetail,
       preferredDate: _preferredDate!,
-      preferredTimeSlot: _preferredTime!.wire,
+      preferredTimeSlot: preferredTime,
       message: message.isEmpty ? null : message,
       dataSharingConsent: _dataSharingConsent,
     );
@@ -277,12 +299,6 @@ class _ConsultationRequestPageState
       _ExerciseGoal.health: l.exGoalHealth,
       _ExerciseGoal.other: l.exOptionOther,
     };
-    final Map<_PreferredTime, String> timeLabels = <_PreferredTime, String>{
-      _PreferredTime.morning: l.exTimeMorning,
-      _PreferredTime.afternoon: l.exTimeAfternoon,
-      _PreferredTime.evening: l.exTimeEvening,
-      _PreferredTime.flexible: l.exTimeFlexible,
-    };
 
     return Center(
       child: ConstrainedBox(
@@ -336,18 +352,38 @@ class _ConsultationRequestPageState
             if (_attempted && _preferredDate == null)
               _ErrorText(l.exDateRequired),
             const SizedBox(height: 20),
-            _ChoiceField<_PreferredTime>(
-              chipKeyPrefix: 'consult-time',
-              title: l.exPreferredTime,
-              values: _PreferredTime.values,
-              labels: timeLabels,
-              selected: _preferredTime,
-              onSelected: (_PreferredTime value) =>
-                  setState(() => _preferredTime = value),
-              errorText: _attempted && _preferredTime == null
-                  ? l.exTimeRequired
-                  : null,
+            _FieldTitle(title: l.exPreferredTime),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                ChoiceChip(
+                  key: const Key('consult-time-flexible'),
+                  label: Text(l.exTimeFlexible),
+                  selected: _timeFlexible,
+                  selectedColor: FigmaColors.primaryA(0.14),
+                  side: BorderSide(
+                    color: _timeFlexible
+                        ? FigmaColors.primary
+                        : FigmaColors.hairline,
+                  ),
+                  onSelected: (bool selected) =>
+                      setState(() => _timeFlexible = selected),
+                ),
+              ],
             ),
+            // 협의가 아니면 정확한 시각을 고른다 — 기본으로 키보드 입력이 뜬다.
+            if (!_timeFlexible) ...<Widget>[
+              const SizedBox(height: 8),
+              _TimeField(
+                key: const Key('consult-time'),
+                time: _preferredTimeOfDay,
+                onTap: _selectTime,
+              ),
+            ],
+            if (_attempted && !_timeFlexible && _preferredTimeOfDay == null)
+              _ErrorText(l.exTimeRequired),
             const SizedBox(height: 20),
             _FieldTitle(title: l.exConsultMessage),
             const SizedBox(height: 8),
@@ -378,7 +414,6 @@ class _ConsultationRequestPageState
                         gym: gym,
                         trainer: trainer,
                         goalLabels: goalLabels,
-                        timeLabels: timeLabels,
                       ),
                     ),
               style: FilledButton.styleFrom(
@@ -707,6 +742,64 @@ class _DateField extends StatelessWidget {
                         ? FontWeight.w500
                         : FontWeight.w700,
                     color: date == null
+                        ? AppColors.mutedForeground
+                        : FigmaColors.ink,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 정확한 희망 시각 입력 필드. [_DateField]와 같은 자리·스타일이다 — 눌렀을 때
+/// 뜨는 게 날짜 대신 [showTimePicker](키보드 입력 기본)일 뿐이다(#1256).
+class _TimeField extends StatelessWidget {
+  const _TimeField({required this.time, required this.onTap, super.key});
+
+  final TimeOfDay? time;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String text = time == null
+        ? l.exSelectTime
+        : MaterialLocalizations.of(context).formatTimeOfDay(time!);
+    return Material(
+      color: FigmaColors.softBlue,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: FigmaColors.hairline),
+          ),
+          child: Row(
+            children: <Widget>[
+              const Icon(
+                Icons.access_time_outlined,
+                size: 18,
+                color: FigmaColors.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: time == null
+                        ? FontWeight.w500
+                        : FontWeight.w700,
+                    color: time == null
                         ? AppColors.mutedForeground
                         : FigmaColors.ink,
                   ),

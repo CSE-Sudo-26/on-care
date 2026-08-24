@@ -95,12 +95,28 @@ class GymTrainerLine extends StatelessWidget {
               // (#1187) — 한 줄에 넷을 밀어 넣으면 직함부터 `퍼스널 트…` 로
               // 잘려, 이 사람이 무엇을 하는 사람인지가 사라진다.
               Expanded(
+                flex: 3,
                 child: stacked
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          _name(),
+                          // `연결됨` 은 **이름 바로 오른쪽**에 붙는다 (#1267).
+                          // 오른쪽 끝에 두면 남는 폭만큼 이름에서 멀어져,
+                          // 누가 연결됐다는 말인지 이름과 묶여 읽히지 않았다.
+                          if (connected)
+                            Row(
+                              children: <Widget>[
+                                Flexible(child: _name()),
+                                const SizedBox(width: 6),
+                                _ConnectedBadge(
+                                  key: const Key('gymTrainerConnectedBadge'),
+                                  label: l.exConnected,
+                                ),
+                              ],
+                            )
+                          else
+                            _name(),
                           const SizedBox(height: 1),
                           _role(l),
                         ],
@@ -113,46 +129,35 @@ class GymTrainerLine extends StatelessWidget {
                         ],
                       ),
               ),
-              // 배지와 버튼은 **한 덩어리로 줄어든다** — 문구가 긴 로케일에서
-              // 이름 쪽과 다투다 줄이 터지던 자리다. 좁으면 통째로 작아지고,
-              // 그래도 모자라면 이름·직함이 줄임표로 접힌다.
-              if (connected || onDetail != null)
-                Flexible(
+              // 상세로 가는 길은 줄 **오른쪽 끝**에 선다 — 다른 화면의 동작
+              // 버튼과 같은 자리다 (#1267). 오른쪽 칸은 제 몫을 다 차지하고
+              // 그 안에서 오른쪽 정렬한다: 내용 크기로만 잡으면 남는 자리가
+              // 버튼 오른쪽에 빈 칸으로 남아 버튼이 줄 가운데에서 끝난다.
+              // 문구가 긴 로케일에서는 FittedBox 가 버튼부터 줄인다.
+              if (onDetail != null)
+                Expanded(
+                  flex: 2,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        if (connected) ...<Widget>[
-                          const SizedBox(width: 8),
-                          _ConnectedBadge(label: l.exConnected),
-                        ],
-                        if (onDetail != null) ...<Widget>[
-                          const SizedBox(width: 4),
-                          TextButton(
-                            key: const Key('gymTrainerDetailButton'),
-                            onPressed: onDetail,
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              minimumSize: const Size(0, 32),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              l.exViewDetail,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: FigmaColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    child: TextButton(
+                      key: const Key('gymTrainerDetailButton'),
+                      onPressed: onDetail,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        l.exViewDetail,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.primary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -190,7 +195,7 @@ class GymTrainerLine extends StatelessWidget {
 /// 헬스장 카드 머리의 `연결됨` 과 같은 배지 — 담당 트레이너 줄에도 같은 표시를
 /// 쓴다.
 class _ConnectedBadge extends StatelessWidget {
-  const _ConnectedBadge({required this.label});
+  const _ConnectedBadge({required this.label, super.key});
 
   final String label;
 

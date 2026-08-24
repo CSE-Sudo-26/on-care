@@ -336,4 +336,86 @@ void main() {
     );
     expect(res.statusCode, 422);
   });
+
+  // --- 근력 세트 (#1262) ------------------------------------------------
+
+  test('POST /exercise/sessions 는 근력 세트를 그대로 저장한다', () async {
+    final res = await dio.post<Map<String, Object?>>(
+      '/exercise/sessions',
+      data: <String, Object?>{
+        'type': 'strength',
+        'minutes': 36,
+        'sets': 12,
+        'calories': 216,
+        'day_label': '화',
+      },
+    );
+    expect(res.data!['sets'], 12);
+
+    final week = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+    );
+    final sets = (week.data!['strength_sets']! as List).cast<num>();
+    // 화요일에 방금 적은 12세트 + 수요일 시드(45분 → 15세트).
+    expect(sets[1], 12);
+    expect(sets[2], 15);
+  });
+
+  test('세트를 안 보낸 근력 기록은 분에서 환산해 센다', () async {
+    final res = await dio.post<Map<String, Object?>>(
+      '/exercise/sessions',
+      data: <String, Object?>{
+        'type': 'strength',
+        'minutes': 30,
+        'calories': 180,
+        'day_label': '목',
+      },
+    );
+    expect(res.data!['sets'], isNull);
+
+    final week = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+    );
+    final sets = (week.data!['strength_sets']! as List).cast<num>();
+    expect(sets[3], 10); // 30분 ÷ 3분
+  });
+
+  test('근력이 아닌 기록에는 세트를 남기지 않는다', () async {
+    final res = await dio.post<Map<String, Object?>>(
+      '/exercise/sessions',
+      data: <String, Object?>{
+        'type': 'cardio',
+        'minutes': 30,
+        'sets': 12,
+        'calories': 270,
+        'day_label': '토',
+      },
+    );
+    expect(res.data!['sets'], isNull);
+  });
+
+  test('PUT 으로 유형을 바꾸면 세트가 지워진다', () async {
+    final id = (await dio.post<Map<String, Object?>>(
+      '/exercise/sessions',
+      data: <String, Object?>{
+        'type': 'strength',
+        'minutes': 36,
+        'sets': 12,
+        'calories': 216,
+        'day_label': '일',
+      },
+    )).data!['id']! as String;
+
+    final res = await dio.put<Map<String, Object?>>(
+      '/exercise/sessions/$id',
+      data: <String, Object?>{
+        'type': 'cardio',
+        'minutes': 36,
+        'sets': null,
+        'calories': 324,
+        'day_label': '일',
+      },
+    );
+    expect(res.data!['sets'], isNull);
+  });
 }
