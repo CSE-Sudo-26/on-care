@@ -111,14 +111,11 @@ void main() {
         // 재빌드될 때 스크롤 위치가 초기화되어 바닥에 닿기 전에 훑기가 끝난다.
         // 다시 열면 목록을 새로 받아오므로, 확인하려는 계약("연 자리가 슬롯 목록에
         // 보인다")은 그대로 두고 타이밍 의존만 걷어낼 수 있다.
-        // 닫기 아이콘은 시트 안에서만 찾는다. 트리 전체를 뒤지면 같은 화면에 다른
-        // 닫기 컨트롤이 붙는 순간 여러 개가 잡혀 깨진다.
-        await tester.tap(
-          find.descendant(
-            of: find.byType(ReservationSlotsSheet),
-            matching: find.byIcon(Icons.close),
-          ),
-        );
+        // 예약 슬롯도 가운데 모달로 뜬다 — 닫기(X)는 시트 안이 아니라
+        // `_openCenteredDialog` 가 카드 바깥에 그리는 공용 버튼
+        // (`DialogCloseButton`, key `dialog-close`)이다. 그 시점에는 모달이
+        // 하나만 열려 있어 키로 바로 찾아도 여러 개가 잡히지 않는다.
+        await tester.tap(find.byKey(const ValueKey<String>('dialog-close')));
         await pumpUntilAbsent(
           tester,
           find.byType(ReservationSlotsSheet),

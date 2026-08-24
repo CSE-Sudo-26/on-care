@@ -345,10 +345,12 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             // 옅은 채움만 쓰고 테두리를 넣지 않는다 — 기본
             // `OutlinedButton` 의 짙은 윤곽선은 이 시트에서 유일하게
             // 선을 두른 요소라 눈에 튀었다(#1090).
+            // 가운데 모달(최대 560)에서는 넷을 한 줄에 두면 넘친다 — 두 줄로
+            // 나눈다. 새 일정 모달의 고객·유형/날짜·시간과 같은 두 칸짜리
+            // 줄 언어다.
             Row(
               children: <Widget>[
                 Expanded(
-                  flex: 3,
                   child: PopupMenuButton<String>(
                     key: const ValueKey<String>('slot-session-type'),
                     enabled: !_saving,
@@ -368,7 +370,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  flex: 3,
                   child: _tappableField(
                     key: const ValueKey<String>('slot-date'),
                     onTap: _saving ? null : _pickDate,
@@ -378,9 +379,12 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: <Widget>[
                 Expanded(
-                  flex: 5,
                   child: _tappableField(
                     key: const ValueKey<String>('slot-time-range'),
                     onTap: _saving ? null : _pickRange,
