@@ -336,7 +336,9 @@ void main() {
         type: '1:1 PT',
         durationMinutes: 60,
       );
-      final slot = (await repo.watchDate(ymd(yesterday)).first).single;
+      final slot = (await repo.watchDate(ymd(yesterday)).first).firstWhere(
+        (entry) => entry.clientName == '이지수' && entry.time == '11:00',
+      );
 
       await repo.completeSession(slot.id, note: '어제 세션 뒤늦게 기록');
 
