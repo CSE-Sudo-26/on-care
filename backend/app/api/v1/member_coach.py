@@ -110,6 +110,7 @@ def complete_my_routine(
             routine_id,
             minutes=payload.minutes,
             sets=payload.sets,
+            reps=payload.reps,
             weight=payload.weight,
             intensity=payload.intensity,
             member_note=payload.member_note,

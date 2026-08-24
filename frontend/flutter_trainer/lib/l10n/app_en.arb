@@ -863,6 +863,14 @@
       }
     }
   },
+  "progRepsValue": "{reps} reps",
+  "@progRepsValue": {
+    "placeholders": {
+      "reps": {
+        "type": "int"
+      }
+    }
+  },
   "progEmpty": "No program planned yet",
   "progEmptyHint": "Build one in the AI routine tab, or agree on it over chat first.",
   "schedSentTo": "Sent to {name}",
@@ -1021,10 +1029,12 @@
   "routineFieldExerciseName": "Exercise name",
   "routineFieldExerciseNameHint": "e.g. Squat, Treadmill",
   "routineFieldSets": "Sets",
+  "routineFieldReps": "Reps",
   "routineFieldWeight": "Weight",
   "routineFieldCalories": "Estimated calories",
   "routineUnitMinutes": "min",
   "routineUnitSets": "sets",
+  "routineUnitReps": "reps",
   "routineUnitKg": "kg",
   "routineKcalValue": "{count} kcal",
   "@routineKcalValue": {

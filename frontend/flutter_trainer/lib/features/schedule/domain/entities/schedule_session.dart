@@ -5,7 +5,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// PT 세션 프로그램의 운동 한 항목 (예: 레그프레스 3세트 · 80kg).
 ///
 /// 회원 앱의 운동 추가 시트와 같은 칸을 받는다(#1276) — 날짜·종류·이름·
-/// 시간(또는 세트·중량)·강도. 예전에는 세트·횟수·중량·시간이 전부 문자열이라
+/// 시간(또는 세트·횟수·중량)·강도. 예전에는 그 값들이 전부 문자열이라
 /// 같은 운동이 화면마다 다른 모양으로 저장됐고, 회원 기록과 나란히 집계할 수가
 /// 없었다.
 class ProgramItem {
@@ -16,6 +16,7 @@ class ProgramItem {
     this.date,
     this.duration,
     this.sets,
+    this.reps,
     this.weight,
     this.intensity = 'moderate',
     this.session = '',
@@ -35,8 +36,9 @@ class ProgramItem {
   /// PT 완료 자동 기록은 이 값이 없으면 세션 슬롯 전체 길이로 되돌아간다(#1233).
   final int? duration;
 
-  /// 근력의 세트 수와 중량(kg). 다른 유형은 null 이다.
+  /// 근력의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 null 이다.
   final int? sets;
+  final int? reps;
   final double? weight;
 
   /// 운동 강도 계약값('light'|'moderate'|'high').

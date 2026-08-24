@@ -27,6 +27,8 @@ class ExerciseSessionOut(BaseModel):
     #: 근력 기록의 세트 수. 다른 유형과 세트를 모르는 옛 근력 기록은 None —
     #: 그때는 클라이언트가 분에서 환산해 읽는다. (#1262)
     sets: int | None = None
+    #: 근력 기록의 한 세트당 횟수. 세트·중량과 한 벌이다. (#1310)
+    reps: int | None = None
     #: 근력 기록의 중량(kg). 세트와 짝이라 근력에만 있다. (#1276)
     weight: float | None = None
     calories: int
@@ -108,6 +110,9 @@ class ExerciseSessionCreate(BaseModel):
     #: 근력이면 회원이 적은 세트 수. 다른 유형에서 와도 저장하지 않는다 —
     #: 유산소를 세트로 세는 화면은 없다. (#1262)
     sets: int | None = Field(None, gt=0, le=100)
+    #: 근력이면 한 세트당 횟수. 세트와 같은 규칙으로, 다른 유형에서 와도
+    #: 버린다. (#1310)
+    reps: int | None = Field(None, gt=0, le=999)
     #: 근력이면 중량(kg). 세트와 같은 규칙으로, 다른 유형에서 와도 버린다.
     weight: float | None = Field(None, ge=0, le=1000)
     calories: int = Field(0, ge=0)
@@ -121,9 +126,10 @@ class AssignedRoutineCompleteRequest(BaseModel):
     """회원이 배정 루틴을 실제 수행한 결과."""
 
     minutes: int = Field(..., gt=0, le=600)
-    #: 근력 루틴이면 실제로 한 세트 수와 중량. 수기 기록과 같은 값을 남겨야
-    #: 그래프가 두 기록을 같은 축으로 읽는다. (#1276)
+    #: 근력 루틴이면 실제로 한 세트 수·횟수·중량. 수기 기록과 같은 값을 남겨야
+    #: 그래프가 두 기록을 같은 축으로 읽는다. (#1276, #1310)
     sets: int | None = Field(None, gt=0, le=100)
+    reps: int | None = Field(None, gt=0, le=999)
     weight: float | None = Field(None, ge=0, le=1000)
     intensity: ExerciseIntensityIn = "moderate"
     member_note: str = Field(default="", max_length=1000)

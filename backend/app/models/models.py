@@ -255,9 +255,14 @@ class ExerciseSession(Base):
     #: 적은 수를 그대로 둔다(#1262). 다른 유형은 None 이고, 이 컬럼이 생기기
     #: 전의 근력 기록도 None 이다 — 그때는 분에서 환산해 읽는다.
     sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: 근력 기록의 한 세트당 횟수. 세트·중량과 한 벌이라 근력에만 있다(#1310).
+    #: 12세트 60kg 만으로는 한 번에 몇 개를 들었는지가 남지 않아 같은 운동을
+    #: 다시 짤 수 없다. 이 컬럼이 생기기 전 기록은 None 이다.
+    reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     #: 근력 기록의 중량(kg, 소수점 한 자리). 세트와 짝이라 근력에만 있고, 다른
     #: 유형은 None 이다(#1276). 칼로리 계산에는 쓰지 않는다 — 같은 무게라도
-    #: 사람마다 소모가 달라, 추정식에 넣으면 근거 없는 정밀도가 된다.
+    #: 사람마다 소모가 달라, 추정식에 넣으면 근거 없는 정밀도가 된다. 횟수도
+    #: 같은 이유로 계산에 넣지 않는다.
     weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     calories: Mapped[int] = mapped_column(Integer, default=0)
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
@@ -902,8 +907,9 @@ class TrainerRoutine(Base):
     intensity: Mapped[str] = mapped_column(
         String(20), default="moderate", server_default="moderate"
     )
-    #: 근력 루틴의 세트 수와 중량(kg). 다른 유형은 비어 있다. (#1276)
+    #: 근력 루틴의 세트 수·횟수·중량(kg). 다른 유형은 비어 있다. (#1276, #1310)
     sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer

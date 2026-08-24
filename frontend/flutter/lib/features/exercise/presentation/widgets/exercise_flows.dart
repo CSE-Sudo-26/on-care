@@ -132,10 +132,11 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   // saved level (가벼움/보통/높음); a new session defaults to 보통.
   late int _level = widget.session?.intensity.index ?? 1;
   late double _minutes = widget.session?.minutes.toDouble() ?? 30;
-  // 근력은 시간이 아니라 **세트와 중량**으로 재는 운동이다 (#1262, #1276). 분과
-  // 따로 들고 있어야 유형을 근력↔유산소로 오갈 때 각자의 값이 남는다 — 하나로
-  // 쓰면 30분이 30세트가 되어 돌아온다.
+  // 근력은 시간이 아니라 **세트·횟수·중량**으로 재는 운동이다
+  // (#1262, #1276, #1310). 분과 따로 들고 있어야 유형을 근력↔유산소로 오갈 때
+  // 각자의 값이 남는다 — 하나로 쓰면 30분이 30세트가 되어 돌아온다.
   late double _sets = _initialSets(widget.session);
+  late double _reps = (widget.session?.reps ?? 10).toDouble();
   late double _weight = widget.session?.weight ?? 20;
   // 기본값은 오늘. 지난 기록을 고치면 그 기록의 날짜로 열린다 — 오늘로
   // 되돌리면 기록을 고치기만 해도 이번 주로 옮겨 간다.
@@ -164,7 +165,8 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     super.dispose();
   }
 
-  /// 지금 고른 유형이 근력인가 — 세트·중량으로 묻고 그렇게 저장할지 가른다.
+  /// 지금 고른 유형이 근력인가 — 세트·횟수·중량으로 묻고 그렇게 저장할지
+  /// 가른다.
   bool get _isStrength => _typeFromIndex(_type) == ExerciseType.strength;
 
   /// 근력 기록의 분. 세트 수에 세트당 벽시계 시간(휴식 포함)을 곱한 값이다 —
@@ -206,9 +208,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       );
       return;
     }
-    // 근력이 아니면 세트·중량을 싣지 않는다 — 유산소를 세트로 세는 화면은
-    // 없고, 유형을 바꾼 수정에서는 null 이 옛 값을 지운다.
+    // 근력이 아니면 세트·횟수·중량을 싣지 않는다 — 유산소를 세트로 세는
+    // 화면은 없고, 유형을 바꾼 수정에서는 null 이 옛 값을 지운다.
     final int? sets = _isStrength ? _sets.round() : null;
+    final int? reps = _isStrength ? _reps.round() : null;
     final double? weight = _isStrength ? _weight : null;
     final ExerciseType type = _typeFromIndex(_type);
     final ExerciseSession? editing = widget.session;
@@ -237,6 +240,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               intensity: intensity,
               date: _date,
               sets: sets,
+              reps: reps,
               weight: weight,
             );
       } else {
@@ -250,6 +254,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               intensity: intensity,
               date: _date,
               sets: sets,
+              reps: reps,
               weight: weight,
             );
       }
@@ -367,7 +372,8 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // 근력은 세트·중량으로, 나머지는 분으로 묻는다 (#1262, #1276).
+                // 근력은 세트·횟수·중량으로, 나머지는 분으로 묻는다
+                // (#1262, #1276, #1310).
                 // 화면 여러 곳(홈 운동 카드·운동 현황 링·주간 목표)이 근력을
                 // 세트로 읽는데 기록만 분이면, 회원이 적지 않은 수가 화면에 뜬다.
                 if (_isStrength) ...<Widget>[
@@ -380,6 +386,17 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     max: 40,
                     suffix: l.exUnitSets,
                     onChanged: (double v) => setState(() => _sets = v),
+                  ),
+                  const SizedBox(height: 20),
+                  _Label(l.exExerciseReps),
+                  const SizedBox(height: 10),
+                  AppNumberStepper(
+                    key: const Key('exerciseRepsStepper'),
+                    value: _reps,
+                    min: 1,
+                    max: 999,
+                    suffix: l.exUnitReps,
+                    onChanged: (double v) => setState(() => _reps = v),
                   ),
                   const SizedBox(height: 20),
                   _Label(l.exExerciseWeight),

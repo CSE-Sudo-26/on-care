@@ -51,6 +51,7 @@ def _exercise(**overrides) -> dict:
         "date": None,
         "duration": None,
         "sets": 4,
+        "reps": 12,
         "weight": 60.0,
         "intensity": "moderate",
         "memo": "무릎 각도 확인",
@@ -159,13 +160,14 @@ def test_draft_save_list_detail_update_contract(
 def test_reopened_draft_keeps_every_editor_value(
     client, trainer_token, cleanup_drafts
 ):
-    """날짜·세트·중량·강도·메모와 AI/트레이너 구분이 그대로 돌아온다."""
+    """날짜·세트·횟수·중량·강도·메모와 AI/트레이너 구분이 그대로 돌아온다."""
     written = _exercise(
         id="exercise-7",
         name="루마니안 데드리프트",
         type="근력",
         date="2026-08-24",
         sets=3,
+        reps=8,
         weight=40.5,
         intensity="high",
         memo="허리 중립 유지",

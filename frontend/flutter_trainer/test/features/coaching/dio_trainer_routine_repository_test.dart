@@ -66,10 +66,11 @@ void main() {
             'minutes': 600,
             'type': '근력',
             // 날짜·강도·세트·중량도 함께 나간다 — 회원 앱의 운동 추가와 같은
-            // 칸이다 (#1276). 세트·중량은 안 정했으면 비어 있다.
+            // 칸이다 (#1276, #1310). 세트·횟수·중량은 안 정했으면 비어 있다.
             'exercise_date': null,
             'intensity': 'moderate',
             'sets': null,
+            'reps': null,
             'weight': null,
             'reason': '걷기, 스쿼트',
             'source': 'ai',

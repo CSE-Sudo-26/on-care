@@ -718,6 +718,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exExerciseNameHint => '예) 스쿼트, 러닝머신';
 
   @override
+  String get exExerciseReps => '횟수';
+
+  @override
   String get exExerciseWeight => '중량';
 
   @override
@@ -725,6 +728,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exUnitSets => '세트';
+
+  @override
+  String get exUnitReps => '회';
 
   @override
   String get exUnitKg => 'kg';
@@ -741,6 +747,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String exSetsCount(int sets) {
     return '$sets세트';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps회';
   }
 
   @override

@@ -3008,6 +3008,12 @@ abstract class AppLocalizations {
   /// **'{sets} sets'**
   String progSetsValue(int sets);
 
+  /// No description provided for @progRepsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{reps} reps'**
+  String progRepsValue(int reps);
+
   /// No description provided for @progEmpty.
   ///
   /// In en, this message translates to:
@@ -3626,6 +3632,12 @@ abstract class AppLocalizations {
   /// **'Sets'**
   String get routineFieldSets;
 
+  /// No description provided for @routineFieldReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps'**
+  String get routineFieldReps;
+
   /// No description provided for @routineFieldWeight.
   ///
   /// In en, this message translates to:
@@ -3649,6 +3661,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'sets'**
   String get routineUnitSets;
+
+  /// No description provided for @routineUnitReps.
+  ///
+  /// In en, this message translates to:
+  /// **'reps'**
+  String get routineUnitReps;
 
   /// No description provided for @routineUnitKg.
   ///
