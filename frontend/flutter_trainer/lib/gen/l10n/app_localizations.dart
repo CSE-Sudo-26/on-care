@@ -1808,17 +1808,17 @@ abstract class AppLocalizations {
   /// **'No pending requests'**
   String get consultNoPending;
 
-  /// No description provided for @consultShowAll.
+  /// No description provided for @consultFilterAll.
   ///
   /// In en, this message translates to:
   /// **'All'**
-  String get consultShowAll;
+  String get consultFilterAll;
 
-  /// No description provided for @consultShowPending.
+  /// No description provided for @consultFilterPendingCount.
   ///
   /// In en, this message translates to:
-  /// **'Pending only'**
-  String get consultShowPending;
+  /// **'Pending {count}'**
+  String consultFilterPendingCount(int count);
 
   /// No description provided for @consultLoadMore.
   ///
@@ -1873,6 +1873,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Request declined'**
   String get consultRejected;
+
+  /// No description provided for @consultScheduleConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlaps {name}\'s {time} session'**
+  String consultScheduleConflict(String name, String time);
+
+  /// No description provided for @consultDecisionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get consultDecisionNote;
 
   /// No description provided for @consultTargetTrainer.
   ///
@@ -1940,11 +1952,17 @@ abstract class AppLocalizations {
   /// **'Decline'**
   String get consultRejectAction;
 
-  /// No description provided for @consultStatusApproved.
+  /// No description provided for @consultStatusPending.
   ///
   /// In en, this message translates to:
-  /// **'Added as a client'**
-  String get consultStatusApproved;
+  /// **'Pending'**
+  String get consultStatusPending;
+
+  /// No description provided for @consultStatusAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get consultStatusAccepted;
 
   /// No description provided for @workoutRecords.
   ///
@@ -2155,12 +2173,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Declined'**
   String get consultStatusRejected;
-
-  /// No description provided for @consultStatusRejectedWithNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Declined · {note}'**
-  String consultStatusRejectedWithNote(String note);
 
   /// No description provided for @dateToday.
   ///
@@ -2726,6 +2738,12 @@ abstract class AppLocalizations {
   /// **'Type'**
   String get schedFieldType;
 
+  /// No description provided for @schedFieldDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get schedFieldDate;
+
   /// No description provided for @schedFieldTime.
   ///
   /// In en, this message translates to:
@@ -2792,12 +2810,6 @@ abstract class AppLocalizations {
   /// **'Repeat'**
   String get schedRepeat;
 
-  /// No description provided for @schedRepeatNone.
-  ///
-  /// In en, this message translates to:
-  /// **'Does not repeat'**
-  String get schedRepeatNone;
-
   /// No description provided for @schedRepeatWeekly.
   ///
   /// In en, this message translates to:
@@ -2809,12 +2821,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repeat on'**
   String get schedRepeatDays;
-
-  /// No description provided for @schedRepeatEnd.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends'**
-  String get schedRepeatEnd;
 
   /// No description provided for @schedRepeatEndByCount.
   ///
@@ -2833,6 +2839,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} times'**
   String schedRepeatCount(int count);
+
+  /// No description provided for @schedRepeatCountUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'times'**
+  String get schedRepeatCountUnit;
 
   /// No description provided for @schedRepeatPreview.
   ///

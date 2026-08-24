@@ -459,8 +459,15 @@
     }
   },
   "consultNoPending": "No pending requests",
-  "consultShowAll": "All",
-  "consultShowPending": "Pending only",
+  "consultFilterAll": "All",
+  "consultFilterPendingCount": "Pending {count}",
+  "@consultFilterPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "consultLoadMore": "Load earlier requests",
   "consultLoadFailed": "Couldn't load consultation requests",
   "consultRetryLater": "Please try again in a moment",
@@ -477,6 +484,18 @@
     }
   },
   "consultRejected": "Request declined",
+  "consultScheduleConflict": "Overlaps {name}'s {time} session",
+  "@consultScheduleConflict": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "consultDecisionNote": "Reason",
   "consultTargetTrainer": "Direct request",
   "consultExerciseGoal": "Training goal",
   "consultHealthPurpose": "Health management purpose",
@@ -488,7 +507,8 @@
   "consultRejectNotice": "The reason you write is sent to the member as a notification.",
   "consultRejectHint": "e.g. I have another appointment at your requested time.",
   "consultRejectAction": "Decline",
-  "consultStatusApproved": "Added as a client",
+  "consultStatusPending": "Pending",
+  "consultStatusAccepted": "Approved",
   "workoutRecords": "Workout log",
   "workoutRecordsShowMore": "Show more",
   "workoutRecordsShowLess": "Show less",
@@ -569,14 +589,6 @@
   },
   "dietAiBalanced": "Today's meals are well balanced. Keep the current routine.",
   "consultStatusRejected": "Declined",
-  "consultStatusRejectedWithNote": "Declined · {note}",
-  "@consultStatusRejectedWithNote": {
-    "placeholders": {
-      "note": {
-        "type": "String"
-      }
-    }
-  },
   "dateToday": "Today",
   "dateTomorrow": "Tomorrow",
   "dateYesterday": "Yesterday",
@@ -805,6 +817,7 @@
   "schedEditTitle": "Edit session",
   "schedFieldClient": "Client",
   "schedFieldType": "Type",
+  "schedFieldDate": "Date",
   "schedFieldTime": "Time",
   "schedHourSuffix": "hr",
   "schedMinuteSuffix": "min",
@@ -816,14 +829,13 @@
   "schedTimeRangeConfirm": "Confirm",
   "schedTimeRangeInvalid": "Enter a valid time (HH:mm)",
   "schedRepeat": "Repeat",
-  "schedRepeatNone": "Does not repeat",
   "schedRepeatWeekly": "Weekly",
   "schedRepeatDays": "Repeat on",
-  "schedRepeatEnd": "Ends",
   "schedRepeatEndByCount": "After",
   "schedRepeatEndByDate": "On date",
   "schedRepeatCount": "{count} times",
   "@schedRepeatCount": {"placeholders": {"count": {"type": "int"}}},
+  "schedRepeatCountUnit": "times",
   "schedRepeatPreview": "{count} sessions · {first} – {last}",
   "@schedRepeatPreview": {"placeholders": {"count": {"type": "int"}, "first": {"type": "String"}, "last": {"type": "String"}}},
   "schedRepeatNeedsDays": "Pick at least one weekday.",

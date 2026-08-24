@@ -2229,6 +2229,16 @@ def trainer_accept_consultation(
         consultation_service.MemberAlreadyCoached,
     ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except consultation_service.ConsultationScheduleConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": str(exc),
+                "conflicts": [
+                    conflict.model_dump(mode="json") for conflict in exc.conflicts
+                ],
+            },
+        ) from exc
 
 
 @router.post(

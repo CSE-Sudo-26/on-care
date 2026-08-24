@@ -21,6 +21,7 @@ ConsultationRequest _request({
   String name = '김민수',
   String status = 'pending',
   String? message = '상담 부탁드립니다.',
+  String timeCode = 'evening',
   DateTime? createdAt,
 }) => ConsultationRequest(
   id: id,
@@ -29,7 +30,7 @@ ConsultationRequest _request({
   goalCode: 'weight_loss',
   purposeCode: 'chronic',
   preferredDate: DateTime(2026, 8, 12),
-  preferredTimeCode: 'evening',
+  preferredTimeCode: timeCode,
   purposeDetail: '허리 통증을 고려해 주세요.',
   message: message,
   status: status,
@@ -42,12 +43,19 @@ class _FakeConsultationRepository implements ConsultationRepository {
   _FakeConsultationRepository({
     List<ConsultationRequest>? requests,
     this.failure,
+    this.acceptConflict,
   }) : requests = requests ?? <ConsultationRequest>[];
 
   List<ConsultationRequest> requests;
   final AppError? failure;
 
+  /// Set to make the next [accept] fail with a schedule conflict instead
+  /// of succeeding.
+  final ConsultationScheduleConflictError? acceptConflict;
+
   final List<String> accepted = <String>[];
+  final List<ConsultationSchedule?> acceptedSchedules =
+      <ConsultationSchedule?>[];
   final List<(String, String?)> rejected = <(String, String?)>[];
 
   @override
@@ -103,7 +111,9 @@ class _FakeConsultationRepository implements ConsultationRepository {
 
   @override
   Future<void> accept(String id, {ConsultationSchedule? schedule}) async {
+    if (acceptConflict != null) throw acceptConflict!;
     accepted.add(id);
+    acceptedSchedules.add(schedule);
     requests = requests
         .map((r) => r.id == id ? _request(id: id, status: 'accepted') : r)
         .toList();
@@ -204,9 +214,11 @@ void main() {
     expect(shell.navigationShell.currentIndex, scheduleIndex);
   });
 
-  testWidgets('accepting sends the decision to the repository', (tester) async {
+  testWidgets('accepting an exact preferred time books that slot', (
+    tester,
+  ) async {
     final repo = _FakeConsultationRepository(
-      requests: <ConsultationRequest>[_request()],
+      requests: <ConsultationRequest>[_request(timeCode: '19:00')],
     );
     await _pumpInbox(tester, repo);
 
@@ -214,6 +226,47 @@ void main() {
     await settle(tester);
 
     expect(repo.accepted, <String>['consult-1']);
+    final ConsultationSchedule? schedule = repo.acceptedSchedules.single;
+    expect(schedule?.date, '2026-08-12');
+    expect(schedule?.time, '19:00');
+    expect(schedule?.type, '상담');
+    expect(schedule?.durationMinutes, 30);
+  });
+
+  testWidgets(
+    'accepting a flexible preferred time books no session (no guessed time to collide with an existing one)',
+    (tester) async {
+      final repo = _FakeConsultationRepository(
+        requests: <ConsultationRequest>[_request()],
+      );
+      await _pumpInbox(tester, repo);
+
+      await tester.tap(find.text('승인'));
+      await settle(tester);
+
+      expect(repo.accepted, <String>['consult-1']);
+      expect(repo.acceptedSchedules.single, isNull);
+    },
+  );
+
+  testWidgets('승인이 겹치면 스낵바 대신 버튼 옆에 인라인으로 안내한다', (tester) async {
+    final repo = _FakeConsultationRepository(
+      requests: <ConsultationRequest>[_request()],
+      acceptConflict: const ConsultationScheduleConflictError(
+        clientName: '이지수',
+        time: '10:00',
+      ),
+    );
+    await _pumpInbox(tester, repo);
+
+    await tester.tap(find.text('승인'));
+    await settle(tester);
+
+    expect(repo.accepted, isEmpty);
+    expect(find.textContaining('이지수'), findsOneWidget);
+    expect(find.textContaining('10:00'), findsOneWidget);
+    // 요청은 여전히 대기 중이라 승인·거절 버튼이 남아 있다.
+    expect(find.text('승인'), findsOneWidget);
   });
 
   for (final entry in <(String, String)>[
@@ -265,10 +318,12 @@ void main() {
     );
     await _pumpInbox(tester, repo);
     // 처리된 건은 '전체' 필터에서만 보인다.
-    await tester.tap(find.text('전체 보기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultation-filter-all')),
+    );
     await settle(tester);
 
-    expect(find.text('담당 고객으로 등록됨'), findsOneWidget);
+    expect(find.text('승인됨'), findsOneWidget);
     expect(find.text('승인'), findsNothing);
   });
 

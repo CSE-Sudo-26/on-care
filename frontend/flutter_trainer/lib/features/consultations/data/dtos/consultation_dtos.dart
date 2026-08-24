@@ -37,6 +37,16 @@ final RegExp _kPreferredTimePattern = RegExp(
   r'^([01]\d|2[0-3]):([0-5]\d)(?:-([01]\d|2[0-3]):([0-5]\d))?$',
 );
 
+/// The fixed start time encoded in [code] as `HH:mm`, or `null` for
+/// `flexible` or a legacy morning/afternoon/evening bucket — those carry no
+/// exact time to seed a session with. A range (`HH:mm-HH:mm`) yields its
+/// start.
+String? preferredStartTime(String code) {
+  final RegExpMatch? match = _kPreferredTimePattern.firstMatch(code);
+  if (match == null) return null;
+  return '${match.group(1)}:${match.group(2)}';
+}
+
 String preferredTimeLabel(AppLocalizations l, String code) {
   final RegExpMatch? match = _kPreferredTimePattern.firstMatch(code);
   if (match == null) return l.slotFlexible;
@@ -46,6 +56,7 @@ String preferredTimeLabel(AppLocalizations l, String code) {
     final int hour12 = hour % 12 == 0 ? 12 : hour % 12;
     return '$period $hour12:$minute';
   }
+
   final String start = label(match.group(1)!, match.group(2)!);
   if (match.group(3) == null) return start;
   return '$start–${label(match.group(3)!, match.group(4)!)}';

@@ -78,6 +78,25 @@ class ConsultationSchedule {
   final int durationMinutes;
 }
 
+/// 승인하려는 시간이 트레이너의 다른 일정과 겹친다 — 서버가 아무것도
+/// 만들지 않고 409 로 막았다. [schedule_recurrence.dart] 의
+/// `ScheduleSeriesConflictError` 와 같은 자리다: `AppError` 계열이 아니라
+/// 따로 잡아, 다른 409(이미 처리됨 등)와 섞이지 않고 버튼 옆에 인라인으로
+/// 보일 수 있게 한다.
+class ConsultationScheduleConflictError implements Exception {
+  const ConsultationScheduleConflictError({
+    required this.clientName,
+    required this.time,
+  });
+
+  /// 그 시간을 이미 차지하고 있는 세션의 고객 이름("신규 회원" 등 표시용
+  /// 값 포함).
+  final String clientName;
+
+  /// 겹친 세션의 시작 시각(`HH:mm`).
+  final String time;
+}
+
 /// Demo build: no inbox. Reads succeed with nothing so any consumer that
 /// does run (tests, a deep link) renders an empty state instead of an
 /// error, and decisions are refused rather than silently doing nothing.
@@ -276,6 +295,10 @@ class DioConsultationRepository implements ConsultationRepository {
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
+      if (action == 'accept' && status == 409) {
+        final conflict = _scheduleConflict(e);
+        if (conflict != null) throw conflict;
+      }
       if (status == 409 || status == 400 || status == 422) {
         throw ValidationError(message: _detail(e));
       }
@@ -288,6 +311,27 @@ class DioConsultationRepository implements ConsultationRepository {
     if (data is! Map) return null;
     final detail = data['detail'];
     return detail is String ? detail : null;
+  }
+
+  /// `consultation_service.ConsultationScheduleConflict` 이 만드는 409 몸통 —
+  /// 반복 생성 겹침(`{"message": ..., "conflicts": [...]}`)과 같은 모양이다.
+  /// `detail` 이 문자열이면(다른 409) `null` 을 돌려 일반 경로로 넘긴다.
+  ConsultationScheduleConflictError? _scheduleConflict(DioException e) {
+    final data = e.response?.data;
+    if (data is! Map) return null;
+    final detail = data['detail'];
+    if (detail is! Map) return null;
+    final conflicts = detail['conflicts'];
+    if (conflicts is! List || conflicts.isEmpty) return null;
+    final first = conflicts.first;
+    if (first is! Map) return null;
+    final clientName = first['client_name'];
+    final time = first['time'];
+    if (clientName is! String || time is! String) return null;
+    return ConsultationScheduleConflictError(
+      clientName: clientName,
+      time: time,
+    );
   }
 }
 

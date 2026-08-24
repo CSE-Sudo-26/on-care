@@ -16,7 +16,10 @@ String preferredTimeLabel(
   if (start == null) return l.exTimeFlexible;
   final MaterialLocalizations m = MaterialLocalizations.of(context);
   final TimeOfDay end = time.end ?? start;
-  final String startLabel = m.formatTimeOfDay(start);
+  final String startLabel = m.formatTimeOfDay(
+    start,
+    alwaysUse24HourFormat: true,
+  );
   if (start == end) return startLabel;
-  return '$startLabel–${m.formatTimeOfDay(end)}';
+  return '$startLabel–${m.formatTimeOfDay(end, alwaysUse24HourFormat: true)}';
 }

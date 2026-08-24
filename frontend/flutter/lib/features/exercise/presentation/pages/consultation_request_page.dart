@@ -90,6 +90,7 @@ class _ConsultationRequestPageState
       context: context,
       initialTime: _preferredTimeOfDay ?? const TimeOfDay(hour: 10, minute: 0),
       helpText: '시작 시간',
+      builder: _use24HourFormat,
     );
     if (start == null || !mounted) return;
     final TimeOfDay initialEnd = _preferredEndTimeOfDay ?? TimeOfDay(
@@ -100,6 +101,7 @@ class _ConsultationRequestPageState
       context: context,
       initialTime: initialEnd,
       helpText: '종료 시간',
+      builder: _use24HourFormat,
     );
     if (end != null && mounted) {
       final int startMinutes = start.hour * 60 + start.minute;
@@ -111,6 +113,14 @@ class _ConsultationRequestPageState
       });
     }
   }
+
+  /// 오전/오후 대신 24시간 형식 다이얼을 쓴다 — 선택 뒤 표시([_TimeField])도
+  /// 같은 형식이어야 하므로 짝을 맞춘다.
+  static Widget _use24HourFormat(BuildContext context, Widget? child) =>
+      MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      );
 
   /// 운동 목표가 "기타"면 문의 내용에 구체적으로 적어야 한다 — 그 내용이
   /// 서버로는 `health_purpose_detail`도 겸해서 나간다(#1112). 목표 선택
@@ -351,32 +361,35 @@ class _ConsultationRequestPageState
             const SizedBox(height: 20),
             _FieldTitle(title: l.exPreferredTime),
             const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _TimeField(
-                    key: const Key('consult-time'),
-                    start: _preferredTimeOfDay,
-                    end: _preferredEndTimeOfDay,
-                    enabled: !_timeFlexible,
-                    onTap: _selectTime,
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    child: _TimeField(
+                      key: const Key('consult-time'),
+                      start: _preferredTimeOfDay,
+                      end: _preferredEndTimeOfDay,
+                      enabled: !_timeFlexible,
+                      onTap: _selectTime,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  key: const Key('consult-time-flexible'),
-                  label: Text(l.exTimeFlexible),
-                  selected: _timeFlexible,
-                  selectedColor: FigmaColors.primaryA(0.14),
-                  side: BorderSide(
-                    color: _timeFlexible
-                        ? FigmaColors.primary
-                        : FigmaColors.hairline,
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    key: const Key('consult-time-flexible'),
+                    label: Text(l.exTimeFlexible),
+                    selected: _timeFlexible,
+                    selectedColor: FigmaColors.primaryA(0.14),
+                    side: BorderSide(
+                      color: _timeFlexible
+                          ? FigmaColors.primary
+                          : FigmaColors.hairline,
+                    ),
+                    onSelected: (bool selected) =>
+                        setState(() => _timeFlexible = selected),
                   ),
-                  onSelected: (bool selected) =>
-                      setState(() => _timeFlexible = selected),
-                ),
-              ],
+                ],
+              ),
             ),
             if (_attempted &&
                 !_timeFlexible &&
@@ -776,7 +789,8 @@ class _TimeField extends StatelessWidget {
     final MaterialLocalizations m = MaterialLocalizations.of(context);
     final String text = start == null || end == null
         ? l.exSelectTime
-        : '${m.formatTimeOfDay(start!)}–${m.formatTimeOfDay(end!)}';
+        : '${m.formatTimeOfDay(start!, alwaysUse24HourFormat: true)}'
+              '–${m.formatTimeOfDay(end!, alwaysUse24HourFormat: true)}';
     return Material(
       color: FigmaColors.softBlue,
       borderRadius: BorderRadius.circular(14),
