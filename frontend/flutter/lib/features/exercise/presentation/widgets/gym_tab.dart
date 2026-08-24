@@ -61,7 +61,10 @@ class GymTab extends ConsumerWidget {
     if (myGymAsync.isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20),
-        child: _SectionLoading(height: 180),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: _SectionLoading(height: 180),
+        ),
       );
     }
     if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
@@ -70,7 +73,10 @@ class GymTab extends ConsumerWidget {
       return const GymFinderView();
     }
 
-    return Padding(
+    // 이 탭은 높이를 받아 놓인다 (#1274) — 연결된 헬스장 화면은 섹션이 여럿인
+    // 긴 화면이라 제 스크롤을 갖는다. 찾기 화면은 스스로 시트를 굴리므로 이
+    // 스크롤을 타지 않는다.
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -662,12 +662,16 @@ Future<void> openConsultationForm(WidgetTester tester, String targetId) async {
 
   // 카드는 화면에 들어오기 전까지 **만들어지지 않는다**. `ensureVisible` 은 이미
   // 있는 위젯만 옮기므로, 지연 목록에서는 스크롤로 만들어 내야 한다.
+  //
+  // 목록을 키로 집는다 — 찾기 화면의 결과는 지도 위 시트 안에 있고(#1274) 그
+  // 시트에는 스크롤이 둘(시트 자신과 결과 목록)이라, "화면 안의 유일한 스크롤"
+  // 로는 어느 쪽인지 정해지지 않는다.
   if (card.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
       card,
       240,
       scrollable: find.descendant(
-        of: find.byType(GymFinderView),
+        of: find.byKey(const Key('gym-result-list')),
         matching: find.byType(Scrollable),
       ),
       maxScrolls: 60,
