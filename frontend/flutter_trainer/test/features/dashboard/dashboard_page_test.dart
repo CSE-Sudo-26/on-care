@@ -209,6 +209,12 @@ void main() {
     expect(find.text('남성 · 35세'), findsWidgets);
     expect(find.text('1:1 PT'), findsWidgets);
     expect(find.text('완료'), findsWidgets);
+    // 스케줄 화면과 같은 시작–종료 범위를 쓰며, 각 일정의 실제 소요
+    // 시간이 끝 시각에 반영된다.
+    expect(find.text('10:00–10:30'), findsOneWidget);
+    expect(find.text('12:00–12:50'), findsOneWidget);
+    expect(find.text('16:00–16:45'), findsOneWidget);
+    expect(find.text('17:00–18:00'), findsWidgets);
     // 빈 시간(공백 슬롯)은 이제 아예 그리지 않는다 — 예약된 것만 보여준다.
     expect(find.textContaining('빈 시간'), findsNothing);
   });

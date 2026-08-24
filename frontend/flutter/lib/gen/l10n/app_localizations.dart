@@ -1400,6 +1400,12 @@ abstract class AppLocalizations {
   /// **'e.g. Squat, Treadmill'**
   String get exExerciseNameHint;
 
+  /// No description provided for @exExerciseReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps'**
+  String get exExerciseReps;
+
   /// No description provided for @exExerciseWeight.
   ///
   /// In en, this message translates to:
@@ -1417,6 +1423,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'sets'**
   String get exUnitSets;
+
+  /// No description provided for @exUnitReps.
+  ///
+  /// In en, this message translates to:
+  /// **'reps'**
+  String get exUnitReps;
 
   /// No description provided for @exUnitKg.
   ///
@@ -1447,6 +1459,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{sets} sets'**
   String exSetsCount(int sets);
+
+  /// No description provided for @exRepsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{reps} reps'**
+  String exRepsCount(int reps);
 
   /// No description provided for @exEnterSets.
   ///

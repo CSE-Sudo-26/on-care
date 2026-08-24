@@ -735,6 +735,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get exExerciseReps => 'Reps';
+
+  @override
   String get exExerciseWeight => 'Weight';
 
   @override
@@ -742,6 +745,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exUnitSets => 'sets';
+
+  @override
+  String get exUnitReps => 'reps';
 
   @override
   String get exUnitKg => 'kg';
@@ -758,6 +764,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String exSetsCount(int sets) {
     return '$sets sets';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps reps';
   }
 
   @override

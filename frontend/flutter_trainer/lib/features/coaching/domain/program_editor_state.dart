@@ -91,10 +91,11 @@ class ProgramSessionDraft {
 /// 편집기의 운동 한 항목.
 ///
 /// 회원 앱의 운동 추가 시트와 같은 칸을 받는다(#1276) — 날짜·종류·이름·
-/// 시간(또는 세트·중량)·강도. 예전에는 세트·횟수·중량·시간·거리·휴식·RPE 가
-/// 전부 자유 문자열이라 같은 운동이 화면마다 다른 모양으로 저장됐고, 회원
-/// 기록과 나란히 집계할 수가 없었다. 통일 스펙에 없는 횟수·거리·휴식·RPE 는
-/// 뺐다 — 강도가 RPE 자리를 대신한다.
+/// 시간(또는 세트·횟수·중량)·강도. 예전에는 세트·횟수·중량·시간·거리·휴식·
+/// RPE 가 전부 자유 문자열이라 같은 운동이 화면마다 다른 모양으로 저장됐고,
+/// 회원 기록과 나란히 집계할 수가 없었다. 통일 스펙에 없는 거리·휴식·RPE 는
+/// 뺐다 — 강도가 RPE 자리를 대신한다. 횟수는 한때 같이 뺐다가 되살렸다
+/// (#1310) — 세트·중량만으로는 근력 한 줄이 재현되지 않는다.
 class ProgramExerciseDraft {
   const ProgramExerciseDraft({
     required this.id,
@@ -103,6 +104,7 @@ class ProgramExerciseDraft {
     this.date,
     this.minutes = 30,
     this.sets = 3,
+    this.reps = 10,
     this.weight = 20,
     this.intensity = 'moderate',
     this.memo = '',
@@ -120,9 +122,10 @@ class ProgramExerciseDraft {
   /// 유산소·스트레칭·기타의 운동 시간(분). 근력은 세트로 재므로 쓰지 않는다.
   final int minutes;
 
-  /// 근력의 세트 수와 중량(kg). 시간과 따로 들고 있어야 유형을 오갈 때 각자의
-  /// 값이 남는다 — 하나로 쓰면 30분이 30세트가 되어 돌아온다.
+  /// 근력의 세트 수·한 세트당 횟수·중량(kg). 시간과 따로 들고 있어야 유형을
+  /// 오갈 때 각자의 값이 남는다 — 하나로 쓰면 30분이 30세트가 되어 돌아온다.
   final int sets;
+  final int reps;
   final double weight;
 
   /// 운동 강도 계약값('light'|'moderate'|'high').
@@ -161,6 +164,7 @@ class ProgramExerciseDraft {
     DateTime? date,
     int? minutes,
     int? sets,
+    int? reps,
     double? weight,
     String? intensity,
     String? memo,
@@ -173,6 +177,7 @@ class ProgramExerciseDraft {
     date: date ?? this.date,
     minutes: minutes ?? this.minutes,
     sets: sets ?? this.sets,
+    reps: reps ?? this.reps,
     weight: weight ?? this.weight,
     intensity: intensity ?? this.intensity,
     memo: memo ?? this.memo,

@@ -732,6 +732,7 @@ def trainer_assign_routine(
         exercise_date=payload.exercise_date,
         intensity=payload.intensity,
         sets=payload.sets,
+        reps=payload.reps,
         weight=payload.weight,
     )
 
