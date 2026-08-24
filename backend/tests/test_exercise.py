@@ -1,7 +1,18 @@
 """운동 기록 추가/조회 — DB 필요(로컬 skip, CI 실행)."""
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import uuid4
+
+from app.core import clock
+from app.services.exercise_service import WEEKDAY_LABELS
+
+
+def _day(label: str) -> str:
+    """이번 주 `label` 요일의 날짜. 기록은 요일이 아니라 날짜로 보낸다(#1276)."""
+    today = clock.today()
+    monday = today - timedelta(days=today.weekday())
+    return (monday + timedelta(days=WEEKDAY_LABELS.index(label))).isoformat()
 
 
 def _login(client) -> dict:
@@ -15,7 +26,7 @@ def test_add_session_reflected_in_week(client):
     h = _login(client)
     r = client.post(
         "/v1/exercise/sessions",
-        json={"type": "other", "minutes": 30, "calories": 120, "day_label": "월"},
+        json={"type": "other", "minutes": 30, "calories": 120, "date": _day("월")},
         headers=h,
     )
     assert r.status_code == 201, r.text
@@ -30,7 +41,8 @@ def test_add_session_reflected_in_week(client):
 def test_add_session_rejects_unknown_type(client):
     h = _login(client)
     r = client.post("/v1/exercise/sessions", json={"type": "flying", "minutes": 10}, headers=h)
-    assert r.status_code == 400
+    # type 은 스키마의 Literal 이라 라우터에 닿기 전에 422 로 걸린다 (#1276)
+    assert r.status_code == 422
 
 
 def test_add_session_rejects_nonpositive_minutes(client):
@@ -44,7 +56,7 @@ def test_delete_session_removes_from_week(client):
     h = _login(client)
     sid = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 40, "calories": 200, "day_label": "화"},
+        json={"type": "cardio", "minutes": 40, "calories": 200, "date": _day("화")},
         headers=h,
     ).json()["id"]
 
@@ -66,13 +78,13 @@ def test_update_session_changes_week(client):
     h = _login(client)
     sid = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "calories": 150, "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "calories": 150, "date": _day("월")},
         headers=h,
     ).json()["id"]
 
     r = client.put(
         f"/v1/exercise/sessions/{sid}",
-        json={"type": "strength", "minutes": 50, "calories": 250, "day_label": "화"},
+        json={"type": "strength", "minutes": 50, "calories": 250, "date": _day("화")},
         headers=h,
     )
     assert r.status_code == 200, r.text
@@ -97,7 +109,7 @@ def test_intensity_persists_and_is_returned(client):
     h = _login(client)
     r = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "calories": 300, "intensity": "high", "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "calories": 300, "intensity": "high", "date": _day("월")},
         headers=h,
     )
     assert r.status_code == 201, r.text
@@ -111,7 +123,7 @@ def test_intensity_defaults_to_moderate_when_omitted(client):
     h = _login(client)
     r = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "date": _day("월")},
         headers=h,
     )
     assert r.status_code == 201, r.text
@@ -125,20 +137,21 @@ def test_add_session_rejects_unknown_intensity(client):
         json={"type": "cardio", "minutes": 10, "intensity": "extreme"},
         headers=h,
     )
-    assert r.status_code == 400
+    # intensity 도 Literal 이라 스키마 단계에서 422 다 (#1276)
+    assert r.status_code == 422
 
 
 def test_update_session_changes_intensity(client):
     h = _login(client)
     sid = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "intensity": "light", "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "intensity": "light", "date": _day("월")},
         headers=h,
     ).json()["id"]
 
     r = client.put(
         f"/v1/exercise/sessions/{sid}",
-        json={"type": "cardio", "minutes": 30, "intensity": "high", "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "intensity": "high", "date": _day("월")},
         headers=h,
     )
     assert r.status_code == 200, r.text
@@ -149,7 +162,7 @@ def test_update_session_rejects_bad_type(client):
     h = _login(client)
     sid = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "date": _day("월")},
         headers=h,
     ).json()["id"]
     r = client.put(
@@ -157,7 +170,7 @@ def test_update_session_rejects_bad_type(client):
         json={"type": "flying", "minutes": 20},
         headers=h,
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
 
 
 def test_week_start_query_returns_that_week(client):
@@ -173,7 +186,7 @@ def test_week_start_query_returns_that_week(client):
     h = _login(client)
     client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "calories": 200, "day_label": "월"},
+        json={"type": "cardio", "minutes": 30, "calories": 200, "date": _day("월")},
         headers=h,
     )
 
@@ -207,7 +220,7 @@ def test_week_start_accepts_any_day_of_that_week(client):
     h = _login(client)
     client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 25, "calories": 150, "day_label": "월"},
+        json={"type": "cardio", "minutes": 25, "calories": 150, "date": _day("월")},
         headers=h,
     )
 
@@ -260,7 +273,7 @@ def test_strength_sets_persist_and_are_counted(client):
         "/v1/exercise/sessions",
         json={
             "type": "strength", "minutes": 36, "sets": 12,
-            "calories": 216, "day_label": "월",
+            "calories": 216, "date": _day("월"),
         },
         headers=h,
     )
@@ -276,7 +289,7 @@ def test_strength_sets_derived_from_minutes_when_absent(client):
     h = _login(client)
     r = client.post(
         "/v1/exercise/sessions",
-        json={"type": "strength", "minutes": 30, "calories": 180, "day_label": "화"},
+        json={"type": "strength", "minutes": 30, "calories": 180, "date": _day("화")},
         headers=h,
     )
     assert r.status_code == 201, r.text
@@ -291,7 +304,7 @@ def test_sets_ignored_for_non_strength_types(client):
     h = _login(client)
     r = client.post(
         "/v1/exercise/sessions",
-        json={"type": "cardio", "minutes": 30, "sets": 12, "day_label": "수"},
+        json={"type": "cardio", "minutes": 30, "sets": 12, "date": _day("수")},
         headers=h,
     )
     assert r.status_code == 201, r.text
@@ -307,7 +320,7 @@ def test_update_session_changes_sets(client):
         "/v1/exercise/sessions",
         json={
             "type": "strength", "minutes": 36, "sets": 12,
-            "calories": 216, "day_label": "목",
+            "calories": 216, "date": _day("목"),
         },
         headers=h,
     ).json()["id"]
@@ -316,7 +329,7 @@ def test_update_session_changes_sets(client):
         f"/v1/exercise/sessions/{sid}",
         json={
             "type": "strength", "minutes": 45, "sets": 15,
-            "calories": 270, "day_label": "목",
+            "calories": 270, "date": _day("목"),
         },
         headers=h,
     )
@@ -334,14 +347,14 @@ def test_update_to_another_type_clears_sets(client):
         "/v1/exercise/sessions",
         json={
             "type": "strength", "minutes": 36, "sets": 12,
-            "calories": 216, "day_label": "금",
+            "calories": 216, "date": _day("금"),
         },
         headers=h,
     ).json()["id"]
 
     r = client.put(
         f"/v1/exercise/sessions/{sid}",
-        json={"type": "cardio", "minutes": 36, "calories": 324, "day_label": "금"},
+        json={"type": "cardio", "minutes": 36, "calories": 324, "date": _day("금")},
         headers=h,
     )
     assert r.status_code == 200, r.text

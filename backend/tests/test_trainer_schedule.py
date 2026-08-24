@@ -304,8 +304,8 @@ def test_complete_session_logs_history_and_is_idempotent(
         time="18:30",
         duration_minutes=40,
         program=[
-            {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
-            {"name": "카프레이즈", "sets": 1, "reps": "20회", "weight": "-"},
+            {"name": "레그프레스", "type": "근력", "sets": 3, "weight": 80.0},
+            {"name": "카프레이즈", "type": "근력", "sets": 1},
         ],
     )
     hist_id = f"sched-hist-{sid}"
@@ -327,7 +327,8 @@ def test_complete_session_logs_history_and_is_idempotent(
     after = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
     assert after[0]["label"] == "PT 세션 · 트레이너 지도"
     assert after[0]["trainer_note"] == "잘 마쳤어요"
-    assert "레그프레스 3세트" in after[0]["exercises"]
+    # 근력은 세트와 중량으로 읽는다 — 무게가 있어야 다음 무게를 정할 수 있다(#1276).
+    assert "레그프레스 3세트 80kg" in after[0]["exercises"]
 
     # 재호출(멱등) → 상태 유지, 기록도 그 한 건 그대로(노트가 덮이지 않는다)
     again = client.post(

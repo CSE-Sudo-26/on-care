@@ -50,6 +50,20 @@ def sets_of(row) -> int:
     return round(row.minutes / STRENGTH_MINUTES_PER_SET)
 
 
+def session_date_of(row) -> date | None:
+    """기록의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다. (#1276)
+
+    요일만으로는 몇 주 전 기록과 이번 주 기록이 구분되지 않는다 — 앱이 수정
+    시트를 열 때 원래 날짜를 되살리려면 여기서 되돌려야 한다. 값이 깨졌으면
+    None 이다: 지어낸 날짜보다 빈 칸이 낫다.
+    """
+    try:
+        monday = date.fromisoformat(row.week_start)
+        return monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
 def monday_of_this_week_str() -> str:
     today = clock.today()
     return (today - timedelta(days=today.weekday())).isoformat()
@@ -188,8 +202,11 @@ def build_current_week(rows: list) -> dict:
             per_sets[r.day_label] = per_sets.get(r.day_label, 0) + sets_of(r)
         sessions.append({
             "id": r.id, "day_label": r.day_label, "type": r.type,
+            "date": session_date_of(r),
+            "name": getattr(r, "name", "") or "",
             "minutes": r.minutes,
             "sets": getattr(r, "sets", None),
+            "weight": getattr(r, "weight", None),
             "calories": r.calories,
             "intensity": getattr(r, "intensity", "moderate") or "moderate",
             "source": getattr(r, "source", "member") or "member",
@@ -200,9 +217,12 @@ def build_current_week(rows: list) -> dict:
             "completed_at": getattr(r, "completed_at", None),
             "date_label": _date_label_for_day(r.day_label),
             "time_label": _default_time_label(r.type),
+            # 회원이 적은 이름이 있으면 그게 이 기록의 내용이다. 없을 때만
+            # 유형별 기본 문구로 채운다 — 이름 칸이 생기기 전 기록들이다. (#1276)
             "items": (
                 [getattr(r, "assigned_routine_name", "")]
                 if getattr(r, "assigned_routine_name", "")
+                else [r.name] if getattr(r, "name", "")
                 else _default_items(r.type)
             ),
         })
