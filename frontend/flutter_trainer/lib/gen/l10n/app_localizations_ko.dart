@@ -3228,9 +3228,15 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportsAverageChip(String value) {
-    return '평균 $value';
+  String reportsAdherenceChip(String value) {
+    return '이행률 평균 $value';
   }
+
+  @override
+  String get reportsBurnByDay => '주간 소모 칼로리';
+
+  @override
+  String get reportsBurnEstimateNote => '소모 칼로리는 운동 유형·시간·강도로 낸 추정치예요.';
 
   @override
   String chartGoalLabel(String value) {

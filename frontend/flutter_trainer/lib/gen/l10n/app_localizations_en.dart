@@ -3367,9 +3367,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportsAverageChip(String value) {
-    return 'Avg $value';
+  String reportsAdherenceChip(String value) {
+    return 'Adherence avg $value';
   }
+
+  @override
+  String get reportsBurnByDay => 'Weekly calories burned';
+
+  @override
+  String get reportsBurnEstimateNote =>
+      'Calories burned are estimated from workout type, duration, and intensity.';
 
   @override
   String chartGoalLabel(String value) {
