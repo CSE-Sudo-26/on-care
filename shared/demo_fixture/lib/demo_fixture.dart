@@ -245,7 +245,7 @@ class FixtureRoutine {
   final String name;
   final int minutes;
 
-  /// `유산소` | `근력` | `유연성` — 화면이 그대로 쓰는 한국어다.
+  /// `유산소` | `근력` | `스트레칭` — 화면이 그대로 쓰는 한국어다.
   final String type;
 
   final String reason;

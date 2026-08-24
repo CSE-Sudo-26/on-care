@@ -5,7 +5,6 @@ import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 void main() {
   const duplicateSuggestions = <AiRoutineItem>[
@@ -86,7 +85,7 @@ void main() {
     editMenu.onSelected?.call('edit');
     await tester.pump();
 
-    final field = find.byKey(const ValueKey<String>('exercise-2-sets'));
+    final field = find.byKey(const ValueKey<String>('exercise-2-sets-field'));
     await tester.tap(field);
     await tester.enterText(field, '4');
     await tester.pump();
@@ -135,18 +134,18 @@ void main() {
   });
 
   group('운동 지표 요약 (programExerciseMetrics)', () {
-    // [ProgramExerciseDraft] 는 유형에 상관없이 세트·횟수 기본값('3'/'10')을
-    // 늘 들고 있다 — 근력이 아닌데도 그 기본값이 그대로 요약에 뜨면 안 된다.
+    // [ProgramExerciseDraft] 는 유형에 상관없이 세트·중량 기본값을 늘 들고
+    // 있다 — 근력이 아닌데도 그 기본값이 그대로 요약에 뜨면 안 된다.
     const nonStrength = ProgramExerciseDraft(
       id: 'e1',
       name: '가벼운 걷기',
       type: '유산소',
-      duration: '20',
+      minutes: 20,
     );
 
-    test('근력이 아니면 세트·횟수가 값이 있어도 요약에 뜨지 않는다', () {
+    test('근력이 아니면 세트·중량이 값이 있어도 요약에 뜨지 않는다', () {
       final metrics = programExerciseMetrics(nonStrength, korean: true);
-      expect(metrics.any((m) => m.contains('세트') || m.contains('회')), isFalse);
+      expect(metrics.any((m) => m.contains('세트') || m.contains('kg')), isFalse);
       expect(metrics, contains('20분'));
     });
 
@@ -157,19 +156,20 @@ void main() {
           korean: true,
         );
         expect(
-          metrics.any((m) => m.contains('세트') || m.contains('회')),
+          metrics.any((m) => m.contains('세트') || m.contains('kg')),
           isFalse,
-          reason: '$type 유형에 세트·횟수가 남아 있다',
+          reason: '$type 유형에 세트·중량이 남아 있다',
         );
       }
     });
 
-    test('근력이면 그대로 세트·횟수를 보여준다', () {
+    test('근력이면 세트와 중량을 보여준다', () {
       final metrics = programExerciseMetrics(
-        nonStrength.copyWith(type: '근력', sets: '4', reps: '10'),
+        nonStrength.copyWith(type: '근력', sets: 4, weight: 60),
         korean: true,
       );
-      expect(metrics, contains('4세트 × 10회'));
+      expect(metrics, contains('4세트'));
+      expect(metrics, contains('60kg'));
     });
   });
 
@@ -254,46 +254,33 @@ void main() {
       );
       await tester.pump();
 
-      // 데이터 모델은 AI 제안과 같은 ProgramExerciseDraft 다 — 세트·횟수
-      // 기본값이 계약(assignment)이 요구하는 값 그대로 채워져 있다.
+      // 데이터 모델은 AI 제안과 같은 ProgramExerciseDraft 다 — 세트·중량
+      // 기본값이 그대로 채워져 있다.
       final added = reviewed!.sessions.single.exercises.single;
       expect(added.name, '런지');
-      expect(added.sets, '3');
-      expect(added.reps, '10');
+      expect(added.sets, 3);
+      expect(added.weight, 20);
       expect(added.source, 'trainer');
       expect(reviewed!.supportsAssignment, isTrue);
     });
 
-    testWidgets('세트 입력칸은 카드 끝까지 늘어나지 않는다', (tester) async {
-      await pumpEditor(tester);
-      await openAddForm(tester);
-
-      final setsBox = find.byKey(const ValueKey<String>('custom-exercise-sets'));
-      final cardWidth = tester.getSize(find.byType(SectionCard)).width;
-      expect(
-        tester.getSize(setsBox).width,
-        lessThan(cardWidth * 0.5),
-        reason: 'stretch Column 의 직계 자식이면 폭 지정이 무시되고 카드 끝까지 늘어난다',
-      );
-    });
-
-    testWidgets('근력이면 세트·횟수를 바로 정해서 추가할 수 있다 (기본 유형)', (tester) async {
+    testWidgets('근력이면 세트·중량을 바로 정해서 추가할 수 있다 (기본 유형)', (tester) async {
       await pumpEditor(tester);
 
       await openAddForm(tester);
       await typeName(tester, '레그컬');
-      // 기본 유형이 근력이라 세트·횟수 칸이 곧장 보인다 — 시간 칸은 없다.
+      // 기본 유형이 근력이라 세트·중량 칸이 곧장 보인다 — 시간 칸은 없다.
       expect(
-        find.byKey(const ValueKey<String>('custom-exercise-duration-hour')),
+        find.byKey(const ValueKey<String>('custom-exercise-duration-field')),
         findsNothing,
       );
       await tester.enterText(
-        find.byKey(const ValueKey<String>('custom-exercise-sets')),
+        find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
         '5',
       );
       await tester.enterText(
-        find.byKey(const ValueKey<String>('custom-exercise-reps')),
-        '8',
+        find.byKey(const ValueKey<String>('custom-exercise-weight-field')),
+        '62.5',
       );
       await tester.pump();
       await confirmAdd(tester);
@@ -308,23 +295,25 @@ void main() {
 
       final added = reviewed!.sessions.single.exercises.single;
       expect(added.name, '레그컬');
-      expect(added.sets, '5');
-      expect(added.reps, '8');
-      expect(added.duration, '');
+      expect(added.sets, 5);
+      expect(added.weight, 62.5);
 
       // 다음 추가는 방금 값이 아니라 기본값으로 다시 시작한다.
       await openAddForm(tester);
       expect(
         tester
-            .widget<TextFormField>(
-              find.byKey(const ValueKey<String>('custom-exercise-sets')),
+            .widget<TextField>(
+              find.byKey(
+                const ValueKey<String>('custom-exercise-sets-field'),
+              ),
             )
-            .initialValue,
+            .controller!
+            .text,
         '3',
       );
     });
 
-    testWidgets('근력이 아니면 세트·횟수 대신 시간을 정해서 추가한다', (tester) async {
+    testWidgets('근력이 아니면 세트·중량 대신 시간을 정해서 추가한다', (tester) async {
       await pumpEditor(tester);
 
       await openAddForm(tester);
@@ -333,18 +322,14 @@ void main() {
         find.byKey(const ValueKey<String>('custom-exercise-category-유산소')),
       );
       await tester.pump();
-      // 유형을 바꾸면 세트·횟수 칸은 사라지고 시간 칸으로 바뀐다.
+      // 유형을 바꾸면 세트·중량 칸은 사라지고 시간 칸으로 바뀐다.
       expect(
-        find.byKey(const ValueKey<String>('custom-exercise-sets')),
+        find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
         findsNothing,
       );
       await tester.enterText(
-        find.byKey(const ValueKey<String>('custom-exercise-duration-hour')),
-        '1',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('custom-exercise-duration-minute')),
-        '30',
+        find.byKey(const ValueKey<String>('custom-exercise-duration-field')),
+        '90',
       );
       await tester.pump();
       await confirmAdd(tester);
@@ -359,58 +344,50 @@ void main() {
 
       final added = reviewed!.sessions.single.exercises.single;
       expect(added.name, '조깅');
-      // 근력이 아니므로 세트·횟수는 기본값 그대로다.
-      expect(added.sets, '3');
-      expect(added.reps, '10');
-      // 1시간 30분 = 90분 — 저장값은 그대로 총 분(minutes) 하나다.
-      expect(added.duration, '90');
+      expect(added.minutes, 90);
+      // 근력이 아니므로 세트·중량은 기본값 그대로다.
+      expect(added.sets, 3);
+      expect(added.weight, 20);
     });
 
-    testWidgets('시간 입력의 분은 0~59 범위를 넘지 못한다', (tester) async {
+    testWidgets('−/+ 버튼은 값을 한 칸씩 옮긴다', (tester) async {
       await pumpEditor(tester);
       await openAddForm(tester);
-      await typeName(tester, '클램프 테스트');
+
       await tester.tap(
-        find.byKey(const ValueKey<String>('custom-exercise-category-유산소')),
+        find.byKey(const ValueKey<String>('custom-exercise-sets-plus')),
       );
-      await tester.pump();
-
-      final minuteField = find.byKey(
-        const ValueKey<String>('custom-exercise-duration-minute'),
-      );
-      await tester.enterText(minuteField, '75');
       await tester.pump();
       expect(
         tester
-            .widget<EditableText>(
-              find.descendant(
-                of: minuteField,
-                matching: find.byType(EditableText),
+            .widget<TextField>(
+              find.byKey(
+                const ValueKey<String>('custom-exercise-sets-field'),
               ),
             )
-            .controller
+            .controller!
             .text,
-        isNot('75'),
-        reason: '59를 넘는 값은 그대로 반영되지 않는다',
+        '4',
       );
 
-      await tester.enterText(minuteField, '45');
+      await tester.tap(
+        find.byKey(const ValueKey<String>('custom-exercise-sets-minus')),
+      );
       await tester.pump();
       expect(
         tester
-            .widget<EditableText>(
-              find.descendant(
-                of: minuteField,
-                matching: find.byType(EditableText),
+            .widget<TextField>(
+              find.byKey(
+                const ValueKey<String>('custom-exercise-sets-field'),
               ),
             )
-            .controller
+            .controller!
             .text,
-        '45',
+        '3',
       );
     });
 
-    testWidgets('운동 수정 모드의 시간도 시·분으로 나뉘어 표시되고 합산 저장된다', (tester) async {
+    testWidgets('운동 수정 모드도 같은 스테퍼로 값을 고친다', (tester) async {
       await pumpEditor(tester);
       await mergeSuggestions(tester);
 
@@ -420,32 +397,20 @@ void main() {
       editMenu.onSelected?.call('edit');
       await tester.pump();
 
-      // 병합된 스쿼트는 20분짜리 AI 제안이다 — 0시간 20분으로 나타난다.
-      expect(
-        tester
-            .widget<TextFormField>(
-              find.byKey(
-                const ValueKey<String>('exercise-2-duration-hour'),
-              ),
-            )
-            .initialValue,
-        '0',
+      // 병합된 스쿼트는 근력 제안이라 세트 칸으로 열린다 — 유형을 유산소로
+      // 바꾸면 그 자리가 시간 칸이 된다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('exercise-2-type-유산소')),
       );
-      expect(
-        tester
-            .widget<TextFormField>(
-              find.byKey(
-                const ValueKey<String>('exercise-2-duration-minute'),
-              ),
-            )
-            .initialValue,
-        '20',
-      );
+      await tester.pump();
 
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('exercise-2-duration-hour')),
-        '1',
+      final durationField = find.byKey(
+        const ValueKey<String>('exercise-2-duration-field'),
       );
+      // AI 제안이 들고 온 20분이 그대로 열린다.
+      expect(tester.widget<TextField>(durationField).controller!.text, '20');
+
+      await tester.enterText(durationField, '80');
       await tester.pump();
 
       await tester.ensureVisible(
@@ -459,8 +424,7 @@ void main() {
       final squat = reviewed!.sessions.single.exercises.firstWhere(
         (exercise) => exercise.name == '스쿼트',
       );
-      // 1시간 20분 = 80분.
-      expect(squat.duration, '80');
+      expect(squat.minutes, 80);
     });
 
     testWidgets('이름이 비면 추가되지 않는다', (tester) async {

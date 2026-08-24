@@ -673,12 +673,12 @@ class DriftClientRepository implements ClientRepository {
     );
   }
 
-  /// 그날 가장 오래 한 유형의 이름. 같으면 유산소 → 근력 → 유연성 순이다.
+  /// 그날 가장 오래 한 유형의 이름. 같으면 유산소 → 근력 → 스트레칭 순이다.
   String _mainTypeLabel(ClientExerciseDay day) {
     final Map<String, int> byType = <String, int>{
       '유산소': day.cardioMinutes,
       '근력': day.strengthMinutes,
-      '유연성': day.stretchingMinutes,
+      '스트레칭': day.stretchingMinutes,
       '기타': day.otherMinutes,
     };
     String best = '유산소';

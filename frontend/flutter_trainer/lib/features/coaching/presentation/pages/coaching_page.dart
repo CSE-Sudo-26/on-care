@@ -206,20 +206,16 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           if (exercise.name.trim().isNotEmpty)
             TemplateExercise(
               name: exercise.name.trim(),
-              // 시간 기반 운동만 `duration` 을 채운다 — 세트·중량 기반
-              // 운동은 비어 있어, 빈 블록이 되지 않도록 기본값을 둔다(다이얼로그의
-              // 새 운동 줄 기본값과 같다, `program_template_dialog.dart`).
-              minutes: _templateMinutes(exercise.duration),
+              // 근력은 세트에서 환산한 분을 담는다 — 템플릿의 총 시간이
+              // 유형과 무관하게 한 축으로 읽혀야 한다 (#1276).
+              minutes: exercise.effectiveMinutes,
               type: kRoutineTypes.contains(exercise.type)
                   ? exercise.type
                   : kRoutineTypes.first,
-              // 근력이면 편집기에서 정한 세트·횟수를 그대로 템플릿에 담는다
-              // — 비워 두면 다시 열었을 때 기본값(3/10)으로 되돌아간 것처럼
-              // 보인다.
-              sets: exercise.type == '근력'
-                  ? (int.tryParse(exercise.sets.trim()) ?? 0)
-                  : 0,
-              reps: exercise.type == '근력' ? exercise.reps.trim() : '',
+              // 근력이면 편집기에서 정한 세트·중량을 그대로 템플릿에 담는다
+              // — 비워 두면 다시 열었을 때 기본값으로 되돌아간 것처럼 보인다.
+              sets: exercise.isStrength ? exercise.sets : 0,
+              weight: exercise.isStrength ? exercise.weight : 0,
             ),
     ];
     if (exercises.isEmpty) {
@@ -386,11 +382,14 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         for (final exercise in session.exercises)
           ProgramItem(
             name: exercise.name.trim(),
-            sets: int.parse(exercise.sets.trim()),
-            reps: exercise.duration.trim().isNotEmpty
-                ? '${exercise.duration}분'
-                : exercise.reps,
-            weight: exercise.weight.trim().isEmpty ? '-' : exercise.weight,
+            type: exercise.type,
+            date: exercise.date,
+            // 근력은 세트·중량으로만 재고 시간을 싣지 않는다 — 두 편집기와
+            // 회원 기록이 같은 규칙을 쓴다 (#1276).
+            duration: exercise.isStrength ? null : exercise.minutes,
+            sets: exercise.isStrength ? exercise.sets : null,
+            weight: exercise.isStrength ? exercise.weight : null,
+            intensity: exercise.intensity,
             session: multi ? capSessionName(session.name) : '',
           ),
     ];
@@ -1357,11 +1356,6 @@ class _ClientChip extends StatelessWidget {
 /// 운동 한 줄을 템플릿에 담을 때 쓸 시간(분). `duration` 이 비어 있거나
 /// 0 이하면(세트·중량 위주 운동) 새 운동 줄의 기본값(10분, 다이얼로그와 동일)을
 /// 대신 쓴다 — 값이 없다고 그 운동째로 템플릿에서 빠지지 않게 한다.
-int _templateMinutes(String duration) {
-  final parsed = int.tryParse(duration.trim());
-  return parsed != null && parsed > 0 ? parsed : 10;
-}
-
 /// 오늘 자정(KST) — PT 등록 날짜의 기본값이자 고를 수 있는 가장 이른 날.
 DateTime _todayKst() {
   final now = nowKst();

@@ -18,8 +18,8 @@ _CARDIO_EASY = ("저강도 걷기", "유산소")
 _CARDIO_HARD = ("인터벌 러닝", "유산소")
 _STRENGTH = ("스쿼트", "근력")
 _STRENGTH2 = ("플랭크", "근력")
-_STRETCH = ("코어 스트레칭", "유연성")
-_STRETCH2 = ("목·어깨 스트레칭", "유연성")
+_STRETCH = ("코어 스트레칭", "스트레칭")
+_STRETCH2 = ("목·어깨 스트레칭", "스트레칭")
 
 _B_LABEL = {"low": "낮음", "moderate": "보통", "high": "높음"}
 
@@ -31,7 +31,7 @@ _CARDIO_KEYWORDS = ("걷기", "러닝", "자전거", "유산소", "인터벌", "
 
 def _guess_type(name: str) -> str:
     if any(keyword in name for keyword in _STRETCH_KEYWORDS):
-        return "유연성"
+        return "스트레칭"
     if any(keyword in name for keyword in _CARDIO_KEYWORDS):
         return "유산소"
     return "근력"

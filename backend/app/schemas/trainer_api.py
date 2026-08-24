@@ -268,41 +268,79 @@ class ChatSendRequest(BaseModel):
     client_request_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
-#: 운동 유형 — 유산소 / 근력 / 유연성 / 기타 네 가지. (#996)
+#: 운동 유형 — 유산소 / 근력 / 스트레칭 / 기타 네 가지. (#996, #1276)
 #:
-#: 예전 어휘(걷기·요가·스트레칭)로 들어오면 422 로 막지 않고 접어 준다. 이미
+#: 예전 어휘(걷기·요가·유연성)로 들어오면 422 로 막지 않고 접어 준다. 이미
 #: 저장된 루틴과 아직 옛 값을 보내는 화면이 있고, 유형 하나 때문에 배정이 통째로
 #: 실패하는 편이 더 나쁘다. 세분화가 필요한 자리는 유형이 아니라 운동 이름으로
 #: 적는다.
 RoutineType = Annotated[
-    Literal["유산소", "근력", "유연성", "기타"],
+    Literal["유산소", "근력", "스트레칭", "기타"],
     BeforeValidator(exercise_types.fold_legacy_ko),
 ]
 RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
 
 #: 운동 항목의 출처. 'ai' 는 AI 제안을 편집기에 반영한 것, 'trainer' 는 트레이너가
-#: 직접 추가한 것. 저장·복원 후에도 이 구분이 남아야 화면이 같은 배지를 그린다.
+#: 직접 추가한 것. 저장·복원에서도 이 구분이 남아야 화면이 같은 배지를 그린다.
 ProgramExerciseSource = Literal["ai", "trainer"]
+
+#: 운동 강도 — 회원 앱의 가벼움/보통/높음과 같은 값이다. 배정 루틴과 프로그램에도
+#: 강도를 실어야 트레이너가 짠 운동과 회원이 적은 운동이 같은 칼로리 식을 탄다.
+#: (#1276)
+RoutineIntensity = Literal["light", "moderate", "high"]
+
+
+def _loose_int(value: object) -> object:
+    """예전 자유 입력("10회"·"3세트"·"")을 정수로 되돌린다. (#1276)
+
+    프로그램 항목은 오래 문자열로 저장돼 왔다. 이제 숫자로 받지만, 이미 저장된
+    초안까지 422 로 거절하면 트레이너가 써 둔 프로그램이 열리지 않는다 — 읽는
+    자리에서 숫자만 뽑아 준다. 숫자가 없으면 None 이라 "적지 않음"이 된다.
+    """
+    if not isinstance(value, str):
+        return value
+    digits = "".join(ch for ch in value if ch.isdigit())
+    return int(digits) if digits else None
+
+
+def _loose_float(value: object) -> object:
+    """`_loose_int` 의 소수 판 — 중량("20kg"·"12.5")용."""
+    if not isinstance(value, str):
+        return value
+    kept = "".join(ch for ch in value if ch.isdigit() or ch == ".")
+    try:
+        return float(kept)
+    except ValueError:
+        return None
+
+
+LooseInt = Annotated[int | None, BeforeValidator(_loose_int)]
+LooseFloat = Annotated[float | None, BeforeValidator(_loose_float)]
 
 
 class ProgramDraftExercise(BaseModel):
     """초안의 운동 한 항목 — 편집기 `ProgramExerciseDraft` 계약 정렬.
 
-    세트·횟수·중량·시간은 **문자열 그대로** 둔다. 편집기가 "10회"·"60"·"20kg"
-    같은 자유 입력을 받으므로 숫자로 정규화하면 트레이너가 적어 둔 표현이 사라진다
-    — 저장·복원에서 값이 손실되지 않는 것이 이 기능의 요구다.
+    값마다 제 타입으로 받는다(#1276). 예전에는 세트·횟수·중량·시간이 전부
+    자유 문자열이라 "10회"·"20kg" 같은 표현이 그대로 저장됐는데, 그러면 같은
+    프로그램을 회원 기록과 나란히 집계할 수가 없었다 — 지금은 회원 앱의 운동
+    추가와 같은 스펙(날짜·종류·이름·시간 또는 세트·중량·강도)을 쓴다.
+
+    횟수·거리·휴식·RPE 는 뺐다. 통일 스펙에 없는 칸이고, 강도가 RPE 자리를
+    대신한다.
     """
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=100)
-    sets: str = Field(default="", max_length=30)
-    reps: str = Field(default="", max_length=30)
-    weight: str = Field(default="", max_length=30)
-    duration: str = Field(default="", max_length=30)
-    distance: str = Field(default="", max_length=30)
-    rest: str = Field(default="", max_length=30)
-    rpe: str = Field(default="", max_length=30)
-    memo: str = Field(default="", max_length=300)
     type: RoutineType = "근력"
+    #: 이 운동을 하는 날. 아직 일정에 걸지 않은 초안은 비어 있다.
+    date: _date | None = None
+    #: 유산소·스트레칭·기타의 운동 시간(분). 근력은 세트로 재므로 비어 있다.
+    duration: LooseInt = Field(default=None, ge=0, le=600)
+    #: 근력의 세트 수와 중량(kg). 다른 유형에서는 비어 있다.
+    sets: LooseInt = Field(default=None, ge=0, le=99)
+    weight: LooseFloat = Field(default=None, ge=0, le=1000)
+    intensity: RoutineIntensity = "moderate"
+    memo: str = Field(default="", max_length=300)
     source: ProgramExerciseSource = "trainer"
 
 
@@ -318,11 +356,17 @@ class RoutineOut(BaseModel):
     id: str
     name: str
     minutes: int
-    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 유형·시간에서 계산한 값이라
+    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 유형·시간·강도에서 계산한 값이라
     #: 따로 저장하지 않는다 — 운동을 시간과 칼로리 두 축으로 보여 주기로 한
     #: 뒤(#996) 배정 카드에도 이 값이 필요해졌다.
     calories: int = 0
     type: RoutineType
+    #: 트레이너가 언제 하라고 보낸 배정인가. 날짜를 정하지 않았으면 비어 있다.
+    exercise_date: _date | None = None
+    intensity: RoutineIntensity = "moderate"
+    #: 근력 루틴의 세트 수와 중량(kg). 다른 유형은 비어 있다. (#1276)
+    sets: int | None = None
+    weight: float | None = None
     reason: str
     source: RoutineSource
     #: 여러 세션을 묶는 프로그램 이름. 단일 배정은 빈 문자열.
@@ -352,6 +396,12 @@ class RoutineAssignRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     minutes: int = Field(default=0, ge=0, le=600)   # 0..600분(현실적 상한)
     type: RoutineType
+    #: 언제 하라고 보내는 배정인가. 회원 앱 운동 추가와 같은 칸이다. (#1276)
+    exercise_date: _date | None = None
+    intensity: RoutineIntensity = "moderate"
+    #: 근력이면 세트 수와 중량(kg). 다른 유형에서 와도 저장하지 않는다.
+    sets: int | None = Field(default=None, gt=0, le=99)
+    weight: float | None = Field(default=None, ge=0, le=1000)
     reason: str = Field(default="", max_length=200)
     source: RoutineSource = "trainer"
     #: 전송 시도당 클라이언트가 만드는 멱등키. 재시도 시 **같은 키를 다시 보내야**
@@ -750,23 +800,26 @@ ScheduleStatus = Literal["예정", "완료", "공백"]
 
 
 class ProgramItem(BaseModel):
-    """세션 프로그램 한 항목 — 프론트 ProgramItem 계약({name,sets,reps,weight}).
+    """세션 프로그램 한 항목 — 코칭 탭 `ProgramDraftExercise` 와 같은 스펙이다.
+
+    두 편집기(스케줄 탭 세션 프로그램·코칭 탭 초안)가 같은 칸을 받는다(#1276).
+    예전에는 여기만 `sets: int`, 나머지는 문자열이라 같은 운동이 화면마다 다른
+    모양으로 저장됐다.
 
     `session` 은 다중 세션 프로그램을 일정에 등록할 때 그 항목이 속한 세션
     이름이다(#709). 기존 행에는 이 키가 없고, 없으면 빈 문자열이라 예전처럼
     세션 구분 없는 목록으로 읽힌다.
 
-    `type`/`duration` 도 마찬가지로 없는 예전 행은 각각 기본값('근력'/'')으로
-    읽힌다 — 코칭 탭 `ProgramDraftExercise` 와 같은 어휘다(#1233). PT 완료
-    자동 기록과 프로그램 전송이 이 값으로 실제 소모 칼로리를 계산한다.
+    PT 완료 자동 기록과 프로그램 전송이 이 값으로 실제 소모 칼로리를 계산한다.
     """
     name: str = Field(min_length=1, max_length=100)
-    sets: int = Field(default=0, ge=0, le=99)
-    reps: str = Field(default="", max_length=30)
-    weight: str = Field(default="", max_length=30)
-    session: str = Field(default="", max_length=100)
     type: RoutineType = "근력"
-    duration: str = Field(default="", max_length=30)
+    date: _date | None = None
+    duration: LooseInt = Field(default=None, ge=0, le=600)
+    sets: LooseInt = Field(default=None, ge=0, le=99)
+    weight: LooseFloat = Field(default=None, ge=0, le=1000)
+    intensity: RoutineIntensity = "moderate"
+    session: str = Field(default="", max_length=100)
 
 
 #: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아 있어야

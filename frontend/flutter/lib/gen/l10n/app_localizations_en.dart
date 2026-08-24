@@ -525,7 +525,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTypeStrength => 'Strength';
 
   @override
-  String get exTypeFlexibility => 'Flexibility';
+  String get exTypeFlexibility => 'Stretching';
 
   @override
   String get exTypeOtherChip => 'Other';
@@ -724,6 +724,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exExerciseType => 'Exercise Type';
+
+  @override
+  String get exExerciseDate => 'Date';
+
+  @override
+  String get exExerciseName => 'Exercise Name';
+
+  @override
+  String get exExerciseNameHint => 'e.g. Squat, Treadmill';
+
+  @override
+  String get exExerciseWeight => 'Weight';
+
+  @override
+  String get exUnitMinutes => 'min';
+
+  @override
+  String get exUnitSets => 'sets';
+
+  @override
+  String get exUnitKg => 'kg';
+
+  @override
+  String get exEnterName => 'Please enter an exercise name';
 
   @override
   String get exExerciseDuration => 'Duration';
@@ -1770,11 +1794,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalStrengthWeekly => 'Weekly strength (sets)';
 
   @override
-  String get myGoalFlexibilityWeekly => 'Weekly flexibility (min)';
+  String get myGoalFlexibilityWeekly => 'Weekly stretching (min)';
 
   @override
   String get myGoalExerciseSuggestionNote =>
-      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week';
+      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week';
 
   @override
   String get myGoalExerciseApplySuggestion => 'Use suggested goals';

@@ -1156,11 +1156,16 @@ def _routine_out(
     회원이 읽을 문구가 아니다. 화면이 감추는 것과 응답에 담지 않는 것은 다르다
     (#790).
     """
+    intensity = getattr(rt, "intensity", None) or "moderate"
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
-        # 예상 소모 칼로리. 배정 시점에는 강도를 모르니 보통으로 잡는다 — 회원이
-        # 수행을 마치면 그때의 강도로 계산한 값이 운동 기록에 남는다. (#996)
-        calories=exercise_service.estimate_calories(rt.type, rt.minutes, "moderate"),
+        exercise_date=getattr(rt, "exercise_date", None),
+        intensity=intensity,
+        sets=getattr(rt, "sets", None),
+        weight=getattr(rt, "weight", None),
+        # 예상 소모 칼로리 — 트레이너가 고른 강도로 계산한다. 회원이 수행을
+        # 마치면 그때의 강도로 다시 계산한 값이 운동 기록에 남는다. (#996)
+        calories=exercise_service.estimate_calories(rt.type, rt.minutes, intensity),
         reason=rt.reason, source=rt.source,
         program_name=rt.program_name,
         session_name=rt.session_name,
@@ -1360,6 +1365,8 @@ def complete_assigned_routine(
     routine_id: str,
     *,
     minutes: int,
+    sets: int | None = None,
+    weight: float | None = None,
     intensity: str,
     member_note: str,
 ) -> RoutineOut:
@@ -1383,13 +1390,28 @@ def complete_assigned_routine(
 
     completed_at = clock.now()
     exercise_type = _ROUTINE_EXERCISE_TYPES(routine.type)
+    # 회원이 실제로 한 수를 적지 않았으면 트레이너가 배정한 값이 남는다 —
+    # 근력 배정에서 세트·중량이 통째로 비면, 그래프가 분에서 세트를 되짚어
+    # 트레이너도 회원도 적은 적 없는 수를 그린다. (#1276)
+    sets = sets if sets is not None else getattr(routine, "sets", None)
+    weight = weight if weight is not None else getattr(routine, "weight", None)
     row = ExerciseSession(
         id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
         user_id=member_id,
         week_start=exercise_service.monday_of_str(completed_at.date().isoformat()),
         day_label=exercise_service.weekday_label_of(completed_at.date().isoformat()),
         type=exercise_type,
+        # 배정 이름이 곧 이 운동의 이름이다 — 회원이 따로 적지 않는다.
+        name=routine.name,
         minutes=minutes,
+        # 세트·중량은 근력에서만 남긴다. 수기 기록과 같은 규칙이라야 그래프가
+        # 두 기록을 같은 축으로 읽는다. (#1276)
+        sets=sets if exercise_type == exercise_types.STRENGTH else None,
+        weight=(
+            round(weight, 1)
+            if weight is not None and exercise_type == exercise_types.STRENGTH
+            else None
+        ),
         calories=exercise_service.estimate_calories(
             exercise_type, minutes, intensity
         ),
@@ -1514,6 +1536,10 @@ def assign_routine(
     db: Session, trainer_id: str, member_id: str,
     name: str, minutes: int, type_: str, reason: str, source: str,
     client_request_id: str | None = None,
+    exercise_date: date | None = None,
+    intensity: str = "moderate",
+    sets: int | None = None,
+    weight: float | None = None,
 ) -> RoutineOut:
     """회원에게 루틴 배정. 로스터 last_routine 은 build_roster 가 최신 루틴을 읽어 반영.
 
@@ -1541,6 +1567,11 @@ def assign_routine(
         name=name,
         minutes=minutes,
         type=type_,
+        exercise_date=exercise_date.isoformat() if exercise_date else None,
+        intensity=intensity,
+        # 세트·중량은 근력에만 남긴다 — 운동 기록과 같은 규칙이다. (#1276)
+        sets=sets if type_ == "근력" else None,
+        weight=round(weight, 1) if weight is not None and type_ == "근력" else None,
         reason=reason,
         source=source,
         sort_order=(max_order or 0) + 1,
@@ -1587,15 +1618,20 @@ def _session_summary(
     `duration` 합, 유형은 가장 많은 유형, 출처는 AI 제안이 하나라도 있으면
     'ai'. 규칙을 서버로 옮긴 것은 세션이 여러 개가 되면서 클라이언트마다
     다르게 접히는 것을 막기 위해서다.
+
+    근력은 시간을 적지 않으므로 세트에서 환산한다 — `_program_minutes_and_type`
+    과 같은 값이라야 배정과 PT 완료가 같은 분을 센다(#1276).
     """
     minutes = 0
     counts: dict[str, int] = {}
     has_ai = False
     for exercise in exercises:
-        try:
-            minutes += int(exercise.duration.strip())
-        except ValueError:
-            pass
+        if exercise.duration:
+            minutes += exercise.duration
+        elif exercise.type == "근력" and exercise.sets:
+            minutes += round(
+                exercise.sets * exercise_service.STRENGTH_MINUTES_PER_SET
+            )
         counts[exercise.type] = counts.get(exercise.type, 0) + 1
         if exercise.source == "ai":
             has_ai = True
@@ -1673,7 +1709,8 @@ def assign_program(
             session_name=session.name if multi else "",
             session_order=index,
             exercises_json=json.dumps(
-                [e.model_dump() for e in session.exercises], ensure_ascii=False
+                [e.model_dump(mode="json") for e in session.exercises],
+                ensure_ascii=False,
             ),
             sort_order=max_order + index + 1,
             client_request_id=(
@@ -2189,8 +2226,9 @@ def draft_sessions(sessions_json: str) -> list[ProgramDraftSession]:
 
 
 def dump_draft_sessions(sessions: Sequence[ProgramDraftSession]) -> str:
+    # mode="json" 이라야 날짜가 문자열로 나간다 — 파이썬 date 는 json 이 모른다.
     return json.dumps(
-        [session.model_dump() for session in sessions], ensure_ascii=False
+        [session.model_dump(mode="json") for session in sessions], ensure_ascii=False
     )
 
 
@@ -2365,16 +2403,34 @@ def _program_items(program_json: str) -> list[ProgramItem]:
             continue
         out.append(ProgramItem(
             name=str(m.get("name", "") or "-"),
-            sets=int(m.get("sets", 0) or 0),
-            reps=str(m.get("reps", "")),
-            weight=str(m.get("weight", "")),
+            # 세트·중량·시간은 예전에 자유 문자열로 저장됐다. LooseInt/LooseFloat
+            # 가 "10회"·"20kg" 에서 숫자를 되짚어 준다(#1276).
+            sets=m.get("sets"),
+            weight=m.get("weight"),
+            duration=m.get("duration"),
+            date=m.get("date"),
+            intensity=m.get("intensity") or "moderate",
             # 이 키가 없는 예전 행은 세션 구분 없는 목록으로 그대로 읽힌다(#709).
             session=str(m.get("session", "") or ""),
-            # 이 키들이 없는 예전 행은 기본값으로 읽힌다(#1233).
+            # 이 키가 없는 예전 행은 기본값으로 읽힌다(#1233).
             type=m.get("type") or "근력",
-            duration=str(m.get("duration", "")),
         ))
     return out
+
+
+def _program_item_label(item: ProgramItem) -> str:
+    """이력 목록에 적히는 한 줄. 근력은 세트·중량, 나머지는 시간으로 읽는다.
+
+    유형마다 재는 단위가 다르다(#1276) — 근력을 "30분"으로 적으면 트레이너가
+    다음 무게를 정할 근거가 사라지고, 유산소를 "3세트"로 적으면 뜻이 없다.
+    """
+    if item.type == "근력":
+        parts = [f"{item.sets}세트"] if item.sets else []
+        if item.weight:
+            parts.append(f"{item.weight:g}kg")
+    else:
+        parts = [f"{item.duration}분"] if item.duration else []
+    return " ".join([item.name, *parts])
 
 
 def _program_minutes_and_type(
@@ -2385,14 +2441,17 @@ def _program_minutes_and_type(
     `_session_summary` 와 같은 규칙이다 — 분은 각 항목 `duration` 의 합,
     유형은 가장 많은 유형. 항목이 하나도 없으면 유형은 None 이라 호출부가
     기존 폴백(세션 유형 고정값)을 쓸 수 있다.
+
+    근력 항목은 시간을 적지 않으므로 세트에서 환산한다 — 회원 기록이 세트를
+    분으로 되짚는 것과 같은 값(세트당 3분)이라야 두 집계가 어긋나지 않는다.
     """
     minutes = 0
     counts: dict[str, int] = {}
     for item in items:
-        try:
-            minutes += int(item.duration.strip())
-        except ValueError:
-            pass
+        if item.duration:
+            minutes += item.duration
+        elif item.type == "근력" and item.sets:
+            minutes += round(item.sets * exercise_service.STRENGTH_MINUTES_PER_SET)
         counts[item.type] = counts.get(item.type, 0) + 1
     type_ = max(counts, key=lambda t: counts[t]) if counts else None
     return minutes, type_
@@ -2518,10 +2577,12 @@ def _dump_program(
     the service boundary consistent for API and direct service callers.
     """
     items = [
-        item.model_dump() if isinstance(item, ProgramItem) else dict(item)
+        item.model_dump(mode="json") if isinstance(item, ProgramItem) else dict(item)
         for item in program
     ]
-    return json.dumps(items, ensure_ascii=False)
+    # `default=str` 은 dict 로 온 쪽의 날짜를 위한 것이다 — 부분 수정 경로는
+    # 이미 model_dump() 를 거쳐 date 객체를 담고 오는데, json 은 그걸 모른다.
+    return json.dumps(items, ensure_ascii=False, default=str)
 
 
 def _existing_schedule_out(
@@ -3077,8 +3138,8 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
 #: 한 시간이 회원 주간 운동량으로 잡히면 집계가 거짓이 된다.
 _SESSION_EXERCISE_TYPE = {"1:1 PT": "strength"}
 
-#: PT 는 트레이너가 붙어서 끌고 가는 시간이라 수기 입력의 '보통'보다 낮게 볼
-#: 이유가 없다. 강도를 따로 입력받는 자리가 트레이너 앱에 없으므로 기본값을 쓴다.
+#: 강도를 하나도 적지 않은(예전) 프로그램의 강도. PT 는 트레이너가 붙어서 끌고
+#: 가는 시간이라 수기 입력의 '보통'보다 낮게 볼 이유가 없다.
 _PT_INTENSITY = "moderate"
 
 
@@ -3106,12 +3167,20 @@ def _add_member_exercise_log(
         return None
     # 프로그램에 적힌 실제 운동 항목의 분·유형을 우선 쓴다 — 분을 하나도
     # 적지 않은(예전) 프로그램만 슬롯 전체 길이·고정 유형으로 되돌아간다(#1233).
-    program_minutes, program_type_ko = _program_minutes_and_type(
-        _program_items(s.program_json)
-    )
+    items = _program_items(s.program_json)
+    program_minutes, program_type_ko = _program_minutes_and_type(items)
     minutes = program_minutes if program_minutes > 0 else s.duration_minutes
     if program_type_ko is not None:
         ex_type = exercise_types.normalize(program_type_ko)
+    # 트레이너가 프로그램에 적어 둔 이름·세트·중량·강도를 회원 기록에도 남긴다
+    # (#1276). 예전에는 분과 유형만 옮겨서, 회원 화면에는 무슨 운동을 몇 kg 로
+    # 했는지가 사라졌다.
+    strength_items = [i for i in items if i.type == "근력"]
+    sets = sum(i.sets for i in strength_items if i.sets) or None
+    weights = [i.weight for i in strength_items if i.weight]
+    # 항목마다 강도가 다르면 세션 하나로 접을 값이 없다 — 그럴 때만 기본값이다.
+    marked = {i.intensity for i in items}
+    intensity = marked.pop() if len(marked) == 1 else _PT_INTENSITY
     row = ExerciseSession(
         id=_derived_exercise_id(s.id),
         user_id=s.member_id,
@@ -3120,11 +3189,14 @@ def _add_member_exercise_log(
         week_start=exercise_service.monday_of_str(s.date),
         day_label=exercise_service.weekday_label_of(s.date),
         type=ex_type,
+        name=", ".join(i.name for i in items),
         minutes=minutes,
-        calories=exercise_service.estimate_calories(
-            ex_type, minutes, _PT_INTENSITY
-        ),
-        intensity=_PT_INTENSITY,
+        sets=sets if ex_type == exercise_types.STRENGTH else None,
+        # 여러 운동을 한 세션이면 가장 무거웠던 무게가 그날의 기록이다 —
+        # 평균은 실제로 든 적 없는 값이라 다음 무게를 정할 근거가 못 된다.
+        weight=max(weights) if weights and ex_type == exercise_types.STRENGTH else None,
+        calories=exercise_service.estimate_calories(ex_type, minutes, intensity),
+        intensity=intensity,
         source="trainer_pt",
     )
     db.add(row)
@@ -3164,17 +3236,19 @@ def send_session_program(
     if s.program_sent_at is not None:
         return _schedule_out(s)  # 멱등 no-op
 
-    # 일정의 프로그램 항목({name,sets,reps,weight})을 배정 계약의 운동으로 옮긴다.
-    # 세션은 하나다 — 회원 화면에 없던 세션 라벨이 생기지 않는다.
+    # 일정의 프로그램 항목을 배정 계약의 운동으로 옮긴다. 두 계약이 같은 칸을
+    # 쓰므로 값을 고쳐 담을 것이 없다(#1276). 세션은 하나다 — 회원 화면에 없던
+    # 세션 라벨이 생기지 않는다.
     exercises = [
         ProgramDraftExercise(
             id=f"{s.id}#{index}",
             name=item.name,
-            sets=str(item.sets) if item.sets else "",
-            reps=item.reps,
-            weight=item.weight,
             type=item.type,
+            date=item.date,
             duration=item.duration,
+            sets=item.sets,
+            weight=item.weight,
+            intensity=item.intensity,
         )
         for index, item in enumerate(items)
     ]
@@ -3239,10 +3313,7 @@ def complete_session(
     exercise_log: ExerciseSession | None = None
     if s.member_id:
         program = _program_items(s.program_json)
-        exercises = [
-            f"{p.name} {p.sets}세트" if p.sets > 1 else f"{p.name} {p.reps}".strip()
-            for p in program
-        ]
+        exercises = [_program_item_label(p) for p in program]
         db.add(RoutineHistory(
             id=f"sched-hist-{s.id}",
             member_id=s.member_id,

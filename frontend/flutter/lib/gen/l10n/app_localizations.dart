@@ -1037,7 +1037,7 @@ abstract class AppLocalizations {
   /// No description provided for @exTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Flexibility'**
+  /// **'Stretching'**
   String get exTypeFlexibility;
 
   /// No description provided for @exTypeOtherChip.
@@ -1381,6 +1381,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exercise Type'**
   String get exExerciseType;
+
+  /// No description provided for @exExerciseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get exExerciseDate;
+
+  /// No description provided for @exExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise Name'**
+  String get exExerciseName;
+
+  /// No description provided for @exExerciseNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Treadmill'**
+  String get exExerciseNameHint;
+
+  /// No description provided for @exExerciseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get exExerciseWeight;
+
+  /// No description provided for @exUnitMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get exUnitMinutes;
+
+  /// No description provided for @exUnitSets.
+  ///
+  /// In en, this message translates to:
+  /// **'sets'**
+  String get exUnitSets;
+
+  /// No description provided for @exUnitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get exUnitKg;
+
+  /// No description provided for @exEnterName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter an exercise name'**
+  String get exEnterName;
 
   /// No description provided for @exExerciseDuration.
   ///
@@ -3287,13 +3335,13 @@ abstract class AppLocalizations {
   /// No description provided for @myGoalFlexibilityWeekly.
   ///
   /// In en, this message translates to:
-  /// **'Weekly flexibility (min)'**
+  /// **'Weekly stretching (min)'**
   String get myGoalFlexibilityWeekly;
 
   /// No description provided for @myGoalExerciseSuggestionNote.
   ///
   /// In en, this message translates to:
-  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week'**
+  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week'**
   String get myGoalExerciseSuggestionNote;
 
   /// No description provided for @myGoalExerciseApplySuggestion.

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 
 void main() {
-  ProgramEditorState draftWith({required String name, required String sets}) {
+  ProgramEditorState draftWith({required String name}) {
     return ProgramEditorState(
       name: '프로그램',
       sessions: <ProgramSessionDraft>[
@@ -11,7 +11,7 @@ void main() {
           id: 'session-1',
           name: '세션 A',
           exercises: <ProgramExerciseDraft>[
-            ProgramExerciseDraft(id: 'exercise-1', name: name, sets: sets),
+            ProgramExerciseDraft(id: 'exercise-1', name: name),
           ],
         ),
       ],
@@ -19,17 +19,14 @@ void main() {
   }
 
   test('flat routine support follows the backend item constraints', () {
-    expect(draftWith(name: ' 스쿼트 ', sets: '3').supportsAssignment, isTrue);
-    expect(draftWith(name: ' ', sets: '3').supportsAssignment, isFalse);
+    expect(draftWith(name: ' 스쿼트 ').supportsAssignment, isTrue);
+    expect(draftWith(name: ' ').supportsAssignment, isFalse);
     expect(
       draftWith(
         name: List<String>.filled(101, '운동').join(),
-        sets: '3',
       ).supportsAssignment,
       isFalse,
     );
-    expect(draftWith(name: '스쿼트', sets: '').supportsAssignment, isFalse);
-    expect(draftWith(name: '스쿼트', sets: '100').supportsAssignment, isFalse);
   });
 
   test('flat routine support rejects structures the API cannot represent', () {
@@ -49,5 +46,28 @@ void main() {
 
     expect(empty.supportsAssignment, isFalse);
     expect(multiple.supportsAssignment, isFalse);
+  });
+
+  test('근력은 세트에서 분을 환산하고, 그 외 유형은 시간을 그대로 쓴다 (#1276)', () {
+    const strength = ProgramExerciseDraft(
+      id: 'e1',
+      name: '스쿼트',
+      sets: 4,
+      weight: 60,
+    );
+    const cardio = ProgramExerciseDraft(
+      id: 'e2',
+      name: '러닝머신',
+      type: '유산소',
+      minutes: 40,
+    );
+
+    // 세트당 벽시계 3분 — 회원 앱·서버와 같은 값이다.
+    expect(strength.effectiveMinutes, 12);
+    expect(cardio.effectiveMinutes, 40);
+
+    // 유형을 한 축에서 견주는 값은 칼로리 하나다.
+    expect(strength.calories, 72); // 12분 × 6kcal × 보통(1.0)
+    expect(cardio.calories, 360); // 40분 × 9kcal × 보통(1.0)
   });
 }
