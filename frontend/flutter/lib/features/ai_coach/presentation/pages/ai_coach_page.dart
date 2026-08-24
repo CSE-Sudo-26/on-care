@@ -168,7 +168,8 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: FigmaColors.onlineGreen,
+                          // `지금 연결됨` 은 트레이너 온라인 점과 같은 초록이다(#1239).
+                          color: FigmaColors.statusGreen,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),

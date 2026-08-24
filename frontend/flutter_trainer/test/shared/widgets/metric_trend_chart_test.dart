@@ -84,7 +84,7 @@ void main() {
     // 초록이 아니다. 초록은 "정상" 으로 읽혀서 목표에 한참 못 미친 날까지
     // 괜찮다고 말한다 — 회원 앱이 #1070 에서 걷어낸 것과 같은 이유다.
     expect(metricStatusColor(1800, 2000), AppColors.statusWithinGoal);
-    expect(metricStatusColor(1800, 2000), isNot(AppColors.statusNormal));
+    expect(metricStatusColor(1800, 2000), isNot(AppColors.success));
     // 초과는 그대로 빨강이다.
     expect(metricStatusColor(2400, 2000), AppColors.overTarget);
     // 목표가 없는 지표(0)는 초과로 보지 않는다.
