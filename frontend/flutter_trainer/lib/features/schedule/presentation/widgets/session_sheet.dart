@@ -11,7 +11,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurr
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_repeat_preview.dart';
-import 'package:oncare_trainer/features/schedule/presentation/widgets/session_time_range_dialog.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Bottom sheet for booking or editing a session: client, type, time
@@ -109,23 +109,18 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     _endMinute = endTotal % 60;
   }
 
-  /// 시작·종료 시간을 함께 고르는 모달을 연다(#1229, #1250). 둘 다 한
-  /// 화면에서 같이 정하므로, 예전 드롭다운처럼 시작만 옮겼을 때 소요
-  /// 시간을 지키려고 종료를 따라 미는 계산은 더 필요 없다 — 사용자가
-  /// 확인을 누른 값 그대로 받는다.
   Future<void> _pickTimeRange() async {
-    final result = await showSessionTimeRangeDialog(
+    final picked = await showScheduleTimeRangePicker(
       context: context,
-      initialStart: TimeOfDay(hour: _hour, minute: _minute),
-      initialEnd: TimeOfDay(hour: _endHour, minute: _endMinute),
+      start: TimeOfDay(hour: _hour, minute: _minute),
+      end: TimeOfDay(hour: _endHour, minute: _endMinute),
     );
-    if (result == null || !mounted) return;
-    final (start, end) = result;
+    if (picked == null || !mounted) return;
     setState(() {
-      _hour = start.hour;
-      _minute = start.minute;
-      _endHour = end.hour;
-      _endMinute = end.minute;
+      _hour = picked.start.hour;
+      _minute = picked.start.minute;
+      _endHour = picked.end.hour;
+      _endMinute = picked.end.minute;
     });
   }
 

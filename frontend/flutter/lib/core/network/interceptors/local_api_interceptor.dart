@@ -318,6 +318,19 @@ class LocalApiInterceptor extends Interceptor {
     )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (existing == null) return _notFound(options, '식단 기록을 찾을 수 없습니다.');
     final body = _jsonBody(options);
+    // 기록 날짜(#1241). 실서버와 같은 규칙이다 — 형식이 틀리거나 아직 오지 않은
+    // 날은 받지 않는다. 데모에서만 통과하면 실연동에서 그 화면이 처음 실패한다.
+    final String? date = (body['date'] as String?)?.trim();
+    if (body.containsKey('date')) {
+      final DateTime? parsed = DateTime.tryParse(date ?? '');
+      if (date == null || parsed == null || date.length != 10) {
+        return _badRequest(options, 'date 는 YYYY-MM-DD 형식이어야 합니다.');
+      }
+      final DateTime now = nowKst();
+      if (parsed.isAfter(DateTime(now.year, now.month, now.day))) {
+        return _badRequest(options, 'date 는 오늘보다 뒤일 수 없습니다.');
+      }
+    }
     final mealType = (body['meal_type'] as String?)?.trim();
     final timeLabel = (body['time_label'] as String?)?.trim();
     final Object? foodsValue = body['foods'];
@@ -333,6 +346,7 @@ class LocalApiInterceptor extends Interceptor {
     final Object? sugarGValue = body['sugar_g'];
     await (_db.update(_db.dietEntries)..where((t) => t.id.equals(id))).write(
       DietEntriesCompanion(
+        date: date == null ? const Value.absent() : Value(date),
         mealType: (mealType == null || mealType.isEmpty)
             ? const Value.absent()
             : Value(mealType),

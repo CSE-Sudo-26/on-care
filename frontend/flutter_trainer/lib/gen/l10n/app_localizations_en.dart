@@ -2816,6 +2816,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Low completion · check recent records';
 
   @override
+  String get dashTodoCarriedOverDemoSubtitle =>
+      'Diet feedback left over from yesterday';
+
+  @override
   String get dashTodoProgramSubtitle => 'No recent program sent';
 
   @override

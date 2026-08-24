@@ -389,6 +389,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietAnalysisFailed => 'Analysis failed';
 
   @override
+  String get dietRecordDate => 'Record date';
+
+  @override
+  String get dietRecordDateChange => 'Change date';
+
+  @override
+  String dietRecordDateMoved(String date) {
+    return 'Moved to $date';
+  }
+
+  @override
+  String get dietRecordDateFailed =>
+      'Could not change the date. Please try again shortly.';
+
+  @override
   String get dietAnalysisDone => 'Analysis complete!';
 
   @override

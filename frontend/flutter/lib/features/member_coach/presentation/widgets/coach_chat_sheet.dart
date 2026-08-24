@@ -314,10 +314,13 @@ class _ReceivedBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return _BannerFrame(
-      background: FigmaColors.greenText.withValues(alpha: 0.08),
-      border: FigmaColors.greenText.withValues(alpha: 0.25),
+      // 루틴을 받았다는 **완료** 배너다 — 두 앱이 함께 쓰는 완료 초록으로
+      // 칠한다(#1239). 예전의 어두운 초록은 식단 화면의 계열색이라, 같은
+      // `완료` 가 화면마다 다른 초록으로 보였다.
+      background: FigmaColors.statusGreen.withValues(alpha: 0.08),
+      border: FigmaColors.statusGreen.withValues(alpha: 0.25),
       icon: Icons.check_circle_outline,
-      iconColor: FigmaColors.greenText,
+      iconColor: FigmaColors.statusGreen,
       title: l.coachChatDemoRoutineReceived,
       subtitle: l.coachChatDemoNotified,
     );

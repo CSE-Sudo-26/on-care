@@ -65,7 +65,15 @@ class AppColors {
   // (AppBadge tones, MetricCard delta tones). The original React
   // app does not have explicit `success` / `info` tokens — these are
   // pragmatic additions kept in the same teal/orange/green family.
-  static const Color success = scoreGradientStart;
+  /// 완료·성공 초록 (`#34C759`). **두 앱이 같은 값을 쓴다** — 회원이 자기
+  /// 폰에서 `완료` 로 본 것을 트레이너 화면에서 다른 초록으로 보여 주지 않는다
+  /// (#1239). 성취(`achievement`)·식단 계열색과는 뜻이 다르다.
+  static const Color success = Color(0xFF34C759);
+
+  /// 성취 초록 (`#22C55E`). 완료와 **다른 뜻**이다 — 완료는 할 일을 끝냈다는
+  /// 상태이고, 성취는 목표를 이뤄 축하할 일이다. `이번 주 건강 점수` 카드의
+  /// 그라디언트와 같은 초록이라 알림의 성취 배지가 그 카드와 한 짝으로 읽힌다.
+  static const Color achievement = scoreGradientStart;
   static const Color info = primary;
   static const Color error = destructive;
   static const Color primaryContainer = accent;
@@ -75,10 +83,6 @@ class AppColors {
   // 세 파트(공통·사용자앱 / 트레이너 대시보드·메시지·스케줄·리포트 /
   // 트레이너 고객·프로그램)가 **같은 이름**으로 읽도록 두 앱에 같은 이름·같은
   // 값으로 둔다. 화면에서 색을 직접 고르지 말고 여기서 가져간다.
-
-  /// 식단 계열 초록. 예전 이름은 "정상 초록" 이었다 — 지금은 상태를 뜻하지
-  /// 않고 식단 그래프의 계열색으로만 남는다.
-  static const Color statusNormal = Color(0xFF22A882);
 
   /// 목표 안쪽(= 초과가 아님) 상태색. 앱 브랜드 파랑을 그대로 쓴다.
   ///
@@ -103,9 +107,14 @@ class AppColors {
   /// 트레이너 화면에서 다른 세기로 보여주지 않는다.
   static const Color statusOver = statusDanger;
 
-  /// 식단 그래프 색. 파랑에서 초록으로 옮긴다 — 운동과 한눈에 갈라 보라는
-  /// 요구이므로 식단만 바꾸고 운동은 파랑을 지킨다.
-  static const Color dietChart = statusNormal;
+  /// 식단 그래프 색. **각 앱의 브랜드색**이다 — 회원 앱은 파랑, 트레이너는
+  /// 자기 남색(#1239).
+  ///
+  /// 한때 초록(`#22A882`)이었지만 초록은 "정상" 으로 읽혀, 목표에 한참 못 미친
+  /// 날까지 괜찮다고 말했다(#1070). 지금은 판단을 담지 않는 브랜드색으로 그리고
+  /// 초과한 날만 [statusOver] 로 갈린다. 두 앱의 식단 그래프가 서로 다른 색인
+  /// 것은 그래서 의도다 — 각자 자기 앱의 색으로 말한다.
+  static const Color dietChart = primary;
 
   /// 운동 그래프 색. 앱별 브랜드 파랑을 그대로 쓴다.
   static const Color exerciseChart = primary;

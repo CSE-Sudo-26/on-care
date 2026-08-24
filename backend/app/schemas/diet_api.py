@@ -8,8 +8,15 @@ entries[]: { id, meal_type, time_label, foods[], total_calories, carbs_g, protei
 """
 from __future__ import annotations
 
+import re
+from datetime import date as _date
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core import clock
+
+#: 계약 날짜 표기. `2026-08-01` 만 받는다.
+_YMD = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 from app.schemas.partial_update import PartialUpdate
 
@@ -76,6 +83,10 @@ class DietEntryUpdate(PartialUpdate):
 
     모든 항목이 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다(#495).
     """
+    #: 기록 날짜(`YYYY-MM-DD`). 사진 분석은 저장 시각의 날짜로 남기는데, 지난
+    #: 식사의 사진을 나중에 올리는 일이 있어 실제로 먹은 날로 옮길 수 있어야
+    #: 한다(#1241).
+    date: str | None = None
     meal_type: str | None = None
     time_label: str | None = None
     total_calories: int | None = Field(None, ge=0)
@@ -84,6 +95,29 @@ class DietEntryUpdate(PartialUpdate):
     fat_g: float | None = Field(None, ge=0, allow_inf_nan=False)
     sodium_mg: int | None = Field(None, ge=0)
     sugar_g: float | None = Field(None, ge=0, allow_inf_nan=False)
+
+    @field_validator("date")
+    @classmethod
+    def _valid_past_or_today(cls, value: str | None) -> str | None:
+        """달력에 있는 날짜여야 하고, 아직 오지 않은 날은 받지 않는다.
+
+        먹지 않은 식사를 기록할 수는 없다. 앞날을 허용하면 오늘까지를 세는
+        평균·연속 기록이 미래 값을 함께 세어 화면마다 다른 수를 말한다.
+        """
+        if value is None:
+            return None
+        # `fromisoformat` 은 `20260801` 같은 축약형도 받는다. 계약은 한 가지
+        # 표기뿐이라 형태부터 걸러 낸다 — 두 표기가 섞이면 화면과 로그에서
+        # 같은 날짜가 다른 문자열로 남는다.
+        if not _YMD.fullmatch(value):
+            raise ValueError("date 는 YYYY-MM-DD 형식이어야 합니다.")
+        try:
+            parsed = _date.fromisoformat(value)
+        except ValueError as e:
+            raise ValueError("date 는 YYYY-MM-DD 형식이어야 합니다.") from e
+        if parsed > clock.today():
+            raise ValueError("date 는 오늘보다 뒤일 수 없습니다.")
+        return parsed.isoformat()
 
 
 class DietAdviceResponse(BaseModel):

@@ -302,7 +302,8 @@ void main() {
 
     test('watchDate separates timelines per calendar day', () async {
       final repo = DriftScheduleRepository(db);
-      final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
+      // 시드는 이번 주를 채우므로(#1210) 빈 날은 그 밖에서 잡는다.
+      final tomorrow = ymd(nowKst().add(const Duration(days: 14)));
 
       expect(await repo.watchDate(tomorrow).first, isEmpty);
 
@@ -347,7 +348,8 @@ void main() {
 
     test('completeSession refuses a future-dated session', () async {
       final repo = DriftScheduleRepository(db);
-      final tomorrow = nowKst().add(const Duration(days: 1));
+      // 시드가 채우지 않는 날 — 그 날의 세션이 하나여야 `single` 이 의미를 갖는다.
+      final tomorrow = nowKst().add(const Duration(days: 14));
       await repo.addSession(
         date: ymd(tomorrow),
         clientName: '이지수',
@@ -414,13 +416,69 @@ void main() {
 
     /// [wide] 가 false 면 부르는 쪽이 잡아 둔 화면 크기를 그대로 쓴다 — 좁은
     /// 폭 회귀를 보는 테스트가 여기서 다시 넓어지면 아무것도 재지 못한다.
-    Future<void> openSchedule(WidgetTester tester, {bool wide = true}) async {
+    Future<ProviderContainer> openSchedule(
+      WidgetTester tester, {
+      bool wide = true,
+    }) async {
       if (wide) useWideConsole(tester);
-      await pumpTrainerApp(
+      return pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
       );
+    }
+
+    Future<void> enterTimeRange(
+      WidgetTester tester, {
+      required String start,
+      required String end,
+      bool confirm = true,
+    }) async {
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
+      await settle(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-start-input')),
+        start,
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        end,
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      if (confirm) {
+        final confirmButton = find.byKey(
+          const ValueKey<String>('session-time-range-confirm'),
+        );
+        await tester.ensureVisible(confirmButton);
+        await tester.pump();
+        await tester.tap(
+          confirmButton,
+        );
+        await settle(tester);
+      }
+    }
+
+    /// [day] 의 일정을 지워 빈 날로 만든다.
+    ///
+    /// 시드는 이번 주 월~일을 모두 채운다(#1210). "일정이 없는 날" 흐름을 보는
+    /// 테스트는 그 조건을 직접 만든다 — 어느 요일에 돌려도 같아야 한다.
+    Future<void> clearDay(
+      WidgetTester tester,
+      ProviderContainer container,
+      DateTime day,
+    ) async {
+      final AppDatabase db = container.read(appDatabaseProvider);
+      await tester.runAsync(
+        () => (db.delete(db.trainerScheduleEntries)
+              ..where((t) => t.date.equals(ymd(day))))
+            .go(),
+      );
+      await settle(tester);
     }
 
     /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
@@ -468,7 +526,7 @@ void main() {
         )
         .message!;
 
-    /// 이번 주 안에서 오늘이 아닌 날 — 시드가 오늘만 채우므로 빈 날이다.
+    /// 이번 주 안에서 오늘이 아닌 날. 시드가 채운 뒤라 [clearDay] 로 비운다.
     DateTime otherDayThisWeek() {
       final today = todayKst();
       final monday = today.subtract(Duration(days: today.weekday - 1));
@@ -793,10 +851,11 @@ void main() {
     });
 
     testWidgets('계획이 없는 1:1 PT 는 프로그램 안내를 보여 준다', (tester) async {
-      await openSchedule(tester);
+      final container = await openSchedule(tester);
 
-      // 시드의 예정 PT 에는 모두 계획이 있다. 비어 있는 날에 하나 만들면 그
-      // 세션이 곧바로 상세 패널에 열린다 — 그 날의 유일한 세션이라서다.
+      // 시드의 예정 PT 에는 모두 계획이 있다. 비운 날에 하나 만들면 그 세션이
+      // 곧바로 상세 패널에 열린다 — 그 날의 유일한 세션이라서다.
+      await clearDay(tester, container, otherDayThisWeek());
       await tester.tap(
         find.byKey(ValueKey<String>('schedule-day-${ymd(otherDayThisWeek())}')),
       );
@@ -868,24 +927,7 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
-      );
-      await settle(tester);
-
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-start-input')),
-        '10:15',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-end-input')),
-        '11:15',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-      );
-      await settle(tester);
+      await enterTimeRange(tester, start: '10:15', end: '11:15');
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -900,19 +942,7 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
-      );
-      await settle(tester);
-
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-end-input')),
-        '11:30',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-      );
-      await settle(tester);
+      await enterTimeRange(tester, start: '10:00', end: '11:30');
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -926,27 +956,17 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
+      await enterTimeRange(
+        tester,
+        start: '10:00',
+        end: '06:00',
+        confirm: false,
       );
-      await settle(tester);
 
-      // 종료를 시작(10시)보다 이른 6시로 옮긴다.
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-end-input')),
-        '06:00',
-      );
-      await tester.tap(
+      final confirm = tester.widget<FilledButton>(
         find.byKey(const ValueKey<String>('session-time-range-confirm')),
       );
-      await settle(tester);
-
-      // 모달이 그 자리에서 막는다 — 시트로 넘어가지 않는다.
-      expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-        findsOneWidget,
-      );
+      expect(confirm.onPressed, isNull);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -976,21 +996,7 @@ void main() {
         findsNothing,
       );
 
-      // 시작을 15:00 → 15:30 으로 옮긴다. 종료는 건드리지 않으므로 그
-      // 대로(16:00) 남는다 — 두 값을 함께 보여 주는 모달이라, 시작만
-      // 바꿔도 소요 시간을 지켜 주던 예전 계산은 더 없다.
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
-      );
-      await settle(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-start-input')),
-        '15:30',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-      );
-      await settle(tester);
+      await enterTimeRange(tester, start: '15:30', end: '16:30');
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
       await tester.tap(find.text('저장하기'));
@@ -1000,7 +1006,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:00'),
+          matching: find.text('15:30\u201316:30'),
         ),
         findsOneWidget,
       );
@@ -1311,13 +1317,14 @@ void main() {
     });
 
     testWidgets('요일 칸을 누르면 그 날을 보고, 오늘 로 돌아온다', (tester) async {
-      await openSchedule(tester);
+      final container = await openSchedule(tester);
       expect(find.text('김민수'), findsWidgets);
       // 오늘을 보고 있으면 `오늘` 은 눌러도 달라질 것이 없어 뜨지 않는다.
       expect(find.text('오늘'), findsNothing);
 
-      // 같은 주의 다른 날 — 시드는 오늘만 채우므로 비어 있다.
+      // 같은 주의 다른 날을 비워, 일정이 없는 날의 안내를 본다.
       final other = otherDayThisWeek();
+      await clearDay(tester, container, other);
       await tester.tap(
         find.byKey(ValueKey<String>('schedule-day-${ymd(other)}')),
       );

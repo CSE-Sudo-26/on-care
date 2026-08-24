@@ -190,6 +190,23 @@
   "dietOpenSettingsFailed": "Couldn't open Settings. Turn on camera and photo access under Settings > Oncare.",
   "dietAnalyzing": "Analyzing…",
   "dietAnalysisFailed": "Analysis failed",
+  "dietRecordDate": "Record date",
+  "@dietRecordDate": {
+    "description": "Label of the date a photo-analysed meal is logged under."
+  },
+  "dietRecordDateChange": "Change date",
+  "@dietRecordDateChange": {
+    "description": "Button that opens the date picker on the analysis result sheet."
+  },
+  "dietRecordDateMoved": "Moved to {date}",
+  "@dietRecordDateMoved": {
+    "description": "Confirmation after moving an analysed meal to another day.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "dietRecordDateFailed": "Could not change the date. Please try again shortly.",
+  "@dietRecordDateFailed": {
+    "description": "Error shown when moving an analysed meal to another day fails."
+  },
   "dietAnalysisDone": "Analysis complete!",
   "dietAiNutritionResult": "AI Nutrition Result",
   "dietAnalyzingBody": "Analyzing the food in your photo",

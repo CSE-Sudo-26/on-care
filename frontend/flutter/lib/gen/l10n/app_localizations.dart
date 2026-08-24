@@ -782,6 +782,30 @@ abstract class AppLocalizations {
   /// **'Analysis failed'**
   String get dietAnalysisFailed;
 
+  /// Label of the date a photo-analysed meal is logged under.
+  ///
+  /// In en, this message translates to:
+  /// **'Record date'**
+  String get dietRecordDate;
+
+  /// Button that opens the date picker on the analysis result sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date'**
+  String get dietRecordDateChange;
+
+  /// Confirmation after moving an analysed meal to another day.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to {date}'**
+  String dietRecordDateMoved(String date);
+
+  /// Error shown when moving an analysed meal to another day fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change the date. Please try again shortly.'**
+  String get dietRecordDateFailed;
+
   /// No description provided for @dietAnalysisDone.
   ///
   /// In en, this message translates to:

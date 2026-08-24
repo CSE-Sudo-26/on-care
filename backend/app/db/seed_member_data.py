@@ -37,11 +37,11 @@ from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.config import get_settings
-from app.db.demo_fixture import FixtureExercise, load_fixture
+from app.db.demo_fixture import FixtureExercise, FixtureRoutine, load_fixture
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
-from app.services import exercise_types
+from app.services import exercise_activity, exercise_types
 from app.services.coach import personal_ingest
 from app.services.coach.rag import has_personal_doc
 
@@ -208,15 +208,9 @@ _CHAT: dict[str, list[tuple[str, str, int]]] = {
     ],
 }
 
-# 회원별 AI 배정 루틴 (name, minutes, type, reason) — 프론트 aiRoutine 정렬.
+# 픽스처가 없는 회원의 AI 배정 루틴 (name, minutes, type, reason).
+# 김민수(user-demo)는 여기 없다 — 공유 픽스처의 `routines` 가 원본이다(#1199).
 _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
-    "user-demo": [
-        ("저강도 유산소 (걷기)", 30, "유산소", "혈압 안정에 효과적"),
-        ("하체 스트레칭", 15, "스트레칭", "혈액순환 개선"),
-        ("코어 강화", 10, "근력", "기초대사량 향상"),
-        ("어깨 관절 보호 스트레칭", 8, "스트레칭",
-         "PT 피드백 반영 · 오른쪽 어깨 보호"),
-    ],
     "user-jisu": [
         ("인터벌 런닝", 25, "유산소", "체지방 연소 효율↑"),
         ("스쿼트 3세트", 15, "근력", "하체 근력 강화"),
@@ -444,14 +438,9 @@ def _entry_foods(entry: models.DietEntry) -> list[dict]:
 
 
 def _session_date(session: models.ExerciseSession) -> str:
-    """세션의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다."""
-    try:
-        monday = date.fromisoformat(session.week_start)
-        return (
-            monday + timedelta(days=_WEEKDAY_INDEX[session.day_label])
-        ).isoformat()
-    except (ValueError, KeyError):
-        return session.week_start
+    """세션의 논리 운동일. 규칙은 [exercise_activity.activity_date_of] 하나다."""
+    day = exercise_activity.activity_date_of(session)
+    return day.isoformat() if day is not None else session.week_start
 
 
 def _seed_schedule(db: Session, valid: set[str]) -> None:
@@ -558,26 +547,65 @@ def _seed_chat(db: Session, member_id: str) -> None:
     _safe_commit(db)
 
 
-def _seed_routines(db: Session, member_id: str) -> None:
-    """AI 배정 루틴 시드(멱등, 결정론적 id)."""
-    routines = _ROUTINES.get(member_id)
-    if not routines:
-        return
-    for i, (name, minutes, rtype, reason) in enumerate(routines):
-        rid = f"seed-routine-{member_id}-{i}"
-        if db.get(models.TrainerRoutine, rid) is not None:
-            continue
-        db.add(models.TrainerRoutine(
-            id=rid,
-            trainer_id=TRAINER_ID,
-            member_id=member_id,
+def _routine_rows(member_id: str) -> list[FixtureRoutine]:
+    """이 회원에게 시드할 개인운동. 김민수는 픽스처가 단일 원본이다. (#1199)
+
+    픽스처는 네 줄 중 둘을 트레이너가 보낸 것으로 둔다. 시드가 표를 따로 들고
+    있던 동안은 그 넷이 전부 `ai` 로 들어가, 목업에서는 갈라 보이던 출처가
+    실서버에서는 한 줄로 뭉쳤다. id 규칙(`seed-routine-{회원}-{순번}`)은 양쪽이
+    같아서 이미 시드된 DB 의 행과 그대로 이어진다.
+    """
+    fixture = load_fixture()
+    if member_id == fixture.user_app_seed_id:
+        return list(fixture.routines)
+    return [
+        FixtureRoutine(
+            id=f"seed-routine-{member_id}-{i}",
             name=name,
             minutes=minutes,
             type=rtype,
             reason=reason,
+            # 픽스처가 없는 회원은 예전과 같이 전부 AI 추천이다.
             source="ai",
-            sort_order=i,
-        ))
+        )
+        for i, (name, minutes, rtype, reason) in enumerate(
+            _ROUTINES.get(member_id, ())
+        )
+    ]
+
+
+def _seed_routines(db: Session, member_id: str) -> None:
+    """개인운동 시드(멱등, 결정론적 id).
+
+    이미 있는 시드 행은 픽스처가 적은 내용으로 맞춘다 — 픽스처를 고쳐도 한 번
+    시드된 DB 가 옛 값을 그대로 들고 있으면, 실연동 데모가 목업과 다른 화면을
+    보여 준다. 트레이너·회원이 만든 행은 id 접두사가 달라 여기 걸리지 않고,
+    검토 상태(`status`)처럼 시드가 소유하지 않는 값은 건드리지 않는다.
+    """
+    routines = _routine_rows(member_id)
+    if not routines:
+        return
+    for i, routine in enumerate(routines):
+        row = db.get(models.TrainerRoutine, routine.id)
+        if row is None:
+            db.add(models.TrainerRoutine(
+                id=routine.id,
+                trainer_id=TRAINER_ID,
+                member_id=member_id,
+                name=routine.name,
+                minutes=routine.minutes,
+                type=routine.type,
+                reason=routine.reason,
+                source=routine.source,
+                sort_order=i,
+            ))
+            continue
+        row.name = routine.name
+        row.minutes = routine.minutes
+        row.type = routine.type
+        row.reason = routine.reason
+        row.source = routine.source
+        row.sort_order = i
     _safe_commit(db)
 
 
@@ -704,6 +732,10 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
                 minutes=minutes,
                 calories=calories,
                 intensity="moderate",
+                # 실제로 운동한 날의 시각을 함께 적는다 (#1264). `created_at` 은
+                # 재시드 시각이라, 이것이 없으면 35주 전 운동도 방금 만든 행으로
+                # 남아 최근 활동 판단이 어긋난다.
+                completed_at=exercise_activity.noon(day.day),
             ))
 
     _safe_commit(db)

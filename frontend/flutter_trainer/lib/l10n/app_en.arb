@@ -1543,6 +1543,10 @@
     }
   },
   "dashTodoCompletionSubtitle": "Low completion · check recent records",
+  "dashTodoCarriedOverDemoSubtitle": "Diet feedback left over from yesterday",
+  "@dashTodoCarriedOverDemoSubtitle": {
+    "description": "Subtitle of the demo carried-over task shown before real history exists."
+  },
   "dashTodoProgramSubtitle": "No recent program sent",
   "dashTodoReportSubtitle": "This week's report is due",
   "dashTaskDismissTitle": "Delete this item?",

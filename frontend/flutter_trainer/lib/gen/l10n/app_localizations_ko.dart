@@ -2700,6 +2700,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashTodoCompletionSubtitle => '이행률 저조 · 최근 기록 확인';
 
   @override
+  String get dashTodoCarriedOverDemoSubtitle => '어제 남긴 식단 피드백';
+
+  @override
   String get dashTodoProgramSubtitle => '최근 등록한 프로그램 없음';
 
   @override

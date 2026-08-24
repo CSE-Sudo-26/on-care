@@ -96,6 +96,7 @@ class DioDietRepository implements DietRepository {
   @override
   Future<DietEntry> updateEntry({
     required String id,
+    String? date,
     String? mealType,
     String? timeLabel,
     List<FoodItem>? foods,
@@ -106,6 +107,7 @@ class DioDietRepository implements DietRepository {
     final res = await _dio.put<Map<String, Object?>>(
       '/diet/entries/$id',
       data: <String, Object?>{
+        'date': ?date,
         'meal_type': ?mealType,
         'time_label': ?timeLabel,
         if (foods != null)
