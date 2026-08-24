@@ -369,3 +369,103 @@ def test_add_session_rejects_nonpositive_sets(client):
         headers=h,
     )
     assert r.status_code == 422
+
+
+def test_name_and_weight_round_trip(client):
+    """운동 이름과 중량이 저장·조회를 지나 그대로 돌아온다. (#1276)"""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "strength", "name": "데드리프트", "minutes": 36,
+            "sets": 12, "weight": 62.5, "calories": 216, "date": _day("수"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["name"] == "데드리프트"
+    assert r.json()["weight"] == 62.5
+    assert r.json()["date"] == _day("수")
+
+    week = client.get("/v1/exercise/weeks/current", headers=h).json()
+    session = week["sessions"][0]
+    assert session["name"] == "데드리프트"
+    assert session["weight"] == 62.5
+    # 이름이 있으면 그게 이 기록의 내용이다 — 유형별 기본 문구를 지어내지 않는다.
+    assert session["items"] == ["데드리프트"]
+
+
+def test_weight_is_dropped_for_non_strength_types(client):
+    """중량은 근력에만 남는다 — 세트와 같은 규칙이다. (#1276)"""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "cardio", "name": "러닝머신", "minutes": 30,
+            "weight": 60, "calories": 270, "date": _day("목"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["weight"] is None
+
+
+def test_a_past_date_lands_in_that_week_not_this_one(client):
+    """지난 날짜를 고르면 그 주에 저장된다. (#1276)
+
+    예전에는 요일 라벨만 받고 주차는 늘 이번 주로 박아, 지난 기록을 적어도
+    이번 주 집계에 들어왔다.
+    """
+    from datetime import date, timedelta
+
+    h = _login(client)
+    last_week = clock.today() - timedelta(days=7)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "cardio", "name": "산책", "minutes": 40,
+            "calories": 360, "date": last_week.isoformat(),
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["date"] == last_week.isoformat()
+
+    # 이번 주에는 잡히지 않는다.
+    assert client.get(
+        "/v1/exercise/weeks/current", headers=h
+    ).json()["total_minutes"] == 0
+
+    monday = last_week - timedelta(days=last_week.weekday())
+    past = client.get(
+        f"/v1/exercise/weeks/current?week_start={monday.isoformat()}", headers=h
+    ).json()
+    assert past["total_minutes"] == 40
+    assert isinstance(date.fromisoformat(past["sessions"][0]["date"]), date)
+
+
+def test_editing_without_a_date_keeps_the_record_where_it_was(client):
+    """날짜를 주지 않은 수정은 원래 자리를 그대로 둔다. (#1276)"""
+    from datetime import timedelta
+
+    h = _login(client)
+    last_week = (clock.today() - timedelta(days=7)).isoformat()
+    sid = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "cardio", "name": "산책", "minutes": 40,
+            "calories": 360, "date": last_week,
+        },
+        headers=h,
+    ).json()["id"]
+
+    r = client.put(
+        f"/v1/exercise/sessions/{sid}",
+        json={"type": "cardio", "name": "산책", "minutes": 50, "calories": 450},
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["date"] == last_week
+    assert client.get(
+        "/v1/exercise/weeks/current", headers=h
+    ).json()["total_minutes"] == 0

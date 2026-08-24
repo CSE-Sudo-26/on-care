@@ -1390,6 +1390,11 @@ def complete_assigned_routine(
 
     completed_at = clock.now()
     exercise_type = _ROUTINE_EXERCISE_TYPES(routine.type)
+    # 회원이 실제로 한 수를 적지 않았으면 트레이너가 배정한 값이 남는다 —
+    # 근력 배정에서 세트·중량이 통째로 비면, 그래프가 분에서 세트를 되짚어
+    # 트레이너도 회원도 적은 적 없는 수를 그린다. (#1276)
+    sets = sets if sets is not None else getattr(routine, "sets", None)
+    weight = weight if weight is not None else getattr(routine, "weight", None)
     row = ExerciseSession(
         id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
         user_id=member_id,
