@@ -334,6 +334,10 @@ class _GymMapAndSheetState extends State<_GymMapAndSheet> {
                         // 붙어 있는지가 아니라 스택의 윗변이 나온다.
                         key: const Key('gym-result-sheet'),
                         child: CustomScrollView(
+                          // 시트 안에서 실제로 구르는 목록. 이 키로 가리킨다 —
+                          // `Scrollable` 이 시트에 둘(시트 자신과 이 목록)이라
+                          // "찾기 화면 안의 유일한 스크롤" 로는 집을 수 없다.
+                          key: const Key('gym-result-list'),
                           controller: scrollController,
                           slivers: <Widget>[
                             SliverToBoxAdapter(
