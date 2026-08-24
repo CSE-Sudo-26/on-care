@@ -712,7 +712,7 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
       scrollable: find.descendant(
         of: find.byKey(const Key('consult-form')),
         matching: find.byType(Scrollable),
-      ),
+      ).first,
       maxScrolls: 40,
     );
   }
