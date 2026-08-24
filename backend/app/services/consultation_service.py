@@ -25,7 +25,8 @@ from app.schemas.consultation_api import (
     ConsultationStatusFilter,
     TrainerConsultationOut,
 )
-from app.services import notification_service
+from app.schemas.trainer_api import ScheduleSessionOut
+from app.services import notification_service, trainer_service
 
 
 class InvalidConsultationRequest(Exception):
@@ -63,6 +64,18 @@ class MemberAlreadyCoached(Exception):
     그때는 IntegrityError 라 트레이너에게 보여 줄 말이 없다. 먼저 확인해서 이유를
     돌려준다.
     """
+
+
+class ConsultationScheduleConflict(Exception):
+    """승인하며 잡으려는 시간에 이미 다른 일정이 있음 — 409.
+
+    `trainer_service.ScheduleSeriesConflict` 와 같은 모양이다 — 겹치는 세션을 들고
+    다녀야 화면이 "OO님 일정과 겹쳐요" 를 그릴 수 있다.
+    """
+
+    def __init__(self, conflicts: list[ScheduleSessionOut]) -> None:
+        super().__init__("겹치는 일정이 있습니다.")
+        self.conflicts = conflicts
 
 
 def _pending_query(member_id: str, payload: ConsultationCreate):
@@ -556,6 +569,16 @@ def accept(
     )
     if existing is not None and existing.trainer_id != trainer_id:
         raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중인 회원입니다.")
+
+    # 담당 링크를 만들기 전에 겹침부터 본다 — 겹치면 아무것도 만들지 않는다
+    # (링크도, 헬스장 연결도, 스케줄도). 화면이 승인 버튼 옆에 짚어 줄 수 있도록
+    # 겹친 세션을 들고 다닌다.
+    if schedule_date is not None:
+        conflicts = trainer_service.conflicting_sessions(
+            db, trainer_id, [(schedule_date.isoformat(), schedule_time or "00:00")]
+        )
+        if conflicts:
+            raise ConsultationScheduleConflict(conflicts)
 
     if existing is None:
         attach_member_to_trainer(
