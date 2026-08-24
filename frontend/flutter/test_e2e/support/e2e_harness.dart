@@ -196,7 +196,7 @@ class E2eApi {
     'exercise_goal': 'strength',
     'health_purpose_type': 'rehab',
     'preferred_date': DateTime.now().toIso8601String().substring(0, 10),
-    'preferred_time_slot': 'evening',
+    'preferred_time_slot': 'flexible',
     'message': 'E2E 예외 케이스',
     // 동의 없이는 서버가 422 다 (#1022).
     'data_sharing_consent': true,
