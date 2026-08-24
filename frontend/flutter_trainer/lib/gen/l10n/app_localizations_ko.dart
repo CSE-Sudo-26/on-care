@@ -1502,6 +1502,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEndBeforeStart => '종료 시간은 시작 시간보다 늦어야 해요';
 
   @override
+  String get schedTimeRangeTitle => '시간 선택';
+
+  @override
+  String get schedTimeRangeConfirm => '확인';
+
+  @override
+  String get schedTimeRangeInvalid => '올바른 시간을 입력하세요 (HH:mm)';
+
+  @override
   String get schedRepeat => '반복';
 
   @override

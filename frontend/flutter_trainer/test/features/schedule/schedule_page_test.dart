@@ -868,19 +868,29 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // 시작 00분 → 15분. 종료는 소요 시간(기본 60분)을 지키며 바라간다 —
-      // 시작만 옮기면 세션이 짧아지는 것을 막는다(#1090).
+      // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
       await tester.tap(
-        find.byKey(const ValueKey<String>('session-start-minute')),
+        find.byKey(const ValueKey<String>('session-time-range-field')),
       );
       await settle(tester);
-      await tester.tap(find.text('15분').last);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-start-input')),
+        '10:15',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        '11:15',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
       await settle(tester);
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      // 시간표 블록이 시작·끝을 함께 말한다(기본 60분 유지).
+      // 시간표 블록이 시작·끝을 함께 말한다.
       expect(find.text('10:15\u201311:15'), findsOneWidget);
     });
 
@@ -890,15 +900,18 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      await tester.tap(find.byKey(const ValueKey<String>('session-end-hour')));
-      await settle(tester);
-      await tester.tap(find.text('11시').last);
-      await settle(tester);
       await tester.tap(
-        find.byKey(const ValueKey<String>('session-end-minute')),
+        find.byKey(const ValueKey<String>('session-time-range-field')),
       );
       await settle(tester);
-      await tester.tap(find.text('30분').last);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        '11:30',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
       await settle(tester);
 
       await tester.tap(find.text('추가하기'));
@@ -907,22 +920,33 @@ void main() {
       expect(find.text('10:00\u201311:30'), findsOneWidget);
     });
 
-    testWidgets('종료 시간이 시작보다 이르면 저장을 막는다 (#1090)', (tester) async {
+    testWidgets('종료 시간이 시작보다 이르면 확인을 막는다 (#1090)', (tester) async {
       await openSchedule(tester);
 
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
+      await settle(tester);
+
       // 종료를 시작(10시)보다 이른 6시로 옮긴다.
-      await tester.tap(find.byKey(const ValueKey<String>('session-end-hour')));
-      await settle(tester);
-      await tester.tap(find.text('06시').last);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        '06:00',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
       await settle(tester);
 
-      await tester.tap(find.text('추가하기'));
-      await settle(tester);
-
+      // 모달이 그 자리에서 막는다 — 시트로 넘어가지 않는다.
       expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -941,12 +965,10 @@ void main() {
       );
       await settle(tester);
 
-      // Booking details stay inside the expanded schedule card. Program and
-      // trainer memo editing have their own separate action.
+      // 일정 수정은 상세 패널을 바꿔치는 대신 가운데 모달로 뜬다(#1250).
+      // 프로그램·메모 편집은 각자 다른 자리다.
       expect(
-        find.byKey(
-          const ValueKey<String>('week-session-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('schedule-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
@@ -954,12 +976,20 @@ void main() {
         findsNothing,
       );
 
-      // Change 00분 → 30분 in the time picker and save.
+      // 시작을 15:00 → 15:30 으로 옮긴다. 종료는 건드리지 않으므로 그
+      // 대로(16:00) 남는다 — 두 값을 함께 보여 주는 모달이라, 시작만
+      // 바꿔도 소요 시간을 지켜 주던 예전 계산은 더 없다.
       await tester.tap(
-        find.byKey(const ValueKey<String>('session-start-minute')),
+        find.byKey(const ValueKey<String>('session-time-range-field')),
       );
       await settle(tester);
-      await tester.tap(find.text('30분').last);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-start-input')),
+        '15:30',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
       await settle(tester);
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
@@ -970,7 +1000,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:30'),
+          matching: find.text('15:30\u201316:00'),
         ),
         findsOneWidget,
       );
@@ -998,9 +1028,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.byKey(
-          const ValueKey<String>('week-session-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('schedule-editor-seed-schedule-3')),
         findsNothing,
       );
       await tester.enterText(
