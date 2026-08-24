@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
@@ -276,14 +277,13 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   /// 새 일정의 날짜를 고른다 — 기본값은 시트를 연 시점의 선택된 날짜다.
   /// 지난 기록을 남기려는 경우도 있어(#870 반복과 달리) 과거 날짜도 막지 않는다.
   Future<void> _pickDate() async {
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final first = _date.isBefore(todayOnly) ? _date : todayOnly;
+    final today = todayKst();
+    final first = _date.isBefore(today) ? _date : today;
     final picked = await showPortraitDatePicker(
       context: context,
       initialDate: _date,
       firstDate: first.subtract(const Duration(days: 365)),
-      lastDate: todayOnly.add(const Duration(days: 365)),
+      lastDate: today.add(const Duration(days: 365)),
     );
     if (picked == null || !mounted) return;
     setState(() {
