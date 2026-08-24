@@ -236,7 +236,14 @@ class FakeDietRepository implements DietRepository {
     final DateTime selectedDate = DateTime(date.year, date.month, date.day);
     final DateTime today = DateTime(now.year, now.month, now.day);
     final int daysAgo = today.difference(selectedDate).inDays;
+    final List<DietEntry> moved = movedEntries.values
+        .where((({String date, DietEntry entry}) m) => m.date == _wire(selectedDate))
+        .map((({String date, DietEntry entry}) m) => m.entry)
+        .toList();
     if (daysAgo == 0) return fetchToday();
+    if (moved.isNotEmpty) {
+      return _historicalDay(moved, _aiCoachMessage);
+    }
     if (daysAgo == 1) {
       return _historicalDay(
         _yesterdayEntries,
@@ -272,6 +279,7 @@ class FakeDietRepository implements DietRepository {
   @override
   Future<DietEntry> updateEntry({
     required String id,
+    String? date,
     String? mealType,
     String? timeLabel,
     List<FoodItem>? foods,
@@ -314,8 +322,31 @@ class FakeDietRepository implements DietRepository {
     if (old != null) {
       _entries[idx] = updated;
     }
+    // 날짜를 옮기면 오늘 목록에서 빠지고 그 날짜에서 보인다 — 실서버가 하는
+    // 일과 같다(#1241). 옮긴 뒤에도 오늘에 남아 있으면 하루 합계가 두 날에
+    // 겹쳐 보인다.
+    if (date != null) {
+      final DateTime now = nowKst();
+      final String todayWire = _wire(DateTime(now.year, now.month, now.day));
+      if (old != null) _entries.removeAt(idx);
+      movedEntries.remove(id);
+      if (date == todayWire) {
+        _entries.add(updated);
+      } else {
+        movedEntries[id] = (date: date, entry: updated);
+      }
+    }
     return updated;
   }
+
+  /// 다른 날짜로 옮겨 둔 기록. [fetchByDate] 가 그 날짜에서 함께 돌려준다.
+  final Map<String, ({String date, DietEntry entry})> movedEntries =
+      <String, ({String date, DietEntry entry})>{};
+
+  static String _wire(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   MealType _mealTypeOf(String name) {
     for (final MealType m in MealType.values) {

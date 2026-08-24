@@ -385,6 +385,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAnalysisFailed => '분석 실패';
 
   @override
+  String get dietRecordDate => '기록 날짜';
+
+  @override
+  String get dietRecordDateChange => '날짜 변경';
+
+  @override
+  String dietRecordDateMoved(String date) {
+    return '$date 식단으로 옮겼어요';
+  }
+
+  @override
+  String get dietRecordDateFailed => '날짜를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
   String get dietAnalysisDone => '분석 완료!';
 
   @override
