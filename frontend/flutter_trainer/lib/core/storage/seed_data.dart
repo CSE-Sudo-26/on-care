@@ -14,10 +14,14 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v27']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v28']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v28` 은 과거에 PT·기타 운동이 생기고 근력이 세트를 값으로 들게 된
+/// 변경이다(#1265) — 올리지 않으면 오늘 이미 시드된 브라우저가 과거가 비어
+/// 있는 옛 데이터를 그대로 들고 있다.
 ///
 /// `_v27` 은 사용자 앱과 트레이너 웹의 김민수 대화 날짜를 일치시켰다(#1292).
 /// 다른 고객과의 상대적인 최신순은 그대로 유지한다.
@@ -110,7 +114,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v27') == today) return;
+  if (await db.readValue('trainer_seeded_v28') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final DemoFixture demo = fixture ?? DemoFixture.load();
@@ -451,7 +455,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v27', today);
+    await db.putValue('trainer_seeded_v28', today);
   });
 }
 

@@ -1886,6 +1886,12 @@ abstract class AppLocalizations {
   /// **'Training goal'**
   String get consultExerciseGoal;
 
+  /// No description provided for @consultHealthPurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Health management purpose'**
+  String get consultHealthPurpose;
+
   /// No description provided for @consultPreferredTime.
   ///
   /// In en, this message translates to:

@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import or_, select
@@ -615,10 +616,25 @@ def _seed_routines(db: Session, member_id: str) -> None:
 _FIXTURE_ID_PREFIX = "seed-fix-"
 
 
+@dataclass(frozen=True)
+class _TypeTotals:
+    """하루·한 종류로 접은 값. 운동 기록 한 행이 되는 그대로다."""
+
+    minutes: int
+    calories: int
+    name: str
+    #: 근력이면 그날 한 세트 수의 **합**. 다른 유형은 None 이다.
+    sets: int | None = None
+    #: 근력이면 그날 한 횟수 중 가장 많은 수. 세트와 달리 더하지 않는다 — 한
+    #: 세트당 수라 합계는 아무도 한 적 없는 값이 된다(#1310 의 PT 파생 기록과
+    #: 같은 규칙).
+    reps: int | None = None
+
+
 def _by_type(
     exercises: tuple[FixtureExercise, ...],
-) -> dict[str, tuple[int, int, str]]:
-    """운동을 종류별로 합친다 — {종류: (분, 칼로리, 이름)}. 픽스처 순서를 유지한다.
+) -> dict[str, _TypeTotals]:
+    """운동을 종류별로 합친다. 픽스처 순서를 유지한다.
 
     종류는 표준 어휘로 접어서 센다 (#996). 픽스처가 아직 옛 이름을 쓰더라도
     DB 에는 표준 값만 들어가야 앱이 유형을 다시 매핑하지 않는다.
@@ -627,17 +643,57 @@ def _by_type(
     이름으로 적기 때문이다(#1288). 종류로 합치면서 이름까지 버리면 데모의 요일
     칸이 "유산소 · 근력" 두 줄로만 남는다. PT 완료가 만드는 기록도 여러 운동을
     쉼표로 잇는 같은 규칙을 쓴다.
+
+    세트·횟수도 함께 접는다 (#1265). 예전에는 픽스처가 적어 둔 세트를 버려서,
+    화면이 분에서 세트를 되짚었다 — 같은 회원의 같은 날 근력이 앱마다 다른 수로
+    보였다.
     """
-    totals: dict[str, tuple[int, int, str]] = {}
+    totals: dict[str, _TypeTotals] = {}
     for exercise in exercises:
         kind = exercise_types.normalize(exercise.type)
-        minutes, calories, names = totals.get(kind, (0, 0, ""))
-        totals[kind] = (
-            minutes + exercise.minutes,
-            calories + exercise.calories,
-            f"{names}, {exercise.name}" if names else exercise.name,
+        prev = totals.get(kind)
+        strength = kind == exercise_types.STRENGTH
+        totals[kind] = _TypeTotals(
+            minutes=(prev.minutes if prev else 0) + exercise.minutes,
+            calories=(prev.calories if prev else 0) + exercise.calories,
+            name=(
+                f"{prev.name}, {exercise.name}"
+                if prev and prev.name
+                else exercise.name
+            ),
+            sets=(
+                _add(prev.sets if prev else None, exercise.sets)
+                if strength
+                else None
+            ),
+            reps=(
+                _peak(prev.reps if prev else None, exercise.reps)
+                if strength
+                else None
+            ),
         )
     return totals
+
+
+def _add(left: int | None, right: int | None) -> int | None:
+    """둘 다 없으면 None. 하나만 있으면 그 값 — 0 으로 채우지 않는다.
+
+    0 은 "0세트를 했다" 가 되고, None 은 "적지 않았다" 다. 그래프가 둘을 다르게
+    읽는다.
+    """
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return left + right
+
+
+def _peak(left: int | None, right: int | None) -> int | None:
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return max(left, right)
 
 
 def _seed_from_fixture(db: Session, member_id: str) -> None:
@@ -728,16 +784,20 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
         # 하루에 같은 종류가 둘일 수 있어(PT 날의 레그프레스·레그컬은 둘 다 근력)
         # 종류로 합친다. 주간 활동 그래프가 하루·종류당 한 칸을 그리므로 나눠 넣을
         # 자리도 없다.
-        for kind, (minutes, calories, name) in _by_type(day.done_exercises).items():
+        for kind, totals in _by_type(day.done_exercises).items():
             db.add(models.ExerciseSession(
                 id=f"{_FIXTURE_ID_PREFIX}ex-{member_id}-{day.iso}-{kind}",
                 user_id=member_id,
                 week_start=day.week_start,
                 day_label=day.day_label,
                 type=kind,
-                name=name,
-                minutes=minutes,
-                calories=calories,
+                name=totals.name,
+                minutes=totals.minutes,
+                calories=totals.calories,
+                # 픽스처가 적어 둔 세트·횟수를 그대로 남긴다 — 없으면 화면이
+                # 분에서 세트를 되짚어 아무도 적은 적 없는 수를 그린다. (#1265)
+                sets=totals.sets,
+                reps=totals.reps,
                 intensity="moderate",
                 # 실제로 운동한 날의 시각을 함께 적는다 (#1264). `created_at` 은
                 # 재시드 시각이라, 이것이 없으면 35주 전 운동도 방금 만든 행으로

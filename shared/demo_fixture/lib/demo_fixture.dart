@@ -112,6 +112,7 @@ class FixtureExercise {
     required this.calories,
     required this.done,
     this.sets,
+    this.reps,
   });
 
   factory FixtureExercise.fromJson(Map<String, Object?> json) =>
@@ -122,6 +123,7 @@ class FixtureExercise {
         calories: (json['calories']! as num).toInt(),
         done: json['done']! as bool,
         sets: (json['sets'] as num?)?.toInt(),
+        reps: (json['reps'] as num?)?.toInt(),
       );
 
   final String name;
@@ -134,8 +136,12 @@ class FixtureExercise {
 
   /// 근력 항목의 **세트 수**. 이름에 적힌 `4세트` 를 화면이 다시 세거나 분에서
   /// 되짚어 계산하면 세 화면이 저마다 다른 수를 말한다 — 값으로 들고 다닌다.
-  /// 유산소·스트레칭은 분이 곧 값이라 null 이다.
+  /// 유산소·스트레칭·기타는 분이 곧 값이라 null 이다.
   final int? sets;
+
+  /// 근력 항목의 **한 세트당 횟수**. 세트·중량과 한 벌이다(#1310) — 셋이 다
+  /// 있어야 지난주에 무엇을 했는지 그대로 되짚는다.
+  final int? reps;
 
   /// 트레이너 화면이 쓰는 표기. 이행률과 이 목록이 같은 자리에서 나오므로
   /// "67%" 옆에 "3개 중 3개 완료" 가 놓이는 일이 없다(#754).

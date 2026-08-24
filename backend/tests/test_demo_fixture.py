@@ -84,3 +84,81 @@ def test_exercise_types_use_the_standard_vocabulary():
     for day in load_fixture().days_for(date(2026, 8, 16)):
         for exercise in day.exercises:
             assert exercise.type in exercise_types.CANONICAL_TYPES, exercise.type
+
+
+# ── 데모가 과거에도 서 있는가 (#1265) ──────────────────────────────────────
+#
+# 데모는 오늘 하루만 보는 것이 아니다. 지난주·전체로 넘겼을 때 PT 를 받은 날,
+# 그때 무엇을 몇 세트 했는지, 회원이 뭐라고 했고 트레이너가 뭘 적어 뒀는지가
+# 없으면 "운동 기능이 충분히 구현된 제품" 으로 읽히지 않는다.
+#
+# 시연 날짜를 미리 알 수 없으므로 **어느 요일에 열어도** 성립해야 한다. 아래
+# 검사는 월~일 일곱 요일과 연·월 경계, 윤년 하루를 함께 본다.
+_ANY_DAY = (
+    date(2026, 8, 10),   # 월
+    date(2026, 8, 11),   # 화
+    date(2026, 8, 12),   # 수
+    date(2026, 8, 13),   # 목
+    date(2026, 8, 14),   # 금
+    date(2026, 8, 15),   # 토
+    date(2026, 8, 16),   # 일
+    date(2026, 12, 31),  # 연말
+    date(2027, 1, 1),    # 연초
+    date(2028, 2, 29),   # 윤년
+)
+
+
+def test_the_past_has_pt_days_spread_across_the_history():
+    """과거에 PT 사례가 흩어져 있다 — 오늘 하나뿐이면 지난 기간이 비어 보인다."""
+    for today in _ANY_DAY:
+        days = load_fixture().days_for(today)
+        past_pt = [d for d in days if d.is_pt and d.day < today]
+        assert len(past_pt) >= 5, f"{today}: 과거 PT 가 {len(past_pt)}일뿐"
+        for day in past_pt:
+            assert day.client_feedback, f"{day.iso}: 고객 피드백이 없다"
+            assert day.trainer_note, f"{day.iso}: 트레이너 메모가 없다"
+            assert any(
+                e.type == exercise_types.STRENGTH and e.sets
+                for e in day.exercises
+            ), f"{day.iso}: 세트를 적은 근력이 없다"
+
+
+def test_every_exercise_type_shows_up_in_more_than_one_week():
+    """네 유형이 모두, 여러 주에 걸쳐 보인다.
+
+    `other` 가 하나도 없으면 유형별 분해 화면의 `기타` 칸이 늘 0 이라, 그 칸이
+    실제로 동작하는지 시연에서 볼 수가 없다.
+    """
+    days = load_fixture().days_for(date(2026, 8, 16))
+    weeks_by_type: dict[str, set[str]] = {}
+    for day in days:
+        for exercise in day.exercises:
+            kind = exercise_types.normalize(exercise.type)
+            weeks_by_type.setdefault(kind, set()).add(day.week_start)
+    for kind in exercise_types.CANONICAL_TYPES:
+        weeks = weeks_by_type.get(kind, set())
+        assert len(weeks) >= 2, f"{kind}: {len(weeks)}주에만 보인다"
+
+
+def test_today_alone_carries_the_whole_story():
+    """월요일에 열어도 이번 주 화면이 비지 않는다 — 오늘 하루가 다 담고 있다."""
+    for today in _ANY_DAY:
+        day = load_fixture().days_for(today)[-1]
+        assert day.day == today
+        kinds = {exercise_types.normalize(e.type) for e in day.exercises}
+        assert kinds == set(exercise_types.CANONICAL_TYPES), f"{today}: {kinds}"
+        assert day.is_pt, f"{today}: 오늘이 PT 날이 아니다"
+        assert day.client_feedback and day.trainer_note
+        assert any(
+            e.type == exercise_types.STRENGTH and e.sets for e in day.exercises
+        )
+
+
+def test_strength_always_says_how_many_sets():
+    """근력은 세트를 값으로 들고 다닌다 — 분에서 되짚으면 화면마다 수가 갈린다."""
+    for day in load_fixture().days_for(date(2026, 8, 16)):
+        for exercise in day.exercises:
+            if exercise_types.normalize(exercise.type) != exercise_types.STRENGTH:
+                assert exercise.sets is None, f"{day.iso}: {exercise.name}"
+                continue
+            assert exercise.sets, f"{day.iso}: {exercise.name} 에 세트가 없다"

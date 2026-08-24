@@ -987,6 +987,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
+  String get consultHealthPurpose => '건강관리 목적';
+
+  @override
   String get consultPreferredTime => '희망 일시';
 
   @override
