@@ -18,6 +18,8 @@ import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart' show kDietDayMessagesKey;
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart'
+    show setsFromStrengthMinutes;
 import 'package:oncare/features/schedule/domain/schedule_format.dart';
 
 /// A drift-backed dummy backend. Intercepts dio requests and serves
@@ -257,6 +259,14 @@ class LocalApiInterceptor extends Interceptor {
     final calories = (body['calories'] as num?)?.toInt() ?? existing.calories;
     final intensity = (body['intensity'] as String? ?? existing.intensity)
         .trim();
+    // 유형을 근력에서 바꾼 수정이면 세트가 지워진다 — 남겨 두면 유산소 기록이
+    // 세트를 들고 있게 된다.
+    final sets = _setsFor(
+      type,
+      body.containsKey('sets')
+          ? (body['sets'] as num?)?.toInt()
+          : existing.sets,
+    );
     final dayRaw = (body['day_label'] as String? ?? '').trim();
     final dayLabel = dayRaw.isEmpty ? existing.dayLabel : dayRaw;
     await (_db.update(
@@ -268,6 +278,7 @@ class LocalApiInterceptor extends Interceptor {
         calories: Value(calories),
         intensity: Value(intensity),
         dayLabel: Value(dayLabel),
+        sets: Value(sets),
       ),
     );
     return _ok(options, <String, Object?>{
@@ -275,6 +286,7 @@ class LocalApiInterceptor extends Interceptor {
       'day_label': dayLabel,
       'type': type,
       'minutes': minutes,
+      'sets': sets,
       'calories': calories,
       'intensity': intensity,
       'date_label': _dateLabelForDayLabel(dayLabel, _mondayOfThisWeekString()),
@@ -290,6 +302,19 @@ class LocalApiInterceptor extends Interceptor {
     )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (existing == null) return _notFound(options, '식단 기록을 찾을 수 없습니다.');
     final body = _jsonBody(options);
+    // 기록 날짜(#1241). 실서버와 같은 규칙이다 — 형식이 틀리거나 아직 오지 않은
+    // 날은 받지 않는다. 데모에서만 통과하면 실연동에서 그 화면이 처음 실패한다.
+    final String? date = (body['date'] as String?)?.trim();
+    if (body.containsKey('date')) {
+      final DateTime? parsed = DateTime.tryParse(date ?? '');
+      if (date == null || parsed == null || date.length != 10) {
+        return _badRequest(options, 'date 는 YYYY-MM-DD 형식이어야 합니다.');
+      }
+      final DateTime now = nowKst();
+      if (parsed.isAfter(DateTime(now.year, now.month, now.day))) {
+        return _badRequest(options, 'date 는 오늘보다 뒤일 수 없습니다.');
+      }
+    }
     final mealType = (body['meal_type'] as String?)?.trim();
     final timeLabel = (body['time_label'] as String?)?.trim();
     final Object? foodsValue = body['foods'];
@@ -305,6 +330,7 @@ class LocalApiInterceptor extends Interceptor {
     final Object? sugarGValue = body['sugar_g'];
     await (_db.update(_db.dietEntries)..where((t) => t.id.equals(id))).write(
       DietEntriesCompanion(
+        date: date == null ? const Value.absent() : Value(date),
         mealType: (mealType == null || mealType.isEmpty)
             ? const Value.absent()
             : Value(mealType),
@@ -864,6 +890,11 @@ class LocalApiInterceptor extends Interceptor {
     final perDayCalories = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayCardio = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayStrength = <String, int>{for (final l in _weekdayLabels) l: 0};
+    // 근력은 세트로 읽는다 — 기록에 세트가 있으면 그 값을, 없으면 분에서
+    // 환산한 값을 센다(서버 `sets_of` 와 같은 규칙). (#1262)
+    final perDayStrengthSets = <String, int>{
+      for (final l in _weekdayLabels) l: 0,
+    };
     final perDayStretching = <String, int>{
       for (final l in _weekdayLabels) l: 0,
     };
@@ -898,11 +929,21 @@ class LocalApiInterceptor extends Interceptor {
         (m) => m + r.minutes,
         ifAbsent: () => r.minutes,
       );
+      if (identical(bucket, perDayStrength)) {
+        final int sets =
+            r.sets ?? setsFromStrengthMinutes(r.minutes.toDouble());
+        perDayStrengthSets.update(
+          r.dayLabel,
+          (n) => n + sets,
+          ifAbsent: () => sets,
+        );
+      }
       sessionsJson.add(<String, Object?>{
         'id': r.id,
         'day_label': r.dayLabel,
         'type': r.type,
         'minutes': r.minutes,
+        'sets': r.sets,
         'calories': r.calories,
         'intensity': r.intensity,
         // Date/time labels are synthesized here so the React-style
@@ -946,6 +987,9 @@ class LocalApiInterceptor extends Interceptor {
       'daily_calories': dailyCalories,
       'cardio_minutes': cardioSeries,
       'strength_minutes': strengthSeries,
+      'strength_sets': <num>[
+        for (final l in _weekdayLabels) perDayStrengthSets[l] ?? 0,
+      ],
       // 서버와 같은 이름으로 함께 내려준다 — flexibility 가 표준이고
       // stretching 은 옮겨 가는 동안의 옛 이름이다. (#996)
       'flexibility_minutes': stretchingSeries,
@@ -1019,6 +1063,12 @@ class LocalApiInterceptor extends Interceptor {
   /// POST /exercise/sessions — persist a workout into drift so the next
   /// GET /exercise/weeks/current includes it (stats + chart + list). The
   /// `ex-` id prefix (not `seed-`) means seedIfEmpty never wipes it.
+  /// 저장할 세트 수. 근력이 아닌 유형에서 온 값은 버린다 — 서버
+  /// (`_sets_for`)와 같은 규칙이라야 데모와 실 API 가 같은 기록을 남긴다.
+  /// (#1262)
+  int? _setsFor(String type, int? sets) =>
+      type.trim() == 'strength' ? sets : null;
+
   Future<Response<Object?>> _exerciseAddSession(RequestOptions options) async {
     final body = options.data;
     Map<String, Object?> payload;
@@ -1038,6 +1088,7 @@ class LocalApiInterceptor extends Interceptor {
     }
     final calories = (payload['calories'] as num?)?.toInt() ?? 0;
     final intensity = (payload['intensity'] as String?) ?? 'moderate';
+    final sets = _setsFor(type, (payload['sets'] as num?)?.toInt());
     final dayLabel =
         (payload['day_label'] as String?) ??
         _weekdayLabels[nowKst().weekday - 1];
@@ -1054,6 +1105,7 @@ class LocalApiInterceptor extends Interceptor {
             minutes: minutes,
             calories: calories,
             intensity: Value(intensity),
+            sets: Value(sets),
           ),
         );
 
@@ -1062,6 +1114,7 @@ class LocalApiInterceptor extends Interceptor {
       'day_label': dayLabel,
       'type': type,
       'minutes': minutes,
+      'sets': sets,
       'calories': calories,
       'intensity': intensity,
       'date_label': _dateLabelForDayLabel(dayLabel, _mondayOfThisWeekString()),

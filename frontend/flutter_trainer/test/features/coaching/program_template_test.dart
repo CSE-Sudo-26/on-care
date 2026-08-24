@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -85,8 +86,64 @@ void main() {
         'than replacing them', (tester) async {
       await openCoaching(tester);
 
-      // A seeded AI suggestion for 김민수 that must survive the apply.
-      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+      // 프로그램 정보 박스는 AI 루틴을 생성/반영하기 전까지 빈 상태로
+      // 시작한다(#1028) — AI 요청 흐름(생성 → 기존 추천 선택 → 검토 완료 →
+      // 템플릿에 반영)을 끝까지 밟아 이 회원의 AI 추천 루틴을 편집기에
+      // 반영해 둔다. 안내 배너의 `편집기에 반영` 단축 버튼은 이제 없다
+      // (#1028 후속).
+      final scrollable = find
+          .descendant(
+            of: find.byKey(
+              const ValueKey<String>('coaching-program-page-scroll'),
+            ),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final generate = find.byKey(
+        const ValueKey<String>('generate-routine-options'),
+      );
+      // `scrollUntilVisible` 은 대상이 트리에 붙는 순간 멈춘다 — 뷰포트
+      // 가장자리에 걸칠 수 있어, 탭 전에 `ensureVisible`+`pump` 로 한 번 더
+      // 자리를 잡는다(`_applyRecommendedRoutine`, `coaching_page_test.dart`
+      // 와 같은 이유).
+      await tester.scrollUntilVisible(generate, 150, scrollable: scrollable);
+      await tester.ensureVisible(generate);
+      await tester.pump();
+      await tester.tap(generate);
+      await tester.pumpAndSettle();
+      final existing = find.byKey(
+        const ValueKey<String>('routine-option-recommended'),
+      );
+      await tester.scrollUntilVisible(existing, 150, scrollable: scrollable);
+      await tester.ensureVisible(existing);
+      await tester.pump();
+      await tester.tap(existing);
+      await tester.pumpAndSettle();
+      final complete = find.byKey(
+        const ValueKey<String>('complete-routine-review'),
+      );
+      await tester.scrollUntilVisible(complete, 150, scrollable: scrollable);
+      await tester.ensureVisible(complete);
+      await tester.pump();
+      await tester.tap(complete);
+      await tester.pumpAndSettle();
+      final apply = find.byKey(
+        const ValueKey<String>('apply-routine-to-template'),
+      );
+      await tester.scrollUntilVisible(apply, 150, scrollable: scrollable);
+      await tester.ensureVisible(apply);
+      await tester.pump();
+      await tester.tap(apply);
+      await settle(tester);
+
+      // A seeded AI suggestion for 김민수 that must survive the apply. AI
+      // 흐름 자신의 검토 목록에도 같은 이름이 남아 있을 수 있어 편집기 안
+      // 으로 범위를 좁힌다.
+      final inEditor = find.descendant(
+        of: find.byType(ProgramEditorWorkspace),
+        matching: find.text('저강도 유산소 (걷기)'),
+      );
+      expect(inEditor, findsOneWidget);
 
       final template = starterTemplates.first;
       await revealTemplate(tester, template.name);
@@ -101,10 +158,10 @@ void main() {
       // The template's exercises joined the composed routine…
       expect(find.text(template.exercises.first.name), findsWidgets);
       // …and the AI's own suggestion is still there.
-      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
-      // Template-added items carry the trainer accent, like any manual
-      // addition.
-      expect(find.text('트레이너 추가'), findsWidgets);
+      expect(inEditor, findsOneWidget);
+      // Template-added items carry the template's own name as their source
+      // badge, not the generic trainer-added label (#1029).
+      expect(find.text('${template.name} 템플릿 추가'), findsWidgets);
     });
 
     testWidgets('식단·운동 영역과 전송 이력을 각각 한 번만 보여 준다', (tester) async {

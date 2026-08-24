@@ -389,6 +389,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietAnalysisFailed => 'Analysis failed';
 
   @override
+  String get dietRecordDate => 'Record date';
+
+  @override
+  String get dietRecordDateChange => 'Change date';
+
+  @override
+  String dietRecordDateMoved(String date) {
+    return 'Moved to $date';
+  }
+
+  @override
+  String get dietRecordDateFailed =>
+      'Could not change the date. Please try again shortly.';
+
+  @override
   String get dietAnalysisDone => 'Analysis complete!';
 
   @override
@@ -504,19 +519,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietDeleteMeal => 'Delete Meal';
 
   @override
-  String get exTypeWalking => 'Walking';
-
-  @override
   String get exTypeCardio => 'Cardio';
 
   @override
   String get exTypeStrength => 'Strength';
 
   @override
-  String get exTypeYoga => 'Yoga';
-
-  @override
-  String get exTypeStretching => 'Stretching';
+  String get exTypeFlexibility => 'Flexibility';
 
   @override
   String get exTypeOtherChip => 'Other';
@@ -718,6 +727,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exExerciseDuration => 'Duration';
+
+  @override
+  String get exExerciseSets => 'Sets';
+
+  @override
+  String exSetsCount(int sets) {
+    return '$sets sets';
+  }
+
+  @override
+  String get exEnterSets => 'Enter the number of sets';
 
   @override
   String get exExerciseIntensity => 'Intensity';
@@ -1347,16 +1367,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exSelectDate => 'Select a date';
 
   @override
+  String get exSelectTime => 'Select a time';
+
+  @override
   String get exPreferredTime => 'Preferred Time';
-
-  @override
-  String get exTimeMorning => 'Morning';
-
-  @override
-  String get exTimeAfternoon => 'Afternoon';
-
-  @override
-  String get exTimeEvening => 'Evening';
 
   @override
   String get exTimeFlexible => 'Discuss Later';
@@ -1416,6 +1430,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => 'Consultation Request Status';
+
+  @override
+  String get exConsultHistoryTitle => 'My Consultation Requests';
+
+  @override
+  String get exConsultHistoryEmpty =>
+      'You haven\'t sent any consultation requests yet.';
+
+  @override
+  String get exConsultHistoryInProgress => 'In Progress';
+
+  @override
+  String get exConsultHistoryPast => 'Past Requests';
 
   @override
   String get exConsultRejectedReasonLabel => 'Reason for decline';
@@ -1749,11 +1776,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalStrengthWeekly => 'Weekly strength (sets)';
 
   @override
-  String get myGoalFlexibilityWeekly => 'Weekly stretching (min)';
+  String get myGoalFlexibilityWeekly => 'Weekly flexibility (min)';
 
   @override
   String get myGoalExerciseSuggestionNote =>
-      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week';
+      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week';
 
   @override
   String get myGoalExerciseApplySuggestion => 'Use suggested goals';

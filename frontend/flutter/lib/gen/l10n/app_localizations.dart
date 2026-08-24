@@ -782,6 +782,30 @@ abstract class AppLocalizations {
   /// **'Analysis failed'**
   String get dietAnalysisFailed;
 
+  /// Label of the date a photo-analysed meal is logged under.
+  ///
+  /// In en, this message translates to:
+  /// **'Record date'**
+  String get dietRecordDate;
+
+  /// Button that opens the date picker on the analysis result sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date'**
+  String get dietRecordDateChange;
+
+  /// Confirmation after moving an analysed meal to another day.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to {date}'**
+  String dietRecordDateMoved(String date);
+
+  /// Error shown when moving an analysed meal to another day fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change the date. Please try again shortly.'**
+  String get dietRecordDateFailed;
+
   /// No description provided for @dietAnalysisDone.
   ///
   /// In en, this message translates to:
@@ -998,12 +1022,6 @@ abstract class AppLocalizations {
   /// **'Delete Meal'**
   String get dietDeleteMeal;
 
-  /// No description provided for @exTypeWalking.
-  ///
-  /// In en, this message translates to:
-  /// **'Walking'**
-  String get exTypeWalking;
-
   /// No description provided for @exTypeCardio.
   ///
   /// In en, this message translates to:
@@ -1016,17 +1034,11 @@ abstract class AppLocalizations {
   /// **'Strength'**
   String get exTypeStrength;
 
-  /// No description provided for @exTypeYoga.
+  /// No description provided for @exTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Yoga'**
-  String get exTypeYoga;
-
-  /// No description provided for @exTypeStretching.
-  ///
-  /// In en, this message translates to:
-  /// **'Stretching'**
-  String get exTypeStretching;
+  /// **'Flexibility'**
+  String get exTypeFlexibility;
 
   /// No description provided for @exTypeOtherChip.
   ///
@@ -1375,6 +1387,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Duration'**
   String get exExerciseDuration;
+
+  /// No description provided for @exExerciseSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get exExerciseSets;
+
+  /// No description provided for @exSetsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{sets} sets'**
+  String exSetsCount(int sets);
+
+  /// No description provided for @exEnterSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the number of sets'**
+  String get exEnterSets;
 
   /// No description provided for @exExerciseIntensity.
   ///
@@ -2510,29 +2540,17 @@ abstract class AppLocalizations {
   /// **'Select a date'**
   String get exSelectDate;
 
+  /// No description provided for @exSelectTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time'**
+  String get exSelectTime;
+
   /// No description provided for @exPreferredTime.
   ///
   /// In en, this message translates to:
   /// **'Preferred Time'**
   String get exPreferredTime;
-
-  /// No description provided for @exTimeMorning.
-  ///
-  /// In en, this message translates to:
-  /// **'Morning'**
-  String get exTimeMorning;
-
-  /// No description provided for @exTimeAfternoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Afternoon'**
-  String get exTimeAfternoon;
-
-  /// No description provided for @exTimeEvening.
-  ///
-  /// In en, this message translates to:
-  /// **'Evening'**
-  String get exTimeEvening;
 
   /// No description provided for @exTimeFlexible.
   ///
@@ -2641,6 +2659,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consultation Request Status'**
   String get exConsultStatusSection;
+
+  /// No description provided for @exConsultHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Consultation Requests'**
+  String get exConsultHistoryTitle;
+
+  /// No description provided for @exConsultHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t sent any consultation requests yet.'**
+  String get exConsultHistoryEmpty;
+
+  /// No description provided for @exConsultHistoryInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get exConsultHistoryInProgress;
+
+  /// No description provided for @exConsultHistoryPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Past Requests'**
+  String get exConsultHistoryPast;
 
   /// No description provided for @exConsultRejectedReasonLabel.
   ///
@@ -3257,13 +3299,13 @@ abstract class AppLocalizations {
   /// No description provided for @myGoalFlexibilityWeekly.
   ///
   /// In en, this message translates to:
-  /// **'Weekly stretching (min)'**
+  /// **'Weekly flexibility (min)'**
   String get myGoalFlexibilityWeekly;
 
   /// No description provided for @myGoalExerciseSuggestionNote.
   ///
   /// In en, this message translates to:
-  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week'**
+  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week'**
   String get myGoalExerciseSuggestionNote;
 
   /// No description provided for @myGoalExerciseApplySuggestion.

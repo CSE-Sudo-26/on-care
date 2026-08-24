@@ -247,6 +247,10 @@ class ExerciseSession(Base):
     #: 옛 값(walking·yoga·stretching)은 0053 마이그레이션에서 접었다.
     type: Mapped[str] = mapped_column(String(20))
     minutes: Mapped[int] = mapped_column(Integer, default=0)
+    #: 근력 기록의 세트 수. 근력은 시간이 아니라 세트로 읽는 운동이라 회원이
+    #: 적은 수를 그대로 둔다(#1262). 다른 유형은 None 이고, 이 컬럼이 생기기
+    #: 전의 근력 기록도 None 이다 — 그때는 분에서 환산해 읽는다.
+    sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
     calories: Mapped[int] = mapped_column(Integer, default=0)
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
     intensity: Mapped[str] = mapped_column(
@@ -1325,6 +1329,9 @@ class TrainerReservationSlot(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    duration_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="60", default=60
+    )
     capacity: Mapped[int] = mapped_column(Integer)
     remaining: Mapped[int] = mapped_column(Integer)
     session_type: Mapped[str] = mapped_column(

@@ -417,7 +417,9 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
                         child: Text(
                           l.actionSaved,
                           style: const TextStyle(
-                            color: AppColors.statusNormal,
+                            // 저장이 끝났다 = 완료. 다른 완료 표시와 같은
+                            // 초록이다(#1239).
+                            color: AppColors.success,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),

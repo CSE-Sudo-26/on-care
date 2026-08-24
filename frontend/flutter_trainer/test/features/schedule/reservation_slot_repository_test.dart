@@ -24,6 +24,7 @@ void main() {
     'id': 'slot-1',
     'trainer_id': 'trainer-1',
     'starts_at': '2026-08-10T01:00:00Z',
+    'duration_minutes': 60,
     'capacity': 1,
     'remaining': remaining,
     'is_closed': false,
@@ -45,6 +46,7 @@ void main() {
     // 서버가 좌석 수로 주더라도 앱은 예약 여부만 본다(#1072).
     expect(result.single.booked, isTrue);
     expect(result.single.sessionType, '1:1 PT');
+    expect(result.single.durationMinutes, 60);
   });
 
   test('좌석이 남아 있으면 비어 있는 자리로 읽는다', () async {
@@ -59,7 +61,7 @@ void main() {
     expect((await repository.list()).single.booked, isFalse);
   });
 
-  test('create sends UTC time and session type', () async {
+  test('create sends UTC time, duration, and session type', () async {
     when(
       () => dio.post<Map<String, dynamic>>(
         '/trainer/reservation-slots',
@@ -88,6 +90,7 @@ void main() {
             as Map<String, dynamic>;
     expect(data, <String, dynamic>{
       'starts_at': '2026-08-10T01:00:00.000Z',
+      'duration_minutes': 60,
       'session_type': '상담',
     });
   });

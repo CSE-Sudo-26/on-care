@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_view.dart';
@@ -102,6 +104,10 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
     final List<Gym> visible = _visibleGyms(
       gymsAsync.valueOrNull ?? const <Gym>[],
     );
+    // 상담 요청 확인 아이콘의 배지 — 대기 중인 요청이 있으면 점을 켠다(#1257).
+    final bool hasPendingConsultation = ref
+        .watch(consultationRequestControllerProvider)
+        .any((ConsultationRequest r) => r.status == ConsultationStatus.pending);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints outer) => Center(
@@ -112,9 +118,30 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _SearchField(
-                  hintText: l.exGymSearchPlaceholder,
-                  onChanged: (String value) => setState(() => _query = value),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _SearchField(
+                        hintText: l.exGymSearchPlaceholder,
+                        onChanged: (String value) =>
+                            setState(() => _query = value),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // 헤더의 채팅 버튼과 같은 자리·배지 모양이다 — 대기 중인
+                    // 상담 요청이 있으면 점이 켜진다(#1257).
+                    Semantics(
+                      button: true,
+                      label: l.exViewConsultationRequest,
+                      child: FigmaCircleButton(
+                        key: const Key('consult-history-shortcut'),
+                        icon: Icons.assignment_outlined,
+                        showDot: hasPendingConsultation,
+                        onTap: () =>
+                            context.push(AppRoutes.consultationHistory),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 // 지도는 자리에 고정된다 — 아래 목록을 아무리 밀어도 따라오지

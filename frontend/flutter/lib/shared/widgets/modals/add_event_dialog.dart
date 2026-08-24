@@ -14,6 +14,7 @@ import 'package:oncare/features/schedule/domain/schedule_format.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 import 'package:oncare/features/schedule/presentation/schedule_category_color.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 드롭다운에 놓는 순서. 값은 서버로 나가는 계약(`ScheduleCategory`)이고, 사람이
 /// 읽는 이름은 `scheduleCategoryLabel` 이 로케일에 맞춰 그린다(#847). 예전에는
@@ -146,12 +147,14 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
 
   Future<void> _submit() async {
     if (_saving) return;
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     final title = _title.text.trim();
     // 날짜는 피커가 늘 채우므로 제목만 확인하면 된다.
     if (title.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l.eventTitleRequired)));
+      toast.show(l.eventTitleRequired,
+        kind: AppToastKind.error,
+      );
       return;
     }
     setState(() => _saving = true);
@@ -184,8 +187,8 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
       Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(_isEdit ? l.eventEditFailed : l.eventAddFailed)),
+      toast.show(_isEdit ? l.eventEditFailed : l.eventAddFailed,
+        kind: AppToastKind.error,
       );
     }
   }

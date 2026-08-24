@@ -32,7 +32,6 @@ import 'support/e2e_harness.dart';
 /// 건강관리 목적은 더는 따로 고르지 않는다(#1112) — 운동 목표에서 자동
 /// 매핑된다. `strength` 는 `general` 로 매핑된다.
 const int _goalStrength = 1; // ExerciseGoal.strength
-const int _timeEvening = 2; // PreferredTimeSlot.evening
 
 const String _acceptMessage = 'E2E 승인 시나리오 문의입니다.';
 const String _rejectMessage = 'E2E 거절 시나리오 문의입니다.';
@@ -53,12 +52,7 @@ Future<void> _requestAs(
   await bootSignedOut(tester);
   await loginAsMember(tester, email: email);
   await openConsultationForm(tester, trainerId);
-  await submitConsultation(
-    tester,
-    goalIndex: _goalStrength,
-    timeIndex: _timeEvening,
-    message: message,
-  );
+  await submitConsultation(tester, goalIndex: _goalStrength, message: message);
 }
 
 void main() {
@@ -110,7 +104,7 @@ void main() {
         expect(saved['exercise_goal'], 'strength');
         // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
         expect(saved['health_purpose_type'], 'general');
-        expect(saved['preferred_time_slot'], 'evening');
+        expect(saved['preferred_time_slot'], 'flexible');
         expect(saved['message'], _acceptMessage);
         E2eState.merge(<String, Object?>{'acceptConsultationId': saved['id']});
 

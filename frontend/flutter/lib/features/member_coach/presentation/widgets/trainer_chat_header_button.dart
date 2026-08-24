@@ -6,6 +6,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 모든 메인 탭 헤더에서 동일한 담당 트레이너 채팅으로 진입하는 버튼이다.
 ///
@@ -40,9 +41,7 @@ class TrainerChatHeaderButton extends ConsumerWidget {
         enabled: ready,
         onTap: ready
             ? () => openTrainerChatPage(context, trainerName: coach.name)
-            : () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(unavailableReason)),
-              ),
+            : () => showAppToast(context, unavailableReason),
       ),
     );
   }

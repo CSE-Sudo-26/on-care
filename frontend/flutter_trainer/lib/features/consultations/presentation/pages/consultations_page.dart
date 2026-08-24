@@ -266,7 +266,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                       label: l.consultPreferredTime,
                       value:
                           '${dateLabel(l, request.preferredDate)} '
-                          '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
+                          '${preferredTimeLabel(l, request.preferredTimeCode)}',
                     ),
                   ],
                 ),

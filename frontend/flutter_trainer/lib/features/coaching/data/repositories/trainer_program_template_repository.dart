@@ -18,8 +18,9 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 abstract interface class TrainerProgramTemplateRepository {
   /// 이 빌드에서 템플릿을 만들고 고칠 수 있는가.
   ///
-  /// 데모는 읽기 전용이다 — 저장할 백엔드가 없어, 만든 것이 새로고침 한 번에
-  /// 사라지면 만들 수 있다고 말한 화면이 거짓이 된다.
+  /// 데모(#1028)는 계정도 백엔드도 없어 앱을 새로고침하면 저장한 것이
+  /// 사라진다 — 그래도 세션 동안은 실제로 저장·수정·삭제가 된다. 실 API
+  /// 모드만 새로고침·재로그인 뒤에도 남는다.
   bool get supportsEditing;
 
   /// 내 템플릿(최근 수정 먼저). 저장한 것이 없으면 시작 구성.
@@ -44,13 +45,25 @@ abstract interface class TrainerProgramTemplateRepository {
   Future<void> delete(String id);
 }
 
-/// 데모: 시작 구성만, 읽기 전용.
+/// 데모: 시작 구성으로 열리고, 저장은 이 세션 동안만 메모리에 남는다.
 ///
-/// 실 API 가 시작 구성으로 주는 것과 **같은 셋**이다. 데모 화면이 예전과 똑같이
-/// 보여야 하고, 두 빌드가 다른 템플릿을 보여 줄 이유도 없다.
+/// 시작 구성은 실 API 가 시작 구성으로 주는 것과 **같은 셋**이다 — 데모
+/// 화면이 예전과 똑같이 보여야 하고, 두 빌드가 다른 템플릿을 보여 줄 이유도
+/// 없다. 다만 프로그램 탭의 `저장` 버튼(#1028)이 이 저장소로 곧장 쓰기 때문에,
+/// 계정도 백엔드도 없는 데모에서마저 저장이 항상 실패하면 그 버튼이 거짓말을
+/// 하는 화면이 된다. 앱을 새로고침하면 사라진다 — 그 이상의 영속성은 실 API
+/// 모드에서만 보장한다.
+///
+/// 시작 구성은 저장된 행이 아니라 곁들이는 예시 목록이라, 트레이너가 처음
+/// 무언가를 저장했다고 그 자리에서 사라지면 안 된다 — 방금까지 보이던
+/// 템플릿이 저장 한 번에 없어진 것처럼 보인다. 그래서 `list()` 는 저장한
+/// 것과 시작 구성을 늘 함께 준다.
 class MockTrainerProgramTemplateRepository
     implements TrainerProgramTemplateRepository {
-  const MockTrainerProgramTemplateRepository();
+  MockTrainerProgramTemplateRepository();
+
+  final List<ProgramTemplate> _saved = <ProgramTemplate>[];
+  int _nextId = 0;
 
   /// 시작 구성. 데모 화면이 무엇을 보여 주는지 테스트가 그대로 읽는다.
   static const List<ProgramTemplate> starters = <ProgramTemplate>[
@@ -87,17 +100,31 @@ class MockTrainerProgramTemplateRepository
   ];
 
   @override
-  bool get supportsEditing => false;
+  bool get supportsEditing => true;
 
+  /// 저장한 것(최근 저장 먼저) 뒤에 시작 구성을 늘 이어 붙인다 — 저장했다고
+  /// 시작 구성이 사라지지 않는다.
   @override
-  Future<List<ProgramTemplate>> list() async => starters;
+  Future<List<ProgramTemplate>> list() async => <ProgramTemplate>[
+    ..._saved.reversed,
+    ...starters,
+  ];
 
   @override
   Future<ProgramTemplate> create({
     required String name,
     required String goal,
     required List<TemplateExercise> exercises,
-  }) async => throw const ValidationError();
+  }) async {
+    final template = ProgramTemplate(
+      id: 'local:${_nextId++}',
+      name: name,
+      goal: goal,
+      exercises: exercises,
+    );
+    _saved.add(template);
+    return template;
+  }
 
   @override
   Future<ProgramTemplate> update(
@@ -105,10 +132,23 @@ class MockTrainerProgramTemplateRepository
     required String name,
     required String goal,
     required List<TemplateExercise> exercises,
-  }) async => throw const ValidationError();
+  }) async {
+    final index = _saved.indexWhere((t) => t.id == id);
+    if (index == -1) throw const NotFoundError();
+    final updated = ProgramTemplate(
+      id: id,
+      name: name,
+      goal: goal,
+      exercises: exercises,
+    );
+    _saved[index] = updated;
+    return updated;
+  }
 
   @override
-  Future<void> delete(String id) async => throw const ValidationError();
+  Future<void> delete(String id) async {
+    _saved.removeWhere((t) => t.id == id);
+  }
 }
 
 /// 실 백엔드 구현.
@@ -212,7 +252,7 @@ class DioTrainerProgramTemplateRepository
 final trainerProgramTemplateRepositoryProvider =
     Provider<TrainerProgramTemplateRepository>((ref) {
       if (ref.watch(appConfigProvider).useMockApi) {
-        return const MockTrainerProgramTemplateRepository();
+        return MockTrainerProgramTemplateRepository();
       }
       return DioTrainerProgramTemplateRepository(ref.watch(dioProvider));
     }, name: 'trainerProgramTemplateRepository');

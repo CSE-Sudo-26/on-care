@@ -385,6 +385,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAnalysisFailed => '분석 실패';
 
   @override
+  String get dietRecordDate => '기록 날짜';
+
+  @override
+  String get dietRecordDateChange => '날짜 변경';
+
+  @override
+  String dietRecordDateMoved(String date) {
+    return '$date 식단으로 옮겼어요';
+  }
+
+  @override
+  String get dietRecordDateFailed => '날짜를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
   String get dietAnalysisDone => '분석 완료!';
 
   @override
@@ -495,19 +509,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietDeleteMeal => '식단 삭제';
 
   @override
-  String get exTypeWalking => '걷기';
-
-  @override
   String get exTypeCardio => '유산소';
 
   @override
   String get exTypeStrength => '근력';
 
   @override
-  String get exTypeYoga => '요가';
-
-  @override
-  String get exTypeStretching => '스트레칭';
+  String get exTypeFlexibility => '유연성';
 
   @override
   String get exTypeOtherChip => '기타';
@@ -702,6 +710,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exExerciseDuration => '운동 시간';
+
+  @override
+  String get exExerciseSets => '세트 수';
+
+  @override
+  String exSetsCount(int sets) {
+    return '$sets세트';
+  }
+
+  @override
+  String get exEnterSets => '세트 수를 입력해주세요';
 
   @override
   String get exExerciseIntensity => '운동 강도';
@@ -1318,16 +1337,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSelectDate => '날짜를 선택해주세요';
 
   @override
+  String get exSelectTime => '시간을 선택해주세요';
+
+  @override
   String get exPreferredTime => '희망 시간대';
-
-  @override
-  String get exTimeMorning => '오전';
-
-  @override
-  String get exTimeAfternoon => '오후';
-
-  @override
-  String get exTimeEvening => '저녁';
 
   @override
   String get exTimeFlexible => '시간 협의';
@@ -1382,6 +1395,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => '상담 요청 현황';
+
+  @override
+  String get exConsultHistoryTitle => '내 상담 요청';
+
+  @override
+  String get exConsultHistoryEmpty => '아직 보낸 상담 요청이 없어요.';
+
+  @override
+  String get exConsultHistoryInProgress => '진행 중';
+
+  @override
+  String get exConsultHistoryPast => '지난 요청';
 
   @override
   String get exConsultRejectedReasonLabel => '거절 사유';
@@ -1700,11 +1725,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalStrengthWeekly => '주간 근력 (세트)';
 
   @override
-  String get myGoalFlexibilityWeekly => '주간 스트레칭 (분)';
+  String get myGoalFlexibilityWeekly => '주간 유연성 (분)';
 
   @override
   String get myGoalExerciseSuggestionNote =>
-      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 스트레칭 60분';
+      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 유연성 60분';
 
   @override
   String get myGoalExerciseApplySuggestion => '권장 비율로 채우기';

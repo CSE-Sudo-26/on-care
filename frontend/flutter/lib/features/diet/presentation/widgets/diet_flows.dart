@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/core/utils/portrait_date_picker.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -17,6 +19,8 @@ import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
+import 'package:oncare/shared/widgets/modals/add_event_dialog.dart' show wireDate;
 import 'package:url_launcher/url_launcher.dart';
 
 /// A single logged food item, with the per-food nutrition shown on the meal
@@ -551,7 +555,19 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
   bool _loading = true;
   DietAnalysisFailure? _failure;
 
+  /// 이 기록이 놓인 날. 분석은 저장한 시각의 날짜로 남기므로 처음은 늘 오늘이고,
+  /// 지난 식사의 사진을 올린 경우 여기서 실제로 먹은 날로 옮긴다(#1241).
+  late DateTime _date = _todayKst();
+
+  /// 날짜를 옮기는 중. 두 번 눌러 같은 기록을 두 날짜로 보내지 않게 막는다.
+  bool _movingDate = false;
+
   bool get _failed => _failure != null;
+
+  static DateTime _todayKst() {
+    final DateTime now = nowKst();
+    return DateTime(now.year, now.month, now.day);
+  }
 
   // One key per capture, reused across retries so a lost response followed by
   // 「다시 시도」 doesn't record the same meal twice (server dedupes on it).
@@ -595,6 +611,60 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       });
     }
   }
+
+  /// 기록 날짜를 고쳐 그 날의 식단으로 옮긴다. (#1241)
+  ///
+  /// 분석이 끝난 시점에 기록은 이미 서버에 남아 있다. 그래서 고른 즉시 옮긴다 —
+  /// 시트를 닫는 방법(완료·X·바깥 누르기)이 여럿인데, 저장을 완료 버튼에만
+  /// 걸어 두면 화면에 보이는 날짜와 실제로 남은 날짜가 갈린다.
+  Future<void> _pickDate() async {
+    final DietAnalysisResult? result = _result;
+    if (result == null || result.entryId.isEmpty || _movingDate) return;
+    final DateTime today = _todayKst();
+    final DateTime? picked = await showPortraitDatePicker(
+      context: context,
+      initialDate: _date,
+      // 지난 식사는 얼마든지 올릴 수 있지만, 앞날의 식사는 아직 먹지 않았다.
+      firstDate: DateTime(today.year - 1),
+      lastDate: today,
+    );
+    if (picked == null || !mounted) return;
+    final DateTime chosen = DateTime(picked.year, picked.month, picked.day);
+    if (chosen == _date) return;
+
+    final AppLocalizations l = AppLocalizations.of(context);
+    final DateTime previous = _date;
+    setState(() => _movingDate = true);
+    try {
+      await ref
+          .read(dietRepositoryProvider)
+          .updateEntry(id: result.entryId, date: wireDate(chosen));
+      if (!mounted) return;
+      setState(() {
+        _date = chosen;
+        _movingDate = false;
+      });
+      // 떠난 날과 도착한 날을 모두 비운다 — 한쪽만 비우면 합계가 두 날에
+      // 겹쳐 보이거나 어느 쪽에서도 보이지 않는다.
+      ref.invalidate(dietTodayProvider);
+      ref.invalidate(dietByDateProvider(previous));
+      ref.invalidate(dietByDateProvider(chosen));
+      showAppToast(
+        context,
+        l.dietRecordDateMoved(_dateLabel(context, chosen)),
+        kind: AppToastKind.success,
+      );
+    } on Object catch (_) {
+      if (!mounted) return;
+      setState(() => _movingDate = false);
+      showAppToast(context, l.dietRecordDateFailed, kind: AppToastKind.error);
+    }
+  }
+
+  String _dateLabel(BuildContext context, DateTime date) =>
+      DateFormat.yMMMd(
+        Localizations.localeOf(context).toString(),
+      ).format(date);
 
   /// Sends the user back to the source picker. The photo they have can't be
   /// analysed, so "다시 시도" would just fail again — the useful next step is
@@ -818,6 +888,56 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           ),
         ),
         const SizedBox(height: 12),
+        // 기록 날짜 — 기본은 오늘이고, 지난 식사의 사진이면 그 날로 옮긴다(#1241).
+        Row(
+          children: <Widget>[
+            Text(
+              l.dietRecordDate,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _dateLabel(context, _date),
+                key: const Key('diet-result-date'),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: FigmaColors.ink,
+                ),
+              ),
+            ),
+            if (_movingDate)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              TextButton(
+                key: const Key('diet-result-date-change'),
+                onPressed: () => unawaited(_pickDate()),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  l.dietRecordDateChange,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -873,9 +993,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           child: FilledButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(l.dietSaved)));
+              showAppToast(context, l.dietSaved, kind: AppToastKind.success);
             },
             style: FilledButton.styleFrom(
               backgroundColor: FigmaColors.primary,
@@ -1058,7 +1176,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     final String? id = widget.meal.id;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     if (id == null) {
       navigator.pop();
       return;
@@ -1090,10 +1208,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l.dietSaved)));
+      toast.show(l.dietSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.dietSaveFailed)));
+      toast.show(l.dietSaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1129,7 +1247,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     if (!ok || !mounted) return;
 
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _busy = true);
     try {
       await ref.read(dietRepositoryProvider).deleteEntry(id);
@@ -1140,10 +1258,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleted)));
+      toast.show(l.dietDeleted, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleteFailed)));
+      toast.show(l.dietDeleteFailed, kind: AppToastKind.error);
     }
   }
 

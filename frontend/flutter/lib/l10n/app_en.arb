@@ -190,6 +190,23 @@
   "dietOpenSettingsFailed": "Couldn't open Settings. Turn on camera and photo access under Settings > Oncare.",
   "dietAnalyzing": "Analyzing…",
   "dietAnalysisFailed": "Analysis failed",
+  "dietRecordDate": "Record date",
+  "@dietRecordDate": {
+    "description": "Label of the date a photo-analysed meal is logged under."
+  },
+  "dietRecordDateChange": "Change date",
+  "@dietRecordDateChange": {
+    "description": "Button that opens the date picker on the analysis result sheet."
+  },
+  "dietRecordDateMoved": "Moved to {date}",
+  "@dietRecordDateMoved": {
+    "description": "Confirmation after moving an analysed meal to another day.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "dietRecordDateFailed": "Could not change the date. Please try again shortly.",
+  "@dietRecordDateFailed": {
+    "description": "Error shown when moving an analysed meal to another day fails."
+  },
   "dietAnalysisDone": "Analysis complete!",
   "dietAiNutritionResult": "AI Nutrition Result",
   "dietAnalyzingBody": "Analyzing the food in your photo",
@@ -226,11 +243,9 @@
   "dietSodiumHint": "Recommended under 2,000mg/day",
   "dietSugarHint": "Recommended under 50g/day",
   "dietDeleteMeal": "Delete Meal",
-  "exTypeWalking": "Walking",
   "exTypeCardio": "Cardio",
   "exTypeStrength": "Strength",
-  "exTypeYoga": "Yoga",
-  "exTypeStretching": "Stretching",
+  "exTypeFlexibility": "Flexibility",
   "exTypeOtherChip": "Other",
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
@@ -353,6 +368,16 @@
   "exSave": "Save",
   "exExerciseType": "Exercise Type",
   "exExerciseDuration": "Duration",
+  "exExerciseSets": "Sets",
+  "exSetsCount": "{sets} sets",
+  "@exSetsCount": {
+    "placeholders": {
+      "sets": {
+        "type": "int"
+      }
+    }
+  },
+  "exEnterSets": "Enter the number of sets",
   "exExerciseIntensity": "Intensity",
   "exEstimatedCalories": "Estimated Calories",
   "exEnterDuration": "Please enter a duration",
@@ -680,10 +705,8 @@
   "exOtherGoalHint": "Please describe your specific exercise goal in the message.",
   "exPreferredDate": "Preferred Date",
   "exSelectDate": "Select a date",
+  "exSelectTime": "Select a time",
   "exPreferredTime": "Preferred Time",
-  "exTimeMorning": "Morning",
-  "exTimeAfternoon": "Afternoon",
-  "exTimeEvening": "Evening",
   "exTimeFlexible": "Discuss Later",
   "exConsultMessage": "Message",
   "exConsultMessageHint": "Share your exercise experience or anything helpful for the consultation.",
@@ -702,6 +725,10 @@
   "exConsultRejectedStatus": "Rejected",
   "exReturnExercise": "Return to Exercise",
   "exConsultStatusSection": "Consultation Request Status",
+  "exConsultHistoryTitle": "My Consultation Requests",
+  "exConsultHistoryEmpty": "You haven't sent any consultation requests yet.",
+  "exConsultHistoryInProgress": "In Progress",
+  "exConsultHistoryPast": "Past Requests",
   "exConsultRejectedReasonLabel": "Reason for decline",
   "exConsultRejectedNoReason": "No reason was given. Try requesting a consultation with another trainer.",
   "exConsultAcceptedGuide": "You're connected with your trainer. You can start chatting now.",
@@ -945,8 +972,8 @@
   "myGoalBurnDaily": "Daily calories burned (kcal)",
   "myGoalCardioWeekly": "Weekly cardio (min)",
   "myGoalStrengthWeekly": "Weekly strength (sets)",
-  "myGoalFlexibilityWeekly": "Weekly stretching (min)",
-  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week",
+  "myGoalFlexibilityWeekly": "Weekly flexibility (min)",
+  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week",
   "myGoalExerciseApplySuggestion": "Use suggested goals",
   "@myGoalsExerciseSection": {
     "description": "Section label in the health goals sheet."

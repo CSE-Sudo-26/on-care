@@ -10,6 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/reservation_slot_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 class ReservationSlotsSheet extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class ReservationSlotsSheet extends ConsumerStatefulWidget {
 class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   late DateTime _date = widget.selectedDay;
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 0);
   bool _saving = false;
 
   /// 정원 대신 종류를 고른다 — 슬롯은 늘 한 사람 몫이다(#1012). 회원 예약이
@@ -38,6 +40,22 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
 
   DateTime _startsAt(TimeOfDay time) =>
       DateTime(_date.year, _date.month, _date.day, time.hour, time.minute);
+
+  int _duration(TimeOfDay start, TimeOfDay end) =>
+      end.hour * 60 + end.minute - start.hour * 60 - start.minute;
+
+  Future<void> _pickRange() async {
+    final picked = await showScheduleTimeRangePicker(
+      context: context,
+      start: _time,
+      end: _endTime,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _time = picked.start;
+      _endTime = picked.end;
+    });
+  }
 
   /// 시트를 연 날짜만 볼 수 있던 것을 고친다 — 다른 날짜에 슬롯을 열려면
   /// 시트를 닫고 캘린더에서 날짜를 옮긴 뒤 다시 열어야 했다(#1090).
@@ -67,7 +85,11 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref
           .read(reservationSlotRepositoryProvider)
-          .create(startsAt: startsAt, sessionType: _type);
+          .create(
+            startsAt: startsAt,
+            durationMinutes: _duration(_time, _endTime),
+            sessionType: _type,
+          );
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotOpened);
     } catch (error) {
@@ -80,11 +102,14 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   Future<void> _edit(ReservationSlot slot) async {
     final AppLocalizations l = AppLocalizations.of(context);
     var time = TimeOfDay.fromDateTime(slot.startsAt);
+    var endTime = TimeOfDay.fromDateTime(
+      slot.startsAt.add(Duration(minutes: slot.durationMinutes)),
+    );
     var type = slot.sessionType;
     // 이미 예약이 걸린 자리는 종류를 고칠 수 없다 — 서버가 409 로 막는
     // 동작을 아예 내놓지 않는다(#871 과 같은 규약).
     final typeLocked = slot.booked;
-    final changed = await showDialog<(TimeOfDay, String)?>(
+    final changed = await showDialog<(TimeOfDay, TimeOfDay, String)?>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -94,14 +119,22 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             children: <Widget>[
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(l.slotStartTime),
-                trailing: Text(time.format(context)),
+                title: Text('${l.schedFieldStart} – ${l.schedFieldEnd}'),
+                trailing: Text(
+                  '${time.format(context)} – ${endTime.format(context)}',
+                ),
                 onTap: () async {
-                  final picked = await showTimePicker(
+                  final picked = await showScheduleTimeRangePicker(
                     context: context,
-                    initialTime: time,
+                    start: time,
+                    end: endTime,
                   );
-                  if (picked != null) setDialogState(() => time = picked);
+                  if (picked != null) {
+                    setDialogState(() {
+                      time = picked.start;
+                      endTime = picked.end;
+                    });
+                  }
                 },
               ),
               ListTile(
@@ -131,7 +164,10 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               child: Text(l.actionCancel),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, (time, type)),
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                (time, endTime, type),
+              ),
               child: Text(l.actionSave),
             ),
           ],
@@ -146,7 +182,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
           .update(
             slot.id,
             startsAt: _startsAt(changed.$1),
-            sessionType: changed.$2 == slot.sessionType ? null : changed.$2,
+            durationMinutes: _duration(changed.$1, changed.$2),
+            sessionType: changed.$3 == slot.sessionType ? null : changed.$3,
           );
       ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotUpdated);
@@ -321,6 +358,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               Row(
                 children: <Widget>[
                   Expanded(
+                    flex: 3,
                     child: PopupMenuButton<String>(
                       key: const ValueKey<String>('slot-session-type'),
                       enabled: !_saving,
@@ -340,6 +378,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
+                    flex: 3,
                     child: _tappableField(
                       key: const ValueKey<String>('slot-date'),
                       onTap: _saving ? null : _pickDate,
@@ -351,21 +390,17 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
+                    flex: 5,
                     child: _tappableField(
+                      key: const ValueKey<String>('slot-time-range'),
                       onTap: _saving
                           ? null
-                          : () async {
-                              final picked = await showTimePicker(
-                                context: context,
-                                initialTime: _time,
-                              );
-                              if (picked != null) {
-                                setState(() => _time = picked);
-                              }
-                            },
+                          : _pickRange,
                       child: _compactField(
                         icon: Icons.schedule_outlined,
-                        label: _time.format(context),
+                        label:
+                            '${_time.format(context)} – '
+                            '${_endTime.format(context)}',
                       ),
                     ),
                   ),
@@ -425,12 +460,11 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                           child: Row(
                             children: <Widget>[
                               Container(
-                                width: 64,
+                                width: 132,
                                 alignment: Alignment.center,
                                 child: Text(
-                                  TimeOfDay.fromDateTime(
-                                    slot.startsAt,
-                                  ).format(context),
+                                  '${TimeOfDay.fromDateTime(slot.startsAt).format(context)} – '
+                                  '${TimeOfDay.fromDateTime(slot.startsAt.add(Duration(minutes: slot.durationMinutes))).format(context)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w800,
                                   ),

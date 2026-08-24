@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/design_system/tokens/nav_metrics.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/dashboard/presentation/widgets/dashboard_content.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
@@ -130,7 +131,7 @@ class _MainShellState extends ConsumerState<MainShell>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final double bottomInset = MediaQuery.of(context).padding.bottom;
-    const double maxNavBottomPadding = 22;
+    const double maxNavBottomPadding = AppNavMetrics.maxBottomInset;
     final double navBottomPadding = bottomInset > maxNavBottomPadding
         ? maxNavBottomPadding
         : bottomInset;
@@ -138,9 +139,10 @@ class _MainShellState extends ConsumerState<MainShell>
     // 글자 아래가 잘렸고, 그만큼을 웹에서만 따로 확보하고 있었다. 이제
     // 목적지 열이 바 높이 안에서 가운데 정렬되므로 그 보정은 필요 없다(#840).
     final double effectiveBottomPadding = navBottomPadding;
-    // The larger navigation labels need a little more vertical room.
-    const double barHeight = 58;
-    const double lift = 24; // headroom so the + button floats above the bar
+    // 바 본체 높이와 `+` 버튼이 솟은 높이는 [AppNavMetrics] 가 들고 있다 —
+    // 바 위에 뜨는 토스트가 같은 값을 봐야 `+` 를 비킬 수 있다(#1259).
+    const double barHeight = AppNavMetrics.barHeight;
+    const double lift = AppNavMetrics.addButtonLift;
     return Scaffold(
       // Let the page continue behind the transparent FAB headroom instead of
       // showing a separate white strip above the navigation bar.
@@ -325,8 +327,8 @@ class _NavAddButton extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 56,
-          height: 56,
+          width: AppNavMetrics.addButtonSize,
+          height: AppNavMetrics.addButtonSize,
           decoration: const BoxDecoration(
             color: FigmaColors.primary,
             shape: BoxShape.circle,

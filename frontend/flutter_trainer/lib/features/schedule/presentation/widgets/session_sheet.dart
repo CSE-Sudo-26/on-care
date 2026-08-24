@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurr
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_repeat_preview.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Bottom sheet for booking or editing a session: client, type, time
@@ -73,9 +74,6 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   // session would become 60 (review PR 218).
   late List<String> _clientOptions;
   late List<String> _typeOptions;
-  late List<int> _hourOptions;
-  late List<int> _minuteOptions;
-  late List<int> _endHourOptions;
 
   /// [base] plus [current] when it isn't already offered.
   static List<T> _withCurrent<T>(List<T> base, T? current) {
@@ -102,9 +100,6 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     _minute = parts != null && parts.length > 1
         ? int.tryParse(parts[1]) ?? 0
         : 0;
-    _hourOptions = _withCurrent(<int>[for (var h = 6; h <= 22; h++) h], _hour)
-      ..sort();
-    _minuteOptions = _withCurrent(const <int>[0, 15, 30, 45], _minute)..sort();
 
     // 종료 시간은 시작 시간 + 소요 시간에서 거꾸로 구한다 — 기존 세션은
     // 소요 시간(`durationMinutes`)만 들고 있어 화면에 보일 종료 시간이
@@ -112,24 +107,20 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     final endTotal = _hour * 60 + _minute + (e?.durationMinutes ?? 60);
     _endHour = endTotal ~/ 60;
     _endMinute = endTotal % 60;
-    _endHourOptions = _withCurrent(<int>[
-      for (var h = 6; h <= 23; h++) h,
-    ], _endHour)..sort();
   }
 
-  int get _startTotalMinutes => _hour * 60 + _minute;
-  int get _endTotalMinutes => _endHour * 60 + _endMinute;
-
-  /// 시작을 옮기면 소요 시간은 그대로 두고 종료를 따라 민다 — 그러지
-  /// 않으면 시작 시간을 15분 늦췄을 뿐인데 세션이 15분 짧아진다.
-  void _shiftStart({int? hour, int? minute}) {
-    final int duration = _endTotalMinutes - _startTotalMinutes;
+  Future<void> _pickTimeRange() async {
+    final picked = await showScheduleTimeRangePicker(
+      context: context,
+      start: TimeOfDay(hour: _hour, minute: _minute),
+      end: TimeOfDay(hour: _endHour, minute: _endMinute),
+    );
+    if (picked == null || !mounted) return;
     setState(() {
-      if (hour != null) _hour = hour;
-      if (minute != null) _minute = minute;
-      final int endTotal = _startTotalMinutes + duration;
-      _endHour = endTotal ~/ 60;
-      _endMinute = endTotal % 60;
+      _hour = picked.start.hour;
+      _minute = picked.start.minute;
+      _endHour = picked.end.hour;
+      _endMinute = picked.end.minute;
     });
   }
 
@@ -142,6 +133,13 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   String get _time =>
       '${_hour.toString().padLeft(2, '0')}:'
       '${_minute.toString().padLeft(2, '0')}';
+
+  String get _endTime =>
+      '${_endHour.toString().padLeft(2, '0')}:'
+      '${_endMinute.toString().padLeft(2, '0')}';
+
+  int get _startTotalMinutes => _hour * 60 + _minute;
+  int get _endTotalMinutes => _endHour * 60 + _endMinute;
 
   /// 지금 화면이 나타내는 반복 규칙.
   WeeklyRecurrence get _rule => WeeklyRecurrence(
@@ -350,125 +348,35 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
               // 소요 시간 대신 시작·종료 시간을 직접 고른다 — 시간표에
               // 뜨는 것도, 예약 슬롯이 세션을 만들 때 넘기는 것도 결국
               // "언제부터 언제까지"라 그 형태로 바로 고르는 편이 낫다(#1090).
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: _pillField(
-                      label: l.schedFieldStart,
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: DropdownButton<int>(
-                              key: const ValueKey<String>('session-start-hour'),
-                              value: _hour,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              items: <DropdownMenuItem<int>>[
-                                for (final h in _hourOptions)
-                                  DropdownMenuItem<int>(
-                                    value: h,
-                                    child: Text(
-                                      l.schedHourLabel(
-                                        h.toString().padLeft(2, '0'),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (v) => _shiftStart(hour: v),
+              // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
+              GestureDetector(
+                key: const ValueKey<String>('session-time-range-field'),
+                onTap: _pickTimeRange,
+                child: _pillField(
+                  label: l.schedFieldTime,
+                  child: SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            l.schedTimeRange(_time, _endTime),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.foreground,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: DropdownButton<int>(
-                              key: const ValueKey<String>(
-                                'session-start-minute',
-                              ),
-                              value: _minute,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              items: <DropdownMenuItem<int>>[
-                                for (final m in _minuteOptions)
-                                  DropdownMenuItem<int>(
-                                    value: m,
-                                    child: Text(
-                                      l.schedMinuteLabel(
-                                        m.toString().padLeft(2, '0'),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (v) => _shiftStart(minute: v),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const Icon(
+                          Icons.schedule_outlined,
+                          size: 18,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ],
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                      left: AppSpacing.xs,
-                      right: AppSpacing.xs,
-                      top: 30,
-                    ),
-                    child: Text(
-                      '–',
-                      style: TextStyle(color: AppColors.subtleForeground),
-                    ),
-                  ),
-                  Expanded(
-                    child: _pillField(
-                      label: l.schedFieldEnd,
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: DropdownButton<int>(
-                              key: const ValueKey<String>('session-end-hour'),
-                              value: _endHour,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              items: <DropdownMenuItem<int>>[
-                                for (final h in _endHourOptions)
-                                  DropdownMenuItem<int>(
-                                    value: h,
-                                    child: Text(
-                                      l.schedHourLabel(
-                                        h.toString().padLeft(2, '0'),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _endHour = v ?? _endHour),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: DropdownButton<int>(
-                              key: const ValueKey<String>('session-end-minute'),
-                              value: _endMinute,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              items: <DropdownMenuItem<int>>[
-                                for (final m in _minuteOptions)
-                                  DropdownMenuItem<int>(
-                                    value: m,
-                                    child: Text(
-                                      l.schedMinuteLabel(
-                                        m.toString().padLeft(2, '0'),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _endMinute = v ?? _endMinute),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
               // 반복은 새 일정에만 있다(#870). 이미 잡힌 회차를 고치는 일은 그
               // 회차 하나의 일이고, 여기서 규칙을 다시 받으면 나머지 회차까지

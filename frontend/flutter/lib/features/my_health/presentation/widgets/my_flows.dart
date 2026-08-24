@@ -16,6 +16,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/my_health/domain/support_links.dart';
 import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// 숫자 전용 입력 필터 — 붙여넣기/외부 키보드로 문자가 들어와 저장 시 int
@@ -23,40 +24,6 @@ import 'package:url_launcher/url_launcher.dart';
 final List<TextInputFormatter> _digitsOnly = <TextInputFormatter>[
   FilteringTextInputFormatter.digitsOnly,
 ];
-
-void _showTopNotification(
-  ScaffoldMessengerState messenger,
-  String message, {
-  required bool isError,
-  required String closeLabel,
-}) {
-  messenger.hideCurrentMaterialBanner();
-  late final ScaffoldFeatureController<
-    MaterialBanner,
-    MaterialBannerClosedReason
-  >
-  controller;
-  controller = messenger.showMaterialBanner(
-    MaterialBanner(
-      elevation: 3,
-      margin: const EdgeInsets.all(12),
-      leading: Icon(
-        isError ? Icons.error_outline : Icons.check_circle_outline,
-        color: isError ? FigmaColors.dangerRed : FigmaColors.primary,
-      ),
-      content: Text(message),
-      actions: <Widget>[
-        IconButton(
-          tooltip: closeLabel,
-          onPressed: () => controller.close(),
-          icon: const Icon(Icons.close),
-        ),
-      ],
-    ),
-  );
-  final dismissTimer = Timer(const Duration(seconds: 3), controller.close);
-  unawaited(controller.closed.whenComplete(dismissTimer.cancel));
-}
 
 Widget _shell(
   BuildContext context,
@@ -447,7 +414,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _saving = true);
     try {
       await ref
@@ -466,10 +433,10 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
       if (!mounted) return;
       ref.invalidate(profileProvider);
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l.myProfileSaved)));
+      toast.show(l.myProfileSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.mySaveFailed)));
+      toast.show(l.mySaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -730,7 +697,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _saving = true);
     try {
       final UserProfile updatedProfile = await ref
@@ -754,22 +721,13 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
       ref.invalidate(dashboardSummaryProvider);
       navigator.pop();
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      if (!messenger.mounted) return;
-      _showTopNotification(
-        messenger,
-        l.myGoalsSaved,
-        isError: false,
-        closeLabel: l.actionClose,
-      );
+      // 시트를 닫은 **뒤에** 뜨는 알림이라 손잡이를 미리 잡아 두고 쓴다.
+      // 예전에는 이 자리만 위쪽 배너로 따로 떠 있었다 — 닫기 버튼을 눌러야
+      // 사라지는 배너였다(#1259). 지금은 다른 화면과 같은 토스트로 알린다.
+      toast.show(l.myGoalsSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      _showTopNotification(
-        messenger,
-        l.mySaveFailed,
-        isError: true,
-        closeLabel: l.actionClose,
-      );
+      toast.show(l.mySaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1049,7 +1007,7 @@ class _NotificationSettingsPageState
     final int seq = (_requestSeq[key] ?? 0) + 1;
     _requestSeq[key] = seq;
     setState(() => _local[key] = value);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref
@@ -1063,8 +1021,8 @@ class _NotificationSettingsPageState
       // 되돌릴 곳은 **직전 값**이지 최초 조회값이 아니다. 한 번 저장에 성공한 뒤
       // 다음 저장이 실패하면 최초값으로 돌아가 서버와 어긋난다(리뷰).
       setState(() => _local[key] = previous);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.myNotificationSaveFailed)),
+      toast.show(l.myNotificationSaveFailed,
+        kind: AppToastKind.error,
       );
     }
   }
@@ -1181,7 +1139,7 @@ class SupportPage extends StatelessWidget {
 /// 앱이 없을 때, 사용자는 앱이 고장 난 것으로 읽는다. (#507)
 Future<void> _openExternal(BuildContext context, String url) async {
   final AppLocalizations l = AppLocalizations.of(context);
-  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  final AppToastHost toast = AppToastHost.of(context);
   bool opened = false;
   try {
     opened = await launchUrl(
@@ -1194,7 +1152,7 @@ Future<void> _openExternal(BuildContext context, String url) async {
     opened = false;
   }
   if (!opened) {
-    messenger.showSnackBar(SnackBar(content: Text(l.mySupportOpenFailed)));
+    toast.show(l.mySupportOpenFailed, kind: AppToastKind.error);
   }
 }
 

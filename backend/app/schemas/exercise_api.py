@@ -9,6 +9,9 @@ class ExerciseSessionOut(BaseModel):
     day_label: str
     type: str  # cardio|strength|flexibility|other (옛 값은 서버가 접어 준다)
     minutes: int
+    #: 근력 기록의 세트 수. 다른 유형과 세트를 모르는 옛 근력 기록은 None —
+    #: 그때는 클라이언트가 분에서 환산해 읽는다. (#1262)
+    sets: int | None = None
     calories: int
     intensity: str  # light|moderate|high
     date_label: str
@@ -51,6 +54,9 @@ class ExerciseWeekResponse(BaseModel):
     # 운동 유형 네 가지의 일별 시간 — 유산소 / 근력 / 유연성 / 기타. (#996)
     cardio_minutes: list[int]
     strength_minutes: list[int]
+    #: 근력의 일별 세트 수. 기록이 세트를 들고 있으면 그 값을, 없으면 분에서
+    #: 환산한 값을 센다 — 화면은 근력을 세트로만 읽는다. (#1262)
+    strength_sets: list[int] = Field(default_factory=list)
     flexibility_minutes: list[int] = Field(default_factory=list)
     other_minutes: list[int] = Field(default_factory=list)
     #: 옛 이름. `flexibility_minutes` 와 같은 값이다 — 두 앱이 옮겨 갈 때까지만
@@ -73,6 +79,9 @@ class ExerciseSessionCreate(BaseModel):
     """운동 기록 추가 입력. day_label 생략 시 오늘 요일 자동."""
     type: str  # cardio|strength|flexibility|other (옛 값도 받아 정규화한다)
     minutes: int = Field(..., gt=0)
+    #: 근력이면 회원이 적은 세트 수. 다른 유형에서 와도 저장하지 않는다 —
+    #: 유산소를 세트로 세는 화면은 없다. (#1262)
+    sets: int | None = Field(None, gt=0, le=100)
     calories: int = Field(0, ge=0)
     intensity: str = "moderate"  # light|moderate|high
     day_label: str | None = None
