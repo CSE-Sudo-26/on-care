@@ -3503,7 +3503,7 @@ abstract class AppLocalizations {
   /// No description provided for @routineTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Flexibility'**
+  /// **'Stretching'**
   String get routineTypeFlexibility;
 
   /// No description provided for @routineTypeOther.
@@ -3626,6 +3626,12 @@ abstract class AppLocalizations {
   /// **'Added by trainer'**
   String get coachTrainerAdded;
 
+  /// No description provided for @coachTemplateAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added from {name} template'**
+  String coachTemplateAdded(String name);
+
   /// No description provided for @coachClientNotified.
   ///
   /// In en, this message translates to:
@@ -3643,6 +3649,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to the {date} PT schedule'**
   String coachRegisterOn(String date);
+
+  /// No description provided for @coachRegisterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to PT schedule'**
+  String get coachRegisterAction;
 
   /// No description provided for @labelTomorrow.
   ///
@@ -3949,6 +3961,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use the button below to jump into their chat and explain it.'**
   String get aiGoToChatHint;
+
+  /// No description provided for @aiApplyToTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to template'**
+  String get aiApplyToTemplate;
+
+  /// No description provided for @aiAppliedToTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI routine was applied to the program info. Review it below, edit if needed, then send it.'**
+  String get aiAppliedToTemplate;
 
   /// No description provided for @aiStepConditions.
   ///
@@ -5366,16 +5390,28 @@ abstract class AppLocalizations {
   /// **'Assign to client'**
   String get programEditorAssign;
 
+  /// No description provided for @programAssignConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to this client?'**
+  String get programAssignConfirmTitle;
+
+  /// No description provided for @programAssignConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This program will be assigned to {name}, and also scheduled on their PT calendar for {date}.'**
+  String programAssignConfirmBody(String name, String date);
+
   /// No description provided for @programEditorReview.
   ///
   /// In en, this message translates to:
-  /// **'Final review'**
+  /// **'Confirm & send'**
   String get programEditorReview;
 
   /// No description provided for @programReviewTitle.
   ///
   /// In en, this message translates to:
-  /// **'Final review'**
+  /// **'Confirm & send'**
   String get programReviewTitle;
 
   /// No description provided for @programReviewBlurb.
@@ -5450,6 +5486,18 @@ abstract class AppLocalizations {
   /// **'Add session'**
   String get programEditorAddSession;
 
+  /// No description provided for @programTemplateSessionPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to which session?'**
+  String get programTemplateSessionPickerTitle;
+
+  /// No description provided for @programTemplateSessionPickerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a session for the \'{name}\' template.'**
+  String programTemplateSessionPickerBody(String name);
+
   /// No description provided for @programEditorSessionName.
   ///
   /// In en, this message translates to:
@@ -5467,6 +5515,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move session down'**
   String get programEditorSessionDown;
+
+  /// No description provided for @programEditorSessionReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset session'**
+  String get programEditorSessionReset;
+
+  /// No description provided for @programEditorSessionResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset this session?'**
+  String get programEditorSessionResetTitle;
+
+  /// No description provided for @programEditorSessionResetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every exercise in \'{name}\' will be cleared. The session itself and other sessions stay.'**
+  String programEditorSessionResetBody(String name);
 
   /// No description provided for @programEditorSessionEmpty.
   ///

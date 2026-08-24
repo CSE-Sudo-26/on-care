@@ -1970,7 +1970,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineTypeStretching => 'Stretching';
 
   @override
-  String get routineTypeFlexibility => 'Flexibility';
+  String get routineTypeFlexibility => 'Stretching';
 
   @override
   String get routineTypeOther => 'Other';
@@ -2035,6 +2035,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachTrainerAdded => 'Added by trainer';
 
   @override
+  String coachTemplateAdded(String name) {
+    return 'Added from $name template';
+  }
+
+  @override
   String get coachClientNotified => 'The client app was notified';
 
   @override
@@ -2046,6 +2051,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String coachRegisterOn(String date) {
     return 'Add to the $date PT schedule';
   }
+
+  @override
+  String get coachRegisterAction => 'Add to PT schedule';
 
   @override
   String get labelTomorrow => 'Tomorrow';
@@ -2233,6 +2241,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aiGoToChatHint =>
       'Use the button below to jump into their chat and explain it.';
+
+  @override
+  String get aiApplyToTemplate => 'Apply to template';
+
+  @override
+  String get aiAppliedToTemplate =>
+      'The AI routine was applied to the program info. Review it below, edit if needed, then send it.';
 
   @override
   String get aiStepConditions => 'Set up';
@@ -3056,10 +3071,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorAssign => 'Assign to client';
 
   @override
-  String get programEditorReview => 'Final review';
+  String get programAssignConfirmTitle => 'Assign to this client?';
 
   @override
-  String get programReviewTitle => 'Final review';
+  String programAssignConfirmBody(String name, String date) {
+    return 'This program will be assigned to $name, and also scheduled on their PT calendar for $date.';
+  }
+
+  @override
+  String get programEditorReview => 'Confirm & send';
+
+  @override
+  String get programReviewTitle => 'Confirm & send';
 
   @override
   String programReviewBlurb(String name) {
@@ -3103,6 +3126,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorAddSession => 'Add session';
 
   @override
+  String get programTemplateSessionPickerTitle => 'Add to which session?';
+
+  @override
+  String programTemplateSessionPickerBody(String name) {
+    return 'Choose a session for the \'$name\' template.';
+  }
+
+  @override
   String programEditorSessionName(String letter) {
     return 'Session $letter';
   }
@@ -3112,6 +3143,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorSessionDown => 'Move session down';
+
+  @override
+  String get programEditorSessionReset => 'Reset session';
+
+  @override
+  String get programEditorSessionResetTitle => 'Reset this session?';
+
+  @override
+  String programEditorSessionResetBody(String name) {
+    return 'Every exercise in \'$name\' will be cleared. The session itself and other sessions stay.';
+  }
 
   @override
   String get programEditorSessionEmpty =>

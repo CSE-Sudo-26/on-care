@@ -1245,11 +1245,19 @@ _TEMPLATE_MAX_EXERCISES = 20
 
 
 class ProgramTemplateExercise(BaseModel):
-    """템플릿 안의 운동 한 줄."""
+    """템플릿 안의 운동 한 줄.
+
+    `sets`/`reps` 는 근력 운동에서만 쓴다(#1029) — `ProgramItem` 과 같은
+    계약(`sets: int`, `reps: str`)이라, 템플릿을 적용해 만든 운동이 프로그램
+    편집기·배정 payload 로 넘어갈 때 값이 그대로 옮겨진다. 비근력 운동은
+    `minutes` 만 쓰고 이 둘은 기본값(0/빈 문자열)으로 둔다.
+    """
 
     name: str = Field(min_length=1, max_length=100)
     minutes: int = Field(ge=1, le=300)
     type: RoutineType = "근력"
+    sets: int = Field(default=0, ge=0, le=99)
+    reps: str = Field(default="", max_length=30)
 
 
 class TrainerProgramTemplateOut(BaseModel):

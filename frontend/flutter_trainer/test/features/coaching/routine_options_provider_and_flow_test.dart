@@ -119,10 +119,10 @@ class _ThrowingRoutineRepository implements TrainerRoutineRepository {
       Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[]);
 }
 
-/// Drives the flow from the initial analysis stage to the send button
-/// being visible and tappable, without actually tapping it — mirrors the
-/// setup half of the "inline flow" test above.
-Future<void> _driveToSendReady(WidgetTester tester) async {
+/// Drives the flow from the initial analysis stage to the `템플릿에 반영`
+/// button being visible and tappable, without actually tapping it — mirrors
+/// the setup half of the "inline flow" test above.
+Future<void> _driveToApplyReady(WidgetTester tester) async {
   await tester.ensureVisible(
     find.byKey(const ValueKey<String>('generate-routine-options')),
   );
@@ -145,7 +145,7 @@ Future<void> _driveToSendReady(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   await tester.ensureVisible(
-    find.byKey(const ValueKey<String>('send-selected-routine')),
+    find.byKey(const ValueKey<String>('apply-routine-to-template')),
   );
 }
 
@@ -491,7 +491,9 @@ void main() {
     );
   });
 
-  testWidgets('inline flow: analyse → horizontal options → edit/send', (
+  testWidgets(
+    'inline flow: analyse → horizontal options → edit/apply to template',
+    (
     tester,
   ) async {
     // Tall viewport so every step's content fits (buttons sit at the bottom
@@ -601,12 +603,30 @@ void main() {
     await tester.ensureVisible(showAddExerciseForm);
     await tester.tap(showAddExerciseForm);
     await tester.pumpAndSettle();
+    // 기본 유형이 근력이라 시간 슬라이더 대신 세트·횟수 칸이 보인다(#1029).
+    expect(
+      find.byKey(const ValueKey<String>('new-exercise-sets')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('new-exercise-minutes')),
+      findsNothing,
+    );
+    // 근력이 아닌 유형으로 바꾸면 시간 슬라이더로 바뀐다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('new-exercise-category-유산소')),
+    );
+    await tester.pumpAndSettle();
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('new-exercise-minutes')),
         matching: find.text('운동 시간'),
       ),
       findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('new-exercise-sets')),
+      findsNothing,
     );
     await tester.tap(
       find.byKey(const ValueKey<String>('hide-add-exercise-form')),
@@ -646,142 +666,82 @@ void main() {
       find.byKey(const ValueKey<String>('complete-routine-review')),
     );
     await tester.pumpAndSettle();
-    expect(reviewed, isNotNull);
-    expect(reviewed!.first.name, '인터벌 걷기');
+    // 최종 검토에 들어온 것만으로는 아직 아무 데도 반영되지 않는다 (#1028
+    // 후속) — `템플릿에 반영`을 눌러야 [onReviewCompleted] 가 호출된다.
+    expect(reviewed, isNull);
     expect(
       find.byKey(const ValueKey<String>('reviewed-routine-list')),
       findsOneWidget,
     );
-
     expect(assigned.memberId, isNull);
     expect(assigned.assigned, isNull);
+    // 이 화면에는 고객에게 직접 보내는 버튼이 없다 — `템플릿에 반영` 뿐이다.
     expect(
-      find.byKey(const ValueKey<String>('open-client-chat')),
+      find.byKey(const ValueKey<String>('send-selected-routine')),
       findsNothing,
     );
 
     await tester.ensureVisible(
-      find.byKey(const ValueKey<String>('send-selected-routine')),
+      find.byKey(const ValueKey<String>('apply-routine-to-template')),
     );
     await tester.tap(
-      find.byKey(const ValueKey<String>('send-selected-routine')),
+      find.byKey(const ValueKey<String>('apply-routine-to-template')),
     );
     await tester.pumpAndSettle();
 
-    expect(assigned.memberId, 'm1');
-    expect(assigned.assigned, isNotNull);
-    expect(assigned.assigned!.name, 'AI 맞춤 루틴 (강화안)');
-    expect(assigned.assigned!.minutes, 35);
-    expect(assigned.assigned!.reason, contains('무릎 충격 주의'));
-    expect(assigned.assigned!.reason, contains('인터벌 걷기 20분'));
-    expect(
-      find.byKey(const ValueKey<String>('routine-sent-confirmation')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('open-client-chat')),
-      findsOneWidget,
-    );
+    // 템플릿(편집기)로만 반영된다 — 서버에는 여전히 아무것도 나가지 않는다.
+    expect(reviewed, isNotNull);
+    expect(reviewed!.first.name, '인터벌 걷기');
+    expect(assigned.memberId, isNull);
+    expect(assigned.assigned, isNull);
   });
 
   testWidgets(
-    '네트워크 실패도 재시도를 안내하고, 재시도는 같은 멱등키를 다시 보낸다 (#581)',
+    '템플릿에 반영은 회원에게 보내는 API를 호출하지 않는다 (#1028 후속)',
     (tester) async {
-      // 서버가 (trainer_id, member_id, client_request_id) 로 중복 배정을 막으므로
-      // 애매한 실패(서버는 커밋했는데 응답만 유실) 뒤에도 안전하게 다시 보낼 수
-      // 있다. 예전에는 "먼저 확인하라"고 안내할 수밖에 없었다.
+      // AI 3단계 최종 검토는 더 이상 여기서 곧바로 전송하지 않는다 — `템플릿에
+      // 반영`은 [onReviewCompleted] 로 편집기에 넘길 뿐이다. 실수로라도 회원
+      // 전송 API 가 호출되면 곧바로 던지도록 만들어 회귀를 잡는다.
       tester.view.physicalSize = const Size(1000, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       final repository = _ThrowingRoutineRepository(const NetworkError());
+      List<RoutineExercise>? reviewed;
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
             appConfigProvider.overrideWithValue(_mockConfig),
             trainerRoutineRepositoryProvider.overrideWithValue(repository),
           ],
-          child: const MaterialApp(
-          locale: Locale('ko'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
+          child: MaterialApp(
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: AiRoutineOptionsFlow(
               client: _client,
-              recommendedExercises: <RoutineExercise>[
+              recommendedExercises: const <RoutineExercise>[
                 RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
               ],
               recommendedReason: '기존 고객 데이터 기반 추천',
+              onReviewCompleted: (exercises) => reviewed = exercises,
             ),
           ),
         ),
       );
 
-      await _driveToSendReady(tester);
-      final sendButton = find.byKey(
-        const ValueKey<String>('send-selected-routine'),
+      await _driveToApplyReady(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('apply-routine-to-template')),
       );
-      await tester.tap(sendButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-
-      // 트레이너가 다시 누른다 — 같은 키가 나가야 중복 배정이 안 생긴다.
-      await tester.tap(sendButton);
-      await tester.pumpAndSettle();
-
-      expect(repository.attempts, hasLength(2));
-      expect(repository.attempts.first, isNotNull);
-      expect(
-        repository.attempts.first,
-        repository.attempts.last,
-        reason: '재시도가 새 키를 만들면 서버가 중복을 막을 수 없다',
-      );
+      expect(reviewed, isNotNull);
+      expect(repository.attempts, isEmpty);
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
     },
   );
-
-  testWidgets('a non-network assign failure shows the generic retry message '
-      '(a clear failure, safe to retry)', (tester) async {
-    tester.view.physicalSize = const Size(1000, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          appConfigProvider.overrideWithValue(_mockConfig),
-          trainerRoutineRepositoryProvider.overrideWithValue(
-            _ThrowingRoutineRepository(const ServerError()),
-          ),
-        ],
-        child: const MaterialApp(
-          locale: Locale('ko'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: AiRoutineOptionsFlow(
-            client: _client,
-            recommendedExercises: <RoutineExercise>[
-              RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
-            ],
-            recommendedReason: '기존 고객 데이터 기반 추천',
-          ),
-        ),
-      ),
-    );
-
-    await _driveToSendReady(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('send-selected-routine')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-    expect(
-      find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-      findsNothing,
-    );
-  });
 }
 
 /// Records what conditions the flow actually sent, and returns a fixed

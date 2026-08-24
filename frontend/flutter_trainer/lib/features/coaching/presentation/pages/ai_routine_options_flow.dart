@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
-import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -56,6 +51,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   final TextEditingController _newExerciseName = TextEditingController();
   final ScrollController _optionScroll = ScrollController();
 
+  /// 이 화면의 맨 위(진행 단계 표시줄) 를 가리킨다 — [_scrollToTop] 이 이
+  /// 위젯을 뷰포트 위쪽으로 끌어올릴 때 기준으로 쓴다.
+  final GlobalKey _topKey = GlobalKey();
+
   /// `RoutineOptionsRequest.trainer_note` 의 서버 상한(#1028). 여기서 막으면
   /// 긴 요청이 422 왕복 없이 그 자리에서 잘린다.
   static const int _promptMaxLength = 500;
@@ -64,6 +63,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   String _intensity = 'moderate';
   String _newExerciseType = '근력';
   int _newExerciseMinutes = 30;
+  // 근력만 세트·횟수를 받는다(#1029) — 그 외 유형은 [_newExerciseMinutes]
+  // 를 그대로 쓴다.
+  final TextEditingController _newExerciseSets = TextEditingController(
+    text: '3',
+  );
+  final TextEditingController _newExerciseReps = TextEditingController(
+    text: '10',
+  );
 
   /// Whether the trainer has touched minutes/intensity directly (#776),
   /// tracked separately — touching one must not silently pin the other to
@@ -75,14 +82,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   bool _intensityTouched = false;
 
   bool _generating = false;
-  bool _sending = false;
   bool _showAddExercise = false;
-  bool _sent = false;
-
-  /// 진행 중인 전송 시도의 멱등키. 실패 후 재시도는 이 값을 그대로 다시 쓰고,
-  /// 전송이 성공하면 비운다 — 그래야 재시도가 중복 배정을 만들지 않으면서도
-  /// 다음 전송은 별개의 배정이 된다(#581).
-  String? _sendRequestId;
   RoutineOptions? _options;
   int _stage = 0;
   int _maxReachedStage = 0;
@@ -94,6 +94,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     _prompt.dispose();
     _trainerMemo.dispose();
     _newExerciseName.dispose();
+    _newExerciseSets.dispose();
+    _newExerciseReps.dispose();
     _optionScroll.dispose();
     super.dispose();
   }
@@ -131,9 +133,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   /// 기존 추천 후보의 선택 식별자. 'A'/'B' 와 같은 층의 값이라 번역하지 않는다.
   static const String _recommendedKey = 'recommended';
 
-  _RoutineChoice _selectedChoiceOf(AppLocalizations l) =>
-      _choicesOf(l).firstWhere((choice) => choice.key == _selectedKey);
-
   String _optionDisplayName(AppLocalizations l, String key) => switch (key) {
     'A' => l.aiOptionRecovery,
     'B' => l.aiOptionPush,
@@ -143,10 +142,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   Future<void> _generate() async {
     if (_generating) return;
     final messenger = ScaffoldMessenger.of(context);
-    setState(() {
-      _generating = true;
-      _sent = false;
-    });
+    setState(() => _generating = true);
     try {
       final options = await ref
           .read(trainerRoutineOptionsRepositoryProvider)
@@ -177,6 +173,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           _intensity = analysis.suggestedIntensity ?? _intensity;
         }
       });
+      _scrollToTop();
     } catch (e) {
       if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
@@ -201,7 +198,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       _selectedKey = choice.key;
       _edited = List<RoutineExercise>.of(choice.exercises);
       _showAddExercise = false;
-      _sent = false;
     });
   }
 
@@ -214,17 +210,24 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       ).showSnackBar(SnackBar(content: Text(l.aiExerciseNameRequired)));
       return;
     }
+    final isStrength = _newExerciseType == '근력';
     setState(() {
       _edited.add(
         RoutineExercise(
           name: name,
           minutes: _newExerciseMinutes,
           type: _newExerciseType,
+          sets: isStrength
+              ? (int.tryParse(_newExerciseSets.text.trim()) ?? 0)
+              : 0,
+          reps: isStrength ? _newExerciseReps.text.trim() : '',
         ),
       );
       _newExerciseName.clear();
       _newExerciseType = '근력';
       _newExerciseMinutes = 30;
+      _newExerciseSets.text = '3';
+      _newExerciseReps.text = '10';
       _showAddExercise = false;
     });
   }
@@ -242,20 +245,51 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       _maxReachedStage = 2;
       _showAddExercise = false;
     });
-    widget.onReviewCompleted?.call(List<RoutineExercise>.unmodifiable(_edited));
+    _scrollToTop();
   }
 
   void _goToStage(int stage) {
-    if (_sending || stage > _maxReachedStage || stage == _stage) return;
-    setState(() {
-      _stage = stage;
-      if (stage < 2) _sent = false;
+    if (stage > _maxReachedStage || stage == _stage) return;
+    setState(() => _stage = stage);
+    _scrollToTop();
+  }
+
+  /// 1·2·3단계를 넘나들 때마다 이 화면을 담고 있는 스크롤을 맨 위로 되돌린다
+  /// — 이전 단계에서 아래로 많이 내려가 있었어도, 다음 단계는 늘 위에서부터
+  /// 보인다.
+  ///
+  /// 편집기 안에 넣을 때(embedded)는 자기 `Scrollable` 이 없어 코칭 페이지
+  /// 전체를 담은 바깥 스크롤을 그대로 쓰는데, 그 스크롤은 이 화면 위로도
+  /// (회원 요약 등) 카드가 더 있는 좁은 화면에서는 `ListView` 로 지연 빌드된다
+  /// — `position.animateTo(0)` 처럼 절대 위치 0으로 보내면 이 화면이 뷰포트
+  /// 밖으로 밀려나 통째로 언빌드된다. [_topKey] 를 이 화면 맨 위(진행 단계
+  /// 표시줄)에 붙여 두고 `Scrollable.ensureVisible` 로 "그 카드가 이미 있는
+  /// 스크롤에서, 그 카드의 맨 위가 뷰포트 맨 위에 오도록" 만큼만 옮긴다.
+  void _scrollToTop() {
+    // 다음 프레임(새 단계가 이미 빌드된 뒤)까지 미룬다 — 이 호출은 늘
+    // `setState` 직후라, 그 자리에서 바로 스크롤을 건드리면 아직 끝나지
+    // 않은 빌드/레이아웃 도중에 스크롤 위치를 바꾸는 셈이 된다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final topContext = _topKey.currentContext;
+      if (topContext == null) return;
+      Scrollable.ensureVisible(
+        topContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
-  Future<void> _send() async {
-    if (_sending || _sent) return;
-    // messenger 와 l 은 await 전에 잡아 둔다 — 실패 경로가 await 뒤에 있다.
+  /// 최종 검토에서 확정한 구성을 **바로 고객에게 보내지 않고**, 2열의
+  /// (지금은 비어 있는) `프로그램 정보` 박스로만 반영한다.
+  ///
+  /// 실제 전송은 프로그램 탭의 단일 `보내기`(최종 검토 단계, `ProgramFinalReviewCard`)
+  /// 에서만 일어난다 — 여기서는 서버를 호출하지 않는다. 반영은
+  /// [CoachingPage]가 넘겨준 [AiRoutineOptionsFlow.onReviewCompleted] 콜백을
+  /// 통해 편집기의 `aiSuggestions` 로 흘러가고, 편집기가 그 값이 바뀔 때마다
+  /// 세션 1에 병합한다(`ProgramEditorWorkspace.didUpdateWidget`).
+  void _applyToTemplate() {
     final AppLocalizations l = AppLocalizations.of(context);
     if (_edited.isEmpty) {
       ScaffoldMessenger.of(
@@ -263,103 +297,23 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
       return;
     }
-
-    final messenger = ScaffoldMessenger.of(context);
-    final routine = _composeRoutine(l);
-
-    // 이 전송 시도의 멱등키. 실패해서 트레이너가 다시 누르면 **같은 키**가 다시
-    // 나가므로, 앞 시도가 서버에 이미 커밋됐더라도 중복 배정되지 않는다(#581).
-    // 성공한 뒤에만 비워 다음 전송이 새 배정이 되게 한다.
-    _sendRequestId ??= newClientRequestId();
-
-    setState(() => _sending = true);
-    try {
-      // Assigning the routine IS the delivery — the member receives it via
-      // /me/coach/routines. No chat note is sent here: routine delivery is
-      // shown in the member's routine feed, not as a chat bubble (matches
-      // the legacy single-shot editor's _send in ai_routine_page.dart).
-      await ref
-          .read(trainerRoutineRepositoryProvider)
-          .assignRoutine(
-            widget.client.id,
-            routine,
-            clientRequestId: _sendRequestId,
-          );
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      // 네트워크 실패는 결과를 알 수 없다 — 서버가 이미 커밋한 뒤 응답만 유실됐을
-      // 수 있다. 다만 멱등키를 함께 보내므로 **같은 키로 재시도해도 중복 배정이
-      // 되지 않는다**(#581). 그래서 "먼저 확인하라" 대신 재시도를 안내한다.
-      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _sending = false;
-      _sent = true;
-      _sendRequestId = null; // 다음 전송은 새 배정이다.
-    });
-    messenger.showSnackBar(
-      SnackBar(content: Text(l.aiRoutineSent(widget.client.name))),
-    );
-  }
-
-  /// 트레이너가 보낼 루틴을 조립한다.
-  ///
-  /// `name`·`reason` 은 트레이너가 만들어 회원에게 보내는 **본문**이라 트레이너의
-  /// 로케일을 따른다(채팅·메모와 같은 층). 반면 `type` 은 서버가 Literal 로
-  /// 검증하는 계약값이라 번역하지 않는다. (#501)
-  AssignedRoutine _composeRoutine(AppLocalizations l) {
-    final total = _edited.fold<int>(0, (sum, item) => sum + item.minutes);
-    final typeCounts = <String, int>{};
-    for (final exercise in _edited) {
-      typeCounts[exercise.type] = (typeCounts[exercise.type] ?? 0) + 1;
-    }
-    final primaryType = typeCounts.entries.fold<MapEntry<String, int>?>(
-      null,
-      (best, entry) => best == null || entry.value > best.value ? entry : best,
-    );
-    final exerciseSummary = _edited
-        .map(
-          (exercise) =>
-              l.aiExerciseWithMinutes(exercise.name, exercise.minutes),
-        )
-        .join(', ');
-    final memo = _trainerMemo.text.trim();
-    final rationale = memo.isEmpty ? _selectedChoiceOf(l).reason : memo;
-    final optionName = _optionDisplayName(l, _selectedKey);
-
-    return AssignedRoutine(
-      id: '',
-      name: l.aiCustomRoutineNamed(optionName),
-      minutes: total,
-      type: primaryType?.key ?? '근력',
-      reason: '$exerciseSummary · $rationale',
-      source: 'ai',
-    );
-  }
-
-  void _openClientChat() {
-    // Explicit: the button says 채팅, and the detail's default section is
-    // a content tab now.
-    context.go(
-      AppRoutes.clientDetail(
-        widget.client.id,
-        section: AppRoutes.clientChatSection,
-      ),
-    );
+    widget.onReviewCompleted?.call(List<RoutineExercise>.unmodifiable(_edited));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l.aiAppliedToTemplate)));
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final content = <Widget>[
-      _ProgressStepper(
-        stage: _stage,
-        maxReachedStage: _maxReachedStage,
-        onStageTap: _goToStage,
+      KeyedSubtree(
+        key: _topKey,
+        child: _ProgressStepper(
+          stage: _stage,
+          maxReachedStage: _maxReachedStage,
+          onStageTap: _goToStage,
+        ),
       ),
       const SizedBox(height: AppSpacing.xl),
       if (_stage == 0) ...<Widget>[
@@ -392,10 +346,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       ] else ...<Widget>[
         _reviewedRoutineList(),
         const SizedBox(height: AppSpacing.lg),
-        if (_sent) ...<Widget>[
-          _sentConfirmation(),
-          const SizedBox(height: AppSpacing.md),
-        ],
         _reviewActions(),
       ],
       const SizedBox(height: AppSpacing.xxl),
@@ -472,7 +422,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               minLines: 3,
               maxLines: 5,
               maxLength: _promptMaxLength,
-              style: const TextStyle(color: AppColors.foreground),
+              style: _inputTextStyle,
               decoration: _inputDecoration(hintText: l.aiPromptHint),
             ),
           ),
@@ -821,13 +771,59 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             decoration: _inputDecoration(hintText: l.progExerciseName),
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineMinutesSlider(
-            key: ValueKey<String>('routine-minutes-$index'),
-            minutes: exercise.minutes,
-            onChanged: (minutes) => setState(() {
-              _edited[index] = _edited[index].copyWith(minutes: minutes);
-            }),
-          ),
+          // 근력은 세트·횟수로, 그 외 유형은 시간으로 잰다(#1029).
+          if (exercise.type == '근력')
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: LabeledField(
+                    label: l.programEditorSets,
+                    child: TextFormField(
+                      key: ValueKey<String>(
+                        'routine-sets-$_selectedKey-$index-${exercise.sets}',
+                      ),
+                      initialValue: exercise.sets == 0
+                          ? ''
+                          : '${exercise.sets}',
+                      keyboardType: TextInputType.number,
+                      style: _inputTextStyle,
+                      onChanged: (value) => setState(() {
+                        _edited[index] = _edited[index].copyWith(
+                          sets: int.tryParse(value) ?? 0,
+                        );
+                      }),
+                      decoration: _inputDecoration(hintText: '3'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: LabeledField(
+                    label: l.programEditorReps,
+                    child: TextFormField(
+                      key: ValueKey<String>(
+                        'routine-reps-$_selectedKey-$index-${exercise.reps}',
+                      ),
+                      initialValue: exercise.reps,
+                      keyboardType: TextInputType.number,
+                      style: _inputTextStyle,
+                      onChanged: (value) => setState(() {
+                        _edited[index] = _edited[index].copyWith(reps: value);
+                      }),
+                      decoration: _inputDecoration(hintText: '10'),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            RoutineMinutesSlider(
+              key: ValueKey<String>('routine-minutes-$index'),
+              minutes: exercise.minutes,
+              onChanged: (minutes) => setState(() {
+                _edited[index] = _edited[index].copyWith(minutes: minutes);
+              }),
+            ),
         ],
       ),
     );
@@ -846,7 +842,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             child: TextField(
               key: const ValueKey<String>('new-exercise-name'),
               controller: _newExerciseName,
-              style: const TextStyle(color: AppColors.foreground),
+              style: _inputTextStyle,
               decoration: _inputDecoration(hintText: l.aiExerciseNameExample),
             ),
           ),
@@ -857,13 +853,45 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             onChanged: (type) => setState(() => _newExerciseType = type),
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineMinutesSlider(
-            key: const ValueKey<String>('new-exercise-minutes'),
-            minutes: _newExerciseMinutes,
-            onChanged: (minutes) => setState(() {
-              _newExerciseMinutes = minutes;
-            }),
-          ),
+          // 근력은 세트·횟수로, 그 외 유형은 시간으로 잰다(#1029).
+          if (_newExerciseType == '근력')
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: LabeledField(
+                    label: l.programEditorSets,
+                    child: TextField(
+                      key: const ValueKey<String>('new-exercise-sets'),
+                      controller: _newExerciseSets,
+                      keyboardType: TextInputType.number,
+                      style: _inputTextStyle,
+                      decoration: _inputDecoration(hintText: '3'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: LabeledField(
+                    label: l.programEditorReps,
+                    child: TextField(
+                      key: const ValueKey<String>('new-exercise-reps'),
+                      controller: _newExerciseReps,
+                      keyboardType: TextInputType.number,
+                      style: _inputTextStyle,
+                      decoration: _inputDecoration(hintText: '10'),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            RoutineMinutesSlider(
+              key: const ValueKey<String>('new-exercise-minutes'),
+              minutes: _newExerciseMinutes,
+              onChanged: (minutes) => setState(() {
+                _newExerciseMinutes = minutes;
+              }),
+            ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
@@ -903,7 +931,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               controller: _trainerMemo,
               minLines: 2,
               maxLines: 4,
-              style: const TextStyle(color: AppColors.foreground),
+              style: _inputTextStyle,
               decoration: _inputDecoration(hintText: _analysisSuggestion(l)),
             ),
           ),
@@ -1042,75 +1070,18 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
+  /// 3단계의 유일한 동작 — **고객에게 바로 전송하지 않는다**. 확정한 구성을
+  /// 2열의 `프로그램 정보` 박스에 반영만 하고, 실제 전송은 그 박스를 확인·
+  /// 수정한 뒤 프로그램 탭의 단일 `보내기`(최종 검토)에서 이뤄진다.
   Widget _reviewActions() {
     final AppLocalizations l = AppLocalizations.of(context);
-    if (_sent) {
-      return SizedBox(
-        height: 48,
-        child: OutlinedButton.icon(
-          key: const ValueKey<String>('open-client-chat'),
-          onPressed: _openClientChat,
-          icon: const Icon(Icons.chat_bubble_outline, size: 17),
-          label: Text(l.aiGoToChat(widget.client.name)),
-        ),
-      );
-    }
     return SizedBox(
       height: 48,
       child: FilledButton.icon(
-        key: const ValueKey<String>('send-selected-routine'),
-        onPressed: _sending ? null : _send,
-        icon: _sending
-            ? const SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.primaryForeground,
-                ),
-              )
-            : const Icon(Icons.send_rounded, size: 17),
-        label: Text(_sending ? l.aiSending : l.aiSendToClient),
-      ),
-    );
-  }
-
-  Widget _sentConfirmation() {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      key: const ValueKey<String>('routine-sent-confirmation'),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.success.withValues(alpha: 0.08),
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        children: <Widget>[
-          const Icon(
-            Icons.check_circle_rounded,
-            size: 34,
-            color: AppColors.success,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            l.aiRoutineSent(widget.client.name),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: AppColors.foreground,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l.aiGoToChatHint,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: AppColors.mutedForeground,
-            ),
-          ),
-        ],
+        key: const ValueKey<String>('apply-routine-to-template'),
+        onPressed: _applyToTemplate,
+        icon: const Icon(Icons.playlist_add_check_rounded, size: 17),
+        label: Text(l.aiApplyToTemplate),
       ),
     );
   }
@@ -1503,4 +1474,13 @@ const TextStyle _labelStyle = TextStyle(
   fontSize: 11.5,
   fontWeight: FontWeight.w700,
   color: AppColors.mutedForeground,
+);
+
+/// 프로그램 탭의 다른 입력창(`_DraftField`, `program_editor_workspace.dart`)과
+/// 같은 크기다 — 이 화면의 본문 기본 크기(테마 `bodyLarge`, 17px)를 그대로
+/// 쓰면 같은 탭의 다른 입력창보다 눈에 띄게 커 보인다.
+const TextStyle _inputTextStyle = TextStyle(
+  color: AppColors.foreground,
+  fontSize: 12.5,
+  fontWeight: FontWeight.w600,
 );

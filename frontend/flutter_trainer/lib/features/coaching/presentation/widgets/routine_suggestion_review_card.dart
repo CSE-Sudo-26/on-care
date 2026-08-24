@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routi
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_suggestion.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_edit_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// The AI personal-exercise review area of the program tab (#790).
@@ -395,24 +396,15 @@ class _SuggestionCard extends StatelessWidget {
             spacing: AppSpacing.sm,
             overflowSpacing: AppSpacing.xs,
             children: <Widget>[
-              // 테두리 있는 버튼이다. 예전에는 흐린 글자만 있는 `TextButton`
-              // 이라 카드 안의 설명 문구와 구별되지 않아, 누를 수 있는 것인지
-              // 알 수 없었다(#939).
-              OutlinedButton(
+              // 다른 카드들과 같은 공용 버튼([ActionButton]) 이다 — 이
+              // 카드만 기본 Material 버튼을 쓰면 높이·글꼴·테두리가 조금씩
+              // 달라 눈에 띈다.
+              ActionButton(
                 key: ValueKey<String>(
                   'routine-suggestion-dismiss-${suggestion.id}',
                 ),
+                label: l.suggestionDismiss,
                 onPressed: busy ? null : onDismiss,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  // 윤곽선을 브랜드 남색으로 지정한다. 테마에 버튼 스타일이
-                  // 없어 기본값(`colorScheme.outline`)을 쓰면 이 버튼만 검은
-                  // 윤곽선으로 나온다.
-                  side: BorderSide(
-                    color: AppColors.primary.withValues(alpha: 0.45),
-                  ),
-                ),
-                child: Text(l.suggestionDismiss),
               ),
               // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
               // 않아야 "무엇이 도는 중인지" 가 읽힌다.
@@ -427,12 +419,13 @@ class _SuggestionCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                   ],
-                  FilledButton(
+                  ActionButton(
                     key: ValueKey<String>(
                       'routine-suggestion-approve-${suggestion.id}',
                     ),
+                    label: l.suggestionApprove,
+                    primary: true,
                     onPressed: busy ? null : onApprove,
-                    child: Text(l.suggestionApprove),
                   ),
                 ],
               ),

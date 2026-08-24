@@ -7,6 +7,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_suggestion_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_suggestion.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -141,6 +142,10 @@ void main() {
     RoutineSuggestion s, {
     bool settle = true,
   }) async {
+    // AI 개인운동 제안 카드는 오른쪽 고객 데이터 열 안에 있어(#1028 후속)
+    // 좁은 뷰포트에서는 스크롤해야 보인다.
+    await tester.ensureVisible(approveButton(s));
+    await tester.pump();
     await tester.tap(approveButton(s));
     await tester.pumpAndSettle();
     await tester.tap(
@@ -175,15 +180,17 @@ void main() {
       expect(editRect.center.dy, lessThan(approveRect.top));
     });
 
-    testWidgets('추천 안 함도 테두리를 가진 버튼이다', (tester) async {
+    testWidgets('추천 안 함도 다른 카드와 같은 테두리 버튼이다', (tester) async {
       await openProgramTab(tester);
 
-      // 예전에는 흐린 글자만 있는 TextButton 이라 카드 안의 설명 문구와
-      // 구별되지 않아, 누를 수 있는 것인지 알 수 없었다.
+      // 다른 카드들과 같은 공용 버튼([ActionButton]) 이다 — 예전처럼 흐린
+      // 글자만 있는 `TextButton` 이면 카드 안의 설명 문구와 구별되지 않아,
+      // 누를 수 있는 것인지 알 수 없었다.
+      final dismiss = tester.widget<ActionButton>(dismissButton(_shoulder));
       expect(
-        tester.widget(dismissButton(_shoulder)),
-        isA<OutlinedButton>(),
-        reason: '테두리가 없으면 누를 수 있는 것으로 읽히지 않는다',
+        dismiss.primary,
+        isFalse,
+        reason: '채워진 버튼이 아니라 테두리만 있는 보조 버튼이다',
       );
       // 카드 안만 본다. 프로그램 탭 전체를 뒤지면 다른 영역에 `TextButton`
       // 하나만 생겨도, 이 카드의 거절 버튼이 멀쩡한데 테스트가 깨진다.
@@ -195,23 +202,6 @@ void main() {
           matching: find.byType(TextButton),
         ),
         findsNothing,
-      );
-    });
-
-    testWidgets('버튼 어디에도 검은 윤곽선이 없다', (tester) async {
-      await openProgramTab(tester);
-
-      // 테마에 버튼 스타일이 없어 기본값(colorScheme.outline)을 쓰면 이 버튼만
-      // 검은 윤곽선으로 나온다.
-      final OutlinedButton dismiss = tester.widget<OutlinedButton>(
-        dismissButton(_shoulder),
-      );
-      final BorderSide? side = dismiss.style!.side!.resolve(<WidgetState>{});
-      expect(side, isNotNull);
-      expect(side!.color, AppColors.primary.withValues(alpha: 0.45));
-      expect(
-        dismiss.style!.foregroundColor!.resolve(<WidgetState>{}),
-        AppColors.primary,
       );
     });
 
@@ -235,11 +225,11 @@ void main() {
         isNull,
       );
       expect(
-        tester.widget<OutlinedButton>(dismissButton(_shoulder)).onPressed,
+        tester.widget<ActionButton>(dismissButton(_shoulder)).onPressed,
         isNull,
       );
       expect(
-        tester.widget<FilledButton>(approveButton(_shoulder)).onPressed,
+        tester.widget<ActionButton>(approveButton(_shoulder)).onPressed,
         isNull,
       );
       await tester.pumpAndSettle();
@@ -259,17 +249,22 @@ void main() {
     expect(find.text('검토 필요 2'), findsOneWidget);
   });
 
-  testWidgets('the review area sits above the program editor', (tester) async {
-    await openProgramTab(tester);
+  testWidgets(
+    'the review area sits in the right client-data column, separate from '
+    'the program editor (#1028 후속)',
+    (tester) async {
+      await openProgramTab(tester);
 
-    final review = tester.getTopLeft(
-      find.byKey(const ValueKey<String>('routine-suggestion-review-card')),
-    );
-    final editor = tester.getTopLeft(find.byType(ProgramEditorWorkspace));
+      final review = tester.getTopLeft(
+        find.byKey(const ValueKey<String>('routine-suggestion-review-card')),
+      );
+      final editor = tester.getTopLeft(find.byType(ProgramEditorWorkspace));
 
-    // 정규 프로그램과 개인운동은 목적이 다르다 — 편집기 위에서 판단만 한다.
-    expect(review.dy, lessThan(editor.dy));
-  });
+      // 정규 프로그램과 개인운동은 목적이 다르다 — 편집기 열에 섞이지 않고
+      // 오른쪽 고객 데이터 열의 작은 카드로 따로 선다.
+      expect(review.dx, greaterThan(editor.dx));
+    },
+  );
 
   testWidgets('approving sends it to the member and clears the card', (
     tester,
@@ -289,6 +284,8 @@ void main() {
   testWidgets('dismissing keeps it away from the member', (tester) async {
     final repo = await openProgramTab(tester);
 
+    await tester.ensureVisible(dismissButton(_walking));
+    await tester.pump();
     await tester.tap(dismissButton(_walking));
     await tester.pumpAndSettle();
 
@@ -303,6 +300,8 @@ void main() {
   ) async {
     final repo = await openProgramTab(tester);
 
+    await tester.ensureVisible(editButton(_shoulder));
+    await tester.pump();
     await tester.tap(editButton(_shoulder));
     await tester.pumpAndSettle();
 
@@ -336,6 +335,8 @@ void main() {
   ) async {
     final repo = await openProgramTab(tester);
 
+    await tester.ensureVisible(editButton(_shoulder));
+    await tester.pump();
     await tester.tap(editButton(_shoulder));
     await tester.pumpAndSettle();
     await tester.tap(
@@ -376,6 +377,8 @@ void main() {
 
     // 목록의 `고객에게 추천` 한 번으로는 mutation 이 일어나지 않는다 — 예전에는
     // 이 탭 하나가 곧바로 승인이었다.
+    await tester.ensureVisible(approveButton(_shoulder));
+    await tester.pump();
     await tester.tap(approveButton(_shoulder));
     await tester.pumpAndSettle();
     expect(repo.approvals, isEmpty);

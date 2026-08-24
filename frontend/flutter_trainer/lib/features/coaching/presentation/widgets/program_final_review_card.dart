@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -9,6 +10,57 @@ import 'package:oncare_trainer/features/coaching/presentation/widgets/program_ed
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+
+/// `고객에게 배정` 을 누르기 전 한 번 더 확인한다(#1029) — 이 버튼 하나가
+/// 배정과 PT 일정 등록을 함께 하므로, 무엇이 나가는지 미리 말해야 한다.
+/// `showRoutineSuggestionConfirmDialog` 와 같은 모양을 쓴다.
+Future<bool?> showProgramAssignConfirmDialog(
+  BuildContext context, {
+  required String clientName,
+  required DateTime registerDate,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      final AppLocalizations l = AppLocalizations.of(dialogContext);
+      return AlertDialog(
+        key: const ValueKey<String>('program-assign-confirm'),
+        backgroundColor: AppColors.card,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(
+          l.programAssignConfirmTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        content: SizedBox(
+          width: 360,
+          child: Text(
+            l.programAssignConfirmBody(clientName, ymd(registerDate)),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.subtleForeground,
+              height: 1.4,
+            ),
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('program-assign-confirm-cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('program-assign-confirm-submit'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.programEditorAssign),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 /// 프로그램 흐름의 **최종 검토** 단계 (#1028).
 ///
@@ -25,13 +77,11 @@ class ProgramFinalReviewCard extends StatelessWidget {
     super.key,
     required this.draft,
     required this.clientName,
-    required this.registerOffset,
-    required this.onRegisterOffsetChanged,
+    required this.registerDate,
+    required this.onRegisterDateChanged,
     required this.onBack,
     required this.onAssign,
-    required this.onRegister,
     this.assigning = false,
-    this.registering = false,
   });
 
   /// 전송될 구성 그대로의 스냅샷.
@@ -40,24 +90,21 @@ class ProgramFinalReviewCard extends StatelessWidget {
   /// 받을 회원의 표시 이름.
   final String clientName;
 
-  /// PT 스케줄에 등록할 날(0 = 오늘 … 6).
-  final int registerOffset;
-  final ValueChanged<int> onRegisterOffsetChanged;
+  /// PT 스케줄에 등록할 날. 기본값은 오늘.
+  final DateTime registerDate;
+  final ValueChanged<DateTime> onRegisterDateChanged;
 
   /// 편집기로 돌아간다 — 검토하던 구성 그대로 다시 열린다.
   final VoidCallback onBack;
 
-  /// 회원에게 프로그램을 배정한다(숙제).
+  /// 확인 다이얼로그를 지난 뒤 실행한다 — 회원에게 프로그램을 배정하고
+  /// (숙제), 이어서 [registerDate] 로 PT 세션 프로그램도 등록한다(#1029).
+  /// 두 API 는 여전히 따로다 — 호출부(`_CoachingPageState`)가 순서대로
+  /// 부르되, 이 화면에는 CTA 하나로만 보인다.
   final VoidCallback onAssign;
-
-  /// 선택한 날의 PT 세션 프로그램으로 등록한다.
-  final VoidCallback onRegister;
 
   /// 배정이 진행 중이거나 이미 끝났다 — 버튼이 잠긴다.
   final bool assigning;
-
-  /// 일정 등록이 진행 중이거나 이미 끝났다.
-  final bool registering;
 
   @override
   Widget build(BuildContext context) {
@@ -161,36 +208,23 @@ class ProgramFinalReviewCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
           ],
           const SizedBox(height: AppSpacing.sm),
-          // 등록할 날 — 편집기가 아니라 검토 단계에서 고른다. 바로 아래
-          // `PT 스케줄에 등록` 이 이 값을 쓴다.
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: <Widget>[
-                for (var offset = 0; offset < 7; offset++) ...<Widget>[
-                  ChoiceChip(
-                    label: Text(_dayLabel(l, offset)),
-                    selected: registerOffset == offset,
-                    onSelected: (_) => onRegisterOffsetChanged(offset),
-                    showCheckmark: false,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: AppColors.card,
-                    side: const BorderSide(color: AppColors.borderStrong),
-                    shape: const StadiumBorder(),
-                    labelStyle: TextStyle(
-                      color: registerOffset == offset
-                          ? AppColors.primaryForeground
-                          : AppColors.mutedForeground,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                ],
-              ],
+          // 등록할 날 — 편집기가 아니라 검토 단계에서 고른다. 아래 `고객에게
+          // 배정` 이 배정과 함께 이 날짜로 PT 일정도 등록한다(#1029) — 예전
+          // `PT 스케줄에 등록` 버튼은 없앴다. 기본값은 오늘.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ActionButton(
+              key: const ValueKey<String>('program-register-date'),
+              label: ymd(registerDate),
+              icon: Icons.calendar_month_outlined,
+              onPressed: assigning ? null : () => _pickDate(context),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          // 실제 전송 두 갈래. 이 앱에서 이 버튼들이 존재하는 곳은 여기뿐이다.
+          // 실제 전송. 이 앱에서 이 버튼이 존재하는 곳은 여기뿐이다. 누르면
+          // 곧바로 나가지 않고 확인창을 한 번 거친다(#1029) — 배정과 PT
+          // 등록이 한 버튼에 묶인 만큼, 무엇이 함께 나가는지 미리 말해야
+          // 한다.
           OverflowBar(
             alignment: MainAxisAlignment.end,
             overflowAlignment: OverflowBarAlignment.end,
@@ -198,16 +232,12 @@ class ProgramFinalReviewCard extends StatelessWidget {
             overflowSpacing: AppSpacing.xs,
             children: <Widget>[
               ActionButton(
-                key: const ValueKey<String>('program-editor-register'),
-                label: l.coachRegisterOn(_dayLabel(l, registerOffset)),
-                icon: Icons.calendar_today_outlined,
-                onPressed: registering ? null : onRegister,
-              ),
-              ActionButton(
                 key: const ValueKey<String>('program-editor-assign'),
                 label: l.programEditorAssign,
                 primary: true,
-                onPressed: assigning ? null : onAssign,
+                onPressed: assigning
+                    ? null
+                    : () => _confirmThenAssign(context),
               ),
             ],
           ),
@@ -215,13 +245,29 @@ class ProgramFinalReviewCard extends StatelessWidget {
       ),
     );
   }
-}
 
-String _dayLabel(AppLocalizations l, int offset) {
-  if (offset == 0) return l.labelToday;
-  if (offset == 1) return l.labelTomorrow;
-  final date = nowKst().add(Duration(days: offset));
-  return '${date.month}/${date.day}';
+  Future<void> _confirmThenAssign(BuildContext context) async {
+    final confirmed = await showProgramAssignConfirmDialog(
+      context,
+      clientName: clientName,
+      registerDate: registerDate,
+    );
+    if (confirmed == true) onAssign();
+  }
+
+  /// 등록할 날짜를 고른다 — 기본값은 오늘, 과거 날짜는 고를 수 없다.
+  Future<void> _pickDate(BuildContext context) async {
+    final now = nowKst();
+    final today = DateTime(now.year, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: registerDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
+  }
 }
 
 class _ReviewExerciseRow extends StatelessWidget {
@@ -282,9 +328,13 @@ class _ReviewExerciseRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          if (exercise.source == 'trainer')
+          // 편집기와 같은 출처 배지 규칙(#1029) — 템플릿에서 온 운동은
+          // `<템플릿명> 템플릿 추가` 로 보인다.
+          if (exercise.templateName != null || exercise.source == 'trainer')
             Text(
-              l.coachTrainerAdded,
+              exercise.templateName != null
+                  ? l.coachTemplateAdded(exercise.templateName!)
+                  : l.coachTrainerAdded,
               style: const TextStyle(
                 color: AppColors.mutedForeground,
                 fontSize: 10.5,

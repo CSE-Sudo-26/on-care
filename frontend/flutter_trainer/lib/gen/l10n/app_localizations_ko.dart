@@ -1885,7 +1885,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineTypeStretching => '스트레칭';
 
   @override
-  String get routineTypeFlexibility => '유연성';
+  String get routineTypeFlexibility => '스트레칭';
 
   @override
   String get routineTypeOther => '기타';
@@ -1948,6 +1948,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTrainerAdded => '트레이너 추가';
 
   @override
+  String coachTemplateAdded(String name) {
+    return '$name 템플릿 추가';
+  }
+
+  @override
   String get coachClientNotified => '고객 앱에 알림이 전송됐어요';
 
   @override
@@ -1959,6 +1964,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String coachRegisterOn(String date) {
     return '$date PT 스케줄에 등록';
   }
+
+  @override
+  String get coachRegisterAction => 'PT 스케줄에 등록';
 
   @override
   String get labelTomorrow => '내일';
@@ -2138,6 +2146,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiGoToChatHint => '아래 버튼에서 고객 채팅으로 이동해 바로 안내할 수 있어요.';
+
+  @override
+  String get aiApplyToTemplate => '템플릿에 반영';
+
+  @override
+  String get aiAppliedToTemplate =>
+      'AI 루틴이 프로그램 정보에 반영됐어요. 아래에서 확인하고 필요하면 수정한 뒤 보내기로 전달하세요.';
 
   @override
   String get aiStepConditions => '조건 설정';
@@ -2922,10 +2937,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAssign => '고객에게 배정';
 
   @override
-  String get programEditorReview => '최종 검토';
+  String get programAssignConfirmTitle => '고객에게 배정할까요?';
 
   @override
-  String get programReviewTitle => '최종 검토';
+  String programAssignConfirmBody(String name, String date) {
+    return '이 프로그램이 $name님에게 배정되고, $date PT 스케줄에도 함께 등록돼요.';
+  }
+
+  @override
+  String get programEditorReview => '전송 확인';
+
+  @override
+  String get programReviewTitle => '전송 확인';
 
   @override
   String programReviewBlurb(String name) {
@@ -2968,6 +2991,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAddSession => '세션 추가';
 
   @override
+  String get programTemplateSessionPickerTitle => '어느 세션에 추가할까요?';
+
+  @override
+  String programTemplateSessionPickerBody(String name) {
+    return '\'$name\' 템플릿을 추가할 세션을 골라 주세요.';
+  }
+
+  @override
   String programEditorSessionName(String letter) {
     return '세션 $letter';
   }
@@ -2977,6 +3008,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorSessionDown => '세션 아래로 이동';
+
+  @override
+  String get programEditorSessionReset => '세션 초기화';
+
+  @override
+  String get programEditorSessionResetTitle => '세션을 초기화할까요?';
+
+  @override
+  String programEditorSessionResetBody(String name) {
+    return '\'$name\' 세션의 운동이 모두 지워져요. 세션 자체와 다른 세션은 그대로 남아요.';
+  }
 
   @override
   String get programEditorSessionEmpty => '운동을 추가해 세션을 구성하세요.';
