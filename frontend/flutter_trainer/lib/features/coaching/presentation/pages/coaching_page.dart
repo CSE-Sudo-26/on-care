@@ -99,6 +99,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// PT 스케줄에 등록할 날. 기본값은 오늘.
   DateTime _registerDate = _todayKst();
 
+  /// PT 스케줄에 등록할 시각. 기본값은 오전 10시 — 날짜 선택 박스 옆에서
+  /// 함께 고른다.
+  TimeOfDay _registerTime = const TimeOfDay(hour: 10, minute: 0);
+
   /// A template save is in flight — blocks re-entry so one click is one
   /// template (#1028).
   bool _savingTemplate = false;
@@ -155,6 +159,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _sending = false;
       _registered = false;
       _registerDate = _todayKst();
+      _registerTime = const TimeOfDay(hour: 10, minute: 0);
       _appliedTemplate = null;
       _templateRevision = 0;
       _editorRevision = 0;
@@ -311,9 +316,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     }
     final registeredFor = client.id;
     final date = ymd(_registerDate);
-    final now = nowKst();
-    final hour = date == ymd(now) ? (now.hour + 1).clamp(6, 23) : 10;
-    final time = '${hour.toString().padLeft(2, '0')}:00';
+    final time =
+        '${_registerTime.hour.toString().padLeft(2, '0')}:'
+        '${_registerTime.minute.toString().padLeft(2, '0')}';
     final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     setState(() => _registeringClientIds.add(registeredFor));
@@ -735,6 +740,11 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 registerDate: _registerDate,
                 onRegisterDateChanged: (date) => setState(() {
                   _registerDate = date;
+                  _registered = false;
+                }),
+                registerTime: _registerTime,
+                onRegisterTimeChanged: (time) => setState(() {
+                  _registerTime = time;
                   _registered = false;
                 }),
                 onBack: _closeFinalReview,

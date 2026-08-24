@@ -28,6 +28,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_final_review_card.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -1417,6 +1418,68 @@ void main() {
       expect(rows.single.program, isNotEmpty);
 
       // Drain the 3s confirmation timer so it isn't left pending.
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('시간 선택 박스로 고른 시각이 그대로 PT 등록에 쓰인다', (tester) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+      );
+      await goTo(tester, AppRoutes.coaching);
+
+      await _openFinalReview(tester);
+      final timeButton = find.byKey(
+        const ValueKey<String>('program-register-time'),
+      );
+      await tester.scrollUntilVisible(
+        timeButton,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(timeButton);
+      await tester.pump();
+      // 기본값은 오전 10시.
+      expect(
+        find.descendant(
+          of: timeButton,
+          matching: find.text(
+            const TimeOfDay(hour: 10, minute: 0).format(tester.element(timeButton)),
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      // `showTimePicker` 의 다이얼(원형) UI는 좌표로 값을 골라야 해서
+      // 픽셀 위치에 취약하다 — 다른 팝업 콜백 테스트(`_selectExerciseAction`)
+      // 처럼 콜백을 직접 불러 값을 확정한다.
+      final card = tester.widget<ProgramFinalReviewCard>(
+        find.byType(ProgramFinalReviewCard),
+      );
+      card.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
+      await tester.pump();
+
+      // 오늘은 시드 데이터에 이미 다른 세션이 있다 — 내일로 골라 새로
+      // 만들어지는 그 세션 하나만 본다(위 날짜 테스트와 같은 이유).
+      await tester.tap(
+        find.byKey(const ValueKey<String>('program-register-date')),
+      );
+      await tester.pumpAndSettle();
+      await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
+
+      await _confirmAssign(tester);
+      await settle(tester);
+      expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
+
+      final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
+      final rows = await tester.runAsync(
+        () => container
+            .read(scheduleRepositoryProvider)
+            .watchDate(tomorrow)
+            .first,
+      );
+      expect(rows!.single.time, '14:30');
+
       await tester.pump(const Duration(seconds: 3));
     });
 

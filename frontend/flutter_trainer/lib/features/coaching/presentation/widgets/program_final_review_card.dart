@@ -79,6 +79,8 @@ class ProgramFinalReviewCard extends StatelessWidget {
     required this.clientName,
     required this.registerDate,
     required this.onRegisterDateChanged,
+    required this.registerTime,
+    required this.onRegisterTimeChanged,
     required this.onBack,
     required this.onAssign,
     this.assigning = false,
@@ -93,6 +95,10 @@ class ProgramFinalReviewCard extends StatelessWidget {
   /// PT 스케줄에 등록할 날. 기본값은 오늘.
   final DateTime registerDate;
   final ValueChanged<DateTime> onRegisterDateChanged;
+
+  /// PT 스케줄에 등록할 시각. 기본값은 오전 10시.
+  final TimeOfDay registerTime;
+  final ValueChanged<TimeOfDay> onRegisterTimeChanged;
 
   /// 편집기로 돌아간다 — 검토하던 구성 그대로 다시 열린다.
   final VoidCallback onBack;
@@ -208,16 +214,29 @@ class ProgramFinalReviewCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
           ],
           const SizedBox(height: AppSpacing.sm),
-          // 등록할 날 — 편집기가 아니라 검토 단계에서 고른다. 아래 `고객에게
-          // 배정` 이 배정과 함께 이 날짜로 PT 일정도 등록한다(#1029) — 예전
-          // `PT 스케줄에 등록` 버튼은 없앴다. 기본값은 오늘.
+          // 등록할 날·시각 — 편집기가 아니라 검토 단계에서 고른다. 아래
+          // `고객에게 배정` 이 배정과 함께 이 날짜·시각으로 PT 일정도
+          // 등록한다(#1029) — 예전 `PT 스케줄에 등록` 버튼은 없앴다. 기본값은
+          // 오늘 오전 10시.
           Align(
             alignment: Alignment.centerLeft,
-            child: ActionButton(
-              key: const ValueKey<String>('program-register-date'),
-              label: ymd(registerDate),
-              icon: Icons.calendar_month_outlined,
-              onPressed: assigning ? null : () => _pickDate(context),
+            child: Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                ActionButton(
+                  key: const ValueKey<String>('program-register-date'),
+                  label: ymd(registerDate),
+                  icon: Icons.calendar_month_outlined,
+                  onPressed: assigning ? null : () => _pickDate(context),
+                ),
+                ActionButton(
+                  key: const ValueKey<String>('program-register-time'),
+                  label: registerTime.format(context),
+                  icon: Icons.schedule_outlined,
+                  onPressed: assigning ? null : () => _pickTime(context),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -267,6 +286,16 @@ class ProgramFinalReviewCard extends StatelessWidget {
     );
     if (picked == null) return;
     onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
+  }
+
+  /// 등록할 시각을 고른다.
+  Future<void> _pickTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: registerTime,
+    );
+    if (picked == null) return;
+    onRegisterTimeChanged(picked);
   }
 }
 
