@@ -892,7 +892,7 @@ class TrainerRoutine(Base):
     )
     name: Mapped[str] = mapped_column(String(100))
     minutes: Mapped[int] = mapped_column(Integer, default=0)
-    #: 운동 유형 — 유산소|근력|유연성|기타 네 가지 (#996).
+    #: 운동 유형 — 유산소|근력|스트레칭|기타 네 가지 (#996).
     type: Mapped[str] = mapped_column(String(20))
     #: 이 루틴을 언제 하기로 했나. 트레이너가 달력에서 고른 날이고, 비어 있으면
     #: "날짜를 정하지 않음"이다 — 이 칸이 생기기 전 배정이 그렇다. (#1276)

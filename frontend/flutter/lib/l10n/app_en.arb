@@ -228,7 +228,7 @@
   "dietDeleteMeal": "Delete Meal",
   "exTypeCardio": "Cardio",
   "exTypeStrength": "Strength",
-  "exTypeFlexibility": "Flexibility",
+  "exTypeFlexibility": "Stretching",
   "exTypeOtherChip": "Other",
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
@@ -961,8 +961,8 @@
   "myGoalBurnDaily": "Daily calories burned (kcal)",
   "myGoalCardioWeekly": "Weekly cardio (min)",
   "myGoalStrengthWeekly": "Weekly strength (sets)",
-  "myGoalFlexibilityWeekly": "Weekly flexibility (min)",
-  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week",
+  "myGoalFlexibilityWeekly": "Weekly stretching (min)",
+  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week",
   "myGoalExerciseApplySuggestion": "Use suggested goals",
   "@myGoalsExerciseSection": {
     "description": "Section label in the health goals sheet."

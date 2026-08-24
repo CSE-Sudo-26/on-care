@@ -14,8 +14,8 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 
 // Backend value sent as `dayLabel` — DO NOT localize (persisted to the server).
-/// The "운동 종류" chip display labels — 유산소 / 근력 / 유연성 / 기타 네 가지다
-/// (#996). 걷기는 유산소로, 요가·스트레칭은 유연성으로 접혀 있다: 유형은 집계
+/// The "운동 종류" chip display labels — 유산소 / 근력 / 스트레칭 / 기타 네 가지다
+/// (#996). 걷기는 유산소로, 요가·스트레칭은 스트레칭으로 접혀 있다: 유형은 집계
 /// 축이지 운동 이름이 아니라, 서버·트레이너 앱도 이 네 가지만 쓴다.
 /// Only the display strings are localized — the index→type mapping is fixed.
 List<String> _exerciseTypeLabels(AppLocalizations l) => <String>[
@@ -37,7 +37,7 @@ List<String> _levelLabels(AppLocalizations l) => <String>[
 ExerciseType _typeFromIndex(int i) => switch (i) {
   0 => ExerciseType.cardio,
   1 => ExerciseType.strength,
-  2 => ExerciseType.stretching, // 유연성 버킷
+  2 => ExerciseType.stretching, // 스트레칭 버킷
   _ => ExerciseType.other,
 };
 

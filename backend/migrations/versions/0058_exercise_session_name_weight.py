@@ -14,6 +14,11 @@
 
 모든 칸이 이 마이그레이션 전 행에서는 비어 있다.
 
+유형 어휘도 되돌린다: `flexibility`/`유연성` → `stretching`/`스트레칭`. 회원과
+트레이너가 실제로 쓰는 말이 "스트레칭" 이라, 두 앱의 입력 폼을 하나로 맞추면서
+화면 문구만이 아니라 저장값까지 그 말로 옮겼다. 0053 이 반대 방향으로 접었던
+것을 되돌리는 셈이다.
+
 Revision ID: 0058_exercise_session_name_weight
 Revises: 0057_exercise_session_sets
 """
@@ -51,6 +56,28 @@ def upgrade() -> None:
     )
     op.add_column("trainer_routines", sa.Column("sets", sa.Integer(), nullable=True))
     op.add_column("trainer_routines", sa.Column("weight", sa.Float(), nullable=True))
+
+    # 유형 어휘: 유연성 → 스트레칭. 0053 이 반대로 접었던 것을 되돌린다.
+    op.execute(
+        "UPDATE exercise_sessions SET type = 'stretching' "
+        "WHERE type = 'flexibility'"
+    )
+    op.execute(
+        "UPDATE trainer_routines SET type = '스트레칭' WHERE type = '유연성'"
+    )
+    # 프로그램·초안의 운동 항목은 JSON 안에 유형이 들어 있다. 문자열 치환으로
+    # 바꾼다 — 이 값은 언제나 `"type": "유연성"` 꼴이라 다른 칸을 건드리지 않는다.
+    for table, column in (
+        ("trainer_routines", "exercises_json"),
+        ("trainer_program_drafts", "sessions_json"),
+        ("trainer_program_templates", "exercises_json"),
+        ("trainer_schedule", "program_json"),
+    ):
+        op.execute(
+            f"UPDATE {table} SET {column} = "
+            f"REPLACE({column}, '\"type\": \"유연성\"', '\"type\": \"스트레칭\"') "
+            f"WHERE {column} LIKE '%\"type\": \"유연성\"%'"
+        )
 
 
 def downgrade() -> None:

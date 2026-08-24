@@ -994,10 +994,10 @@ class LocalApiInterceptor extends Interceptor {
       'strength_sets': <num>[
         for (final l in _weekdayLabels) perDayStrengthSets[l] ?? 0,
       ],
-      // 서버와 같은 이름으로 함께 내려준다 — flexibility 가 표준이고
-      // stretching 은 옮겨 가는 동안의 옛 이름이다. (#996)
-      'flexibility_minutes': stretchingSeries,
+      // 서버와 같은 이름으로 함께 내려준다 — stretching 이 표준이고
+      // flexibility 는 옮겨 가는 동안의 옛 이름이다. (#996, #1276)
       'stretching_minutes': stretchingSeries,
+      'flexibility_minutes': stretchingSeries,
       'other_minutes': otherSeries,
       'day_labels': _weekdayLabels,
       'total_minutes': totalMinutes,

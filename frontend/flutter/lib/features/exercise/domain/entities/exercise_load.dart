@@ -8,7 +8,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 ///
 ///   * 유산소  → **분**
 ///   * 근력    → **세트**
-///   * 유연성  → **분**
+///   * 스트레칭  → **분**
 ///
 /// 을 각자의 단위로 들고 다니고, 화면의 숫자·목표는 언제나 그 단위로 보여 준다.
 /// 세 유형을 **한 축에서** 비교해야 할 때 쓰는 값은 [ExerciseDayLoad.calories]

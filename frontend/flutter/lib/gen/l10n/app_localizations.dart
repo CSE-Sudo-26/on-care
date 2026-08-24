@@ -1013,7 +1013,7 @@ abstract class AppLocalizations {
   /// No description provided for @exTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Flexibility'**
+  /// **'Stretching'**
   String get exTypeFlexibility;
 
   /// No description provided for @exTypeOtherChip.
@@ -3311,13 +3311,13 @@ abstract class AppLocalizations {
   /// No description provided for @myGoalFlexibilityWeekly.
   ///
   /// In en, this message translates to:
-  /// **'Weekly flexibility (min)'**
+  /// **'Weekly stretching (min)'**
   String get myGoalFlexibilityWeekly;
 
   /// No description provided for @myGoalExerciseSuggestionNote.
   ///
   /// In en, this message translates to:
-  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week'**
+  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week'**
   String get myGoalExerciseSuggestionNote;
 
   /// No description provided for @myGoalExerciseApplySuggestion.

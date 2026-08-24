@@ -501,7 +501,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTypeStrength => '근력';
 
   @override
-  String get exTypeFlexibility => '유연성';
+  String get exTypeFlexibility => '스트레칭';
 
   @override
   String get exTypeOtherChip => '기타';
@@ -1729,11 +1729,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalStrengthWeekly => '주간 근력 (세트)';
 
   @override
-  String get myGoalFlexibilityWeekly => '주간 유연성 (분)';
+  String get myGoalFlexibilityWeekly => '주간 스트레칭 (분)';
 
   @override
   String get myGoalExerciseSuggestionNote =>
-      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 유연성 60분';
+      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 스트레칭 60분';
 
   @override
   String get myGoalExerciseApplySuggestion => '권장 비율로 채우기';

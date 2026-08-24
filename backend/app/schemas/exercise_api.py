@@ -68,17 +68,18 @@ class ExerciseWeekResponse(BaseModel):
     # 홈 '주간 추이' 차트가 읽는 일별 소모 칼로리. 없으면 클라이언트가 데모 상수로
     # 폴백하므로 daily_minutes 와 같이 내려준다.
     daily_calories: list[int]
-    # 운동 유형 네 가지의 일별 시간 — 유산소 / 근력 / 유연성 / 기타. (#996)
+    # 운동 유형 네 가지의 일별 시간 — 유산소 / 근력 / 스트레칭 / 기타. (#996)
     cardio_minutes: list[int]
     strength_minutes: list[int]
     #: 근력의 일별 세트 수. 기록이 세트를 들고 있으면 그 값을, 없으면 분에서
     #: 환산한 값을 센다 — 화면은 근력을 세트로만 읽는다. (#1262)
     strength_sets: list[int] = Field(default_factory=list)
-    flexibility_minutes: list[int] = Field(default_factory=list)
-    other_minutes: list[int] = Field(default_factory=list)
-    #: 옛 이름. `flexibility_minutes` 와 같은 값이다 — 두 앱이 옮겨 갈 때까지만
-    #: 함께 내려준다.
     stretching_minutes: list[int]
+    other_minutes: list[int] = Field(default_factory=list)
+    #: 옛 이름. `stretching_minutes` 와 같은 값이다 — 유형 어휘를 스트레칭으로
+    #: 되돌리기 전(#996) 잠깐 쓰던 이름이라, 아직 이걸 읽는 클라이언트가 있는
+    #: 동안만 함께 내려준다. (#1276)
+    flexibility_minutes: list[int] = Field(default_factory=list)
     day_labels: list[str]
     total_minutes: int
     total_calories: int

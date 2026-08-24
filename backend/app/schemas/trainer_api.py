@@ -268,14 +268,14 @@ class ChatSendRequest(BaseModel):
     client_request_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
-#: 운동 유형 — 유산소 / 근력 / 유연성 / 기타 네 가지. (#996)
+#: 운동 유형 — 유산소 / 근력 / 스트레칭 / 기타 네 가지. (#996, #1276)
 #:
-#: 예전 어휘(걷기·요가·스트레칭)로 들어오면 422 로 막지 않고 접어 준다. 이미
+#: 예전 어휘(걷기·요가·유연성)로 들어오면 422 로 막지 않고 접어 준다. 이미
 #: 저장된 루틴과 아직 옛 값을 보내는 화면이 있고, 유형 하나 때문에 배정이 통째로
 #: 실패하는 편이 더 나쁘다. 세분화가 필요한 자리는 유형이 아니라 운동 이름으로
 #: 적는다.
 RoutineType = Annotated[
-    Literal["유산소", "근력", "유연성", "기타"],
+    Literal["유산소", "근력", "스트레칭", "기타"],
     BeforeValidator(exercise_types.fold_legacy_ko),
 ]
 RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
@@ -334,7 +334,7 @@ class ProgramDraftExercise(BaseModel):
     type: RoutineType = "근력"
     #: 이 운동을 하는 날. 아직 일정에 걸지 않은 초안은 비어 있다.
     date: _date | None = None
-    #: 유산소·유연성·기타의 운동 시간(분). 근력은 세트로 재므로 비어 있다.
+    #: 유산소·스트레칭·기타의 운동 시간(분). 근력은 세트로 재므로 비어 있다.
     duration: LooseInt = Field(default=None, ge=0, le=600)
     #: 근력의 세트 수와 중량(kg). 다른 유형에서는 비어 있다.
     sets: LooseInt = Field(default=None, ge=0, le=99)

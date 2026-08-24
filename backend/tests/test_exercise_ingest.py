@@ -61,12 +61,12 @@ def test_exercise_is_ingested_into_the_exercise_domain(_captured):
     [
         ("cardio", "유산소"),
         ("strength", "근력"),
-        ("flexibility", "유연성"),
+        ("stretching", "스트레칭"),
         ("other", "기타"),
-        # 옛 값도 표준 라벨로 접힌다 (#996).
+        # 옛 값도 표준 라벨로 접힌다 (#996, #1276).
         ("walking", "유산소"),
-        ("yoga", "유연성"),
-        ("stretching", "유연성"),
+        ("yoga", "스트레칭"),
+        ("flexibility", "스트레칭"),
     ],
 )
 def test_every_allowed_exercise_type_has_a_label(_captured, type_, expected):

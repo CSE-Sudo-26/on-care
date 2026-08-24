@@ -25,7 +25,7 @@ enum ExerciseType { cardio, strength, yoga, walking, stretching, other }
 ///
 /// 표준 어휘는 네 가지(cardio·strength·flexibility·other)인데 이 enum 은 옛
 /// 이름을 아직 값으로 들고 있다 — `flexibility` 를 이름으로 찾으면 못 찾아
-/// **유연성 기록이 기타로 떨어졌다**. 옛 값도 자기 버킷으로 접어 읽는다. (#996)
+/// **스트레칭 기록이 기타로 떨어졌다**. 옛 값도 자기 버킷으로 접어 읽는다. (#996)
 ExerciseType _exerciseTypeFromString(String s) => switch (s) {
   'cardio' || 'walking' => ExerciseType.cardio,
   'strength' => ExerciseType.strength,
@@ -252,11 +252,12 @@ class ExerciseWeek {
       dailyCalories: dailyCalories,
       cardioMinutes: parseDoubleList('cardio_minutes'),
       strengthMinutes: parseDoubleList('strength_minutes'),
-      // 표준 이름을 먼저 본다. 옛 이름은 서버가 아직 함께 내려주는 동안의
-      // 다리다 — 둘 다 없으면 빈 목록이라 그래프가 그 줄기만 비운다. (#997)
-      stretchingMinutes: parseDoubleList('flexibility_minutes').isNotEmpty
-          ? parseDoubleList('flexibility_minutes')
-          : parseDoubleList('stretching_minutes'),
+      // 표준 이름을 먼저 본다. 옛 이름(flexibility)은 서버가 아직 함께
+      // 내려주는 동안의 다리다 — 둘 다 없으면 빈 목록이라 그래프가 그 줄기만
+      // 비운다. (#997, #1276)
+      stretchingMinutes: parseDoubleList('stretching_minutes').isNotEmpty
+          ? parseDoubleList('stretching_minutes')
+          : parseDoubleList('flexibility_minutes'),
       otherMinutes: parseDoubleList('other_minutes'),
       strengthSets: parseDoubleList('strength_sets'),
     );
