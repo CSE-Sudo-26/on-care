@@ -53,27 +53,7 @@ class ConsultationsPage extends ConsumerWidget {
 
     final page = PageScaffold(
       title: l.consultTitle,
-      subtitle: pending == null
-          ? null
-          : (pending > 0 ? l.consultPendingCount(pending) : l.consultNoPending),
       actions: <Widget>[
-        // 메시지 탭 고객 리스트 상단의 `전체 / 읽지 않음 N` 필과 같은 언어다
-        // — 글자 토글(`전체 보기`/`대기 중만`) 대신 두 상태를 한눈에 본다.
-        _ConsultFilterChip(
-          key: const ValueKey<String>('consultation-filter-all'),
-          label: l.consultFilterAll,
-          selected: filter == 'all',
-          onTap: () =>
-              ref.read(consultationFilterProvider.notifier).state = 'all',
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        _ConsultFilterChip(
-          key: const ValueKey<String>('consultation-filter-pending'),
-          label: l.consultFilterPendingCount(pending ?? 0),
-          selected: filter == 'pending',
-          onTap: () =>
-              ref.read(consultationFilterProvider.notifier).state = 'pending',
-        ),
         if (modal)
           IconButton(
             key: const ValueKey<String>('consultations-close'),
@@ -85,6 +65,34 @@ class ConsultationsPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // 메시지 탭 고객 리스트 상단의 `전체 / 읽지 않음 N` 칩과 같은 언어다
+          // — 글자 토글(`전체 보기`/`대기 중만`) 대신 두 상태를 한눈에 본다.
+          // 예전에는 헤더 우측 `actions` 자리에 있었는데, 그 자리는 액션마다
+          // 자동으로 여백을 더해 칩 사이가 메시지 탭보다 넓어 보였고, 바로
+          // 위 `대기 중 N건` 부제와 같은 정보를 두 번 말하고 있었다 — 부제를
+          // 없애고 그 자리로 옮긴다.
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _ConsultFilterChip(
+                key: const ValueKey<String>('consultation-filter-all'),
+                label: l.consultFilterAll,
+                selected: filter == 'all',
+                onTap: () =>
+                    ref.read(consultationFilterProvider.notifier).state = 'all',
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _ConsultFilterChip(
+                key: const ValueKey<String>('consultation-filter-pending'),
+                label: l.consultFilterPendingCount(pending ?? 0),
+                selected: filter == 'pending',
+                onTap: () =>
+                    ref.read(consultationFilterProvider.notifier).state =
+                        'pending',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
           if (!modal) ...<Widget>[
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -311,9 +319,10 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
       // 로케일을 모른다. (#501)
       title: request.memberName.isEmpty ? l.unknownMember : request.memberName,
-      // 대기·승인·거절을 카드 우측 상단 배지로 바로 보여준다 — 아래
-      // 액션 줄까지 읽어야 알 수 있던 상태를 제목과 같은 줄에서 읽는다.
-      trailing: _StatusBadge(status: request.status),
+      // 승인·거절 결과를 카드 우측 상단 배지로 바로 보여준다. 대기 중은
+      // 배지를 달지 않는다 — 위 `대기 N` 필터가 이미 그 상태를 말하고
+      // 있어, 카드마다 또 붙이면 같은 말을 반복하는 셈이다.
+      trailing: request.isPending ? null : _StatusBadge(status: request.status),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
