@@ -80,7 +80,7 @@ def test_health_profile_seed_survives_the_gender_seed(client, db_session):
     from app.models.models import HealthProfile
 
     profile = db_session.scalar(
-        select(HealthProfile).where(HealthProfile.user_id == "user-demo")
+        select(HealthProfile).where(HealthProfile.user_id == "user-7d4e9a2c5f18")
     )
     assert profile is not None
     assert profile.gender == "male"

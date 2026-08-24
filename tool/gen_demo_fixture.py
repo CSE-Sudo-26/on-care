@@ -55,20 +55,20 @@ HISTORY_WEEKS = 35
 # 회원 화면은 `코어 스트레칭 10분`, 고객 탭은 `코어 서킷 15분`, 프로그램 탭은
 # `코어 강화 10분` 이었다.
 #
-# 값은 백엔드 시드(`seed_member_data._ROUTINES['user-demo']`)를 따른다. 실 API
+# 값은 백엔드 시드(`seed_member_data._ROUTINES['user-7d4e9a2c5f18']`)를 따른다. 실 API
 # 모드에서 두 앱이 실제로 받는 것이 그 목록이므로, 데모가 다른 값을 보여 주면
 # 모드를 바꿀 때마다 화면이 달라진다.
 #
 # 유형은 화면이 그대로 쓰는 한국어다(유산소·근력·스트레칭). 회원 앱은 `스트레칭`,
 # 트레이너 그래프는 `스트레칭` 이라 부르지만 재는 값은 같다.
 ROUTINES: list[tuple[str, str, int, str, str, str]] = [
-    ("seed-routine-user-demo-0", "저강도 유산소 (걷기)", 30, "유산소",
+    ("seed-routine-user-7d4e9a2c5f18-0", "저강도 유산소 (걷기)", 30, "유산소",
      "혈압 안정에 효과적", "ai"),
-    ("seed-routine-user-demo-1", "하체 스트레칭", 15, "스트레칭",
+    ("seed-routine-user-7d4e9a2c5f18-1", "하체 스트레칭", 15, "스트레칭",
      "혈액순환 개선", "trainer"),
-    ("seed-routine-user-demo-2", "코어 강화", 10, "근력",
+    ("seed-routine-user-7d4e9a2c5f18-2", "코어 강화", 10, "근력",
      "기초대사량 향상", "ai"),
-    ("seed-routine-user-demo-3", "어깨 관절 보호 스트레칭", 8, "스트레칭",
+    ("seed-routine-user-7d4e9a2c5f18-3", "어깨 관절 보호 스트레칭", 8, "스트레칭",
      "PT 피드백 반영 · 오른쪽 어깨 보호", "trainer"),
 ]
 
@@ -506,7 +506,7 @@ def build() -> dict:
         ),
         "member": {
             "name": "김민수",
-            "userAppSeedId": "user-demo",
+            "userAppSeedId": "user-7d4e9a2c5f18",
             "trainerClientId": "seed-client-1",
         },
         "historyWeeks": HISTORY_WEEKS,

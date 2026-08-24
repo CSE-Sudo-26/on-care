@@ -11,7 +11,7 @@ const String kimMinsuFixtureJson = r'''
   "readme": "김민수 데모 데이터의 단일 원본. 사용자앱·트레이너웹·백엔드가 이 파일만 읽는다. 날짜는 상대값이다 — weeks[].weeksAgo 는 이번 주 월요일에서 몇 주 거슬러 올라가는지, days[].weekday 는 월(0)~일(6). recent[].offset 은 오늘로부터의 일수이고 주 격자 위를 덮는다. 이행률은 exercises[].done 개수에서 계산한다 — 퍼센트를 따로 적지 않는다.",
   "member": {
     "name": "김민수",
-    "userAppSeedId": "user-demo",
+    "userAppSeedId": "user-7d4e9a2c5f18",
     "trainerClientId": "seed-client-1"
   },
   "historyWeeks": 35,
@@ -8773,7 +8773,7 @@ const String kimMinsuFixtureJson = r'''
   ],
   "routines": [
     {
-      "id": "seed-routine-user-demo-0",
+      "id": "seed-routine-user-7d4e9a2c5f18-0",
       "name": "저강도 유산소 (걷기)",
       "minutes": 30,
       "type": "유산소",
@@ -8781,7 +8781,7 @@ const String kimMinsuFixtureJson = r'''
       "source": "ai"
     },
     {
-      "id": "seed-routine-user-demo-1",
+      "id": "seed-routine-user-7d4e9a2c5f18-1",
       "name": "하체 스트레칭",
       "minutes": 15,
       "type": "스트레칭",
@@ -8789,7 +8789,7 @@ const String kimMinsuFixtureJson = r'''
       "source": "trainer"
     },
     {
-      "id": "seed-routine-user-demo-2",
+      "id": "seed-routine-user-7d4e9a2c5f18-2",
       "name": "코어 강화",
       "minutes": 10,
       "type": "근력",
@@ -8797,7 +8797,7 @@ const String kimMinsuFixtureJson = r'''
       "source": "ai"
     },
     {
-      "id": "seed-routine-user-demo-3",
+      "id": "seed-routine-user-7d4e9a2c5f18-3",
       "name": "어깨 관절 보호 스트레칭",
       "minutes": 8,
       "type": "스트레칭",

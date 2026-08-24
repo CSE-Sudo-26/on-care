@@ -41,7 +41,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String trainerEmail = 'trainer@oncare.com';
 const String memberEmail = 'minsu@oncare.com';
-const String memberId = 'user-demo';
+const String memberId = 'user-7d4e9a2c5f18';
 const String memberName = '김민수';
 const String demoPassword = 'oncare123';
 

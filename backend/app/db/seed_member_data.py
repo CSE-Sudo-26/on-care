@@ -10,7 +10,7 @@
 실제 데이터"다. 트레이너 API 는 이 데이터를 그대로 읽어 로스터를 집계하므로,
 트레이너↔회원 데이터 공유가 시드 단계에서부터 실제로 성립한다.
 
-김민수(`user-demo`)만은 이 파일이 값을 만들지 않는다. 그는 사용자 앱의 데모 계정과
+김민수(`user-7d4e9a2c5f18`)만은 이 파일이 값을 만들지 않는다. 그는 사용자 앱의 데모 계정과
 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 세 곳이 각자 계산하니 같은 날짜의
 숫자가 서로 달랐다(#757). 그의 하루는 `app/db/demo_fixture.py` 가 읽는 픽스처가
 정하고, 여기서는 그것을 테이블에 옮기기만 한다. 나머지 회원은 아래 상수들이 만든다.
@@ -70,7 +70,7 @@ def _safe_commit(db: Session) -> None:
 # — 프론트 seed 와 동일 수치.
 # 하루 나트륨 합 == _SODIUM_WEEK[member][-1](오늘) 이 되도록 맞춰 둠.
 #
-# 김민수(`user-demo`)는 여기 없다 — 그의 하루는 픽스처가 정한다(#757). 아래 상수는
+# 김민수(`user-7d4e9a2c5f18`)는 여기 없다 — 그의 하루는 픽스처가 정한다(#757). 아래 상수는
 # 전부 그를 뺀 나머지 회원용이다.
 _TODAY_MEALS: dict[
     str, list[tuple[str, str, int, int, float, float, float, float]]
@@ -159,8 +159,8 @@ def _valid_member_ids(db: Session) -> set[str]:
 
 # 회원별 채팅 스레드 (sender: trainer|client, text, days_ago) — 프론트 시드와 정렬.
 #
-# user-demo 스레드는 회원 앱·트레이너 앱의 데모 시드와 **같은 대화**여야 한다.
-# 김민수는 회원 앱 데모 사용자(user-demo)와 같은 계정이라, 실서버로 붙여도
+# user-7d4e9a2c5f18 스레드는 회원 앱·트레이너 앱의 데모 시드와 **같은 대화**여야 한다.
+# 김민수는 회원 앱 데모 사용자(user-7d4e9a2c5f18)와 같은 계정이라, 실서버로 붙여도
 # 데모에서 보던 대화가 그대로 이어져야 하기 때문이다. 같은 목록이 아래 두 곳에
 # 있다 — 한 곳만 고치면 그 파일의 테스트가 깨진다:
 #   * frontend/flutter_trainer/lib/core/storage/seed_clients.dart (트레이너 시점)
@@ -171,7 +171,7 @@ def _valid_member_ids(db: Session) -> set[str]:
 # 걸친 대화가 30분짜리 수다로 보이고, 화면이 날짜로 묶는 자리(하루치 AI 분석
 # 안내)도 하나로 뭉친다.
 _CHAT: dict[str, list[tuple[str, str, int]]] = {
-    "user-demo": [
+    "user-7d4e9a2c5f18": [
         # 1일차.
         ("trainer", "민수님, 지난주 기록 정리해 봤는데 요일마다 이행률이 들쭉날쭉하네요. 바쁜 요일이 정해져 있나요?", 5),
         ("client", "화요일이랑 목요일이 야근이 많아요 😥", 5),
@@ -209,7 +209,7 @@ _CHAT: dict[str, list[tuple[str, str, int]]] = {
 }
 
 # 픽스처가 없는 회원의 AI 배정 루틴 (name, minutes, type, reason).
-# 김민수(user-demo)는 여기 없다 — 공유 픽스처의 `routines` 가 원본이다(#1199).
+# 김민수(user-7d4e9a2c5f18)는 여기 없다 — 공유 픽스처의 `routines` 가 원본이다(#1199).
 _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
     "user-jisu": [
         ("인터벌 런닝", 25, "유산소", "체지방 연소 효율↑"),
@@ -240,7 +240,7 @@ _WEEKDAY_INDEX: dict[str, int] = {
 # 동일. 위험도·활동점수·기본정보 + 목표치는 구조화 컬럼(goal_*/daily_*)에 넣는다.
 # conditions 는 위험도 서술에서 추론(목업엔 명시 없음). 키(height_cm)·성별은 목업에 없어 비운다.
 _HEALTH_PROFILE: dict[str, dict] = {
-    "user-demo": {
+    "user-7d4e9a2c5f18": {
         "risk_title": "고혈압·당뇨 위험 주의",
         "risk_body": "최근 혈압과 혈당 추세가 다소 높습니다. 식단·운동 관리에 신경 써주세요.",
         "risk_level": "medium",
@@ -268,7 +268,7 @@ _HEALTH_PROFILE: dict[str, dict] = {
 # 트레이너 오늘 타임라인 (time, client, member_id, type, duration, status, note, program).
 # member_id 는 유효 회원일 때만 연결(아니면 표시용 이름만). 프론트 TRAINER_SCHEDULE 정렬.
 _SCHEDULE: list[tuple[str, str, str | None, str, int, str, str, list[dict]]] = [
-    ("10:00", "김민수", "user-demo", "1:1 PT", 60, "완료", "무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.", [
+    ("10:00", "김민수", "user-7d4e9a2c5f18", "1:1 PT", 60, "완료", "무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.", [
         {"name": "레그프레스", "type": "근력", "sets": 3, "reps": 12, "weight": 80},
         {"name": "레그컬", "type": "근력", "sets": 3, "reps": 12, "weight": 40},
         {"name": "카프레이즈", "type": "근력", "sets": 3, "reps": 20},

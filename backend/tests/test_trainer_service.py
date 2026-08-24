@@ -26,7 +26,7 @@ def test_latest_by_member_returns_one_row_per_member(client, db_session):
     try:
         latest = _latest_by_member(
             db_session, ChatMessage, TRAINER_ID,
-            ["user-jisu", "user-demo", "user-sungho"],
+            ["user-jisu", "user-7d4e9a2c5f18", "user-sungho"],
         )
         # 반환 행 수는 회원 수 이하(메시지 5건이어도) — 회원당 최신 1건만
         assert len(latest) <= 3
