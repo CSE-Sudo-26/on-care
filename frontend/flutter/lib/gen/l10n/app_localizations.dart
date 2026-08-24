@@ -2984,12 +2984,6 @@ abstract class AppLocalizations {
   /// **'Tell us a little about yourself so we can tailor your care.'**
   String get onboardBasicSubtitle;
 
-  /// No description provided for @onboardBirthHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Date of birth (YYYY-MM-DD)'**
-  String get onboardBirthHint;
-
   /// No description provided for @onboardHeightHint.
   ///
   /// In en, this message translates to:
@@ -3032,11 +3026,173 @@ abstract class AppLocalizations {
   /// **'Health and exercise goals'**
   String get onboardGoalHint;
 
-  /// No description provided for @onboardSodiumGoalHint.
+  /// No description provided for @onboardOptionalTag.
   ///
   /// In en, this message translates to:
-  /// **'Daily sodium goal (mg)'**
-  String get onboardSodiumGoalHint;
+  /// **'(optional)'**
+  String get onboardOptionalTag;
+
+  /// No description provided for @onboardSkipStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this step'**
+  String get onboardSkipStep;
+
+  /// No description provided for @onboardBirthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get onboardBirthLabel;
+
+  /// No description provided for @onboardBirthYearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get onboardBirthYearHint;
+
+  /// No description provided for @onboardBirthMonthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get onboardBirthMonthHint;
+
+  /// No description provided for @onboardBirthDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get onboardBirthDayHint;
+
+  /// One row of the birth-year dropdown in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{year}'**
+  String onboardBirthYearValue(int year);
+
+  /// One row of the birth-month dropdown in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}'**
+  String onboardBirthMonthValue(int month);
+
+  /// One row of the birth-day dropdown in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{day}'**
+  String onboardBirthDayValue(int day);
+
+  /// No description provided for @onboardGenderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get onboardGenderLabel;
+
+  /// Age chip next to the date-of-birth field in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{age} years old'**
+  String onboardAgeSummary(int age);
+
+  /// BMI chip in onboarding step 1: the value and its category.
+  ///
+  /// In en, this message translates to:
+  /// **'BMI {bmi} · {category}'**
+  String onboardBmiSummary(String bmi, String category);
+
+  /// No description provided for @onboardBmiUnderweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Underweight'**
+  String get onboardBmiUnderweight;
+
+  /// No description provided for @onboardBmiNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get onboardBmiNormal;
+
+  /// No description provided for @onboardBmiPreObese.
+  ///
+  /// In en, this message translates to:
+  /// **'Pre-obese'**
+  String get onboardBmiPreObese;
+
+  /// No description provided for @onboardBmiObese1.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity class I'**
+  String get onboardBmiObese1;
+
+  /// No description provided for @onboardBmiObese2.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity class II'**
+  String get onboardBmiObese2;
+
+  /// No description provided for @onboardBmiObese3.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity class III'**
+  String get onboardBmiObese3;
+
+  /// No description provided for @onboardBmiSourceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut-offs: Korean Society for the Study of Obesity guideline (Asia-Pacific)'**
+  String get onboardBmiSourceNote;
+
+  /// No description provided for @onboardDietTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet goals'**
+  String get onboardDietTitle;
+
+  /// No description provided for @onboardDietSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We prefilled suggested goals. Change anything you like.'**
+  String get onboardDietSubtitle;
+
+  /// No description provided for @onboardExerciseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise goals'**
+  String get onboardExerciseTitle;
+
+  /// No description provided for @onboardExerciseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefilled from the World Health Organization guideline. Change anything you like.'**
+  String get onboardExerciseSubtitle;
+
+  /// No description provided for @onboardRecommendedPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested from your age, gender, height and weight'**
+  String get onboardRecommendedPersonal;
+
+  /// No description provided for @onboardRecommendedFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'App defaults. Fill in step 1 to get a suggestion tailored to you'**
+  String get onboardRecommendedFallback;
+
+  /// No description provided for @onboardResetToRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to suggested'**
+  String get onboardResetToRecommended;
+
+  /// No description provided for @onboardDietSourceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources: Dietary Reference Intakes for Koreans 2020 (EER, AMDR) · WHO sodium and free-sugar guidelines'**
+  String get onboardDietSourceNote;
+
+  /// No description provided for @onboardExerciseSourceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: WHO guidelines on physical activity (2020) — 150 min of moderate cardio and 2+ strength days a week'**
+  String get onboardExerciseSourceNote;
 
   /// No description provided for @onboardGenderMale.
   ///
