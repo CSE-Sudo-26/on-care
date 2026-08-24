@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
@@ -7,13 +8,16 @@ ConsultationDraft _draft({
   HealthPurposeType purpose = HealthPurposeType.general,
   String? detail,
   bool consent = true,
+  PreferredTime preferredTime = const PreferredTime.at(
+    TimeOfDay(hour: 9, minute: 30),
+  ),
 }) => ConsultationDraft(
   trainerId: trainerId,
   exerciseGoal: ExerciseGoal.fitness,
   healthPurposeType: purpose,
   healthPurposeDetail: detail,
   preferredDate: DateTime(2026, 8, 20),
-  preferredTimeSlot: PreferredTimeSlot.morning,
+  preferredTimeSlot: preferredTime,
   message: null,
   // 동의 없이는 보낼 수 없다(#1022) — 기본 대역은 동의한 상태로 둔다.
   dataSharingConsent: consent,
@@ -25,9 +29,14 @@ void main() {
     expect(json['trainer_id'], 'trainer-1');
     expect(json['exercise_goal'], 'fitness');
     expect(json['health_purpose_type'], 'general');
-    expect(json['preferred_time_slot'], 'morning');
+    expect(json['preferred_time_slot'], '09:30');
     // 서버 계약이 date 라 날짜만 보낸다.
     expect(json['preferred_date'], '2026-08-20');
+  });
+
+  test('시간 협의는 flexible 로 나간다 (#1256)', () {
+    final json = _draft(preferredTime: const PreferredTime.flexible()).toJson();
+    expect(json['preferred_time_slot'], 'flexible');
   });
 
   test('폐지된 헬스장 대상 필드는 아예 싣지 않는다', () {
@@ -50,8 +59,10 @@ void main() {
       throwsArgumentError,
     );
     expect(
-      _draft(purpose: HealthPurposeType.other, detail: '허리 통증')
-          .toJson()['health_purpose_detail'],
+      _draft(
+        purpose: HealthPurposeType.other,
+        detail: '허리 통증',
+      ).toJson()['health_purpose_detail'],
       '허리 통증',
     );
   });

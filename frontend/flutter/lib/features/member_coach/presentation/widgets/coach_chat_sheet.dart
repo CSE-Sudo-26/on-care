@@ -9,6 +9,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:printing/printing.dart';
 
 /// 루트 화면 위에 채팅 페이지를 열어 하단 내비게이션과 플로팅 버튼을 가린다.
@@ -55,30 +56,58 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
   /// 그대로 두면 내 말풍선 앞에 "분석했어요" 가 끼어든다.
   List<Widget> _withDemoBanners(List<CoachMessage> messages) {
     final List<Widget> out = <Widget>[];
+    final int lastSeeded = messages.lastIndexWhere(
+      (message) => message.id.startsWith('seed-'),
+    );
     for (int i = 0; i < messages.length; i++) {
       final CoachMessage m = messages[i];
       final bool seeded = m.id.startsWith('seed-');
       final bool newDay =
-          seeded &&
-          (i == 0 || !_sameDay(messages[i - 1].createdAt, m.createdAt));
+          i == 0 || !_sameDay(messages[i - 1].createdAt, m.createdAt);
       if (newDay) {
-        if (i > 0) {
+        if (seeded && i > 0) {
           out.add(
             _ReceivedBanner(key: ValueKey<String>('received-before-${m.id}')),
           );
           out.add(const SizedBox(height: 16));
         }
-        out.add(_AnalyzedBanner(trainerName: widget.trainerName));
+        out.add(_DateDivider(date: m.createdAt));
         out.add(const SizedBox(height: 16));
+        if (seeded) {
+          out.add(_AnalyzedBanner(trainerName: widget.trainerName));
+          out.add(const SizedBox(height: 16));
+        }
       }
       out.add(_Bubble(message: m));
+      if (i == lastSeeded) {
+        out.add(const _ReceivedBanner());
+        if (i != messages.length - 1) out.add(const SizedBox(height: 16));
+      }
     }
-    if (messages.isNotEmpty) out.add(const _ReceivedBanner());
     return out;
   }
 
-  static bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  List<Widget> _withoutDemoBanners(List<CoachMessage> messages) {
+    final List<Widget> out = <Widget>[];
+    for (int i = 0; i < messages.length; i++) {
+      final message = messages[i];
+      if (i == 0 || !_sameDay(messages[i - 1].createdAt, message.createdAt)) {
+        out
+          ..add(_DateDivider(date: message.createdAt))
+          ..add(const SizedBox(height: 16));
+      }
+      out.add(_Bubble(message: message));
+    }
+    return out;
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) {
+    final localA = a.toLocal();
+    final localB = b.toLocal();
+    return localA.year == localB.year &&
+        localA.month == localB.month &&
+        localA.day == localB.day;
+  }
 
   /// 대화를 열거나 메시지가 늘면 맨 아래를 보여 준다.
   ///
@@ -113,15 +142,17 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
     if (_sending) return;
     final text = _input.text.trim();
     if (text.isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
+    // 문구와 같이 await 전에 잡아 둔다.
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     setState(() => _sending = true);
     try {
       await ref.read(memberCoachRepositoryProvider).sendMessage(text);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatSendFailed)));
+      toast.show(l.coachChatSendFailed,
+        kind: AppToastKind.error,
+      );
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -184,39 +215,18 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Row(
-                          children: <Widget>[
-                            const DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: FigmaColors.statusGreen,
-                                shape: BoxShape.circle,
-                              ),
-                              child: SizedBox(width: 7, height: 7),
-                            ),
-                            const SizedBox(width: 5),
-                            // 부제는 로케일마다 길이가 다르다 — 영어가 한국어보다
-                            // 훨씬 길어 고정 폭으로 두면 그대로 넘친다(#840).
-                            Flexible(
-                              child: Text(
-                                l.coachChatSubtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.mutedForeground,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          l.coachChatSubtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.mutedForeground,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const Icon(
-                    Icons.more_vert,
-                    size: 20,
-                    color: FigmaColors.textMuted,
                   ),
                 ],
               ),
@@ -249,10 +259,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
                       children: showDemoBanners
                           ? _withDemoBanners(messages)
-                          : <Widget>[
-                              for (final CoachMessage m in messages)
-                                _Bubble(message: m),
-                            ],
+                          : _withoutDemoBanners(messages),
                     );
                   },
                 ),
@@ -381,6 +388,40 @@ class _BannerFrame extends StatelessWidget {
   }
 }
 
+class _DateDivider extends StatelessWidget {
+  const _DateDivider({required this.date});
+
+  final DateTime date;
+
+  static const List<String> _weekdays = <String>[
+    '월요일',
+    '화요일',
+    '수요일',
+    '목요일',
+    '금요일',
+    '토요일',
+    '일요일',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final localDate = date.toLocal();
+    return Center(
+      child: Text(
+        '${localDate.year}년 ${localDate.month}월 ${localDate.day}일 ${_weekdays[localDate.weekday - 1]}',
+        key: ValueKey<String>(
+          'coach-chat-date-${localDate.year}-${localDate.month}-${localDate.day}',
+        ),
+        style: const TextStyle(
+          color: AppColors.mutedForeground,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message});
 
@@ -414,78 +455,60 @@ class _Bubble extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
           ],
+          if (fromMe) ...<Widget>[
+            _MessageTime(message: message),
+            const SizedBox(width: 5),
+          ],
           Flexible(
-            child: Column(
-              crossAxisAlignment: fromMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  key: ValueKey<String>('coach-message-bubble-${message.id}'),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.sizeOf(context).width * 0.70,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: fromMe ? FigmaColors.primary : Colors.white,
-                    border: fromMe
-                        ? null
-                        : Border.all(color: FigmaColors.hairline),
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(14),
-                      topRight: const Radius.circular(14),
-                      bottomLeft: Radius.circular(fromMe ? 14 : 4),
-                      bottomRight: Radius.circular(fromMe ? 4 : 14),
+            child: Container(
+              key: ValueKey<String>('coach-message-bubble-${message.id}'),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.70,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              decoration: BoxDecoration(
+                color: fromMe ? FigmaColors.primary : Colors.white,
+                border: fromMe ? null : Border.all(color: FigmaColors.hairline),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: Radius.circular(fromMe ? 14 : 4),
+                  bottomRight: Radius.circular(fromMe ? 4 : 14),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    message.body,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                      color: fromMe ? Colors.white : FigmaColors.ink,
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        message.body,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.4,
-                          fontWeight: FontWeight.w500,
-                          color: fromMe ? Colors.white : FigmaColors.ink,
-                        ),
+                  if (message.attachment case final attachment?) ...<Widget>[
+                    const SizedBox(height: 8),
+                    // 사진은 대화 안에서 그리고, 리포트 PDF 는 내려받는
+                    // 카드로 둔다. 사진을 카드로 두면 볼 때마다 파일을
+                    // 열어야 한다. (#921)
+                    if (attachment.isImage)
+                      CoachImageAttachment(attachment: attachment)
+                    else
+                      _PdfCard(
+                        attachment: attachment,
+                        onOpen: () => _openPdf(context, ref, attachment),
                       ),
-                      if (message.attachment
-                          case final attachment?) ...<Widget>[
-                        const SizedBox(height: 8),
-                        // 사진은 대화 안에서 그리고, 리포트 PDF 는 내려받는
-                        // 카드로 둔다. 사진을 카드로 두면 볼 때마다 파일을
-                        // 열어야 한다. (#921)
-                        if (attachment.isImage)
-                          CoachImageAttachment(attachment: attachment)
-                        else
-                          _PdfCard(
-                            attachment: attachment,
-                            onOpen: () => _openPdf(context, ref, attachment),
-                          ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  message.timeLabel,
-                  key: ValueKey<String>('coach-message-time-${message.id}'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: fromMe
-                        ? FigmaColors.primary
-                        : AppColors.mutedForeground,
-                  ),
-                ),
-              ],
+                  ],
+                ],
+              ),
             ),
           ),
-          if (fromMe) const SizedBox(width: 4),
+          if (!fromMe) ...<Widget>[
+            const SizedBox(width: 5),
+            _MessageTime(message: message),
+          ],
         ],
       ),
     );
@@ -497,7 +520,7 @@ class _Bubble extends ConsumerWidget {
     CoachAttachment attachment,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     try {
       final bytes = await ref
           .read(chatPdfRepositoryProvider)
@@ -518,7 +541,9 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatPdfOpenFailed)));
+      toast.show(l.coachChatPdfOpenFailed,
+        kind: AppToastKind.error,
+      );
     }
   }
 }
@@ -564,6 +589,26 @@ class _PdfCard extends StatelessWidget {
   static String _fileSize(int bytes) => bytes >= 1024 * 1024
       ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
       : '${(bytes / 1024).toStringAsFixed(1)} KB';
+}
+
+class _MessageTime extends StatelessWidget {
+  const _MessageTime({required this.message});
+
+  final CoachMessage message;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    _clockOnly(message.timeLabel),
+    key: ValueKey<String>('coach-message-time-${message.id}'),
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: AppColors.mutedForeground,
+    ),
+  );
+
+  static String _clockOnly(String label) =>
+      RegExp(r'\d{1,2}:\d{2}').firstMatch(label)?.group(0) ?? label;
 }
 
 class _InputBar extends StatelessWidget {

@@ -10,7 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
-import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
+import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/cancel_session_dialog.dart';
@@ -25,6 +25,7 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
 /// 스케줄 tab — 트레이너의 주간 시간표. (#988)
@@ -123,30 +124,92 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void _shiftWeek(int direction) =>
       _selectDay(_selectedDay.add(Duration(days: 7 * direction)));
 
-  String? _editingScheduleId;
-  String? _editingProgramId;
-
-  /// 메모만 고치는 편집기가 열린 세션. 프로그램 편집기와 자리를 나눠 쓰므로
-  /// 둘 중 하나만 열린다(#1011).
-  String? _editingNoteId;
-
-  /// New schedules use a sheet; existing schedules are edited in their card.
-  Future<void> _openSessionSheet() async {
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    if (clients.isEmpty) return;
-    await showModalBottomSheet<void>(
+  /// 정보량에 맞춰 커지되 화면을 다 채우지 않는 가운데 모달(#1250).
+  ///
+  /// 일정·프로그램·메모 편집과 새 일정 추가는 예전에 상세 패널 안에서
+  /// 그 자리에 펼치거나(카드 폭이 좁아 세트·횟수/시간·중량 칸이 잘렸다)
+  /// 화면 폭 그대로 쓰는 바텀시트를 썼다(세로로 화면 끝까지 꽉 찼다).
+  /// 최대 높이(화면의 85%)까지는 내용만큼만 커지고, 넘치면 그 안에서만
+  /// 스크롤한다. [scrollable] 을 false 로 두면 바깥 스크롤을 씌우지
+  /// 않는다 — [SessionSheet] 처럼 안에 이미 자기 스크롤이 있는 내용을
+  /// 이중으로 감싸면 높이 제약이 풀려 무한 높이 예외가 난다.
+  Future<void> _openCenteredDialog(
+    WidgetBuilder builder, {
+    bool scrollable = true,
+  }) {
+    return showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (context) => SessionSheet(
-        clientNames: clients.map((c) => c.name).toList(),
-        date: _selectedYmd,
-        existing: null,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
+          ),
+          // 카드 밖으로 걸치면 잘리기 쉽다(모서리를 벗어난 만큼 다른
+          // 요소에 가려지거나 탭이 닿지 않았다) — 카드 안쪽, 오른쪽
+          // 위 구석에 둔다.
+          child: Stack(
+            children: <Widget>[
+              scrollable
+                  ? SingleChildScrollView(child: builder(dialogContext))
+                  : builder(dialogContext),
+              Positioned(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+                child: DialogCloseButton(
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  /// 프로그램(또는 메모)을 가운데 모달로 연다.
+  Future<void> _openProgramEditor(
+    ScheduleSession session, {
+    required bool noteOnly,
+  }) {
+    return _openCenteredDialog(
+      (dialogContext) => SessionProgramEditor(
+        key: ValueKey<String>(
+          noteOnly
+              ? 'note-editor-${session.id}'
+              : 'program-editor-${session.id}',
+        ),
+        session: session,
+        noteOnly: noteOnly,
+        onSaved: () => Navigator.of(dialogContext).pop(),
+        onCancel: () => Navigator.of(dialogContext).pop(),
+      ),
+    );
+  }
+
+  /// 일정을 가운데 모달로 연다 — [existing] 이 없으면 `새 일정 추가`,
+  /// 있으면 `일정 수정`이다. [SessionSheet] 는 자기 안에 이미
+  /// `SingleChildScrollView` 가 있으므로 바깥 스크롤은 씌우지 않는다.
+  Future<void> _openScheduleDialog({ScheduleSession? existing}) {
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+    if (existing == null && clients.isEmpty) return Future<void>.value();
+    return _openCenteredDialog(scrollable: false, (dialogContext) {
+      return SessionSheet(
+        key: ValueKey<String>(
+          existing == null
+              ? 'new-session-editor'
+              : 'schedule-editor-${existing.id}',
+        ),
+        clientNames: clients.map((c) => c.name).toList(),
+        date: existing?.date ?? _selectedYmd,
+        existing: existing,
+        inline: true,
+        onSaved: () => Navigator.of(dialogContext).pop(),
+        onCancel: () => Navigator.of(dialogContext).pop(),
+      );
+    });
   }
 
   Future<void> _openReservationSlotsSheet() async {
@@ -159,20 +222,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ),
       builder: (context) => ReservationSlotsSheet(selectedDay: _selectedDay),
     );
-  }
-
-  Future<void> _openConsultationInbox() async {
-    final date = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (_) => const ConsultationInboxSheet(),
-    );
-    final day = date == null ? null : DateTime.tryParse(date);
-    if (day != null && mounted) _selectDay(day);
   }
 
   Future<void> _confirmDelete(ScheduleSession s) async {
@@ -254,12 +303,42 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   }
 
   /// 완료 처리 — flips the session to 완료 and logs it to the client's
-  /// 운동기록. 확인 다이얼로그 없이 바로 처리한다 — 메모는 완료 뒤에도
-  /// 상세 패널에서 언제든 남길 수 있어, 누르는 순간 매번 빈 메모란을
-  /// 보여줄 이유가 없다(#1106).
+  /// 운동기록. 확인 다이얼로그를 거친다 — 완료는 예정에서만 갈리는 종료
+  /// 상태라 취소·노쇼처럼 되돌릴 UI가 없고, 잘못 눌러도 물릴 방법이
+  /// 없다(#1227). 메모는 이 다이얼로그가 아니라 완료 뒤 상세 패널에서
+  /// 언제든 남길 수 있어, 여기서는 빈 메모란을 보여주지 않는다.
   Future<void> _confirmComplete(ScheduleSession s) async {
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(l.schedCompleteTitle, style: const TextStyle(fontSize: 17)),
+        content: Text(
+          l.schedCompleteConfirm(s.time, s.clientName),
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: <Widget>[
+          ActionButton(
+            label: l.actionCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ActionButton(
+            key: const ValueKey<String>('session-complete-confirm'),
+            label: l.legendDone,
+            primary: true,
+            tone: AppColors.success,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(scheduleRepositoryProvider)
@@ -379,6 +458,19 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     context.go(AppRoutes.messagesFor(match.first.id));
   }
 
+  /// 계획 없는 세션의 `프로그램 추가` — 이 카드 안이 아니라 그 고객의 코칭
+  /// 탭으로 이동한다. 프로그램은 AI 코칭 탭에서 짓고 보내는 것이라, 스케줄
+  /// 카드에는 편집기를 두지 않는다(#1247).
+  void _openProgram(ScheduleSession s) {
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+    final match = clients.where((c) => c.name == s.clientName);
+    if (match.isEmpty) {
+      context.go(AppRoutes.clients);
+      return;
+    }
+    context.go(AppRoutes.coachingFor(match.first.id));
+  }
+
   String get _selectedYmd => ymd(_selectedDay);
 
   /// 날짜 행 오른쪽에 붙는 `오늘`. (#882, #988)
@@ -430,7 +522,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         if (consultationInbox)
           ConsultationInboxAction(
             pending: pendingConsultations,
-            onTap: _openConsultationInbox,
+            onTap: () => showConsultationsDialog(context),
           ),
       ],
       scrollable: false,
@@ -475,7 +567,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           label: l.schedNewSession,
           icon: Icons.add,
           primary: true,
-          onPressed: () => _openSessionSheet(),
+          onPressed: () => _openScheduleDialog(),
         ),
       ),
     );
@@ -655,8 +747,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final dateText = day == today
         ? l.labelToday
         : l.dateMonthDay(day.month, day.day);
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-
     return ListView(
       key: const Key('week-detail'),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -671,21 +761,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ],
         SessionCard(
           session: session,
-          onEditSchedule: () => setState(() {
-            _editingScheduleId = session.id;
-            _editingProgramId = null;
-            _editingNoteId = null;
-          }),
-          onEditProgram: () => setState(() {
-            _editingProgramId = session.id;
-            _editingScheduleId = null;
-            _editingNoteId = null;
-          }),
-          onEditNote: () => setState(() {
-            _editingNoteId = session.id;
-            _editingScheduleId = null;
-            _editingProgramId = null;
-          }),
+          onEditSchedule: () => _openScheduleDialog(existing: session),
+          onEditProgram: () => _openProgramEditor(session, noteOnly: false),
+          onGoToProgram: () => _openProgram(session),
+          onEditNote: () => _openProgramEditor(session, noteOnly: true),
           onDelete: () => _confirmDelete(session),
           onChat: () => _openChat(session),
           onComplete: (session.isUpcoming && !isFuture)
@@ -700,33 +779,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           programDateLabel: dateText,
           sendingProgram: _sendingProgramId == session.id,
           onSendProgram: () => _sendProgram(session),
-          inlineEditor: _editingScheduleId == session.id
-              ? SessionSheet(
-                  key: ValueKey<String>('week-session-editor-${session.id}'),
-                  clientNames: clients.map((client) => client.name).toList(),
-                  date: session.date,
-                  existing: session,
-                  inline: true,
-                  onSaved: () => setState(() => _editingScheduleId = null),
-                  onCancel: () => setState(() => _editingScheduleId = null),
-                )
-              : _editingProgramId == session.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('week-program-editor-${session.id}'),
-                  session: session,
-                  onSaved: () => setState(() => _editingProgramId = null),
-                  onCancel: () => setState(() => _editingProgramId = null),
-                )
-              : _editingNoteId == session.id
-              ? SessionProgramEditor(
-                  key: ValueKey<String>('week-note-editor-${session.id}'),
-                  session: session,
-                  // 같은 편집기의 메모만 모드다 — 운동 목록 없이 메모만 연다.
-                  noteOnly: true,
-                  onSaved: () => setState(() => _editingNoteId = null),
-                  onCancel: () => setState(() => _editingNoteId = null),
-                )
-              : null,
         ),
       ],
     );

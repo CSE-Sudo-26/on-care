@@ -4,6 +4,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/models/program_draft.dart';
@@ -153,10 +154,16 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                 onRemove: () => _removeItem(index),
                 onTypeChanged: (type) =>
                     setState(() => _items[index].type = type),
+                onDurationChanged: (minutes) =>
+                    setState(() => _items[index].duration.text = '$minutes'),
               ),
               const SizedBox(height: AppSpacing.sm),
             ],
             OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                side: const BorderSide(color: AppColors.accent),
+              ),
               onPressed: _saving ? null : _addItem,
               icon: const Icon(Icons.add, size: 16),
               label: Text(l.progAddExercise),
@@ -191,7 +198,12 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _saving ? null : widget.onCancel,
-                  child: Text(l.actionCancel),
+                  // 좁은 화면에서 "프로그램 저장"이 두 줄로 접히던 것과
+                  // 같은 안전장치 — 잘리는 대신 통째로 줄어든다.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(l.actionCancel),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -199,7 +211,10 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                 child: FilledButton(
                   key: const ValueKey<String>('save-program'),
                   onPressed: _saving ? null : _save,
-                  child: Text(_saving ? l.progSaving : l.progSaveAction),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(_saving ? l.progSaving : l.progSaveAction),
+                  ),
                 ),
               ),
             ],
@@ -216,6 +231,7 @@ class _ProgramDraftFields extends StatelessWidget {
     required this.draft,
     required this.onRemove,
     required this.onTypeChanged,
+    required this.onDurationChanged,
   });
 
   final int index;
@@ -223,9 +239,16 @@ class _ProgramDraftFields extends StatelessWidget {
   final VoidCallback onRemove;
   final ValueChanged<String> onTypeChanged;
 
+  /// 슬라이더를 실제로 움직였을 때만 부른다 — 비어 있는 채로 두면
+  /// [ProgramDraft.duration] 은 그대로 빈 문자열로 남아 미입력을
+  /// 지킨다(#1233). 슬라이더가 보여 주는 기본값(5분)은 화면 표시일 뿐,
+  /// 건드리지 않으면 저장되지 않는다.
+  final ValueChanged<int> onDurationChanged;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final storedDuration = int.tryParse(draft.duration.text.trim());
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -234,17 +257,18 @@ class _ProgramDraftFields extends StatelessWidget {
         border: Border.all(color: AppColors.borderStrong),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // 코칭 탭에서 프로그램을 짤 때와 같은 순서·같은 위젯이다 —
+          // 유형을 먼저 고르고, 그 유형 안에서 이름·세트를 채운다.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: TextField(
-                  key: ValueKey<String>('program-name-$index'),
-                  controller: draft.name,
-                  decoration: InputDecoration(
-                    labelText: l.progExerciseName,
-                    isDense: true,
-                  ),
+                child: RoutineCategoryChips(
+                  keyPrefix: 'program-type-$index',
+                  value: normaliseRoutineType(draft.type),
+                  onChanged: onTypeChanged,
                 ),
               ),
               IconButton(
@@ -259,82 +283,69 @@ class _ProgramDraftFields extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: ValueKey<String>('program-name-$index'),
+            controller: draft.name,
+            decoration: InputDecoration(
+              labelText: l.progExerciseName,
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
+              // "횟수/시간"("Reps/time")이 세 라벨 중 가장 길다 — 셋을
+              // 똑같이 나누면 그 라벨만 잘린다. 라벨 글씨를 살짝 줄이고
+              // 그 칸에 몫을 더 준다.
               Expanded(
+                flex: 3,
                 child: TextField(
                   key: ValueKey<String>('program-sets-$index'),
                   controller: draft.sets,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: l.progSets,
+                    labelStyle: const TextStyle(fontSize: 12),
                     isDense: true,
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
+                flex: 4,
                 child: TextField(
                   key: ValueKey<String>('program-reps-$index'),
                   controller: draft.reps,
                   decoration: InputDecoration(
                     labelText: l.progReps,
+                    labelStyle: const TextStyle(fontSize: 12),
                     isDense: true,
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
+                flex: 3,
                 child: TextField(
                   key: ValueKey<String>('program-weight-$index'),
                   controller: draft.weight,
                   decoration: InputDecoration(
                     labelText: l.progWeight,
                     hintText: l.progOptional,
+                    labelStyle: const TextStyle(fontSize: 12),
                     isDense: true,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey<String>('program-type-$index'),
-                  initialValue: normaliseRoutineType(draft.type),
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: l.progType,
-                    isDense: true,
-                  ),
-                  items: <DropdownMenuItem<String>>[
-                    for (final type in kRoutineTypes)
-                      DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(routineTypeLabel(l, type)),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) onTypeChanged(value);
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  key: ValueKey<String>('program-duration-$index'),
-                  controller: draft.duration,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: l.progDuration,
-                    hintText: l.progOptional,
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: AppSpacing.md),
+          RoutineMinutesSlider(
+            key: ValueKey<String>('program-duration-$index'),
+            minutes: storedDuration != null
+                ? storedDuration.clamp(5, 120)
+                : 5,
+            onChanged: onDurationChanged,
           ),
         ],
       ),

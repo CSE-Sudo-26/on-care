@@ -113,6 +113,17 @@ def current_week(
     )
 
 
+def _sets_for(normalized_type: str, sets: int | None) -> int | None:
+    """저장할 세트 수. 근력이 아닌 유형에서 온 값은 버린다. (#1262)
+
+    유산소를 세트로 세는 화면은 없다 — 받아 두면 집계가 읽지 않는 값이 기록에만
+    남아, 나중에 그 값을 믿는 화면이 생겼을 때 조용히 어긋난다.
+    """
+    if normalized_type != exercise_types.STRENGTH:
+        return None
+    return sets
+
+
 @router.post("/exercise/sessions", response_model=ExerciseSessionOut, status_code=201)
 def add_session(
     payload: ExerciseSessionCreate,
@@ -132,13 +143,15 @@ def add_session(
     if day_label not in WEEKDAY_LABELS:
         raise HTTPException(status_code=400, detail=f"잘못된 요일 라벨: {day_label}")
 
+    normalized = exercise_types.normalize(payload.type)
     row = ExerciseSession(
         id=f"ex-{uuid.uuid4().hex[:12]}",
         user_id=current_user.id,
         week_start=monday_of_str(today.isoformat()),
         day_label=day_label,
-        type=exercise_types.normalize(payload.type),
+        type=normalized,
         minutes=payload.minutes,
+        sets=_sets_for(normalized, payload.sets),
         calories=payload.calories,
         intensity=payload.intensity,
     )
@@ -188,6 +201,7 @@ def update_session(
 
     row.type = exercise_types.normalize(payload.type)
     row.minutes = payload.minutes
+    row.sets = _sets_for(row.type, payload.sets)
     row.calories = payload.calories
     row.intensity = payload.intensity
     row.day_label = day_label

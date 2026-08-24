@@ -71,13 +71,13 @@ String? clientChatRedirect(String? id, String? section) {
   return AppRoutes.messagesFor(id);
 }
 
-/// Builds the trainer routing tree: a seven-branch [StatefulShellRoute]
+/// Builds the trainer routing tree: an eight-branch [StatefulShellRoute]
 /// behind an auth gate, plus the auth routes.
 ///
-/// Branches 0–4 are the sidebar destinations (대시보드 / 고객 / 스케줄 /
-/// AI 코칭 / 리포트) in [navDestinations] order; branch 5 is 내 정보 —
-/// reachable from the sidebar footer but not a nav row; branch 6 is
-/// 상담 요청, whose nav row appears only against the real API.
+/// Branches 0–5 are the sidebar destinations in [navDestinations] order;
+/// branch 6 is 내 정보 and branch 7 is 알림함. 상담 요청은 스케줄 branch의
+/// 하위 페이지라, 열어 둔 동안에도 사이드바는 스케줄을 현재 작업 공간으로
+/// 표시한다(#1228).
 ///
 /// [readStatus] drives [sessionRedirect]; [refresh] should fire whenever
 /// the session changes so the guard re-evaluates without rebuilding the
@@ -170,6 +170,14 @@ GoRouter buildAppRouter({
                   date: state.uri.queryParameters['d'],
                   sessionId: state.uri.queryParameters['session'],
                 ),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: AppRoutes.consultationsSegment,
+                    builder: (context, state) => ConsultationsPage(
+                      returnTo: state.uri.queryParameters['from'],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -200,17 +208,6 @@ GoRouter buildAppRouter({
               ),
             ],
           ),
-          // 상담 요청 is appended AFTER 내 정보 on purpose: `myBranchIndex`
-          // is `navDestinations.length`, so inserting here instead would
-          // shift 내 정보 and silently break the footer's selection. (#467)
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: AppRoutes.consultations,
-                builder: (context, state) => const ConsultationsPage(),
-              ),
-            ],
-          ),
           // 알림함도 같은 이유로 맨 뒤에 붙인다. (#503)
           StatefulShellBranch(
             routes: <RouteBase>[
@@ -221,6 +218,10 @@ GoRouter buildAppRouter({
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.legacyConsultations,
+        redirect: (context, state) => AppRoutes.consultations,
       ),
       // 셸 밖에 둔다 — 사이드바를 띄우려면 세션이 있어야 하는데, 이 문서는
       // 로그인 전에도 열려야 한다. (#968)

@@ -22,10 +22,14 @@ import 'package:oncare_trainer/features/clients/domain/entities/routine_history_
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_final_review_card.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -69,7 +73,16 @@ class _SlowChatRepository extends DriftChatRepository {
 /// Counts registration calls and delays them, to test the in-flight
 /// double-tap guard.
 class _SlowCountingScheduleRepository extends DriftScheduleRepository {
-  _SlowCountingScheduleRepository(super.db);
+  _SlowCountingScheduleRepository(
+    super.db, {
+    this.delay = const Duration(seconds: 5),
+  });
+
+  /// 이 write 를 붙잡아 두는 시간. 프로그램 탭이 길어질수록(#1028: AI 요청
+  /// 흐름이 편집기 위에 항상 있다) 같은 화면 안에서 여러 번 스크롤해야 하는
+  /// 테스트는 그 스크롤이 소비하는 가상 시계도 감안해야 한다 — 기본값보다
+  /// 긴 지연이 필요하면 이 값을 올린다.
+  final Duration delay;
 
   int registerCalls = 0;
 
@@ -83,7 +96,7 @@ class _SlowCountingScheduleRepository extends DriftScheduleRepository {
   }) async {
     registerCalls++;
     // Keep the write in flight across client-switching/scroll animations.
-    await Future<void>.delayed(const Duration(seconds: 5));
+    await Future<void>.delayed(delay);
     return super.registerProgram(
       date: date,
       clientId: clientId,
@@ -361,6 +374,160 @@ Finder _exerciseActionMenus() => find.byWidgetPredicate((widget) {
       key.value.startsWith('exercise-edit-');
 });
 
+/// 프로그램 정보 박스는 AI 루틴을 생성/반영하기 전까지 빈 상태로 시작한다
+/// (#1028) — AI 코칭 보조 제안 안내 배너의 `편집기에 반영` 단축 버튼은 이제
+/// 없다(#1028 후속). 이 회원의 AI 추천 루틴을 편집기에 반영하는 유일한
+/// 길인 AI 요청 흐름(생성 → 기존 추천 선택 → 검토 완료 → 템플릿에 반영)을
+/// 끝까지 밟는다.
+///
+/// 좁은 화면은 `ListView` 라 아직 뷰포트 밖인 위젯은 빌드조차 되지 않는다 —
+/// `find.text(...).evaluate().isEmpty` 로 미리 존재를 확인하면 항상 비어
+/// 있는 것으로 보인다. 그래서 존재 여부를 먼저 묻지 않고, `scrollUntilVisible`
+/// 이 스크롤해 가며 직접 찾게 한다.
+Future<void> _applyRecommendedRoutine(WidgetTester tester) async {
+  final scrollable = find.byType(Scrollable).first;
+
+  final generate = find.byKey(
+    const ValueKey<String>('generate-routine-options'),
+  );
+  await tester.scrollUntilVisible(
+    generate,
+    150,
+    scrollable: scrollable,
+    maxScrolls: 100,
+  );
+  await tester.ensureVisible(generate);
+  await tester.pump();
+  await tester.tap(generate);
+  await tester.pumpAndSettle();
+
+  // 세 후보(회복안·강화안·기존안) 중 기존 AI 추천 그대로인 `기존안` 을
+  // 고른다 — 편집기에 들어갈 값이 이 회원의 seeded 추천과 같아야 한다.
+  final existing = find.byKey(
+    const ValueKey<String>('routine-option-recommended'),
+  );
+  await tester.scrollUntilVisible(
+    existing,
+    150,
+    scrollable: scrollable,
+    maxScrolls: 100,
+  );
+  await tester.ensureVisible(existing);
+  await tester.pump();
+  await tester.tap(existing);
+  await tester.pumpAndSettle();
+
+  final complete = find.byKey(
+    const ValueKey<String>('complete-routine-review'),
+  );
+  await tester.scrollUntilVisible(
+    complete,
+    150,
+    scrollable: scrollable,
+    maxScrolls: 100,
+  );
+  await tester.ensureVisible(complete);
+  await tester.pump();
+  await tester.tap(complete);
+  await tester.pumpAndSettle();
+
+  final apply = find.byKey(
+    const ValueKey<String>('apply-routine-to-template'),
+  );
+  await tester.scrollUntilVisible(
+    apply,
+    150,
+    scrollable: scrollable,
+    maxScrolls: 100,
+  );
+  await tester.ensureVisible(apply);
+  await tester.pump();
+  await tester.tap(apply);
+  await tester.pumpAndSettle();
+}
+
+/// 편집기의 `전송 확인` 을 눌러 전송 화면을 연다 (#1028).
+///
+/// 배정·PT 등록 버튼은 더 이상 편집기에 없다 — 프로그램이 회원에게 가려면
+/// 반드시 이 단계를 지난다. 이미 검토 중이면 아무 일도 하지 않는다.
+Future<void> _openFinalReview(WidgetTester tester) async {
+  if (find
+      .byKey(const ValueKey<String>('program-final-review'))
+      .evaluate()
+      .isNotEmpty) {
+    return;
+  }
+  final review = find.byKey(const ValueKey<String>('program-editor-review'));
+  await tester.scrollUntilVisible(
+    review,
+    150,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(review);
+  await tester.pump();
+  // 편집기가 이미 운동을 갖고 있으면(트레이너가 직접 채웠거나 이미
+  // 반영했다면) 여기서 다시 채우지 않는다 — 조건 없이 AI 흐름을 다시 밟으면
+  // 방금 지운 운동이 되살아난다.
+  if (tester.widget<ActionButton>(review).onPressed == null) {
+    await _applyRecommendedRoutine(tester);
+    await tester.scrollUntilVisible(
+      review,
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(review);
+    await tester.pump();
+  }
+  await tester.tap(review);
+  await tester.pump();
+}
+
+/// `고객에게 배정` 을 누르고 확인창까지 통과한다(#1029) — 이 버튼 하나가
+/// 배정과 PT 등록을 함께 한다. 예전에 따로 있던 `PT 스케줄에 등록` 버튼은
+/// 이제 없다 — 그 결과(오늘 스케줄에 등록됨)를 보려는 테스트도 이 헬퍼를
+/// 쓴다.
+Future<void> _confirmAssign(WidgetTester tester) async {
+  // 텍스트가 아니라 키로 찾는다 — 확인 다이얼로그의 submit 버튼도 같은
+  // 라벨(`programEditorAssign`)을 쓰므로, 텍스트 찾기는 라벨이 한 곳 더
+  // 생기면 `findsOneWidget` 위반으로 깨진다.
+  final assign = find.byKey(const ValueKey<String>('program-editor-assign'));
+  await tester.scrollUntilVisible(
+    assign,
+    150,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(assign);
+  await tester.pump();
+  await tester.tap(assign);
+  await tester.pumpAndSettle();
+  await tester.tap(
+    find.byKey(const ValueKey<String>('program-assign-confirm-submit')),
+  );
+}
+
+/// `showDatePicker` 의 기본 달력에서 [date] 를 고르고 확인한다 (#1028).
+///
+/// 지금 보이는 달과 [date] 의 달이 다르면(예: 오늘이 말일이라 "내일"이 다음
+/// 달인 경우) 한 달 넘긴다 — 오늘에서 하루 넘어가는 것뿐이라 한 번이면 된다.
+Future<void> _pickDateInPicker(WidgetTester tester, DateTime date) async {
+  final dialog = find.byType(DatePickerDialog);
+  final today = nowKst();
+  if (date.year != today.year || date.month != today.month) {
+    await tester.tap(
+      find.descendant(of: dialog, matching: find.byIcon(Icons.chevron_right)),
+    );
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(
+    find.descendant(of: dialog, matching: find.text('${date.day}')).last,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(
+    find.descendant(of: dialog, matching: find.byType(TextButton)).last,
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> _selectExerciseAction(
   WidgetTester tester,
   String action, {
@@ -537,26 +704,29 @@ void main() {
           find.byKey(const Key('client-nutrition-calorie-progress')),
           findsOneWidget,
         );
-        expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
-        expect(find.text('혈압 안정에 효과적'), findsOneWidget);
+        // 프로그램 정보 박스는 AI 루틴을 생성/반영하기 전까지 빈 상태로
+        // 시작한다(#1028) — AI 요청 흐름을 끝까지 밟아야 기본 추천 운동이
+        // 보인다. AI 흐름 자신의 검토 목록에도 같은 이름이 뜰 수 있어
+        // 편집기 안으로 범위를 좁힌다.
+        await _applyRecommendedRoutine(tester);
+        expect(
+          find.descendant(
+            of: find.byType(ProgramEditorWorkspace),
+            matching: find.text('저강도 유산소 (걷기)'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
         final programCard = find.byKey(
           const ValueKey<String>('program-client-seed-client-1'),
         );
         expect(programCard, findsOneWidget);
-        // 이행률은 [라벨][막대][값] 한 줄로 그린다(#899) — 값이 라벨과 같은
-        // Text 에 붙어 있지 않다.
+        // 이행률 막대·퍼센트는 이 목록에서 뺐다(#1029) — 이 목록은 회원을
+        // 고르는 자리다.
         expect(
-          find.descendant(of: programCard, matching: find.text('운동 이행률')),
-          findsOneWidget,
+          find.descendant(of: programCard, matching: find.byType(InlineBarValue)),
+          findsNothing,
         );
-        final completionBar = tester.widget<InlineBarValue>(
-          find.descendant(
-            of: programCard,
-            matching: find.byType(InlineBarValue),
-          ),
-        );
-        expect(completionBar.fraction, isNotNull);
-        expect(completionBar.text, endsWith('%'));
         final avatar = tester.widget<ClientAvatar>(
           find.descendant(of: programCard, matching: find.byType(ClientAvatar)),
         );
@@ -572,9 +742,9 @@ void main() {
         final mainColumn = find.byKey(
           const ValueKey<String>('coaching-wide-main-column'),
         );
-        final assistant = find.byKey(
-          const ValueKey<String>('coaching-wide-ai-prompt'),
-        );
+        // `AI에게 맞춤 루틴 요청하기` 는 더 이상 배너가 아니다 — 이 흐름
+        // 자체가 항상 메인 열의 맨 위에 있다(#1028 후속).
+        final assistant = find.byType(AiRoutineOptionsFlow);
         final overview = find.byKey(
           const ValueKey<String>('coaching-wide-client-overview'),
         );
@@ -725,10 +895,10 @@ void main() {
           reason: '$stale 이 아직 줄에 남아 있다',
         );
       }
-      // 지운 것은 상대시간뿐이다 — 목표와 이행률은 그대로 있어야 한다.
+      // 이행률 막대도 뺐다(#1029) — 이 줄에는 이제 이름·목표만 남는다.
       expect(
         find.descendant(of: row, matching: find.text('운동 이행률')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(tester.takeException(), isNull);
     });
@@ -821,12 +991,12 @@ void main() {
         const ValueKey<String>('program-client-list-scroll'),
       );
       expect(listFinder, findsOneWidget);
-      // 한 줄에 이름 · 목표 · 이행률 세 줄이 들어간다 — `오늘`/`5일 전` 같은
-      // 상대시간 줄을 지우면서 104 에서 88 로 내려왔다(#1027). 앱 기본 글씨
-      // 배율이 올라가면 줄 높이도 함께 늘어난다 — 화면과 같은 식으로 기대값을
-      // 잡는다. (#995)
+      // 한 줄에 이름 · 목표 두 줄만 남는다 — `오늘`/`5일 전` 같은 상대시간
+      // 줄을 지우면서 104 에서 88 로(#1027), 이행률 막대까지 지우면서 88
+      // 에서 64 로 내려왔다(#1029). 앱 기본 글씨 배율이 올라가면 줄 높이도
+      // 함께 늘어난다 — 화면과 같은 식으로 기대값을 잡는다. (#995)
       final double expectedRow =
-          88 + 84 * (AppTypography.textScale - 1).clamp(0.0, 2.0);
+          64 + 56 * (AppTypography.textScale - 1).clamp(0.0, 2.0);
       expect(tester.getSize(listFinder).height, expectedRow * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);
@@ -851,7 +1021,7 @@ void main() {
         const ValueKey<String>('program-client-list-scroll'),
       );
       expect(listFinder, findsOneWidget);
-      expect(tester.getSize(listFinder).height, greaterThan(84 * 5));
+      expect(tester.getSize(listFinder).height, greaterThan(60 * 5));
       expect(tester.takeException(), isNull);
     });
 
@@ -896,67 +1066,80 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('opens the A/B assistant inline in the AI routine tab', (
-      tester,
-    ) async {
-      await openTab(tester);
+    testWidgets(
+      'the AI routine assistant is always visible, not behind a click '
+      '(#1028 후속)',
+      (tester) async {
+        await openTab(tester);
 
-      expect(find.text('AI에게 맞춤 루틴 요청하기'), findsOneWidget);
-      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
-      await tester.pumpAndSettle();
+        // 클릭해야 나타나던 배너는 없다 — 흐름 자체가 항상 프로그램 정보
+        // 박스 위에 있다.
+        expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
+        expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
+        // The persistent shell proves this lives inline in the tab, not a
+        // dialog/page. Asserted on the sidebar's profile footer rather than
+        // a nav label, which now also appears as the page title.
+        expect(
+          find.byKey(const ValueKey<String>('sidebar-profile')),
+          findsOneWidget,
+        );
+      },
+    );
 
-      expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
-      expect(find.text('추천 목록으로'), findsOneWidget);
-      // The persistent shell proves this was not opened as a dialog/page.
-      // Asserted on the sidebar's profile footer rather than a nav label,
-      // which now also appears as the page title.
-      expect(
-        find.byKey(const ValueKey<String>('sidebar-profile')),
-        findsOneWidget,
-      );
-    });
+    testWidgets(
+      '템플릿에 반영을 눌러야 검토한 후보가 프로그램 정보에 반영된다 (#1028 후속)',
+      (tester) async {
+        await openTab(tester);
 
-    testWidgets('reviewed AI option remains in the recommendation list', (
-      tester,
-    ) async {
-      await openTab(tester);
-      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
-      await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey<String>('generate-routine-options')),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.byKey(const ValueKey<String>('generate-routine-options')),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey<String>('complete-routine-review')),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.byKey(const ValueKey<String>('complete-routine-review')),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('generate-routine-options')),
-      );
-      await tester.pump();
-      await tester.tap(
-        find.byKey(const ValueKey<String>('generate-routine-options')),
-      );
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('complete-routine-review')),
-      );
-      await tester.pump();
-      await tester.tap(
-        find.byKey(const ValueKey<String>('complete-routine-review')),
-      );
-      await tester.pumpAndSettle();
+        // 검토 단계에 들어온 것만으로는 아직 편집기에 아무것도 반영되지
+        // 않는다 — `템플릿에 반영`을 눌러야 한다.
+        expect(
+          find.descendant(
+            of: find.byType(ProgramEditorWorkspace),
+            matching: find.text('저강도 걷기'),
+          ),
+          findsNothing,
+        );
 
-      await tester.ensureVisible(find.text('추천 목록으로'));
-      await tester.pump();
-      await tester.tap(find.text('추천 목록으로'));
-      await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey<String>('apply-routine-to-template')),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.byKey(const ValueKey<String>('apply-routine-to-template')),
+        );
+        await tester.pumpAndSettle();
 
-      // 편집기 안으로 범위를 좁힌다 — 같은 이름의 운동이 위쪽 `AI 개인운동
-      // 제안` 영역(#790)에도 뜰 수 있고, 이 테스트가 확인하는 것은 검토한
-      // 후보가 **추천 목록**에 남아 있는지다.
-      expect(
-        find.descendant(
-          of: find.byType(ProgramEditorWorkspace),
-          matching: find.text('저강도 걷기'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
-    });
+        // 편집기 안으로 범위를 좁힌다 — 같은 이름의 운동이 오른쪽 `AI 개인운동
+        // 제안` 영역(#790)에도 뜰 수 있고, 이 테스트가 확인하는 것은 검토한
+        // 후보가 프로그램 정보에 반영됐는지다.
+        expect(
+          find.descendant(
+            of: find.byType(ProgramEditorWorkspace),
+            matching: find.text('저강도 걷기'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
+      },
+    );
 
     testWidgets(
       'switching client updates the nutrition graph and suggestions',
@@ -981,7 +1164,17 @@ void main() {
           tester.widget<CircularProgressIndicator>(progressFinder).value,
           isNot(initialProgress),
         );
-        expect(find.text('인터벌 런닝'), findsOneWidget);
+        // 프로그램 정보 박스는 빈 상태로 시작한다(#1028) — 이 회원의 AI
+        // 추천 루틴을 편집기에 반영해야 기본 추천이 보인다. AI 흐름 자신의
+        // 검토 목록에도 같은 이름이 뜰 수 있어 편집기 안으로 범위를 좁힌다.
+        await _applyRecommendedRoutine(tester);
+        expect(
+          find.descendant(
+            of: find.byType(ProgramEditorWorkspace),
+            matching: find.text('인터벌 런닝'),
+          ),
+          findsOneWidget,
+        );
         expect(find.text('저강도 유산소 (걷기)'), findsNothing);
       },
     );
@@ -1021,6 +1214,51 @@ void main() {
       expect(find.text('레그프레스 5세트'), findsNothing);
     });
 
+    testWidgets(
+      '다른 탭에 갔다 돌아와도 작성 중인 프로그램이 그대로 남는다 (#1028 후속)',
+      (tester) async {
+        await openTab(tester);
+
+        // 안내 배너 없이도 편집기는 빈 상태로 시작한다 — 직접 운동을 하나
+        // 추가해 "작성 중"인 상태를 만든다.
+        await tester.scrollUntilVisible(
+          find.text('운동 추가'),
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(find.text('운동 추가'));
+        await tester.pump();
+        await tester.tap(find.text('운동 추가'));
+        await tester.pump();
+        await tester.enterText(
+          find.byKey(const ValueKey<String>('custom-exercise-name')),
+          '탭 이동 테스트 운동',
+        );
+        await tester.ensureVisible(find.text('추가'));
+        await tester.pump();
+        await tester.tap(find.text('추가'));
+        await tester.pump();
+        await tester.scrollUntilVisible(
+          find.text('탭 이동 테스트 운동'),
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
+
+        // 다른 탭(대시보드)으로 갔다가 프로그램 탭으로 돌아온다 — 저장
+        // 버튼을 누르지 않았다.
+        await goTo(tester, AppRoutes.dashboard);
+        await goTo(tester, AppRoutes.coaching);
+
+        await tester.scrollUntilVisible(
+          find.text('탭 이동 테스트 운동'),
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
+      },
+    );
+
     testWidgets('send reset also closes the add-exercise form', (tester) async {
       await openTab(tester);
 
@@ -1041,14 +1279,8 @@ void main() {
 
       // The open form's TextField adds an inner Scrollable — target the
       // page ListView explicitly.
-      await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('고객에게 배정'));
-      await tester.pump();
-      await tester.tap(find.text('고객에게 배정'));
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 4)); // reset window
@@ -1070,18 +1302,27 @@ void main() {
     ) async {
       await openTab(tester);
 
-      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+      // 프로그램 정보 박스는 빈 상태로 시작한다(#1028) — 먼저 AI 추천
+      // 루틴을 편집기에 반영한다. AI 흐름 자신의 검토 목록에도 같은 이름이
+      // 남아 있을 수 있어 편집기 안으로 범위를 좁힌다.
+      await _applyRecommendedRoutine(tester);
+      final inEditor = find.descendant(
+        of: find.byType(ProgramEditorWorkspace),
+        matching: find.text('저강도 유산소 (걷기)'),
+      );
+      expect(inEditor, findsOneWidget);
       await _selectExerciseAction(tester, 'delete');
-      expect(find.text('저강도 유산소 (걷기)'), findsNothing);
+      expect(inEditor, findsNothing);
 
-      // Switching clients and back restores the full suggestion list.
+      // 다른 회원으로 옮겼다가 돌아오면 편집기는 새로 시작한다 — 지운 것이
+      // 되살아나지 않는다(#1028 후속: 반영 전까지는 항상 빈 상태).
       await tester.drag(find.byType(Scrollable).first, const Offset(0, 1000));
       await tester.pump();
       await tester.tap(find.text('이지수'));
       await settle(tester);
       await tester.tap(find.text('김민수'));
       await settle(tester);
-      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+      expect(find.text('저강도 유산소 (걷기)'), findsNothing);
     });
 
     testWidgets('오늘 스케줄에 등록 writes the routine onto the schedule tab', (
@@ -1093,18 +1334,19 @@ void main() {
       await tester.tap(find.text('박성호'));
       await settle(tester);
 
-      await tester.scrollUntilVisible(
-        find.text('오늘 PT 스케줄에 등록'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
-      await tester.pump();
-      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await settle(tester);
 
-      expect(find.text('오늘 스케줄에 등록됨'), findsOneWidget);
-      expect(find.text('스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요'), findsOneWidget);
+      // 박성호는 오늘 15:00 에 이미 예정된 세션이 있다 — 새 세션을 만드는
+      // 게 아니라 그 세션에 프로그램만 붙으므로, 등록 시각으로 고른 값(기본
+      // 오전 10시)은 적용되지 않는다. 그래서 성공 문구가 아니라 경고가
+      // 뜬다.
+      expect(
+        find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요'),
+        findsOneWidget,
+      );
+      expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
 
       // The 스케줄 tab shows the registered plan on his 예정 session.
       await goTo(tester, AppRoutes.schedule);
@@ -1123,14 +1365,8 @@ void main() {
     ) async {
       await openTab(tester);
 
-      await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('고객에게 배정'));
-      await tester.pump();
-      await tester.tap(find.text('고객에게 배정'));
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await settle(tester);
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
 
@@ -1143,7 +1379,7 @@ void main() {
       expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsNothing);
     });
 
-    testWidgets('내일 chip registers the routine on the next day', (
+    testWidgets('date picker registers the routine on the picked day', (
       tester,
     ) async {
       final container = await pumpTrainerApp(
@@ -1152,17 +1388,29 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
+      await _openFinalReview(tester);
+      final dateButton = find.byKey(
+        const ValueKey<String>('program-register-date'),
+      );
       await tester.scrollUntilVisible(
-        find.text('내일'),
+        dateButton,
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('내일'));
+      await tester.ensureVisible(dateButton);
       await tester.pump();
-      await tester.tap(find.text('내일'));
-      await tester.pump();
+      // 기본값은 오늘 — YYYY-MM-DD 로 표시된다.
+      expect(
+        find.descendant(of: dateButton, matching: find.text(ymd(nowKst()))),
+        findsOneWidget,
+      );
+      await tester.tap(dateButton);
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('내일 PT 스케줄에 등록'));
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
+
+      await _confirmAssign(tester);
       await settle(tester);
       expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
 
@@ -1183,24 +1431,97 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
     });
 
-    testWidgets('send shows confirmation then resets edits', (tester) async {
-      await openTab(tester);
+    testWidgets('시간 선택 박스로 고른 시각이 그대로 PT 등록에 쓰인다', (tester) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+      );
+      await goTo(tester, AppRoutes.coaching);
 
+      await _openFinalReview(tester);
+      final timeButton = find.byKey(
+        const ValueKey<String>('program-register-time'),
+      );
       await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
+        timeButton,
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('고객에게 배정'));
+      await tester.ensureVisible(timeButton);
       await tester.pump();
-      await tester.tap(find.text('고객에게 배정'));
+      // 기본값은 오전 10시.
+      expect(
+        find.descendant(
+          of: timeButton,
+          matching: find.text(
+            const TimeOfDay(hour: 10, minute: 0).format(tester.element(timeButton)),
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      // `showTimePicker` 의 다이얼(원형) UI는 좌표로 값을 골라야 해서
+      // 픽셀 위치에 취약하다 — 다른 팝업 콜백 테스트(`_selectExerciseAction`)
+      // 처럼 콜백을 직접 불러 값을 확정한다.
+      final card = tester.widget<ProgramFinalReviewCard>(
+        find.byType(ProgramFinalReviewCard),
+      );
+      card.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
+      await tester.pump();
+
+      // 오늘은 시드 데이터에 이미 다른 세션이 있다 — 내일로 골라 새로
+      // 만들어지는 그 세션 하나만 본다(위 날짜 테스트와 같은 이유).
+      await tester.tap(
+        find.byKey(const ValueKey<String>('program-register-date')),
+      );
+      await tester.pumpAndSettle();
+      await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
+
+      await _confirmAssign(tester);
+      await settle(tester);
+      expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
+
+      final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
+      final rows = await tester.runAsync(
+        () => container
+            .read(scheduleRepositoryProvider)
+            .watchDate(tomorrow)
+            .first,
+      );
+      expect(rows!.single.time, '14:30');
+
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('send shows confirmation then resets edits', (tester) async {
+      await openTab(tester);
+
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await tester.pump();
 
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
       expect(find.text('고객 앱에 알림이 전송됐어요'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4)); // reset window
-      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+      // 초기화된 편집기는 다시 빈 프로그램 정보 박스로 시작한다(#1028) —
+      // 보낸 운동이 자동으로 되살아나지 않아, 검토 버튼도 다시 잠긴다.
+      expect(
+        find.descendant(
+          of: find.byType(ProgramEditorWorkspace),
+          matching: find.text('저강도 유산소 (걷기)'),
+        ),
+        findsNothing,
+      );
+      final review = find.byKey(
+        const ValueKey<String>('program-editor-review'),
+      );
+      await tester.scrollUntilVisible(
+        review,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.widget<ActionButton>(review).onPressed, isNull);
     });
 
     testWidgets('mashing 스케줄 등록 registers only once', (tester) async {
@@ -1216,19 +1537,18 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await tester.scrollUntilVisible(
-        find.text('오늘 PT 스케줄에 등록'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
-      await tester.pump();
-      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
+      await _openFinalReview(tester);
+      // 배정+PT 등록이 한 버튼에 묶였다(#1029) — 배정은 빠르지만 그 뒤로
+      // 이어지는 등록이 느린 채로 남아 있는 동안, 버튼은 계속 잠겨 있다
+      // (`assigning`). 그 잠긴 창 안에서 두 번째 탭을 흉내 낸다.
+      await _confirmAssign(tester);
       await tester.pump(const Duration(milliseconds: 50));
-      // Second tap lands mid-flight — the button is now disabled and its
-      // label has flipped, so this must NOT trigger a second register.
+      // Second tap lands mid-flight — the button is now disabled, so this
+      // must NOT trigger a second register. Key (not text) — the confirm
+      // dialog's own submit button shares the same label and may still be
+      // mid-close.
       await tester.tap(
-        find.textContaining('스케줄에 등록').first,
+        find.byKey(const ValueKey<String>('program-editor-assign')),
         warnIfMissed: false,
       );
       await settle(tester);
@@ -1255,14 +1575,8 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await tester.scrollUntilVisible(
-        find.text('오늘 PT 스케줄에 등록'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
-      await tester.pump();
-      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await tester.pump(const Duration(milliseconds: 50));
 
       // Switch client while the write for 김민수 is still in flight —
@@ -1280,13 +1594,14 @@ void main() {
       // 이지수's card must not claim the registration, and her button
       // must not be left disabled by the previous client's guard. The
       // editor is a lazy list, so bring the button back into view first.
+      await _openFinalReview(tester);
       await tester.scrollUntilVisible(
-        find.text('오늘 PT 스케줄에 등록'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
-      expect(find.text('오늘 PT 스케줄에 등록'), findsOneWidget);
+      expect(find.text('고객에게 배정'), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
     });
@@ -1305,14 +1620,8 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('고객에게 배정'));
-      await tester.pump();
-      await tester.tap(find.text('고객에게 배정'));
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
@@ -1327,25 +1636,48 @@ void main() {
         token: 'demo-trainer-token',
         extraOverrides: <Override>[
           scheduleRepositoryProvider.overrideWith(
-            (ref) =>
-                _SlowCountingScheduleRepository(ref.watch(appDatabaseProvider)),
+            (ref) => _SlowCountingScheduleRepository(
+              ref.watch(appDatabaseProvider),
+              // 이 테스트만 회원을 세 번 오가며 매번 편집기 아래쪽까지
+              // 스크롤한다(#1028: AI 요청 흐름이 편집기 위에 항상 있어 탭이
+              // 길어졌다) — 그 스크롤이 쓰는 가상 시계만으로도 기본
+              // 5초를 넘길 수 있어 넉넉히 늘려 둔다.
+              delay: const Duration(seconds: 30),
+            ),
           ),
         ],
       );
       await goTo(tester, AppRoutes.coaching);
 
-      // Matches both the idle '📅 …등록' and the in-flight/disabled
-      // '✓ …등록됨' label so it works before and during a save.
-      Future<void> tapRegister() async {
-        final f = find.textContaining('스케줄에 등록');
-        await tester.scrollUntilVisible(
-          f,
-          150,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.ensureVisible(f);
+      // 편집기는 매번 빈 상태로 시작한다(#1028) — 회원을 오갈 때마다 그
+      // 회원의 편집기는 새로 만들어지기 때문이다. `_openFinalReview` 가 AI
+      // 흐름 전체를 다시 밟게 두면(느려서) 아래 5초 지연과 우연히 겹칠 수
+      // 있으므로, 이 타이밍 테스트에서는 직접 운동 하나를 빠르게 넣어 둔다.
+      Future<void> quicklyFillEditor() async {
+        final scrollable = find.byType(Scrollable).first;
+        final add = find.text('운동 추가');
+        await tester.scrollUntilVisible(add, 150, scrollable: scrollable);
         await tester.pump();
-        await tester.tap(f, warnIfMissed: false);
+        await tester.tap(add);
+        await tester.pump();
+        await tester.enterText(
+          find.byKey(const ValueKey<String>('custom-exercise-name')),
+          '등록 테스트 운동',
+        );
+        final confirm = find.text('추가');
+        await tester.scrollUntilVisible(confirm, 150, scrollable: scrollable);
+        await tester.pump();
+        await tester.tap(confirm);
+        await tester.pump();
+      }
+
+      Future<void> tapRegister() async {
+        // 회원을 바꾸면 검토가 닫힌다 — 등록마다 다시 최종 검토를 연다.
+        // `고객에게 배정` 이 배정+PT 등록을 함께 한다(#1029) — 등록만의
+        // 재진입 방지는 여전히 `_registeringClientIds`(고객별) 가 맡는다.
+        await quicklyFillEditor();
+        await _openFinalReview(tester);
+        await _confirmAssign(tester);
         await tester.pump(const Duration(milliseconds: 30));
       }
 
@@ -1376,7 +1708,8 @@ void main() {
           container.read(scheduleRepositoryProvider)
               as _SlowCountingScheduleRepository;
       expect(repo.registerCalls, 2);
-      await tester.pump(const Duration(seconds: 5));
+      // 두 write 모두 흘려보낸다 — 지연을 늘렸으니(30초) 그만큼 더 기다린다.
+      await tester.pump(const Duration(seconds: 35));
       await settle(tester);
     });
 
@@ -1394,14 +1727,8 @@ void main() {
       await goTo(tester, AppRoutes.coaching);
 
       // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
-      await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('고객에게 배정'));
-      await tester.pump();
-      await tester.tap(find.text('고객에게 배정'));
+      await _openFinalReview(tester);
+      await _confirmAssign(tester);
       await tester.pump(const Duration(milliseconds: 50));
 
       await tester.scrollUntilVisible(
@@ -1452,21 +1779,171 @@ void main() {
     ) async {
       await openTab(tester);
 
+      // 프로그램 정보 박스는 빈 상태로 시작한다(#1028 후속) — 지울 운동이
+      // 있으려면 먼저 AI 코칭 보조 제안을 편집기에 반영해야 한다.
+      await _applyRecommendedRoutine(tester);
+
       // 김민수의 개인 운동을 모두 지운다 — 공유 픽스처가 정한 네 건이다
       // (#1170).
       for (var i = 0; i < 4; i++) {
         await _selectExerciseAction(tester, 'delete');
       }
 
+      // 운동이 하나도 없으면 최종 검토 자체가 열리지 않는다 — 전송 버튼은
+      // 그 화면에만 있으므로, 여기서 막히면 회원에게 갈 길도 함께 막힌다
+      // (#1028).
+      final review = find.byKey(const ValueKey<String>('program-editor-review'));
       await tester.scrollUntilVisible(
-        find.text('오늘 PT 스케줄에 등록'),
+        review,
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
+      await tester.ensureVisible(review);
       await tester.pump();
-      final disabledAction = find.widgetWithText(ActionButton, '오늘 PT 스케줄에 등록');
-      expect(tester.widget<ActionButton>(disabledAction).onPressed, isNull);
+      expect(tester.widget<ActionButton>(review).onPressed, isNull);
+      expect(find.text('PT 스케줄에 등록'), findsNothing);
+      expect(find.text('고객에게 배정'), findsNothing);
+    });
+  });
+
+  group('CoachingPage — 전송은 최종 검토에서만 (#1028)', () {
+    Future<void> openTab(
+      WidgetTester tester, {
+      Size size = const Size(1600, 1200),
+    }) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
+    }
+
+    testWidgets('편집기 화면에는 배정·PT 등록이 아예 없다', (tester) async {
+      await openTab(tester);
+
+      // 화면 어디에도 전송 버튼이 없다 — 스크롤 밖에 숨어 있는 것이 아니라
+      // 위젯 트리에 만들어지지 않는다.
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-register')),
+        findsNothing,
+      );
+      expect(find.text('고객에게 배정'), findsNothing);
+      expect(find.text('PT 스케줄에 등록'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('최종 검토를 열면 전송 버튼이 생기고, 돌아가면 다시 사라진다', (tester) async {
+      await openTab(tester);
+
+      await _openFinalReview(tester);
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsOneWidget,
+      );
+
+      // 편집기로 돌아가면 전송 자리도 함께 닫힌다.
+      final backButton = find.byKey(
+        const ValueKey<String>('program-review-back'),
+      );
+      await tester.scrollUntilVisible(
+        backButton,
+        -150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(backButton);
+      await tester.pump();
+      await tester.tap(backButton);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('최종 검토 화면이 보여 주는 구성이 곧 편집기의 구성이다', (tester) async {
+      await openTab(tester);
+
+      // 프로그램 정보 박스는 빈 상태로 시작한다(#1028 후속) — 먼저 AI 코칭
+      // 보조 제안을 편집기에 반영한다.
+      await _applyRecommendedRoutine(tester);
+
+      // 편집기에서 운동 하나를 지우고 검토를 연다 — 검토 화면은 지운 뒤의
+      // 구성을 보여 줘야 한다. 화면과 payload 가 어긋나면 트레이너가 확인한
+      // 것과 다른 것이 회원에게 간다.
+      await _selectExerciseAction(tester, 'delete');
+      await _openFinalReview(tester);
+
+      final review = find.byKey(const ValueKey<String>('program-final-review'));
+      expect(
+        find.descendant(of: review, matching: find.text('저강도 유산소 (걷기)')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: review, matching: find.text('하체 스트레칭')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('회원을 바꾸면 검토가 닫힌다 — 다른 회원의 구성을 물려받지 않는다', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await _openFinalReview(tester);
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsOneWidget,
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('이지수'),
+        -150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('이지수'));
+      await tester.pump();
+      await tester.tap(find.text('이지수'));
+      await settle(tester);
+
+      expect(
+        find.byKey(const ValueKey<String>('program-final-review')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+      'AI 요청 흐름과 AI 개인운동 제안은 클릭 없이 동시에 보인다 (#1028 후속)',
+      (tester) async {
+        await openTab(tester, size: const Size(1920, 1200));
+
+        // 둘 다 처음부터 트리에 있다 — 하나를 열기 위해 다른 하나가
+        // 자리를 비켜 주지 않는다.
+        expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
+        expect(find.byType(RoutineSuggestionReviewCard), findsOneWidget);
+      },
+    );
+
+    testWidgets('좁은 화면에서도 AI 개인운동 제안이 사라지지 않는다', (
+      tester,
+    ) async {
+      await openTab(tester, size: const Size(800, 1600));
+
+      expect(find.byType(RoutineSuggestionReviewCard), findsOneWidget);
+      expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
     });
   });
 
@@ -1545,6 +2022,12 @@ void main() {
           trainerAuthRepositoryProvider.overrideWithValue(
             const _FakeTrainerAuthRepository(),
           ),
+          // 실 API 모드지만 AI 후보 생성(`생성` 버튼)까지 실제 서버로 보낼
+          // 것은 아니다 — 편집기가 빈 상태로 시작해(#1028) 검토 흐름을
+          // 타야 하는 테스트가 이 저장소로 그 단계를 통과한다.
+          trainerRoutineOptionsRepositoryProvider.overrideWithValue(
+            const MockTrainerRoutineOptionsRepository(),
+          ),
           trainerRoutineRepositoryProvider.overrideWithValue(routineRepo),
           if (includeInitialSuggestions)
             aiRoutineRepositoryProvider.overrideWithValue(
@@ -1568,6 +2051,12 @@ void main() {
     }
 
     Future<void> tapSend(WidgetTester tester) async {
+      await _openFinalReview(tester);
+      // `_openFinalReview` 가 편집기를 채우려고 AI 흐름을 지났다면(#1028)
+      // `템플릿에 반영` 스낵바가 큐에 남아 있을 수 있다 — 같은
+      // `ScaffoldMessenger` 를 쓰므로, 그 스낵바가 다 사라질 때까지 기다려
+      // 둬야 전송 실패 스낵바가 곧바로 보인다.
+      await tester.pump(const Duration(seconds: 5));
       await tester.scrollUntilVisible(
         find.text('고객에게 배정'),
         150,
@@ -1576,6 +2065,13 @@ void main() {
       await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
       await tester.tap(find.text('고객에게 배정'));
+      await tester.pumpAndSettle();
+      // `고객에게 배정` 은 곧장 mutation 하지 않고 확인창을 한 번 더
+      // 거친다(#1029) — 배정과 PT 등록이 한 버튼에 묶인 만큼, 실제로
+      // 나가기 전에 확인해야 한다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('program-assign-confirm-submit')),
+      );
       await settle(tester);
     }
 
@@ -1589,20 +2085,18 @@ void main() {
           captureSchedule: (repo) => scheduleRepo = repo,
         );
 
-        await tester.scrollUntilVisible(
-          find.text('오늘 PT 스케줄에 등록'),
-          150,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
-        await tester.pump();
-        await tester.tap(find.text('오늘 PT 스케줄에 등록'));
-        await settle(tester);
+        await tapSend(tester);
 
         expect(scheduleRepo.registerCalls, 1);
         expect(scheduleRepo.clientId, 'real-client-1');
         expect(scheduleRepo.program, isNotEmpty);
-        expect(find.text('오늘 스케줄에 등록됨'), findsOneWidget);
+        // `_CapturingScheduleRepository.registerProgram` 은 늘 `true`(기존
+        // 세션에 붙었다)를 돌려준다 — 그래서 성공 문구가 아니라 경고가
+        // 뜬다.
+        expect(
+          find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요'),
+          findsOneWidget,
+        );
       },
     );
 
@@ -1672,6 +2166,10 @@ void main() {
       (tester) async {
         final routineRepo = await openRealApiTab(tester);
 
+        // 프로그램 정보 박스는 빈 상태로 시작한다(#1028 후속) — 지울
+        // 운동이 있으려면 먼저 AI 코칭 보조 제안을 편집기에 반영해야 한다.
+        await _applyRecommendedRoutine(tester);
+
         // Remove all 3 seeded AI suggestions for 김민수.
         for (var i = 0; i < 3; i++) {
           await _selectExerciseAction(tester, 'delete');
@@ -1697,8 +2195,8 @@ void main() {
         final stretching = find.byKey(
           const ValueKey<String>('custom-exercise-category-유연성'),
         );
-        final chip = tester.widget<ChoiceChip>(stretching);
-        chip.onSelected?.call(true);
+        await tester.ensureVisible(stretching);
+        await tester.tap(stretching);
         await tester.pump();
         await tester.ensureVisible(find.text('추가'));
         await tester.pump();

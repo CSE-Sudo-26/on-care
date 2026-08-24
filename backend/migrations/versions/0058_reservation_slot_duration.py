@@ -1,14 +1,14 @@
 """store reservation slot duration
 
-Revision ID: 0057_reservation_slot_duration
-Revises: 0056_exercise_type_goals
+Revision ID: 0058_reservation_slot_duration
+Revises: 0057_exercise_session_sets
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0057_reservation_slot_duration"
-down_revision = "0056_exercise_type_goals"
+revision = "0058_reservation_slot_duration"
+down_revision = "0057_exercise_session_sets"
 branch_labels = None
 depends_on = None
 

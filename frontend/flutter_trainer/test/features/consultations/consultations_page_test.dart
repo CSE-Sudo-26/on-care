@@ -1,10 +1,12 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
@@ -117,11 +119,12 @@ class _FakeConsultationRepository implements ConsultationRepository {
 
 Future<ProviderContainer> _pumpInbox(
   WidgetTester tester,
-  _FakeConsultationRepository repo,
-) => pumpTrainerApp(
+  _FakeConsultationRepository repo, {
+  String? at,
+}) => pumpTrainerApp(
   tester,
   token: 'demo-token',
-  at: AppRoutes.consultations,
+  at: at ?? AppRoutes.consultations,
   extraOverrides: <Override>[
     consultationRepositoryProvider.overrideWithValue(repo),
   ],
@@ -150,7 +153,7 @@ void main() {
     expect(find.text('거절'), findsOneWidget);
   });
 
-  testWidgets('badges every request as addressed to this trainer', (
+  testWidgets('does not repeat that every request targets a trainer', (
     tester,
   ) async {
     await _pumpInbox(
@@ -158,9 +161,48 @@ void main() {
       _FakeConsultationRepository(requests: <ConsultationRequest>[_request()]),
     );
 
-    // 요청은 트레이너 한 사람 앞으로만 온다 — "헬스장 문의" 갈래는 없어졌다.
-    expect(find.text('트레이너 지정'), findsOneWidget);
+    // 요청은 항상 트레이너 앞으로 오므로 카드마다 같은 배지를 반복하지 않는다.
+    expect(find.text('트레이너 지정'), findsNothing);
     expect(find.text('헬스장 문의'), findsNothing);
+  });
+
+  testWidgets('offers a route back to the schedule', (tester) async {
+    await _pumpInbox(tester, _FakeConsultationRepository());
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+    );
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.schedule);
+  });
+
+  testWidgets('dashboard entry returns to the dashboard', (tester) async {
+    await _pumpInbox(
+      tester,
+      _FakeConsultationRepository(),
+      at: AppRoutes.consultationsFromDashboard(),
+    );
+
+    expect(find.text('대시보드로 돌아가기'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+    );
+    await settle(tester);
+
+    expect(currentLocation(tester), AppRoutes.dashboard);
+  });
+
+  testWidgets('consultations remain inside the schedule workspace', (
+    tester,
+  ) async {
+    await _pumpInbox(tester, _FakeConsultationRepository());
+
+    final shell = tester.widget<AppShell>(find.byType(AppShell));
+    final scheduleIndex = navDestinations.indexWhere(
+      (destination) => destination.route == AppRoutes.schedule,
+    );
+    expect(shell.navigationShell.currentIndex, scheduleIndex);
   });
 
   testWidgets('accepting sends the decision to the repository', (tester) async {
@@ -174,6 +216,47 @@ void main() {
 
     expect(repo.accepted, <String>['consult-1']);
   });
+
+  for (final entry in <(String, String)>[
+    ('스케줄', AppRoutes.consultations),
+    ('대시보드', AppRoutes.consultationsFromDashboard()),
+  ]) {
+    testWidgets('${entry.$1} 상담 거절은 위험 색상과 일정 충돌 예시를 쓴다', (tester) async {
+      await _pumpInbox(
+        tester,
+        _FakeConsultationRepository(
+          requests: <ConsultationRequest>[_request()],
+        ),
+        at: entry.$2,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('consultation-reject-consult-1')),
+      );
+      await settle(tester);
+
+      final confirm = tester.widget<TextButton>(
+        find.byKey(const ValueKey<String>('consultation-reject-confirm')),
+      );
+      final cancel = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, _ko.actionCancel),
+      );
+      expect(
+        confirm.style?.foregroundColor?.resolve(const <WidgetState>{}),
+        AppColors.destructive,
+      );
+      expect(
+        cancel.style?.foregroundColor?.resolve(const <WidgetState>{}),
+        isNot(AppColors.destructive),
+      );
+
+      final reason = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('consultation-reject-reason')),
+      );
+      expect(reason.decoration?.hintText, '예) 요청하신 시간에 다른 일정이 있어요.');
+      expect(find.textContaining('이번 달은 정원이 찼어요'), findsNothing);
+    });
+  }
 
   testWidgets('a decided request shows its outcome, not the actions', (
     tester,

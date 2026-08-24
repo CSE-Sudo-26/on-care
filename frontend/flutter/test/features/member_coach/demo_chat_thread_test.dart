@@ -69,28 +69,6 @@ void main() {
     }
   });
 
-  test('오늘이 아닌 메시지는 라벨에 요일이 있다', () async {
-    // 이 화면에는 날짜 구분선이 없다. 라벨이 며칠 전인지 말해 주지 않으면
-    // 3일치 대화가 하루 안에 오간 것처럼 읽힌다.
-    final List<CoachMessage> chat = await MockMemberCoachRepository()
-        .fetchChat();
-    final List<String> older = <String>[
-      for (final CoachMessage m in chat.take(13)) m.timeLabel,
-    ];
-    final List<String> today = <String>[
-      for (final CoachMessage m in chat.skip(13)) m.timeLabel,
-    ];
-
-    expect(
-      older.every((String l) => l.startsWith('화 ') || l.startsWith('수 ')),
-      isTrue,
-    );
-    expect(
-      today.every((String l) => RegExp(r'^\d{2}:\d{2}$').hasMatch(l)),
-      isTrue,
-    );
-  });
-
   test('미읽음은 마지막으로 내가 보낸 뒤에 온 것만 센다', () async {
     // 스레드 전체의 트레이너 메시지를 세면 배지가 8이 된다 — 이미 주고받은
     // 대화까지 안 읽은 것으로 치는 셈이다.

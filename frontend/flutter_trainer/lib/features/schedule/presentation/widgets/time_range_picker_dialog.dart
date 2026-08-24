@@ -159,6 +159,9 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
                       '시작 시간',
                       _startController,
                       _isStart,
+                      key: const ValueKey<String>(
+                        'session-time-range-start-input',
+                      ),
                       onTap: () => setState(() => _step = 0),
                       onSubmitted: (value) => _readField(value, start: true),
                     ),
@@ -174,6 +177,9 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
                       '종료 시간',
                       _endController,
                       !_isStart,
+                      key: const ValueKey<String>(
+                        'session-time-range-end-input',
+                      ),
                       onTap: () => setState(() => _step = 2),
                       onSubmitted: (value) => _readField(value, start: false),
                     ),
@@ -251,7 +257,9 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: FilledButton(
-                      key: const ValueKey<String>('time-range-confirm'),
+                      key: const ValueKey<String>(
+                        'session-time-range-confirm',
+                      ),
                       onPressed: endMinutes > startMinutes
                           ? () => Navigator.pop(
                               context,
@@ -275,6 +283,7 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
     String label,
     TextEditingController controller,
     bool active, {
+    required Key key,
     required VoidCallback onTap,
     required ValueChanged<String> onSubmitted,
   }) => Container(
@@ -291,6 +300,7 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
       children: <Widget>[
         Text(label, style: const TextStyle(color: AppColors.mutedForeground)),
         TextField(
+          key: key,
           controller: controller,
           onTap: onTap,
           onChanged: onSubmitted,

@@ -1808,6 +1808,18 @@ abstract class AppLocalizations {
   /// **'Consultation requests'**
   String get consultTitle;
 
+  /// No description provided for @consultBackToSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to schedule'**
+  String get consultBackToSchedule;
+
+  /// No description provided for @consultBackToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to dashboard'**
+  String get consultBackToDashboard;
+
   /// No description provided for @consultPendingCount.
   ///
   /// In en, this message translates to:
@@ -1937,7 +1949,7 @@ abstract class AppLocalizations {
   /// No description provided for @consultRejectHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. We\'re fully booked this month'**
+  /// **'e.g. I have another appointment at your requested time.'**
   String get consultRejectHint;
 
   /// No description provided for @consultRejectAction.
@@ -2642,6 +2654,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t delete the session. Please try again'**
   String get schedDeleteFailed;
 
+  /// No description provided for @schedCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete session'**
+  String get schedCompleteTitle;
+
+  /// No description provided for @schedCompleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the {time} session with {name} as complete?'**
+  String schedCompleteConfirm(String time, String name);
+
   /// No description provided for @schedCompleteFailed.
   ///
   /// In en, this message translates to:
@@ -2726,6 +2750,12 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get schedFieldTime;
 
+  /// No description provided for @schedHourSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'hr'**
+  String get schedHourSuffix;
+
   /// No description provided for @schedMinuteSuffix.
   ///
   /// In en, this message translates to:
@@ -2755,6 +2785,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End time must be after the start time'**
   String get schedEndBeforeStart;
+
+  /// No description provided for @schedTimeRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get schedTimeRangeTitle;
+
+  /// No description provided for @schedTimeRangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get schedTimeRangeConfirm;
+
+  /// No description provided for @schedTimeRangeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid time (HH:mm)'**
+  String get schedTimeRangeInvalid;
 
   /// No description provided for @schedRepeat.
   ///
@@ -2899,6 +2947,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit program'**
   String get progEditTitle;
+
+  /// No description provided for @progAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add program'**
+  String get progAddTitle;
 
   /// No description provided for @progAddExercise.
   ///
@@ -3539,7 +3593,7 @@ abstract class AppLocalizations {
   /// No description provided for @routineTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Flexibility'**
+  /// **'Stretching'**
   String get routineTypeFlexibility;
 
   /// No description provided for @routineTypeOther.
@@ -3662,6 +3716,12 @@ abstract class AppLocalizations {
   /// **'Added by trainer'**
   String get coachTrainerAdded;
 
+  /// No description provided for @coachTemplateAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added from {name} template'**
+  String coachTemplateAdded(String name);
+
   /// No description provided for @coachClientNotified.
   ///
   /// In en, this message translates to:
@@ -3674,11 +3734,23 @@ abstract class AppLocalizations {
   /// **'Added to the {date} schedule'**
   String coachRegisteredOn(String date);
 
+  /// No description provided for @coachRegisteredAttachedExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn\'t applied'**
+  String coachRegisteredAttachedExisting(String date);
+
   /// No description provided for @coachRegisterOn.
   ///
   /// In en, this message translates to:
   /// **'Add to the {date} PT schedule'**
   String coachRegisterOn(String date);
+
+  /// No description provided for @coachRegisterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to PT schedule'**
+  String get coachRegisterAction;
 
   /// No description provided for @labelTomorrow.
   ///
@@ -3929,7 +4001,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAddExerciseManually.
   ///
   /// In en, this message translates to:
-  /// **'Add an exercise'**
+  /// **'Write it yourself'**
   String get aiAddExerciseManually;
 
   /// No description provided for @aiExerciseNameExample.
@@ -3986,6 +4058,18 @@ abstract class AppLocalizations {
   /// **'Use the button below to jump into their chat and explain it.'**
   String get aiGoToChatHint;
 
+  /// No description provided for @aiApplyToTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to template'**
+  String get aiApplyToTemplate;
+
+  /// No description provided for @aiAppliedToTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI routine was applied to the program info. Review it below, edit if needed, then send it.'**
+  String get aiAppliedToTemplate;
+
   /// No description provided for @aiStepConditions.
   ///
   /// In en, this message translates to:
@@ -3995,13 +4079,13 @@ abstract class AppLocalizations {
   /// No description provided for @aiStepReview.
   ///
   /// In en, this message translates to:
-  /// **'Review'**
+  /// **'Program selection'**
   String get aiStepReview;
 
   /// No description provided for @aiStepDone.
   ///
   /// In en, this message translates to:
-  /// **'Done'**
+  /// **'Final review'**
   String get aiStepDone;
 
   /// No description provided for @aiStepperLabel.
@@ -4057,6 +4141,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit recommended conditions'**
   String get aiConditionsEditToggle;
+
+  /// No description provided for @aiPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell the AI what program you want'**
+  String get aiPromptTitle;
+
+  /// No description provided for @aiPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request (plain language)'**
+  String get aiPromptLabel;
+
+  /// No description provided for @aiPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Build a 40-minute program that goes easy on the legs and leans on cardio'**
+  String get aiPromptHint;
+
+  /// No description provided for @aiPromptBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.'**
+  String get aiPromptBlurb;
 
   /// No description provided for @aiGenerateGoalBased.
   ///
@@ -4142,23 +4250,17 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get goalOther;
 
-  /// No description provided for @slotMorning.
+  /// No description provided for @slotAm.
   ///
   /// In en, this message translates to:
-  /// **'Morning'**
-  String get slotMorning;
+  /// **'AM'**
+  String get slotAm;
 
-  /// No description provided for @slotAfternoon.
+  /// No description provided for @slotPm.
   ///
   /// In en, this message translates to:
-  /// **'Afternoon'**
-  String get slotAfternoon;
-
-  /// No description provided for @slotEvening.
-  ///
-  /// In en, this message translates to:
-  /// **'Evening'**
-  String get slotEvening;
+  /// **'PM'**
+  String get slotPm;
 
   /// No description provided for @slotFlexible.
   ///
@@ -5252,6 +5354,18 @@ abstract class AppLocalizations {
   /// **'Recommend to client'**
   String get suggestionApprove;
 
+  /// No description provided for @suggestionConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Final review · recommend to client'**
+  String get suggestionConfirmTitle;
+
+  /// No description provided for @suggestionConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Exactly what you see below is what {client} receives. Once recommended it shows up in their app.'**
+  String suggestionConfirmBody(String client);
+
   /// No description provided for @suggestionDismiss.
   ///
   /// In en, this message translates to:
@@ -5366,6 +5480,48 @@ abstract class AppLocalizations {
   /// **'Assign to client'**
   String get programEditorAssign;
 
+  /// No description provided for @programAssignConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to this client?'**
+  String get programAssignConfirmTitle;
+
+  /// No description provided for @programAssignConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This program will be assigned to {name}, and also scheduled on their PT calendar for {date}.'**
+  String programAssignConfirmBody(String name, String date);
+
+  /// No description provided for @programEditorReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & send'**
+  String get programEditorReview;
+
+  /// No description provided for @programReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & send'**
+  String get programReviewTitle;
+
+  /// No description provided for @programReviewBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Exactly what you see below is what {name} receives. Check it, then send.'**
+  String programReviewBlurb(String name);
+
+  /// No description provided for @programReviewBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the editor'**
+  String get programReviewBack;
+
+  /// No description provided for @programReviewSessionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} exercises'**
+  String programReviewSessionSummary(int count);
+
   /// No description provided for @programEditorInfo.
   ///
   /// In en, this message translates to:
@@ -5420,6 +5576,18 @@ abstract class AppLocalizations {
   /// **'Add session'**
   String get programEditorAddSession;
 
+  /// No description provided for @programTemplateSessionPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to which session?'**
+  String get programTemplateSessionPickerTitle;
+
+  /// No description provided for @programTemplateSessionPickerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a session for the \'{name}\' template.'**
+  String programTemplateSessionPickerBody(String name);
+
   /// No description provided for @programEditorSessionName.
   ///
   /// In en, this message translates to:
@@ -5437,6 +5605,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move session down'**
   String get programEditorSessionDown;
+
+  /// No description provided for @programEditorSessionReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset session'**
+  String get programEditorSessionReset;
+
+  /// No description provided for @programEditorSessionResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset this session?'**
+  String get programEditorSessionResetTitle;
+
+  /// No description provided for @programEditorSessionResetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every exercise in \'{name}\' will be cleared. The session itself and other sessions stay.'**
+  String programEditorSessionResetBody(String name);
 
   /// No description provided for @programEditorSessionEmpty.
   ///

@@ -36,6 +36,19 @@ _KCAL_PER_MIN = {
 #: 강도 배수 — 회원 앱 `_intensityFactor` 와 같다.
 _INTENSITY_FACTOR = {"light": 0.85, "moderate": 1.0, "high": 1.2}
 
+#: 근력 1세트가 차지하는 벽시계 시간(세트 + 휴식). 회원 앱
+#: `kStrengthMinutesPerSetWithRest` 와 같은 값이다 — 세트를 모르는 옛 기록을
+#: 세트로 되짚을 때만 쓴다. (#1262)
+STRENGTH_MINUTES_PER_SET = 3.0
+
+
+def sets_of(row) -> int:
+    """근력 기록의 세트 수. 적혀 있으면 그 값, 없으면 분에서 환산한 값."""
+    recorded = getattr(row, "sets", None)
+    if recorded:
+        return int(recorded)
+    return round(row.minutes / STRENGTH_MINUTES_PER_SET)
+
 
 def monday_of_this_week_str() -> str:
     today = clock.today()
@@ -152,6 +165,7 @@ def build_current_week(rows: list) -> dict:
     per_strength = {l: 0 for l in WEEKDAY_LABELS}
     per_flex = {l: 0 for l in WEEKDAY_LABELS}
     per_other = {l: 0 for l in WEEKDAY_LABELS}
+    per_sets = {l: 0 for l in WEEKDAY_LABELS}
     total_minutes = 0
     total_calories = 0
     sessions = []
@@ -167,11 +181,16 @@ def build_current_week(rows: list) -> dict:
             exercise_types.FLEXIBILITY: per_flex,
             exercise_types.OTHER: per_other,
         }
-        target = bucket_map[_bucket(r.type)]
+        bucket = _bucket(r.type)
+        target = bucket_map[bucket]
         target[r.day_label] = target.get(r.day_label, 0) + r.minutes
+        if bucket == exercise_types.STRENGTH:
+            per_sets[r.day_label] = per_sets.get(r.day_label, 0) + sets_of(r)
         sessions.append({
             "id": r.id, "day_label": r.day_label, "type": r.type,
-            "minutes": r.minutes, "calories": r.calories,
+            "minutes": r.minutes,
+            "sets": getattr(r, "sets", None),
+            "calories": r.calories,
             "intensity": getattr(r, "intensity", "moderate") or "moderate",
             "source": getattr(r, "source", "member") or "member",
             "assigned_routine_id": getattr(r, "assigned_routine_id", None),
@@ -206,6 +225,7 @@ def build_current_week(rows: list) -> dict:
         "daily_calories": [per_day_cal[l] for l in WEEKDAY_LABELS],
         "cardio_minutes": [per_cardio[l] for l in WEEKDAY_LABELS],
         "strength_minutes": [per_strength[l] for l in WEEKDAY_LABELS],
+        "strength_sets": [per_sets[l] for l in WEEKDAY_LABELS],
         "flexibility_minutes": [per_flex[l] for l in WEEKDAY_LABELS],
         "other_minutes": [per_other[l] for l in WEEKDAY_LABELS],
         # 옛 이름. 아직 이 필드를 읽는 클라이언트가 있어 같은 값을 함께 내려준다.

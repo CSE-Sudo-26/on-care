@@ -18,6 +18,7 @@ import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/presentation/pages/consultation_complete_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/consultation_history_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/consultation_request_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_detail_page.dart';
@@ -187,6 +188,10 @@ GoRouter buildAppRouter({
               ? state.extra! as ConsultationRequest
               : null,
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.consultationHistory,
+        builder: (context, state) => const ConsultationHistoryPage(),
       ),
       GoRoute(
         path: AppRoutes.signIn,

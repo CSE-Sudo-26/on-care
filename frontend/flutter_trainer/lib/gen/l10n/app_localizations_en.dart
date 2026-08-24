@@ -979,6 +979,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultTitle => 'Consultation requests';
 
   @override
+  String get consultBackToSchedule => 'Back to schedule';
+
+  @override
+  String get consultBackToDashboard => 'Back to dashboard';
+
+  @override
   String consultPendingCount(int count) {
     return '$count pending';
   }
@@ -1048,7 +1054,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'The reason you write is sent to the member as a notification.';
 
   @override
-  String get consultRejectHint => 'e.g. We\'re fully booked this month';
+  String get consultRejectHint =>
+      'e.g. I have another appointment at your requested time.';
 
   @override
   String get consultRejectAction => 'Decline';
@@ -1497,6 +1504,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t delete the session. Please try again';
 
   @override
+  String get schedCompleteTitle => 'Complete session';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return 'Mark the $time session with $name as complete?';
+  }
+
+  @override
   String get schedCompleteFailed =>
       'Couldn\'t mark it complete. Please try again';
 
@@ -1545,6 +1560,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldTime => 'Time';
 
   @override
+  String get schedHourSuffix => 'hr';
+
+  @override
   String get schedMinuteSuffix => 'min';
 
   @override
@@ -1558,6 +1576,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedEndBeforeStart => 'End time must be after the start time';
+
+  @override
+  String get schedTimeRangeTitle => 'Select time';
+
+  @override
+  String get schedTimeRangeConfirm => 'Confirm';
+
+  @override
+  String get schedTimeRangeInvalid => 'Enter a valid time (HH:mm)';
 
   @override
   String get schedRepeat => 'Repeat';
@@ -1640,6 +1667,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progEditTitle => 'Edit program';
+
+  @override
+  String get progAddTitle => 'Add program';
 
   @override
   String get progAddExercise => 'Add exercise';
@@ -1990,7 +2020,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineTypeStretching => 'Stretching';
 
   @override
-  String get routineTypeFlexibility => 'Flexibility';
+  String get routineTypeFlexibility => 'Stretching';
 
   @override
   String get routineTypeOther => 'Other';
@@ -2055,6 +2085,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachTrainerAdded => 'Added by trainer';
 
   @override
+  String coachTemplateAdded(String name) {
+    return 'Added from $name template';
+  }
+
+  @override
   String get coachClientNotified => 'The client app was notified';
 
   @override
@@ -2063,9 +2098,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String coachRegisteredAttachedExisting(String date) {
+    return 'There was already a session planned on $date, so the program was only attached to it — the time you picked wasn\'t applied';
+  }
+
+  @override
   String coachRegisterOn(String date) {
     return 'Add to the $date PT schedule';
   }
+
+  @override
+  String get coachRegisterAction => 'Add to PT schedule';
 
   @override
   String get labelTomorrow => 'Tomorrow';
@@ -2219,7 +2262,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Edit names, durations and structure just like the existing suggestion.';
 
   @override
-  String get aiAddExerciseManually => 'Add an exercise';
+  String get aiAddExerciseManually => 'Write it yourself';
 
   @override
   String get aiExerciseNameExample => 'e.g. leg press, 3 sets';
@@ -2255,13 +2298,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Use the button below to jump into their chat and explain it.';
 
   @override
+  String get aiApplyToTemplate => 'Apply to template';
+
+  @override
+  String get aiAppliedToTemplate =>
+      'The AI routine was applied to the program info. Review it below, edit if needed, then send it.';
+
+  @override
   String get aiStepConditions => 'Set up';
 
   @override
-  String get aiStepReview => 'Review';
+  String get aiStepReview => 'Program selection';
 
   @override
-  String get aiStepDone => 'Done';
+  String get aiStepDone => 'Final review';
 
   @override
   String get aiStepperLabel => 'Custom routine progress';
@@ -2293,6 +2343,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiConditionsEditToggle => 'Edit recommended conditions';
+
+  @override
+  String get aiPromptTitle => 'Tell the AI what program you want';
+
+  @override
+  String get aiPromptLabel => 'Your request (plain language)';
+
+  @override
+  String get aiPromptHint =>
+      'e.g. Build a 40-minute program that goes easy on the legs and leans on cardio';
+
+  @override
+  String get aiPromptBlurb =>
+      'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.';
 
   @override
   String get aiGenerateGoalBased => 'Generate goal-based routine';
@@ -2341,13 +2405,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalOther => 'Other';
 
   @override
-  String get slotMorning => 'Morning';
+  String get slotAm => 'AM';
 
   @override
-  String get slotAfternoon => 'Afternoon';
-
-  @override
-  String get slotEvening => 'Evening';
+  String get slotPm => 'PM';
 
   @override
   String get slotFlexible => 'Flexible';
@@ -2984,6 +3045,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get suggestionApprove => 'Recommend to client';
 
   @override
+  String get suggestionConfirmTitle => 'Final review · recommend to client';
+
+  @override
+  String suggestionConfirmBody(String client) {
+    return 'Exactly what you see below is what $client receives. Once recommended it shows up in their app.';
+  }
+
+  @override
   String get suggestionDismiss => 'Don\'t recommend';
 
   @override
@@ -3054,6 +3123,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorAssign => 'Assign to client';
 
   @override
+  String get programAssignConfirmTitle => 'Assign to this client?';
+
+  @override
+  String programAssignConfirmBody(String name, String date) {
+    return 'This program will be assigned to $name, and also scheduled on their PT calendar for $date.';
+  }
+
+  @override
+  String get programEditorReview => 'Confirm & send';
+
+  @override
+  String get programReviewTitle => 'Confirm & send';
+
+  @override
+  String programReviewBlurb(String name) {
+    return 'Exactly what you see below is what $name receives. Check it, then send.';
+  }
+
+  @override
+  String get programReviewBack => 'Back to the editor';
+
+  @override
+  String programReviewSessionSummary(int count) {
+    return '$count exercises';
+  }
+
+  @override
   String get programEditorInfo => 'Program information';
 
   @override
@@ -3082,6 +3178,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorAddSession => 'Add session';
 
   @override
+  String get programTemplateSessionPickerTitle => 'Add to which session?';
+
+  @override
+  String programTemplateSessionPickerBody(String name) {
+    return 'Choose a session for the \'$name\' template.';
+  }
+
+  @override
   String programEditorSessionName(String letter) {
     return 'Session $letter';
   }
@@ -3091,6 +3195,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorSessionDown => 'Move session down';
+
+  @override
+  String get programEditorSessionReset => 'Reset session';
+
+  @override
+  String get programEditorSessionResetTitle => 'Reset this session?';
+
+  @override
+  String programEditorSessionResetBody(String name) {
+    return 'Every exercise in \'$name\' will be cleared. The session itself and other sessions stay.';
+  }
 
   @override
   String get programEditorSessionEmpty =>
