@@ -84,18 +84,33 @@ class RoutineExercise {
     required this.name,
     required this.minutes,
     required this.type,
+    this.sets = 0,
+    this.reps = '',
   });
 
   final String name;
   final int minutes;
   final String type;
 
-  RoutineExercise copyWith({String? name, int? minutes, String? type}) =>
-      RoutineExercise(
-        name: name ?? this.name,
-        minutes: minutes ?? this.minutes,
-        type: type ?? this.type,
-      );
+  /// 근력 운동에서만 쓴다(#1029) — 서버가 주는 A/B 후보는 아직 이 값을 모르니
+  /// 기본값(0/빈 문자열)으로 시작하고, 트레이너가 이 화면에서 직접 채운다.
+  /// `ProgramExerciseDraft` 로 넘어갈 때 그대로 옮겨진다.
+  final int sets;
+  final String reps;
+
+  RoutineExercise copyWith({
+    String? name,
+    int? minutes,
+    String? type,
+    int? sets,
+    String? reps,
+  }) => RoutineExercise(
+    name: name ?? this.name,
+    minutes: minutes ?? this.minutes,
+    type: type ?? this.type,
+    sets: sets ?? this.sets,
+    reps: reps ?? this.reps,
+  );
 }
 
 /// One generated plan (A recovery/sustainable or B intensity/volume).

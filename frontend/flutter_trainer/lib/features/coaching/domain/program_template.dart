@@ -5,6 +5,8 @@ class TemplateExercise {
     required this.name,
     required this.minutes,
     required this.type,
+    this.sets = 0,
+    this.reps = '',
   });
 
   /// Exercise name.
@@ -17,12 +19,20 @@ class TemplateExercise {
   /// 문구는 `routineTypeLabel` 이 붙인다 — 번역하면 서버가 422 를 돌려준다.
   final String type;
 
+  /// 근력 운동에서만 쓴다(#1029) — `ProgramItem`/`ProgramExerciseDraft` 와
+  /// 같은 계약(`sets: int`, `reps: String`). 비근력 운동은 기본값(0/빈
+  /// 문자열)으로 두고 [minutes] 만 쓴다.
+  final int sets;
+  final String reps;
+
   /// `ProgramTemplateExercise` 한 줄.
   factory TemplateExercise.fromJson(Map<String, Object?> json) =>
       TemplateExercise(
         name: json['name'] as String? ?? '',
         minutes: (json['minutes'] as num?)?.toInt() ?? 0,
         type: json['type'] as String? ?? '근력',
+        sets: (json['sets'] as num?)?.toInt() ?? 0,
+        reps: json['reps'] as String? ?? '',
       );
 
   /// 저장 요청에 실리는 형태.
@@ -30,6 +40,8 @@ class TemplateExercise {
     'name': name,
     'minutes': minutes,
     'type': type,
+    'sets': sets,
+    'reps': reps,
   };
 }
 
