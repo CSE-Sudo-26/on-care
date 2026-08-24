@@ -218,6 +218,12 @@ abstract class AppLocalizations {
   /// **'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.'**
   String get schedDeleteMeansRemove;
 
+  /// No description provided for @schedDeleteMeansRemoveFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting erases the record. This session is already complete and can\'t be undone.'**
+  String get schedDeleteMeansRemoveFinished;
+
   /// Display label for an empty slot in the trainer's day.
   ///
   /// In en, this message translates to:
@@ -1802,6 +1808,18 @@ abstract class AppLocalizations {
   /// **'Consultation requests'**
   String get consultTitle;
 
+  /// No description provided for @consultBackToSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to schedule'**
+  String get consultBackToSchedule;
+
+  /// No description provided for @consultBackToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to dashboard'**
+  String get consultBackToDashboard;
+
   /// No description provided for @consultPendingCount.
   ///
   /// In en, this message translates to:
@@ -1931,7 +1949,7 @@ abstract class AppLocalizations {
   /// No description provided for @consultRejectHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. We\'re fully booked this month'**
+  /// **'e.g. I have another appointment at your requested time.'**
   String get consultRejectHint;
 
   /// No description provided for @consultRejectAction.
@@ -2627,7 +2645,7 @@ abstract class AppLocalizations {
   /// No description provided for @schedDeleteConfirm.
   ///
   /// In en, this message translates to:
-  /// **'Delete the {time} session with {name}?'**
+  /// **'Delete the {time} PT session with {name}?'**
   String schedDeleteConfirm(String time, String name);
 
   /// No description provided for @schedDeleteFailed.
@@ -2635,6 +2653,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t delete the session. Please try again'**
   String get schedDeleteFailed;
+
+  /// No description provided for @schedCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete session'**
+  String get schedCompleteTitle;
+
+  /// No description provided for @schedCompleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark the {time} session with {name} as complete?'**
+  String schedCompleteConfirm(String time, String name);
 
   /// No description provided for @schedCompleteFailed.
   ///
@@ -2737,6 +2767,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Duration'**
   String get schedFieldDuration;
+
+  /// No description provided for @schedFieldStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get schedFieldStart;
+
+  /// No description provided for @schedFieldEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get schedFieldEnd;
+
+  /// No description provided for @schedEndBeforeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'End time must be after the start time'**
+  String get schedEndBeforeStart;
+
+  /// No description provided for @schedTimeRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get schedTimeRangeTitle;
+
+  /// No description provided for @schedTimeRangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get schedTimeRangeConfirm;
+
+  /// No description provided for @schedTimeRangeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid time (HH:mm)'**
+  String get schedTimeRangeInvalid;
 
   /// No description provided for @schedRepeat.
   ///
@@ -2882,6 +2948,12 @@ abstract class AppLocalizations {
   /// **'Edit program'**
   String get progEditTitle;
 
+  /// No description provided for @progAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add program'**
+  String get progAddTitle;
+
   /// No description provided for @progAddExercise.
   ///
   /// In en, this message translates to:
@@ -2935,6 +3007,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weight'**
   String get progWeight;
+
+  /// No description provided for @progType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get progType;
+
+  /// No description provided for @progDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (min)'**
+  String get progDuration;
 
   /// No description provided for @progOptional.
   ///
@@ -4166,23 +4250,17 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get goalOther;
 
-  /// No description provided for @slotMorning.
+  /// No description provided for @slotAm.
   ///
   /// In en, this message translates to:
-  /// **'Morning'**
-  String get slotMorning;
+  /// **'AM'**
+  String get slotAm;
 
-  /// No description provided for @slotAfternoon.
+  /// No description provided for @slotPm.
   ///
   /// In en, this message translates to:
-  /// **'Afternoon'**
-  String get slotAfternoon;
-
-  /// No description provided for @slotEvening.
-  ///
-  /// In en, this message translates to:
-  /// **'Evening'**
-  String get slotEvening;
+  /// **'PM'**
+  String get slotPm;
 
   /// No description provided for @slotFlexible.
   ///

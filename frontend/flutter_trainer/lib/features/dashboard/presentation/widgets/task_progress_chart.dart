@@ -4,7 +4,6 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 월~일 stacked bar of daily 오늘 할 일 completion.
 ///
@@ -42,9 +41,17 @@ class TaskProgressChart extends StatelessWidget {
   /// "today" to bold and no day left to greyed out as not-yet-happened.
   final bool isCurrentWeek;
 
+  /// "그날 목록의 몇 %를 처리했나" — 이월까지 포함한 완료 수를 그날 전체
+  /// 목록(오늘치 + 이월) 기준으로 잰다. 아직 오지 않았거나 기록이 없는
+  /// 날은 숫자를 보여줄 근거가 없어 빈 칸이다.
+  static String _percentLabel(DailyTaskSnapshot? snapshot) {
+    if (snapshot == null || snapshot.total == 0) return '';
+    final percent = (snapshot.completed / snapshot.total * 100).round();
+    return '$percent%';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final ceiling = <int>[
       1,
       for (final s in snapshots)
@@ -55,22 +62,8 @@ class TaskProgressChart extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // `Wrap`, not `Row` — 영어 로케일의 "Done (carried over)" 는 좁은
-        // 카드 폭에서 `Row` 로는 넘친다(#[dashboard]).
-        Wrap(
-          spacing: AppSpacing.md,
-          runSpacing: 4,
-          children: <Widget>[
-            _Legend(color: AppColors.primary, label: l.dashTaskProgressToday),
-            _Legend(
-              color: AppColors.aiCardGradientEnd,
-              label: l.dashTaskProgressCarriedOver,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
         SizedBox(
-          height: 88,
+          height: 102,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
@@ -79,7 +72,9 @@ class TaskProgressChart extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 3),
                     child: _StackedBar(
+                      index: i,
                       snapshot: snapshots[i],
+                      percentLabel: _percentLabel(snapshots[i]),
                       ceiling: ceiling,
                       pending: isCurrentWeek && i > todayIndex,
                     ),
@@ -120,8 +115,16 @@ class TaskProgressChart extends StatelessWidget {
   }
 }
 
-class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label});
+/// A colour-dot + label legend entry — used both by the chart's own header
+/// (previously) and now by [_TaskProgressCard]'s section header, next to
+/// the card title.
+class TaskProgressLegend extends StatelessWidget {
+  /// Creates one legend entry.
+  const TaskProgressLegend({
+    super.key,
+    required this.color,
+    required this.label,
+  });
 
   final Color color;
   final String label;
@@ -152,12 +155,16 @@ class _Legend extends StatelessWidget {
 
 class _StackedBar extends StatelessWidget {
   const _StackedBar({
+    required this.index,
     required this.snapshot,
+    required this.percentLabel,
     required this.ceiling,
     required this.pending,
   });
 
+  final int index;
   final DailyTaskSnapshot? snapshot;
+  final String percentLabel;
   final int ceiling;
   final bool pending;
 
@@ -180,17 +187,35 @@ class _StackedBar extends StatelessWidget {
     final s = snapshot!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxHeight = constraints.maxHeight;
-        final todayHeight = maxHeight * (s.completedToday / ceiling);
-        final carriedHeight = maxHeight * (s.completedCarriedOver / ceiling);
+        const labelHeight = 12.0;
+        const labelGap = 2.0;
+        final maxBarHeight = constraints.maxHeight - labelHeight - labelGap;
+        final todayHeight = maxBarHeight * (s.completedToday / ceiling);
+        final carriedHeight = maxBarHeight * (s.completedCarriedOver / ceiling);
         final totalHeight = (todayHeight + carriedHeight).clamp(
           s.completed > 0 ? 2.0 : 0.0,
-          maxHeight,
+          maxBarHeight,
         );
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             SizedBox(
+              height: labelHeight,
+              child: Center(
+                child: Text(
+                  percentLabel,
+                  key: ValueKey<String>('task-progress-percent-$index'),
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: labelGap),
+            SizedBox(
+              key: ValueKey<String>('task-progress-bar-$index'),
               height: totalHeight,
               child: Column(
                 children: <Widget>[

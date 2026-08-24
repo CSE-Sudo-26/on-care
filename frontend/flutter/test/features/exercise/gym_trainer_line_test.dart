@@ -118,6 +118,41 @@ void main() {
       expect(find.textContaining('추천 이유'), findsNothing);
     });
 
+    testWidgets('연결됨은 이름 옆에, 상세보기는 줄 오른쪽 끝에 선다 (#1267)', (
+      WidgetTester tester,
+    ) async {
+      await pumpGymTab(tester);
+
+      final Finder line = find.byKey(const Key('gym-trainer-line-mine'));
+      final Finder name = find.descendant(
+        of: line,
+        matching: find.text('김트레이너'),
+      );
+      final Finder badge = find.descendant(
+        of: line,
+        matching: find.byKey(const Key('gymTrainerConnectedBadge')),
+      );
+      final Finder detail = find.descendant(
+        of: line,
+        matching: find.byKey(const Key('gymTrainerDetailButton')),
+      );
+
+      // 배지는 이름에 붙어 있다 — 남는 폭만큼 떨어져 허공에 뜨지 않는다.
+      final double gap =
+          tester.getTopLeft(badge).dx - tester.getTopRight(name).dx;
+      expect(gap, lessThan(24));
+
+      // 상세보기는 줄 오른쪽 끝. 배지보다 오른쪽이고, 줄 끝과 거의 붙는다.
+      expect(
+        tester.getTopLeft(detail).dx,
+        greaterThan(tester.getTopRight(badge).dx),
+      );
+      expect(
+        tester.getBottomRight(line).dx - tester.getBottomRight(detail).dx,
+        lessThan(16),
+      );
+    });
+
     testWidgets('상세보기를 누르면 트레이너 상세로 간다', (WidgetTester tester) async {
       await pumpGymTab(tester);
 

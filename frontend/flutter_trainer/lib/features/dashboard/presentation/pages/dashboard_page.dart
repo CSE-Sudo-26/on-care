@@ -156,37 +156,58 @@ class _TaskProgressCard extends ConsumerWidget {
     return SectionCard(
       title: l.dashTaskProgressTitle,
       icon: Icons.stacked_bar_chart_outlined,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          IconButton(
-            key: const ValueKey<String>('task-progress-prev-week'),
-            onPressed: offset <= -_maxTaskProgressWeeksBack
-                ? null
-                : () => ref
-                      .read(_taskProgressWeekOffsetProvider.notifier)
-                      .state--,
-            icon: const Icon(Icons.chevron_left, size: 18),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            color: AppColors.subtleForeground,
+      // 범례(오늘 처리/이월 처리)를 그래프 위 별도 줄 대신 제목 옆으로 —
+      // `SectionCard.trailing` 은 폭을 스스로 제한하지 않으므로(제목이
+      // 먼저 줄어드는 쪽으로 설계돼 있다), 여기서 직접 상한을 주고 그
+      // 안에서 FittedBox 로 한 번 더 줄어든다.
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 220),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TaskProgressLegend(
+                color: AppColors.primary,
+                label: l.dashTaskProgressToday,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              TaskProgressLegend(
+                color: AppColors.aiCardGradientEnd,
+                label: l.dashTaskProgressCarriedOver,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              IconButton(
+                key: const ValueKey<String>('task-progress-prev-week'),
+                onPressed: offset <= -_maxTaskProgressWeeksBack
+                    ? null
+                    : () => ref
+                          .read(_taskProgressWeekOffsetProvider.notifier)
+                          .state--,
+                icon: const Icon(Icons.chevron_left, size: 18),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: AppColors.subtleForeground,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              IconButton(
+                key: const ValueKey<String>('task-progress-next-week'),
+                onPressed: offset >= 0
+                    ? null
+                    : () => ref
+                          .read(_taskProgressWeekOffsetProvider.notifier)
+                          .state++,
+                icon: const Icon(Icons.chevron_right, size: 18),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: AppColors.subtleForeground,
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.xs),
-          IconButton(
-            key: const ValueKey<String>('task-progress-next-week'),
-            onPressed: offset >= 0
-                ? null
-                : () => ref
-                      .read(_taskProgressWeekOffsetProvider.notifier)
-                      .state++,
-            icon: const Icon(Icons.chevron_right, size: 18),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            color: AppColors.subtleForeground,
-          ),
-        ],
+        ),
       ),
       child: TaskProgressChart(
         snapshots: <DailyTaskSnapshot?>[

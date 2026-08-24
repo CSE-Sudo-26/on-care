@@ -11,6 +11,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 담당 트레이너 관계와 소통만 담는다 — 이름·전문 분야·프로필 이동·채팅.
 ///
@@ -329,15 +330,19 @@ class _RecommendedExerciseRowState
       await ref.read(memberCoachRepositoryProvider).deleteRoutine(routine.id);
       ref.invalidate(coachRoutinesProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
+        showAppToast(
           context,
-        ).showSnackBar(SnackBar(content: Text(l.coachRoutineCancelled)));
+          l.coachRoutineCancelled,
+          kind: AppToastKind.success,
+        );
       }
     } on Object {
       if (mounted) {
-        ScaffoldMessenger.of(
+        showAppToast(
           context,
-        ).showSnackBar(SnackBar(content: Text(l.coachRoutineCancelFailed)));
+          l.coachRoutineCancelFailed,
+          kind: AppToastKind.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -379,16 +384,16 @@ class _RecommendedExerciseRowState
       ref.invalidate(coachRoutinesProvider);
       ref.invalidate(exerciseWeekProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.coachRoutineUndone)));
+        showAppToast(context, l.coachRoutineUndone, kind: AppToastKind.success);
       }
     } on Object catch (error, stackTrace) {
       debugPrint('uncompleteRoutine failed: $error\n$stackTrace');
       if (mounted) {
-        ScaffoldMessenger.of(
+        showAppToast(
           context,
-        ).showSnackBar(SnackBar(content: Text(l.coachRoutineUndoFailed)));
+          l.coachRoutineUndoFailed,
+          kind: AppToastKind.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -420,9 +425,7 @@ class _RecommendedExerciseRowState
       ref.invalidate(coachRoutinesProvider);
       ref.invalidate(exerciseWeekProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.coachRoutineLogged)));
+        showAppToast(context, l.coachRoutineLogged, kind: AppToastKind.success);
       }
     } catch (error, stackTrace) {
       debugPrint('completeRoutine failed: $error\n$stackTrace');
@@ -435,9 +438,7 @@ class _RecommendedExerciseRowState
           NetworkError() => l.coachRoutineNetworkError,
           _ => l.coachRoutineLogFailed,
         };
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        showAppToast(context, message, kind: AppToastKind.error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -593,9 +594,30 @@ class _RecommendedExerciseRowState
               ),
             ],
           ),
+          // 내가 남긴 메모도 트레이너 피드백과 **같은 모양의 상자**로 놓는다.
+          // 예전에는 맨 텍스트라 본문 기본 크기(카드 제목보다 크다)로 찍혀,
+          // 카드에서 메모만 혼자 커 보였다. 색만 달리해 누가 쓴 글인지
+          // 구분한다 — 내 메모는 흰 바탕, 트레이너 피드백은 파란 바탕.
           if (routine.memberNote.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            Text(l.coachRoutineMyNote(routine.memberNote)),
+            Container(
+              key: Key('routineMemberNote-${routine.id}'),
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: FigmaColors.hairline),
+              ),
+              child: Text(
+                l.coachRoutineMyNote(routine.memberNote),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: FigmaColors.textBody,
+                ),
+              ),
+            ),
           ],
           if (routine.trainerFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),

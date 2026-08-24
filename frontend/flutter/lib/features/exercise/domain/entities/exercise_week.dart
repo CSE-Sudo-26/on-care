@@ -21,8 +21,17 @@ int longestActiveStreak(List<double> dailyMinutes) {
 
 enum ExerciseType { cardio, strength, yoga, walking, stretching, other }
 
-ExerciseType _exerciseTypeFromString(String s) => ExerciseType.values
-    .firstWhere((t) => t.name == s, orElse: () => ExerciseType.other);
+/// 서버·저장소가 쓰는 유형 코드 → [ExerciseType].
+///
+/// 표준 어휘는 네 가지(cardio·strength·flexibility·other)인데 이 enum 은 옛
+/// 이름을 아직 값으로 들고 있다 — `flexibility` 를 이름으로 찾으면 못 찾아
+/// **유연성 기록이 기타로 떨어졌다**. 옛 값도 자기 버킷으로 접어 읽는다. (#996)
+ExerciseType _exerciseTypeFromString(String s) => switch (s) {
+  'cardio' || 'walking' => ExerciseType.cardio,
+  'strength' => ExerciseType.strength,
+  'flexibility' || 'stretching' || 'yoga' => ExerciseType.stretching,
+  _ => ExerciseType.other,
+};
 
 /// Workout intensity, persisted so the edit sheet reopens at the saved
 /// level and calorie estimates stay consistent. Order matches the

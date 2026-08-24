@@ -63,6 +63,7 @@ class _FixedWeekRepository implements ExerciseRepository {
     required int calories,
     required String dayLabel,
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
   }) async => throw UnimplementedError();
 
   @override
@@ -76,6 +77,7 @@ class _FixedWeekRepository implements ExerciseRepository {
     required int calories,
     required String dayLabel,
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
   }) async => throw UnimplementedError();
 }
 

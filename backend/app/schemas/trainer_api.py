@@ -755,12 +755,18 @@ class ProgramItem(BaseModel):
     `session` 은 다중 세션 프로그램을 일정에 등록할 때 그 항목이 속한 세션
     이름이다(#709). 기존 행에는 이 키가 없고, 없으면 빈 문자열이라 예전처럼
     세션 구분 없는 목록으로 읽힌다.
+
+    `type`/`duration` 도 마찬가지로 없는 예전 행은 각각 기본값('근력'/'')으로
+    읽힌다 — 코칭 탭 `ProgramDraftExercise` 와 같은 어휘다(#1233). PT 완료
+    자동 기록과 프로그램 전송이 이 값으로 실제 소모 칼로리를 계산한다.
     """
     name: str = Field(min_length=1, max_length=100)
     sets: int = Field(default=0, ge=0, le=99)
     reps: str = Field(default="", max_length=30)
     weight: str = Field(default="", max_length=30)
     session: str = Field(default="", max_length=100)
+    type: RoutineType = "근력"
+    duration: str = Field(default="", max_length=30)
 
 
 #: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아 있어야

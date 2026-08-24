@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +26,7 @@ final ConsultationRequest _pendingRequest = ConsultationRequest(
   healthPurposeType: HealthPurposeType.chronic,
   healthPurposeDetail: null,
   preferredDate: DateTime(2026, 7, 30),
-  preferredTimeSlot: PreferredTimeSlot.afternoon,
+  preferredTimeSlot: const PreferredTime.at(TimeOfDay(hour: 14, minute: 0)),
   message: 'A 사용자의 문의 내용',
   status: ConsultationStatus.pending,
   createdAt: DateTime(2026, 7, 29),

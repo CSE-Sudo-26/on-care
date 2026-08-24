@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -72,7 +73,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get schedDeleteMeansRemove => '기록까지 지웁니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+  String get schedDeleteMeansRemove => '기록이 지워집니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+
+  @override
+  String get schedDeleteMeansRemoveFinished =>
+      '기록이 지워집니다. 이미 완료한 일정이라 되돌릴 수 없어요.';
 
   @override
   String get scheduleStatusGap => '공백';
@@ -513,7 +518,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashSessionPrepared => '준비됨';
 
   @override
-  String get dashSessionNoteWritten => '작성됨';
+  String get dashSessionNoteWritten => '작성 완료';
 
   @override
   String get dashSessionSentNo => '전송 안됨';
@@ -522,7 +527,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashSessionPreparedNo => '준비 안됨';
 
   @override
-  String get dashSessionNoteNotWritten => '작성 안됨';
+  String get dashSessionNoteNotWritten => '메모 없음';
 
   @override
   String get weekdayMon => '월';
@@ -937,6 +942,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultTitle => '상담 요청';
 
   @override
+  String get consultBackToSchedule => '스케줄로 돌아가기';
+
+  @override
+  String get consultBackToDashboard => '대시보드로 돌아가기';
+
+  @override
   String consultPendingCount(int count) {
     return '대기 중 $count건';
   }
@@ -1004,7 +1015,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectNotice => '입력한 사유는 고객에게 알림으로 전달돼요.';
 
   @override
-  String get consultRejectHint => '예) 이번 달은 정원이 찼어요';
+  String get consultRejectHint => '예) 요청하신 시간에 다른 일정이 있어요.';
 
   @override
   String get consultRejectAction => '거절하기';
@@ -1415,11 +1426,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String schedDeleteConfirm(String time, String name) {
-    return '$time $name님 세션을 삭제할까요?';
+    return '$time $name님 PT 일정을 삭제할까요?';
   }
 
   @override
   String get schedDeleteFailed => '일정 삭제에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get schedCompleteTitle => '일정 완료';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return '$time $name님 세션을 완료할까요?';
+  }
 
   @override
   String get schedCompleteFailed => '완료 처리에 실패했어요. 다시 시도해 주세요';
@@ -1475,6 +1494,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedFieldDuration => '소요 시간';
+
+  @override
+  String get schedFieldStart => '시작';
+
+  @override
+  String get schedFieldEnd => '종료';
+
+  @override
+  String get schedEndBeforeStart => '종료 시간은 시작 시간보다 늦어야 해요';
+
+  @override
+  String get schedTimeRangeTitle => '시간 선택';
+
+  @override
+  String get schedTimeRangeConfirm => '확인';
+
+  @override
+  String get schedTimeRangeInvalid => '올바른 시간을 입력하세요 (HH:mm)';
 
   @override
   String get schedRepeat => '반복';
@@ -1558,6 +1595,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get progEditTitle => '프로그램 수정';
 
   @override
+  String get progAddTitle => '프로그램 추가';
+
+  @override
   String get progAddExercise => '운동 추가';
 
   @override
@@ -1583,6 +1623,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get progWeight => '중량';
+
+  @override
+  String get progType => '유형';
+
+  @override
+  String get progDuration => '시간(분)';
 
   @override
   String get progOptional => '선택';
@@ -2259,13 +2305,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get goalOther => '기타';
 
   @override
-  String get slotMorning => '오전';
+  String get slotAm => '오전';
 
   @override
-  String get slotAfternoon => '오후';
-
-  @override
-  String get slotEvening => '저녁';
+  String get slotPm => '오후';
 
   @override
   String get slotFlexible => '조율 가능';

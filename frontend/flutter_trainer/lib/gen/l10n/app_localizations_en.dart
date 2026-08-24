@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -76,6 +77,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schedDeleteMeansRemove =>
       'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.';
+
+  @override
+  String get schedDeleteMeansRemoveFinished =>
+      'Deleting erases the record. This session is already complete and can\'t be undone.';
 
   @override
   String get scheduleStatusGap => 'Open';
@@ -974,6 +979,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultTitle => 'Consultation requests';
 
   @override
+  String get consultBackToSchedule => 'Back to schedule';
+
+  @override
+  String get consultBackToDashboard => 'Back to dashboard';
+
+  @override
   String consultPendingCount(int count) {
     return '$count pending';
   }
@@ -1043,7 +1054,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'The reason you write is sent to the member as a notification.';
 
   @override
-  String get consultRejectHint => 'e.g. We\'re fully booked this month';
+  String get consultRejectHint =>
+      'e.g. I have another appointment at your requested time.';
 
   @override
   String get consultRejectAction => 'Decline';
@@ -1484,12 +1496,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String schedDeleteConfirm(String time, String name) {
-    return 'Delete the $time session with $name?';
+    return 'Delete the $time PT session with $name?';
   }
 
   @override
   String get schedDeleteFailed =>
       'Couldn\'t delete the session. Please try again';
+
+  @override
+  String get schedCompleteTitle => 'Complete session';
+
+  @override
+  String schedCompleteConfirm(String time, String name) {
+    return 'Mark the $time session with $name as complete?';
+  }
 
   @override
   String get schedCompleteFailed =>
@@ -1547,6 +1567,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedFieldDuration => 'Duration';
+
+  @override
+  String get schedFieldStart => 'Start';
+
+  @override
+  String get schedFieldEnd => 'End';
+
+  @override
+  String get schedEndBeforeStart => 'End time must be after the start time';
+
+  @override
+  String get schedTimeRangeTitle => 'Select time';
+
+  @override
+  String get schedTimeRangeConfirm => 'Confirm';
+
+  @override
+  String get schedTimeRangeInvalid => 'Enter a valid time (HH:mm)';
 
   @override
   String get schedRepeat => 'Repeat';
@@ -1631,6 +1669,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progEditTitle => 'Edit program';
 
   @override
+  String get progAddTitle => 'Add program';
+
+  @override
   String get progAddExercise => 'Add exercise';
 
   @override
@@ -1656,6 +1697,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progWeight => 'Weight';
+
+  @override
+  String get progType => 'Type';
+
+  @override
+  String get progDuration => 'Duration (min)';
 
   @override
   String get progOptional => 'Optional';
@@ -2358,13 +2405,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalOther => 'Other';
 
   @override
-  String get slotMorning => 'Morning';
+  String get slotAm => 'AM';
 
   @override
-  String get slotAfternoon => 'Afternoon';
-
-  @override
-  String get slotEvening => 'Evening';
+  String get slotPm => 'PM';
 
   @override
   String get slotFlexible => 'Flexible';

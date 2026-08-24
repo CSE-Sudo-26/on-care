@@ -70,13 +70,18 @@ class AppRoutes {
   static bool isLegalPath(String path) =>
       path == legal || path.startsWith('$legal/');
 
-  /// 상담 요청 — the inbox where a member becomes a client. (#467)
-  ///
-  /// Its nav row only exists against the real API: the demo has no member
-  /// backend to receive requests from, so showing the row there would add
-  /// a permanently empty destination to a screen that must stay as it is.
-  /// The route itself is always registered so a deep link still resolves.
-  static const String consultations = '/consultations';
+  /// 스케줄 하위의 상담 요청 인박스. (#467, #1228)
+  static const String consultationsSegment = 'consultations';
+  static const String consultations = '$schedule/$consultationsSegment';
+
+  /// 이전 독립 탭 주소. 기존 링크는 새 스케줄 하위 주소로 리다이렉트한다.
+  static const String legacyConsultations = '/consultations';
+
+  /// 대시보드에서 열었음을 남겨 돌아가기 동선을 복원한다.
+  static String consultationsFromDashboard() => Uri(
+    path: consultations,
+    queryParameters: const <String, String>{'from': 'dashboard'},
+  ).toString();
 
   /// 알림함 — 놓친 변화를 나중에 확인하는 자리. (#503)
   ///
@@ -178,13 +183,13 @@ class AppRoutes {
   /// Builds the 스케줄 tab on a given date.
   ///
   /// 보기가 주간 시간표 하나뿐이라 `v=` 는 없다(#988). 날짜만 실어 보낸다.
-  static String scheduleAt({String? date}) {
+  static String scheduleAt({String? date, String? sessionId}) {
     // [clientDetail] 과 같은 이유로 빈 맵을 넘기지 않는다 — `Uri` 는 빈 쿼리와
     // 쿼리 없음을 구분해, 빈 맵에는 `?` 만 붙은 `/schedule?` 를 돌려준다.
-    if (date == null) return schedule;
+    if (date == null && sessionId == null) return schedule;
     return Uri(
       path: schedule,
-      queryParameters: <String, String>{'d': date},
+      queryParameters: <String, String>{'d': ?date, 'session': ?sessionId},
     ).toString();
   }
 
@@ -227,7 +232,7 @@ class AppRoutes {
     coaching,
     reports,
     my,
-    consultations,
+    legacyConsultations,
     notifications,
   ];
 

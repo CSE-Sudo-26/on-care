@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_consultation_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
@@ -15,7 +16,7 @@ ConsultationDraft draftFor(ConsultationRequest request) => ConsultationDraft(
   healthPurposeType: HealthPurposeType.general,
   healthPurposeDetail: null,
   preferredDate: request.preferredDate,
-  preferredTimeSlot: PreferredTimeSlot.morning,
+  preferredTimeSlot: const PreferredTime.at(TimeOfDay(hour: 9, minute: 0)),
   message: request.message,
 );
 

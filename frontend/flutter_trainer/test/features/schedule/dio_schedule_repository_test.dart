@@ -362,6 +362,9 @@ void main() {
         'weight': '60kg',
         // 세션 구분은 항상 실린다 — 단일 세션 프로그램은 빈 문자열(#709).
         'session': '',
+        // type/duration 도 항상 실린다 — 없으면 기본값('근력'/빈 문자열)(#1233).
+        'type': '근력',
+        'duration': '',
       });
     },
   );
@@ -409,6 +412,8 @@ void main() {
         'sets': 1,
         'reps': '20분',
         'weight': '-',
+        'type': '근력',
+        'duration': '',
       });
       verifyNever(
         () => dio.get<List<dynamic>>(
