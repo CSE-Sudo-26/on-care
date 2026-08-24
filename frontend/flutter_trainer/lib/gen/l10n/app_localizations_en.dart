@@ -1547,6 +1547,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldType => 'Type';
 
   @override
+  String get schedFieldDate => 'Date';
+
+  @override
   String get schedFieldTime => 'Time';
 
   @override
@@ -1580,9 +1583,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedRepeat => 'Repeat';
 
   @override
-  String get schedRepeatNone => 'Does not repeat';
-
-  @override
   String get schedRepeatWeekly => 'Weekly';
 
   @override
@@ -1601,6 +1601,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String schedRepeatCount(int count) {
     return '$count times';
   }
+
+  @override
+  String get schedRepeatCountUnit => 'times';
 
   @override
   String schedRepeatPreview(int count, String first, String last) {

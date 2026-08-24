@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_repeat_preview.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/number_stepper.dart';
 
 /// Bottom sheet for booking or editing a session: client, type, time
 /// (15-minute steps), and duration.
@@ -44,8 +45,17 @@ class SessionSheet extends ConsumerStatefulWidget {
 class _SessionSheetState extends ConsumerState<SessionSheet> {
   static const List<String> _types = SessionType.all;
 
+  /// 고객·유형·날짜·시간 값 글씨를 한 크기로 맞춘다 — 필드마다 굵기·크기가
+  /// 다르면 같은 층위의 정보가 아닌 것처럼 읽힌다.
+  static const TextStyle _fieldValueStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: AppColors.foreground,
+  );
+
   late String _client;
   late String _type;
+  late DateTime _date;
   late int _hour;
   late int _minute;
   late int _endHour;
@@ -94,6 +104,8 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
 
     _type = e != null && e.type.isNotEmpty ? e.type : _types.first;
     _typeOptions = _withCurrent(_types, _type);
+
+    _date = DateTime.parse(e?.date ?? widget.date);
 
     final parts = e?.time.split(':');
     _hour = parts != null ? int.tryParse(parts[0]) ?? 10 : 10;
@@ -150,8 +162,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
 
   /// 저장하면 만들어질 날짜들. 서버와 같은 규칙을 쓰므로(`seriesOccurrences`)
   /// 화면이 보여 준 회차 수와 실제로 만들어지는 수가 어긋나지 않는다.
-  List<DateTime> get _occurrences =>
-      seriesOccurrences(DateTime.parse(widget.date), _rule);
+  List<DateTime> get _occurrences => seriesOccurrences(_date, _rule);
 
   /// 반복 등록 시도 하나의 멱등키. 재시도에 같은 값을 다시 보내야 회차가 두 벌
   /// 생기지 않는다 — 시트를 여는 동안 고정한다.
@@ -174,7 +185,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     try {
       final e = widget.existing;
       if (e == null && _repeatDays.isNotEmpty) {
-        final start = DateTime.parse(widget.date);
+        final start = _date;
         final rule = _rule;
         // 만들기 전에 충돌을 먼저 본다. 서버도 같은 검사로 409 를 주지만, 화면이
         // 겹친 회차를 짚어 주려면 목록이 필요하다(#870).
@@ -204,7 +215,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
         );
       } else if (e == null) {
         await repo.addSession(
-          date: widget.date,
+          date: ymd(_date),
           clientName: _client,
           time: _time,
           type: _type,
@@ -248,7 +259,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   }
 
   Future<void> _pickUntil() async {
-    final start = DateTime.parse(widget.date);
+    final start = _date;
     final picked = await showPortraitDatePicker(
       context: context,
       initialDate: _repeatUntil ?? start.add(const Duration(days: 56)),
@@ -260,6 +271,31 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     setState(
       () => _repeatUntil = DateTime(picked.year, picked.month, picked.day),
     );
+  }
+
+  /// 새 일정의 날짜를 고른다 — 기본값은 시트를 연 시점의 선택된 날짜다.
+  /// 지난 기록을 남기려는 경우도 있어(#870 반복과 달리) 과거 날짜도 막지 않는다.
+  Future<void> _pickDate() async {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final first = _date.isBefore(todayOnly) ? _date : todayOnly;
+    final picked = await showPortraitDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: first.subtract(const Duration(days: 365)),
+      lastDate: todayOnly.add(const Duration(days: 365)),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _date = DateTime(picked.year, picked.month, picked.day);
+      // 반복 요일이 시작일 하나만 켠 상태였다면 새 시작일을 따라간다 — 날짜를
+      // 옮겼는데 이전 요일에 켜진 채로 남으면 미리보기가 옮긴 날을 담지 못한다.
+      if (_repeatDays.length == 1) {
+        _repeatDays
+          ..clear()
+          ..add(_date.weekday);
+      }
+    });
   }
 
   @override
@@ -313,7 +349,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                           for (final name in _clientOptions)
                             DropdownMenuItem<String>(
                               value: name,
-                              child: Text(name),
+                              child: Text(name, style: _fieldValueStyle),
                             ),
                         ],
                         onChanged: (v) =>
@@ -335,7 +371,10 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                             // 가져온다.
                             DropdownMenuItem<String>(
                               value: t,
-                              child: Text(sessionTypeLabel(l, t)),
+                              child: Text(
+                                sessionTypeLabel(l, t),
+                                style: _fieldValueStyle,
+                              ),
                             ),
                         ],
                         onChanged: (v) => setState(() => _type = v ?? _type),
@@ -349,35 +388,20 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
               // 뜨는 것도, 예약 슬롯이 세션을 만들 때 넘기는 것도 결국
               // "언제부터 언제까지"라 그 형태로 바로 고르는 편이 낫다(#1090).
               // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
-              GestureDetector(
-                key: const ValueKey<String>('session-time-range-field'),
-                onTap: _pickTimeRange,
-                child: _pillField(
-                  label: l.schedFieldTime,
-                  child: SizedBox(
-                    height: 44,
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            l.schedTimeRange(_time, _endTime),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.foreground,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.schedule_outlined,
-                          size: 18,
-                          color: AppColors.subtleForeground,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              //
+              // 날짜는 새 일정에만 고를 수 있다 — 이미 잡힌 회차의 날짜를
+              // 옮기는 일은 저장소가 지원하지 않는다(수정은 그 회차의 시간·
+              // 고객·유형만 바꾼다).
+              if (widget.existing == null)
+                Row(
+                  children: <Widget>[
+                    Expanded(child: _dateField(l)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: _timeField(l)),
+                  ],
+                )
+              else
+                _timeField(l),
               // 반복은 새 일정에만 있다(#870). 이미 잡힌 회차를 고치는 일은 그
               // 회차 하나의 일이고, 여기서 규칙을 다시 받으면 나머지 회차까지
               // 건드리는 것처럼 읽힌다.
@@ -388,124 +412,143 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Wrap(
-                        spacing: AppSpacing.xs,
-                        runSpacing: AppSpacing.xs,
+                      // `반복 없음` 이 기본값이다 — 따로 고를 버튼을 두지 않고
+                      // `매주` 하나를 껐다 켰다 하는 토글로 둔다. 켜면 남는
+                      // 폭에 요일 7칸이 같은 줄로 붙는다 — 반복 요일만을 위한
+                      // 새 줄·라벨을 따로 두지 않는다.
+                      Row(
                         children: <Widget>[
-                          ChoiceChip(
-                            key: const ValueKey<String>('repeat-none'),
-                            label: Text(l.schedRepeatNone),
-                            selected: _repeatDays.isEmpty,
-                            onSelected: (_) =>
-                                setState(() => _repeatDays.clear()),
-                          ),
-                          ChoiceChip(
+                          _segment(
                             key: const ValueKey<String>('repeat-weekly'),
-                            label: Text(l.schedRepeatWeekly),
+                            label: l.schedRepeatWeekly,
                             selected: _repeatDays.isNotEmpty,
-                            onSelected: (_) => setState(() {
-                              if (_repeatDays.isEmpty) {
-                                // 켜는 순간의 기본값은 **시작일의 요일**이다. 빈
-                                // 상태로 켜면 "매주" 를 골랐는데 아무 회차도 없는
-                                // 화면이 된다.
-                                _repeatDays.add(
-                                  DateTime.parse(widget.date).weekday,
-                                );
+                            onTap: () => setState(() {
+                              if (_repeatDays.isNotEmpty) {
+                                _repeatDays.clear();
+                              } else {
+                                // 켜는 순간의 기본값은 **시작일의 요일**이다.
+                                // 빈 상태로 켜면 "매주" 를 골랐는데 아무 회차도
+                                // 없는 화면이 된다.
+                                _repeatDays.add(_date.weekday);
                               }
                             }),
                           ),
+                          if (_repeatDays.isNotEmpty) ...<Widget>[
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Row(
+                                children: <Widget>[
+                                  for (
+                                    var day = 1;
+                                    day <= 7;
+                                    day++
+                                  ) ...<Widget>[
+                                    if (day != 1)
+                                      const SizedBox(width: AppSpacing.xxs),
+                                    Expanded(
+                                      child: _segment(
+                                        key: ValueKey<String>(
+                                          'repeat-day-$day',
+                                        ),
+                                        label: weekdayNames(l)[day - 1],
+                                        selected: _repeatDays.contains(day),
+                                        dense: true,
+                                        onTap: () => setState(() {
+                                          if (_repeatDays.contains(day)) {
+                                            if (_repeatDays.length > 1) {
+                                              // 마지막 요일까지 끄면 `매주` 인데
+                                              // 회차가 없는 상태가 된다 — 끄려면
+                                              // `매주` 를 다시 눌러 반복 자체를
+                                              // 끈다.
+                                              _repeatDays.remove(day);
+                                            }
+                                          } else {
+                                            _repeatDays.add(day);
+                                          }
+                                        }),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       if (_repeatDays.isNotEmpty) ...<Widget>[
                         const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          l.schedRepeatDays,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.subtleForeground,
+                        // `종료` 는 실제로는 횟수·종료일 중 하나를 고르는
+                        // 드롭다운이다 — 고객 탭 `성별` 필드와 같은, 앱 전역
+                        // 테두리 있는 선택 UI로 통일한다.
+                        DropdownButtonFormField<bool>(
+                          key: const ValueKey<String>('repeat-end-mode'),
+                          initialValue: _endsByCount,
+                          decoration: InputDecoration(
+                            labelText: l.schedRepeatEnd,
+                            isDense: true,
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Wrap(
-                          spacing: AppSpacing.xs,
-                          runSpacing: AppSpacing.xs,
-                          children: <Widget>[
-                            for (var day = 1; day <= 7; day++)
-                              FilterChip(
-                                key: ValueKey<String>('repeat-day-$day'),
-                                label: Text(weekdayNames(l)[day - 1]),
-                                selected: _repeatDays.contains(day),
-                                onSelected: (on) => setState(() {
-                                  if (on) {
-                                    _repeatDays.add(day);
-                                  } else if (_repeatDays.length > 1) {
-                                    // 마지막 요일까지 끄면 `매주` 인데 회차가 없는
-                                    // 상태가 된다 — 끄려면 `반복 없음` 을 고른다.
-                                    _repeatDays.remove(day);
-                                  }
-                                }),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          l.schedRepeatEnd,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.subtleForeground,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Row(
-                          children: <Widget>[
-                            ChoiceChip(
-                              key: const ValueKey<String>('repeat-end-count'),
-                              label: Text(l.schedRepeatEndByCount),
-                              selected: _endsByCount,
-                              onSelected: (_) =>
-                                  setState(() => _endsByCount = true),
+                          items: <DropdownMenuItem<bool>>[
+                            DropdownMenuItem<bool>(
+                              value: true,
+                              child: Text(l.schedRepeatEndByCount),
                             ),
-                            const SizedBox(width: AppSpacing.xs),
-                            ChoiceChip(
-                              key: const ValueKey<String>('repeat-end-date'),
-                              label: Text(l.schedRepeatEndByDate),
-                              selected: !_endsByCount,
-                              onSelected: (_) => setState(() {
-                                _endsByCount = false;
-                                _repeatUntil ??= DateTime.parse(
-                                  widget.date,
-                                ).add(const Duration(days: 56));
-                              }),
+                            DropdownMenuItem<bool>(
+                              value: false,
+                              child: Text(l.schedRepeatEndByDate),
                             ),
                           ],
+                          onChanged: (v) => setState(() {
+                            _endsByCount = v ?? _endsByCount;
+                            if (!_endsByCount) {
+                              _repeatUntil ??= _date.add(
+                                const Duration(days: 56),
+                              );
+                            }
+                          }),
                         ),
                         const SizedBox(height: AppSpacing.xs),
+                        // 횟수는 프리셋 목록 대신 숫자 키보드로 바로 입력한다.
+                        // 종료일은 필드를 누르면 바로 날짜 선택기가 뜬다.
                         if (_endsByCount)
-                          DropdownButton<int>(
+                          NumberStepper(
                             key: const ValueKey<String>('repeat-count'),
-                            value: _repeatCount,
-                            isExpanded: true,
-                            underline: const SizedBox.shrink(),
-                            items: <DropdownMenuItem<int>>[
-                              for (final n in const <int>[4, 8, 12, 16, 24])
-                                DropdownMenuItem<int>(
-                                  value: n,
-                                  child: Text(l.schedRepeatCount(n)),
-                                ),
-                            ],
-                            onChanged: (v) => setState(
-                              () => _repeatCount = v ?? _repeatCount,
-                            ),
+                            value: _repeatCount.toDouble(),
+                            min: 1,
+                            max: maxSeriesOccurrences.toDouble(),
+                            suffix: l.schedRepeatCountUnit,
+                            onChanged: (v) =>
+                                setState(() => _repeatCount = v.round()),
                           )
                         else
-                          OutlinedButton.icon(
+                          GestureDetector(
                             key: const ValueKey<String>('repeat-until'),
-                            onPressed: _pickUntil,
-                            icon: const Icon(Icons.event_outlined, size: 18),
-                            label: Text(
-                              _repeatUntil == null ? '-' : ymd(_repeatUntil!),
+                            onTap: _pickUntil,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.sm,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: AppColors.inputBackground,
+                                borderRadius: BorderRadius.all(AppRadius.sm),
+                              ),
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Text(
+                                      _repeatUntil == null
+                                          ? '-'
+                                          : ymd(_repeatUntil!),
+                                      style: _fieldValueStyle,
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.event_outlined,
+                                    size: 18,
+                                    color: AppColors.subtleForeground,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         const SizedBox(height: AppSpacing.sm),
@@ -550,9 +593,12 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                 children: <Widget>[
                   if (widget.inline) ...<Widget>[
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: _saving ? null : widget.onCancel,
-                        child: Text(l.actionCancel),
+                      child: SizedBox(
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: _saving ? null : widget.onCancel,
+                          child: Text(l.actionCancel),
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -582,6 +628,78 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 시작·종료 시간 필드 — 눌러서 한 번에 고르는 모달을 연다(#1229, #1250).
+  Widget _timeField(AppLocalizations l) {
+    return GestureDetector(
+      key: const ValueKey<String>('session-time-range-field'),
+      onTap: _pickTimeRange,
+      child: _pillField(
+        label: l.schedFieldTime,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  l.schedTimeRange(_time, _endTime),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.schedule_outlined,
+                size: 18,
+                color: AppColors.subtleForeground,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 새 일정의 날짜 필드 — 기본값은 시트를 연 시점의 선택된 날짜이고, 눌러서
+  /// 다른 날짜로 바꿀 수 있다.
+  Widget _dateField(AppLocalizations l) {
+    return GestureDetector(
+      key: const ValueKey<String>('session-date-field'),
+      onTap: _pickDate,
+      child: _pillField(
+        label: l.schedFieldDate,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  l.dateMonthDayWeekday(
+                    _date.month,
+                    _date.day,
+                    weekdayNames(l)[_date.weekday - 1],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: AppColors.subtleForeground,
               ),
             ],
           ),
@@ -647,6 +765,42 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           child: child,
         ),
       ],
+    );
+  }
+
+  /// 테두리 없는 필 모양 토글 — 채움색으로만 선택 상태를 말한다. 다른 화면의
+  /// 칩(메시지 필터 등)과 같은 언어다. Material 기본 `ChoiceChip`/`FilterChip`
+  /// 은 옅은 회색 대신 짙은 윤곽선을 그려 이 앱 다른 곳과 튀었다.
+  Widget _segment({
+    Key? key,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    bool dense = false,
+  }) {
+    return Material(
+      key: key,
+      color: selected ? AppColors.accentSurface : AppColors.inputBackground,
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: dense ? AppSpacing.xxs : AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: dense ? 12 : 13,
+              fontWeight: FontWeight.w700,
+              color: selected ? AppColors.primary : AppColors.mutedForeground,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
