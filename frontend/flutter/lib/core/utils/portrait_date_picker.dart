@@ -30,7 +30,19 @@ Future<DateTime?> showPortraitDatePicker({
     lastDate: lastDate,
     initialEntryMode: initialEntryMode,
     builder: (context, child) {
-      final Widget themed = builder == null ? child! : builder(context, child);
+      final Widget whitePicker = Theme(
+        data: Theme.of(context).copyWith(
+          datePickerTheme: Theme.of(context).datePickerTheme.copyWith(
+            backgroundColor: Colors.white,
+            headerBackgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+          ),
+        ),
+        child: child!,
+      );
+      final Widget themed = builder == null
+          ? whitePicker
+          : builder(context, whitePicker);
       final MediaQueryData query = MediaQuery.of(context);
       if (query.size.width <= query.size.height) return themed;
       return MediaQuery(
