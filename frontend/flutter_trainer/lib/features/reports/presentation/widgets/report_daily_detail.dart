@@ -57,10 +57,10 @@ class _DailyDetailColumn extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            // 이행률과 몇 개 중 몇 개인지는 적지 않는다 — 퍼센트는 바로 위
-            // 막대가 이미 말하고, 개수는 아래 ✓/✗ 를 세면 나온다. 기록이 없는
-            // 날은 막대 쪽에 '기록 없음' 이 적히고, 아직 오지 않은 날은 비워
-            // 둔다 — 빈칸이 곧 "아직" 이다.
+            // 이행률은 적지 않는다 — 퍼센트는 바로 위 막대가 이미 말한다.
+            // 여기 오는 것은 그날 **실제로 한** 운동뿐이라 미수행은 없다(#1288).
+            // 기록이 없는 날은 막대 쪽에 '기록 없음' 이 적히고, 아직 오지 않은
+            // 날은 비워 둔다 — 빈칸이 곧 "아직" 이다.
             for (final name in names.take(_maxLines))
               ExerciseLine(line: name, fontSize: 11.5, maxLines: 2),
             // 운동을 많이 배정한 날이 카드 높이를 혼자 정하지 않게 한다.
