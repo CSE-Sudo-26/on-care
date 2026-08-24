@@ -448,6 +448,15 @@ class _RecommendedExerciseRowState
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final CoachRoutine routine = widget.routine;
+    // 이미 한 운동은 글자를 한 단계 낮춘다 (#1196). 체크 박스 하나만으로는
+    // 여러 줄짜리 목록에서 어디까지 했는지 한눈에 갈리지 않는다 — 남은 줄이
+    // 검정으로 남아 있어야 다음에 할 것이 먼저 읽힌다.
+    final Color titleColor = routine.completed
+        ? FigmaColors.textSub
+        : FigmaColors.ink;
+    final Color detailColor = routine.completed
+        ? AppColors.mutedForeground
+        : AppColors.foreground;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -480,10 +489,10 @@ class _RecommendedExerciseRowState
                       routine.isProgramSession
                           ? routine.sessionName
                           : routine.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: FigmaColors.ink,
+                        color: titleColor,
                       ),
                     ),
                     // 운동 구성이 오면 그것을 보여 준다 — 이름만 이어 붙인
@@ -496,9 +505,9 @@ class _RecommendedExerciseRowState
                           exercise.detail.isEmpty
                               ? exercise.name
                               : '${exercise.name} · ${exercise.detail}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.foreground,
+                            color: detailColor,
                           ),
                         ),
                       ]
@@ -506,9 +515,9 @@ class _RecommendedExerciseRowState
                       const SizedBox(height: 2),
                       Text(
                         routine.reason,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: AppColors.foreground,
+                          color: detailColor,
                         ),
                       ),
                     ],

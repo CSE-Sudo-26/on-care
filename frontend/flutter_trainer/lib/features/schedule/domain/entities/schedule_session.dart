@@ -1,5 +1,6 @@
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// One exercise in a PT session's program (e.g. 레그프레스 3세트 × 12회 · 80kg).
 class ProgramItem {
@@ -10,6 +11,8 @@ class ProgramItem {
     required this.reps,
     required this.weight,
     this.session = '',
+    this.type = '근력',
+    this.duration = '',
   });
 
   /// Exercise name.
@@ -29,6 +32,14 @@ class ProgramItem {
   /// Empty for a single-session program and for rows written before sessions
   /// existed — the schedule then reads as the flat list it always was.
   final String session;
+
+  /// 운동 유형 계약값('유산소'|'근력'|'유연성'|'기타') — 코칭 탭 루틴 배정과
+  /// 같은 어휘다(#1233). 이 값이 없는 예전 행은 '근력'으로 읽힌다.
+  final String type;
+
+  /// 이 운동에 쓴 분. 빈 문자열은 미입력 — PT 완료 자동 기록은 이 값이 없으면
+  /// 세션 슬롯 전체 길이로 되돌아간다(#1233).
+  final String duration;
 }
 
 /// One slot on the trainer's daily timeline (스케줄 탭). Decoded from
@@ -139,6 +150,22 @@ int? clockMinutes(String time) {
   if (hour == null || minute == null) return null;
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
   return hour * 60 + minute;
+}
+
+/// `12:00–12:50` — 시작과 끝. 시각이 `HH:mm` 이 아니면 [session]의 시작
+/// 시각 그대로.
+String timeRangeLabel(AppLocalizations l, ScheduleSession session) {
+  final start = clockMinutes(session.time);
+  if (start == null) return session.time;
+  return l.schedTimeRange(session.time, _hhmm(start + session.durationMinutes));
+}
+
+/// 자정부터의 분을 `HH:mm` 으로.
+String _hhmm(int minutes) {
+  final wrapped = minutes % (24 * 60);
+  final hour = (wrapped ~/ 60).toString().padLeft(2, '0');
+  final minute = (wrapped % 60).toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 /// [session] 이 지금부터 [leadMinutes] 안에 시작하는가. (#817)

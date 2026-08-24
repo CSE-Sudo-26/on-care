@@ -76,13 +76,24 @@ class SessionProgramRow extends StatelessWidget {
 }
 
 /// Shown inside an expanded 예정 session that has no program yet.
+///
+/// 상담의 [SessionNoNoteBox]처럼, 바로가기를 이 상자 안에 둔다 — 예전에는 이
+/// 안내와 그 동작이 서로 떨어져 있었다. 다만 메모와 달리 프로그램은 **이
+/// 카드 안에서 짓지 않는다** — AI 코칭 탭에서 만들어 보내는 것이라, 이 아이콘은
+/// 편집기를 여는 대신 그 고객의 코칭 탭으로 이동한다(#1247). 관리 줄 쪽
+/// `프로그램 수정` 아이콘은 프로그램이 비어 있는 동안은 [SessionManageRow]가
+/// 숨긴다.
 class SessionNoPlanBox extends StatelessWidget {
-  const SessionNoPlanBox({super.key});
+  const SessionNoPlanBox({super.key, required this.onGoToProgram});
+
+  /// 코칭 탭의 그 고객 프로그램 화면으로 이동한다.
+  final VoidCallback onGoToProgram;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
+      key: const ValueKey<String>('session-no-plan'),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.md,
@@ -92,27 +103,77 @@ class SessionNoPlanBox extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border.all(color: AppColors.borderStrong),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: <Widget>[
-          Text(
-            l.progEmpty,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.mutedForeground,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  l.progEmpty,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l.progEmptyHint,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            l.progEmptyHint,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-              color: AppColors.subtleForeground,
-            ),
+          const SizedBox(width: AppSpacing.sm),
+          // `프로그램 수정`(관리 줄, `session-edit-program-chip`)과는 다른
+          // 동작이라 키도 다르다 — 이 카드에서 편집기를 여는 게 아니라 코칭
+          // 탭으로 나간다.
+          _ProgramAddChip(
+            key: const ValueKey<String>('session-add-program-chip'),
+            label: l.progAddTitle,
+            onTap: onGoToProgram,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ProgramAddChip extends StatelessWidget {
+  const _ProgramAddChip({super.key, required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: Material(
+          color: AppColors.secondary.withValues(alpha: 0.08),
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            child: const Padding(
+              padding: EdgeInsets.all(AppSpacing.sm),
+              child: Icon(
+                Icons.fitness_center,
+                size: 15,
+                color: AppColors.secondary,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

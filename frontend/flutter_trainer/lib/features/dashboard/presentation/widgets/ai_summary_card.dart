@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/dashboard/domain/ai_coaching_summary.dart';
+import 'package:oncare_trainer/features/dashboard/domain/activity_feedback.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/oni_avatar.dart';
 
-/// 식단·운동·건강 프로필·최근 대화를 고객별 실행 항목으로 보여 주는 요약 카드.
+/// "AI 진단" — 트레이너 활동 피드백 3가지(이행률·이탈 위험 감지, 7일 이상
+/// 활동 저조, 식단 피드백 미완료)를 풀어서 보여 주는 카드.
+///
+/// 이전에는 규칙 기반 코칭 요약(고객별 상태·근거·운동 중심)을 함께 그렸는데,
+/// "AI 진단" 이라는 이름에 맞춰 활동 피드백 하나로 좁혔다 — 두 정보가 한
+/// 카드에 있으면 어느 쪽을 먼저 읽어야 할지 애매했다.
 class AiSummaryCard extends StatelessWidget {
-  const AiSummaryCard({
-    super.key,
-    required this.summary,
-    required this.onRetry,
-  });
+  /// Creates the card.
+  const AiSummaryCard({super.key, required this.activityFeedback});
 
-  final AsyncValue<AiCoachingSummary> summary;
-  final VoidCallback onRetry;
+  /// 이행률·이탈 위험·식단 피드백 미완료 등 트레이너 활동 피드백 bullets.
+  final List<ActivityFeedbackItem> activityFeedback;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // 대상이 없는 신호는 아예 그리지 않는다 — "0명" 문장은 안내가 아니다.
+    final active = activityFeedback.where((i) => i.count > 0).toList();
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -40,26 +41,25 @@ class AiSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _Header(title: l.dashAiSummaryTitle, today: l.dashToday),
+          _Header(title: l.dashAiSummaryTitle),
           const SizedBox(height: AppSpacing.md),
-          summary.when(
-            loading: () => _LoadingState(label: l.dashAiLoading),
-            error: (error, _) => _ErrorState(
-              label: error is RateLimitedError
-                  ? l.dashAiRateLimited
-                  : l.dashAiLoadFailed,
-              retryLabel: l.actionRetry,
-              onRetry: onRetry,
-            ),
-            data: (value) => _SummaryBody(summary: value),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ActionButton(
-            label: l.dashCreateAiRoutine,
-            icon: Icons.auto_awesome,
-            primary: true,
-            onPressed: () => context.go(AppRoutes.coaching),
-          ),
+          if (active.isEmpty)
+            Text(
+              l.dashAiNoClients,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.mutedForeground,
+              ),
+            )
+          else
+            for (var i = 0; i < active.length; i++) ...<Widget>[
+              if (i > 0) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                const Divider(color: AppColors.aiCardGradientEnd, height: 1),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              _ActivityFeedbackDetail(item: active[i]),
+            ],
         ],
       ),
     );
@@ -67,10 +67,9 @@ class AiSummaryCard extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.title, required this.today});
+  const _Header({required this.title});
 
   final String title;
-  final String today;
 
   @override
   Widget build(BuildContext context) {
@@ -86,339 +85,110 @@ class _Header extends StatelessWidget {
             color: AppColors.foreground,
           ),
         ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: const BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.all(AppRadius.pill),
-          ),
-          child: Text(
-            today,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
       ],
     );
   }
 }
 
-class _SummaryBody extends StatelessWidget {
-  const _SummaryBody({required this.summary});
+/// One 트레이너 활동 피드백 bullet, written out in full — headline, a
+/// sentence that names the clients naturally, and a right-aligned link to
+/// go act on it.
+///
+/// 흰 박스로 감싸지 않는다 — 카드 자체가 이미 그라디언트로 구분돼 있어,
+/// 안에 또 흰 상자를 두면 레이어가 하나 더 생길 뿐이었다(#[dashboard]).
+class _ActivityFeedbackDetail extends StatelessWidget {
+  const _ActivityFeedbackDetail({required this.item});
 
-  final AiCoachingSummary summary;
+  final ActivityFeedbackItem item;
+
+  /// Where each kind's CTA leads — the client most worth checking first.
+  String? _destination() {
+    if (item.clientIds.isEmpty) return null;
+    final id = item.clientIds.first;
+    return switch (item.kind) {
+      ActivityFeedbackKind.difficultyReview => AppRoutes.coachingFor(id),
+      ActivityFeedbackKind.inactiveSevenDays => AppRoutes.messagesFor(id),
+      ActivityFeedbackKind.dietFeedbackPending => AppRoutes.clientDetail(
+        id,
+        section: 'diet',
+      ),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final headline = switch (summary.kind) {
-      CoachingSummaryKind.noClients => l.dashAiNoClients,
-      CoachingSummaryKind.allOnTrack => l.dashAiAllOnTrack(
-        summary.totalClients,
-      ),
-      CoachingSummaryKind.attention => l.dashAiRuleHeadline(
-        summary.clients.first.memberName,
-      ),
-      CoachingSummaryKind.details => summary.headline,
-    };
+    final destination = _destination();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          headline,
+          item.kind.title(l),
           style: const TextStyle(
-            fontSize: 15,
-            height: 1.5,
+            fontSize: 13.5,
             fontWeight: FontWeight.w800,
             color: AppColors.foreground,
           ),
         ),
-        if (summary.clients.isNotEmpty) ...<Widget>[
-          const SizedBox(height: AppSpacing.md),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 960
-                  ? 3
-                  : constraints.maxWidth >= 620
-                  ? 2
-                  : 1;
-              final width =
-                  (constraints.maxWidth - AppSpacing.md * (columns - 1)) /
-                  columns;
-              return Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
-                children: <Widget>[
-                  for (final insight in summary.clients)
-                    SizedBox(
-                      width: width,
-                      child: _InsightPanel(insight: insight),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _InsightPanel extends StatelessWidget {
-  const _InsightPanel({required this.insight});
-
-  final AiCoachingClientInsight insight;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final copy = _insightCopy(l, insight);
-    final (priorityLabel, priorityColor) = switch (insight.priority) {
-      CoachingPriority.high => (l.dashAiPriorityHigh, AppColors.warning),
-      CoachingPriority.medium => (
-        l.dashAiPriorityMedium,
-        AppColors.brandOrange,
-      ),
-      CoachingPriority.low => (l.dashAiPriorityLow, AppColors.success),
-    };
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.card.withValues(alpha: 0.9),
-        border: Border.all(color: AppColors.borderStrong),
-        borderRadius: const BorderRadius.all(AppRadius.md),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  insight.memberName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.foreground,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: priorityColor.withValues(alpha: 0.12),
-                  borderRadius: const BorderRadius.all(AppRadius.pill),
-                ),
-                child: Text(
-                  priorityLabel,
-                  style: TextStyle(
-                    color: priorityColor,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _DetailBlock(
-            icon: Icons.monitor_heart_outlined,
-            label: l.dashAiStatus,
-            body: copy.status,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _DetailBlock(
-            icon: Icons.fitness_center,
-            label: l.dashAiExerciseFocus,
-            body: copy.focus,
-          ),
-          if (copy.evidence.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            _DetailBlock(
-              icon: Icons.fact_check_outlined,
-              label: l.dashAiEvidence,
-              body: copy.evidence.map((item) => '• $item').join('\n'),
-            ),
-          ],
-          if (copy.caution.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            _DetailBlock(
-              icon: Icons.health_and_safety_outlined,
-              label: l.dashAiCaution,
-              body: copy.caution,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InsightCopy {
-  const _InsightCopy({
-    required this.status,
-    required this.focus,
-    required this.evidence,
-    required this.caution,
-  });
-
-  final String status;
-  final String focus;
-  final List<String> evidence;
-  final String caution;
-}
-
-_InsightCopy _insightCopy(AppLocalizations l, AiCoachingClientInsight insight) {
-  final data = insight.ruleData;
-  if (data == null) {
-    return _InsightCopy(
-      status: insight.statusSummary,
-      focus: insight.exerciseFocus,
-      evidence: insight.evidence,
-      caution: insight.caution,
-    );
-  }
-  final (status, focus, caution) = switch (data.signal) {
-    RuleCoachingSignal.knee => (
-      l.dashAiRuleKneeStatus,
-      l.dashAiRuleKneeFocus,
-      l.dashAiRuleKneeCaution,
-    ),
-    RuleCoachingSignal.upperBody => (
-      l.dashAiRuleUpperStatus,
-      l.dashAiRuleUpperFocus,
-      l.dashAiRuleUpperCaution,
-    ),
-    RuleCoachingSignal.fatigue => (
-      l.dashAiRuleFatigueStatus,
-      l.dashAiRuleFatigueFocus,
-      l.dashAiRuleFatigueCaution,
-    ),
-    RuleCoachingSignal.sodium => (
-      l.dashAiRuleSodiumStatus,
-      l.dashAiRuleSodiumFocus,
-      l.dashAiRuleSodiumCaution,
-    ),
-    RuleCoachingSignal.lowCompletion => (
-      l.dashAiRuleCompletionStatus,
-      l.dashAiRuleCompletionFocus,
-      l.dashAiRuleCompletionCaution,
-    ),
-    RuleCoachingSignal.unanswered => (
-      l.dashAiRuleUnansweredStatus,
-      l.dashAiRuleUnansweredFocus,
-      l.dashAiRuleUnansweredCaution,
-    ),
-  };
-  final evidence = <String>[
-    if (data.recentMessage case final message?)
-      l.dashAiRuleEvidenceMessage(message),
-    if ((data.sodiumMg, data.sodiumTargetMg) case (final value?, final target?))
-      l.dashAiRuleEvidenceSodium(value, target),
-    if (data.completionAverage case final average?)
-      l.dashAiRuleEvidenceCompletion(average),
-  ];
-  return _InsightCopy(
-    status: status,
-    focus: focus,
-    evidence: evidence.take(3).toList(growable: false),
-    caution: caution,
-  );
-}
-
-class _DetailBlock extends StatelessWidget {
-  const _DetailBlock({
-    required this.icon,
-    required this.label,
-    required this.body,
-  });
-
-  final IconData icon;
-  final String label;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                body,
+        const SizedBox(height: 4),
+        // 설명은 왼쪽에서 넓게 숨 쉬고, 버튼은 오른쪽에 고정 너비로 붙는다 —
+        // 세 항목이 같은 두 칸 그리드로 줄을 맞춰야 나란히 훑어 읽힌다.
+        Row(
+          children: <Widget>[
+            Expanded(
+              // 추천 행동("프로그램에서 루틴을 조정해보세요")을 설명 문장에
+              // 이어 붙인다 — 버튼은 그 탭으로 가는 짧은 링크일 뿐, 무엇을
+              // 해야 하는지는 이 문장이 전부 말한다.
+              child: Text(
+                '${item.kind.description(l, _names(l, item.clientNames))} '
+                '${item.kind.recommendation(l)}',
                 style: const TextStyle(
                   fontSize: 12.5,
-                  height: 1.45,
+                  height: 1.5,
                   fontWeight: FontWeight.w500,
                   color: AppColors.mutedForeground,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            if (destination != null)
+              // 오늘의 일정 배너의 "수업 준비하기" 버튼과 같은 마감 —
+              // 알약처럼 둥글고 여유 있게, 짧은 탭 이름이 초라해 보이지
+              // 않도록.
+              FilledButton.icon(
+                key: ValueKey<String>('ai-summary-cta-${item.kind.name}'),
+                onPressed: () => context.go(destination),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accentDark,
+                  foregroundColor: AppColors.accentForeground,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: 12,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(AppRadius.pill),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                icon: Text(item.kind.tabLabel(l)),
+                label: const Icon(Icons.chevron_right, size: 16),
+                iconAlignment: IconAlignment.start,
+              ),
+          ],
         ),
       ],
     );
   }
-}
 
-class _LoadingState extends StatelessWidget {
-  const _LoadingState({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        const SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(child: Text(label)),
-      ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.label,
-    required this.retryLabel,
-    required this.onRetry,
-  });
-
-  final String label;
-  final String retryLabel;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        const Icon(Icons.error_outline, color: AppColors.warning),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(child: Text(label)),
-        TextButton(onPressed: onRetry, child: Text(retryLabel)),
-      ],
-    );
+  static String _names(AppLocalizations l, List<String> names) {
+    const maxShown = 3;
+    if (names.length <= maxShown) return names.join(', ');
+    final shown = names.take(maxShown).join(', ');
+    return l.dashActivityMoreClients(shown, names.length - maxShown);
   }
 }

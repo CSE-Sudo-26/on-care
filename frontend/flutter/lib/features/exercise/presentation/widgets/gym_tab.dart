@@ -13,6 +13,8 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/consultation_request_card.dart';
+import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
@@ -56,18 +58,12 @@ class GymTab extends ConsumerWidget {
     final int unreadCoachMessages = showTrainerChat
         ? ref.watch(coachUnreadProvider).valueOrNull ?? 0
         : 0;
-    final GlobalKey recentConsultationKey = GlobalKey();
 
-    void showRecentConsultation() {
-      final BuildContext? targetContext = recentConsultationKey.currentContext;
-      if (targetContext == null) return;
-      Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        alignment: 0.1,
-      );
-    }
+    // "상담 요청 확인" 은 같은 화면 아래로 스크롤하는 대신 전체 내역 화면으로
+    // 옮긴다 — 요청이 누적될수록 카드 1건만으로는 지난 이력을 알 수 없었다
+    // (#948). `Scrollable.ensureVisible` 의존도 이걸로 없앤다.
+    void openConsultationHistory() =>
+        context.push(AppRoutes.consultationHistory);
 
     // 연결된 헬스장이 없으면 이 탭에서 할 일은 헬스장을 찾는 것뿐이다 —
     // 지도만 든 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면을 그대로 보여
@@ -96,12 +92,12 @@ class GymTab extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 _RecentConsultationSection(
-                  key: recentConsultationKey,
                   request: displayedRequest,
+                  onSeeAll: openConsultationHistory,
                 ),
                 if (pendingRequest != null) ...<Widget>[
                   const SizedBox(height: 14),
-                  _PendingConsultationButton(onTap: showRecentConsultation),
+                  _PendingConsultationButton(onTap: openConsultationHistory),
                 ],
               ],
             ),
@@ -117,7 +113,13 @@ class GymTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _SectionHeader(title: l.exMyGymSection),
+          // 이미 연결된 헬스장이 있어도 다른 헬스장을 둘러볼 수 있어야 한다 —
+          // 마이페이지의 `헬스장 찾기`와 같은 목적지다(#1257).
+          _SectionHeader(
+            title: l.exMyGymSection,
+            actionLabel: l.exFindGym,
+            onAction: () => context.push(AppRoutes.gyms),
+          ),
           const SizedBox(height: 10),
           _MyGymSection(
             gymAsync: myGymAsync,
@@ -127,7 +129,7 @@ class GymTab extends ConsumerWidget {
             onRetry: () => ref.invalidate(myGymProvider),
             onPendingConsultationTap: pendingRequest == null
                 ? null
-                : showRecentConsultation,
+                : openConsultationHistory,
             onTrainerChatTap: showTrainerChat
                 ? () => openTrainerChatPage(
                     context,
@@ -139,8 +141,8 @@ class GymTab extends ConsumerWidget {
           if (displayedRequest != null) ...<Widget>[
             const SizedBox(height: 28),
             _RecentConsultationSection(
-              key: recentConsultationKey,
               request: displayedRequest,
+              onSeeAll: openConsultationHistory,
             ),
           ],
           const SizedBox(height: 28),
@@ -167,202 +169,31 @@ class GymTab extends ConsumerWidget {
   }
 }
 
+/// 운동 탭의 상담 요청 요약 — 대기 중이거나 가장 최근 요청 1건만 보여준다.
+/// 전체 이력은 [ConsultationHistoryPage] 가 맡는다(#948).
 class _RecentConsultationSection extends StatelessWidget {
-  const _RecentConsultationSection({required this.request, super.key});
+  const _RecentConsultationSection({
+    required this.request,
+    required this.onSeeAll,
+  });
 
   final ConsultationRequest request;
+  final VoidCallback onSeeAll;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String targetName = request.trainerName ?? '';
-    final String targetType = l.exTrainerConsultType;
-    final String status = switch (request.status) {
-      ConsultationStatus.pending => l.exConsultPendingStatus,
-      ConsultationStatus.accepted => l.exConsultAcceptedStatus,
-      ConsultationStatus.rejected => l.exConsultRejectedStatus,
-    };
-    final String date = MaterialLocalizations.of(
-      context,
-    ).formatMediumDate(request.preferredDate);
-    final Widget? outcome = _outcomeNote(context, l);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _SectionHeader(title: l.exConsultStatusSection),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration(),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.person_outline,
-                  size: 21,
-                  color: FigmaColors.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            targetName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: FigmaColors.ink,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: FigmaColors.primaryA(0.10),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            status,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      // 서버가 트레이너 대상 요청에 헬스장 이름을 주지 않아, 예전에는
-                      // 앱을 다시 열면 "트레이너 상담 · " 로 뒤가 비어 보였다.
-                      targetType,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '$date · ${request.preferredTimeSlot}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.foreground,
-                      ),
-                    ),
-                    if (outcome != null) ...<Widget>[
-                      const SizedBox(height: 10),
-                      outcome,
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
+        _SectionHeader(
+          title: l.exConsultStatusSection,
+          actionLabel: l.exSeeMore,
+          onAction: onSeeAll,
         ),
+        const SizedBox(height: 10),
+        ConsultationRequestCard(request: request),
       ],
-    );
-  }
-
-  /// 처리된 요청에 붙는 결과 안내. 대기 중이면 null. (#473)
-  ///
-  /// 거절은 사유가 본체다 — "거절됨" 배지만 보면 다시 신청해도 되는지, 다른
-  /// 트레이너를 찾아야 하는지 판단할 근거가 없다. 트레이너가 사유를 적지 않았을
-  /// 수도 있으므로 그때는 다음 행동을 안내한다.
-  Widget? _outcomeNote(BuildContext context, AppLocalizations l) {
-    switch (request.status) {
-      case ConsultationStatus.pending:
-        return null;
-      case ConsultationStatus.accepted:
-        return _OutcomeNote(
-          key: const Key('consult-outcome-accepted'),
-          tone: FigmaColors.primary,
-          text: l.exConsultAcceptedGuide,
-        );
-      case ConsultationStatus.rejected:
-        final String? note = request.decisionNote;
-        return _OutcomeNote(
-          key: const Key('consult-outcome-rejected'),
-          tone: FigmaColors.textMuted,
-          label: note == null ? null : l.exConsultRejectedReasonLabel,
-          text: note ?? l.exConsultRejectedNoReason,
-        );
-    }
-  }
-}
-
-/// 상태 카드 하단의 결과 안내 한 덩어리 — 승인 안내 또는 거절 사유.
-class _OutcomeNote extends StatelessWidget {
-  const _OutcomeNote({
-    required this.tone,
-    required this.text,
-    this.label,
-    super.key,
-  });
-
-  final Color tone;
-  final String? label;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: tone.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (label != null) ...<Widget>[
-            Text(
-              label!,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: tone,
-              ),
-            ),
-            const SizedBox(height: 3),
-          ],
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: FigmaColors.textBody,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -523,6 +354,20 @@ class _MyGymCard extends StatelessWidget {
               ),
             ),
           ),
+          // 담당 트레이너가 누구인지 카드에서 한 줄로 읽힌다 (#1187). 예전에는
+          // 예약 패널 문구에서 이름이 스쳐 지나갈 뿐이었다.
+          if (trainer != null) ...<Widget>[
+            const SizedBox(height: 12),
+            GymTrainerLine(
+              key: const Key('gym-trainer-line-mine'),
+              trainer: trainer!,
+              connected: true,
+              // 고를 이유가 아니라 이미 함께 하는 사람이다 — 추천 이유는 뺀다.
+              showReason: false,
+              onDetail: () =>
+                  context.push(AppRoutes.trainerDetailPath(trainer!.id)),
+            ),
+          ],
           // 담당 트레이너가 없으면 예약 패널을 숨긴다. 없는 사람의 빈 시간을
           // 고르고 예약 완료 메시지까지 보게 되는 상태를 막는다.
           if (trainer != null) ...<Widget>[
@@ -597,7 +442,9 @@ class _TrainerChatButton extends StatelessWidget {
       child: OutlinedButton.icon(
         key: const Key('gymTrainerChatButton'),
         onPressed: onTap,
-        icon: const Icon(Icons.chat_bubble_outline, size: 16),
+        // 이 버튼만 카드 안 다른 문구보다 커서 혼자 떠 보였다 — 글자와
+        // 아이콘을 한 단계씩 줄인다. (#1184)
+        icon: const Icon(Icons.chat_bubble_outline, size: 14),
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -649,6 +496,11 @@ class _TrainerChatButton extends StatelessWidget {
         ),
         style: OutlinedButton.styleFrom(
           foregroundColor: FigmaColors.primary,
+          // 앱 서체를 **버리지 않는다** — 여기에 맨 `TextStyle` 을 주면
+          // fontFamily 까지 덮어써 한글이 기본 서체로 떨어진다.
+          textStyle: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontSize: 13),
           minimumSize: const Size(0, 44),
           side: BorderSide(color: FigmaColors.primaryA(0.25)),
           shape: RoundedRectangleBorder(

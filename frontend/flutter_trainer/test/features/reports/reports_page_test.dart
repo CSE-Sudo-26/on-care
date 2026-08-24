@@ -243,9 +243,7 @@ void main() {
     expect(inBox('단백질'), findsOneWidget);
     expect(inBox('지방'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey<String>('compare-diet-sugar')),
-    );
+    await tester.tap(find.byKey(const ValueKey<String>('compare-diet-sugar')));
     await settle(tester);
     expect(inBox('탄수화물'), findsNothing);
 
@@ -429,9 +427,7 @@ void main() {
     expect(find.text('피드백으로 가져오기'), findsNothing);
   });
 
-  testWidgets('주 이동은 리포트 카드 제목 줄에서 하고, 보고 있는 주를 적는다 (#1177)', (
-    tester,
-  ) async {
+  testWidgets('주 이동은 리포트 카드 제목 줄에서 하고, 보고 있는 주를 적는다 (#1177)', (tester) async {
     await openReports(tester);
 
     String rangeOf(DateTime start) {
@@ -474,18 +470,13 @@ void main() {
     expect(arrow(nextWeek).onTap, isNotNull);
   });
 
-  testWidgets('`이번 주` 버튼은 주 이동 줄 안에 있고 이번 주에서는 죽어 있다 (#1177)', (
+  testWidgets('`이번 주` 버튼은 주 이동 줄 안에 있고 이번 주에서는 아예 감춘다 (#1177, #1245)', (
     tester,
   ) async {
     await openReports(tester);
 
     final Finder currentWeek = find.byKey(
       const ValueKey<String>('reports-go-this-week'),
-    );
-    // 스케줄 탭의 `오늘` 처럼 두 화살표 사이에 선다 — 옮기는 대상과 같은 줄이다.
-    expect(
-      find.descendant(of: find.byType(ReportWeekNav), matching: currentWeek),
-      findsOneWidget,
     );
     // 헤더에는 더 이상 없다.
     expect(
@@ -495,14 +486,19 @@ void main() {
       ),
       findsNothing,
     );
-    // 버튼이 생겼다 사라지면 화살표가 좌우로 밀린다 — 자리는 늘 있고, 갈 곳이
-    // 없을 때 회색으로 죽는다.
-    expect(currentWeek, findsOneWidget);
-    expect(tester.widget<ActionButton>(currentWeek).onPressed, isNull);
+    // 스케줄 탭의 `오늘` 처럼 이번 주에는 버튼 자체를 그리지 않는다 — 회색
+    // 비활성이 아니라 미표시다. 자리는 고정폭 슬롯이 대신 지켜, 화살표는
+    // 밀리지 않는다.
+    expect(currentWeek, findsNothing);
 
     await tester.tap(prevWeek);
     await settle(tester);
 
+    // 스케줄 탭의 `오늘` 처럼 두 화살표 사이에 선다 — 옮기는 대상과 같은 줄이다.
+    expect(
+      find.descendant(of: find.byType(ReportWeekNav), matching: currentWeek),
+      findsOneWidget,
+    );
     expect(tester.widget<ActionButton>(currentWeek).onPressed, isNotNull);
     // 비교 카드와 최근 4주 목록에 같은 말이 쓰인다.
     expect(find.text('선택 주'), findsWidgets);
@@ -510,7 +506,7 @@ void main() {
     await tester.tap(currentWeek);
     await settle(tester);
 
-    expect(tester.widget<ActionButton>(currentWeek).onPressed, isNull);
+    expect(currentWeek, findsNothing);
   });
 
   testWidgets('헤더 검색 바가 다른 탭과 같은 인라인 모양이다 (#1177)', (tester) async {
@@ -521,9 +517,9 @@ void main() {
     expect(find.byKey(clientSearchFieldKey), findsOneWidget);
     expect(find.byKey(clientSearchIconKey), findsNothing);
     // 대시보드에서 보는 것과 같은 폭·같은 안내 문구다.
-    final double reportsWidth = tester.getSize(
-      find.byKey(clientSearchFieldKey),
-    ).width;
+    final double reportsWidth = tester
+        .getSize(find.byKey(clientSearchFieldKey))
+        .width;
     expect(find.text('고객·목표·최근 메시지·마지막 루틴 전송일 검색'), findsOneWidget);
 
     await goTo(tester, AppRoutes.dashboard);
@@ -654,9 +650,7 @@ void main() {
     expect(find.text('이지수님 주간 리포트'), findsOneWidget);
   });
 
-  testWidgets('고객 목록은 이름·목표만 적고 이행률 막대는 두지 않는다 (#1177)', (
-    tester,
-  ) async {
+  testWidgets('고객 목록은 이름·목표만 적고 이행률 막대는 두지 않는다 (#1177)', (tester) async {
     await openReports(
       tester,
       extraOverrides: <Override>[
@@ -1120,17 +1114,13 @@ void main() {
     expect(feedbackField, findsOneWidget);
   });
 
-  testWidgets('부제는 리포트를 쓰라고 하지 않고 확인해 전달하라고 말한다 (#1177)', (
-    tester,
-  ) async {
+  testWidgets('부제는 리포트를 쓰라고 하지 않고 확인해 전달하라고 말한다 (#1177)', (tester) async {
     await openReports(tester);
 
     expect(find.text('주간 변화를 확인하고 고객에게 전달하세요'), findsOneWidget);
   });
 
-  testWidgets('식단 추이 막대는 목표를 넘긴 주만 빨강이고 목표 표기는 없다 (#1177)', (
-    tester,
-  ) async {
+  testWidgets('식단 추이 막대는 목표를 넘긴 주만 빨강이고 목표 표기는 없다 (#1177)', (tester) async {
     await openReports(
       tester,
       extraOverrides: <Override>[

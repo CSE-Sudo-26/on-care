@@ -33,6 +33,7 @@ class AppSidebar extends ConsumerWidget {
     super.key,
     required this.currentIndex,
     required this.onSelect,
+    required this.onHome,
     required this.expanded,
     this.profileSelected = false,
     this.onNavigate,
@@ -48,6 +49,9 @@ class AppSidebar extends ConsumerWidget {
 
   /// Invoked with the branch index when a destination is tapped.
   final ValueChanged<int> onSelect;
+
+  /// Opens the dashboard from the product brand.
+  final VoidCallback onHome;
 
   /// Whether labels are shown (false renders the icon rail).
   final bool expanded;
@@ -98,7 +102,13 @@ class AppSidebar extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _Brand(expanded: expanded),
+            _Brand(
+              expanded: expanded,
+              onTap: () {
+                onHome();
+                onNavigate?.call();
+              },
+            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(
@@ -193,9 +203,10 @@ class _NavGroupLabel extends StatelessWidget {
 /// Logo + wordmark. The 트레이너 word keeps the navy primary so the two
 /// On-Care clients read as one service with distinct audiences.
 class _Brand extends StatelessWidget {
-  const _Brand({required this.expanded});
+  const _Brand({required this.expanded, required this.onTap});
 
   final bool expanded;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -216,54 +227,64 @@ class _Brand extends StatelessWidget {
       ),
     );
 
-    return Container(
-      // Taller than the page header so the brand has room to breathe now
-      // that no rule separates it from the nav.
-      height: AppLayout.pageHeaderHeight + AppSpacing.lg,
-      padding: EdgeInsets.symmetric(
-        horizontal: expanded ? AppSpacing.lg : AppSpacing.md,
-      ),
-      alignment: expanded ? Alignment.centerLeft : Alignment.center,
-      child: expanded
-          ? Row(
-              children: <Widget>[
-                logo,
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  // 서비스 이름이 `On-Care 트레…` 가 되면 이 콘솔이 무엇인지가
-                  // 사라진다 — 좁으면 글씨를 줄인다. (#1004)
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text.rich(
-                      TextSpan(
-                        children: <InlineSpan>[
-                          const TextSpan(
-                            text: 'On-Care ',
-                            style: TextStyle(color: AppColors.foreground),
-                          ),
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).dashTitle,
+      child: InkWell(
+        key: const ValueKey<String>('sidebar-brand-home'),
+        onTap: onTap,
+        child: Container(
+          // Taller than the page header so the brand has room to breathe now
+          // that no rule separates it from the nav.
+          height: AppLayout.pageHeaderHeight + AppSpacing.lg,
+          padding: EdgeInsets.symmetric(
+            horizontal: expanded ? AppSpacing.lg : AppSpacing.md,
+          ),
+          alignment: expanded ? Alignment.centerLeft : Alignment.center,
+          child: expanded
+              ? Row(
+                  children: <Widget>[
+                    logo,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      // 서비스 이름이 `On-Care 트레…` 가 되면 이 콘솔이 무엇인지가
+                      // 사라진다 — 좁으면 글씨를 줄인다. (#1004)
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text.rich(
                           TextSpan(
-                            text: AppLocalizations.of(
-                              context,
-                            ).appWordmarkTrainer,
-                            style: const TextStyle(color: AppColors.primary),
+                            children: <InlineSpan>[
+                              const TextSpan(
+                                text: 'On-Care ',
+                                style: TextStyle(color: AppColors.foreground),
+                              ),
+                              TextSpan(
+                                text: AppLocalizations.of(
+                                  context,
+                                ).appWordmarkTrainer,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ],
-                        style: const TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
+                          maxLines: 1,
                         ),
                       ),
-                      maxLines: 1,
                     ),
-                  ),
+                  ],
+                )
+              : Tooltip(
+                  message: AppLocalizations.of(context).appTitle,
+                  child: logo,
                 ),
-              ],
-            )
-          : Tooltip(
-              message: AppLocalizations.of(context).appTitle,
-              child: logo,
-            ),
+        ),
+      ),
     );
   }
 }
@@ -328,9 +349,15 @@ class _NavTile extends StatelessWidget {
               children: <Widget>[
                 icon,
                 if (badgeCount != null && badgeCount! > 0)
+                  // width/height 를 명시해야 Stack 의 느슨한 제약과 무관하게
+                  // _Badge 가 항상 고정 20×20 정원으로 그려진다 — 없으면
+                  // 아이콘 위에 음수 오프셋으로 겹쳐 그리는 이 경계 조건에서
+                  // 배지가 살짝 세로로 긴 타원으로 찌그러진다.
                   Positioned(
                     top: -4,
                     right: -10,
+                    width: 20,
+                    height: 20,
                     child: _Badge(count: badgeCount!),
                   ),
               ],

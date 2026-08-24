@@ -75,9 +75,21 @@ void main() {
 
     await tester.tap(find.text('새 일정'));
     await settle(tester);
-    await tester.tap(find.text('10시').first);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('session-time-range-field')),
+    );
     await settle(tester);
-    await tester.tap(find.text('06시').last);
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('session-time-range-start-input')),
+      '06:00',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('session-time-range-end-input')),
+      '07:00',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('session-time-range-confirm')),
+    );
     await settle(tester);
     await tester.tap(find.text('추가하기'));
     await settle(tester);

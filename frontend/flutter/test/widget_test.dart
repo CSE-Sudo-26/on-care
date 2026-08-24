@@ -368,6 +368,36 @@ void main() {
     );
   });
 
+  testWidgets('coaching sheet keeps the CTA off the bottom edge (#1180)', (
+    tester,
+  ) async {
+    // 홈 인디케이터가 없는 기기·창에서는 SafeArea 가 밀어 주는 것이 없어,
+    // 버튼이 시트 끝에 붙어 잘려 보였다. 여백은 시트가 스스로 둔다.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('home-coaching-banner')),
+    );
+    await tester.pumpAndSettle();
+
+    final double sheetBottom = tester
+        .getBottomRight(find.byKey(const Key('coachingSheet')))
+        .dy;
+    final double buttonBottom = tester
+        .getBottomRight(
+          find.descendant(
+            of: find.byKey(const Key('coachingSheetCta')),
+            matching: find.byType(FilledButton),
+          ),
+        )
+        .dy;
+    expect(sheetBottom - buttonBottom, greaterThanOrEqualTo(16));
+  });
+
   testWidgets('header notification opens the existing full page', (
     tester,
   ) async {
@@ -514,7 +544,7 @@ void main() {
       // 코드에 하드코딩돼 있던 문구들이 이제 로케일별 ARB 로 분리됐다.
       expect(en.coachCardDietTitle, 'Great breakfast — watch lunch sodium');
       expect(ko.coachCardDietTitle, '아침 식단 훌륭, 점심 나트륨 주의');
-      expect(en.coachCardExerciseTitle, 'Upper-body PT session 12 done');
+      expect(en.coachCardExerciseTitle, 'PT session 12 done');
       expect(en.homeAiAdviceTitle, "Today's combined AI advice");
       expect(ko.homeAiAdviceTitle, '오늘의 AI 통합 조언');
       expect(en.homeSodiumExceededBadge, 'Sodium over');

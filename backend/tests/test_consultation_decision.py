@@ -155,7 +155,7 @@ def _request_consultation(client, token: str, *, trainer_id: str) -> str:
         "health_purpose_type": "general",
         "health_purpose_detail": None,
         "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
-        "preferred_time_slot": "evening",
+        "preferred_time_slot": "19:00",
         "message": "상담 부탁드립니다.",
         "data_sharing_consent": True,
     }

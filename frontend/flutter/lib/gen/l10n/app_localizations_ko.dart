@@ -795,6 +795,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exNearbyGyms => '주변 헬스장';
 
   @override
+  String get exGymListCollapse => '목록 접기';
+
+  @override
+  String get exGymListExpand => '목록 펼치기';
+
+  @override
   String get exAiAnalysis => '✦ AI 분석';
 
   @override
@@ -1099,17 +1105,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachCardDietBody =>
-      '아침 식단은 훌륭했지만 점심 짬뽕의 나트륨·당류 부담이 크니, 수분을 충분히 섭취해 나트륨 배출을 도와주세요.';
+      '아침 식단은 균형 있게 잘 챙겼어요. 다만 점심으로 드신 짬뽕은 나트륨과 당류 부담이 있을 수 있으니, 오늘은 물을 충분히 섭취해 주세요. 이후 식사에서는 채소와 단백질을 함께 챙겨 균형을 맞춰보세요.';
 
   @override
   String get coachCardExerciseTag => '운동';
 
   @override
-  String get coachCardExerciseTitle => '12회차 상체 PT 완료';
+  String get coachCardExerciseTitle => '12회차 PT 완료';
 
   @override
   String get coachCardExerciseBody =>
-      '12회차 상체 PT를 잘 마쳤어요! 코치님 피드백대로 어깨 회전근개 스트레칭과 가벼운 유산소로 마무리를 추천합니다.';
+      '12회차 PT를 잘 마쳤어요. 꾸준히 운동을 이어가고 있는 점이 좋습니다. 코치님 피드백대로 어깨 회전근개 스트레칭을 충분히 진행하고, 가벼운 유산소 운동으로 마무리해 주세요. 운동 후에는 무리한 활동보다 충분한 휴식과 수분 섭취로 회복을 도와주세요.';
 
   @override
   String get coachCardWaterTag => '수분';
@@ -1214,6 +1220,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aicQuickRepliesLabel => '이런 걸 물어보세요';
 
   @override
+  String get aicGeneratingReply => '맞춤 답변 생성 중';
+
+  @override
   String get aicQuickReply1 => '오늘 저녁 메뉴 추천해줘';
 
   @override
@@ -1308,16 +1317,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSelectDate => '날짜를 선택해주세요';
 
   @override
+  String get exSelectTime => '시간을 선택해주세요';
+
+  @override
   String get exPreferredTime => '희망 시간대';
-
-  @override
-  String get exTimeMorning => '오전';
-
-  @override
-  String get exTimeAfternoon => '오후';
-
-  @override
-  String get exTimeEvening => '저녁';
 
   @override
   String get exTimeFlexible => '시간 협의';
@@ -1372,6 +1375,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => '상담 요청 현황';
+
+  @override
+  String get exConsultHistoryTitle => '내 상담 요청';
+
+  @override
+  String get exConsultHistoryEmpty => '아직 보낸 상담 요청이 없어요.';
+
+  @override
+  String get exConsultHistoryInProgress => '진행 중';
+
+  @override
+  String get exConsultHistoryPast => '지난 요청';
 
   @override
   String get exConsultRejectedReasonLabel => '거절 사유';
