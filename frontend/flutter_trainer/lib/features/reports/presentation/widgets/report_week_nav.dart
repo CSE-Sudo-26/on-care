@@ -6,7 +6,7 @@ import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 /// 리포트 카드의 주 이동 — `‹ 8월 17일 – 8월 23일 [이번 주] ›`.
 ///
-/// 스케줄 탭의 날짜 줄과 같은 짜임이다(화살표 · 날짜 · 되돌리기 버튼 · 화살표).
+/// 스케줄 탭의 날짜 줄과 같은 짜임이다(화살표 · 날짜 · 화살표 · 되돌리기 버튼).
 /// 두 탭이 같은 동작에 다른 모양을 쓸 이유가 없다.
 ///
 /// 헤더가 아니라 **리포트 카드 제목 줄**에 있다. 옮기는 것은 이 카드의
@@ -14,9 +14,8 @@ import 'package:oncare_trainer/shared/widgets/action_button.dart';
 /// 검색 바의 폭을 먹어 다른 탭과 다른 모양으로 접혔다(#1177).
 ///
 /// 이 줄은 카드 제목(`Expanded`) 오른쪽에 자기 폭만큼만 차지하고 붙는다 —
-/// 즉 이 위젯 **전체 폭이 곧 왼쪽 화살표의 위치**다. 날짜와 `이번 주` 자리에
-/// 고정폭을 주지 않으면 날짜 글자 수가 바뀌거나 버튼이 나타났다 사라질 때마다
-/// 전체 폭이 흔들려 왼쪽 화살표가 좌우로 밀린다(#1245).
+/// 날짜·화살표 묶음 양옆에 `이번 주` 버튼과 같은 폭을 둔다. 버튼 표시 여부와
+/// 무관하게 탐색 묶음의 중심이 이 위젯 중심에 고정된다(#1245, #1295).
 class ReportWeekNav extends StatelessWidget {
   /// Creates the week nav.
   const ReportWeekNav({
@@ -55,6 +54,13 @@ class ReportWeekNav extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
+        // 오른쪽 `이번 주` 자리와 같은 폭을 먼저 비워 날짜·화살표 묶음이
+        // 버튼 유무와 관계없이 전체 헤더의 정중앙에 선다(#1295).
+        const SizedBox(
+          key: ValueKey<String>('report-week-balance-slot'),
+          width: _thisWeekSlot,
+        ),
+        const SizedBox(width: _gap),
         _Chevron(
           navKey: const ValueKey<String>('report-week-prev'),
           icon: Icons.chevron_left,
@@ -80,6 +86,13 @@ class ReportWeekNav extends StatelessWidget {
           ),
         ),
         const SizedBox(width: _gap),
+        _Chevron(
+          navKey: const ValueKey<String>('report-week-next'),
+          icon: Icons.chevron_right,
+          tooltip: l.a11yNextWeek,
+          onTap: onNext,
+        ),
+        const SizedBox(width: _gap),
         // 스케줄 탭의 `오늘` 과 같은 자리다. 헤더에 있던 때에는 옮기는
         // 대상(리포트)과 버튼이 서로 다른 줄에 있어, 무엇을 이번 주로
         // 되돌리는지 자리로 이어지지 않았다(#1177).
@@ -99,13 +112,6 @@ class ReportWeekNav extends StatelessWidget {
                     ),
                   ),
                 ),
-        ),
-        const SizedBox(width: _gap),
-        _Chevron(
-          navKey: const ValueKey<String>('report-week-next'),
-          icon: Icons.chevron_right,
-          tooltip: l.a11yNextWeek,
-          onTap: onNext,
         ),
       ],
     );
