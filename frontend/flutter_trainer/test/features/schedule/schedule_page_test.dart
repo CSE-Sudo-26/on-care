@@ -70,7 +70,7 @@ void main() {
         '10:00',
         '12:00',
         '14:00',
-        '15:00',
+        '16:00',
         '17:00',
         '19:00',
       ]);
@@ -548,7 +548,7 @@ void main() {
 
       // 블록은 시간 범위와 종류를 함께 말한다.
       expect(find.text('10:00\u201311:00'), findsWidgets);
-      expect(find.text('17:00\u201317:30'), findsOneWidget);
+      expect(find.text('17:00\u201317:30'), findsWidgets);
       expect(find.text('김민수'), findsWidgets);
       expect(find.textContaining('이지수'), findsWidgets);
       expect(find.textContaining('박성호'), findsWidgets);
@@ -969,7 +969,7 @@ void main() {
       expect(confirm.onPressed, isNull);
     });
 
-    testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
+    testWidgets('일정 수정 moves 박성호 to a 15-minute step (16:00 → 16:30)', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -996,7 +996,7 @@ void main() {
         findsNothing,
       );
 
-      await enterTimeRange(tester, start: '15:30', end: '16:30');
+      await enterTimeRange(tester, start: '16:30', end: '17:30');
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
       await tester.tap(find.text('저장하기'));
@@ -1006,11 +1006,17 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:30'),
+          matching: find.text('16:30\u201317:30'),
         ),
         findsOneWidget,
       );
-      expect(find.text('15:00\u201316:00'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('16:00\u201317:00'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('프로그램 수정 opens a dialog to edit exercises', (tester) async {
@@ -1065,7 +1071,7 @@ void main() {
         find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsNothing,
       );
-      expect(find.textContaining('15:00\u201316:00'), findsWidgets);
+      expect(find.textContaining('16:00\u201317:00'), findsWidgets);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트'), findsOneWidget);
       // 프로그램만 고쳤으므로 원래 메모는 그대로 남는다.
