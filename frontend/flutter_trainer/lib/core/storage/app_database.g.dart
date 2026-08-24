@@ -421,6 +421,24 @@ class $TrainerClientsTable extends TrainerClients
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _genderMeta = const VerificationMeta('gender');
+  @override
+  late final GeneratedColumn<String> gender = GeneratedColumn<String>(
+    'gender',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ageMeta = const VerificationMeta('age');
+  @override
+  late final GeneratedColumn<int> age = GeneratedColumn<int>(
+    'age',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -442,6 +460,8 @@ class $TrainerClientsTable extends TrainerClients
     caloriesWeekJson,
     sugarWeekJson,
     sortOrder,
+    gender,
+    age,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -609,6 +629,18 @@ class $TrainerClientsTable extends TrainerClients
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('gender')) {
+      context.handle(
+        _genderMeta,
+        gender.isAcceptableOrUnknown(data['gender']!, _genderMeta),
+      );
+    }
+    if (data.containsKey('age')) {
+      context.handle(
+        _ageMeta,
+        age.isAcceptableOrUnknown(data['age']!, _ageMeta),
+      );
+    }
     return context;
   }
 
@@ -694,6 +726,14 @@ class $TrainerClientsTable extends TrainerClients
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      gender: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gender'],
+      ),
+      age: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}age'],
+      ),
     );
   }
 
@@ -724,6 +764,18 @@ class TrainerClientRow extends DataClass
   final String caloriesWeekJson;
   final String sugarWeekJson;
   final int sortOrder;
+
+  /// 회원이 자기 프로필에 등록한 성별(`male`/`female`/`other`). 트레이너가
+  /// 신규 등록 시 입력하는 값이 아니다 — 회원 ID로 연결할 때 회원의 실제
+  /// 프로필에서 그대로 옮겨 온다. 비어 있으면 [TrainerClient.rosterGender] 가
+  /// 예전 행을 위한 표시용 폴백을 쓴다(#960) — 새로 연결되는 회원은 이 값이
+  /// 항상 채워지므로 폴백을 타지 않는다.
+  final String? gender;
+
+  /// 회원의 실제 나이 — 연결 시점에 회원 프로필의 생년월일로 계산해 저장한다.
+  /// null 이면 [TrainerClient.rosterAge] 가 예전 행을 위한 표시용 폴백을
+  /// 쓴다. 트레이너가 직접 입력하는 값이 아니다.
+  final int? age;
   const TrainerClientRow({
     required this.id,
     required this.name,
@@ -744,6 +796,8 @@ class TrainerClientRow extends DataClass
     required this.caloriesWeekJson,
     required this.sugarWeekJson,
     required this.sortOrder,
+    this.gender,
+    this.age,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -767,6 +821,12 @@ class TrainerClientRow extends DataClass
     map['calories_week_json'] = Variable<String>(caloriesWeekJson);
     map['sugar_week_json'] = Variable<String>(sugarWeekJson);
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || gender != null) {
+      map['gender'] = Variable<String>(gender);
+    }
+    if (!nullToAbsent || age != null) {
+      map['age'] = Variable<int>(age);
+    }
     return map;
   }
 
@@ -791,6 +851,10 @@ class TrainerClientRow extends DataClass
       caloriesWeekJson: Value(caloriesWeekJson),
       sugarWeekJson: Value(sugarWeekJson),
       sortOrder: Value(sortOrder),
+      gender: gender == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gender),
+      age: age == null && nullToAbsent ? const Value.absent() : Value(age),
     );
   }
 
@@ -821,6 +885,8 @@ class TrainerClientRow extends DataClass
       caloriesWeekJson: serializer.fromJson<String>(json['caloriesWeekJson']),
       sugarWeekJson: serializer.fromJson<String>(json['sugarWeekJson']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      gender: serializer.fromJson<String?>(json['gender']),
+      age: serializer.fromJson<int?>(json['age']),
     );
   }
   @override
@@ -846,6 +912,8 @@ class TrainerClientRow extends DataClass
       'caloriesWeekJson': serializer.toJson<String>(caloriesWeekJson),
       'sugarWeekJson': serializer.toJson<String>(sugarWeekJson),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'gender': serializer.toJson<String?>(gender),
+      'age': serializer.toJson<int?>(age),
     };
   }
 
@@ -869,6 +937,8 @@ class TrainerClientRow extends DataClass
     String? caloriesWeekJson,
     String? sugarWeekJson,
     int? sortOrder,
+    Value<String?> gender = const Value.absent(),
+    Value<int?> age = const Value.absent(),
   }) => TrainerClientRow(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -889,6 +959,8 @@ class TrainerClientRow extends DataClass
     caloriesWeekJson: caloriesWeekJson ?? this.caloriesWeekJson,
     sugarWeekJson: sugarWeekJson ?? this.sugarWeekJson,
     sortOrder: sortOrder ?? this.sortOrder,
+    gender: gender.present ? gender.value : this.gender,
+    age: age.present ? age.value : this.age,
   );
   TrainerClientRow copyWithCompanion(TrainerClientsCompanion data) {
     return TrainerClientRow(
@@ -925,6 +997,8 @@ class TrainerClientRow extends DataClass
           ? data.sugarWeekJson.value
           : this.sugarWeekJson,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      gender: data.gender.present ? data.gender.value : this.gender,
+      age: data.age.present ? data.age.value : this.age,
     );
   }
 
@@ -949,13 +1023,15 @@ class TrainerClientRow extends DataClass
           ..write('sodiumWeekJson: $sodiumWeekJson, ')
           ..write('caloriesWeekJson: $caloriesWeekJson, ')
           ..write('sugarWeekJson: $sugarWeekJson, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('gender: $gender, ')
+          ..write('age: $age')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     avatar,
@@ -975,7 +1051,9 @@ class TrainerClientRow extends DataClass
     caloriesWeekJson,
     sugarWeekJson,
     sortOrder,
-  );
+    gender,
+    age,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -998,7 +1076,9 @@ class TrainerClientRow extends DataClass
           other.sodiumWeekJson == this.sodiumWeekJson &&
           other.caloriesWeekJson == this.caloriesWeekJson &&
           other.sugarWeekJson == this.sugarWeekJson &&
-          other.sortOrder == this.sortOrder);
+          other.sortOrder == this.sortOrder &&
+          other.gender == this.gender &&
+          other.age == this.age);
 }
 
 class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
@@ -1021,6 +1101,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
   final Value<String> caloriesWeekJson;
   final Value<String> sugarWeekJson;
   final Value<int> sortOrder;
+  final Value<String?> gender;
+  final Value<int?> age;
   final Value<int> rowid;
   const TrainerClientsCompanion({
     this.id = const Value.absent(),
@@ -1042,6 +1124,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     this.caloriesWeekJson = const Value.absent(),
     this.sugarWeekJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.gender = const Value.absent(),
+    this.age = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TrainerClientsCompanion.insert({
@@ -1064,6 +1148,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     this.caloriesWeekJson = const Value.absent(),
     this.sugarWeekJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.gender = const Value.absent(),
+    this.age = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1096,6 +1182,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Expression<String>? caloriesWeekJson,
     Expression<String>? sugarWeekJson,
     Expression<int>? sortOrder,
+    Expression<String>? gender,
+    Expression<int>? age,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1119,6 +1207,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       if (caloriesWeekJson != null) 'calories_week_json': caloriesWeekJson,
       if (sugarWeekJson != null) 'sugar_week_json': sugarWeekJson,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (gender != null) 'gender': gender,
+      if (age != null) 'age': age,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1143,6 +1233,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Value<String>? caloriesWeekJson,
     Value<String>? sugarWeekJson,
     Value<int>? sortOrder,
+    Value<String?>? gender,
+    Value<int?>? age,
     Value<int>? rowid,
   }) {
     return TrainerClientsCompanion(
@@ -1165,6 +1257,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       caloriesWeekJson: caloriesWeekJson ?? this.caloriesWeekJson,
       sugarWeekJson: sugarWeekJson ?? this.sugarWeekJson,
       sortOrder: sortOrder ?? this.sortOrder,
+      gender: gender ?? this.gender,
+      age: age ?? this.age,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1229,6 +1323,12 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (gender.present) {
+      map['gender'] = Variable<String>(gender.value);
+    }
+    if (age.present) {
+      map['age'] = Variable<int>(age.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1257,6 +1357,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
           ..write('caloriesWeekJson: $caloriesWeekJson, ')
           ..write('sugarWeekJson: $sugarWeekJson, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('gender: $gender, ')
+          ..write('age: $age, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5656,6 +5758,8 @@ typedef $$TrainerClientsTableCreateCompanionBuilder =
       Value<String> caloriesWeekJson,
       Value<String> sugarWeekJson,
       Value<int> sortOrder,
+      Value<String?> gender,
+      Value<int?> age,
       Value<int> rowid,
     });
 typedef $$TrainerClientsTableUpdateCompanionBuilder =
@@ -5679,6 +5783,8 @@ typedef $$TrainerClientsTableUpdateCompanionBuilder =
       Value<String> caloriesWeekJson,
       Value<String> sugarWeekJson,
       Value<int> sortOrder,
+      Value<String?> gender,
+      Value<int?> age,
       Value<int> rowid,
     });
 
@@ -5783,6 +5889,16 @@ class $$TrainerClientsTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gender => $composableBuilder(
+    column: $table.gender,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get age => $composableBuilder(
+    column: $table.age,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5890,6 +6006,16 @@ class $$TrainerClientsTableOrderingComposer
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get gender => $composableBuilder(
+    column: $table.gender,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get age => $composableBuilder(
+    column: $table.age,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TrainerClientsTableAnnotationComposer
@@ -5971,6 +6097,12 @@ class $$TrainerClientsTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get gender =>
+      $composableBuilder(column: $table.gender, builder: (column) => column);
+
+  GeneratedColumn<int> get age =>
+      $composableBuilder(column: $table.age, builder: (column) => column);
 }
 
 class $$TrainerClientsTableTableManager
@@ -6029,6 +6161,8 @@ class $$TrainerClientsTableTableManager
                 Value<String> caloriesWeekJson = const Value.absent(),
                 Value<String> sugarWeekJson = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> gender = const Value.absent(),
+                Value<int?> age = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerClientsCompanion(
                 id: id,
@@ -6050,6 +6184,8 @@ class $$TrainerClientsTableTableManager
                 caloriesWeekJson: caloriesWeekJson,
                 sugarWeekJson: sugarWeekJson,
                 sortOrder: sortOrder,
+                gender: gender,
+                age: age,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6073,6 +6209,8 @@ class $$TrainerClientsTableTableManager
                 Value<String> caloriesWeekJson = const Value.absent(),
                 Value<String> sugarWeekJson = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> gender = const Value.absent(),
+                Value<int?> age = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerClientsCompanion.insert(
                 id: id,
@@ -6094,6 +6232,8 @@ class $$TrainerClientsTableTableManager
                 caloriesWeekJson: caloriesWeekJson,
                 sugarWeekJson: sugarWeekJson,
                 sortOrder: sortOrder,
+                gender: gender,
+                age: age,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

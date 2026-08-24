@@ -947,6 +947,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myDefaultUserName => '사용자';
 
   @override
+  String get myMemberIdLabel => '내 회원 ID';
+
+  @override
+  String get myMemberIdCopied => '회원 ID를 복사했어요';
+
+  @override
   String get mySettingsTitle => '설정';
 
   @override

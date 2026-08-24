@@ -534,6 +534,8 @@
   "exKakaoMapArea": "Kakao Map area",
   "myTabTitle": "MY",
   "myDefaultUserName": "User",
+  "myMemberIdLabel": "My member ID",
+  "myMemberIdCopied": "Member ID copied",
   "mySettingsTitle": "Settings",
   "myProfileTitle": "My Profile",
   "myNotifTitle": "Notification Settings",
