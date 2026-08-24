@@ -1,67 +1,165 @@
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 
-/// 트레이너가 회원에게 보내는 담당 요청. (#919)
+/// 트레이너가 회원 ID로 회원을 찾아 담당으로 연결하는 흐름. (#919)
 ///
 /// 지금까지 고객이 생기는 경로는 회원이 보낸 상담 요청을 트레이너가 수락하는
 /// 하나뿐이라, 센터에서 먼저 등록·결제를 마친 회원을 콘솔에서 잡을 수 없었다.
+/// 트레이너가 성별·나이 같은 인적 사항을 직접 입력해 새 고객을 만드는 대신,
+/// 회원이 이미 자기 앱에 등록해 둔 프로필을 회원 ID로 찾아 연결한다 — 신체
+/// 정보의 source of truth는 언제나 회원 본인이다.
 ///
-/// **여기서 보내는 것은 요청이지 등록이 아니다.** 담당 관계는 상대의 식단·건강
-/// 기록을 여는 권한이라, 회원이 회원 앱에서 수락해야 명단에 나타난다. 화면도
-/// 그렇게 말해야 한다 — 요청을 보낸 트레이너가 고객이 생겼다고 읽으면, 오지
-/// 않는 회원을 기다리게 된다.
+/// **실 API 에서 [invite] 가 만드는 것은 요청이지 등록이 아니다.** 담당 관계는
+/// 상대의 식단·건강 기록을 여는 권한이라, 회원이 회원 앱에서 수락해야 명단에
+/// 나타난다 — [connectsImmediately] 가 `false`. 데모는 답할 회원 백엔드가
+/// 없으므로 회원 ID가 확인되면 그 자리에서 연결한다 — [connectsImmediately]
+/// 가 `true`.
 ///
 /// 두 구현이 [clientInviteRepositoryProvider] 뒤에 있고 [AppConfig.useMockApi]
 /// 로 갈린다.
 abstract interface class ClientInviteRepository {
-  /// 이 빌드에서 담당 요청을 보낼 수 있는가. 데모에서는 진입점을 감춘다 —
-  /// 요청을 받을 회원 백엔드가 없어, 보내도 아무 데도 닿지 않는다.
+  /// 이 빌드에서 회원 ID로 회원을 찾아 연결할 수 있는가.
   bool get supportsInvites;
 
-  /// 이메일 **완전 일치**로 회원을 찾는다. 없으면 [NotFoundError].
-  Future<MemberLookup> lookup(String email);
+  /// [invite] 가 호출 즉시 담당 링크를 만드는가(데모), 아니면 회원의 수락을
+  /// 기다리는 요청만 보내는가(실 API). 화면 문구·성공 처리가 이 값으로
+  /// 갈린다.
+  bool get connectsImmediately;
 
-  /// 담당 요청을 보낸다. 이미 담당이 있거나 이미 보냈으면 [ValidationError]
-  /// (서버 문구를 그대로 싣는다 — 어느 쪽인지는 서버만 안다).
+  /// 회원 ID(`User.id`) **완전 일치**로 회원을 찾는다. 없으면 [NotFoundError].
+  ///
+  /// 이메일도 성별·나이도 아니다 — 회원이 자기 앱 MY 탭에서 확인할 수 있는
+  /// 그 계정의 고유 식별자다.
+  Future<MemberLookup> lookup(String memberId);
+
+  /// 회원을 담당으로 연결한다. 이미 담당이 있거나 이미 보냈으면
+  /// [ValidationError](서버 문구를 그대로 싣는다 — 어느 쪽인지는 서버만 안다).
   Future<ClientInvite> invite(String memberId, {String? message});
 
-  /// 내가 보낸 요청. `status` 는 `pending` 또는 `all`.
+  /// 내가 보낸 요청. `status` 는 `pending` 또는 `all`. [connectsImmediately] 가
+  /// `true` 인 소스는 대기할 요청이 없으므로 항상 빈 목록이다.
   Future<List<ClientInvite>> listSent({String status = 'pending'});
 
-  /// 보낸 요청을 거둬들인다.
+  /// 보낸 요청을 거둬들인다. [connectsImmediately] 가 `true` 인 소스에는
+  /// 거둘 대기 요청이 없다.
   Future<void> cancel(String inviteId);
 }
 
-/// 데모: 요청을 받을 회원 백엔드가 없다.
-///
-/// 읽기는 빈 결과로 성공시켜 딥링크나 테스트가 오류가 아닌 빈 화면을 보게 하고,
-/// 쓰기는 조용히 성공시키지 않는다 — 데모에서 눌러 성공한 것처럼 보이면 실제로
-/// 회원에게 닿았다고 읽힌다.
+/// 데모: 답할 회원 백엔드가 없는 대신, 회원 ID가 확인되면 그 자리에서
+/// 로컬 로스터에 연결한다 — [demoProspectiveMembers] 가 "아직 연결되지 않은
+/// 회원", [demoAlreadyLinkedMemberId] 가 "이미 연결된 회원" 시나리오다.
 class DemoClientInviteRepository implements ClientInviteRepository {
-  const DemoClientInviteRepository();
+  DemoClientInviteRepository(this._db);
+
+  final AppDatabase _db;
 
   @override
-  bool get supportsInvites => false;
+  bool get supportsInvites => true;
 
   @override
-  Future<MemberLookup> lookup(String email) async =>
-      throw const NotFoundError();
+  bool get connectsImmediately => true;
 
   @override
-  Future<ClientInvite> invite(String memberId, {String? message}) async =>
+  Future<MemberLookup> lookup(String memberId) async {
+    final String normalized = memberId.trim().toLowerCase();
+    if (normalized.isEmpty) throw const NotFoundError();
+
+    if (normalized == demoAlreadyLinkedMemberId) {
+      final row = await (_db.select(
+        _db.trainerClients,
+      )..where((t) => t.id.equals(demoAlreadyLinkedClientId))).getSingleOrNull();
+      if (row != null) return _linkedLookup(normalized, row.name);
+    }
+
+    final prospect = findDemoProspectiveMemberById(normalized);
+    if (prospect == null) throw const NotFoundError();
+
+    // 이번 데모 세션에서 이미 연결한 적이 있으면(같은 회원 ID를 다시 찾는
+    // 경우) "이미 연결됨" 으로 답한다 — 중복 연결을 여기서부터 막는다.
+    final existing = await (_db.select(
+      _db.trainerClients,
+    )..where((t) => t.id.equals(prospect.id))).getSingleOrNull();
+    if (existing != null) return _linkedLookup(existing.id, existing.name);
+
+    return MemberLookup(
+      memberId: prospect.id,
+      name: prospect.name,
+      hasTrainer: false,
+      coachedByMe: false,
+      invitePending: false,
+    );
+  }
+
+  MemberLookup _linkedLookup(String memberId, String name) => MemberLookup(
+    memberId: memberId,
+    name: name,
+    hasTrainer: true,
+    coachedByMe: true,
+    invitePending: false,
+  );
+
+  @override
+  Future<ClientInvite> invite(String memberId, {String? message}) async {
+    final prospect = findDemoProspectiveMemberById(memberId);
+    if (prospect == null) throw const NotFoundError();
+
+    final DateTime now = nowKst();
+    try {
+      await _db
+          .into(_db.trainerClients)
+          .insert(
+            TrainerClientsCompanion.insert(
+              id: prospect.id,
+              name: prospect.name,
+              avatar: String.fromCharCode(prospect.name.runes.first),
+              goal: prospect.goal,
+              lastMessage: '아직 대화가 없어요',
+              lastTime: '-',
+              active: const Value(true),
+              caloriesToday: 0,
+              sodiumMg: 0,
+              sugarG: 0,
+              lastRoutine: '-',
+              weekCompletionJson: '[0,0,0,0,0,0,0]',
+              // 회원이 이미 등록해 둔 실제 값 — 트레이너가 지금 입력하는
+              // 값이 아니다.
+              gender: Value(prospect.gender),
+              age: Value(prospect.ageOn(now)),
+              sortOrder: Value(now.millisecondsSinceEpoch),
+            ),
+          );
+    } catch (_) {
+      // 같은 id 로 이미 연결된 행이 있는 경우 — 두 번 연결이 아니라 "이미
+      // 연결됨" 으로 읽혀야 한다. lookup 이 먼저 걸러내므로 정상 경로에서는
+      // 일어나지 않고, 방어적으로만 남긴다.
       throw const ValidationError();
+    }
+
+    return ClientInvite(
+      id: 'demo-link-${prospect.id}',
+      memberId: prospect.id,
+      memberName: prospect.name,
+      memberEmail: '',
+      status: ClientInviteStatus.accepted,
+      createdAt: now,
+    );
+  }
 
   @override
   Future<List<ClientInvite>> listSent({String status = 'pending'}) async =>
       const <ClientInvite>[];
 
   @override
-  Future<void> cancel(String inviteId) async => throw const ValidationError();
+  Future<void> cancel(String inviteId) async {}
 }
 
 /// 실 백엔드 구현.
@@ -74,11 +172,14 @@ class DioClientInviteRepository implements ClientInviteRepository {
   bool get supportsInvites => true;
 
   @override
-  Future<MemberLookup> lookup(String email) async {
+  bool get connectsImmediately => false;
+
+  @override
+  Future<MemberLookup> lookup(String memberId) async {
     try {
       final res = await _dio.get<Map<String, Object?>>(
         '/trainer/member-lookup',
-        queryParameters: <String, Object?>{'email': email.trim()},
+        queryParameters: <String, Object?>{'member_id': memberId.trim()},
       );
       final data = res.data;
       if (data == null) throw const ServerError();
@@ -160,7 +261,7 @@ class DioClientInviteRepository implements ClientInviteRepository {
 /// 현재 모드에 맞는 저장소.
 final clientInviteRepositoryProvider = Provider<ClientInviteRepository>((ref) {
   if (ref.watch(appConfigProvider).useMockApi) {
-    return const DemoClientInviteRepository();
+    return DemoClientInviteRepository(ref.watch(appDatabaseProvider));
   }
   return DioClientInviteRepository(ref.watch(dioProvider));
 }, name: 'clientInviteRepository');

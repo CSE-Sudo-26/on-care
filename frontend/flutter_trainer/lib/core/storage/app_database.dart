@@ -48,6 +48,18 @@ class TrainerClients extends Table {
   TextColumn get sugarWeekJson => text().withDefault(const Constant('[]'))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
+  /// 회원이 자기 프로필에 등록한 성별(`male`/`female`/`other`). 트레이너가
+  /// 신규 등록 시 입력하는 값이 아니다 — 회원 ID로 연결할 때 회원의 실제
+  /// 프로필에서 그대로 옮겨 온다. 비어 있으면 [TrainerClient.rosterGender] 가
+  /// 예전 행을 위한 표시용 폴백을 쓴다(#960) — 새로 연결되는 회원은 이 값이
+  /// 항상 채워지므로 폴백을 타지 않는다.
+  TextColumn get gender => text().nullable()();
+
+  /// 회원의 실제 나이 — 연결 시점에 회원 프로필의 생년월일로 계산해 저장한다.
+  /// null 이면 [TrainerClient.rosterAge] 가 예전 행을 위한 표시용 폴백을
+  /// 쓴다. 트레이너가 직접 입력하는 값이 아니다.
+  IntColumn get age => integer().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
@@ -288,7 +300,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -418,6 +430,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 16) {
         await m.addColumn(clientDietEntries, clientDietEntries.timeLabel);
         await m.addColumn(clientDietEntries, clientDietEntries.foodsJson);
+      }
+      // v17: 회원 ID로 연결한 고객의 실제 성별·나이(신규 고객 등록 피드백).
+      // nullable 이라 기존 행은 값 없이 그대로 읽히고, 표시는 예전처럼
+      // roster 폴백을 쓴다 — 이 컬럼은 새로 연결되는 회원만 채운다.
+      if (from < 17) {
+        await m.addColumn(trainerClients, trainerClients.gender);
+        await m.addColumn(trainerClients, trainerClients.age);
       }
     },
   );
