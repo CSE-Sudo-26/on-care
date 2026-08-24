@@ -471,8 +471,11 @@ void main() {
         );
         expect(attached, isTrue);
 
+        // 오늘 자리만 센다 — 시드는 이번 주 다른 요일에도 수업을 둔다(#1210).
         final rows = await db.select(db.trainerScheduleEntries).get();
-        final his = rows.where((r) => r.clientName == '박성호').toList();
+        final his = rows
+            .where((r) => r.clientName == '박성호' && r.date == ymd(nowKst()))
+            .toList();
         expect(his.length, 1); // no extra slot booked
         expect(his.single.programJson, contains('저강도 유산소'));
       },
@@ -495,7 +498,9 @@ void main() {
         expect(attached, isFalse);
 
         final rows = await db.select(db.trainerScheduleEntries).get();
-        final his = rows.where((r) => r.clientName == '김민수').toList();
+        final his = rows
+            .where((r) => r.clientName == '김민수' && r.date == ymd(nowKst()))
+            .toList();
         expect(his.length, 2);
         final booked = his.firstWhere((r) => r.status == '예정');
         expect(booked.programJson, contains('코어 강화'));
@@ -1176,8 +1181,11 @@ void main() {
             .watchDate(tomorrow)
             .first,
       );
-      expect(rows!.single.clientName, '김민수');
-      expect(rows.single.program, isNotEmpty);
+      // 시드가 이번 주를 채우므로(#1210) 내일에도 다른 수업이 있을 수 있다 —
+      // 방금 등록한 것만 골라 본다.
+      final booked = rows!.where((s) => s.clientName == '김민수').toList();
+      expect(booked, hasLength(1));
+      expect(booked.single.program, isNotEmpty);
 
       // Drain the 3s confirmation timer so it isn't left pending.
       await tester.pump(const Duration(seconds: 3));

@@ -302,7 +302,8 @@ void main() {
 
     test('watchDate separates timelines per calendar day', () async {
       final repo = DriftScheduleRepository(db);
-      final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
+      // 시드는 이번 주를 채우므로(#1210) 빈 날은 그 밖에서 잡는다.
+      final tomorrow = ymd(nowKst().add(const Duration(days: 14)));
 
       expect(await repo.watchDate(tomorrow).first, isEmpty);
 
@@ -347,7 +348,8 @@ void main() {
 
     test('completeSession refuses a future-dated session', () async {
       final repo = DriftScheduleRepository(db);
-      final tomorrow = nowKst().add(const Duration(days: 1));
+      // 시드가 채우지 않는 날 — 그 날의 세션이 하나여야 `single` 이 의미를 갖는다.
+      final tomorrow = nowKst().add(const Duration(days: 14));
       await repo.addSession(
         date: ymd(tomorrow),
         clientName: '이지수',
@@ -414,13 +416,34 @@ void main() {
 
     /// [wide] 가 false 면 부르는 쪽이 잡아 둔 화면 크기를 그대로 쓴다 — 좁은
     /// 폭 회귀를 보는 테스트가 여기서 다시 넓어지면 아무것도 재지 못한다.
-    Future<void> openSchedule(WidgetTester tester, {bool wide = true}) async {
+    Future<ProviderContainer> openSchedule(
+      WidgetTester tester, {
+      bool wide = true,
+    }) async {
       if (wide) useWideConsole(tester);
-      await pumpTrainerApp(
+      return pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
       );
+    }
+
+    /// [day] 의 일정을 지워 빈 날로 만든다.
+    ///
+    /// 시드는 이번 주 월~일을 모두 채운다(#1210). "일정이 없는 날" 흐름을 보는
+    /// 테스트는 그 조건을 직접 만든다 — 어느 요일에 돌려도 같아야 한다.
+    Future<void> clearDay(
+      WidgetTester tester,
+      ProviderContainer container,
+      DateTime day,
+    ) async {
+      final AppDatabase db = container.read(appDatabaseProvider);
+      await tester.runAsync(
+        () => (db.delete(db.trainerScheduleEntries)
+              ..where((t) => t.date.equals(ymd(day))))
+            .go(),
+      );
+      await settle(tester);
     }
 
     /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
@@ -468,7 +491,7 @@ void main() {
         )
         .message!;
 
-    /// 이번 주 안에서 오늘이 아닌 날 — 시드가 오늘만 채우므로 빈 날이다.
+    /// 이번 주 안에서 오늘이 아닌 날. 시드가 채운 뒤라 [clearDay] 로 비운다.
     DateTime otherDayThisWeek() {
       final today = todayKst();
       final monday = today.subtract(Duration(days: today.weekday - 1));
@@ -793,10 +816,11 @@ void main() {
     });
 
     testWidgets('계획이 없는 1:1 PT 는 프로그램 안내를 보여 준다', (tester) async {
-      await openSchedule(tester);
+      final container = await openSchedule(tester);
 
-      // 시드의 예정 PT 에는 모두 계획이 있다. 비어 있는 날에 하나 만들면 그
-      // 세션이 곧바로 상세 패널에 열린다 — 그 날의 유일한 세션이라서다.
+      // 시드의 예정 PT 에는 모두 계획이 있다. 비운 날에 하나 만들면 그 세션이
+      // 곧바로 상세 패널에 열린다 — 그 날의 유일한 세션이라서다.
+      await clearDay(tester, container, otherDayThisWeek());
       await tester.tap(
         find.byKey(ValueKey<String>('schedule-day-${ymd(otherDayThisWeek())}')),
       );
@@ -1311,13 +1335,14 @@ void main() {
     });
 
     testWidgets('요일 칸을 누르면 그 날을 보고, 오늘 로 돌아온다', (tester) async {
-      await openSchedule(tester);
+      final container = await openSchedule(tester);
       expect(find.text('김민수'), findsWidgets);
       // 오늘을 보고 있으면 `오늘` 은 눌러도 달라질 것이 없어 뜨지 않는다.
       expect(find.text('오늘'), findsNothing);
 
-      // 같은 주의 다른 날 — 시드는 오늘만 채우므로 비어 있다.
+      // 같은 주의 다른 날을 비워, 일정이 없는 날의 안내를 본다.
       final other = otherDayThisWeek();
+      await clearDay(tester, container, other);
       await tester.tap(
         find.byKey(ValueKey<String>('schedule-day-${ymd(other)}')),
       );
