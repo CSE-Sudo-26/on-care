@@ -132,7 +132,9 @@ class ClientReportView extends StatelessWidget {
         // 운동과 식단을 카드로 나눈다. 예전에는 나트륨 추이 그래프가 '요일별
         // 운동 이행률' 카드 안에 있어 제목과 내용이 서로 다른 말을 했다(#754).
         SectionCard(
-          title: l.reportsCompletionByDay,
+          // 막대가 이행률에서 소모 칼로리로 바뀌면서 제목도 따라간다(#1289).
+          // 이행률은 사라지지 않고 제목 줄의 요약 칩과 4주 추이로 남는다.
+          title: l.reportsBurnByDay,
           // 한 주를 요약하는 세 값은 제목 줄에 둔다. 카드 안에서 큰 숫자로
           // 다시 보여 주면 그래프가 아래로 밀린다(#754 의 반복).
           trailing: _WeekSummaryChips(report: report),
@@ -203,7 +205,9 @@ class _WeekSummaryChips extends StatelessWidget {
       runSpacing: AppSpacing.xs,
       alignment: WrapAlignment.end,
       children: <Widget>[
-        if (avg != null) _Chip(label: l.reportsAverageChip('$avg%')),
+        // 카드 제목이 소모 칼로리를 말하게 됐으므로(#1289) 이 칩이 무엇의
+        // 평균인지 스스로 밝힌다 — `평균 87%` 만으로는 칼로리의 평균으로 읽힌다.
+        if (avg != null) _Chip(label: l.reportsAdherenceChip('$avg%')),
         if (logged > 0) _Chip(label: l.reportsRecordedDays(logged)),
       ],
     );
