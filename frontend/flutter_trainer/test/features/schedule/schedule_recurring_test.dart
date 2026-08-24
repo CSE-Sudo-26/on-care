@@ -200,8 +200,9 @@ void main() {
         findsOneWidget,
       );
 
-      // 다시 끄면 미리보기도 사라진다 — `반복 없음` 이 지금까지의 동작이다.
-      await tester.tap(find.byKey(const ValueKey<String>('repeat-none')));
+      // 다시 끄면 미리보기도 사라진다 — `매주` 는 토글이라 한 번 더 누르면
+      // `반복 없음`(지금까지의 동작)으로 돌아간다.
+      await tester.tap(find.byKey(const ValueKey<String>('repeat-weekly')));
       await settle(tester);
       expect(
         find.byKey(const ValueKey<String>('repeat-preview')),
