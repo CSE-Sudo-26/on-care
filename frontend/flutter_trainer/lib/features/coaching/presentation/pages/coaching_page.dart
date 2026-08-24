@@ -91,6 +91,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
 
   /// A schedule registration just succeeded (drives the 3s flash).
   bool _registered = false;
+
+  /// 방금 등록이 새 세션을 만든 게 아니라 그 날짜에 이미 있던 세션에
+  /// 프로그램만 붙은 경우다 — 이때는 고른 시각이 적용되지 않고 기존 세션의
+  /// 시각이 그대로 남는다(`registerProgram` 이 돌려주는
+  /// `attached_to_existing`). [_registered] 플래시를 성공이 아니라 경고로
+  /// 보여줘야 한다는 뜻이라 따로 든다.
+  bool _registeredAttachedExisting = false;
   // Every client whose registration is in flight. Multiple clients may save
   // concurrently, but each client may have only one pending write.
   final Set<String> _registeringClientIds = <String>{};
@@ -122,6 +129,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _reviewDraft = draft;
       _sent = false;
       _registered = false;
+      _registeredAttachedExisting = false;
     });
   }
 
@@ -158,6 +166,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _sent = false;
       _sending = false;
       _registered = false;
+      _registeredAttachedExisting = false;
       _registerDate = _todayKst();
       _registerTime = const TimeOfDay(hour: 10, minute: 0);
       _appliedTemplate = null;
@@ -322,8 +331,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     setState(() => _registeringClientIds.add(registeredFor));
+    bool attachedToExisting;
     try {
-      await ref
+      attachedToExisting = await ref
           .read(scheduleRepositoryProvider)
           .registerProgram(
             date: date,
@@ -343,7 +353,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     if (!mounted) return;
     setState(() {
       _registeringClientIds.remove(registeredFor);
-      if (_isStillSelected(registeredFor)) _registered = true;
+      if (_isStillSelected(registeredFor)) {
+        _registered = true;
+        // `attachedToExisting` 이면 그 날짜에 이미 있던 세션에 프로그램만
+        // 붙은 것이다 — 방금 고른 시각은 적용되지 않고 기존 세션 시각이
+        // 그대로 남으니, 성공이 아니라 경고로 알려야 한다.
+        _registeredAttachedExisting = attachedToExisting;
+      }
     });
     _registerTimer?.cancel();
     _registerTimer = Timer(const Duration(seconds: 3), () {
@@ -618,6 +634,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     _appliedTemplate = template;
     _templateRevision++;
     _registered = false;
+    _registeredAttachedExisting = false;
     _sent = false;
     // 템플릿을 얹으면 구성이 달라진다 — 이미 검토하던 스냅샷은 더 이상 지금
     // 구성이 아니므로 편집기로 돌려보내 다시 검토하게 한다 (#1028).
@@ -741,11 +758,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 onRegisterDateChanged: (date) => setState(() {
                   _registerDate = date;
                   _registered = false;
+                  _registeredAttachedExisting = false;
                 }),
                 registerTime: _registerTime,
                 onRegisterTimeChanged: (time) => setState(() {
                   _registerTime = time;
                   _registered = false;
+                  _registeredAttachedExisting = false;
                 }),
                 onBack: _closeFinalReview,
                 onAssign: () => _assignReviewedDraft(client),
@@ -777,7 +796,26 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   ],
                 ),
               ),
-            if (_registered)
+            if (_registered && _registeredAttachedExisting)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Column(
+                  children: <Widget>[
+                    Text(
+                      l.coachRegisteredAttachedExisting(
+                        _dateChipLabel(l, _registerDate),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (_registered)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: Column(

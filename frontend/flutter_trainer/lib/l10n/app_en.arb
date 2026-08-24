@@ -1033,6 +1033,8 @@
       }
     }
   },
+  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn't applied",
+  "@coachRegisteredAttachedExisting": {"placeholders": {"date": {"type": "String"}}},
   "coachRegisterOn": "Add to the {date} PT schedule",
   "@coachRegisterOn": {
     "placeholders": {

@@ -2048,6 +2048,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String coachRegisteredAttachedExisting(String date) {
+    return 'There was already a session planned on $date, so the program was only attached to it — the time you picked wasn\'t applied';
+  }
+
+  @override
   String coachRegisterOn(String date) {
     return 'Add to the $date PT schedule';
   }

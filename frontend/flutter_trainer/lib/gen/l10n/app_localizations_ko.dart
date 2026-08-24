@@ -1961,6 +1961,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String coachRegisteredAttachedExisting(String date) {
+    return '$date에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요';
+  }
+
+  @override
   String coachRegisterOn(String date) {
     return '$date PT 스케줄에 등록';
   }

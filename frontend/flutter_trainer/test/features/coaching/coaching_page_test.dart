@@ -1335,8 +1335,15 @@ void main() {
       await _confirmAssign(tester);
       await settle(tester);
 
-      expect(find.text('오늘 스케줄에 등록됨'), findsOneWidget);
-      expect(find.text('스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요'), findsOneWidget);
+      // 박성호는 오늘 15:00 에 이미 예정된 세션이 있다 — 새 세션을 만드는
+      // 게 아니라 그 세션에 프로그램만 붙으므로, 등록 시각으로 고른 값(기본
+      // 오전 10시)은 적용되지 않는다. 그래서 성공 문구가 아니라 경고가
+      // 뜬다.
+      expect(
+        find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요'),
+        findsOneWidget,
+      );
+      expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
 
       // The 스케줄 tab shows the registered plan on his 예정 session.
       await goTo(tester, AppRoutes.schedule);
@@ -2080,7 +2087,13 @@ void main() {
         expect(scheduleRepo.registerCalls, 1);
         expect(scheduleRepo.clientId, 'real-client-1');
         expect(scheduleRepo.program, isNotEmpty);
-        expect(find.text('오늘 스케줄에 등록됨'), findsOneWidget);
+        // `_CapturingScheduleRepository.registerProgram` 은 늘 `true`(기존
+        // 세션에 붙었다)를 돌려준다 — 그래서 성공 문구가 아니라 경고가
+        // 뜬다.
+        expect(
+          find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요'),
+          findsOneWidget,
+        );
       },
     );
 
