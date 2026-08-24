@@ -94,11 +94,18 @@ class FixtureMeal:
 @dataclass(frozen=True)
 class FixtureExercise:
     name: str
-    #: `cardio` | `strength` | `flexibility` — 표준 어휘 (#996, #997).
+    #: `cardio` | `strength` | `stretching` | `other` — 표준 어휘 (#996, #997).
     type: str
     minutes: int
     calories: int
     done: bool
+    #: 근력 항목의 세트 수와 한 세트당 횟수. 다른 유형은 None 이다.
+    #:
+    #: 예전에는 이 값을 읽지 않고 버렸다 — Dart 쪽 짝은 읽는데 백엔드만 버려서,
+    #: 실 API 로 붙이면 같은 회원의 같은 날 근력이 화면마다 다른 세트 수로
+    #: 보였다(분에서 되짚은 수와 픽스처가 적어 둔 수가 달랐다). (#1265)
+    sets: int | None = None
+    reps: int | None = None
 
     @property
     def label(self) -> str:
@@ -255,6 +262,8 @@ class DemoFixture:
                     minutes=item["minutes"],
                     calories=item["calories"],
                     done=item["done"],
+                    sets=item.get("sets"),
+                    reps=item.get("reps"),
                 )
                 for item in entry["exercises"]
             ),
