@@ -339,7 +339,7 @@ void main() {
       await repo.updateProgram(
         's1',
         program: const <ProgramItem>[
-          ProgramItem(name: '스쿼트', sets: 3, weight: 60),
+          ProgramItem(name: '스쿼트', sets: 3, reps: 12, weight: 60),
         ],
         note: '무릎 주의',
       );
@@ -359,9 +359,11 @@ void main() {
         'name': '스쿼트',
         'type': '근력',
         'date': null,
-        // 근력은 세트·중량으로만 잰다 — 시간은 싣지 않는다 (#1276).
+        // 근력은 세트·횟수·중량으로만 잰다 — 시간은 싣지 않는다
+        // (#1276, #1310).
         'duration': null,
         'sets': 3,
+        'reps': 12,
         'weight': 60.0,
         'intensity': 'moderate',
         // 세션 구분은 항상 실린다 — 단일 세션 프로그램은 빈 문자열(#709).
@@ -413,6 +415,7 @@ void main() {
         'date': null,
         'duration': null,
         'sets': 1,
+        'reps': null,
         'weight': null,
         'intensity': 'moderate',
         'session': '',

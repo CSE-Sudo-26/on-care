@@ -55,6 +55,8 @@ class ExerciseSessions extends Table {
   /// 근력 기록의 세트 수. 근력이 아니거나 세트를 모르는 기록은 null 이고,
   /// 그때는 분에서 환산해 읽는다. (#1262)
   IntColumn get sets => integer().nullable()();
+  /// 근력 기록의 한 세트당 횟수. 세트·중량과 한 벌이라 근력에만 있다. (#1310)
+  IntColumn get reps => integer().nullable()();
   /// 근력 기록의 중량(kg). 세트와 짝이라 근력에만 있다. (#1276)
   RealColumn get weight => real().nullable()();
   IntColumn get calories => integer()();
@@ -124,7 +126,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -175,6 +177,11 @@ class AppDatabase extends _$AppDatabase {
         // 운동 이름·중량 컬럼 추가 — 기존 기록은 비어 있다. (#1276)
         await m.addColumn(exerciseSessions, exerciseSessions.name);
         await m.addColumn(exerciseSessions, exerciseSessions.weight);
+      }
+      if (from < 10) {
+        // 근력 횟수 컬럼 추가 — 기존 기록은 비어 있다. 세트·중량만으로는
+        // 한 세트에 몇 번을 들었는지가 남지 않는다. (#1310)
+        await m.addColumn(exerciseSessions, exerciseSessions.reps);
       }
     },
   );

@@ -206,6 +206,7 @@ def build_current_week(rows: list) -> dict:
             "name": getattr(r, "name", "") or "",
             "minutes": r.minutes,
             "sets": getattr(r, "sets", None),
+            "reps": getattr(r, "reps", None),
             "weight": getattr(r, "weight", None),
             "calories": r.calories,
             "intensity": getattr(r, "intensity", "moderate") or "moderate",

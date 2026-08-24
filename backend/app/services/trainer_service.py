@@ -1159,6 +1159,7 @@ def _routine_out(
         exercise_date=getattr(rt, "exercise_date", None),
         intensity=intensity,
         sets=getattr(rt, "sets", None),
+        reps=getattr(rt, "reps", None),
         weight=getattr(rt, "weight", None),
         # 예상 소모 칼로리 — 트레이너가 고른 강도로 계산한다. 회원이 수행을
         # 마치면 그때의 강도로 다시 계산한 값이 운동 기록에 남는다. (#996)
@@ -1363,6 +1364,7 @@ def complete_assigned_routine(
     *,
     minutes: int,
     sets: int | None = None,
+    reps: int | None = None,
     weight: float | None = None,
     intensity: str,
     member_note: str,
@@ -1388,9 +1390,10 @@ def complete_assigned_routine(
     completed_at = clock.now()
     exercise_type = _ROUTINE_EXERCISE_TYPES(routine.type)
     # 회원이 실제로 한 수를 적지 않았으면 트레이너가 배정한 값이 남는다 —
-    # 근력 배정에서 세트·중량이 통째로 비면, 그래프가 분에서 세트를 되짚어
-    # 트레이너도 회원도 적은 적 없는 수를 그린다. (#1276)
+    # 근력 배정에서 세트·횟수·중량이 통째로 비면, 그래프가 분에서 세트를 되짚어
+    # 트레이너도 회원도 적은 적 없는 수를 그린다. (#1276, #1310)
     sets = sets if sets is not None else getattr(routine, "sets", None)
+    reps = reps if reps is not None else getattr(routine, "reps", None)
     weight = weight if weight is not None else getattr(routine, "weight", None)
     row = ExerciseSession(
         id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
@@ -1401,9 +1404,10 @@ def complete_assigned_routine(
         # 배정 이름이 곧 이 운동의 이름이다 — 회원이 따로 적지 않는다.
         name=routine.name,
         minutes=minutes,
-        # 세트·중량은 근력에서만 남긴다. 수기 기록과 같은 규칙이라야 그래프가
-        # 두 기록을 같은 축으로 읽는다. (#1276)
+        # 세트·횟수·중량은 근력에서만 남긴다. 수기 기록과 같은 규칙이라야
+        # 그래프가 두 기록을 같은 축으로 읽는다. (#1276, #1310)
         sets=sets if exercise_type == exercise_types.STRENGTH else None,
+        reps=reps if exercise_type == exercise_types.STRENGTH else None,
         weight=(
             round(weight, 1)
             if weight is not None and exercise_type == exercise_types.STRENGTH
@@ -1536,6 +1540,7 @@ def assign_routine(
     exercise_date: date | None = None,
     intensity: str = "moderate",
     sets: int | None = None,
+    reps: int | None = None,
     weight: float | None = None,
 ) -> RoutineOut:
     """회원에게 루틴 배정. 로스터 last_routine 은 build_roster 가 최신 루틴을 읽어 반영.
@@ -1566,8 +1571,10 @@ def assign_routine(
         type=type_,
         exercise_date=exercise_date.isoformat() if exercise_date else None,
         intensity=intensity,
-        # 세트·중량은 근력에만 남긴다 — 운동 기록과 같은 규칙이다. (#1276)
+        # 세트·횟수·중량은 근력에만 남긴다 — 운동 기록과 같은 규칙이다.
+        # (#1276, #1310)
         sets=sets if type_ == "근력" else None,
+        reps=reps if type_ == "근력" else None,
         weight=round(weight, 1) if weight is not None and type_ == "근력" else None,
         reason=reason,
         source=source,
@@ -2400,9 +2407,11 @@ def _program_items(program_json: str) -> list[ProgramItem]:
             continue
         out.append(ProgramItem(
             name=str(m.get("name", "") or "-"),
-            # 세트·중량·시간은 예전에 자유 문자열로 저장됐다. LooseInt/LooseFloat
-            # 가 "10회"·"20kg" 에서 숫자를 되짚어 준다(#1276).
+            # 세트·횟수·중량·시간은 예전에 자유 문자열로 저장됐다.
+            # LooseInt/LooseFloat 가 "10회"·"20kg" 에서 숫자를 되짚어 준다
+            # (#1276, #1310).
             sets=m.get("sets"),
+            reps=m.get("reps"),
             weight=m.get("weight"),
             duration=m.get("duration"),
             date=m.get("date"),
@@ -2416,13 +2425,15 @@ def _program_items(program_json: str) -> list[ProgramItem]:
 
 
 def _program_item_label(item: ProgramItem) -> str:
-    """이력 목록에 적히는 한 줄. 근력은 세트·중량, 나머지는 시간으로 읽는다.
+    """이력 목록에 적히는 한 줄. 근력은 세트·횟수·중량, 나머지는 시간으로 읽는다.
 
     유형마다 재는 단위가 다르다(#1276) — 근력을 "30분"으로 적으면 트레이너가
     다음 무게를 정할 근거가 사라지고, 유산소를 "3세트"로 적으면 뜻이 없다.
     """
     if item.type == "근력":
         parts = [f"{item.sets}세트"] if item.sets else []
+        if item.reps:
+            parts.append(f"{item.reps}회")
         if item.weight:
             parts.append(f"{item.weight:g}kg")
     else:
@@ -3169,12 +3180,15 @@ def _add_member_exercise_log(
     minutes = program_minutes if program_minutes > 0 else s.duration_minutes
     if program_type_ko is not None:
         ex_type = exercise_types.normalize(program_type_ko)
-    # 트레이너가 프로그램에 적어 둔 이름·세트·중량·강도를 회원 기록에도 남긴다
-    # (#1276). 예전에는 분과 유형만 옮겨서, 회원 화면에는 무슨 운동을 몇 kg 로
-    # 했는지가 사라졌다.
+    # 트레이너가 프로그램에 적어 둔 이름·세트·횟수·중량·강도를 회원 기록에도
+    # 남긴다(#1276, #1310). 예전에는 분과 유형만 옮겨서, 회원 화면에는 무슨
+    # 운동을 몇 회 몇 kg 로 했는지가 사라졌다.
     strength_items = [i for i in items if i.type == "근력"]
     sets = sum(i.sets for i in strength_items if i.sets) or None
     weights = [i.weight for i in strength_items if i.weight]
+    # 횟수는 세트와 달리 더하지 않는다 — 한 세트당 수라 합계는 아무도 한 적 없는
+    # 수가 된다. 중량과 같은 규칙으로 가장 많이 한 수를 그날의 기록으로 남긴다.
+    rep_counts = [i.reps for i in strength_items if i.reps]
     # 항목마다 강도가 다르면 세션 하나로 접을 값이 없다 — 그럴 때만 기본값이다.
     marked = {i.intensity for i in items}
     intensity = marked.pop() if len(marked) == 1 else _PT_INTENSITY
@@ -3189,6 +3203,11 @@ def _add_member_exercise_log(
         name=", ".join(i.name for i in items),
         minutes=minutes,
         sets=sets if ex_type == exercise_types.STRENGTH else None,
+        reps=(
+            max(rep_counts)
+            if rep_counts and ex_type == exercise_types.STRENGTH
+            else None
+        ),
         # 여러 운동을 한 세션이면 가장 무거웠던 무게가 그날의 기록이다 —
         # 평균은 실제로 든 적 없는 값이라 다음 무게를 정할 근거가 못 된다.
         weight=max(weights) if weights and ex_type == exercise_types.STRENGTH else None,
@@ -3244,6 +3263,7 @@ def send_session_program(
             date=item.date,
             duration=item.duration,
             sets=item.sets,
+            reps=item.reps,
             weight=item.weight,
             intensity=item.intensity,
         )

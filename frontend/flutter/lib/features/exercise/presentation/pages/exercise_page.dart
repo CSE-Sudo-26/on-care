@@ -708,15 +708,19 @@ class _ExerciseDayDetail extends StatelessWidget {
   }
 }
 
-/// 기록 한 줄이 말하는 **양**. 근력은 세트로, 나머지는 분으로 읽는다 —
+/// 기록 한 줄이 말하는 **양**. 근력은 세트·횟수로, 나머지는 분으로 읽는다 —
 /// 홈 운동 카드·운동 현황 링·주간 목표가 이미 근력을 세트로 세므로, 목록만
-/// 분으로 적으면 같은 기록이 화면마다 다른 수로 보인다. (#1262)
+/// 분으로 적으면 같은 기록이 화면마다 다른 수로 보인다. (#1262, #1310)
 String _exerciseAmountLabel(AppLocalizations l, ExerciseSession s) {
   if (s.type != ExerciseType.strength) {
     return '${s.minutes}${l.unitMinutes}';
   }
   final int sets = s.sets ?? setsFromStrengthMinutes(s.minutes.toDouble());
-  return l.exSetsCount(sets);
+  final int? reps = s.reps;
+  // 횟수는 적었을 때만 붙인다 — 이 칸이 생기기 전 기록에 아무도 적지 않은
+  // 수가 뜨면 안 된다.
+  if (reps == null || reps <= 0) return l.exSetsCount(sets);
+  return '${l.exSetsCount(sets)} · ${l.exRepsCount(reps)}';
 }
 
 /// 운동 유형 → 화면 라벨. 유형별 분해 카드와 같은 문구를 쓴다.
@@ -898,13 +902,20 @@ class _CompletedPtSessionCard extends StatelessWidget {
   final String coachName;
 
   String _programLabel(CoachProgramItem item, AppLocalizations l) {
+    // 세트 → 횟수 → 중량. 입력 화면이 묻는 순서 그대로다 (#1310) — 트레이너가
+    // 적은 순서와 회원이 읽는 순서가 다르면 같은 한 줄이 두 앱에서 달라 보인다.
     final String details = <String>[
-      if (item.weight.isNotEmpty) item.weight,
       if (item.sets > 0) l.exProgramSets(item.sets),
-      if (item.reps.isNotEmpty) item.reps,
+      if (item.reps > 0) l.exRepsCount(item.reps),
+      if (item.weight > 0) '${_trimZero(item.weight)}${l.exUnitKg}',
     ].join(' · ');
     return details.isEmpty ? item.name : '${item.name} · $details';
   }
+
+  /// 20.0 → `20`, 62.5 → `62.5`. 정수 무게에 소수점이 붙으면 원판 단위가
+  /// 아닌 값을 적은 것처럼 읽힌다.
+  static String _trimZero(double value) =>
+      value == value.roundToDouble() ? '${value.round()}' : '$value';
 
   @override
   Widget build(BuildContext context) {
