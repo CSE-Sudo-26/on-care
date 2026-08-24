@@ -269,9 +269,10 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       lastDate: start.add(const Duration(days: 7 * maxSeriesOccurrences)),
     );
     if (picked == null || !mounted) return;
-    setState(
-      () => _repeatUntil = DateTime(picked.year, picked.month, picked.day),
-    );
+    setState(() {
+      _repeatUntil = DateTime(picked.year, picked.month, picked.day);
+      _endsByCount = false;
+    });
   }
 
   /// 새 일정의 날짜를 고른다 — 기본값은 시트를 연 시점의 선택된 날짜다.
@@ -477,80 +478,17 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                       ),
                       if (_repeatDays.isNotEmpty) ...<Widget>[
                         const SizedBox(height: AppSpacing.sm),
-                        // `종료` 는 실제로는 횟수·종료일 중 하나를 고르는
-                        // 드롭다운이다 — 고객 탭 `성별` 필드와 같은, 앱 전역
-                        // 테두리 있는 선택 UI로 통일한다.
-                        DropdownButtonFormField<bool>(
-                          key: const ValueKey<String>('repeat-end-mode'),
-                          initialValue: _endsByCount,
-                          decoration: InputDecoration(
-                            labelText: l.schedRepeatEnd,
-                            isDense: true,
-                          ),
-                          items: <DropdownMenuItem<bool>>[
-                            DropdownMenuItem<bool>(
-                              value: true,
-                              child: Text(l.schedRepeatEndByCount),
-                            ),
-                            DropdownMenuItem<bool>(
-                              value: false,
-                              child: Text(l.schedRepeatEndByDate),
-                            ),
+                        // `종료` 는 횟수·종료일 중 하나를 고르는 별도 category
+                        // 가 아니라 둘 다 그 자체로 값이 있는 필드다 — 날짜·
+                        // 시간처럼 나란히 두고, 건드린 쪽이 종료 기준이 된다.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(child: _repeatCountField(l)),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(child: _repeatUntilField(l)),
                           ],
-                          onChanged: (v) => setState(() {
-                            _endsByCount = v ?? _endsByCount;
-                            if (!_endsByCount) {
-                              _repeatUntil ??= _date.add(
-                                const Duration(days: 56),
-                              );
-                            }
-                          }),
                         ),
-                        const SizedBox(height: AppSpacing.xs),
-                        // 횟수는 프리셋 목록 대신 숫자 키보드로 바로 입력한다.
-                        // 종료일은 필드를 누르면 바로 날짜 선택기가 뜬다.
-                        if (_endsByCount)
-                          NumberStepper(
-                            key: const ValueKey<String>('repeat-count'),
-                            value: _repeatCount.toDouble(),
-                            min: 1,
-                            max: maxSeriesOccurrences.toDouble(),
-                            suffix: l.schedRepeatCountUnit,
-                            onChanged: (v) =>
-                                setState(() => _repeatCount = v.round()),
-                          )
-                        else
-                          GestureDetector(
-                            key: const ValueKey<String>('repeat-until'),
-                            onTap: _pickUntil,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.sm,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: AppColors.inputBackground,
-                                borderRadius: BorderRadius.all(AppRadius.sm),
-                              ),
-                              child: Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Text(
-                                      _repeatUntil == null
-                                          ? '-'
-                                          : ymd(_repeatUntil!),
-                                      style: _fieldValueStyle,
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.event_outlined,
-                                    size: 18,
-                                    color: AppColors.subtleForeground,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         const SizedBox(height: AppSpacing.sm),
                         // 저장 전에 회차를 보여 준다 — 잘못 고른 요일을 되돌리는
                         // 비용은 한 건씩 지우는 일이다.
@@ -643,27 +581,20 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       onTap: _pickTimeRange,
       child: _pillField(
         label: l.schedFieldTime,
-        child: SizedBox(
-          height: 44,
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  l.schedTimeRange(_time, _endTime),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.foreground,
-                  ),
-                ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l.schedTimeRange(_time, _endTime),
+                style: _fieldValueStyle,
               ),
-              const Icon(
-                Icons.schedule_outlined,
-                size: 18,
-                color: AppColors.subtleForeground,
-              ),
-            ],
-          ),
+            ),
+            const Icon(
+              Icons.schedule_outlined,
+              size: 18,
+              color: AppColors.subtleForeground,
+            ),
+          ],
         ),
       ),
     );
@@ -677,32 +608,82 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       onTap: _pickDate,
       child: _pillField(
         label: l.schedFieldDate,
-        child: SizedBox(
-          height: 44,
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  l.dateMonthDayWeekday(
-                    _date.month,
-                    _date.day,
-                    weekdayNames(l)[_date.weekday - 1],
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.foreground,
-                  ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l.dateMonthDayWeekday(
+                  _date.month,
+                  _date.day,
+                  weekdayNames(l)[_date.weekday - 1],
                 ),
+                overflow: TextOverflow.ellipsis,
+                style: _fieldValueStyle,
               ),
-              const Icon(
-                Icons.calendar_today_outlined,
-                size: 16,
-                color: AppColors.subtleForeground,
-              ),
-            ],
+            ),
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 16,
+              color: AppColors.subtleForeground,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 반복 종료를 횟수로 잡을 때의 값 — 숫자 키보드로 바로 입력한다. 건드리면
+  /// 종료 기준이 횟수 쪽으로 넘어온다.
+  Widget _repeatCountField(AppLocalizations l) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          l.schedRepeatEndByCount,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
           ),
+        ),
+        const SizedBox(height: 4),
+        NumberStepper(
+          key: const ValueKey<String>('repeat-count'),
+          value: _repeatCount.toDouble(),
+          min: 1,
+          max: maxSeriesOccurrences.toDouble(),
+          suffix: l.schedRepeatCountUnit,
+          onChanged: (v) => setState(() {
+            _repeatCount = v.round();
+            _endsByCount = true;
+          }),
+        ),
+      ],
+    );
+  }
+
+  /// 반복 종료를 종료일로 잡을 때의 값 — 누르면 바로 날짜 선택기가 뜬다.
+  /// 고르면 종료 기준이 종료일 쪽으로 넘어온다.
+  Widget _repeatUntilField(AppLocalizations l) {
+    return GestureDetector(
+      key: const ValueKey<String>('repeat-until'),
+      onTap: _pickUntil,
+      child: _pillField(
+        label: l.schedRepeatEndByDate,
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                _repeatUntil == null ? '-' : ymd(_repeatUntil!),
+                style: _fieldValueStyle,
+              ),
+            ),
+            const Icon(
+              Icons.event_outlined,
+              size: 18,
+              color: AppColors.subtleForeground,
+            ),
+          ],
         ),
       ),
     );
@@ -739,32 +720,14 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     );
   }
 
-  /// 위에 작은 라벨, 아래 옅은 채움(inputBackground) 카드 — 예약 슬롯
-  /// 시트가 쓰는 것과 같은 언어다(#1090). 짙은 `OutlinedButton` 윤곽선
-  /// 대신 이 카드로 통일해, 한 시트 안에서 필드마다 다른 무게로 서던
-  /// 것을 정리한다.
+  /// 테두리 있는 필드 껍데기 — 고객 탭 `성별` 필드와 같은 언어다. 앱 전역
+  /// `inputDecorationTheme`(옅은 채움 + `borderStrong` 테두리 + 안쪽 라벨)을
+  /// 그대로 물려받아, 고객·유형·날짜·시간·종료일이 실제 입력 필드가 아니어도
+  /// 같은 모양으로 보인다.
   Widget _pillField({required String label, required Widget child}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          decoration: const BoxDecoration(
-            color: AppColors.inputBackground,
-            borderRadius: BorderRadius.all(AppRadius.sm),
-          ),
-          child: child,
-        ),
-      ],
+    return InputDecorator(
+      decoration: InputDecoration(labelText: label, isDense: true),
+      child: child,
     );
   }
 

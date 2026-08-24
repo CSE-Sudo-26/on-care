@@ -1516,9 +1516,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedRepeatDays => '반복 요일';
 
   @override
-  String get schedRepeatEnd => '종료';
-
-  @override
   String get schedRepeatEndByCount => '횟수';
 
   @override

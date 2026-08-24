@@ -482,7 +482,6 @@
   "schedRepeat": "반복",
   "schedRepeatWeekly": "매주",
   "schedRepeatDays": "반복 요일",
-  "schedRepeatEnd": "종료",
   "schedRepeatEndByCount": "횟수",
   "schedRepeatEndByDate": "종료일",
   "schedRepeatCount": "{count}회",

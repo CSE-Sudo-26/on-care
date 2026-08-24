@@ -1589,9 +1589,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedRepeatDays => 'Repeat on';
 
   @override
-  String get schedRepeatEnd => 'Ends';
-
-  @override
   String get schedRepeatEndByCount => 'After';
 
   @override

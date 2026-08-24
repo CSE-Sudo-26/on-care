@@ -818,7 +818,6 @@
   "schedRepeat": "Repeat",
   "schedRepeatWeekly": "Weekly",
   "schedRepeatDays": "Repeat on",
-  "schedRepeatEnd": "Ends",
   "schedRepeatEndByCount": "After",
   "schedRepeatEndByDate": "On date",
   "schedRepeatCount": "{count} times",

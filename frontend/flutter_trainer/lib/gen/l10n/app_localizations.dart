@@ -2804,12 +2804,6 @@ abstract class AppLocalizations {
   /// **'Repeat on'**
   String get schedRepeatDays;
 
-  /// No description provided for @schedRepeatEnd.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends'**
-  String get schedRepeatEnd;
-
   /// No description provided for @schedRepeatEndByCount.
   ///
   /// In en, this message translates to:
