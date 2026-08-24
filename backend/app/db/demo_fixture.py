@@ -119,7 +119,7 @@ class FixtureRoutine:
     id: str
     name: str
     minutes: int
-    #: 운동 유형 — 유산소|근력|유연성|기타 (모델과 같은 한국어 어휘).
+    #: 운동 유형 — 유산소|근력|스트레칭|기타 (모델과 같은 한국어 어휘).
     type: str
     reason: str
     #: `ai` | `trainer`.

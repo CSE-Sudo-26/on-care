@@ -34,23 +34,52 @@ class DioExerciseRepository implements ExerciseRepository {
     required ExerciseType type,
     required int minutes,
     required int calories,
-    required String dayLabel,
+    required DateTime date,
+    String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    double? weight,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
       '/exercise/sessions',
-      data: <String, Object?>{
-        'type': type.name,
-        'minutes': minutes,
-        'sets': sets,
-        'calories': calories,
-        'intensity': intensity.name,
-        'day_label': dayLabel,
-      },
+      data: _sessionBody(
+        type: type,
+        minutes: minutes,
+        calories: calories,
+        date: date,
+        name: name,
+        intensity: intensity,
+        sets: sets,
+        weight: weight,
+      ),
     );
     return ExerciseSession.fromJson(res.data!);
   }
+
+  /// 생성·수정이 같은 몸통을 쓴다 — 한쪽에만 필드를 더하면 수정한 기록에서
+  /// 그 값이 조용히 사라진다.
+  ///
+  /// `sets`·`weight` 는 null 이어도 실어 보낸다. 유형을 근력에서 바꾼 수정이면
+  /// 그 null 이 옛 값을 지우는데, 빼고 보내면 서버가 예전 값을 그대로 둔다.
+  static Map<String, Object?> _sessionBody({
+    required ExerciseType type,
+    required int minutes,
+    required int calories,
+    required DateTime date,
+    required String name,
+    required ExerciseIntensity intensity,
+    required int? sets,
+    required double? weight,
+  }) => <String, Object?>{
+    'type': type.name,
+    'name': name,
+    'minutes': minutes,
+    'sets': sets,
+    'weight': weight,
+    'calories': calories,
+    'intensity': intensity.name,
+    'date': _dateString(date),
+  };
 
   @override
   Future<void> deleteSession(String id) async {
@@ -63,22 +92,24 @@ class DioExerciseRepository implements ExerciseRepository {
     required ExerciseType type,
     required int minutes,
     required int calories,
-    required String dayLabel,
+    required DateTime date,
+    String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    double? weight,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/exercise/sessions/$id',
-      data: <String, Object?>{
-        'type': type.name,
-        'minutes': minutes,
-        // 유형을 근력에서 바꾼 수정이면 null 을 실어 세트를 지운다 — 빼고
-        // 보내면 옛 세트가 기록에 남는다.
-        'sets': sets,
-        'calories': calories,
-        'intensity': intensity.name,
-        'day_label': dayLabel,
-      },
+      data: _sessionBody(
+        type: type,
+        minutes: minutes,
+        calories: calories,
+        date: date,
+        name: name,
+        intensity: intensity,
+        sets: sets,
+        weight: weight,
+      ),
     );
     return ExerciseSession.fromJson(res.data!);
   }

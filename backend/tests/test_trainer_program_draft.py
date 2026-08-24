@@ -47,15 +47,13 @@ def _exercise(**overrides) -> dict:
     base = {
         "id": "exercise-2",
         "name": "레그프레스",
-        "sets": "4",
-        "reps": "12회",
-        "weight": "60kg",
-        "duration": "",
-        "distance": "",
-        "rest": "90",
-        "rpe": "8",
-        "memo": "무릎 각도 확인",
         "type": "근력",
+        "date": None,
+        "duration": None,
+        "sets": 4,
+        "weight": 60.0,
+        "intensity": "moderate",
+        "memo": "무릎 각도 확인",
         "source": "trainer",
     }
     base.update(overrides)
@@ -97,9 +95,9 @@ def test_draft_save_list_detail_update_contract(
                     _exercise(
                         id="exercise-3",
                         name="인터벌 유산소",
-                        sets="",
-                        reps="",
-                        duration="20",
+                        sets=None,
+                        weight=None,
+                        duration=20,
                         type="유산소",
                         source="ai",
                     ),
@@ -137,7 +135,7 @@ def test_draft_save_list_detail_update_contract(
             "name": f"{name} (수정)",
             "sessions": [
                 _session(
-                    exercises=[_exercise(id="exercise-9", name="스쿼트", sets="5")]
+                    exercises=[_exercise(id="exercise-9", name="스쿼트", sets=5)]
                 )
             ],
         },
@@ -161,19 +159,16 @@ def test_draft_save_list_detail_update_contract(
 def test_reopened_draft_keeps_every_editor_value(
     client, trainer_token, cleanup_drafts
 ):
-    """세트·횟수·중량·시간·휴식·RPE·메모와 AI/트레이너 구분이 그대로 돌아온다."""
+    """날짜·세트·중량·강도·메모와 AI/트레이너 구분이 그대로 돌아온다."""
     written = _exercise(
         id="exercise-7",
         name="루마니안 데드리프트",
-        sets="3",
-        reps="10회",
-        weight="40kg",
-        duration="15",
-        distance="0",
-        rest="120",
-        rpe="7",
-        memo="허리 중립 유지",
         type="근력",
+        date="2026-08-24",
+        sets=3,
+        weight=40.5,
+        intensity="high",
+        memo="허리 중립 유지",
         source="ai",
     )
     created = _create_draft(

@@ -212,7 +212,7 @@ def _guess_intensity(exercise_type: str) -> RoutineIntensityPreference:
     code = exercise_types.normalize(exercise_type)
     if code == exercise_types.STRENGTH:
         return "high"
-    if code == exercise_types.FLEXIBILITY:
+    if code == exercise_types.STRETCHING:
         return "low"
     return "moderate"
 

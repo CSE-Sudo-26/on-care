@@ -323,8 +323,6 @@
     }
   },
   "clientsSeeAll": "See all",
-  "clientsNameRequired": "Enter a name",
-  "clientsAddFailed": "Couldn't add the client. Please try again",
   "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
   "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
   "memberHealthSaving": "Saving…",
@@ -343,22 +341,21 @@
   "memberHealthWeeklyBurn": "Calories burned",
   "memberHealthRange": "Enter a value between {min} and {max}.",
   "@memberHealthRange": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}},
-  "clientsDuplicateName": "A client with that name already exists",
-  "clientsAddTitle": "Add a client",
-  "clientsNameLabel": "Client name",
-  "clientsGoalLabel": "Goal (e.g. weight loss · strength)",
-  "clientsAddAction": "Add",
-  "clientInviteTitle": "Invite a member",
-  "clientInviteIntro": "Find a member by email and send a coaching request. They appear in your client list once they accept in the app.",
-  "clientInviteEmailLabel": "Member email",
+  "clientInviteTitle": "Add a new client",
+  "clientInviteIntro": "Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.",
+  "clientInviteIntroImmediate": "Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.",
+  "clientInviteMemberIdLabel": "Member ID",
   "clientInviteLookupAction": "Find",
   "clientInviteMessageLabel": "Message (optional)",
   "clientInviteSendAction": "Send request",
+  "clientInviteConnectAction": "Connect",
   "clientInviteSent": "Sent a coaching request to {name}",
   "@clientInviteSent": {"placeholders": {"name": {"type": "String"}}},
-  "clientInviteNotFound": "No member uses that email",
+  "clientInviteConnected": "Connected with {name}",
+  "@clientInviteConnected": {"placeholders": {"name": {"type": "String"}}},
+  "clientInviteNotFound": "No member uses that member ID",
   "clientInviteFailed": "Couldn't send the request. Please try again",
-  "clientInviteEmailRequired": "Enter an email",
+  "clientInviteMemberIdRequired": "Enter a member ID",
   "clientInviteAlreadyCoached": "You already coach this member",
   "clientInviteHasTrainer": "Another trainer already coaches this member",
   "clientInvitePendingHint": "A request you sent is still waiting for an answer",
@@ -858,14 +855,11 @@
   "progType": "Type",
   "progDuration": "Duration (min)",
   "progOptional": "Optional",
-  "progSetsByReps": "{sets} × {reps}",
-  "@progSetsByReps": {
+  "progSetsValue": "{sets} sets",
+  "@progSetsValue": {
     "placeholders": {
       "sets": {
         "type": "int"
-      },
-      "reps": {
-        "type": "String"
       }
     }
   },
@@ -1023,6 +1017,24 @@
   "routineFieldMinutes": "Duration",
   "routineFieldTotalMinutes": "Total workout time",
   "routineFieldIntensity": "Intensity",
+  "routineFieldDate": "Date",
+  "routineFieldExerciseName": "Exercise name",
+  "routineFieldExerciseNameHint": "e.g. Squat, Treadmill",
+  "routineFieldSets": "Sets",
+  "routineFieldWeight": "Weight",
+  "routineFieldCalories": "Estimated calories",
+  "routineUnitMinutes": "min",
+  "routineUnitSets": "sets",
+  "routineUnitKg": "kg",
+  "routineKcalValue": "{count} kcal",
+  "@routineKcalValue": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "intensityLight": "Light",
   "intensityModerate": "Moderate",
   "intensityHigh": "High",

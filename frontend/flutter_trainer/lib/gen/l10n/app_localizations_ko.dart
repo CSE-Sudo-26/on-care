@@ -615,12 +615,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsSeeAll => '전체 보기';
 
   @override
-  String get clientsNameRequired => '이름을 입력해 주세요';
-
-  @override
-  String get clientsAddFailed => '등록에 실패했어요. 다시 시도해 주세요';
-
-  @override
   String get memberHealthLoadFailed => '고객 정보를 불러오지 못했어요. 다시 시도해 주세요';
 
   @override
@@ -674,29 +668,18 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get clientsDuplicateName => '이미 같은 이름의 고객이 있어요';
-
-  @override
-  String get clientsAddTitle => '신규 고객 등록';
-
-  @override
-  String get clientsNameLabel => '고객 이름';
-
-  @override
-  String get clientsGoalLabel => '목표 (예: 체중 감량 · 근력 향상)';
-
-  @override
-  String get clientsAddAction => '등록하기';
-
-  @override
-  String get clientInviteTitle => '회원에게 담당 요청';
+  String get clientInviteTitle => '신규 고객 등록';
 
   @override
   String get clientInviteIntro =>
-      '회원의 이메일로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
+      '회원 ID로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
 
   @override
-  String get clientInviteEmailLabel => '회원 이메일';
+  String get clientInviteIntroImmediate =>
+      '회원 ID로 회원을 확인한 뒤 바로 연결해요. 성별·나이·신체 정보는 입력할 필요 없어요 — 연결되면 회원이 등록해 둔 값을 그대로 가져와요.';
+
+  @override
+  String get clientInviteMemberIdLabel => '회원 ID';
 
   @override
   String get clientInviteLookupAction => '찾기';
@@ -708,18 +691,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientInviteSendAction => '담당 요청 보내기';
 
   @override
+  String get clientInviteConnectAction => '연결하기';
+
+  @override
   String clientInviteSent(String name) {
     return '$name님에게 담당 요청을 보냈어요';
   }
 
   @override
-  String get clientInviteNotFound => '그 이메일을 쓰는 회원을 찾지 못했어요';
+  String clientInviteConnected(String name) {
+    return '$name님과 연결됐어요';
+  }
+
+  @override
+  String get clientInviteNotFound => '그 회원 ID를 쓰는 회원을 찾지 못했어요';
 
   @override
   String get clientInviteFailed => '요청을 보내지 못했어요. 다시 시도해 주세요';
 
   @override
-  String get clientInviteEmailRequired => '이메일을 입력해 주세요';
+  String get clientInviteMemberIdRequired => '회원 ID를 입력해 주세요';
 
   @override
   String get clientInviteAlreadyCoached => '이미 담당하고 있는 회원이에요';
@@ -1633,8 +1624,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get progOptional => '선택';
 
   @override
-  String progSetsByReps(int sets, String reps) {
-    return '$sets세트 × $reps';
+  String progSetsValue(int sets) {
+    return '$sets세트';
   }
 
   @override
@@ -1949,6 +1940,42 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFieldIntensity => '운동 강도';
+
+  @override
+  String get routineFieldDate => '날짜';
+
+  @override
+  String get routineFieldExerciseName => '운동 이름';
+
+  @override
+  String get routineFieldExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get routineFieldSets => '세트 수';
+
+  @override
+  String get routineFieldWeight => '중량';
+
+  @override
+  String get routineFieldCalories => '예상 소모 칼로리';
+
+  @override
+  String get routineUnitMinutes => '분';
+
+  @override
+  String get routineUnitSets => '세트';
+
+  @override
+  String get routineUnitKg => 'kg';
+
+  @override
+  String routineKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
 
   @override
   String get intensityLight => '가벼움';

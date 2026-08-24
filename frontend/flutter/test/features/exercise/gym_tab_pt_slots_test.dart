@@ -168,6 +168,25 @@ void main() {
     expect(find.byIcon(Icons.event_available_outlined), findsOneWidget);
   });
 
+  testWidgets('연결된 헬스장은 정보 다음에 예약 상자만 배치한다 (#1287)', (
+    WidgetTester tester,
+  ) async {
+    await pumpTab(tester);
+
+    final Finder infoCard = find.byKey(const Key('my-gym-info-card'));
+    final Finder reservationPanel = find.byKey(
+      const Key('my-gym-reservation-panel'),
+    );
+    expect(infoCard, findsOneWidget);
+    expect(reservationPanel, findsOneWidget);
+    expect(
+      tester.getTopLeft(reservationPanel).dy,
+      greaterThan(tester.getBottomLeft(infoCard).dy),
+    );
+    expect(find.text('추천 헬스장'), findsNothing);
+    expect(find.text('추천 트레이너'), findsNothing);
+  });
+
   testWidgets('다음 일정이 있으면 빈 예약 시간 영역을 감춘다', (WidgetTester tester) async {
     final AppLocalizations l = await pumpTab(
       tester,
