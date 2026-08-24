@@ -88,7 +88,7 @@ void main() {
     expect(today.every((r) => !r.id.startsWith('seed-schedule-w')), isTrue);
   });
 
-  test('한 주에 1:1 PT 와 상담이 여러 요일에 흩어져 있다', () async {
+  test('PT는 10~22시 짝수 정시 60분, 상담은 홀수 정시 30분이다', () async {
     await seedIfEmpty(db, clock: _dayOfWeek(4));
 
     final rows = await db.select(db.trainerScheduleEntries).get();
@@ -105,16 +105,32 @@ void main() {
       reason: '상담이 하루에만 있으면 상담 흐름을 다른 요일에서 시연할 수 없다',
     );
     expect(training.map((r) => r.date).toSet().length, greaterThanOrEqualTo(5));
-    // 시간대와 길이도 섞여 있어야 시간표가 실제 사용 화면처럼 보인다.
-    expect(rows.map((r) => r.time).toSet().length, greaterThanOrEqualTo(8));
-    expect(
-      rows
-          .map((r) => r.durationMinutes)
-          .where((m) => m > 0)
-          .toSet()
-          .length,
-      greaterThanOrEqualTo(3),
-    );
+    final scheduled = rows.where((r) => r.durationMinutes > 0);
+    for (final row in scheduled) {
+      final parts = row.time.split(':');
+      final hour = int.parse(parts.first);
+      final minute = int.parse(parts.last);
+      expect(hour, inInclusiveRange(10, 22), reason: '${row.date} ${row.time}');
+      expect(minute, 0, reason: '${row.date} ${row.time}');
+
+      if (row.type == SessionType.personalTraining) {
+        expect(hour.isEven, isTrue, reason: '${row.date} ${row.time}');
+        expect(row.durationMinutes, 60, reason: '${row.date} ${row.time}');
+      } else if (row.type == SessionType.consultation) {
+        expect(hour.isOdd, isTrue, reason: '${row.date} ${row.time}');
+        expect(row.durationMinutes, 30, reason: '${row.date} ${row.time}');
+      }
+    }
+
+    for (final consultation in consultations) {
+      expect(
+        training.any(
+          (pt) => pt.date == consultation.date && pt.time == consultation.time,
+        ),
+        isFalse,
+        reason: '상담은 같은 날 PT가 없는 빈 시간에 배치한다',
+      );
+    }
   });
 
   test('명단에 있는 이름은 고객 id 로, 미등록 상담자는 이름만 남는다', () async {

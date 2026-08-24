@@ -1112,7 +1112,8 @@ class _WeekSlot {
   final List<Map<String, Object?>> program;
 }
 
-/// 트레이너의 한 주 — 요일마다 다른 시간대·길이의 1:1 PT 와 상담.
+/// 트레이너의 한 주 — 10~22시 사이 짝수 정시는 1:1 PT, 그 사이 홀수
+/// 정시는 상담으로 둔다. PT는 60분, 상담은 30분으로 통일한다.
 ///
 /// 오늘 몫은 [_schedule] 이 따로 들고 있어서, 오늘에 해당하는 요일은 시딩이
 /// 건너뛴다. 두 목록이 같은 날에 겹치면 오늘 화면에 없던 수업이 끼어든다.
@@ -1120,10 +1121,10 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 월
   _WeekSlot(
     weekday: 1,
-    time: '07:00',
+    time: '10:00',
     clientName: '최우진',
     type: SessionType.personalTraining,
-    durationMinutes: 50,
+    durationMinutes: 60,
     note: '출근 전 수업. 상체 위주로 짧게 끊어 간다.',
     program: <Map<String, Object?>>[
       <String, Object?>{'name': '랫풀다운', 'sets': 4, 'reps': '10회', 'weight': '35kg'},
@@ -1132,7 +1133,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   ),
   _WeekSlot(
     weekday: 1,
-    time: '11:00',
+    time: '13:00',
     clientName: '정하윤',
     type: SessionType.consultation,
     durationMinutes: 30,
@@ -1153,18 +1154,18 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 화
   _WeekSlot(
     weekday: 2,
-    time: '09:00',
+    time: '10:00',
     clientName: '신유나',
     type: SessionType.personalTraining,
-    durationMinutes: 40,
+    durationMinutes: 60,
     note: '유산소 비중을 늘리는 주. 심박 130 안쪽으로 유지한다.',
   ),
   _WeekSlot(
     weekday: 2,
-    time: '13:00',
+    time: '14:00',
     clientName: '오세라',
     type: SessionType.personalTraining,
-    durationMinutes: 50,
+    durationMinutes: 60,
     note: '어깨 가동 범위 회복 단계. 중량보다 자세를 본다.',
     program: <Map<String, Object?>>[
       <String, Object?>{'name': '밴드 외전', 'sets': 3, 'reps': '20회', 'weight': '밴드'},
@@ -1173,7 +1174,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   ),
   _WeekSlot(
     weekday: 2,
-    time: '19:00',
+    time: '20:00',
     clientName: '한지호',
     type: SessionType.personalTraining,
     durationMinutes: 60,
@@ -1182,7 +1183,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 수
   _WeekSlot(
     weekday: 3,
-    time: '08:00',
+    time: '10:00',
     clientName: '배준혁',
     type: SessionType.personalTraining,
     durationMinutes: 60,
@@ -1194,7 +1195,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   ),
   _WeekSlot(
     weekday: 3,
-    time: '14:00',
+    time: '15:00',
     clientName: '문가영',
     type: SessionType.consultation,
     durationMinutes: 30,
@@ -1205,7 +1206,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     time: '20:00',
     clientName: '백서진',
     type: SessionType.personalTraining,
-    durationMinutes: 50,
+    durationMinutes: 60,
     note: '야간 수업. 다음 날 근육통을 고려해 볼륨을 낮게 잡는다.',
   ),
   // 목
@@ -1226,21 +1227,21 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     time: '16:00',
     clientName: '류태경',
     type: SessionType.personalTraining,
-    durationMinutes: 40,
+    durationMinutes: 60,
     note: '재활 마무리 단계. 통증 없는 범위에서만 중량을 올린다.',
   ),
   // 금
   _WeekSlot(
     weekday: 5,
-    time: '07:30',
+    time: '10:00',
     clientName: '노은채',
     type: SessionType.personalTraining,
-    durationMinutes: 50,
+    durationMinutes: 60,
     note: '주 마지막 근력 수업. 상체 볼륨을 채운다.',
   ),
   _WeekSlot(
     weekday: 5,
-    time: '12:00',
+    time: '13:00',
     clientName: '조은비',
     type: SessionType.consultation,
     durationMinutes: 30,
@@ -1248,7 +1249,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   ),
   _WeekSlot(
     weekday: 5,
-    time: '17:00',
+    time: '16:00',
     clientName: '최우진',
     type: SessionType.personalTraining,
     durationMinutes: 60,
@@ -1260,16 +1261,16 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   ),
   _WeekSlot(
     weekday: 5,
-    time: '19:30',
+    time: '20:00',
     clientName: '이지수',
     type: SessionType.personalTraining,
-    durationMinutes: 40,
+    durationMinutes: 60,
     note: '컨디션에 따라 유산소로 대체할 수 있다.',
   ),
   // 토
   _WeekSlot(
     weekday: 6,
-    time: '09:00',
+    time: '10:00',
     clientName: '정하윤',
     type: SessionType.personalTraining,
     durationMinutes: 60,
@@ -1283,18 +1284,18 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 더하면 회원 앱과 트레이너 웹의 같은 날짜가 다른 이야기를 한다.
   _WeekSlot(
     weekday: 6,
-    time: '11:00',
+    time: '14:00',
     clientName: '박성호',
     type: SessionType.personalTraining,
-    durationMinutes: 50,
+    durationMinutes: 60,
     note: '주말 보강 수업. 평일에 빠진 하체를 채운다.',
   ),
   _WeekSlot(
     weekday: 6,
-    time: '15:00',
+    time: '17:00',
     clientName: '서지훈',
     type: SessionType.consultation,
-    durationMinutes: 40,
+    durationMinutes: 30,
     note: '주말 상담. 헬스장 이용 시간대와 목표를 맞춰 본다.',
   ),
   // 일
@@ -1303,7 +1304,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     time: '10:00',
     clientName: '임도현',
     type: SessionType.personalTraining,
-    durationMinutes: 40,
+    durationMinutes: 60,
     note: '가벼운 마무리 수업. 다음 주 계획을 함께 정한다.',
   ),
 ];
@@ -1341,7 +1342,7 @@ const List<_Slot> _schedule = <_Slot>[
     time: '12:00',
     clientName: '이지수',
     type: SessionType.personalTraining,
-    durationMinutes: 50,
+    durationMinutes: 60,
     status: ScheduleStatus.done,
     note: '데드리프트 자세 안정적. 다음 세션 60kg 도전.',
     program: <Map<String, Object?>>[
@@ -1371,7 +1372,7 @@ const List<_Slot> _schedule = <_Slot>[
     program: <Map<String, Object?>>[],
   ),
   _Slot(
-    time: '15:00',
+    time: '16:00',
     clientName: '박성호',
     type: SessionType.personalTraining,
     durationMinutes: 60,
