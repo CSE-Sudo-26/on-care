@@ -9,6 +9,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:printing/printing.dart';
 
 /// 루트 화면 위에 채팅 페이지를 열어 하단 내비게이션과 플로팅 버튼을 가린다.
@@ -141,15 +142,17 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
     if (_sending) return;
     final text = _input.text.trim();
     if (text.isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
+    // 문구와 같이 await 전에 잡아 둔다.
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     setState(() => _sending = true);
     try {
       await ref.read(memberCoachRepositoryProvider).sendMessage(text);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatSendFailed)));
+      toast.show(l.coachChatSendFailed,
+        kind: AppToastKind.error,
+      );
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -517,7 +520,7 @@ class _Bubble extends ConsumerWidget {
     CoachAttachment attachment,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     try {
       final bytes = await ref
           .read(chatPdfRepositoryProvider)
@@ -538,7 +541,9 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatPdfOpenFailed)));
+      toast.show(l.coachChatPdfOpenFailed,
+        kind: AppToastKind.error,
+      );
     }
   }
 }

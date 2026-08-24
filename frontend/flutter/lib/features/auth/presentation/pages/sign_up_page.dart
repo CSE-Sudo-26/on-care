@@ -9,6 +9,7 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 회원가입 화면 — 이름/이메일/비밀번호로 계정을 만들고, 성공 시 자동
 /// 로그인해 대시보드로 진입한다(라우터 가드가 인증 상태를 감지).
@@ -47,26 +48,26 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Future<void> _register() async {
     if (_loading) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final name = _name.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
     final confirm = _passwordConfirm.text;
     if (email.isEmpty || password.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.authMissingCredentials)),
+      toast.show(l.authMissingCredentials,
+        kind: AppToastKind.error,
       );
       return;
     }
     if (password.length < 8) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.signUpPasswordTooShort)),
+      toast.show(l.signUpPasswordTooShort,
+        kind: AppToastKind.error,
       );
       return;
     }
     if (password != confirm) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.signUpPasswordMismatch)),
+      toast.show(l.signUpPasswordMismatch,
+        kind: AppToastKind.error,
       );
       return;
     }
@@ -84,12 +85,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       final msg = e.response?.statusCode == 409
           ? l.signUpEmailTaken
           : l.signUpFailed;
-      messenger.showSnackBar(SnackBar(content: Text(msg)));
+      toast.show(msg, kind: AppToastKind.error);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.signUpFailed)),
-      );
+      toast.show(l.signUpFailed, kind: AppToastKind.error);
     }
   }
 

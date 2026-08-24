@@ -17,6 +17,7 @@ import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/meal_photo_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// A single logged food item, with the per-food nutrition shown on the meal
@@ -873,9 +874,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           child: FilledButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(l.dietSaved)));
+              showAppToast(context, l.dietSaved, kind: AppToastKind.success);
             },
             style: FilledButton.styleFrom(
               backgroundColor: FigmaColors.primary,
@@ -1058,7 +1057,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     final String? id = widget.meal.id;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     if (id == null) {
       navigator.pop();
       return;
@@ -1090,10 +1089,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l.dietSaved)));
+      toast.show(l.dietSaved, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.dietSaveFailed)));
+      toast.show(l.dietSaveFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1129,7 +1128,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     if (!ok || !mounted) return;
 
     final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _busy = true);
     try {
       await ref.read(dietRepositoryProvider).deleteEntry(id);
@@ -1140,10 +1139,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleted)));
+      toast.show(l.dietDeleted, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleteFailed)));
+      toast.show(l.dietDeleteFailed, kind: AppToastKind.error);
     }
   }
 

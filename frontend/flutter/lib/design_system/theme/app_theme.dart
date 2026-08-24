@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/design_system/tokens/spacing.dart';
+import 'package:oncare/design_system/tokens/toast.dart';
 import 'package:oncare/design_system/tokens/typography.dart';
 
 /// Builds the app-wide `ThemeData`. The light scheme is hand-mapped from
@@ -33,6 +35,37 @@ class AppTheme {
   /// 의도해서 쓰는 자리까지 함께 바뀐다.
   static const DialogThemeData _dialogTheme = DialogThemeData(
     backgroundColor: AppColors.card,
+  );
+
+  /// `SnackBar` 을 **떠 있는 형태**로 고정한다. (#1259)
+  ///
+  /// 앱이 띄우는 알림은 [showAppToast] 로 화면 위쪽 오버레이에 뜬다. 이 테마는
+  /// 그 헬퍼를 거치지 않은 `showSnackBar` 호출을 위한 **그물**이다 — 기본값
+  /// 그대로 두면 아래에서 `+` 버튼과 겹치기 때문이다.
+  ///
+  /// Material 기본값(`SnackBarBehavior.fixed`)은 토스트를 하단 내비게이션 바
+  /// 위에 각진 채로 붙인다. 그런데 이 앱의 `+` 버튼은 `Scaffold` 의 FAB 이
+  /// 아니라 **바 위젯 안**에 들어 있어(`AppNavMetrics.addButtonLift` 만큼 솟은
+  /// 투명 여백에 얹혀 있다), 붙어 버린 토스트 아래로 그 투명한 띠가 남고 `+`
+  /// 원이 경계에 걸쳐 위치가 어긋나 보였다.
+  ///
+  /// 떠 있는 형태는 바 위젯 **전체**(= `+` 버튼까지)를 비켜서 놓이므로 셸 안팎
+  /// 어디서 띄우든 자리가 맞는다 — 하단 바가 없는 로그인·온보딩 화면에서는
+  /// 화면 아래 끝에서 [AppToastStyle.bottomGap] 만큼만 떨어진다.
+  static const SnackBarThemeData _snackBarTheme = SnackBarThemeData(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: AppToastStyle.background,
+    contentTextStyle: AppToastStyle.contentTextStyle,
+    actionTextColor: AppToastStyle.actionText,
+    closeIconColor: AppToastStyle.foreground,
+    elevation: 6,
+    insetPadding: EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.xs,
+      AppSpacing.lg,
+      AppToastStyle.bottomGap,
+    ),
+    shape: RoundedRectangleBorder(borderRadius: AppToastStyle.borderRadius),
   );
 
   static ThemeData light() {
@@ -86,6 +119,7 @@ class AppTheme {
       ),
       dialogTheme: _dialogTheme,
       bottomSheetTheme: _bottomSheetTheme,
+      snackBarTheme: _snackBarTheme,
     );
   }
 
@@ -106,6 +140,7 @@ class AppTheme {
     return base.copyWith(
       textTheme: AppTypography.buildTextTheme(base.textTheme),
       bottomSheetTheme: _bottomSheetTheme,
+      snackBarTheme: _snackBarTheme,
     );
   }
 }
