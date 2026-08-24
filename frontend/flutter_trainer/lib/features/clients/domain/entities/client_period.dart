@@ -198,6 +198,10 @@ class ClientExerciseDay {
     this.strengthMinutes = 0,
     this.stretchingMinutes = 0,
     this.otherMinutes = 0,
+    this.cardioCalories = 0,
+    this.strengthCalories = 0,
+    this.stretchingCalories = 0,
+    this.otherCalories = 0,
     this.strengthSets = 0,
   });
 
@@ -212,6 +216,13 @@ class ClientExerciseDay {
 
   /// 목표가 없는 나머지 운동. 그래프에는 그리지 않고 분 수만 적는다.
   final int otherMinutes;
+
+  /// 그날의 유형별 **칼로리**. 리포트 막대를 칼로리로 쌓는 재료다(#1289).
+  /// 분과 따로 두는 이유는 유형마다 분당 소모가 다르기 때문이다.
+  final int cardioCalories;
+  final int strengthCalories;
+  final int stretchingCalories;
+  final int otherCalories;
 
   /// 그날의 근력 **세트 수**.
   final int strengthSets;
@@ -231,6 +242,7 @@ class ClientExercisePeriod {
     required this.range,
     required this.days,
     this.weeklyGoalMinutes = 0,
+    this.weeklyGoalCalories = 0,
   });
 
   final ClientDateRange range;
@@ -241,8 +253,15 @@ class ClientExercisePeriod {
   /// (#1015)
   final int weeklyGoalMinutes;
 
+  /// 회원의 주간 **소모 칼로리** 목표. 리포트 막대가 칼로리 축을 쓰면서
+  /// 눈금 끝을 정하는 값이 됐다(#1289) — 이행률(%)일 때는 늘 100 이었다.
+  final int weeklyGoalCalories;
+
   /// 하루 목표(분). 목표가 없으면 0 이고, 그러면 목표선을 그리지 않는다.
   double get dailyGoalMinutes => weeklyGoalMinutes / 7;
+
+  /// 하루 소모 칼로리 목표. 목표가 없으면 0 이다.
+  double get dailyGoalCalories => weeklyGoalCalories / 7;
 
   int get totalMinutes =>
       days.fold<int>(0, (int a, ClientExerciseDay d) => a + d.minutes);

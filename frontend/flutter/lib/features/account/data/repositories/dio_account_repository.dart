@@ -27,10 +27,21 @@ class DioAccountRepository implements AccountRepository {
     num? weightKg,
     String? conditions,
     String? goals,
+    int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? dailyBurnKcal,
+    int? weeklyCardioMinutes,
+    int? weeklyStrengthSets,
+    int? weeklyFlexibilityMinutes,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
       '/users/me/onboarding',
+      // 여기서는 `?value` 로 빈 값을 통째로 뺀다 — 첫 저장이라 '목표 해제'
+      // 라는 뜻이 없고, 비운 칸은 손대지 않은 칸이다.
       data: <String, Object?>{
         'birth_date': ?birthDate,
         'gender': ?gender,
@@ -38,7 +49,16 @@ class DioAccountRepository implements AccountRepository {
         'weight_kg': ?weightKg,
         'conditions': ?conditions,
         'goals': ?goals,
+        'daily_calories': ?dailyCalories,
         'daily_sodium_mg': ?dailySodiumMg,
+        'daily_sugar_g': ?dailySugarG,
+        'daily_carbs_g': ?dailyCarbsG,
+        'daily_protein_g': ?dailyProteinG,
+        'daily_fat_g': ?dailyFatG,
+        'daily_burn_kcal': ?dailyBurnKcal,
+        'weekly_cardio_minutes': ?weeklyCardioMinutes,
+        'weekly_strength_sets': ?weeklyStrengthSets,
+        'weekly_flexibility_minutes': ?weeklyFlexibilityMinutes,
       },
     );
     return UserProfile.fromJson(res.data!);

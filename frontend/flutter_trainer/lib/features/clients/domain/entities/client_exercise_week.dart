@@ -9,9 +9,14 @@ class ClientExerciseWeek {
     this.strengthMinutes = const <int>[],
     this.stretchingMinutes = const <int>[],
     this.otherMinutes = const <int>[],
+    this.cardioCalories = const <int>[],
+    this.strengthCalories = const <int>[],
+    this.stretchingCalories = const <int>[],
+    this.otherCalories = const <int>[],
     this.strengthSets = const <int>[],
     this.sessionCount,
     this.weeklyGoalMinutes = 0,
+    this.weeklyGoalCalories = 0,
     this.itemsByDayLabel = const <String, List<String>>{},
   });
 
@@ -31,6 +36,17 @@ class ClientExerciseWeek {
   /// 뜻을 잃는다. 회원 앱과 같은 규칙이다.
   final List<int> otherMinutes;
 
+  /// 요일별 유형 분해를 **칼로리로** 잰 것(월→일). 셋의 합에 [otherCalories]
+  /// 까지 더하면 [dailyCalories] 와 같다.
+  ///
+  /// 분과 따로 두는 이유는 유형마다 분당 소모가 다르기 때문이다 — 분 비중으로
+  /// 칼로리를 나누면 근력 40분이 유산소 40분과 같은 몫을 차지한다. 서버가
+  /// 유형별 칼로리를 따로 내려주지 않으므로 `sessions` 에서 직접 센다.
+  final List<int> cardioCalories;
+  final List<int> strengthCalories;
+  final List<int> stretchingCalories;
+  final List<int> otherCalories;
+
   /// 요일별 **근력 세트 수**. 근력은 시간이 아니라 세트로 재는 운동이라, 서버가
   /// 기록한 값을 그대로 내려준다. 비어 있으면 분에서 환산한다.
   final List<int> strengthSets;
@@ -43,6 +59,11 @@ class ClientExerciseWeek {
   /// 쓰게 서버가 함께 내려준다 — 트레이너 화면은 회원 프로필을 따로 읽지
   /// 않는다. (#1015)
   final int weeklyGoalMinutes;
+
+  /// 이 회원의 주간 **소모 칼로리** 목표. 서버가 운동 시간 목표와 함께 늘 내려
+  /// 주는데 예전에는 앱이 읽지 않았다 — 리포트 그래프가 이행률(%)을 그리는 동안
+  /// 눈금 끝이 늘 100 이라 목표가 필요 없었기 때문이다(#1289).
+  final int weeklyGoalCalories;
 
   /// 요일 라벨 → 그날 한 운동 이름들. 서버 응답의 `sessions` 에서 모은다.
   ///
@@ -81,16 +102,72 @@ class ClientExerciseWeek {
     return out;
   }
 
+  /// 응답의 유형 표기를 네 가지 표준 코드로 접는다.
+  ///
+  /// 기록에 따라 영문 코드·한글 라벨·옛 어휘(`walking`·`yoga`)가 섞여 온다 —
+  /// 서버의 `exercise_types.normalize` 와 같은 표다. 모르는 값은 `other`.
+  static String _kindOf(String? type) => switch ((type ?? '').trim()) {
+    'cardio' || '유산소' || 'walking' || '걷기' => 'cardio',
+    'strength' || '근력' => 'strength',
+    'stretching' ||
+    '스트레칭' ||
+    'yoga' ||
+    '요가' ||
+    'flexibility' ||
+    '유연성' => 'stretching',
+    _ => 'other',
+  };
+
+  /// `sessions` → 요일별·유형별 칼로리. 키는 [_kindOf] 의 네 코드다.
+  ///
+  /// 서버가 유형 분해를 분으로만 내려주므로 칼로리는 여기서 센다. 분 비중으로
+  /// 나누면 안 된다 — 유형마다 분당 소모가 다르다.
+  static Map<String, List<int>> _caloriesByKind(
+    Object? sessions,
+    List<String> dayLabels,
+  ) {
+    final out = <String, List<int>>{
+      for (final String kind in <String>[
+        'cardio',
+        'strength',
+        'stretching',
+        'other',
+      ])
+        kind: List<int>.filled(dayLabels.length, 0),
+    };
+    for (final Object? row
+        in (sessions as List<Object?>?) ?? const <Object?>[]) {
+      if (row is! Map<String, Object?>) continue;
+      final int day = dayLabels.indexOf((row['day_label'] as String?) ?? '');
+      if (day < 0) continue;
+      out[_kindOf(row['type'] as String?)]![day] +=
+          (row['calories'] as num?)?.toInt() ?? 0;
+    }
+    return out;
+  }
+
   factory ClientExerciseWeek.fromJson(Map<String, Object?> json) {
     List<int> ints(String key) =>
         ((json[key] as List<Object?>?) ?? const <Object?>[])
             .map((value) => (value! as num).toInt())
             .toList(growable: false);
 
+    final List<String> dayLabels =
+        ((json['day_labels'] as List<Object?>?) ?? const <Object?>[])
+            .cast<String>()
+            .toList(growable: false);
+    final Map<String, List<int>> byKind = _caloriesByKind(
+      json['sessions'],
+      dayLabels,
+    );
+
     return ClientExerciseWeek(
-      dayLabels: ((json['day_labels'] as List<Object?>?) ?? const <Object?>[])
-          .cast<String>()
-          .toList(growable: false),
+      dayLabels: dayLabels,
+      cardioCalories: byKind['cardio']!,
+      strengthCalories: byKind['strength']!,
+      stretchingCalories: byKind['stretching']!,
+      otherCalories: byKind['other']!,
+      weeklyGoalCalories: (json['weekly_goal_calories'] as num?)?.toInt() ?? 0,
       dailyMinutes: ints('daily_minutes'),
       dailyCalories: ints('daily_calories'),
       cardioMinutes: ints('cardio_minutes'),

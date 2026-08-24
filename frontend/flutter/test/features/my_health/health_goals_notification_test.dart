@@ -84,7 +84,7 @@ void main() {
       tester.getRect(find.text('건강 목표가 저장되었어요')).center.dy,
       lessThan(screen.height / 4),
     );
-    expect(find.text('식단 일일 목표'), findsNothing);
+    expect(find.text('식단 목표'), findsNothing);
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
@@ -97,7 +97,7 @@ void main() {
 
     expect(find.text('저장에 실패했어요. 잠시 후 다시 시도해 주세요'), findsOneWidget);
     expect(find.byType(MaterialBanner), findsNothing);
-    expect(find.text('식단 일일 목표'), findsOneWidget);
+    expect(find.text('식단 목표'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();

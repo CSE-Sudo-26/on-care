@@ -6,14 +6,20 @@ import 'package:oncare/features/account/data/repositories/mock_account_repositor
 import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 세우지 않은 목표는 화면을 열고 저장해도 세워지지 않는다. (PR #900 리뷰)
 ///
 /// `null` 은 *미설정 또는 목표 해제*라는 계약이고, 서버는 키가 없으면 그대로
-/// 두고 키가 `null` 로 오면 해제한다. 화면이 빈 칸을 기본값으로 채워 두면
-/// 열어 보기만 해도 기본값이 진짜 목표로 굳는다.
+/// 두고 키가 `null` 로 오면 해제한다.
+///
+/// 칸은 이제 권장값이 **채워진 채로** 열린다 — 예전처럼 비워 두면 식단 여섯
+/// 칸만 까맣게 차고 운동 네 칸은 옅은 자리표시로 남아, 같은 시트의 위아래가
+/// 서로 다른 상태로 읽혔다. 대신 화면이 *회원이 손댄 칸*을 따로 기억해서, 손대지
+/// 않은 칸은 여전히 `null` 로 내보낸다. 보이는 것과 저장되는 것이 다른 자리라
+/// 여기서 못 박아 둔다.
 
 /// 마지막으로 받은 인자를 잡아 두는 저장소 — 화면이 무엇을 보냈는지 본다.
 class _RecordingAccountRepository extends MockAccountRepository {
@@ -115,19 +121,42 @@ Future<void> _save(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('세우지 않은 목표는 빈 칸으로 열리고 기본값은 placeholder 로만 보인다', (
-    tester,
-  ) async {
+  testWidgets('세우지 않은 목표도 권장값이 채워진 채로 열린다', (tester) async {
     await _openHealthGoals(tester);
 
-    final carbs = _field(tester, 'goalCarbsField');
-    expect(carbs.controller!.text, isEmpty, reason: '기본값이 값으로 채워졌다');
-    // 기본값은 보이되 값이 되지는 않는다. 칼로리(1800)가 있으니 권장 배분
-    // 225g 이 placeholder 로 온다.
-    expect(carbs.decoration!.hintText, isNotNull);
-
-    // 세워 둔 목표는 그대로 보인다.
+    // 세운 적 없는 탄수화물도 빈 칸이 아니라 기본값이 적혀 있다.
+    expect(
+      _field(tester, 'goalCarbsField').controller!.text,
+      '${UserProfile.defaultDailyCarbsG}',
+    );
+    // 세워 둔 목표는 저장된 값 그대로다.
     expect(_field(tester, 'goalProteinField').controller!.text, '120');
+    // 운동 네 칸도 같이 찬다 — 식단만 까맣고 운동만 회색이던 자리다.
+    expect(
+      _field(tester, 'goalDailyBurnField').controller!.text,
+      '${kDefaultExerciseLoadGoals.dailyBurnKcal.round()}',
+    );
+    expect(
+      _field(tester, 'goalCardioField').controller!.text,
+      '${kDefaultExerciseLoadGoals.weeklyCardioMinutes.round()}',
+    );
+  });
+
+  testWidgets('채워진 권장값을 한 번 고치면 그때부터는 그 값이 저장된다', (tester) async {
+    final repository = await _openHealthGoals(tester);
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const Key('goalCarbsField')),
+        matching: find.byType(TextField),
+      ),
+      '300',
+    );
+    await tester.pump();
+    await _save(tester);
+
+    expect(repository.lastCarbs!.value, 300);
+    expect((await repository.fetchProfile()).dailyCarbsG, 300);
   });
 
   testWidgets('열고 그대로 저장해도 세우지 않은 목표는 null 로 남는다', (tester) async {
