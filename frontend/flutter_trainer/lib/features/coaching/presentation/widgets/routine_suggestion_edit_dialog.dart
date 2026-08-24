@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_suggestion.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -31,6 +32,108 @@ Future<RoutineSuggestionEdit?> showRoutineSuggestionEditDialog(
   return showDialog<RoutineSuggestionEdit>(
     context: context,
     builder: (_) => RoutineSuggestionEditDialog(suggestion: suggestion),
+  );
+}
+
+/// 개인운동 제안 하나의 **최종 검토** — 승인 직전 확인 (#1028).
+///
+/// `true` 로 닫히면 트레이너가 나갈 내용을 그대로 보고 확인한 것이다. 취소·
+/// 바깥 탭은 null 이고, 그때는 아무 mutation 도 일어나지 않는다. 여기 그리는
+/// 값(이름·시간·유형·메모)이 곧 `approve` 가 보낼 값이라, 확인한 내용과
+/// payload 가 어긋날 자리가 없다.
+Future<bool?> showRoutineSuggestionConfirmDialog(
+  BuildContext context, {
+  required RoutineSuggestion suggestion,
+  required String clientName,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      final AppLocalizations l = AppLocalizations.of(dialogContext);
+      return AlertDialog(
+        key: const ValueKey<String>('routine-suggestion-confirm'),
+        backgroundColor: AppColors.card,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(
+          l.suggestionConfirmTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                l.suggestionConfirmBody(clientName),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.subtleForeground,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: const BoxDecoration(
+                  color: AppColors.inputBackground,
+                  borderRadius: BorderRadius.all(AppRadius.md),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '${suggestion.name} · ${l.minutesShort(suggestion.minutes)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      routineTypeLabel(l, suggestion.type),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.subtleForeground,
+                      ),
+                    ),
+                    if (suggestion.reason.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        suggestion.reason,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.foreground,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('suggestion-confirm-cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('suggestion-confirm-submit'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.suggestionApprove),
+          ),
+        ],
+      );
+    },
   );
 }
 

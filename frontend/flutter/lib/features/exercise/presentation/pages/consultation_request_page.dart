@@ -15,6 +15,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 enum _ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 
@@ -198,8 +199,10 @@ class _ConsultationRequestPageState
       // 제출 버튼이 영영 눌리지 않는다(리뷰 지적).
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).errorUnknown)),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).errorUnknown,
+        kind: AppToastKind.error,
       );
       return;
     }
