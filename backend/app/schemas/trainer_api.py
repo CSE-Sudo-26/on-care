@@ -1180,10 +1180,11 @@ class TrainerNotificationSettingsUpdate(PartialUpdate):
 
 
 class MemberLookupOut(BaseModel):
-    """이메일 완전 일치로 찾은 회원 한 명.
+    """회원 ID(`User.id`) 완전 일치로 찾은 회원 한 명.
 
     요청을 보낼지 판단할 만큼만 담는다. 누가 담당인지·어떤 기록이 있는지는
-    담당이 아닌 트레이너가 알 이유가 없다.
+    담당이 아닌 트레이너가 알 이유가 없다. 성별·나이·신체 정보는 여기 없다 —
+    그 값들은 담당이 성립한 뒤 회원의 건강 프로필에서만 조회한다.
     """
 
     member_id: str
