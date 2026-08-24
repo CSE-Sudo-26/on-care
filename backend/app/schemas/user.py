@@ -187,9 +187,19 @@ class OnboardingRequest(BaseModel):
     weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
     conditions: Optional[str] = None  # "고혈압, 당뇨 전단계"
     goals: Optional[str] = None
+    # 목표 칸은 `HealthGoalsUpdate` 와 **같은 열**이다 — 온보딩이 권장값으로
+    # 채워 둔 목표를 MY 건강 목표가 그대로 이어 고친다. 두 스키마가 서로 다른
+    # 열을 다루면 온보딩에서 정한 목표가 MY 에서 보이지 않는다.
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
     daily_sugar_g: Optional[int] = None
+    daily_carbs_g: Optional[int] = None
+    daily_protein_g: Optional[int] = None
+    daily_fat_g: Optional[int] = None
+    daily_burn_kcal: Optional[int] = None
+    weekly_cardio_minutes: Optional[int] = None
+    weekly_strength_sets: Optional[int] = None
+    weekly_flexibility_minutes: Optional[int] = None
 
 
 class ProfileUpdate(PartialUpdate):

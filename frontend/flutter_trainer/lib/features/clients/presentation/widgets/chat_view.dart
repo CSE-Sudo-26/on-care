@@ -719,7 +719,7 @@ class _Bubble extends ConsumerWidget {
       ),
     );
     final time = Text(
-      message.timeLabel,
+      _clockOnly(message.timeLabel),
       key: ValueKey<String>('trainer-message-time-${message.id}'),
       style: const TextStyle(fontSize: 10, color: AppColors.subtleForeground),
     );
@@ -758,6 +758,9 @@ class _Bubble extends ConsumerWidget {
       ),
     );
   }
+
+  static String _clockOnly(String label) =>
+      RegExp(r'\d{1,2}:\d{2}').firstMatch(label)?.group(0) ?? label;
 
   Future<void> _openPdf(
     BuildContext context,

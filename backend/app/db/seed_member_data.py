@@ -617,19 +617,25 @@ _FIXTURE_ID_PREFIX = "seed-fix-"
 
 def _by_type(
     exercises: tuple[FixtureExercise, ...],
-) -> dict[str, tuple[int, int]]:
-    """운동을 종류별로 합친다 — {종류: (분, 칼로리)}. 픽스처 순서를 유지한다.
+) -> dict[str, tuple[int, int, str]]:
+    """운동을 종류별로 합친다 — {종류: (분, 칼로리, 이름)}. 픽스처 순서를 유지한다.
 
     종류는 표준 어휘로 접어서 센다 (#996). 픽스처가 아직 옛 이름을 쓰더라도
     DB 에는 표준 값만 들어가야 앱이 유형을 다시 매핑하지 않는다.
+
+    이름도 함께 잇는다 — 리포트의 요일 칸이 그날 무엇을 했는지를 운동 기록의
+    이름으로 적기 때문이다(#1288). 종류로 합치면서 이름까지 버리면 데모의 요일
+    칸이 "유산소 · 근력" 두 줄로만 남는다. PT 완료가 만드는 기록도 여러 운동을
+    쉼표로 잇는 같은 규칙을 쓴다.
     """
-    totals: dict[str, tuple[int, int]] = {}
+    totals: dict[str, tuple[int, int, str]] = {}
     for exercise in exercises:
         kind = exercise_types.normalize(exercise.type)
-        minutes, calories = totals.get(kind, (0, 0))
+        minutes, calories, names = totals.get(kind, (0, 0, ""))
         totals[kind] = (
             minutes + exercise.minutes,
             calories + exercise.calories,
+            f"{names}, {exercise.name}" if names else exercise.name,
         )
     return totals
 
@@ -722,13 +728,14 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
         # 하루에 같은 종류가 둘일 수 있어(PT 날의 레그프레스·레그컬은 둘 다 근력)
         # 종류로 합친다. 주간 활동 그래프가 하루·종류당 한 칸을 그리므로 나눠 넣을
         # 자리도 없다.
-        for kind, (minutes, calories) in _by_type(day.done_exercises).items():
+        for kind, (minutes, calories, name) in _by_type(day.done_exercises).items():
             db.add(models.ExerciseSession(
                 id=f"{_FIXTURE_ID_PREFIX}ex-{member_id}-{day.iso}-{kind}",
                 user_id=member_id,
                 week_start=day.week_start,
                 day_label=day.day_label,
                 type=kind,
+                name=name,
                 minutes=minutes,
                 calories=calories,
                 intensity="moderate",

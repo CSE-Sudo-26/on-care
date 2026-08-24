@@ -1570,9 +1570,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardBasicSubtitle => '맞춤 건강 관리를 위해 기본 정보를 알려주세요.';
 
   @override
-  String get onboardBirthHint => '생년월일 (YYYY-MM-DD)';
-
-  @override
   String get onboardHeightHint => '키 (cm)';
 
   @override
@@ -1594,7 +1591,102 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardGoalHint => '건강·운동 목표';
 
   @override
-  String get onboardSodiumGoalHint => '하루 나트륨 목표 (mg)';
+  String get onboardOptionalTag => '(선택)';
+
+  @override
+  String get onboardSkipStep => '이 단계 건너뛰기';
+
+  @override
+  String get onboardBirthLabel => '생년월일';
+
+  @override
+  String get onboardBirthYearHint => '년';
+
+  @override
+  String get onboardBirthMonthHint => '월';
+
+  @override
+  String get onboardBirthDayHint => '일';
+
+  @override
+  String onboardBirthYearValue(int year) {
+    return '$year년';
+  }
+
+  @override
+  String onboardBirthMonthValue(int month) {
+    return '$month월';
+  }
+
+  @override
+  String onboardBirthDayValue(int day) {
+    return '$day일';
+  }
+
+  @override
+  String get onboardGenderLabel => '성별';
+
+  @override
+  String onboardAgeSummary(int age) {
+    return '만 $age세';
+  }
+
+  @override
+  String onboardBmiSummary(String bmi, String category) {
+    return 'BMI $bmi · $category';
+  }
+
+  @override
+  String get onboardBmiUnderweight => '저체중';
+
+  @override
+  String get onboardBmiNormal => '정상';
+
+  @override
+  String get onboardBmiPreObese => '비만 전단계';
+
+  @override
+  String get onboardBmiObese1 => '1단계 비만';
+
+  @override
+  String get onboardBmiObese2 => '2단계 비만';
+
+  @override
+  String get onboardBmiObese3 => '3단계 비만';
+
+  @override
+  String get onboardBmiSourceNote => '기준: 대한비만학회 비만 진료지침(아시아·태평양 기준)';
+
+  @override
+  String get onboardDietTitle => '식단 목표';
+
+  @override
+  String get onboardDietSubtitle => '권장값을 미리 채워 뒀어요. 원하는 값으로 바꿔도 괜찮아요.';
+
+  @override
+  String get onboardExerciseTitle => '운동 목표';
+
+  @override
+  String get onboardExerciseSubtitle =>
+      '세계보건기구 권고를 기준으로 채워 뒀어요. 원하는 값으로 바꿔도 괜찮아요.';
+
+  @override
+  String get onboardRecommendedPersonal => '나이·성별·키·체중으로 계산한 권장값이에요';
+
+  @override
+  String get onboardRecommendedFallback =>
+      '기본 권장값이에요. 1단계에서 생년월일·성별·키·체중을 채우면 더 정확해져요';
+
+  @override
+  String get onboardResetToRecommended => '권장값으로 되돌리기';
+
+  @override
+  String get onboardDietSourceNote =>
+      '출처: 2020 한국인 영양소 섭취기준(에너지필요추정량·에너지적정비율) · WHO 나트륨·자유당 섭취 권고';
+
+  @override
+  String get onboardExerciseSourceNote =>
+      '출처: WHO 신체활동 지침(2020) — 주 150분 중강도 유산소, 주 2회 이상 근력';
 
   @override
   String get onboardGenderMale => '남성';
@@ -1734,7 +1826,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myHealthGoalsTitle => '건강 목표';
 
   @override
-  String get myGoalsDietSection => '식단 일일 목표';
+  String get myGoalsDietSection => '식단 목표';
 
   @override
   String get myGoalsExerciseSection => '운동 목표';

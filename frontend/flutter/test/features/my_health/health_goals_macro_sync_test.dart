@@ -136,7 +136,9 @@ void main() {
     expect(_text(tester, 'goalProteinField'), '150');
     expect(_text(tester, 'goalFatField'), '44');
     expect(_calories(tester), '1996');
-    // 이제 세 칸이 배분과 같으니 버튼은 사라진다.
-    expect(find.byKey(const Key('goalApplyMacroSplit')), findsNothing);
+    // 세 칸이 배분과 같아져도 버튼은 그대로 남는다 — 값을 고쳐 둔 다음 권장
+    // 배분으로 되돌릴 길이 이 버튼 하나뿐이라, 조건에 따라 사라지면 되돌릴
+    // 방법이 없어진다.
+    expect(find.byKey(const Key('goalApplyMacroSplit')), findsOneWidget);
   });
 }
