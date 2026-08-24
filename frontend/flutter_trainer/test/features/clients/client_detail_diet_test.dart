@@ -59,6 +59,10 @@ void main() {
         db,
       ).watchDiet('seed-client-1').first;
       expect(meals.map((m) => m.meal).toList(), <String>['아침', '점심', '간식']);
+      // 같은 끼니 라벨이 하루에 두 번 저장돼도 목록 위젯 키가 겹치지 않도록
+      // 고유한 id 를 함께 준다 — meal 라벨만으로는 고유하지 않다.
+      expect(meals.map((m) => m.id).toSet(), hasLength(3));
+      expect(meals.every((m) => m.id.isNotEmpty), isTrue);
       expect(meals.first.items, '스크램블 에그, 딸기');
       expect(meals.first.calories, 217);
       expect(meals.first.sodiumMg, 221);
@@ -176,6 +180,18 @@ void main() {
           matching: find.byType(Scrollable),
         )
         .first;
+
+    // 끼니 카드는 `meal.id` 를 키로 쓴다(같은 끼니 라벨이 하루에 두 번 저장될
+    // 수 있어 라벨만으로는 고유하지 않다) — 그래서 라벨 배지 텍스트로 카드를
+    // 찾아 올라간다.
+    Finder mealCardFinder(String mealLabel) => find.ancestor(
+      of: find.text(mealLabel),
+      matching: find.byWidgetPredicate(
+        (Widget w) =>
+            w.key is ValueKey<String> &&
+            (w.key! as ValueKey<String>).value.startsWith('diet-meal-'),
+      ),
+    );
 
     Future<ProviderContainer> openDiet(
       WidgetTester tester,
@@ -300,7 +316,15 @@ void main() {
       // 끼니 카드와 같다. 예전에는 이름을 쉼표로 이어 붙인 한 줄뿐이었다.
       expect(find.text('스크램블 에그'), findsOneWidget);
       expect(find.text('딸기'), findsOneWidget);
-      expect(find.textContaining('칼로리', findRichText: true), findsWidgets);
+      // 위 영양 요약 카드에도 '오늘 섭취 칼로리' 가 있어 전체 트리를 뒤지면
+      // 끼니 카드의 칼로리가 사라져도 통과한다 — 아침 카드 범위로 좁힌다.
+      expect(
+        find.descendant(
+          of: mealCardFinder('아침'),
+          matching: find.textContaining('칼로리', findRichText: true),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('탄수화물 10g · 단백질 13.5g · 지방 14.5g'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('점심'),
@@ -485,11 +509,7 @@ void main() {
         tester
             .getTopLeft(find.byKey(const ValueKey<String>('diet-ai-analysis')))
             .dy,
-        lessThan(
-          tester
-              .getTopLeft(find.byKey(const ValueKey<String>('diet-meal-아침')))
-              .dy,
-        ),
+        lessThan(tester.getTopLeft(mealCardFinder('아침')).dy),
       );
 
       await tester.tap(find.byKey(const Key('client-period-week')));

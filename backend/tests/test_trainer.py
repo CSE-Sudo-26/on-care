@@ -342,6 +342,11 @@ def test_trainer_client_diet_maps_member_meals(client):
     assert meals[0]["carbs_g"] == 40
     assert meals[0]["protein_g"] == 15
     assert meals[0]["fat_g"] == 6
+    # 같은 끼니 라벨(예: 간식 두 번)이 하루에 또 저장돼도 화면 목록의 키가
+    # 겹치지 않도록, meal 라벨이 아니라 고유한 DietEntry.id 를 함께 준다.
+    ids = [m["id"] for m in meals]
+    assert all(ids)
+    assert len(set(ids)) == len(ids)
 
 
 def test_trainer_client_diet_survives_unexpected_food_shapes(client, db_session):

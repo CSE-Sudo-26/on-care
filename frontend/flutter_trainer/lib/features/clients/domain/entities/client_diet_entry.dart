@@ -32,6 +32,7 @@ class ClientDietFood {
 class ClientDietEntry {
   /// Creates a meal entry.
   const ClientDietEntry({
+    this.id = '',
     required this.meal,
     required this.items,
     required this.calories,
@@ -45,6 +46,11 @@ class ClientDietEntry {
     this.photoUrl,
     this.photoAsset,
   });
+
+  /// The backing `DietEntry.id`. 같은 날 같은 [meal] 라벨(예: 간식 두 번)이
+  /// meal_type 중복을 막는 제약 없이 저장될 수 있어, 목록 위젯의 키로 [meal]
+  /// 대신 이 값을 쓴다.
+  final String id;
 
   /// Meal label (아침 | 점심 | 저녁 | 간식).
   final String meal;

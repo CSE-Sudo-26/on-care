@@ -189,6 +189,9 @@ class MemberHealthProfileUpdate(PartialUpdate):
 
 class ClientDietEntryOut(BaseModel):
     """고객 식단 서브탭 한 끼 — 프론트 ClientDietEntry 계약 정렬."""
+    #: `DietEntry.id`. 같은 날 같은 끼니(예: 간식 두 번)가 meal_type 중복을
+    #: 막는 제약 없이 저장될 수 있어, 화면 목록의 키로 meal 라벨을 쓸 수 없다.
+    id: str = ""
     meal: str        # 아침|점심|저녁|간식
     items: str       # 음식명 나열
     # 회원이 자기 앱에서 보는 것과 같은 끼니 카드를 트레이너도 본다(#1166).

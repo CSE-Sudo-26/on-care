@@ -148,7 +148,9 @@ class _TodayDiet extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               for (final meal in meals) ...<Widget>[
                 _MealCard(
-                  key: ValueKey<String>('diet-meal-${meal.meal}'),
+                  // 같은 날 같은 끼니 라벨이 두 번 저장될 수 있어(예: 간식
+                  // 두 번), meal 라벨이 아니라 고유한 끼니 id를 키로 쓴다.
+                  key: ValueKey<String>('diet-meal-${meal.id}'),
                   entry: meal,
                 ),
                 const SizedBox(height: AppSpacing.sm),

@@ -784,6 +784,7 @@ class DriftClientRepository implements ClientRepository {
   }
 
   ClientDietEntry _toDietEntry(ClientDietEntryRow row) => ClientDietEntry(
+    id: row.id,
     meal: row.meal,
     items: row.items,
     calories: row.calories,
