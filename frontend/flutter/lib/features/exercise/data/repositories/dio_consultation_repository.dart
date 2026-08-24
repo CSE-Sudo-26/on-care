@@ -45,6 +45,11 @@ class DioConsultationRepository implements ConsultationRepository {
         .map(consultationFromJson)
         .toList();
   }
+
+  @override
+  Future<void> cancel(String consultationId) async {
+    await _dio.delete<void>('/consultations/$consultationId');
+  }
 }
 
 /// 데모용. `LocalApiInterceptor` 에 `/consultations` 핸들러가 없어 데모에서는 서버로
@@ -67,4 +72,7 @@ class MockConsultationRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => const <ConsultationRequest>[];
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
