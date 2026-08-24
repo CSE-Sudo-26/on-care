@@ -4892,6 +4892,12 @@ abstract class AppLocalizations {
   /// **'Low completion · check recent records'**
   String get dashTodoCompletionSubtitle;
 
+  /// Subtitle of the demo carried-over task shown before real history exists.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet feedback left over from yesterday'**
+  String get dashTodoCarriedOverDemoSubtitle;
+
   /// No description provided for @dashTodoProgramSubtitle.
   ///
   /// In en, this message translates to:

@@ -41,10 +41,15 @@ abstract class DietRepository {
   /// DELETE /diet/entries/{id} — remove a diet entry.
   Future<void> deleteEntry(String id);
 
-  /// PUT /diet/entries/{id} — edit an entry's meal type, time, foods, and
-  /// nutrition values corrected from the analysis result.
+  /// PUT /diet/entries/{id} — edit an entry's date, meal type, time, foods,
+  /// and nutrition values corrected from the analysis result.
+  ///
+  /// [date] 는 `YYYY-MM-DD` 다. 사진 분석은 저장한 시각의 날짜로 기록을 남기는데,
+  /// 지난 식사의 사진을 나중에 올리는 일이 있어 실제로 먹은 날로 옮길 수 있어야
+  /// 한다(#1241). 아직 오지 않은 날은 서버가 거절한다.
   Future<DietEntry> updateEntry({
     required String id,
+    String? date,
     String? mealType,
     String? timeLabel,
     List<FoodItem>? foods,

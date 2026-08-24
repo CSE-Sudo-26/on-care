@@ -111,11 +111,15 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
 ///
 /// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
 /// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
-Color _rateColor(int rate) {
-  // 100% 초록은 회원 앱이 쓰는 어두운 초록과 같은 토큰이다 — 같은 성취를 두
-  // 앱이 다른 초록으로 칠하면 나란히 놓고 이야기할 때 서로 다른 것처럼
-  // 보인다(#1025).
-  if (rate >= 100) return AppColors.statusNormal;
+///
+/// 화면 밖에서도 읽을 수 있게 열어 둔다 — 이 세 단계가 곧 `완료` 의 정의라,
+/// 색이 흔들리면 테스트가 먼저 걸린다(#1239).
+Color workoutRateColor(int rate) {
+  // 100% 는 두 앱이 함께 쓰는 **완료 초록**이다(#1239). 예전에는 어두운 초록
+  // (`#22A882`)이었는데, 그 색은 회원 앱에서 식단 화면의 계열색으로 남아 있어
+  // 같은 `완료` 를 두 앱이 다른 초록으로 칠하고 있었다 — 트레이너 앱 안에서도
+  // 일정·할 일 완료와 이 배지의 초록이 갈렸다.
+  if (rate >= 100) return AppColors.success;
   if (rate > 0) return AppColors.brandOrange;
   // 미시작은 `borderStrong`(#DEE8F1) 이었다. 4px 띠일 때는 옅어도 보였지만,
   // 색 띠를 걷어낸 지금은 이 색이 배지의 글자색이라 판에 거의 묻힌다.
@@ -342,7 +346,7 @@ class _MissionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color = _rateColor(rate);
+    final Color color = workoutRateColor(rate);
     final IconData icon = rate >= 100
         ? Icons.emoji_events_outlined
         : rate > 0

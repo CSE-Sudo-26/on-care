@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 
-enum AppBadgeTone { neutral, info, success, warning, error }
+/// 배지의 뜻. `success` 는 **완료·성공**, `achievement` 는 **성취**다 —
+/// 초록 두 가지가 서로 다른 것을 말한다(#1239).
+enum AppBadgeTone { neutral, info, success, achievement, warning, error }
 
 class AppBadge extends StatelessWidget {
   const AppBadge({
@@ -26,6 +28,10 @@ class AppBadge extends StatelessWidget {
       AppBadgeTone.success => (
         bg: AppColors.success.withValues(alpha: 0.15),
         fg: AppColors.success,
+      ),
+      AppBadgeTone.achievement => (
+        bg: AppColors.achievement.withValues(alpha: 0.15),
+        fg: AppColors.achievement,
       ),
       AppBadgeTone.warning => (
         bg: AppColors.warning.withValues(alpha: 0.15),

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2663,6 +2662,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashTodoCompletionSubtitle => '이행률 저조 · 최근 기록 확인';
+
+  @override
+  String get dashTodoCarriedOverDemoSubtitle => '어제 남긴 식단 피드백';
 
   @override
   String get dashTodoProgramSubtitle => '최근 등록한 프로그램 없음';

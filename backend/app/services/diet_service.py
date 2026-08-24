@@ -407,7 +407,11 @@ def get_owned_entry(db: Session, user_id: str, entry_id: str) -> DietEntry | Non
 
 
 def apply_entry_update(db: Session, entry: DietEntry, payload: DietEntryUpdate) -> DietEntryOut:
-    """식단 기록의 끼니 분류/시간 + 영양소 부분 수정."""
+    """식단 기록의 날짜·끼니 분류/시간 + 영양소 부분 수정."""
+    if payload.date is not None:
+        # 날짜가 바뀌면 그 하루의 합계도 함께 옮겨진다 — 화면은 날짜별로 조회하므로
+        # 이 값이 곧 "어느 날 먹은 것인가" 다(#1241).
+        entry.date = payload.date
     if payload.meal_type is not None:
         entry.meal_type = payload.meal_type
     if payload.time_label is not None:

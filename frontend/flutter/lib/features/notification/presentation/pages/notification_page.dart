@@ -20,7 +20,7 @@ import 'package:oncare/shared/widgets/empty_state.dart';
 ) => switch (c) {
   AlertCategory.reminder => (label: l.alertCategoryReminder, tone: AppBadgeTone.info),
   AlertCategory.healthCheck => (label: l.alertCategoryHealth, tone: AppBadgeTone.warning),
-  AlertCategory.achievement => (label: l.alertCategoryAchievement, tone: AppBadgeTone.success),
+  AlertCategory.achievement => (label: l.alertCategoryAchievement, tone: AppBadgeTone.achievement),
   AlertCategory.system => (label: l.alertCategorySystem, tone: AppBadgeTone.neutral),
 };
 
