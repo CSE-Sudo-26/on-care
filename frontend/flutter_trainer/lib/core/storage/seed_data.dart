@@ -14,10 +14,13 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v26']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v27']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v27` 은 사용자 앱과 트레이너 웹의 김민수 대화 날짜를 일치시켰다(#1292).
+/// 다른 고객과의 상대적인 최신순은 그대로 유지한다.
 ///
 /// `_v26` 은 트레이너의 한 주를 채웠다(#1210) — 시드가 오늘 하루치뿐이어서
 /// 주간 시간표의 다른 요일 열이 전부 비어 있었다. 요일마다 시간대·길이가 다른
@@ -107,7 +110,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v26') == today) return;
+  if (await db.readValue('trainer_seeded_v27') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final DemoFixture demo = fixture ?? DemoFixture.load();
@@ -117,12 +120,13 @@ Future<void> seedIfEmpty(
     todayIndex,
   );
 
-  // A fixed, ancient anchor for seed chat timestamps. Using a constant
-  // (not nowKst()) keeps seed messages ordered before ANY reply
+  // A fixed anchor for seed chat timestamps. The 40-day spread ends on
+  // 2026-01-03, matching the member app's shared Kim Minsu thread. Using
+  // a constant (not nowKst()) keeps seed messages ordered before ANY reply
   // added at runtime — including after a later-day re-seed, where a fresh
   // `now()` base would otherwise sort new seed rows *after* a preserved
   // runtime reply.
-  final chatEpoch = DateTime.utc(2000);
+  final chatEpoch = DateTime(2025, 11, 24);
 
   // First boot, or the date rolled over. Wipe + re-insert + flag all run
   // in ONE transaction: if any insert fails, the whole thing rolls back
@@ -347,7 +351,8 @@ Future<void> seedIfEmpty(
                       client.daysAgo -
                       (lastDayIndex - client.chat[i].dayIndex),
                   minutes: _minutesOfDay(client.chat[i].timeLabel),
-                  seconds: i,
+                  // 공유 스레드는 회원 앱과 DateTime까지 정확히 같아야 한다.
+                  seconds: client.id == 1 ? 0 : i,
                 ),
               ),
             ),
@@ -446,7 +451,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v26', today);
+    await db.putValue('trainer_seeded_v27', today);
   });
 }
 
