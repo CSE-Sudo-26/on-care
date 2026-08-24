@@ -10,8 +10,9 @@ import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store
 /// Each bar has two segments: that day's own tasks (navy) stacked under
 /// tasks that were **carried over** from an earlier day's unfinished list
 /// (회색이 섞인 푸른색) — [DailyTaskSnapshot.completedCarriedOver] is a real
-/// count, not a visual flourish, so a taller band means the trainer is
-/// clearing a real backlog that day.
+/// count, not a visual flourish. The full bar height represents that day's
+/// completion rate, while each segment shows how the completed tasks split
+/// between today's list and carried-over work.
 class TaskProgressChart extends StatelessWidget {
   /// Creates the chart.
   const TaskProgressChart({
@@ -52,12 +53,6 @@ class TaskProgressChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ceiling = <int>[
-      1,
-      for (final s in snapshots)
-        if (s != null) s.total,
-    ].reduce((a, b) => a > b ? a : b);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +70,6 @@ class TaskProgressChart extends StatelessWidget {
                       index: i,
                       snapshot: snapshots[i],
                       percentLabel: _percentLabel(snapshots[i]),
-                      ceiling: ceiling,
                       pending: isCurrentWeek && i > todayIndex,
                     ),
                   ),
@@ -158,14 +152,12 @@ class _StackedBar extends StatelessWidget {
     required this.index,
     required this.snapshot,
     required this.percentLabel,
-    required this.ceiling,
     required this.pending,
   });
 
   final int index;
   final DailyTaskSnapshot? snapshot;
   final String percentLabel;
-  final int ceiling;
   final bool pending;
 
   @override
@@ -190,12 +182,18 @@ class _StackedBar extends StatelessWidget {
         const labelHeight = 12.0;
         const labelGap = 2.0;
         final maxBarHeight = constraints.maxHeight - labelHeight - labelGap;
-        final todayHeight = maxBarHeight * (s.completedToday / ceiling);
-        final carriedHeight = maxBarHeight * (s.completedCarriedOver / ceiling);
-        final totalHeight = (todayHeight + carriedHeight).clamp(
+        final completionRate = s.total == 0
+            ? 0.0
+            : (s.completed / s.total).clamp(0.0, 1.0);
+        final totalHeight = (maxBarHeight * completionRate).clamp(
           s.completed > 0 ? 2.0 : 0.0,
           maxBarHeight,
         );
+        final carriedShare = s.completed == 0
+            ? 0.0
+            : (s.completedCarriedOver / s.completed).clamp(0.0, 1.0);
+        final carriedHeight = totalHeight * carriedShare;
+        final todayHeight = totalHeight - carriedHeight;
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
