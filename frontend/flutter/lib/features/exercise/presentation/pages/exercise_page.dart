@@ -713,8 +713,10 @@ String _exerciseTypeLabel(AppLocalizations l, ExerciseType type) =>
     switch (type) {
       ExerciseType.cardio || ExerciseType.walking => l.exTypeCardio,
       ExerciseType.strength => l.exTypeStrength,
-      ExerciseType.stretching || ExerciseType.yoga => l.exTypeStretching,
-      ExerciseType.other => l.exTypeCardio,
+      ExerciseType.stretching || ExerciseType.yoga => l.exTypeFlexibility,
+      // 기타는 기타라고 적는다 — 유산소로 적으면 하지 않은 운동을 한 것처럼
+      // 읽힌다.
+      ExerciseType.other => l.exTypeOtherChip,
     };
 
 /// 정말로 기록이 없는 날 — 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 낀다.

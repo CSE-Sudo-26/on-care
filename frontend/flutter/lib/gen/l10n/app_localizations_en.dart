@@ -504,19 +504,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietDeleteMeal => 'Delete Meal';
 
   @override
-  String get exTypeWalking => 'Walking';
-
-  @override
   String get exTypeCardio => 'Cardio';
 
   @override
   String get exTypeStrength => 'Strength';
 
   @override
-  String get exTypeYoga => 'Yoga';
-
-  @override
-  String get exTypeStretching => 'Stretching';
+  String get exTypeFlexibility => 'Flexibility';
 
   @override
   String get exTypeOtherChip => 'Other';
@@ -1750,11 +1744,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalStrengthWeekly => 'Weekly strength (sets)';
 
   @override
-  String get myGoalFlexibilityWeekly => 'Weekly stretching (min)';
+  String get myGoalFlexibilityWeekly => 'Weekly flexibility (min)';
 
   @override
   String get myGoalExerciseSuggestionNote =>
-      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week';
+      'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week';
 
   @override
   String get myGoalExerciseApplySuggestion => 'Use suggested goals';
