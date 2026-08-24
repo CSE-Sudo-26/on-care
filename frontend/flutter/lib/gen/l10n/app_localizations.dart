@@ -1736,6 +1736,18 @@ abstract class AppLocalizations {
   /// **'User'**
   String get myDefaultUserName;
 
+  /// No description provided for @myMemberIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'My member ID'**
+  String get myMemberIdLabel;
+
+  /// No description provided for @myMemberIdCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Member ID copied'**
+  String get myMemberIdCopied;
+
   /// No description provided for @mySettingsTitle.
   ///
   /// In en, this message translates to:

@@ -304,6 +304,8 @@
   "exKakaoMapArea": "카카오맵 영역",
   "myTabTitle": "MY",
   "myDefaultUserName": "사용자",
+  "myMemberIdLabel": "내 회원 ID",
+  "myMemberIdCopied": "회원 ID를 복사했어요",
   "mySettingsTitle": "설정",
   "myProfileTitle": "내 프로필",
   "myNotifTitle": "알림 설정",
