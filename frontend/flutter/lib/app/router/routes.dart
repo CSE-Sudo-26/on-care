@@ -21,6 +21,10 @@ class AppRoutes {
   static const String trainerDetail = '/trainers/:trainerId';
   static const String consultationRequest = '/consultations/request';
   static const String consultationComplete = '/consultations/complete';
+
+  /// 내 상담 요청 전체 내역 화면(#948). 운동 탭 요약 카드는 요청 1건만
+  /// 보여주고, 여기서 전체(진행 중 + 지난 요청)를 본다.
+  static const String consultationHistory = '/consultations';
   static const String exerciseGym = '/exercise?tab=gym';
 
   static String gymDetailPath(String gymId) =>
@@ -43,10 +47,7 @@ class AppRoutes {
   }) {
     return Uri(
       path: consultationRequest,
-      queryParameters: <String, String>{
-        'gymId': gymId,
-        'trainerId': trainerId,
-      },
+      queryParameters: <String, String>{'gymId': gymId, 'trainerId': trainerId},
     ).toString();
   }
 

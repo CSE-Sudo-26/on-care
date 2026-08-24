@@ -729,7 +729,6 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
 Future<void> submitConsultation(
   WidgetTester tester, {
   required int goalIndex,
-  required int timeIndex,
   required String message,
 }) async {
   Future<void> tapChip(String prefix, int index) async {
@@ -775,7 +774,14 @@ Future<void> submitConsultation(
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 
-  await tapChip('consult-time', timeIndex);
+  // 실 시간 선택기(키보드 입력)는 흔들리기 쉬우므로 E2E 는 "시간 협의"만
+  // 고른다(#1256) — 정확한 시각 입력 자체는 위젯 테스트가 다룬다.
+  final Finder timeFlexible = await _revealInForm(
+    tester,
+    find.byKey(const Key('consult-time-flexible')),
+  );
+  await tester.tap(timeFlexible);
+  await tester.pump();
 
   final Finder box = await _revealInForm(
     tester,

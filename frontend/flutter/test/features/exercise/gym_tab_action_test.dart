@@ -67,7 +67,7 @@ ConsultationRequest _consultation(
     healthPurposeType: HealthPurposeType.chronic,
     healthPurposeDetail: null,
     preferredDate: DateTime(2026, 8),
-    preferredTimeSlot: PreferredTimeSlot.afternoon,
+    preferredTimeSlot: const PreferredTime.at(TimeOfDay(hour: 14, minute: 0)),
     message: null,
     status: status,
     createdAt: DateTime(2026, 7, 31),
@@ -284,14 +284,14 @@ void main() {
     expect(find.text(l.exConsultButton), findsNothing);
     expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
 
-    final Finder statusSection = find.text(l.exConsultStatusSection);
-    final double statusTopBeforeTap = tester.getTopLeft(statusSection).dy;
     final int requestCountBeforeTap = consultationController.state.length;
 
+    // "상담 요청 확인" 은 같은 화면 아래로 스크롤하는 대신 전체 내역
+    // 화면으로 이동한다 — 누적된 이력을 여기서는 볼 수 없었다(#948).
     await tester.tap(find.text(l.exViewConsultationRequest));
     await tester.pumpAndSettle();
 
-    expect(tester.getTopLeft(statusSection).dy, lessThan(statusTopBeforeTap));
+    expect(find.text(l.exConsultHistoryTitle), findsOneWidget);
     expect(consultationController.state, hasLength(requestCountBeforeTap));
     expect(find.byType(BottomSheet), findsNothing);
   });
@@ -357,7 +357,7 @@ void main() {
       healthPurposeType: HealthPurposeType.chronic,
       healthPurposeDetail: null,
       preferredDate: DateTime(2026, 8),
-      preferredTimeSlot: PreferredTimeSlot.afternoon,
+      preferredTimeSlot: const PreferredTime.at(TimeOfDay(hour: 14, minute: 0)),
       message: null,
       status: ConsultationStatus.accepted,
       createdAt: DateTime(2026, 8),

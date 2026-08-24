@@ -1341,16 +1341,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exSelectDate => 'Select a date';
 
   @override
+  String get exSelectTime => 'Select a time';
+
+  @override
   String get exPreferredTime => 'Preferred Time';
-
-  @override
-  String get exTimeMorning => 'Morning';
-
-  @override
-  String get exTimeAfternoon => 'Afternoon';
-
-  @override
-  String get exTimeEvening => 'Evening';
 
   @override
   String get exTimeFlexible => 'Discuss Later';
@@ -1410,6 +1404,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => 'Consultation Request Status';
+
+  @override
+  String get exConsultHistoryTitle => 'My Consultation Requests';
+
+  @override
+  String get exConsultHistoryEmpty =>
+      'You haven\'t sent any consultation requests yet.';
+
+  @override
+  String get exConsultHistoryInProgress => 'In Progress';
+
+  @override
+  String get exConsultHistoryPast => 'Past Requests';
 
   @override
   String get exConsultRejectedReasonLabel => 'Reason for decline';
