@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2779,6 +2778,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dashTodoCompletionSubtitle =>
       'Low completion · check recent records';
+
+  @override
+  String get dashTodoCarriedOverDemoSubtitle =>
+      'Diet feedback left over from yesterday';
 
   @override
   String get dashTodoProgramSubtitle => 'No recent program sent';

@@ -63,6 +63,20 @@ class DailyTaskProgressStore {
     );
   }
 
+  /// 실제로 저장된 가장 이른 날(`YYYY-MM-DD`), 한 번도 쓰지 않았으면 null.
+  ///
+  /// 데모 이력이 어디까지 끼어들어도 되는지의 경계다(#1203) — 트레이너가 처음
+  /// 체크한 날부터는 그날의 실제 기록만 보여 준다.
+  String? firstSavedDate() {
+    String? earliest;
+    for (final String key in _prefs.getKeys()) {
+      if (!key.startsWith(_prefix)) continue;
+      final String date = key.substring(_prefix.length);
+      if (earliest == null || date.compareTo(earliest) < 0) earliest = date;
+    }
+    return earliest;
+  }
+
   /// The snapshot saved for [date] (`YYYY-MM-DD`), or null if the trainer
   /// never opened the dashboard that day.
   DailyTaskSnapshot? read(String date) {

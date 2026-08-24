@@ -8,6 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
+import 'package:oncare_trainer/features/dashboard/data/demo_task_history.dart';
 import 'package:oncare_trainer/features/dashboard/domain/churn_risk.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -146,6 +147,7 @@ class _TaskProgressCard extends ConsumerWidget {
     ref.watch(taskProgressVersionProvider);
     final l = AppLocalizations.of(context);
     final store = ref.watch(dailyTaskProgressStoreProvider);
+    final demoHistory = ref.watch(demoTaskHistoryProvider);
     final offset = ref.watch(_taskProgressWeekOffsetProvider);
     final today = nowKst();
     final currentMonday = today.subtract(Duration(days: today.weekday - 1));
@@ -210,8 +212,10 @@ class _TaskProgressCard extends ConsumerWidget {
         ),
       ),
       child: TaskProgressChart(
+        // 실제 기록이 먼저다. 데모 이력은 그 기록이 시작되기 전의 지난
+        // 날들만 채운다(#1203).
         snapshots: <DailyTaskSnapshot?>[
-          for (final d in dates) store.read(ymd(d)),
+          for (final d in dates) store.read(ymd(d)) ?? demoHistory.snapshotFor(d),
         ],
         dates: dates,
         labels: weekdayLabels(l),
