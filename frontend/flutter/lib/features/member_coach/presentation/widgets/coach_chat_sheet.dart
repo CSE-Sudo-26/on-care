@@ -9,6 +9,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:printing/printing.dart';
 
 /// 루트 화면 위에 채팅 페이지를 열어 하단 내비게이션과 플로팅 버튼을 가린다.
@@ -149,7 +150,11 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
       await ref.read(memberCoachRepositoryProvider).sendMessage(text);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatSendFailed)));
+      showAppToastVia(
+        messenger,
+        l.coachChatSendFailed,
+        kind: AppToastKind.error,
+      );
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -538,7 +543,11 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatPdfOpenFailed)));
+      showAppToastVia(
+        messenger,
+        l.coachChatPdfOpenFailed,
+        kind: AppToastKind.error,
+      );
     }
   }
 }

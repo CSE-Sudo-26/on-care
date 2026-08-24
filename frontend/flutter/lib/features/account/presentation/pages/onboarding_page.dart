@@ -8,6 +8,7 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// First-run onboarding — a 3-step wizard shown right after sign-up.
 /// Collects basic info → chronic conditions → health goals, then
@@ -112,7 +113,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.onboardSaveFailed)));
+      showAppToastVia(messenger, l.onboardSaveFailed, kind: AppToastKind.error);
     }
   }
 

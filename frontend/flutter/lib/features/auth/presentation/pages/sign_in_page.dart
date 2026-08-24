@@ -9,6 +9,7 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 로그인 화면 — 이메일/비밀번호 로그인 + 우측 상단 "데모로 시작" 바로가기.
 class SignInPage extends ConsumerStatefulWidget {
@@ -43,7 +44,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l.authMissingCredentials)));
+      showAppToastVia(
+        messenger,
+        l.authMissingCredentials,
+        kind: AppToastKind.error,
+      );
       return;
     }
     setState(() => _loading = true);
@@ -56,9 +61,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.authSignInFailed)),
-      );
+      showAppToastVia(messenger, l.authSignInFailed, kind: AppToastKind.error);
     }
   }
 
@@ -77,8 +80,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.authSocialSignInFailed)),
+      showAppToastVia(
+        messenger,
+        l.authSocialSignInFailed,
+        kind: AppToastKind.error,
       );
     }
   }

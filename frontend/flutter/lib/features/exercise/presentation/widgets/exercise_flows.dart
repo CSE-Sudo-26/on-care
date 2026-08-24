@@ -8,6 +8,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart'
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 // Backend value sent as `dayLabel` — DO NOT localize (persisted to the server).
 /// The "운동 종류" chip display labels, kept index-1:1 with [ExerciseType] so a
@@ -141,14 +142,14 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final int minutes = _minutes.round();
     if (minutes <= 0) {
-      messenger.showSnackBar(SnackBar(content: Text(l.exEnterDuration)));
+      showAppToastVia(messenger, l.exEnterDuration, kind: AppToastKind.error);
       return;
     }
     final ExerciseType type = _typeFromIndex(_type);
     final ExerciseSession? editing = widget.session;
     if (editing != null && editing.id == null) {
       // No id → PUT impossible; don't silently create a duplicate session.
-      messenger.showSnackBar(SnackBar(content: Text(l.exCannotEdit)));
+      showAppToastVia(messenger, l.exCannotEdit, kind: AppToastKind.error);
       return;
     }
     // Intensity is persisted now, so always recompute calories from the
@@ -184,12 +185,14 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       if (!mounted) return;
       ref.invalidate(exerciseWeekProvider);
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(widget.isEdit ? l.exUpdated : l.exLogged)),
+      showAppToastVia(
+        messenger,
+        widget.isEdit ? l.exUpdated : l.exLogged,
+        kind: AppToastKind.success,
       );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.exSaveFailed)));
+      showAppToastVia(messenger, l.exSaveFailed, kind: AppToastKind.error);
     }
   }
 

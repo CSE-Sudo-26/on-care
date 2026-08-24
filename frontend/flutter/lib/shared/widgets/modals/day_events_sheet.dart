@@ -10,6 +10,7 @@ import 'package:oncare/features/schedule/domain/entities/schedule_event.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 import 'package:oncare/features/schedule/presentation/schedule_category_color.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:oncare/shared/widgets/modals/add_event_dialog.dart';
 
 /// 하루치 일정을 펼쳐 수정·삭제할 수 있게 한다.
@@ -122,9 +123,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _deleting = null);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.eventDeleteFailed)),
-      );
+      showAppToastVia(messenger, l.eventDeleteFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -133,7 +132,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
       _deleting = null;
       _events.removeWhere((ScheduleEvent e) => e.id == event.id);
     });
-    messenger.showSnackBar(SnackBar(content: Text(l.eventDeleted)));
+    showAppToastVia(messenger, l.eventDeleted, kind: AppToastKind.success);
   }
 
   Future<void> _add() async {

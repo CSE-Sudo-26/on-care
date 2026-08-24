@@ -18,6 +18,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 class GymTab extends ConsumerWidget {
   const GymTab({required this.selectedSlot, required this.onSlot, super.key});
@@ -733,7 +734,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
       await ref.read(gymRepositoryProvider).reserve(slot.id);
     } catch (_) {
       if (mounted) setState(() => _reserving = null);
-      messenger.showSnackBar(SnackBar(content: Text(l.exReserveFailed)));
+      showAppToastVia(messenger, l.exReserveFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -742,10 +743,10 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     // 방금 잡은 예약이 '내 예약'에도 나타나야 취소가 걸린다. (#502)
     ref.invalidate(myReservationsProvider);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(l.exReserveConfirmedSlotGym(label, widget.gym.name)),
-      ),
+    showAppToastVia(
+      messenger,
+      l.exReserveConfirmedSlotGym(label, widget.gym.name),
+      kind: AppToastKind.success,
     );
   }
 
@@ -783,7 +784,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
       await ref.read(gymRepositoryProvider).cancelReservation(reservation.id);
     } catch (_) {
       if (mounted) setState(() => _cancelling = null);
-      messenger.showSnackBar(SnackBar(content: Text(l.exCancelFailed)));
+      showAppToastVia(messenger, l.exCancelFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -791,7 +792,11 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     // 좌석이 돌아왔으므로 슬롯도 함께 다시 읽는다.
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     ref.invalidate(myReservationsProvider);
-    messenger.showSnackBar(SnackBar(content: Text(l.exCancelDone(label))));
+    showAppToastVia(
+      messenger,
+      l.exCancelDone(label),
+      kind: AppToastKind.success,
+    );
   }
 
   @override

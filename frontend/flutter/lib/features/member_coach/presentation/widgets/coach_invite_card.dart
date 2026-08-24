@@ -7,6 +7,7 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 트레이너가 보낸 담당 요청 카드. (#919)
 ///
@@ -83,18 +84,16 @@ class _CoachInviteCardState extends ConsumerState<CoachInviteCard> {
           ..invalidate(coachSessionsProvider);
       }
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            accept
-                ? l.coachInviteAccepted(invite.trainerName)
-                : l.coachInviteRejected,
-          ),
-        ),
+      showAppToastVia(
+        messenger,
+        accept
+            ? l.coachInviteAccepted(invite.trainerName)
+            : l.coachInviteRejected,
+        kind: AppToastKind.success,
       );
     } on AppError {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.coachInviteFailed)));
+      showAppToastVia(messenger, l.coachInviteFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
