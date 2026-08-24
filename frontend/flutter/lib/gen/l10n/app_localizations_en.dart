@@ -971,6 +971,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myDefaultUserName => 'User';
 
   @override
+  String get myMemberIdLabel => 'My member ID';
+
+  @override
+  String get myMemberIdCopied => 'Member ID copied';
+
+  @override
   String get mySettingsTitle => 'Settings';
 
   @override

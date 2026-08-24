@@ -83,7 +83,9 @@ def get_my_health(
         rank = 14
 
     return UserHealth(
-        profile=HealthProfileBrief(name=current_user.name, email=current_user.email),
+        profile=HealthProfileBrief(
+            id=current_user.id, name=current_user.name, email=current_user.email
+        ),
         risk=risk,
         activity_points=points,
         activity_rank=rank,
