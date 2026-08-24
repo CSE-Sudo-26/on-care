@@ -5,11 +5,7 @@ import 'package:oncare/features/exercise/presentation/widgets/consult_time_range
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 void main() {
-  Future<void> openPicker(
-    WidgetTester tester, {
-    TimeRangeValue? Function(TimeRangeValue)? onPicked,
-  }) async {
-    TimeRangeValue? picked;
+  Future<void> openPicker(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('ko'),
@@ -17,13 +13,11 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (BuildContext context) => TextButton(
-            onPressed: () async {
-              picked = await showConsultTimeRangePicker(
-                context: context,
-                start: const TimeOfDay(hour: 10, minute: 0),
-                end: const TimeOfDay(hour: 11, minute: 0),
-              );
-            },
+            onPressed: () => showConsultTimeRangePicker(
+              context: context,
+              start: const TimeOfDay(hour: 10, minute: 0),
+              end: const TimeOfDay(hour: 11, minute: 0),
+            ),
             child: const Text('시간 선택 열기'),
           ),
         ),
