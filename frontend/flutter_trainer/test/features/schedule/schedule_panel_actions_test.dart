@@ -128,7 +128,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('week-detail')),
-        matching: find.text('10:00\u201311:00'),
+        matching: find.text('10:00\u201310:30'),
       ),
       findsOneWidget,
       reason: '시각은 자르지 않는다 — 소요 시간은 옆에 다시 적지 않는다',
