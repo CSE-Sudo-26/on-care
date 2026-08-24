@@ -1312,16 +1312,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSelectDate => '날짜를 선택해주세요';
 
   @override
+  String get exSelectTime => '시간을 선택해주세요';
+
+  @override
   String get exPreferredTime => '희망 시간대';
-
-  @override
-  String get exTimeMorning => '오전';
-
-  @override
-  String get exTimeAfternoon => '오후';
-
-  @override
-  String get exTimeEvening => '저녁';
 
   @override
   String get exTimeFlexible => '시간 협의';
@@ -1376,6 +1370,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => '상담 요청 현황';
+
+  @override
+  String get exConsultHistoryTitle => '내 상담 요청';
+
+  @override
+  String get exConsultHistoryEmpty => '아직 보낸 상담 요청이 없어요.';
+
+  @override
+  String get exConsultHistoryInProgress => '진행 중';
+
+  @override
+  String get exConsultHistoryPast => '지난 요청';
 
   @override
   String get exConsultRejectedReasonLabel => '거절 사유';

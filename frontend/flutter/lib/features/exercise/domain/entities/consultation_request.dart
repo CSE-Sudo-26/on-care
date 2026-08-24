@@ -56,7 +56,7 @@ class ConsultationRequest {
   /// `healthPurposeType` 이 other 일 때 사용자가 적은 내용.
   final String? healthPurposeDetail;
   final DateTime preferredDate;
-  final PreferredTimeSlot preferredTimeSlot;
+  final PreferredTime preferredTimeSlot;
   final String? message;
   final ConsultationStatus status;
   final DateTime createdAt;

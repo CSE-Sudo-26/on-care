@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2268,13 +2269,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get goalOther => '기타';
 
   @override
-  String get slotMorning => '오전';
+  String get slotAm => '오전';
 
   @override
-  String get slotAfternoon => '오후';
-
-  @override
-  String get slotEvening => '저녁';
+  String get slotPm => '오후';
 
   @override
   String get slotFlexible => '조율 가능';

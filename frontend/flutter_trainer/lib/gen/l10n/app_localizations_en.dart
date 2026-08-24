@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2367,13 +2368,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalOther => 'Other';
 
   @override
-  String get slotMorning => 'Morning';
+  String get slotAm => 'AM';
 
   @override
-  String get slotAfternoon => 'Afternoon';
-
-  @override
-  String get slotEvening => 'Evening';
+  String get slotPm => 'PM';
 
   @override
   String get slotFlexible => 'Flexible';
