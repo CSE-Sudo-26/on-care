@@ -13,10 +13,11 @@ class DialogCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 배경 없이 X 아이콘만 둔다 — 흰 원(그림자 포함)이 늘 떠 있으면 카드
+    // 구석에서 무겁게 보인다. 탭 파문은 `Material` 이 투명해도 그려진다.
     final button = Material(
-      color: AppColors.card,
+      color: Colors.transparent,
       shape: const CircleBorder(),
-      elevation: 1,
       child: InkWell(
         key: const ValueKey<String>('dialog-close'),
         customBorder: const CircleBorder(),

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from app.db.demo_fixture import load_fixture
 
-_MEMBER_ID = "user-demo"
+_MEMBER_ID = "user-7d4e9a2c5f18"
 
 
 def _h(token: str) -> dict:

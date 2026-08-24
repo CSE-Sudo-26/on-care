@@ -410,7 +410,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatView(
-                clientId: 'user-demo',
+                clientId: 'user-7d4e9a2c5f18',
                 clientAvatar: '김',
                 clientName: '김민수',
               ),

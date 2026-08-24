@@ -987,6 +987,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultExerciseGoal => '운동 목표';
 
   @override
+  String get consultHealthPurpose => '건강관리 목적';
+
+  @override
   String get consultPreferredTime => '희망 일시';
 
   @override
@@ -1474,6 +1477,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldType => '유형';
 
   @override
+  String get schedFieldDate => '날짜';
+
+  @override
   String get schedFieldTime => '시간';
 
   @override
@@ -1507,16 +1513,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedRepeat => '반복';
 
   @override
-  String get schedRepeatNone => '반복 없음';
-
-  @override
   String get schedRepeatWeekly => '매주';
 
   @override
   String get schedRepeatDays => '반복 요일';
-
-  @override
-  String get schedRepeatEnd => '종료';
 
   @override
   String get schedRepeatEndByCount => '횟수';
@@ -1528,6 +1528,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String schedRepeatCount(int count) {
     return '$count회';
   }
+
+  @override
+  String get schedRepeatCountUnit => '회';
 
   @override
   String schedRepeatPreview(int count, String first, String last) {
