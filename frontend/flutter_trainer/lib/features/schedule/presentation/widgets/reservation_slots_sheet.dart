@@ -317,202 +317,218 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     // 가운데 모달로 뜬다(#1250 과 같은 자리) — 닫기(X)는 카드 바깥
     // `_openCenteredDialog` 가 이미 그려 주므로 여기서 또 두지 않는다.
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.xl,
-        AppSpacing.xl,
-        AppSpacing.xl + bottom,
+    // `Dialog` 자체는 투명이라(#1250) 배경은 이 위젯이 직접 그린다 — 예전
+    // 바텀시트는 `showModalBottomSheet` 의 `backgroundColor` 로 받았는데,
+    // 가운데 모달로 옮기며 그 배경이 통째로 빠졌었다.
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: const BorderRadius.all(AppRadius.lg),
+        border: Border.all(color: AppColors.borderStrong),
       ),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.7,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              l.slotManageTitle,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              l.slotIntro(l.dateMonthDay(_date.month, _date.day)),
-              style: const TextStyle(color: AppColors.mutedForeground),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            // 종류·날짜·시간을 한 줄에 둔다 — 셋 다 "언제·누구 자리를
-            // 열까"를 정하는 같은 층위의 선택이라, 종류만 위에 따로 서고
-            // 나머지가 아래에 서면 무엇이 먼저인지 자리로 오해된다.
-            // 옅은 채움만 쓰고 테두리를 넣지 않는다 — 기본
-            // `OutlinedButton` 의 짙은 윤곽선은 이 시트에서 유일하게
-            // 선을 두른 요소라 눈에 튀었다(#1090).
-            // 가운데 모달(최대 560)에서는 넷을 한 줄에 두면 넘친다 — 두 줄로
-            // 나눈다. 새 일정 모달의 고객·유형/날짜·시간과 같은 두 칸짜리
-            // 줄 언어다.
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: PopupMenuButton<String>(
-                    key: const ValueKey<String>('slot-session-type'),
-                    enabled: !_saving,
-                    itemBuilder: (context) => <PopupMenuEntry<String>>[
-                      for (final t in SessionType.all)
-                        PopupMenuItem<String>(
-                          value: t,
-                          child: Text(sessionTypeLabel(l, t)),
-                        ),
-                    ],
-                    onSelected: (v) => setState(() => _type = v),
-                    child: _compactField(
-                      icon: Icons.badge_outlined,
-                      label: sessionTypeLabel(l, _type),
-                    ),
-                  ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.xl,
+          AppSpacing.xl,
+          AppSpacing.xl + bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                l.slotManageTitle,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _tappableField(
-                    key: const ValueKey<String>('slot-date'),
-                    onTap: _saving ? null : _pickDate,
-                    child: _compactField(
-                      icon: Icons.calendar_today_outlined,
-                      label: l.dateMonthDay(_date.month, _date.day),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _tappableField(
-                    key: const ValueKey<String>('slot-time-range'),
-                    onTap: _saving ? null : _pickRange,
-                    child: _compactField(
-                      icon: Icons.schedule_outlined,
-                      label: '${_hhmm(_time)} – ${_hhmm(_endTime)}',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                FilledButton.icon(
-                  key: const ValueKey<String>('slot-create'),
-                  onPressed: _saving ? null : _create,
-                  icon: const Icon(Icons.add),
-                  label: Text(l.slotOpenAction),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const Divider(height: 1),
-            const SizedBox(height: AppSpacing.md),
-            Expanded(
-              child: slots.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _) => Center(
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => ref.invalidate(reservationSlotsProvider),
-                    icon: const Icon(Icons.refresh),
-                    label: Text(l.slotReload),
-                  ),
-                ),
-                data: (allSlots) {
-                  final daySlots = allSlots
-                      .where((slot) => _sameDay(slot.startsAt, _date))
-                      .toList();
-                  if (daySlots.isEmpty) {
-                    return Center(
-                      child: Text(
-                        l.slotEmpty,
-                        style: const TextStyle(
-                          color: AppColors.mutedForeground,
-                        ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                l.slotIntro(l.dateMonthDay(_date.month, _date.day)),
+                style: const TextStyle(color: AppColors.mutedForeground),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              // 종류·날짜·시간을 한 줄에 둔다 — 셋 다 "언제·누구 자리를
+              // 열까"를 정하는 같은 층위의 선택이라, 종류만 위에 따로 서고
+              // 나머지가 아래에 서면 무엇이 먼저인지 자리로 오해된다.
+              // 옅은 채움만 쓰고 테두리를 넣지 않는다 — 기본
+              // `OutlinedButton` 의 짙은 윤곽선은 이 시트에서 유일하게
+              // 선을 두른 요소라 눈에 튀었다(#1090).
+              // 가운데 모달(최대 560)에서는 넷을 한 줄에 두면 넘친다 — 두 줄로
+              // 나눈다. 새 일정 모달의 고객·유형/날짜·시간과 같은 두 칸짜리
+              // 줄 언어다.
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: PopupMenuButton<String>(
+                      key: const ValueKey<String>('slot-session-type'),
+                      enabled: !_saving,
+                      itemBuilder: (context) => <PopupMenuEntry<String>>[
+                        for (final t in SessionType.all)
+                          PopupMenuItem<String>(
+                            value: t,
+                            child: Text(sessionTypeLabel(l, t)),
+                          ),
+                      ],
+                      onSelected: (v) => setState(() => _type = v),
+                      child: _compactField(
+                        icon: Icons.badge_outlined,
+                        label: sessionTypeLabel(l, _type),
                       ),
-                    );
-                  }
-                  return ListView.separated(
-                    itemCount: daySlots.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final slot = daySlots[index];
-                      return Container(
-                        key: ValueKey<String>('slot-row-${slot.id}'),
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: slot.isClosed
-                              ? AppColors.inputBackground
-                              : AppColors.card,
-                          border: Border.all(color: AppColors.borderStrong),
-                          borderRadius: const BorderRadius.all(AppRadius.md),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Container(
-                              width: 132,
-                              alignment: Alignment.center,
-                              child: Text(
-                                '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt))} – '
-                                '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt.add(Duration(minutes: slot.durationMinutes))))}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    sessionTypeLabel(l, slot.sessionType),
-                                    style: const TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  Text(
-                                    // 한 사람 몫뿐인 자리라 인원수를 셀
-                                    // 것이 없다 — 상태만 적는다(#1072).
-                                    slot.isClosed
-                                        ? l.slotClosedSummary
-                                        : (slot.booked
-                                              ? l.slotBookedSummary
-                                              : l.slotOpenSummary),
-                                    style: TextStyle(
-                                      color: slot.isClosed
-                                          ? AppColors.subtleForeground
-                                          : AppColors.foreground,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (!slot.isClosed) ...<Widget>[
-                              IconButton(
-                                tooltip: l.actionEdit,
-                                onPressed: _saving ? null : () => _edit(slot),
-                                icon: const Icon(Icons.edit_outlined),
-                              ),
-                              IconButton(
-                                tooltip: l.slotCloseAction,
-                                onPressed: _saving ? null : () => _close(slot),
-                                icon: const Icon(
-                                  Icons.lock_outline,
-                                  color: AppColors.destructive,
-                                ),
-                              ),
-                            ],
-                          ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _tappableField(
+                      key: const ValueKey<String>('slot-date'),
+                      onTap: _saving ? null : _pickDate,
+                      child: _compactField(
+                        icon: Icons.calendar_today_outlined,
+                        label: l.dateMonthDay(_date.month, _date.day),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _tappableField(
+                      key: const ValueKey<String>('slot-time-range'),
+                      onTap: _saving ? null : _pickRange,
+                      child: _compactField(
+                        icon: Icons.schedule_outlined,
+                        label: '${_hhmm(_time)} – ${_hhmm(_endTime)}',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  FilledButton.icon(
+                    key: const ValueKey<String>('slot-create'),
+                    onPressed: _saving ? null : _create,
+                    icon: const Icon(Icons.add),
+                    label: Text(l.slotOpenAction),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.md),
+              Expanded(
+                child: slots.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, _) => Center(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => ref.invalidate(reservationSlotsProvider),
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l.slotReload),
+                    ),
+                  ),
+                  data: (allSlots) {
+                    final daySlots = allSlots
+                        .where((slot) => _sameDay(slot.startsAt, _date))
+                        .toList();
+                    if (daySlots.isEmpty) {
+                      return Center(
+                        child: Text(
+                          l.slotEmpty,
+                          style: const TextStyle(
+                            color: AppColors.mutedForeground,
+                          ),
                         ),
                       );
-                    },
-                  );
-                },
+                    }
+                    return ListView.separated(
+                      itemCount: daySlots.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        final slot = daySlots[index];
+                        return Container(
+                          key: ValueKey<String>('slot-row-${slot.id}'),
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: slot.isClosed
+                                ? AppColors.inputBackground
+                                : AppColors.card,
+                            border: Border.all(color: AppColors.borderStrong),
+                            borderRadius: const BorderRadius.all(AppRadius.md),
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              Container(
+                                width: 132,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt))} – '
+                                  '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt.add(Duration(minutes: slot.durationMinutes))))}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
+                                      sessionTypeLabel(l, slot.sessionType),
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      // 한 사람 몫뿐인 자리라 인원수를 셀
+                                      // 것이 없다 — 상태만 적는다(#1072).
+                                      slot.isClosed
+                                          ? l.slotClosedSummary
+                                          : (slot.booked
+                                                ? l.slotBookedSummary
+                                                : l.slotOpenSummary),
+                                      style: TextStyle(
+                                        color: slot.isClosed
+                                            ? AppColors.subtleForeground
+                                            : AppColors.foreground,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (!slot.isClosed) ...<Widget>[
+                                IconButton(
+                                  tooltip: l.actionEdit,
+                                  onPressed: _saving ? null : () => _edit(slot),
+                                  icon: const Icon(Icons.edit_outlined),
+                                ),
+                                IconButton(
+                                  tooltip: l.slotCloseAction,
+                                  onPressed: _saving
+                                      ? null
+                                      : () => _close(slot),
+                                  icon: const Icon(
+                                    Icons.lock_outline,
+                                    color: AppColors.destructive,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

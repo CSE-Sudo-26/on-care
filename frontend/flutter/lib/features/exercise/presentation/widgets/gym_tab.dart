@@ -429,13 +429,20 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
   /// 취소 요청이 오가는 동안 잡고 있는 예약 id. 예약과 같은 이유로 잠근다.
   String? _cancelling;
 
-  /// 로케일에 맞는 "8월 8일 오후 7:00" 형태. 고정 문자열이 아니라 실제 시각을
-  /// 쓰므로 날이 바뀌어도 어긋나지 않는다.
+  /// 24시간(HH:mm) 표기로 고정한다 — 로케일 기본(오전/오후 12시간제)을 쓰던
+  /// `MaterialLocalizations.formatTimeOfDay` 대신이다. 빈 예약 시간을
+  /// 트레이너 쪽 스케줄·모달과 같은 표기로 보여준다.
+  static String _hhmm(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:'
+      '${t.minute.toString().padLeft(2, '0')}';
+
+  /// "8월 8일 19:00" 형태. 고정 문자열이 아니라 실제 시각을 쓰므로 날이
+  /// 바뀌어도 어긋나지 않는다.
   String _when(BuildContext context, AppLocalizations l, DateTime at) {
     final MaterialLocalizations m = MaterialLocalizations.of(context);
     return l.exSlotWhen(
       m.formatMediumDate(at),
-      m.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+      _hhmm(TimeOfDay.fromDateTime(at)),
     );
   }
 
@@ -444,8 +451,8 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     final DateTime end = slot.startsAt.add(
       Duration(minutes: slot.durationMinutes),
     );
-    final String start = m.formatTimeOfDay(TimeOfDay.fromDateTime(slot.startsAt));
-    final String finish = m.formatTimeOfDay(TimeOfDay.fromDateTime(end));
+    final String start = _hhmm(TimeOfDay.fromDateTime(slot.startsAt));
+    final String finish = _hhmm(TimeOfDay.fromDateTime(end));
     return '${m.formatMediumDate(slot.startsAt)}\n$start–$finish';
   }
 
@@ -635,33 +642,37 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                       const SizedBox(height: 10),
                     ],
                     LayoutBuilder(
-                      builder: (BuildContext context, BoxConstraints constraints) {
-                        const double gap = 8;
-                        final double itemWidth = (constraints.maxWidth - gap) / 2;
-                        return Wrap(
-                          spacing: gap,
-                          runSpacing: 8,
-                          children: <Widget>[
-                            for (final TrainerSlot slot in slots)
-                              SizedBox(
-                                width: itemWidth,
-                                child: _SlotChip(
-                            key: ValueKey<String>('slot-chip-${slot.id}'),
-                            // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
-                            // 남으므로(#1136) 실제로는 늘 같은 값이다.
-                            type: l.exSlotTypePersonalTraining,
-                            label: _slotWhen(context, slot),
-                            selected: picked?.id == slot.id,
-                            // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
-                            // 선택도 잠근다.
-                            onTap: slot.booked || busy
-                                ? null
-                                : () => widget.onSlot(slot.id),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
+                      builder:
+                          (BuildContext context, BoxConstraints constraints) {
+                            const double gap = 8;
+                            final double itemWidth =
+                                (constraints.maxWidth - gap) / 2;
+                            return Wrap(
+                              spacing: gap,
+                              runSpacing: 8,
+                              children: <Widget>[
+                                for (final TrainerSlot slot in slots)
+                                  SizedBox(
+                                    width: itemWidth,
+                                    child: _SlotChip(
+                                      key: ValueKey<String>(
+                                        'slot-chip-${slot.id}',
+                                      ),
+                                      // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
+                                      // 남으므로(#1136) 실제로는 늘 같은 값이다.
+                                      type: l.exSlotTypePersonalTraining,
+                                      label: _slotWhen(context, slot),
+                                      selected: picked?.id == slot.id,
+                                      // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
+                                      // 선택도 잠근다.
+                                      onTap: slot.booked || busy
+                                          ? null
+                                          : () => widget.onSlot(slot.id),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                     ),
                     if (picked != null) ...<Widget>[
                       const SizedBox(height: 10),
