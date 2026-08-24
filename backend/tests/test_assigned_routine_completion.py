@@ -323,3 +323,67 @@ def test_member_can_undo_a_completion(client, assigned_routine):
     )
     assert redone.status_code == 200, redone.text
     assert redone.json()["completed_minutes"] == 12
+
+
+def test_the_trainers_sets_and_weight_reach_the_members_record(client, db_session):
+    """트레이너가 정한 세트·중량이 회원 기록까지 그대로 간다. (#1276)
+
+    회원 앱은 완료할 때 세트·중량을 따로 묻지 않는다 — 트레이너가 이미 정해
+    보낸 값이 있는데 기록에서 비면, 그래프가 분에서 세트를 되짚어 아무도 적은
+    적 없는 수를 그린다.
+    """
+    from app.models.models import ExerciseSession, TrainerRoutine
+
+    trainer_token = _login(client, "trainer@oncare.com")
+    created = client.post(
+        f"/v1/trainer/clients/{MEMBER_ID}/routines",
+        headers=_headers(trainer_token),
+        json={
+            "name": f"중량 전달 {uuid4().hex[:6]}",
+            "minutes": 36,
+            "type": "근력",
+            "sets": 12,
+            "weight": 62.5,
+            "intensity": "high",
+            "exercise_date": "2026-08-24",
+        },
+    )
+    assert created.status_code == 201, created.text
+    routine = created.json()
+    # 배정 응답에도 그대로 실린다 — 트레이너 화면이 방금 보낸 값을 다시 읽는다.
+    assert routine["sets"] == 12
+    assert routine["weight"] == 62.5
+    assert routine["intensity"] == "high"
+    assert routine["exercise_date"] == "2026-08-24"
+
+    try:
+        member_headers = _headers(_login(client, "jisu@oncare.com"))
+        completed = client.post(
+            f"/v1/me/coach/routines/{routine['id']}/complete",
+            headers=member_headers,
+            # 회원은 세트·중량을 적지 않았다.
+            json={"minutes": 36, "intensity": "high", "member_note": ""},
+        )
+        assert completed.status_code == 200, completed.text
+
+        week = client.get(
+            "/v1/exercise/weeks/current", headers=member_headers
+        ).json()
+        session = next(
+            row for row in week["sessions"]
+            if row["assigned_routine_id"] == routine["id"]
+        )
+        assert session["sets"] == 12
+        assert session["weight"] == 62.5
+        assert session["name"] == routine["name"]
+    finally:
+        db_session.rollback()
+        stale = db_session.query(ExerciseSession).filter_by(
+            assigned_routine_id=routine["id"]
+        ).one_or_none()
+        if stale is not None:
+            db_session.delete(stale)
+        stored = db_session.get(TrainerRoutine, routine["id"])
+        if stored is not None:
+            db_session.delete(stored)
+        db_session.commit()

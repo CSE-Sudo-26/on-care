@@ -729,6 +729,10 @@ def trainer_assign_routine(
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
         client_request_id=payload.client_request_id,
+        exercise_date=payload.exercise_date,
+        intensity=payload.intensity,
+        sets=payload.sets,
+        weight=payload.weight,
     )
 
 

@@ -9,18 +9,16 @@ import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dar
 
 ProgramExerciseDraft _exercise(
   String name, {
-  String sets = '4',
-  String duration = '15',
+  int sets = 4,
+  int duration = 15,
   String source = 'trainer',
   String type = '근력',
 }) => ProgramExerciseDraft(
   id: 'exercise-$name',
   name: name,
   sets: sets,
-  reps: '12회',
-  weight: '60kg',
-  duration: duration,
-  rest: '90',
+  weight: 60,
+  minutes: duration,
   type: type,
   source: source,
 );
@@ -41,7 +39,7 @@ ProgramEditorState _twoSessionDraft() => ProgramEditorState(
       id: 'session-2',
       name: '세션 B · 유산소',
       exercises: <ProgramExerciseDraft>[
-        _exercise('인터벌 러닝', type: '유산소', duration: '20', source: 'ai'),
+        _exercise('인터벌 러닝', type: '유산소', duration: 20, source: 'ai'),
       ],
     ),
   ],
@@ -68,11 +66,12 @@ void main() {
 
     test('두 번째 세션의 값이 계약을 벗어나면 막는다', () {
       final draft = _twoSessionDraft();
+      // 숫자 칸은 스테퍼가 범위 안으로 묶으므로, 남은 것은 빈 이름이다(#1276).
       final broken = draft.copyWith(
         sessions: <ProgramSessionDraft>[
           draft.sessions.first,
           draft.sessions.last.copyWith(
-            exercises: <ProgramExerciseDraft>[_exercise('인터벌 러닝', sets: '')],
+            exercises: <ProgramExerciseDraft>[_exercise('  ')],
           ),
         ],
       );
@@ -100,7 +99,7 @@ void main() {
           .map((e) => e! as Map<String, Object?>)
           .toList();
       expect(first.map((e) => e['name']), <String>['레그프레스', '스쿼트']);
-      expect(first.first['weight'], '60kg');
+      expect(first.first['weight'], 60.0);
       final second = (sessions.last['exercises']! as List<Object?>).single!
           as Map<String, Object?>;
       // AI 제안인지 트레이너가 넣은 것인지가 배정에도 남는다.

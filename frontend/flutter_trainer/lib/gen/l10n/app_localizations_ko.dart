@@ -1624,8 +1624,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get progOptional => '선택';
 
   @override
-  String progSetsByReps(int sets, String reps) {
-    return '$sets세트 × $reps';
+  String progSetsValue(int sets) {
+    return '$sets세트';
   }
 
   @override
@@ -1940,6 +1940,42 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFieldIntensity => '운동 강도';
+
+  @override
+  String get routineFieldDate => '날짜';
+
+  @override
+  String get routineFieldExerciseName => '운동 이름';
+
+  @override
+  String get routineFieldExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get routineFieldSets => '세트 수';
+
+  @override
+  String get routineFieldWeight => '중량';
+
+  @override
+  String get routineFieldCalories => '예상 소모 칼로리';
+
+  @override
+  String get routineUnitMinutes => '분';
+
+  @override
+  String get routineUnitSets => '세트';
+
+  @override
+  String get routineUnitKg => 'kg';
+
+  @override
+  String routineKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
 
   @override
   String get intensityLight => '가벼움';

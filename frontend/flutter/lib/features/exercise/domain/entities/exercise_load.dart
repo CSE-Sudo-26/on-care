@@ -8,31 +8,17 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 ///
 ///   * 유산소  → **분**
 ///   * 근력    → **세트**
-///   * 유연성  → **분**
+///   * 스트레칭  → **분**
 ///
-/// 을 각자의 단위로 들고 다니고, 한 축에서 비교해야 할 때만 [ExerciseDayLoad.score]
-/// 로 환산한다. 화면의 숫자·목표는 언제나 원래 단위로 보여 준다.
+/// 을 각자의 단위로 들고 다니고, 화면의 숫자·목표는 언제나 그 단위로 보여 준다.
+/// 세 유형을 **한 축에서** 비교해야 할 때 쓰는 값은 [ExerciseDayLoad.calories]
+/// 하나다 — 트레이너 앱도 같은 축을 쓰므로, 같은 회원의 같은 한 주가 두 앱에서
+/// 같은 그림으로 읽힌다. (#1276)
 enum ExerciseLoadKind { cardio, strength, flexibility }
 
-/// 환산 축 = **MET·분**(대사당량 × 시간). WHO·ACSM 의 신체활동 권고가 쓰는
-/// 단위라서, "주 150분 중강도" 같은 실제 가이드라인을 그대로 목표로 옮길 수
-/// 있다. 유산소는 6.0(중강도), 근력은 5.0, 유연성은 2.5 MET 로 본다.
-const double kMetCardio = 6.0;
-const double kMetStrength = 5.0;
-const double kMetFlexibility = 2.5;
-
-/// 근력 **1세트의 유효 운동 시간**. 세트 사이 휴식은 부하가 아니므로 뺀다 —
-/// 근력을 시간으로 재면 안 되는 이유가 바로 이 휴식이다.
-const double kStrengthMinutesPerSet = 1.5;
-
 /// 근력 1세트가 차지하는 **벽시계 시간**(세트 + 휴식). 세트 수를 따로 기록하지
-/// 않는 옛 기록(분만 있는 기록)을 세트로 되돌릴 때만 쓰는 다리다. 세션에
-/// 세트·반복·중량이 저장되면 이 환산은 필요 없어진다.
+/// 않는 옛 기록(분만 있는 기록)을 세트로 되돌릴 때만 쓰는 다리다.
 const double kStrengthMinutesPerSetWithRest = 3.0;
-
-/// 세트 하나의 활동량(MET·분) = 1.5분 × 5.0 MET = 7.5.
-double strengthScoreOfSets(num sets) =>
-    sets * kStrengthMinutesPerSet * kMetStrength;
 
 /// 세트를 **모르는** 옛 기록에서만 쓰는 환산. 45분 ≈ 15세트.
 ///
@@ -87,16 +73,6 @@ class ExerciseLoadGoals {
     ExerciseLoadKind.strength => weeklyStrengthSets,
     ExerciseLoadKind.flexibility => weeklyFlexibilityMinutes,
   };
-
-  /// 세 유형의 주간 목표를 합친 활동량(MET·분). WHO 최소 권고(600)의 두 배
-  /// 가까운, "권고를 넉넉히 채운 한 주" 다.
-  double get weeklyScore =>
-      weeklyCardioMinutes * kMetCardio +
-      strengthScoreOfSets(weeklyStrengthSets) +
-      weeklyFlexibilityMinutes * kMetFlexibility;
-
-  /// 하루 평균 목표. 주간 목표를 7 로 나눈 값 — 요일 막대의 기준선이다.
-  double get dailyScore => weeklyScore / 7;
 }
 
 const ExerciseLoadGoals kDefaultExerciseLoadGoals = ExerciseLoadGoals();
@@ -145,25 +121,17 @@ class ExerciseDayLoad {
   /// 자리다 — 도넛과 막대는 이 값을 그린다.
   final double calories;
 
-  double get cardioScore => cardioMinutes * kMetCardio;
-  double get strengthScore => strengthScoreOfSets(strengthSets);
-  double get flexibilityScore => flexibilityMinutes * kMetFlexibility;
-
-  /// 한 축에서 비교하기 위한 하루 활동량(MET·분).
-  double get score => cardioScore + strengthScore + flexibilityScore;
-
-  bool get isActive => score > 0 || otherMinutes > 0 || calories > 0;
+  bool get isActive =>
+      cardioMinutes > 0 ||
+      strengthSets > 0 ||
+      flexibilityMinutes > 0 ||
+      otherMinutes > 0 ||
+      calories > 0;
 
   double valueOf(ExerciseLoadKind kind) => switch (kind) {
     ExerciseLoadKind.cardio => cardioMinutes,
     ExerciseLoadKind.strength => strengthSets.toDouble(),
     ExerciseLoadKind.flexibility => flexibilityMinutes,
-  };
-
-  double scoreOf(ExerciseLoadKind kind) => switch (kind) {
-    ExerciseLoadKind.cardio => cardioScore,
-    ExerciseLoadKind.strength => strengthScore,
-    ExerciseLoadKind.flexibility => flexibilityScore,
   };
 }
 
@@ -191,9 +159,3 @@ List<ExerciseDayLoad> dayLoadsOfWeek(ExerciseWeek week, DateTime monday) {
       ),
   ];
 }
-
-/// 활동한 날의 **최장 연속 구간**. 요일 배열이 아니라 날짜 순서의 목록을 본다.
-int longestActiveStreakOfLoads(List<ExerciseDayLoad> loads) =>
-    longestActiveStreak(<double>[
-      for (final ExerciseDayLoad d in loads) d.score + d.otherMinutes,
-    ]);

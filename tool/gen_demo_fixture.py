@@ -59,16 +59,16 @@ HISTORY_WEEKS = 35
 # 모드에서 두 앱이 실제로 받는 것이 그 목록이므로, 데모가 다른 값을 보여 주면
 # 모드를 바꿀 때마다 화면이 달라진다.
 #
-# 유형은 화면이 그대로 쓰는 한국어다(유산소·근력·유연성). 회원 앱은 `유연성`,
+# 유형은 화면이 그대로 쓰는 한국어다(유산소·근력·스트레칭). 회원 앱은 `스트레칭`,
 # 트레이너 그래프는 `스트레칭` 이라 부르지만 재는 값은 같다.
 ROUTINES: list[tuple[str, str, int, str, str, str]] = [
     ("seed-routine-user-demo-0", "저강도 유산소 (걷기)", 30, "유산소",
      "혈압 안정에 효과적", "ai"),
-    ("seed-routine-user-demo-1", "하체 스트레칭", 15, "유연성",
+    ("seed-routine-user-demo-1", "하체 스트레칭", 15, "스트레칭",
      "혈액순환 개선", "trainer"),
     ("seed-routine-user-demo-2", "코어 강화", 10, "근력",
      "기초대사량 향상", "ai"),
-    ("seed-routine-user-demo-3", "어깨 관절 보호 스트레칭", 8, "유연성",
+    ("seed-routine-user-demo-3", "어깨 관절 보호 스트레칭", 8, "스트레칭",
      "PT 피드백 반영 · 오른쪽 어깨 보호", "trainer"),
 ]
 
@@ -179,20 +179,20 @@ MEALS: dict[str, tuple[str, str, str, str, list[str]]] = {
 ROUTINE: dict[int, list[tuple[str, str, int]]] = {
     0: [("저강도 유산소 (걷기) 30분", "cardio", 30),
         ("코어 강화 10분", "strength", 10),
-        ("하체 스트레칭 5분", "flexibility", 5)],
+        ("하체 스트레칭 5분", "stretching", 5)],
     1: [("저강도 유산소 (걷기) 40분", "cardio", 40),
-        ("하체 스트레칭 10분", "flexibility", 10)],
+        ("하체 스트레칭 10분", "stretching", 10)],
     2: [],
     3: [("저강도 유산소 (걷기) 35분", "cardio", 35),
         ("코어 강화 20분", "strength", 20),
-        ("하체 스트레칭 5분", "flexibility", 5)],
+        ("하체 스트레칭 5분", "stretching", 5)],
     4: [("저강도 유산소 (걷기) 45분", "cardio", 45),
-        ("어깨 관절 보호 스트레칭 10분", "flexibility", 10)],
+        ("어깨 관절 보호 스트레칭 10분", "stretching", 10)],
     5: [("저강도 유산소 (걷기) 25분", "cardio", 25),
         ("코어 강화 30분", "strength", 30),
-        ("하체 스트레칭 15분", "flexibility", 15)],
+        ("하체 스트레칭 15분", "stretching", 15)],
     6: [("저강도 유산소 (걷기) 20분", "cardio", 20),
-        ("하체 스트레칭 10분", "flexibility", 10)],
+        ("하체 스트레칭 10분", "stretching", 10)],
 }
 
 #: 분당 칼로리. 종류마다 다르다 — 걷기와 스트레칭을 같은 값으로 두면 주간 활동
@@ -204,7 +204,7 @@ ROUTINE: dict[int, list[tuple[str, str, int]]] = {
 #: 같은 사람의 같은 운동이 기록 경로에 따라 다른 숫자가 되는 셈이다. (#997)
 # `other` 는 목표가 없는 나머지 운동(탁구·등산 같은 것)이다. 화면의
 # 그래프에는 그리지 않고 분 수만 적는다.
-KCAL_PER_MIN = {"cardio": 9, "strength": 6, "flexibility": 3, "other": 5}
+KCAL_PER_MIN = {"cardio": 9, "strength": 6, "stretching": 3, "other": 5}
 
 # ── 주별 이야기 ────────────────────────────────────────────────────────────
 # 12주를 7가지 주로 돌려 채운다. 예전에는 주마다 계수 하나를 곱해 흔들었는데,
@@ -355,7 +355,7 @@ RECENT: list[dict] = [
             ("랫풀다운 45kg · 4세트", "strength", 12, True, 4),
             ("플랭크 60초 · 3세트", "strength", 6, True, 3),
             ("마무리 러닝머신 15분", "cardio", 15, True),
-            ("하체 스트레칭 12분", "flexibility", 12, True),
+            ("하체 스트레칭 12분", "stretching", 12, True),
         ],
         "meals": [
             (B_EGG, "seed-diet-breakfast", "08:20",
@@ -376,7 +376,7 @@ RECENT: list[dict] = [
         "exercises": [
             ("저강도 유산소 (걷기) 30분", "cardio", 30, True),
             ("코어 강화 10분", "strength", 10, True),
-            ("하체 스트레칭 15분", "flexibility", 15, False),
+            ("하체 스트레칭 15분", "stretching", 15, False),
         ],
         "meals": [
             (B_OAT, "seed-diet-yesterday-breakfast", "08:10",
@@ -397,7 +397,7 @@ RECENT: list[dict] = [
         "exercises": [
             ("저강도 유산소 (걷기) 30분", "cardio", 30, True),
             ("코어 강화 10분", "strength", 10, True),
-            ("하체 스트레칭 15분", "flexibility", 15, True),
+            ("하체 스트레칭 15분", "stretching", 15, True),
         ],
         "meals": [
             (B_YOG, "seed-diet-two-days-ago-breakfast", "08:35",

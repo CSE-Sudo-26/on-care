@@ -515,7 +515,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTypeStrength => '근력';
 
   @override
-  String get exTypeFlexibility => '유연성';
+  String get exTypeFlexibility => '스트레칭';
 
   @override
   String get exTypeOtherChip => '기타';
@@ -707,6 +707,30 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exExerciseType => '운동 종류';
+
+  @override
+  String get exExerciseDate => '날짜';
+
+  @override
+  String get exExerciseName => '운동 이름';
+
+  @override
+  String get exExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get exExerciseWeight => '중량';
+
+  @override
+  String get exUnitMinutes => '분';
+
+  @override
+  String get exUnitSets => '세트';
+
+  @override
+  String get exUnitKg => 'kg';
+
+  @override
+  String get exEnterName => '운동 이름을 입력해주세요';
 
   @override
   String get exExerciseDuration => '운동 시간';
@@ -1725,11 +1749,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalStrengthWeekly => '주간 근력 (세트)';
 
   @override
-  String get myGoalFlexibilityWeekly => '주간 유연성 (분)';
+  String get myGoalFlexibilityWeekly => '주간 스트레칭 (분)';
 
   @override
   String get myGoalExerciseSuggestionNote =>
-      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 유연성 60분';
+      '권장: 하루 300kcal · 주 유산소 150분 · 근력 21세트 · 스트레칭 60분';
 
   @override
   String get myGoalExerciseApplySuggestion => '권장 비율로 채우기';

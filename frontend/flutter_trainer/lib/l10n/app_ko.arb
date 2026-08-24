@@ -519,7 +519,7 @@
   "progType": "유형",
   "progDuration": "시간(분)",
   "progOptional": "선택",
-  "progSetsByReps": "{sets}세트 × {reps}",
+  "progSetsValue": "{sets}세트",
   "progEmpty": "아직 계획된 프로그램이 없어요",
   "progEmptyHint": "AI 루틴 탭에서 프로그램을 만들어 보내거나, 채팅으로 미리 조율해 보세요.",
   "schedSentTo": "{name}님에게 전송됨",
@@ -619,6 +619,24 @@
   "routineFieldMinutes": "운동 시간",
   "routineFieldTotalMinutes": "총 운동시간",
   "routineFieldIntensity": "운동 강도",
+  "routineFieldDate": "날짜",
+  "routineFieldExerciseName": "운동 이름",
+  "routineFieldExerciseNameHint": "예) 스쿼트, 러닝머신",
+  "routineFieldSets": "세트 수",
+  "routineFieldWeight": "중량",
+  "routineFieldCalories": "예상 소모 칼로리",
+  "routineUnitMinutes": "분",
+  "routineUnitSets": "세트",
+  "routineUnitKg": "kg",
+  "routineKcalValue": "{count} kcal",
+  "@routineKcalValue": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "intensityLight": "가벼움",
   "intensityModerate": "보통",
   "intensityHigh": "높음",

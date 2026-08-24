@@ -3002,11 +3002,11 @@ abstract class AppLocalizations {
   /// **'Optional'**
   String get progOptional;
 
-  /// No description provided for @progSetsByReps.
+  /// No description provided for @progSetsValue.
   ///
   /// In en, this message translates to:
-  /// **'{sets} × {reps}'**
-  String progSetsByReps(int sets, String reps);
+  /// **'{sets} sets'**
+  String progSetsValue(int sets);
 
   /// No description provided for @progEmpty.
   ///
@@ -3601,6 +3601,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Intensity'**
   String get routineFieldIntensity;
+
+  /// No description provided for @routineFieldDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get routineFieldDate;
+
+  /// No description provided for @routineFieldExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise name'**
+  String get routineFieldExerciseName;
+
+  /// No description provided for @routineFieldExerciseNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Treadmill'**
+  String get routineFieldExerciseNameHint;
+
+  /// No description provided for @routineFieldSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get routineFieldSets;
+
+  /// No description provided for @routineFieldWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get routineFieldWeight;
+
+  /// No description provided for @routineFieldCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated calories'**
+  String get routineFieldCalories;
+
+  /// No description provided for @routineUnitMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get routineUnitMinutes;
+
+  /// No description provided for @routineUnitSets.
+  ///
+  /// In en, this message translates to:
+  /// **'sets'**
+  String get routineUnitSets;
+
+  /// No description provided for @routineUnitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get routineUnitKg;
+
+  /// No description provided for @routineKcalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} kcal'**
+  String routineKcalValue(int count);
 
   /// No description provided for @intensityLight.
   ///
