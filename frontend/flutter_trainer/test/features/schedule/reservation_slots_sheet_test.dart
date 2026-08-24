@@ -41,5 +41,33 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(DatePickerDialog), findsOneWidget);
     });
+
+    testWidgets('시간 범위는 한 필드에 보이고 시 선택 뒤 단계 화살표가 나타난다', (
+      tester,
+    ) async {
+      await openSheet(tester);
+
+      expect(find.textContaining('오전 10:00 – 오전 11:00'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('slot-time-range')),
+      );
+      await settle(tester);
+
+      expect(find.byType(TextField), findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey<String>('time-range-back')),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const ValueKey<String>('clock-value-10')));
+      await settle(tester);
+      expect(
+        find.byKey(const ValueKey<String>('time-range-back')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('time-range-next')),
+        findsOneWidget,
+      );
+    });
   });
 }

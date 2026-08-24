@@ -423,6 +423,34 @@ void main() {
       );
     }
 
+    Future<void> enterTimeRange(
+      WidgetTester tester, {
+      required String start,
+      required String end,
+      bool confirm = true,
+    }) async {
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range')),
+      );
+      await settle(tester);
+      final fields = find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(fields.at(0), start);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      await tester.enterText(fields.at(1), end);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      if (confirm) {
+        await tester.tap(
+          find.byKey(const ValueKey<String>('time-range-confirm')),
+        );
+        await settle(tester);
+      }
+    }
+
     /// 시간표에서 [name] 의 블록을 눌러 상세 패널에 연다.
     Future<void> openSession(WidgetTester tester, String name) async {
       // 블록의 둘째 줄은 `이름 종류` 라 이름만으로는 정확히 맞지 않는다(#1010).
@@ -908,14 +936,7 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // 시작 00분 → 15분. 종료는 소요 시간(기본 60분)을 지키며 바라간다 —
-      // 시작만 옮기면 세션이 짧아지는 것을 막는다(#1090).
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-start-minute')),
-      );
-      await settle(tester);
-      await tester.tap(find.text('15분').last);
-      await settle(tester);
+      await enterTimeRange(tester, start: '10:15', end: '11:15');
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -930,16 +951,7 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      await tester.tap(find.byKey(const ValueKey<String>('session-end-hour')));
-      await settle(tester);
-      await tester.tap(find.text('11시').last);
-      await settle(tester);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-end-minute')),
-      );
-      await settle(tester);
-      await tester.tap(find.text('30분').last);
-      await settle(tester);
+      await enterTimeRange(tester, start: '10:00', end: '11:30');
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -953,16 +965,17 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // 종료를 시작(10시)보다 이른 6시로 옮긴다.
-      await tester.tap(find.byKey(const ValueKey<String>('session-end-hour')));
-      await settle(tester);
-      await tester.tap(find.text('06시').last);
-      await settle(tester);
+      await enterTimeRange(
+        tester,
+        start: '10:00',
+        end: '06:00',
+        confirm: false,
+      );
 
-      await tester.tap(find.text('추가하기'));
-      await settle(tester);
-
-      expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
+      final confirm = tester.widget<FilledButton>(
+        find.byKey(const ValueKey<String>('time-range-confirm')),
+      );
+      expect(confirm.onPressed, isNull);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -994,13 +1007,7 @@ void main() {
         findsNothing,
       );
 
-      // Change 00분 → 30분 in the time picker and save.
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-start-minute')),
-      );
-      await settle(tester);
-      await tester.tap(find.text('30분').last);
-      await settle(tester);
+      await enterTimeRange(tester, start: '15:30', end: '16:30');
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
       await tester.tap(find.text('저장하기'));
