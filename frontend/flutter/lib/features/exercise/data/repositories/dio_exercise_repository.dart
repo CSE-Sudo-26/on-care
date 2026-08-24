@@ -36,12 +36,14 @@ class DioExerciseRepository implements ExerciseRepository {
     required int calories,
     required String dayLabel,
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
       '/exercise/sessions',
       data: <String, Object?>{
         'type': type.name,
         'minutes': minutes,
+        'sets': sets,
         'calories': calories,
         'intensity': intensity.name,
         'day_label': dayLabel,
@@ -63,12 +65,16 @@ class DioExerciseRepository implements ExerciseRepository {
     required int calories,
     required String dayLabel,
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/exercise/sessions/$id',
       data: <String, Object?>{
         'type': type.name,
         'minutes': minutes,
+        // 유형을 근력에서 바꾼 수정이면 null 을 실어 세트를 지운다 — 빼고
+        // 보내면 옛 세트가 기록에 남는다.
+        'sets': sets,
         'calories': calories,
         'intensity': intensity.name,
         'day_label': dayLabel,

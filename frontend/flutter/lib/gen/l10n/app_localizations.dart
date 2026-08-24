@@ -1364,6 +1364,24 @@ abstract class AppLocalizations {
   /// **'Duration'**
   String get exExerciseDuration;
 
+  /// No description provided for @exExerciseSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get exExerciseSets;
+
+  /// No description provided for @exSetsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{sets} sets'**
+  String exSetsCount(int sets);
+
+  /// No description provided for @exEnterSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the number of sets'**
+  String get exEnterSets;
+
   /// No description provided for @exExerciseIntensity.
   ///
   /// In en, this message translates to:
