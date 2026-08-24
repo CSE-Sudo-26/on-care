@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/core/utils/portrait_date_picker.dart';
+import 'package:oncare/design_system/atoms/app_number_stepper.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -130,11 +132,20 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   // saved level (가벼움/보통/높음); a new session defaults to 보통.
   late int _level = widget.session?.intensity.index ?? 1;
   late double _minutes = widget.session?.minutes.toDouble() ?? 30;
-  // 근력은 시간이 아니라 **세트**로 재는 운동이다 (#1262). 분과 따로 들고
-  // 있어야 유형을 근력↔유산소로 오갈 때 각자의 값이 남는다 — 하나로 쓰면
-  // 30분이 30세트가 되어 돌아온다.
+  // 근력은 시간이 아니라 **세트와 중량**으로 재는 운동이다 (#1262, #1276). 분과
+  // 따로 들고 있어야 유형을 근력↔유산소로 오갈 때 각자의 값이 남는다 — 하나로
+  // 쓰면 30분이 30세트가 되어 돌아온다.
   late double _sets = _initialSets(widget.session);
+  late double _weight = widget.session?.weight ?? 20;
+  // 기본값은 오늘. 지난 기록을 고치면 그 기록의 날짜로 열린다 — 오늘로
+  // 되돌리면 기록을 고치기만 해도 이번 주로 옮겨 간다.
+  late DateTime _date = _dateOnly(widget.session?.date ?? nowKst());
+  late final TextEditingController _name = TextEditingController(
+    text: widget.session?.name ?? '',
+  );
   bool _saving = false;
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   /// 편집 시트가 열릴 세트 수. 기록이 세트를 들고 있으면 그 값, 세트를 모르는
   /// 옛 근력 기록이면 분에서 환산한 값, 새 기록이면 12세트다.
@@ -147,7 +158,13 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
         .toDouble();
   }
 
-  /// 지금 고른 유형이 근력인가 — 세트로 묻고 세트로 저장할지 가른다.
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  /// 지금 고른 유형이 근력인가 — 세트·중량으로 묻고 그렇게 저장할지 가른다.
   bool get _isStrength => _typeFromIndex(_type) == ExerciseType.strength;
 
   /// 근력 기록의 분. 세트 수에 세트당 벽시계 시간(휴식 포함)을 곱한 값이다 —
@@ -159,11 +176,28 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   int get _effectiveMinutes =>
       _isStrength ? _strengthMinutes : _minutes.round();
 
+  Future<void> _pickDate() async {
+    final DateTime now = nowKst();
+    final DateTime? picked = await showPortraitDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(now.year - 2),
+      // 앞으로 한 기록은 없다 — 아직 하지 않은 운동을 적을 자리가 아니다.
+      lastDate: _dateOnly(now),
+    );
+    if (picked != null) setState(() => _date = _dateOnly(picked));
+  }
+
   Future<void> _save() async {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
     final AppToastHost toast = AppToastHost.of(context);
+    final String name = _name.text.trim();
+    if (name.isEmpty) {
+      toast.show(l.exEnterName, kind: AppToastKind.error);
+      return;
+    }
     final int minutes = _effectiveMinutes;
     if (minutes <= 0) {
       toast.show(
@@ -172,9 +206,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       );
       return;
     }
-    // 근력이 아니면 세트를 싣지 않는다 — 유산소를 세트로 세는 화면은 없고,
-    // 유형을 바꾼 수정에서는 null 이 옛 세트를 지운다.
+    // 근력이 아니면 세트·중량을 싣지 않는다 — 유산소를 세트로 세는 화면은
+    // 없고, 유형을 바꾼 수정에서는 null 이 옛 값을 지운다.
     final int? sets = _isStrength ? _sets.round() : null;
+    final double? weight = _isStrength ? _weight : null;
     final ExerciseType type = _typeFromIndex(_type);
     final ExerciseSession? editing = widget.session;
     if (editing != null && editing.id == null) {
@@ -196,22 +231,26 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
             .updateSession(
               id: editing.id!,
               type: type,
+              name: name,
               minutes: minutes,
               calories: calories,
               intensity: intensity,
-              dayLabel: editing.dayLabel,
+              date: _date,
               sets: sets,
+              weight: weight,
             );
       } else {
         await ref
             .read(exerciseRepositoryProvider)
             .addSession(
               type: type,
+              name: name,
               minutes: minutes,
               calories: calories,
               intensity: intensity,
-              dayLabel: kWeekdayLabelsKo[nowKst().weekday - 1],
+              date: _date,
               sets: sets,
+              weight: weight,
             );
       }
       // Sheet dismissed mid-save → don't pop the page below.
@@ -275,6 +314,14 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               // 붙어 잘린 것처럼 보였다.
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
               children: <Widget>[
+                _Label(l.exExerciseDate),
+                const SizedBox(height: 10),
+                _DateField(
+                  key: const Key('exerciseDateField'),
+                  date: _date,
+                  onTap: _pickDate,
+                ),
+                const SizedBox(height: 20),
                 _Label(l.exExerciseType),
                 const SizedBox(height: 10),
                 Wrap(
@@ -290,48 +337,77 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                // 근력은 세트로, 나머지는 분으로 묻는다 (#1262). 화면 여러
-                // 곳(홈 운동 카드·운동 현황 링·주간 목표)이 근력을 세트로
-                // 읽는데 기록만 분이면, 회원이 적지 않은 수가 화면에 뜬다.
-                Row(
-                  children: <Widget>[
-                    _Label(
-                      _isStrength ? l.exExerciseSets : l.exExerciseDuration,
+                _Label(l.exExerciseName),
+                const SizedBox(height: 10),
+                TextField(
+                  key: const Key('exerciseNameField'),
+                  controller: _name,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 100,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    counterText: '',
+                    hintText: l.exExerciseNameHint,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
                     ),
-                    const Spacer(),
-                    Text(
-                      _isStrength
-                          ? l.exSetsCount(_sets.round())
-                          : l.exDurationMinutes(_minutes.round()),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.primary,
-                      ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: FigmaColors.hairline),
                     ),
-                  ],
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: FigmaColors.hairline),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: FigmaColors.primary),
+                    ),
+                  ),
                 ),
-                if (_isStrength)
-                  Slider(
-                    key: const Key('exerciseSetsSlider'),
+                const SizedBox(height: 20),
+                // 근력은 세트·중량으로, 나머지는 분으로 묻는다 (#1262, #1276).
+                // 화면 여러 곳(홈 운동 카드·운동 현황 링·주간 목표)이 근력을
+                // 세트로 읽는데 기록만 분이면, 회원이 적지 않은 수가 화면에 뜬다.
+                if (_isStrength) ...<Widget>[
+                  _Label(l.exExerciseSets),
+                  const SizedBox(height: 10),
+                  AppNumberStepper(
+                    key: const Key('exerciseSetsStepper'),
                     value: _sets,
                     min: 1,
                     max: 40,
-                    divisions: 39,
-                    activeColor: FigmaColors.primary,
+                    suffix: l.exUnitSets,
                     onChanged: (double v) => setState(() => _sets = v),
-                  )
-                else
-                  Slider(
-                    key: const Key('exerciseMinutesSlider'),
+                  ),
+                  const SizedBox(height: 20),
+                  _Label(l.exExerciseWeight),
+                  const SizedBox(height: 10),
+                  AppNumberStepper(
+                    key: const Key('exerciseWeightStepper'),
+                    value: _weight,
+                    min: 0,
+                    max: 500,
+                    // 원판은 0.5kg 단위로 붙는다 — 버튼 한 번에 1kg 이 실용적인
+                    // 걸음이고, 소수 자리는 직접 적어 채운다.
+                    decimals: 1,
+                    suffix: l.exUnitKg,
+                    onChanged: (double v) => setState(() => _weight = v),
+                  ),
+                ] else ...<Widget>[
+                  _Label(l.exExerciseDuration),
+                  const SizedBox(height: 10),
+                  AppNumberStepper(
+                    key: const Key('exerciseMinutesStepper'),
                     value: _minutes,
-                    min: 5,
-                    max: 120,
-                    divisions: 23,
-                    activeColor: FigmaColors.primary,
+                    min: 1,
+                    max: 600,
+                    suffix: l.exUnitMinutes,
                     onChanged: (double v) => setState(() => _minutes = v),
                   ),
-                const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 20),
                 _Label(l.exExerciseIntensity),
                 const SizedBox(height: 10),
                 Row(
@@ -429,6 +505,56 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               color: on ? FigmaColors.primary : AppColors.mutedForeground,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 날짜 한 칸 — 눌러서 달력을 연다. 기본값은 오늘이다.
+class _DateField extends StatelessWidget {
+  const _DateField({required this.date, required this.onTap, super.key});
+
+  final DateTime date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: FigmaColors.hairline),
+        ),
+        child: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: FigmaColors.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                // 로케일이 정하는 날짜 문구. 하드코딩한 'yyyy.MM.dd' 로 적으면
+                // 영어 화면에도 한국식 표기가 남는다.
+                MaterialLocalizations.of(context).formatFullDate(date),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: FigmaColors.ink,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              size: 20,
+              color: AppColors.mutedForeground,
+            ),
+          ],
         ),
       ),
     );

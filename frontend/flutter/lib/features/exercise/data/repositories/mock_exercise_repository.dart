@@ -189,30 +189,36 @@ class MockExerciseRepository implements ExerciseRepository {
     required ExerciseType type,
     required int minutes,
     required int calories,
-    required String dayLabel,
+    required DateTime date,
+    String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    double? weight,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final session = ExerciseSession(
       id: 'mock-ex-${++_seq}',
-      dayLabel: dayLabel,
+      dayLabel: _dayLabels[date.weekday - 1],
       type: type,
       minutes: minutes,
       calories: calories,
       intensity: intensity,
-      dateLabel: '오늘',
-      sets: _setsFor(type, sets),
+      dateLabel: _dateLabel(_ymd(date)),
+      sets: _strengthOnly(type, sets),
+      name: name,
+      weight: _strengthOnly(type, weight),
+      date: date,
     );
     _sessions.add(session);
     _totalCalories += calories;
     return session;
   }
 
-  /// 저장할 세트 수. 근력이 아닌 유형에서 온 값은 버린다 — 서버(`_sets_for`)와
-  /// 같은 규칙이라야 데모와 실 API 가 같은 기록을 남긴다. (#1262)
-  int? _setsFor(ExerciseType type, int? sets) =>
-      type == ExerciseType.strength ? sets : null;
+  /// 근력에서만 의미 있는 값(세트·중량). 다른 유형에서 온 값은 버린다 —
+  /// 서버(`_strength_only`)와 같은 규칙이라야 데모와 실 API 가 같은 기록을
+  /// 남긴다. (#1262, #1276)
+  T? _strengthOnly<T>(ExerciseType type, T? value) =>
+      type == ExerciseType.strength ? value : null;
 
   @override
   Future<void> deleteSession(String id) async {
@@ -229,24 +235,31 @@ class MockExerciseRepository implements ExerciseRepository {
     required ExerciseType type,
     required int minutes,
     required int calories,
-    required String dayLabel,
+    required DateTime date,
+    String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    double? weight,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final int idx = _sessions.indexWhere((ExerciseSession s) => s.id == id);
     final ExerciseSession? old = idx >= 0 ? _sessions[idx] : null;
     final ExerciseSession updated = ExerciseSession(
       id: id,
-      dayLabel: dayLabel,
+      dayLabel: _dayLabels[date.weekday - 1],
       type: type,
       minutes: minutes,
       calories: calories,
       intensity: intensity,
-      dateLabel: old?.dateLabel ?? '오늘',
+      // 날짜를 고쳤으면 라벨도 그 날짜의 것이다 — 옛 라벨을 이어받으면
+      // 3일 전으로 옮긴 기록이 '오늘' 로 남는다.
+      dateLabel: _dateLabel(_ymd(date)),
       timeLabel: old?.timeLabel,
       items: old?.items ?? const <String>[],
-      sets: _setsFor(type, sets),
+      sets: _strengthOnly(type, sets),
+      name: name,
+      weight: _strengthOnly(type, weight),
+      date: date,
     );
     if (idx >= 0 && old != null) {
       _totalCalories = _nonNeg(_totalCalories - old.calories + calories);

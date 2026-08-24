@@ -711,6 +711,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseType => 'Exercise Type';
 
   @override
+  String get exExerciseDate => 'Date';
+
+  @override
+  String get exExerciseName => 'Exercise Name';
+
+  @override
+  String get exExerciseNameHint => 'e.g. Squat, Treadmill';
+
+  @override
+  String get exExerciseWeight => 'Weight';
+
+  @override
+  String get exUnitMinutes => 'min';
+
+  @override
+  String get exUnitSets => 'sets';
+
+  @override
+  String get exUnitKg => 'kg';
+
+  @override
+  String get exEnterName => 'Please enter an exercise name';
+
+  @override
   String get exExerciseDuration => 'Duration';
 
   @override

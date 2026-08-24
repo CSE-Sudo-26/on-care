@@ -695,6 +695,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exExerciseType => '운동 종류';
 
   @override
+  String get exExerciseDate => '날짜';
+
+  @override
+  String get exExerciseName => '운동 이름';
+
+  @override
+  String get exExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get exExerciseWeight => '중량';
+
+  @override
+  String get exUnitMinutes => '분';
+
+  @override
+  String get exUnitSets => '세트';
+
+  @override
+  String get exUnitKg => 'kg';
+
+  @override
+  String get exEnterName => '운동 이름을 입력해주세요';
+
+  @override
   String get exExerciseDuration => '운동 시간';
 
   @override
