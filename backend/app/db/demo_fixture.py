@@ -107,6 +107,26 @@ class FixtureExercise:
 
 
 @dataclass(frozen=True)
+class FixtureRoutine:
+    """회원에게 배정된 개인운동 한 줄. Dart 쪽 `FixtureRoutine` 과 같은 내용이다.
+
+    출처(`source`)가 픽스처에 있는 것이 중요하다 — 회원 앱은 이 값으로 `트레이너
+    추천` 과 `AI 추천 · 트레이너 확인` 을 갈라 적는다. 실서버 시드가 따로 든 표를
+    읽던 동안은 이 구분이 실연동에서 사라졌다(#1199).
+    """
+
+    #: 실서버 시드가 쓰는 것과 같은 id. 두 앱이 같은 루틴을 같은 줄로 가리킨다.
+    id: str
+    name: str
+    minutes: int
+    #: 운동 유형 — 유산소|근력|유연성|기타 (모델과 같은 한국어 어휘).
+    type: str
+    reason: str
+    #: `ai` | `trainer`.
+    source: str
+
+
+@dataclass(frozen=True)
 class FixtureDay:
     day: date
     meals: tuple[FixtureMeal, ...]
@@ -185,6 +205,18 @@ class DemoFixture:
             for key, value in payload["foods"].items()
         }
         self._meals: dict[str, dict] = payload["meals"]
+        #: 배정된 개인운동. 실서버 시드도 이 목록을 읽는다(#1199).
+        self.routines: tuple[FixtureRoutine, ...] = tuple(
+            FixtureRoutine(
+                id=item["id"],
+                name=item["name"],
+                minutes=item["minutes"],
+                type=item["type"],
+                reason=item["reason"],
+                source=item["source"],
+            )
+            for item in payload.get("routines", ())
+        )
         self._recent: list[dict] = payload["recent"]
         self._weeks: list[dict] = payload["weeks"]
 
