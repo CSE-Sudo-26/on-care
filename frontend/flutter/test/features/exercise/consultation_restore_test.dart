@@ -34,6 +34,9 @@ class _RestoringRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => <ConsultationRequest>[consultationFromJson(_serverRow)];
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
 
 class _FailingRepository implements ConsultationRepository {
@@ -44,6 +47,9 @@ class _FailingRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => throw StateError('network down');
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
 
 void main() {

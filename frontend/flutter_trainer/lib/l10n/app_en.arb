@@ -479,6 +479,7 @@
   "consultRejected": "Request declined",
   "consultTargetTrainer": "Direct request",
   "consultExerciseGoal": "Training goal",
+  "consultHealthPurpose": "Health management purpose",
   "consultPreferredTime": "Preferred time",
   "consultMessage": "Message",
   "consultReject": "Decline",

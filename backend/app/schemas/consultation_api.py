@@ -19,7 +19,9 @@ HealthPurposeType = Literal[
 #: 값이 이미 저장된 행에 남아 있을 수 있어 **응답**은 `str` 로 느슨하게 받고
 #: **입력**만 이 패턴으로 좁힌다(#1256). 컬럼이 `String(20)` 그대로라 마이그레이션은
 #: 필요 없다.
-PREFERRED_TIME_PATTERN = r"^flexible$|^([01]\d|2[0-3]):[0-5]\d$"
+PREFERRED_TIME_PATTERN = (
+    r"^flexible$|^([01]\d|2[0-3]):[0-5]\d(?:-([01]\d|2[0-3]):[0-5]\d)?$"
+)
 
 
 class ConsultationCreate(BaseModel):
@@ -79,7 +81,7 @@ class ConsultationCreate(BaseModel):
 
 
 #: 트레이너 인박스가 걸 수 있는 상태 필터. `all` 은 처리 이력까지 함께 본다.
-ConsultationStatusFilter = Literal["pending", "accepted", "rejected", "all"]
+ConsultationStatusFilter = Literal["pending", "accepted", "rejected", "cancelled", "all"]
 
 
 class ConsultationDecision(BaseModel):
@@ -129,6 +131,7 @@ class ConsultationOut(BaseModel):
     #: 목록 카드가 이름을 렌더한다. id 만 주면 앱이 트레이너마다 상세를 다시 조회해야
     #: 하고, 대상이 지워지면 이름을 영영 못 만든다(#327).
     trainer_name: str | None = None
+    trainer_gym_name: str | None = None
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None

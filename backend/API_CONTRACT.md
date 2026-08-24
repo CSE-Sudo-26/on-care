@@ -237,12 +237,13 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 |---|---|---|
 | POST | `/consultations` | 입력 `{ trainer_id, exercise_goal, health_purpose_type, preferred_date, preferred_time_slot, message? }` |
 | GET | `/consultations/me` | 내가 보낸 요청 (최신순, 기본 50건·커서) |
+| DELETE | `/consultations/{consultation_id}` | 내가 보낸 대기 중 상담 요청 취소 |
 | GET | `/consultations/{id}` | 단건(남의 것·없는 것 404) |
 
 - 같은 트레이너에게 **대기 중인 요청은 한 건**입니다(`uq_consultation_requests_pending_trainer`,
   중복은 409). 그래서 목록이 자라는 쪽은 처리된 지난 요청입니다 — 상태 필터가 없어
   그대로 함께 쌓이고, 그 때문에 상한이 필요합니다. (#980)
-- `preferred_time_slot` 입력은 `"flexible"` 또는 `"HH:MM"` 정확한 시각만 허용합니다(#1256).
+- `preferred_time_slot` 입력은 `"flexible"`, 기존 단일 `"HH:MM"`, 또는 `"HH:MM-HH:MM"` 시작–종료 범위를 허용합니다.
   과거 `morning`/`afternoon`/`evening` 값은 이미 저장된 행에 남아 있을 수 있어 **응답**에서는
   그대로 내려줍니다 — 컬럼이 `String(20)` 이라 마이그레이션 없이 값 형식만 바뀐 것입니다.
 - 커서는 `(created_at, id)` 로 알림과 같은 모양입니다(`before`·`before_id`).
