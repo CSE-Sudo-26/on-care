@@ -2738,6 +2738,12 @@ abstract class AppLocalizations {
   /// **'Type'**
   String get schedFieldType;
 
+  /// No description provided for @schedFieldDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get schedFieldDate;
+
   /// No description provided for @schedFieldTime.
   ///
   /// In en, this message translates to:
@@ -2804,12 +2810,6 @@ abstract class AppLocalizations {
   /// **'Repeat'**
   String get schedRepeat;
 
-  /// No description provided for @schedRepeatNone.
-  ///
-  /// In en, this message translates to:
-  /// **'Does not repeat'**
-  String get schedRepeatNone;
-
   /// No description provided for @schedRepeatWeekly.
   ///
   /// In en, this message translates to:
@@ -2821,12 +2821,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repeat on'**
   String get schedRepeatDays;
-
-  /// No description provided for @schedRepeatEnd.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends'**
-  String get schedRepeatEnd;
 
   /// No description provided for @schedRepeatEndByCount.
   ///
@@ -2845,6 +2839,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} times'**
   String schedRepeatCount(int count);
+
+  /// No description provided for @schedRepeatCountUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'times'**
+  String get schedRepeatCountUnit;
 
   /// No description provided for @schedRepeatPreview.
   ///

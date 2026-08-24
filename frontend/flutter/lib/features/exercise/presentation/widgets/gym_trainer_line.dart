@@ -129,6 +129,7 @@ class GymTrainerLine extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           minimumSize: const Size(0, 32),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          foregroundColor: FigmaColors.textFaint,
                         ),
                         child: const Icon(Icons.chevron_right, size: 20),
                       ),

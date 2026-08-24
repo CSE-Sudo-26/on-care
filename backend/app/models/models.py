@@ -2,7 +2,7 @@
 ORM 모델 — 프론트 계약(LocalApiInterceptor + drift 스키마)에 맞춤.
 
 핵심 정렬 사항:
-- 사용자 id 는 문자열(예: 'user-demo')
+- 사용자 id 는 문자열(예: 'user-7d4e9a2c5f18')
 - 식단은 나트륨(sodium_mg)·당류(sugar_g)를 1급 지표로 (고혈압·당뇨 특화)
 - drift 테이블(diet_entries, exercise_sessions, schedule_events, notifications)과 1:1 대응
 

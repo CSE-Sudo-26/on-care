@@ -1,8 +1,8 @@
 """
 DB 초기화 + 데모 데이터 시드.
 
-프론트 계약상 사용자 id 는 문자열. 데모 사용자 'user-demo' 를 시드합니다
-(프론트 mock 의 _usersMe 가 'user-demo' / '김민수' / 'minsu@oncare.com' 를 쓰므로 호환).
+프론트 계약상 사용자 id 는 문자열. 데모 사용자 'user-7d4e9a2c5f18' 를 시드합니다
+(프론트 mock 의 _usersMe 가 'user-7d4e9a2c5f18' / '김민수' / 'minsu@oncare.com' 를 쓰므로 호환).
 이후 STEP 들에서 이 사용자에 식단/운동/건강 데이터를 붙입니다.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from app.models import models  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
-DEMO_USER_ID = "user-demo"
+DEMO_USER_ID = "user-7d4e9a2c5f18"
 
 
 def init_db() -> None:
@@ -46,7 +46,7 @@ def init_db() -> None:
         _seed_demo_places()
         _seed_demo_notifications()
         # 트레이너 데모(계정·프로필·담당 회원·링크). 데모 사용자 시드 뒤에 호출해야
-        # 김민수(user-demo) 링크가 성립한다.
+        # 김민수(user-7d4e9a2c5f18) 링크가 성립한다.
         from app.db.seed_trainer import seed_trainer_domain
         seed_trainer_domain()
         # 제휴 헬스장(#324). 트레이너 시드 뒤에 호출해야 gym_name → gym_id 연결이

@@ -1,6 +1,6 @@
 """캘린더 상세 + 알림 액션(#256). DB 필요(로컬 skip, CI 실행).
 
-인증은 데모 폴백(토큰 없음 → user-demo 회원)을 사용한다.
+인증은 데모 폴백(토큰 없음 → user-7d4e9a2c5f18 회원)을 사용한다.
 """
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ def test_notification_read_all_and_unread_count(client, db_session):
     from app.models.models import Notification
 
     db_session.add(Notification(
-        id="noti-test-unread", user_id="user-demo", title="테스트 알림",
+        id="noti-test-unread", user_id="user-7d4e9a2c5f18", title="테스트 알림",
         body="본문", category="reminder", read=False,
     ))
     db_session.commit()
@@ -132,7 +132,7 @@ def test_notification_delete(client, db_session):
     from app.models.models import Notification
 
     db_session.add(Notification(
-        id="noti-test-del", user_id="user-demo", title="삭제용", body="b",
+        id="noti-test-del", user_id="user-7d4e9a2c5f18", title="삭제용", body="b",
         category="system", read=False,
     ))
     db_session.commit()
@@ -162,7 +162,7 @@ def test_notification_action_and_delete_ownership(client, db_session):
     ))
     db_session.commit()
     try:
-        # 데모(user-demo)로 남의 알림 삭제 시도 → 404
+        # 데모(user-7d4e9a2c5f18)로 남의 알림 삭제 시도 → 404
         assert client.delete("/v1/notifications/noti-other").status_code == 404
     finally:
         db_session.query(Notification).filter(Notification.id == "noti-other").delete()

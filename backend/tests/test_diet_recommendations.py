@@ -82,7 +82,7 @@ def _cleanup_member(db_session, user) -> None:
 def member_token(client) -> str:
     """로그인 가능한 시드 회원.
 
-    user-demo(minsu)는 hashed_password 가 빈 값이라 로그인 계정이 아니다(데모 폴백
+    user-7d4e9a2c5f18(minsu)는 hashed_password 가 빈 값이라 로그인 계정이 아니다(데모 폴백
     전용 신원). 시드가 비밀번호까지 만들어 주는 회원을 쓴다.
     """
     return client.post(

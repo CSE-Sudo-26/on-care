@@ -9,7 +9,7 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 /// `GET /consultations/me` 실응답 한 건.
 const Map<String, Object?> _serverRow = <String, Object?>{
   'id': 'consult-abc123',
-  'member_id': 'user-demo',
+  'member_id': 'user-7d4e9a2c5f18',
   'target_type': 'trainer',
   'gym_id': null,
   'trainer_id': 'trainer-demo',
