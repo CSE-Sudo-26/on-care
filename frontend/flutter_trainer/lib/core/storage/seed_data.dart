@@ -747,9 +747,13 @@ class _FixtureClient {
         carbsG: Value(day.carbsG),
         proteinG: Value(day.proteinG),
         fatG: Value(day.fatG),
+        // 리포트의 요일 칸은 **실제로 한** 운동만 적는다(#1288). 배정에는 날짜가
+        // 없어 "그날 배정됐는데 안 했다" 가 성립하지 않으므로 미수행은 싣지
+        // 않는다 — `history` 쪽(운동 기록 탭)이 ✓/✗ 를 그대로 쓰는 것과 다르다.
         exercisesJson: Value(
           jsonEncode(<String>[
-            for (final FixtureExercise e in day.exercises) e.label,
+            for (final FixtureExercise e in day.exercises)
+              if (e.done) e.name,
           ]),
         ),
       );
@@ -845,10 +849,11 @@ const List<List<String>> _routinePool = <List<String>>[
   <String>['플랭크 3세트', '버피 3세트', '마운틴 클라이머 3세트'],
 ];
 
-/// 그날의 운동 목록 — 이행률과 **맞게** ✓/✗ 를 붙인다.
+/// 그날 **실제로 한** 운동 목록. 미수행은 싣지 않는다. (#1288)
 ///
-/// 67% 인 날에 3개 모두 ✓ 인 목록을 붙이면 화면에서 "67%" 옆에 "3개 중 3개
-/// 완료" 가 놓여 서로 다른 말을 한다(#754).
+/// 예전에는 이행률에 맞춰 ✓/✗ 를 매겼다. 실서버에서는 그 목록이 나올 수 없다 —
+/// 배정에 날짜가 없어 "그날 배정됐는데 안 했다" 를 만들 자리가 없고, 요일 칸은
+/// 회원의 운동 기록에서 온다. 데모가 실서버에 없는 화면을 보여 주면 안 된다.
 ///
 /// 오늘만은 고객의 큐레이션된 운동 기록을 그대로 쓴다 — 같은 날을 리포트와
 /// 고객 상세의 운동 기록이 각각 다른 운동으로 보여 주면 안 된다.
@@ -866,20 +871,26 @@ List<String> _exercisesFor(
         best = entry;
       }
     }
-    return best.exercises;
+    return _doneNames(best.exercises);
   }
   return const <String>[];
 }
 
-/// 요일·고객으로 고른 루틴에 이행률만큼 ✓ 를 매긴다.
+/// 운동 기록 표기(`이름 ✓` / `이름 ✗`)에서 **한 것만** 이름으로 추린다.
+///
+/// 운동 기록 탭은 그 표기를 그대로 쓰고 리포트만 추린다. 시드가 두 화면에 같은
+/// 하루를 공급하므로 변환은 이 자리에서 한 번만 한다.
+List<String> _doneNames(List<String> lines) => <String>[
+  for (final String line in lines)
+    if (!line.contains('✗')) line.replaceAll('✓', '').trim(),
+];
+
+/// 요일·고객으로 고른 루틴에서 이행률만큼을 **한 것**으로 남긴다.
 List<String> _routineFor(int clientId, int weekday, int completion) {
   if (completion <= 0) return const <String>[];
   final names = _routinePool[(clientId + weekday) % _routinePool.length];
   final done = (names.length * completion / 100).round().clamp(1, names.length);
-  return <String>[
-    for (var i = 0; i < names.length; i++)
-      '${names[i]} ${i < done ? '✓' : '✗'}',
-  ];
+  return names.take(done).toList(growable: false);
 }
 
 /// 아직 오지 않은 요일을 지운다.
