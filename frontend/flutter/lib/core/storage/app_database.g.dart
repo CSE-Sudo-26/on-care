@@ -973,6 +973,15 @@ class $ExerciseSessionsTable extends ExerciseSessions
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _setsMeta = const VerificationMeta('sets');
+  @override
+  late final GeneratedColumn<int> sets = GeneratedColumn<int>(
+    'sets',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _caloriesMeta = const VerificationMeta(
     'calories',
   );
@@ -1015,6 +1024,7 @@ class $ExerciseSessionsTable extends ExerciseSessions
     dayLabel,
     type,
     minutes,
+    sets,
     calories,
     intensity,
     createdAt,
@@ -1068,6 +1078,12 @@ class $ExerciseSessionsTable extends ExerciseSessions
     } else if (isInserting) {
       context.missing(_minutesMeta);
     }
+    if (data.containsKey('sets')) {
+      context.handle(
+        _setsMeta,
+        sets.isAcceptableOrUnknown(data['sets']!, _setsMeta),
+      );
+    }
     if (data.containsKey('calories')) {
       context.handle(
         _caloriesMeta,
@@ -1117,6 +1133,10 @@ class $ExerciseSessionsTable extends ExerciseSessions
         DriftSqlType.int,
         data['${effectivePrefix}minutes'],
       )!,
+      sets: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sets'],
+      ),
       calories: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}calories'],
@@ -1145,6 +1165,10 @@ class ExerciseSessionRow extends DataClass
   final String dayLabel;
   final String type;
   final int minutes;
+
+  /// 근력 기록의 세트 수. 근력이 아니거나 세트를 모르는 기록은 null 이고,
+  /// 그때는 분에서 환산해 읽는다. (#1262)
+  final int? sets;
   final int calories;
   final String intensity;
   final DateTime createdAt;
@@ -1154,6 +1178,7 @@ class ExerciseSessionRow extends DataClass
     required this.dayLabel,
     required this.type,
     required this.minutes,
+    this.sets,
     required this.calories,
     required this.intensity,
     required this.createdAt,
@@ -1166,6 +1191,9 @@ class ExerciseSessionRow extends DataClass
     map['day_label'] = Variable<String>(dayLabel);
     map['type'] = Variable<String>(type);
     map['minutes'] = Variable<int>(minutes);
+    if (!nullToAbsent || sets != null) {
+      map['sets'] = Variable<int>(sets);
+    }
     map['calories'] = Variable<int>(calories);
     map['intensity'] = Variable<String>(intensity);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -1179,6 +1207,7 @@ class ExerciseSessionRow extends DataClass
       dayLabel: Value(dayLabel),
       type: Value(type),
       minutes: Value(minutes),
+      sets: sets == null && nullToAbsent ? const Value.absent() : Value(sets),
       calories: Value(calories),
       intensity: Value(intensity),
       createdAt: Value(createdAt),
@@ -1196,6 +1225,7 @@ class ExerciseSessionRow extends DataClass
       dayLabel: serializer.fromJson<String>(json['dayLabel']),
       type: serializer.fromJson<String>(json['type']),
       minutes: serializer.fromJson<int>(json['minutes']),
+      sets: serializer.fromJson<int?>(json['sets']),
       calories: serializer.fromJson<int>(json['calories']),
       intensity: serializer.fromJson<String>(json['intensity']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1210,6 +1240,7 @@ class ExerciseSessionRow extends DataClass
       'dayLabel': serializer.toJson<String>(dayLabel),
       'type': serializer.toJson<String>(type),
       'minutes': serializer.toJson<int>(minutes),
+      'sets': serializer.toJson<int?>(sets),
       'calories': serializer.toJson<int>(calories),
       'intensity': serializer.toJson<String>(intensity),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1222,6 +1253,7 @@ class ExerciseSessionRow extends DataClass
     String? dayLabel,
     String? type,
     int? minutes,
+    Value<int?> sets = const Value.absent(),
     int? calories,
     String? intensity,
     DateTime? createdAt,
@@ -1231,6 +1263,7 @@ class ExerciseSessionRow extends DataClass
     dayLabel: dayLabel ?? this.dayLabel,
     type: type ?? this.type,
     minutes: minutes ?? this.minutes,
+    sets: sets.present ? sets.value : this.sets,
     calories: calories ?? this.calories,
     intensity: intensity ?? this.intensity,
     createdAt: createdAt ?? this.createdAt,
@@ -1242,6 +1275,7 @@ class ExerciseSessionRow extends DataClass
       dayLabel: data.dayLabel.present ? data.dayLabel.value : this.dayLabel,
       type: data.type.present ? data.type.value : this.type,
       minutes: data.minutes.present ? data.minutes.value : this.minutes,
+      sets: data.sets.present ? data.sets.value : this.sets,
       calories: data.calories.present ? data.calories.value : this.calories,
       intensity: data.intensity.present ? data.intensity.value : this.intensity,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -1256,6 +1290,7 @@ class ExerciseSessionRow extends DataClass
           ..write('dayLabel: $dayLabel, ')
           ..write('type: $type, ')
           ..write('minutes: $minutes, ')
+          ..write('sets: $sets, ')
           ..write('calories: $calories, ')
           ..write('intensity: $intensity, ')
           ..write('createdAt: $createdAt')
@@ -1270,6 +1305,7 @@ class ExerciseSessionRow extends DataClass
     dayLabel,
     type,
     minutes,
+    sets,
     calories,
     intensity,
     createdAt,
@@ -1283,6 +1319,7 @@ class ExerciseSessionRow extends DataClass
           other.dayLabel == this.dayLabel &&
           other.type == this.type &&
           other.minutes == this.minutes &&
+          other.sets == this.sets &&
           other.calories == this.calories &&
           other.intensity == this.intensity &&
           other.createdAt == this.createdAt);
@@ -1294,6 +1331,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
   final Value<String> dayLabel;
   final Value<String> type;
   final Value<int> minutes;
+  final Value<int?> sets;
   final Value<int> calories;
   final Value<String> intensity;
   final Value<DateTime> createdAt;
@@ -1304,6 +1342,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     this.dayLabel = const Value.absent(),
     this.type = const Value.absent(),
     this.minutes = const Value.absent(),
+    this.sets = const Value.absent(),
     this.calories = const Value.absent(),
     this.intensity = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1315,6 +1354,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     required String dayLabel,
     required String type,
     required int minutes,
+    this.sets = const Value.absent(),
     required int calories,
     this.intensity = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1331,6 +1371,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     Expression<String>? dayLabel,
     Expression<String>? type,
     Expression<int>? minutes,
+    Expression<int>? sets,
     Expression<int>? calories,
     Expression<String>? intensity,
     Expression<DateTime>? createdAt,
@@ -1342,6 +1383,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
       if (dayLabel != null) 'day_label': dayLabel,
       if (type != null) 'type': type,
       if (minutes != null) 'minutes': minutes,
+      if (sets != null) 'sets': sets,
       if (calories != null) 'calories': calories,
       if (intensity != null) 'intensity': intensity,
       if (createdAt != null) 'created_at': createdAt,
@@ -1355,6 +1397,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     Value<String>? dayLabel,
     Value<String>? type,
     Value<int>? minutes,
+    Value<int?>? sets,
     Value<int>? calories,
     Value<String>? intensity,
     Value<DateTime>? createdAt,
@@ -1366,6 +1409,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
       dayLabel: dayLabel ?? this.dayLabel,
       type: type ?? this.type,
       minutes: minutes ?? this.minutes,
+      sets: sets ?? this.sets,
       calories: calories ?? this.calories,
       intensity: intensity ?? this.intensity,
       createdAt: createdAt ?? this.createdAt,
@@ -1391,6 +1435,9 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     if (minutes.present) {
       map['minutes'] = Variable<int>(minutes.value);
     }
+    if (sets.present) {
+      map['sets'] = Variable<int>(sets.value);
+    }
     if (calories.present) {
       map['calories'] = Variable<int>(calories.value);
     }
@@ -1414,6 +1461,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
           ..write('dayLabel: $dayLabel, ')
           ..write('type: $type, ')
           ..write('minutes: $minutes, ')
+          ..write('sets: $sets, ')
           ..write('calories: $calories, ')
           ..write('intensity: $intensity, ')
           ..write('createdAt: $createdAt, ')
@@ -2782,6 +2830,7 @@ typedef $$ExerciseSessionsTableCreateCompanionBuilder =
       required String dayLabel,
       required String type,
       required int minutes,
+      Value<int?> sets,
       required int calories,
       Value<String> intensity,
       Value<DateTime> createdAt,
@@ -2794,6 +2843,7 @@ typedef $$ExerciseSessionsTableUpdateCompanionBuilder =
       Value<String> dayLabel,
       Value<String> type,
       Value<int> minutes,
+      Value<int?> sets,
       Value<int> calories,
       Value<String> intensity,
       Value<DateTime> createdAt,
@@ -2831,6 +2881,11 @@ class $$ExerciseSessionsTableFilterComposer
 
   ColumnFilters<int> get minutes => $composableBuilder(
     column: $table.minutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sets => $composableBuilder(
+    column: $table.sets,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2884,6 +2939,11 @@ class $$ExerciseSessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sets => $composableBuilder(
+    column: $table.sets,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get calories => $composableBuilder(
     column: $table.calories,
     builder: (column) => ColumnOrderings(column),
@@ -2923,6 +2983,9 @@ class $$ExerciseSessionsTableAnnotationComposer
 
   GeneratedColumn<int> get minutes =>
       $composableBuilder(column: $table.minutes, builder: (column) => column);
+
+  GeneratedColumn<int> get sets =>
+      $composableBuilder(column: $table.sets, builder: (column) => column);
 
   GeneratedColumn<int> get calories =>
       $composableBuilder(column: $table.calories, builder: (column) => column);
@@ -2976,6 +3039,7 @@ class $$ExerciseSessionsTableTableManager
                 Value<String> dayLabel = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<int> minutes = const Value.absent(),
+                Value<int?> sets = const Value.absent(),
                 Value<int> calories = const Value.absent(),
                 Value<String> intensity = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -2986,6 +3050,7 @@ class $$ExerciseSessionsTableTableManager
                 dayLabel: dayLabel,
                 type: type,
                 minutes: minutes,
+                sets: sets,
                 calories: calories,
                 intensity: intensity,
                 createdAt: createdAt,
@@ -2998,6 +3063,7 @@ class $$ExerciseSessionsTableTableManager
                 required String dayLabel,
                 required String type,
                 required int minutes,
+                Value<int?> sets = const Value.absent(),
                 required int calories,
                 Value<String> intensity = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -3008,6 +3074,7 @@ class $$ExerciseSessionsTableTableManager
                 dayLabel: dayLabel,
                 type: type,
                 minutes: minutes,
+                sets: sets,
                 calories: calories,
                 intensity: intensity,
                 createdAt: createdAt,

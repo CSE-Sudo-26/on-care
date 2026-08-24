@@ -638,7 +638,7 @@ class _ExerciseDayDetail extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${s.minutes}${l.unitMinutes} · '
+                            '${_exerciseAmountLabel(l, s)} · '
                             '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
                             style: const TextStyle(
                               fontSize: 12.5,
@@ -706,6 +706,17 @@ class _ExerciseDayDetail extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 기록 한 줄이 말하는 **양**. 근력은 세트로, 나머지는 분으로 읽는다 —
+/// 홈 운동 카드·운동 현황 링·주간 목표가 이미 근력을 세트로 세므로, 목록만
+/// 분으로 적으면 같은 기록이 화면마다 다른 수로 보인다. (#1262)
+String _exerciseAmountLabel(AppLocalizations l, ExerciseSession s) {
+  if (s.type != ExerciseType.strength) {
+    return '${s.minutes}${l.unitMinutes}';
+  }
+  final int sets = s.sets ?? setsFromStrengthMinutes(s.minutes.toDouble());
+  return l.exSetsCount(sets);
 }
 
 /// 운동 유형 → 화면 라벨. 유형별 분해 카드와 같은 문구를 쓴다.

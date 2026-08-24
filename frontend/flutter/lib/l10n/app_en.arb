@@ -351,6 +351,16 @@
   "exSave": "Save",
   "exExerciseType": "Exercise Type",
   "exExerciseDuration": "Duration",
+  "exExerciseSets": "Sets",
+  "exSetsCount": "{sets} sets",
+  "@exSetsCount": {
+    "placeholders": {
+      "sets": {
+        "type": "int"
+      }
+    }
+  },
+  "exEnterSets": "Enter the number of sets",
   "exExerciseIntensity": "Intensity",
   "exEstimatedCalories": "Estimated Calories",
   "exEnterDuration": "Please enter a duration",

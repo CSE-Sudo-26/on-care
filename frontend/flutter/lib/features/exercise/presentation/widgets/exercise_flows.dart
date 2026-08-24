@@ -5,6 +5,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -128,18 +129,52 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   // saved level (가벼움/보통/높음); a new session defaults to 보통.
   late int _level = widget.session?.intensity.index ?? 1;
   late double _minutes = widget.session?.minutes.toDouble() ?? 30;
+  // 근력은 시간이 아니라 **세트**로 재는 운동이다 (#1262). 분과 따로 들고
+  // 있어야 유형을 근력↔유산소로 오갈 때 각자의 값이 남는다 — 하나로 쓰면
+  // 30분이 30세트가 되어 돌아온다.
+  late double _sets = _initialSets(widget.session);
   bool _saving = false;
+
+  /// 편집 시트가 열릴 세트 수. 기록이 세트를 들고 있으면 그 값, 세트를 모르는
+  /// 옛 근력 기록이면 분에서 환산한 값, 새 기록이면 12세트다.
+  static double _initialSets(ExerciseSession? session) {
+    if (session == null || session.type != ExerciseType.strength) return 12;
+    final int? recorded = session.sets;
+    if (recorded != null && recorded > 0) return recorded.toDouble();
+    return setsFromStrengthMinutes(session.minutes.toDouble())
+        .clamp(1, 40)
+        .toDouble();
+  }
+
+  /// 지금 고른 유형이 근력인가 — 세트로 묻고 세트로 저장할지 가른다.
+  bool get _isStrength => _typeFromIndex(_type) == ExerciseType.strength;
+
+  /// 근력 기록의 분. 세트 수에 세트당 벽시계 시간(휴식 포함)을 곱한 값이다 —
+  /// 서버는 여전히 분(>0)을 요구하고, 주간 운동 시간도 분으로 센다.
+  int get _strengthMinutes =>
+      (_sets.round() * kStrengthMinutesPerSetWithRest).round();
+
+  /// 저장·칼로리 계산이 쓰는 분. 근력이면 세트에서 환산한 값이다.
+  int get _effectiveMinutes =>
+      _isStrength ? _strengthMinutes : _minutes.round();
 
   Future<void> _save() async {
     if (_saving) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    final int minutes = _minutes.round();
+    final int minutes = _effectiveMinutes;
     if (minutes <= 0) {
-      messenger.showSnackBar(SnackBar(content: Text(l.exEnterDuration)));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(_isStrength ? l.exEnterSets : l.exEnterDuration),
+        ),
+      );
       return;
     }
+    // 근력이 아니면 세트를 싣지 않는다 — 유산소를 세트로 세는 화면은 없고,
+    // 유형을 바꾼 수정에서는 null 이 옛 세트를 지운다.
+    final int? sets = _isStrength ? _sets.round() : null;
     final ExerciseType type = _typeFromIndex(_type);
     final ExerciseSession? editing = widget.session;
     if (editing != null && editing.id == null) {
@@ -151,6 +186,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     // (restored or edited) level — no more preserving stale values.
     final ExerciseIntensity intensity = ExerciseIntensity.values[_level];
     final int calories = _estimateCalories(type, minutes, _level);
+
     setState(() => _saving = true);
     try {
       // 서버(mock 모드는 drift)에 저장 → 주간 데이터 무효화로 통계·차트·목록 반영.
@@ -164,6 +200,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               calories: calories,
               intensity: intensity,
               dayLabel: editing.dayLabel,
+              sets: sets,
             );
       } else {
         await ref
@@ -174,6 +211,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               calories: calories,
               intensity: intensity,
               dayLabel: kWeekdayLabelsKo[nowKst().weekday - 1],
+              sets: sets,
             );
       }
       // Sheet dismissed mid-save → don't pop the page below.
@@ -252,12 +290,19 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                // 근력은 세트로, 나머지는 분으로 묻는다 (#1262). 화면 여러
+                // 곳(홈 운동 카드·운동 현황 링·주간 목표)이 근력을 세트로
+                // 읽는데 기록만 분이면, 회원이 적지 않은 수가 화면에 뜬다.
                 Row(
                   children: <Widget>[
-                    _Label(l.exExerciseDuration),
+                    _Label(
+                      _isStrength ? l.exExerciseSets : l.exExerciseDuration,
+                    ),
                     const Spacer(),
                     Text(
-                      l.exDurationMinutes(_minutes.round()),
+                      _isStrength
+                          ? l.exSetsCount(_sets.round())
+                          : l.exDurationMinutes(_minutes.round()),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -266,14 +311,26 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     ),
                   ],
                 ),
-                Slider(
-                  value: _minutes,
-                  min: 5,
-                  max: 120,
-                  divisions: 23,
-                  activeColor: FigmaColors.primary,
-                  onChanged: (double v) => setState(() => _minutes = v),
-                ),
+                if (_isStrength)
+                  Slider(
+                    key: const Key('exerciseSetsSlider'),
+                    value: _sets,
+                    min: 1,
+                    max: 40,
+                    divisions: 39,
+                    activeColor: FigmaColors.primary,
+                    onChanged: (double v) => setState(() => _sets = v),
+                  )
+                else
+                  Slider(
+                    key: const Key('exerciseMinutesSlider'),
+                    value: _minutes,
+                    min: 5,
+                    max: 120,
+                    divisions: 23,
+                    activeColor: FigmaColors.primary,
+                    onChanged: (double v) => setState(() => _minutes = v),
+                  ),
                 const SizedBox(height: 12),
                 _Label(l.exExerciseIntensity),
                 const SizedBox(height: 10),
@@ -321,7 +378,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         l.unitKcalValue(
                           _estimateCalories(
                             _typeFromIndex(_type),
-                            _minutes.round(),
+                            _effectiveMinutes,
                             _level,
                           ),
                         ),

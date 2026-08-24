@@ -698,6 +698,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exExerciseDuration => '운동 시간';
 
   @override
+  String get exExerciseSets => '세트 수';
+
+  @override
+  String exSetsCount(int sets) {
+    return '$sets세트';
+  }
+
+  @override
+  String get exEnterSets => '세트 수를 입력해주세요';
+
+  @override
   String get exExerciseIntensity => '운동 강도';
 
   @override

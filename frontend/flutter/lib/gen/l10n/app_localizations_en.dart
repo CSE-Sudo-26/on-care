@@ -714,6 +714,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseDuration => 'Duration';
 
   @override
+  String get exExerciseSets => 'Sets';
+
+  @override
+  String exSetsCount(int sets) {
+    return '$sets sets';
+  }
+
+  @override
+  String get exEnterSets => 'Enter the number of sets';
+
+  @override
   String get exExerciseIntensity => 'Intensity';
 
   @override
