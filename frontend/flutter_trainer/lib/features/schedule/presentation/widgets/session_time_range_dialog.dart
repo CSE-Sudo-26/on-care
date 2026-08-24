@@ -337,8 +337,8 @@ class _DialClock extends StatelessWidget {
         _PeriodToggle(
           keyPrefix: keyPrefix,
           period: time.period,
-          amLabel: l.slotMorning,
-          pmLabel: l.slotAfternoon,
+          amLabel: l.slotAm,
+          pmLabel: l.slotPm,
           onChanged: onPeriodChanged,
         ),
         const SizedBox(height: AppSpacing.sm),
