@@ -26,10 +26,6 @@ class AppColors {
   /// 진행 척도의 '부분', 지표 구분색 등. 주의는 [warning](빨강)이다.
   static const Color brandOrange = Color(0xFFFF953C);
 
-  /// Tone-down green used by the user app's normal sugar chart
-  /// (`FigmaColors.greenText`).
-  static const Color userSugarGreen = Color(0xFF22A882);
-
   // --- Accent (client navy) ---
   /// Navy used for client avatars, info chips, and the "AI 요약" card.
   static const Color accent = Color(0xFF2E7DAB);
@@ -104,7 +100,10 @@ class AppColors {
   static const Color disabledForeground = Color(0xFF768596);
 
   // --- Semantic ---
-  /// Success / "완료" green (`#34C759`).
+  /// 완료·성공 초록 (`#34C759`). **두 앱이 같은 값을 쓴다** — 회원이 자기
+  /// 폰에서 `완료` 로 본 것을 트레이너 화면에서 다른 초록으로 보여 주지 않는다
+  /// (#1239). 일정·할 일·상담 수락·운동 항목·미션 100%·저장 완료가 모두 이
+  /// 초록 하나다.
   static const Color success = Color(0xFF34C759);
 
   /// '주의' 빨강 (`#F04438`). [overTarget] 과 **같은 색이다.**
@@ -144,10 +143,6 @@ class AppColors {
   // 트레이너 고객·프로그램)가 **같은 이름**으로 읽도록 두 앱에 같은 이름·같은
   // 값으로 둔다. 화면에서 색을 직접 고르지 말고 여기서 가져간다.
 
-  /// 정상 초록. "고객-식단-정상 초록"을 기준값으로 승격한 것이다.
-  /// 식단 그래프·정상 태그·달성 표시가 모두 이 초록 하나를 쓴다.
-  static const Color statusNormal = Color(0xFF22A882);
-
   /// 주의 주황 — **고객 상태 등급**의 중간 단계(주의 고객)에 쓴다.
   /// 텍스트·아이콘용. 배지 배경·막대는 [statusCautionFill].
   static const Color statusCaution = Color(0xFFE8760A);
@@ -172,6 +167,10 @@ class AppColors {
 
   /// 식단 그래프 색. 목표 안쪽과 같은 색이다 — 같은 카드의 칼로리 링·탄단지·
   /// 나트륨·당류가 하나의 색으로 말하고, 초과만 [statusOver] 로 갈린다.
+  ///
+  /// **각 앱의 브랜드색**이라 회원 앱(파랑)과 값이 다르다. 그것이 의도다
+  /// — 그래프의 주 색은 자기 앱의 색으로 말하고, 초과 같은 특수색만 두 앱이
+  /// 같은 값을 쓴다(#1239).
   static const Color dietChart = statusWithinGoal;
 
   /// 운동 그래프 색. 앱별 브랜드 파랑을 그대로 쓴다.

@@ -729,10 +729,11 @@ class _MacroBar extends StatelessWidget {
               ? AppColors.border
               : over
               ? AppColors.overTarget.withValues(alpha: 0.85)
-              // 식단 그래프의 정상 막대는 카드가 말하는 `정상` 과 같은
-              // 초록이다([AppColors.dietChart] = statusNormal). 예전에는 브랜드
-              // 남색이라, 같은 날이 카드에서는 초록 · 그래프에서는 남색이었다.
-              // (#1027) 운동 그래프(파랑)와 색으로 갈리는 것도 이 값이다(#1025).
+              // 목표 안쪽 막대는 [AppColors.dietChart] — 이 앱의 브랜드
+              // 남색이다. 한때 초록이었지만(#1027) 초록은 `정상` 으로 읽혀
+              // 목표에 한참 못 미친 날까지 괜찮다고 말해 걷어냈다(#1168).
+              // 판단은 초과 여부만 하고, 초과한 날만 [AppColors.overTarget]
+              // 으로 갈린다(#1239).
 
               : AppColors.dietChart.withValues(alpha: 0.85),
           borderRadius: radius,
