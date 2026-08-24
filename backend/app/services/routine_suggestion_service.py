@@ -31,9 +31,9 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -44,7 +44,7 @@ from app.models.models import (
     TrainerRoutine,
     TrainerSchedule,
 )
-from app.services import exercise_types
+from app.services import exercise_activity, exercise_types
 
 #: 검토 대기 상태. 상수의 출처는 [app.services.trainer_service] 지만 그 모듈이 이
 #: 모듈을 불러오므로 값을 여기서 다시 적는다(순환 import 회피) —
@@ -234,7 +234,10 @@ def _collect_signals(
 ) -> _Signals:
     """회원의 최근 기록에서 후보의 근거가 될 신호를 모은다."""
     today = clock.today()
-    since = today - timedelta(days=LOOKBACK_DAYS)
+    # 최근 구간은 **오늘을 포함한 [LOOKBACK_DAYS] 개 날짜**다. PT·운동·피드백이
+    # 모두 같은 구간을 보아야 "최근" 이 신호마다 다른 뜻이 되지 않는다.
+    since, _ = exercise_activity.recent_window(LOOKBACK_DAYS, today=today)
+    window = (since, today)
 
     # 완료된 PT 는 날짜(문자열 YYYY-MM-DD)로 비교한다 — 컬럼이 그 표기라
     # 사전순 비교가 곧 날짜 비교다(다른 조회들도 같은 방식이다).
@@ -251,34 +254,28 @@ def _collect_signals(
     pt_just_finished = any(row.date >= recent_cutoff for row in pt_rows)
     pt_note = any((row.note or "").strip() for row in pt_rows)
 
-    routine_feedback = (
-        db.scalar(
-            select(ExerciseSession.id)
-            .where(
-                ExerciseSession.user_id == member_id,
-                ExerciseSession.assigned_trainer_id == trainer_id,
-                ExerciseSession.trainer_feedback != "",
-                ExerciseSession.created_at >= _since_ts(since),
-            )
-            .limit(1)
+    # 운동 기록은 **논리 운동일**(고객 앱이 보는 날짜)로 거른다 (#1264).
+    # `created_at` 은 적재 시각이라, 재시드한 35주 전 운동도 방금 만든 행이
+    # 되어 최근 운동으로 오인된다.
+    recent_sessions = [
+        row
+        for row in db.scalars(_recent_sessions_query(member_id, window)).all()
+        if exercise_activity.in_window(
+            exercise_activity.activity_date_of(row), window
         )
-        is not None
+    ]
+
+    routine_feedback = any(
+        row.assigned_trainer_id == trainer_id
+        and (row.trainer_feedback or "").strip()
+        for row in recent_sessions
     )
 
-    minutes_by_type = {
-        row.type: int(row.total or 0)
-        for row in db.execute(
-            select(
-                ExerciseSession.type,
-                func.sum(ExerciseSession.minutes).label("total"),
-            )
-            .where(
-                ExerciseSession.user_id == member_id,
-                ExerciseSession.created_at >= _since_ts(since),
-            )
-            .group_by(ExerciseSession.type)
-        ).all()
-    }
+    minutes_by_type: dict[str, int] = {}
+    for row in recent_sessions:
+        minutes_by_type[row.type] = minutes_by_type.get(row.type, 0) + int(
+            row.minutes or 0
+        )
     total_minutes = sum(minutes_by_type.values())
     strength_minutes = sum(
         minutes
@@ -313,9 +310,25 @@ def _collect_signals(
     )
 
 
-def _since_ts(since: date) -> datetime:
-    """`created_at` 비교용 시각. 날짜 경계면 충분해 KST 자정으로 맞춘다."""
-    return datetime.combine(since, time.min, tzinfo=clock.SEOUL)
+def _recent_sessions_query(member_id: str, window: tuple[date, date]):
+    """구간에 닿을 수 있는 운동 기록만 가져오는 조회.
+
+    세 갈래로 넓게 긁고 최종 판정은 파이썬이 [exercise_activity.activity_date_of]
+    로 한다 — 주차만 걸면 `week_start` 가 깨진 옛 행을 놓치고, 반대로 전체를
+    읽으면 35주치 데모에서 245일이 매번 끌려온다.
+    """
+    start, _ = window
+    since_ts = exercise_activity.start_of_day(start)
+    return select(ExerciseSession).where(
+        ExerciseSession.user_id == member_id,
+        or_(
+            ExerciseSession.week_start.in_(
+                exercise_activity.week_starts_covering(*window)
+            ),
+            ExerciseSession.completed_at >= since_ts,
+            ExerciseSession.created_at >= since_ts,
+        ),
+    )
 
 
 def _candidates_for(signals: _Signals) -> list[_Candidate]:

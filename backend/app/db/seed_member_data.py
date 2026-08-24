@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.config import get_settings
 from app.db.demo_fixture import FixtureExercise, load_fixture
+from app.services import exercise_activity
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
@@ -444,14 +445,9 @@ def _entry_foods(entry: models.DietEntry) -> list[dict]:
 
 
 def _session_date(session: models.ExerciseSession) -> str:
-    """세션의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다."""
-    try:
-        monday = date.fromisoformat(session.week_start)
-        return (
-            monday + timedelta(days=_WEEKDAY_INDEX[session.day_label])
-        ).isoformat()
-    except (ValueError, KeyError):
-        return session.week_start
+    """세션의 논리 운동일. 규칙은 [exercise_activity.activity_date_of] 하나다."""
+    day = exercise_activity.activity_date_of(session)
+    return day.isoformat() if day is not None else session.week_start
 
 
 def _seed_schedule(db: Session, valid: set[str]) -> None:
@@ -704,6 +700,10 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
                 minutes=minutes,
                 calories=calories,
                 intensity="moderate",
+                # 실제로 운동한 날의 시각을 함께 적는다 (#1264). `created_at` 은
+                # 재시드 시각이라, 이것이 없으면 35주 전 운동도 방금 만든 행으로
+                # 남아 최근 활동 판단이 어긋난다.
+                completed_at=exercise_activity.noon(day.day),
             ))
 
     _safe_commit(db)
