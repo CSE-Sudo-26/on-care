@@ -16,7 +16,7 @@ from app.models.models import ChatMessage, Notification, TrainerSchedule
 
 TRAINER = "trainer-demo"
 MEMBER = "user-jisu"
-OTHER_MEMBER = "user-demo"
+OTHER_MEMBER = "user-7d4e9a2c5f18"
 KEY_PREFIX = "idem605-"
 
 

@@ -8,7 +8,7 @@ class MockAccountRepository implements AccountRepository {
   MockAccountRepository({UserProfile profile = _demo}) : _profile = profile;
 
   static const UserProfile _demo = UserProfile(
-    id: 'user-demo',
+    id: 'user-7d4e9a2c5f18',
     name: '김민수',
     email: 'minsu@oncare.com',
     phone: '010-1234-5678',

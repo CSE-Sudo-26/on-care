@@ -19,7 +19,7 @@ from app.services import routine_suggestion_service as suggestions
 
 MEMBER = "user-jisu"
 #: 혈압 관리가 필요한 시드 회원 — 근거 표시가 데이터에서 나오는지 본다.
-BP_MEMBER = "user-demo"
+BP_MEMBER = "user-7d4e9a2c5f18"
 TRAINER = "trainer-demo"
 
 

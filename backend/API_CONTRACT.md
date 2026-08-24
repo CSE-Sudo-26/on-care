@@ -13,7 +13,7 @@
 - **JSON 표기**: **snake_case** (Pydantic alias 규약). 프론트의 case_mapper 가 camelCase 로 변환.
 - **인증**: `Authorization: Bearer <token>` (JWT). `auth_interceptor` 가 붙인다. 자세한 것은 아래 "인증" 절.
 - **에러**: `{ "code": "...", "message": "..." }` 형태. 4xx/5xx 는 DioException 으로 처리됨.
-- **사용자 id**: **문자열** (`"user-demo"`). 정수 아님.
+- **사용자 id**: **문자열** (`"user-7d4e9a2c5f18"`). 정수 아님.
 - **목록 페이지네이션**: 계속 자라는 목록은 **한 쪽**만 돌려줍니다. 파라미터 없이 부르면
   기본 50건이라 기존 클라이언트는 그대로 동작합니다. 커서 모양은 한 가지입니다 —
   받은 마지막 항목의 `(정렬키, id)` 를 `(before, before_id)` 로 되돌려 줍니다
@@ -327,7 +327,7 @@ refresh 토큰은 **일회용**이다. `POST /auth/refresh` 는 회전할 때 �
 demo_fallback_enabled = allow_demo_fallback and not is_prod
 ```
 
-- **dev / staging** — 데모 사용자(`user-demo`)로 응답한다. 프론트가 `USE_MOCK_API=false` 로
+- **dev / staging** — 데모 사용자(`user-7d4e9a2c5f18`)로 응답한다. 프론트가 `USE_MOCK_API=false` 로
   전환할 때 로그인 없이도 화면이 뜨게 하려는 것이다.
 - **prod** — `ALLOW_DEMO_FALLBACK` 값과 무관하게 **항상 비활성**이고 401 을 낸다.
 
@@ -343,7 +343,7 @@ CORS 와일드카드, 기본·짧은 `DEMO_LOGIN_PASSWORD` 로 켠 데모 시드
 
 ### 사용자 id
 
-**문자열**이다(`user-demo`). 정수가 아니다. 데모 시드도 같은 규약을 따른다.
+**문자열**이다(`user-7d4e9a2c5f18`). 정수가 아니다. 데모 시드도 같은 규약을 따른다.
 
 ## 도메인 핵심 (놓치면 안 되는 차별점)
 
