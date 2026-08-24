@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
-import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays;
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -13,10 +12,11 @@ import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
 
-/// 프로그램 탭의 운동 이행률을 막대로 그린다. (#899)
+/// 프로그램 탭의 운동 이행률. (#899, #1029)
 ///
-/// 숫자만 적혀 있으면 목록을 훑으며 누가 처지는지 견주려고 눈으로 비교해야
-/// 한다. 요약 카드에는 이 회원의 한 주가 어떻게 흘렀는지가 아예 없었다.
+/// 회원 목록 행의 이행률 막대·퍼센트는 #1029 에서 뺐다 — 이 목록은 회원을
+/// 고르는 자리고, 이행률 비교는 `운동` 데이터 쪽(요일별 막대그래프)의 몫이다.
+/// 그 그래프는 그대로 남아 있다.
 void main() {
   Future<void> openCoaching(
     WidgetTester tester,
@@ -48,27 +48,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder rowBar(String id) => find.descendant(
-    of: find.byKey(ValueKey<String>('program-client-$id')),
-    matching: find.byType(InlineBarValue),
-  );
+  Finder rowOf(String id) =>
+      find.byKey(ValueKey<String>('program-client-$id'));
 
-  /// 이행률 막대가 실제로 칠해진 색. 채워진 쪽(`FractionallySizedBox` 안의
-  /// `Container`)만 본다 — 트랙은 늘 회색이다.
-  Color barFill(WidgetTester tester, String id) => (tester
-              .widget<Container>(
-                find.descendant(
-                  of: find.descendant(
-                    of: rowBar(id),
-                    matching: find.byType(FractionallySizedBox),
-                  ),
-                  matching: find.byType(Container),
-                ),
-              )
-              .color) ??
-      const Color(0x00000000);
-
-  testWidgets('회원 목록 행의 이행률이 막대와 값으로 함께 보인다', (tester) async {
+  testWidgets('회원 목록 행에는 이행률 막대도 퍼센트도 없다 (#1029)', (tester) async {
     await openCoaching(tester, <TrainerClient>[
       makeClient(
         id: 'steady',
@@ -77,74 +60,22 @@ void main() {
       ),
     ]);
 
-    final bar = tester.widget<InlineBarValue>(rowBar('steady'));
-    expect(bar.fraction, closeTo(0.9, 0.001));
-    expect(bar.text, '90%');
-    expect(barFill(tester, 'steady'), AppColors.primary);
-  });
-
-  testWidgets('이행률이 낮아도 막대는 남색이다 (#913)', (tester) async {
-    await openCoaching(tester, <TrainerClient>[
-      makeClient(
-        id: 'slipping',
-        name: '처지는고객',
-        weekCompletion: const <int>[40, 40, 40, 40, 40, 40, 40],
-      ),
-    ]);
-
-    // 빨강은 이 앱에서 `목표 초과` 다(#690). 이행률이 낮은 것은 초과가
-    // 아니라 아직 덜 한 것이고, 그 사실은 길이와 값이 이미 말한다.
-    expect(barFill(tester, 'slipping'), AppColors.primary);
-    expect(barFill(tester, 'slipping'), isNot(AppColors.overTarget));
-
-    final Color valueColor = tester
-        .widget<Text>(
-          find.descendant(of: rowBar('slipping'), matching: find.text('40%')),
-        )
-        .style!
-        .color!;
-    expect(valueColor, AppColors.primary);
-  });
-
-  testWidgets('기록이 없는 회원은 막대를 그리지 않는다', (tester) async {
-    await openCoaching(tester, <TrainerClient>[
-      makeClient(
-        id: 'blank',
-        name: '기록없음',
-        weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0],
-      ),
-    ]);
-
-    final bar = tester.widget<InlineBarValue>(rowBar('blank'));
-    expect(bar.fraction, isNull, reason: '기록 없음이 0% 수행으로 읽힌다');
-    // 왜 빈지를 적는다 — `-` 만으로는 값이 0 인지 없는지 알 수 없다.
-    expect(bar.text, '데이터 부족');
+    // 행 자체가 렌더됐는지 먼저 확인한다 — 아래 findsNothing 어서션들은
+    // 행이 아예 없어도 그대로 통과해 버려서, 이 양성 확인이 없으면 위양성이
+    // 된다.
+    expect(rowOf('steady'), findsOneWidget);
     expect(
-      find.descendant(of: rowBar('blank'), matching: find.text('데이터 부족')),
-      findsOneWidget,
+      find.descendant(of: rowOf('steady'), matching: find.byType(InlineBarValue)),
+      findsNothing,
     );
-  });
-
-  testWidgets('기록이 없는 줄은 라벨까지 흐려진다', (tester) async {
-    await openCoaching(tester, <TrainerClient>[
-      makeClient(
-        id: 'blank',
-        name: '기록없음',
-        weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0],
-      ),
-    ]);
-
-    Color colorOf(String text) => tester
-        .widget<Text>(
-          find.descendant(of: rowBar('blank'), matching: find.text(text)),
-        )
-        .style!
-        .color!;
-
-    // 값 칸만 흐리면 라벨은 또렷한 채로 남아, 잴 값이 있는데 못 읽은 것처럼
-    // 보인다. 줄 전체가 흐려져야 읽거나 누를 것이 없다는 뜻이 된다.
-    expect(colorOf('데이터 부족'), AppColors.disabledForeground);
-    expect(colorOf('운동 이행률'), AppColors.disabledForeground);
+    expect(
+      find.descendant(of: rowOf('steady'), matching: find.text('90%')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: rowOf('steady'), matching: find.text('운동 이행률')),
+      findsNothing,
+    );
   });
 
   testWidgets('운동 쪽에 요일별 이행률 막대그래프가 보인다', (tester) async {

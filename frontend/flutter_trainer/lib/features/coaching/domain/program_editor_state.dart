@@ -104,6 +104,7 @@ class ProgramExerciseDraft {
     this.memo = '',
     this.type = '근력',
     this.source = 'trainer',
+    this.templateName,
   });
 
   final String id;
@@ -117,7 +118,17 @@ class ProgramExerciseDraft {
   final String rpe;
   final String memo;
   final String type;
+
+  /// `ai` | `trainer` — 서버가 받는 계약값이다(`kProgramExerciseSources`).
+  /// 화면 표시는 [templateName] 이 있으면 그쪽을 우선한다.
   final String source;
+
+  /// 이 운동을 끌어온 템플릿 이름(#1029) — 있으면 출처 배지가 `트레이너
+  /// 추가` 대신 `$templateName 템플릿 추가` 를 보여 준다. 화면 전용 값이라
+  /// [source] 는 그대로 `trainer` 로 남고, 배정 payload
+  /// (`programExerciseToJson`) 는 이 필드를 읽지 않는다 — 서버 계약을 넓히지
+  /// 않는다.
+  final String? templateName;
 
   ProgramExerciseDraft copyWith({
     String? name,
@@ -131,6 +142,7 @@ class ProgramExerciseDraft {
     String? memo,
     String? type,
     String? source,
+    String? templateName,
   }) => ProgramExerciseDraft(
     id: id,
     name: name ?? this.name,
@@ -144,5 +156,6 @@ class ProgramExerciseDraft {
     memo: memo ?? this.memo,
     type: type ?? this.type,
     source: source ?? this.source,
+    templateName: templateName ?? this.templateName,
   );
 }
