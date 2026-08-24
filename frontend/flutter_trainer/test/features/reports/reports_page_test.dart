@@ -510,6 +510,32 @@ void main() {
     expect(currentWeek, findsNothing);
   });
 
+  testWidgets('`이번 주` 버튼 여부와 무관하게 날짜·화살표 묶음은 중앙이다 (#1295)', (
+    WidgetTester tester,
+  ) async {
+    await openReports(tester);
+
+    final Finder nav = find.byType(ReportWeekNav);
+    double arrowGroupCenter() =>
+        (tester.getCenter(prevWeek).dx + tester.getCenter(nextWeek).dx) / 2;
+
+    final double currentNavCenter = tester.getCenter(nav).dx;
+    expect(arrowGroupCenter(), closeTo(currentNavCenter, 0.5));
+    final double currentPrevX = tester.getCenter(prevWeek).dx;
+    final double currentNextX = tester.getCenter(nextWeek).dx;
+
+    await tester.tap(prevWeek);
+    await settle(tester);
+
+    expect(
+      find.byKey(const ValueKey<String>('reports-go-this-week')),
+      findsOneWidget,
+    );
+    expect(arrowGroupCenter(), closeTo(tester.getCenter(nav).dx, 0.5));
+    expect(tester.getCenter(prevWeek).dx, closeTo(currentPrevX, 0.5));
+    expect(tester.getCenter(nextWeek).dx, closeTo(currentNextX, 0.5));
+  });
+
   testWidgets('헤더 검색 바가 다른 탭과 같은 인라인 모양이다 (#1177)', (tester) async {
     await openReports(tester);
 

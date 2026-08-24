@@ -222,19 +222,34 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
               const SizedBox(height: AppSpacing.sm),
               SizedBox(
                 height: 52,
-                child: Visibility(
-                  visible: _isHour,
-                  maintainAnimation: true,
-                  maintainSize: true,
-                  maintainState: true,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      _periodButton('오전', false),
-                      const SizedBox(width: AppSpacing.sm),
-                      _periodButton('오후', true),
-                    ],
-                  ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    Visibility(
+                      visible: _isHour,
+                      maintainAnimation: true,
+                      maintainSize: true,
+                      maintainState: true,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          _periodButton('오전', false),
+                          const SizedBox(width: AppSpacing.sm),
+                          _periodButton('오후', true),
+                        ],
+                      ),
+                    ),
+                    if (_step == 3 && endMinutes < startMinutes)
+                      const Text(
+                        '종료 시간이 시작 시간보다 빠릅니다',
+                        key: ValueKey<String>('time-range-invalid-end'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.destructive,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),

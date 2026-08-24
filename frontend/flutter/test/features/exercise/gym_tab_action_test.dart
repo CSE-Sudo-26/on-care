@@ -241,11 +241,9 @@ void main() {
     );
 
     expect(find.text(l.exTrainerAvailability(_trainer.name)), findsOneWidget);
-    const double expectedBottomInset = 17; // 16px padding + 1px border.
     expect(
-      tester.getBottomRight(myGymCard()).dy -
-          tester.getBottomRight(reservationPanel()).dy,
-      expectedBottomInset,
+      tester.getTopLeft(reservationPanel()).dy,
+      greaterThan(tester.getBottomLeft(myGymCard()).dy),
     );
   });
 
@@ -266,7 +264,7 @@ void main() {
     expect(find.text('트레이너 채팅'), findsNothing);
   });
 
-  testWidgets('pending consultation shows one action and reuses status UI', (
+  testWidgets('connected gym does not duplicate the consultation action', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(
@@ -279,21 +277,12 @@ void main() {
     final AppLocalizations l = AppLocalizations.of(
       tester.element(find.byType(Scaffold).first),
     );
-    expect(find.text(l.exViewConsultationRequest), findsOneWidget);
+    expect(find.text(l.exViewConsultationRequest), findsNothing);
     expect(find.text(l.exGymInfo), findsNothing);
     expect(find.text(l.exConsultButton), findsNothing);
     expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
 
-    final int requestCountBeforeTap = consultationController.state.length;
-
-    // "상담 요청 확인" 은 같은 화면 아래로 스크롤하는 대신 전체 내역
-    // 화면으로 이동한다 — 누적된 이력을 여기서는 볼 수 없었다(#948).
-    await tester.tap(find.text(l.exViewConsultationRequest));
-    await tester.pumpAndSettle();
-
-    expect(find.text(l.exConsultHistoryTitle), findsOneWidget);
-    expect(consultationController.state, hasLength(requestCountBeforeTap));
-    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text(l.exConsultPendingStatus), findsNothing);
   });
 
   testWidgets('connected trainer shows chat without a zero badge', (
@@ -327,7 +316,7 @@ void main() {
   });
 
   testWidgets(
-    'pending consultation keeps its action without a member gym link',
+    'pending consultation uses only the finder history shortcut',
     (WidgetTester tester) async {
       await pumpGymTab(
         tester,
@@ -339,12 +328,16 @@ void main() {
       final AppLocalizations l = AppLocalizations.of(
         tester.element(find.byType(Scaffold).first),
       );
-      expect(find.text(l.exViewConsultationRequest), findsOneWidget);
+      expect(find.text(l.exViewConsultationRequest), findsNothing);
+      expect(
+        find.byKey(const Key('consult-history-shortcut')),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
     },
   );
 
-  testWidgets('any pending consultation keeps the consultation action', (
+  testWidgets('pending consultation does not add a connected-gym summary', (
     WidgetTester tester,
   ) async {
     final ConsultationRequest recentAcceptedRequest = ConsultationRequest(
@@ -373,9 +366,9 @@ void main() {
     final AppLocalizations l = AppLocalizations.of(
       tester.element(find.byType(Scaffold).first),
     );
-    expect(find.text(l.exViewConsultationRequest), findsOneWidget);
+    expect(find.text(l.exViewConsultationRequest), findsNothing);
     expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
-    expect(find.text(l.exConsultPendingStatus), findsOneWidget);
+    expect(find.text(l.exConsultPendingStatus), findsNothing);
     expect(find.text('박최근'), findsNothing);
   });
 
@@ -435,12 +428,9 @@ void main() {
     });
   }
 
-  // --- 처리 결과 안내 (#473) --------------------------------------------
-  //
-  // "거절됨" 배지만으로는 다시 신청해도 되는지, 다른 트레이너를 찾아야 하는지
-  // 알 수 없다. 사유가 결과 전달의 본체다.
-
-  testWidgets('거절된 요청은 트레이너가 남긴 사유를 보여준다', (WidgetTester tester) async {
+  testWidgets('연결 화면에는 지난 상담 결과 요약을 다시 노출하지 않는다', (
+    WidgetTester tester,
+  ) async {
     await pumpGymTab(
       tester,
       consultation: _consultation(
@@ -453,37 +443,8 @@ void main() {
     final AppLocalizations l = AppLocalizations.of(
       tester.element(find.byType(Scaffold).first),
     );
-    expect(find.text('이번 달은 정원이 찼어요'), findsOneWidget);
-    expect(find.text(l.exConsultRejectedReasonLabel), findsOneWidget);
-  });
-
-  testWidgets('사유 없이 거절되면 다음 행동을 안내한다', (WidgetTester tester) async {
-    await pumpGymTab(
-      tester,
-      consultation: _consultation(ConsultationStatus.rejected),
-    );
-    await scrollToCard(tester);
-
-    final AppLocalizations l = AppLocalizations.of(
-      tester.element(find.byType(Scaffold).first),
-    );
-    // 빈 사유 칸을 그리는 대신, 다른 트레이너를 찾도록 안내한다.
-    expect(find.text(l.exConsultRejectedNoReason), findsOneWidget);
+    expect(find.text('이번 달은 정원이 찼어요'), findsNothing);
     expect(find.text(l.exConsultRejectedReasonLabel), findsNothing);
-  });
-
-  testWidgets('승인된 요청은 채팅으로 이어지는 안내를 보여준다', (WidgetTester tester) async {
-    await pumpGymTab(
-      tester,
-      consultation: _consultation(ConsultationStatus.accepted),
-      coach: _coach,
-    );
-    await scrollToCard(tester);
-
-    final AppLocalizations l = AppLocalizations.of(
-      tester.element(find.byType(Scaffold).first),
-    );
-    expect(find.text(l.exConsultAcceptedGuide), findsOneWidget);
   });
 
   testWidgets('대기 중인 요청에는 결과 안내가 붙지 않는다', (WidgetTester tester) async {
@@ -527,11 +488,11 @@ void main() {
     expect(myGymCard(), findsOneWidget);
     expect(reservationPanel(), findsNothing);
     expect(find.text(l.exTrainerAvailability(_trainer.name)), findsNothing);
-    // 내 카드에서만 빠질 뿐, 추천 트레이너 레일에는 그대로 남아 있어야 한다.
+    // 연결 화면에서 추천 트레이너 레일도 함께 제거된다.
     expect(
       find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),
       findsNothing,
     );
-    expect(find.text(_trainer.name), findsWidgets);
+    expect(find.text(_trainer.name), findsNothing);
   });
 }

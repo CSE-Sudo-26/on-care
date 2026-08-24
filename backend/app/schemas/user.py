@@ -23,6 +23,9 @@ class UserMe(BaseModel):
 class HealthProfileBrief(BaseModel):
     name: str
     email: str
+    #: 회원 ID(`User.id`) — MY 탭이 "내 회원 ID"로 보여주는 값이다.
+    #: 트레이너웹의 신규 고객 등록(회원 ID로 찾아 연결)이 이 값을 그대로 쓴다.
+    id: str = ""
 
 
 class RiskInfo(BaseModel):
