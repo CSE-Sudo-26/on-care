@@ -93,9 +93,10 @@ class _ConsultationRequestPageState
       builder: _use24HourFormat,
     );
     if (start == null || !mounted) return;
-    final TimeOfDay initialEnd =
-        _preferredEndTimeOfDay ??
-        TimeOfDay(hour: (start.hour + 1) % 24, minute: start.minute);
+    final TimeOfDay initialEnd = _preferredEndTimeOfDay ?? TimeOfDay(
+      hour: (start.hour + 1) % 24,
+      minute: start.minute,
+    );
     final TimeOfDay? end = await showTimePicker(
       context: context,
       initialTime: initialEnd,
