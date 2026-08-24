@@ -9,10 +9,11 @@
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pytest
 
+from app.core import clock
 from app.db.demo_fixture import load_fixture
 from app.services.exercise_service import monday_of_str
 
@@ -65,9 +66,14 @@ def _sessions(body: dict) -> list[tuple]:
 
 
 def _weeks_to_check() -> list[str]:
-    """이번 주 · 지난주 · 과거 PT 가 있는 주."""
+    """이번 주 · 지난주 · 과거 PT 가 있는 주.
+
+    오늘은 **서비스 기준 시각(KST)** 으로 센다. 시드가 그 시계로 날짜를 붙이는데
+    여기서 러너의 로컬 날짜를 쓰면, UTC 저녁(=KST 다음 날)에 도는 CI 에서 서로 다른
+    하루를 가리킨다. (#557)
+    """
     fixture = load_fixture()
-    today = date.today()
+    today = clock.today()
     weeks = [
         monday_of_str(today.isoformat()),
         monday_of_str((today - timedelta(days=7)).isoformat()),
@@ -122,7 +128,7 @@ def test_seeded_strength_keeps_the_sets_the_fixture_wrote(client):
     값)과 실 API(분 ÷ 3)에서 다른 수로 보였다.
     """
     fixture = load_fixture()
-    today = date.today()
+    today = clock.today()
     day = next(
         d
         for d in reversed(fixture.days_for(today))
