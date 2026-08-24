@@ -339,7 +339,7 @@ void main() {
       await repo.updateProgram(
         's1',
         program: const <ProgramItem>[
-          ProgramItem(name: '스쿼트', sets: 3, reps: '12회', weight: '60kg'),
+          ProgramItem(name: '스쿼트', sets: 3, weight: 60),
         ],
         note: '무릎 주의',
       );
@@ -357,14 +357,15 @@ void main() {
       expect(body.keys.toSet(), <String>{'program', 'note'});
       expect((body['program'] as List<dynamic>).single, <String, Object?>{
         'name': '스쿼트',
+        'type': '근력',
+        'date': null,
+        // 근력은 세트·중량으로만 잰다 — 시간은 싣지 않는다 (#1276).
+        'duration': null,
         'sets': 3,
-        'reps': '12회',
-        'weight': '60kg',
+        'weight': 60.0,
+        'intensity': 'moderate',
         // 세션 구분은 항상 실린다 — 단일 세션 프로그램은 빈 문자열(#709).
         'session': '',
-        // type/duration 도 항상 실린다 — 없으면 기본값('근력'/빈 문자열)(#1233).
-        'type': '근력',
-        'duration': '',
       });
     },
   );
@@ -386,7 +387,7 @@ void main() {
         clientName: '김민수',
         time: '16:00',
         program: const <ProgramItem>[
-          ProgramItem(name: '스쿼트', sets: 1, reps: '20분', weight: '-'),
+          ProgramItem(name: '스쿼트', sets: 1),
         ],
       );
 
@@ -408,12 +409,13 @@ void main() {
       expect(body['client_name'], '김민수');
       expect((body['program'] as List<Object?>).single, <String, Object?>{
         'name': '스쿼트',
-        'session': '',
-        'sets': 1,
-        'reps': '20분',
-        'weight': '-',
         'type': '근력',
-        'duration': '',
+        'date': null,
+        'duration': null,
+        'sets': 1,
+        'weight': null,
+        'intensity': 'moderate',
+        'session': '',
       });
       verifyNever(
         () => dio.get<List<dynamic>>(
@@ -441,7 +443,7 @@ void main() {
         clientName: '김민수',
         time: '16:00',
         program: const <ProgramItem>[
-          ProgramItem(name: '플랭크', sets: 1, reps: '10분', weight: '-'),
+          ProgramItem(name: '플랭크', type: '스트레칭', duration: 10),
         ],
       );
 
@@ -497,7 +499,6 @@ void main() {
           <String, dynamic>{
             'name': '스쿼트',
             'sets': 3.0,
-            'reps': '12회',
             'weight': '60kg',
           },
         ],

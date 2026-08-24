@@ -858,14 +858,11 @@
   "progType": "Type",
   "progDuration": "Duration (min)",
   "progOptional": "Optional",
-  "progSetsByReps": "{sets} × {reps}",
-  "@progSetsByReps": {
+  "progSetsValue": "{sets} sets",
+  "@progSetsValue": {
     "placeholders": {
       "sets": {
         "type": "int"
-      },
-      "reps": {
-        "type": "String"
       }
     }
   },
@@ -1023,6 +1020,24 @@
   "routineFieldMinutes": "Duration",
   "routineFieldTotalMinutes": "Total workout time",
   "routineFieldIntensity": "Intensity",
+  "routineFieldDate": "Date",
+  "routineFieldExerciseName": "Exercise name",
+  "routineFieldExerciseNameHint": "e.g. Squat, Treadmill",
+  "routineFieldSets": "Sets",
+  "routineFieldWeight": "Weight",
+  "routineFieldCalories": "Estimated calories",
+  "routineUnitMinutes": "min",
+  "routineUnitSets": "sets",
+  "routineUnitKg": "kg",
+  "routineKcalValue": "{count} kcal",
+  "@routineKcalValue": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "intensityLight": "Light",
   "intensityModerate": "Moderate",
   "intensityHigh": "High",

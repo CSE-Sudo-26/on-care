@@ -633,7 +633,7 @@ void main() {
           clientName: '박성호',
           time: '10:00',
           program: const <ProgramItem>[
-            ProgramItem(name: '저강도 유산소', sets: 1, reps: '30분', weight: '-'),
+            ProgramItem(name: '저강도 유산소', type: '유산소', duration: 30),
           ],
         );
         expect(attached, isTrue);
@@ -656,7 +656,7 @@ void main() {
           clientName: '김민수',
           time: '10:00',
           program: const <ProgramItem>[
-            ProgramItem(name: '코어 강화', sets: 1, reps: '10분', weight: '-'),
+            ProgramItem(name: '코어 강화', type: '스트레칭', duration: 10),
           ],
         );
         expect(attached, isFalse);
@@ -2187,13 +2187,13 @@ void main() {
 
         await tester.enterText(
           find.byKey(const ValueKey<String>('custom-exercise-name')),
-          '유연성 A',
+          '스트레칭 A',
         );
-        // Default category is 근력 — switch to 유연성 so the assigned
+        // Default category is 근력 — switch to 스트레칭 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
         final stretching = find.byKey(
-          const ValueKey<String>('custom-exercise-category-유연성'),
+          const ValueKey<String>('custom-exercise-category-스트레칭'),
         );
         await tester.ensureVisible(stretching);
         await tester.tap(stretching);
@@ -2210,7 +2210,7 @@ void main() {
         // 트레이너가 넣은 운동을 그대로 실어 보낸다.
         expect(
           routineRepo.lastAssignedExercises.map((e) => e['type']),
-          everyElement('유연성'),
+          everyElement('스트레칭'),
         );
         expect(
           routineRepo.lastAssignedExercises.map((e) => e['source']),

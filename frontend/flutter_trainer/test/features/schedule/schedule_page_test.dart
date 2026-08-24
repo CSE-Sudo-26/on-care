@@ -134,7 +134,7 @@ void main() {
       expect(minsu.program.length, 4);
       expect(minsu.program.first.name, '레그프레스');
       expect(minsu.program.first.sets, 3);
-      expect(minsu.program.first.weight, '80kg');
+      expect(minsu.program.first.weight, 80.0);
 
       final seongho = slots.firstWhere((s) => s.clientName == '박성호');
       expect(seongho.expandable, isTrue); // 예정 now opens (plan preview)
@@ -190,7 +190,7 @@ void main() {
         await repo.updateProgram(
           target.id,
           program: const <ProgramItem>[
-            ProgramItem(name: '덤벨 프레스', sets: 4, reps: '12회', weight: '16kg'),
+            ProgramItem(name: '덤벨 프레스', sets: 4, weight: 16),
           ],
           note: '마지막 세트 RPE 8 확인',
         );
@@ -1036,7 +1036,7 @@ void main() {
         '덤벨 플라이',
       );
       await tester.enterText(
-        find.byKey(const ValueKey<String>('program-sets-0')),
+        find.byKey(const ValueKey<String>('program-sets-0-field')),
         '4',
       );
       // 메모는 이 편집기에 없다 — 고치는 자리가 둘이면 어느 쪽이 최신인지
@@ -1061,7 +1061,7 @@ void main() {
       );
       expect(find.textContaining('15:00\u201316:00'), findsWidgets);
       expect(find.text('덤벨 플라이'), findsOneWidget);
-      expect(find.textContaining('4세트 × 8회'), findsOneWidget);
+      expect(find.textContaining('4세트'), findsOneWidget);
       // 프로그램만 고쳤으므로 원래 메모는 그대로 남는다.
       expect(find.text('벤치 컨디션 확인 필요.'), findsNothing);
     });

@@ -200,7 +200,7 @@ class _ExerciseDraft {
     required this.name,
     required this.minutes,
     required this.sets,
-    required this.reps,
+    required this.weight,
     required this.type,
   }) : key = _nextKey++;
 
@@ -208,7 +208,7 @@ class _ExerciseDraft {
     name: TextEditingController(),
     minutes: TextEditingController(text: '10'),
     sets: TextEditingController(text: '3'),
-    reps: TextEditingController(text: '10'),
+    weight: TextEditingController(text: '20'),
     type: kRoutineTypes.first,
   );
 
@@ -218,8 +218,8 @@ class _ExerciseDraft {
     sets: TextEditingController(
       text: exercise.sets > 0 ? '${exercise.sets}' : '3',
     ),
-    reps: TextEditingController(
-      text: exercise.reps.isNotEmpty ? exercise.reps : '10',
+    weight: TextEditingController(
+      text: exercise.weight > 0 ? '${exercise.weight}' : '20',
     ),
     type: kRoutineTypes.contains(exercise.type)
         ? exercise.type
@@ -232,7 +232,7 @@ class _ExerciseDraft {
   final TextEditingController name;
   final TextEditingController minutes;
   final TextEditingController sets;
-  final TextEditingController reps;
+  final TextEditingController weight;
   String type;
 
   /// 이름이 비었거나 시간이 0 이하면 저장 대상이 아니다 — 빈 줄을 남긴 채
@@ -249,7 +249,7 @@ class _ExerciseDraft {
       // 비근력은 저장하지 않는다 — 화면에서 숨긴 값이 조용히 실리면
       // 안 쓰는 필드가 남아 있는 것처럼 보인다.
       sets: isStrength ? (int.tryParse(sets.text.trim()) ?? 0) : 0,
-      reps: isStrength ? reps.text.trim() : '',
+      weight: isStrength ? (double.tryParse(weight.text.trim()) ?? 0) : 0,
     );
   }
 
@@ -257,7 +257,7 @@ class _ExerciseDraft {
     name.dispose();
     minutes.dispose();
     sets.dispose();
-    reps.dispose();
+    weight.dispose();
   }
 }
 
@@ -321,11 +321,16 @@ class _ExerciseRow extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: TextField(
-                    controller: draft.reps,
+                    controller: draft.weight,
                     style: _fieldStyle,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    ],
                     decoration: InputDecoration(
-                      labelText: l.programEditorReps,
+                      labelText: l.programEditorWeight,
                     ),
                   ),
                 ),

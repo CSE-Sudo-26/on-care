@@ -220,7 +220,7 @@ class _RoutineSuggestionEditDialogState
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              RoutineMinutesSlider(
+              RoutineMinutesField(
                 minutes: _minutes,
                 onChanged: (next) => setState(() => _minutes = next),
               ),

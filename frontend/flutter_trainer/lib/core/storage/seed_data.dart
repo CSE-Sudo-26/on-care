@@ -1038,7 +1038,7 @@ class _Slot {
   final int durationMinutes;
   final String status; // 완료|예정|공백
   final String note;
-  final List<Map<String, Object?>> program; // {name,sets,reps,weight}
+  final List<Map<String, Object?>> program; // {name,type,sets,weight,duration}
 }
 
 const List<_Slot> _schedule = <_Slot>[
@@ -1052,27 +1052,21 @@ const List<_Slot> _schedule = <_Slot>[
     program: <Map<String, Object?>>[
       <String, Object?>{
         'name': '레그프레스',
+        'type': '근력',
         'sets': 3,
-        'reps': '12회',
-        'weight': '80kg',
+        'weight': 80.0,
       },
       <String, Object?>{
         'name': '레그컬',
+        'type': '근력',
         'sets': 3,
-        'reps': '12회',
-        'weight': '40kg',
+        'weight': 40.0,
       },
-      <String, Object?>{
-        'name': '카프레이즈',
-        'sets': 3,
-        'reps': '20회',
-        'weight': '자체중량',
-      },
+      <String, Object?>{'name': '카프레이즈', 'type': '근력', 'sets': 3},
       <String, Object?>{
         'name': '하체 스트레칭',
-        'sets': 1,
-        'reps': '10분',
-        'weight': '-',
+        'type': '스트레칭',
+        'duration': 10,
       },
     ],
   ),
@@ -1086,23 +1080,18 @@ const List<_Slot> _schedule = <_Slot>[
     program: <Map<String, Object?>>[
       <String, Object?>{
         'name': '데드리프트',
+        'type': '근력',
         'sets': 4,
-        'reps': '8회',
-        'weight': '55kg',
+        'weight': 55.0,
       },
       <String, Object?>{
         'name': '루마니안 데드리프트',
+        'type': '근력',
         'sets': 3,
-        'reps': '10회',
-        'weight': '40kg',
+        'weight': 40.0,
       },
-      <String, Object?>{'name': '플랭크', 'sets': 3, 'reps': '45초', 'weight': '-'},
-      <String, Object?>{
-        'name': '코어 서킷',
-        'sets': 2,
-        'reps': '12회',
-        'weight': '-',
-      },
+      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3},
+      <String, Object?>{'name': '코어 서킷', 'type': '근력', 'sets': 2},
     ],
   ),
   _Slot(
@@ -1124,22 +1113,17 @@ const List<_Slot> _schedule = <_Slot>[
     program: <Map<String, Object?>>[
       <String, Object?>{
         'name': '벤치프레스',
+        'type': '근력',
         'sets': 4,
-        'reps': '8회',
-        'weight': '65kg',
+        'weight': 65.0,
       },
       <String, Object?>{
         'name': '인클라인 덤벨 프레스',
+        'type': '근력',
         'sets': 3,
-        'reps': '10회',
-        'weight': '26kg',
+        'weight': 26.0,
       },
-      <String, Object?>{
-        'name': '트라이셉스 딥',
-        'sets': 3,
-        'reps': '12회',
-        'weight': '-',
-      },
+      <String, Object?>{'name': '트라이셉스 딥', 'type': '근력', 'sets': 3},
     ],
   ),
   // 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다.

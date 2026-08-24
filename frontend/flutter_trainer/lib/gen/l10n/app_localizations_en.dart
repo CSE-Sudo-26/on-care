@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1708,8 +1707,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progOptional => 'Optional';
 
   @override
-  String progSetsByReps(int sets, String reps) {
-    return '$sets × $reps';
+  String progSetsValue(int sets) {
+    return '$sets sets';
   }
 
   @override
@@ -2036,6 +2035,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineFieldIntensity => 'Intensity';
+
+  @override
+  String get routineFieldDate => 'Date';
+
+  @override
+  String get routineFieldExerciseName => 'Exercise name';
+
+  @override
+  String get routineFieldExerciseNameHint => 'e.g. Squat, Treadmill';
+
+  @override
+  String get routineFieldSets => 'Sets';
+
+  @override
+  String get routineFieldWeight => 'Weight';
+
+  @override
+  String get routineFieldCalories => 'Estimated calories';
+
+  @override
+  String get routineUnitMinutes => 'min';
+
+  @override
+  String get routineUnitSets => 'sets';
+
+  @override
+  String get routineUnitKg => 'kg';
+
+  @override
+  String routineKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
 
   @override
   String get intensityLight => 'Light';
