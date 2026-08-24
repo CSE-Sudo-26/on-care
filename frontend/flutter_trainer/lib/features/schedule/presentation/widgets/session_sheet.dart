@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurr
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_repeat_preview.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/session_time_range_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Bottom sheet for booking or editing a session: client, type, time
@@ -42,13 +43,13 @@ class SessionSheet extends ConsumerStatefulWidget {
 
 class _SessionSheetState extends ConsumerState<SessionSheet> {
   static const List<String> _types = SessionType.all;
-  static const List<int> _durations = <int>[30, 45, 60, 90];
 
   late String _client;
   late String _type;
   late int _hour;
   late int _minute;
-  late int _duration;
+  late int _endHour;
+  late int _endMinute;
   bool _saving = false;
   late final TextEditingController _note;
 
@@ -73,9 +74,6 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   // session would become 60 (review PR 218).
   late List<String> _clientOptions;
   late List<String> _typeOptions;
-  late List<int> _hourOptions;
-  late List<int> _minuteOptions;
-  late List<int> _durationOptions;
 
   /// [base] plus [current] when it isn't already offered.
   static List<T> _withCurrent<T>(List<T> base, T? current) {
@@ -102,12 +100,33 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     _minute = parts != null && parts.length > 1
         ? int.tryParse(parts[1]) ?? 0
         : 0;
-    _hourOptions = _withCurrent(<int>[for (var h = 6; h <= 22; h++) h], _hour)
-      ..sort();
-    _minuteOptions = _withCurrent(const <int>[0, 15, 30, 45], _minute)..sort();
 
-    _duration = e?.durationMinutes ?? 60;
-    _durationOptions = _withCurrent(_durations, _duration)..sort();
+    // 종료 시간은 시작 시간 + 소요 시간에서 거꾸로 구한다 — 기존 세션은
+    // 소요 시간(`durationMinutes`)만 들고 있어 화면에 보일 종료 시간이
+    // 저장돼 있지 않다(#1090).
+    final endTotal = _hour * 60 + _minute + (e?.durationMinutes ?? 60);
+    _endHour = endTotal ~/ 60;
+    _endMinute = endTotal % 60;
+  }
+
+  /// 시작·종료 시간을 함께 고르는 모달을 연다(#1229, #1250). 둘 다 한
+  /// 화면에서 같이 정하므로, 예전 드롭다운처럼 시작만 옮겼을 때 소요
+  /// 시간을 지키려고 종료를 따라 미는 계산은 더 필요 없다 — 사용자가
+  /// 확인을 누른 값 그대로 받는다.
+  Future<void> _pickTimeRange() async {
+    final result = await showSessionTimeRangeDialog(
+      context: context,
+      initialStart: TimeOfDay(hour: _hour, minute: _minute),
+      initialEnd: TimeOfDay(hour: _endHour, minute: _endMinute),
+    );
+    if (result == null || !mounted) return;
+    final (start, end) = result;
+    setState(() {
+      _hour = start.hour;
+      _minute = start.minute;
+      _endHour = end.hour;
+      _endMinute = end.minute;
+    });
   }
 
   @override
@@ -119,6 +138,13 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   String get _time =>
       '${_hour.toString().padLeft(2, '0')}:'
       '${_minute.toString().padLeft(2, '0')}';
+
+  String get _endTime =>
+      '${_endHour.toString().padLeft(2, '0')}:'
+      '${_endMinute.toString().padLeft(2, '0')}';
+
+  int get _startTotalMinutes => _hour * 60 + _minute;
+  int get _endTotalMinutes => _endHour * 60 + _endMinute;
 
   /// 지금 화면이 나타내는 반복 규칙.
   WeeklyRecurrence get _rule => WeeklyRecurrence(
@@ -138,11 +164,18 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final int duration = _endTotalMinutes - _startTotalMinutes;
+    if (duration <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.schedEndBeforeStart)));
+      return;
+    }
     setState(() => _saving = true);
     final repo = ref.read(scheduleRepositoryProvider);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final AppLocalizations l = AppLocalizations.of(context);
     try {
       final e = widget.existing;
       if (e == null && _repeatDays.isNotEmpty) {
@@ -170,7 +203,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           rule: rule,
           clientName: _client,
           type: _type,
-          durationMinutes: _duration,
+          durationMinutes: duration,
           note: _note.text.trim(),
           clientRequestId: _requestId,
         );
@@ -180,7 +213,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           clientName: _client,
           time: _time,
           type: _type,
-          durationMinutes: _duration,
+          durationMinutes: duration,
           note: _note.text.trim(),
         );
       } else {
@@ -189,7 +222,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           clientName: _client,
           time: _time,
           type: _type,
-          durationMinutes: _duration,
+          durationMinutes: duration,
           note: _note.text.trim(),
         );
       }
@@ -270,95 +303,84 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _sheetField(
-                label: l.schedFieldClient,
-                child: DropdownButton<String>(
-                  value: _client,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<String>>[
-                    for (final name in _clientOptions)
-                      DropdownMenuItem<String>(value: name, child: Text(name)),
-                  ],
-                  onChanged: (v) => setState(() => _client = v ?? _client),
-                ),
-              ),
-              _sheetField(
-                label: l.schedFieldType,
-                child: DropdownButton<String>(
-                  value: _type,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<String>>[
-                    for (final t in _typeOptions)
-                      // 값은 계약값 그대로, 보이는 문구만 로케일에서 가져온다.
-                      DropdownMenuItem<String>(
-                        value: t,
-                        child: Text(sessionTypeLabel(l, t)),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _type = v ?? _type),
-                ),
-              ),
-              _sheetField(
-                label: l.schedFieldTime,
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: DropdownButton<int>(
-                        value: _hour,
+              // 고객·유형은 같은 층위의 선택이라 한 줄에 묶는다 — 세로로
+              // 나란한 두 드롭다운이 각자 한 줄을 다 쓸 이유가 없다(#1090).
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldClient,
+                      child: DropdownButton<String>(
+                        value: _client,
                         isExpanded: true,
                         underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<int>>[
-                          for (final h in _hourOptions)
-                            DropdownMenuItem<int>(
-                              value: h,
-                              child: Text(
-                                l.schedHourLabel(h.toString().padLeft(2, '0')),
-                              ),
-                            ),
-                        ],
-                        onChanged: (v) => setState(() => _hour = v ?? _hour),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: DropdownButton<int>(
-                        value: _minute,
-                        isExpanded: true,
-                        underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<int>>[
-                          for (final m in _minuteOptions)
-                            DropdownMenuItem<int>(
-                              value: m,
-                              child: Text(
-                                l.schedMinuteLabel(
-                                  m.toString().padLeft(2, '0'),
-                                ),
-                              ),
+                        items: <DropdownMenuItem<String>>[
+                          for (final name in _clientOptions)
+                            DropdownMenuItem<String>(
+                              value: name,
+                              child: Text(name),
                             ),
                         ],
                         onChanged: (v) =>
-                            setState(() => _minute = v ?? _minute),
+                            setState(() => _client = v ?? _client),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              _sheetField(
-                label: l.schedFieldDuration,
-                child: DropdownButton<int>(
-                  value: _duration,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<int>>[
-                    for (final d in _durationOptions)
-                      DropdownMenuItem<int>(
-                        value: d,
-                        child: Text(l.minutesShort(d)),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldType,
+                      child: DropdownButton<String>(
+                        value: _type,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: <DropdownMenuItem<String>>[
+                          for (final t in _typeOptions)
+                            // 값은 계약값 그대로, 보이는 문구만 로케일에서
+                            // 가져온다.
+                            DropdownMenuItem<String>(
+                              value: t,
+                              child: Text(sessionTypeLabel(l, t)),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _type = v ?? _type),
                       ),
-                  ],
-                  onChanged: (v) => setState(() => _duration = v ?? _duration),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              // 소요 시간 대신 시작·종료 시간을 직접 고른다 — 시간표에
+              // 뜨는 것도, 예약 슬롯이 세션을 만들 때 넘기는 것도 결국
+              // "언제부터 언제까지"라 그 형태로 바로 고르는 편이 낫다(#1090).
+              // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
+              GestureDetector(
+                key: const ValueKey<String>('session-time-range-field'),
+                onTap: _pickTimeRange,
+                child: _pillField(
+                  label: l.schedFieldTime,
+                  child: SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            l.schedTimeRange(_time, _endTime),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.foreground,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.schedule_outlined,
+                          size: 18,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               // 반복은 새 일정에만 있다(#870). 이미 잡힌 회차를 고치는 일은 그
@@ -518,7 +540,10 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                     maxLines: 4,
                     decoration: InputDecoration(
                       hintText: l.schedNoteHint,
+                      // 테마 기본 힌트 크기가 옆 `메모` 라벨(13)보다 커서 이
+                      // 시트에서만 튀어 보였다 — 그 크기에 맞춘다(#1247).
                       hintStyle: const TextStyle(
+                        fontSize: 13,
                         color: AppColors.mutedForeground,
                       ),
                       isDense: true,
@@ -598,6 +623,35 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                 Expanded(child: child),
               ],
             ),
+    );
+  }
+
+  /// 위에 작은 라벨, 아래 옅은 채움(inputBackground) 카드 — 예약 슬롯
+  /// 시트가 쓰는 것과 같은 언어다(#1090). 짙은 `OutlinedButton` 윤곽선
+  /// 대신 이 카드로 통일해, 한 시트 안에서 필드마다 다른 무게로 서던
+  /// 것을 정리한다.
+  Widget _pillField({required String label, required Widget child}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          decoration: const BoxDecoration(
+            color: AppColors.inputBackground,
+            borderRadius: BorderRadius.all(AppRadius.sm),
+          ),
+          child: child,
+        ),
+      ],
     );
   }
 }

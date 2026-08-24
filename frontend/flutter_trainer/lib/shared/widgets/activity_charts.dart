@@ -903,6 +903,17 @@ class _GoalRingsPainter extends CustomPainter {
   bool shouldRepaint(covariant _GoalRingsPainter old) => old.ratios != ratios;
 }
 
+/// 한 바퀴를 넘긴 원호가 **다시 도는 몫**(0 이상 1 미만).
+///
+/// 넘친 몫을 1 에서 자르면 두 바퀴를 넘긴 순간(209%, 300% …) 끝이 12시로
+/// 되돌아가, 그 자리에 고정으로 얹는 유형 기호 아래 캡 표시가 숨는다 —
+/// 도넛이 그냥 꽉 찬 원으로만 보인다. 자르지 말고 **바퀴마다 감아 돌린다**
+/// (#1178). 209% 면 두 번째 바퀴의 9% 지점, 200%·300% 면 12시가 맞다.
+double ringOverflowTurn(double ratio) {
+  if (!ratio.isFinite) return 0;
+  return ratio - ratio.floorToDouble();
+}
+
 /// 링 하나 — 트랙 + 채운 호. 목표를 넘기면 한 바퀴를 넘어 이어 그리고, 겹친
 /// 끝 아래에 그림자를 깔아 어디서 멈췄는지 보이게 한다. 그림자는 그 링의
 /// 두께로 잘라 밖으로 번지지 않는다.
@@ -945,7 +956,7 @@ void paintRing(
         ..strokeWidth = stroke
         ..color = color,
     );
-    final double over = math.min(ratio - 1, 1);
+    final double over = ringOverflowTurn(ratio);
     capAngle = -math.pi / 2 + math.pi * 2 * over;
     _paintCapShadow(canvas, center, radius, stroke, capAngle);
     if (over > 0) {

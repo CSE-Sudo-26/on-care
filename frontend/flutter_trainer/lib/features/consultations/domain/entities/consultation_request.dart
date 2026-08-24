@@ -44,8 +44,9 @@ class ConsultationRequest {
   /// Requested date (`YYYY-MM-DD` parsed).
   final DateTime preferredDate;
 
-  /// 희망 시간대, already localized (저녁 …).
-  /// 서버 enum 코드('morning' …). 화면 문구는 [preferredTimeLabels] 로 만든다.
+  /// 서버 코드 — `flexible` 또는 `HH:MM` 정확한 시각(#1256). 과거
+  /// morning/afternoon/evening 값도 남아 있을 수 있다. 화면 문구는
+  /// [preferredTimeLabel] 로 만든다.
   final String preferredTimeCode;
 
   /// The member's own note to the trainer.

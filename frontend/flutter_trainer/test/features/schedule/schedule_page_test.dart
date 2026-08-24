@@ -664,7 +664,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('consultation inbox opens from the schedule tab', (
+    testWidgets('consultation inbox dialog opens over the schedule tab', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -672,99 +672,17 @@ void main() {
       await tester.tap(find.byKey(const Key('consult-inbox-entry')));
       await settle(tester);
 
-      expect(find.text('김하늘'), findsOneWidget);
-      expect(find.text('퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.'), findsOneWidget);
-      expect(find.text('거절'), findsOneWidget);
-      expect(find.text('새 일정'), findsWidgets);
-    });
-
-    testWidgets(
-      'failed demo schedule write keeps the consultation pending for retry',
-      (tester) async {
-        final container = await pumpTrainerApp(
-          tester,
-          token: 'demo-trainer-token',
-          at: AppRoutes.schedule,
-          extraOverrides: <Override>[
-            scheduleRepositoryProvider.overrideWith(
-              (ref) =>
-                  _ThrowingScheduleRepository(ref.watch(appDatabaseProvider)),
-            ),
-          ],
-        );
-        final consultations = container.read(consultationRepositoryProvider);
-
-        await tester.tap(find.byKey(const Key('consult-inbox-entry')));
-        await settle(tester);
-        await tester.tap(find.text('새 일정').last);
-        await settle(tester);
-        await tester.tap(find.text('추가하기'));
-        await settle(tester);
-
-        expect(await consultations.pendingCount(), 1);
-        expect((await consultations.fetch()).single.isPending, isTrue);
-        expect(find.text('상담을 처리하지 못했어요'), findsOneWidget);
-      },
-    );
-
-    testWidgets('past preferred date opens a valid consultation date picker', (
-      tester,
-    ) async {
-      final consultations = DemoConsultationRepository(
-        requests: <ConsultationRequest>[
-          ConsultationRequest(
-            id: 'past-consultation',
-            memberId: 'past-member',
-            memberName: '과거희망일 회원',
-            goalCode: 'fitness',
-            purposeCode: 'general',
-            preferredDate: DateTime(2020),
-            preferredTimeCode: 'morning',
-            status: 'pending',
-          ),
-        ],
+      expect(currentLocation(tester), AppRoutes.schedule);
+      expect(find.text('상담 요청'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey<String>('consultations-dialog')),
+        findsOneWidget,
       );
-      await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        at: AppRoutes.schedule,
-        extraOverrides: <Override>[
-          consultationRepositoryProvider.overrideWithValue(consultations),
-        ],
+      expect(
+        find.byKey(const ValueKey<String>('consultations-back-to-schedule')),
+        findsNothing,
       );
-
-      await tester.tap(find.byKey(const Key('consult-inbox-entry')));
-      await settle(tester);
-      await tester.tap(find.text('새 일정').last);
-      await settle(tester);
-      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
-      await settle(tester);
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(DatePickerDialog), findsOneWidget);
-    });
-
-    testWidgets('blank consultation rejection reason cannot be submitted', (
-      tester,
-    ) async {
-      await openSchedule(tester);
-
-      await tester.tap(find.byKey(const Key('consult-inbox-entry')));
-      await settle(tester);
-      await tester.tap(find.text('거절'));
-      await settle(tester);
-
-      TextButton rejectButton() =>
-          tester.widget<TextButton>(find.widgetWithText(TextButton, '거절하기'));
-      expect(rejectButton().onPressed, isNull);
-
-      await tester.enterText(find.byType(TextField).last, '   ');
-      await tester.pump();
-      expect(rejectButton().onPressed, isNull);
-
-      await tester.enterText(find.byType(TextField).last, '요청 시간 조율 필요');
-      await tester.pump();
-      expect(rejectButton().onPressed, isNotNull);
+      expect(find.byType(BottomSheet), findsNothing);
     });
 
     testWidgets('예약 슬롯 action opens the selected-day management sheet', (
@@ -890,9 +808,15 @@ void main() {
 
       await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
       expect(find.text('아직 계획된 프로그램이 없어요'), findsOneWidget);
+      // 계획이 없으면 이 카드 안에서 고치는 자리(`프로그램 수정`)가 아니라
+      // 코칭 탭으로 나가는 자리(`프로그램 추가`)만 있다(#1247).
+      expect(
+        find.byKey(const ValueKey<String>('session-add-program-chip')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('session-edit-program-chip')),
-        findsOneWidget,
+        findsNothing,
       );
       // 메모 자리는 종류와 상관없이 있다(#1011).
       expect(
@@ -900,6 +824,42 @@ void main() {
         findsOneWidget,
       );
       expect(noteActionLabel(tester), '메모 추가');
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-add-program-chip')),
+      );
+      await settle(tester);
+
+      expect(currentLocation(tester), startsWith(AppRoutes.coaching));
+    });
+
+    testWidgets('이미 회원에게 보낸 프로그램은 프로그램 수정 아이콘이 없다 (#1247)', (tester) async {
+      await withWideSurface(tester, () async {
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.schedule,
+        );
+
+        await openSession(tester, '김민수');
+        expect(
+          find.byKey(const ValueKey<String>('session-edit-program-chip')),
+          findsOneWidget,
+        );
+
+        final send = find.byKey(
+          const ValueKey<String>('schedule-send-program'),
+        );
+        await tester.ensureVisible(send);
+        await tester.pumpAndSettle();
+        await tester.tap(send);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey<String>('session-edit-program-chip')),
+          findsNothing,
+        );
+      }, size: const Size(1100, 2000));
     });
 
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {
@@ -908,17 +868,85 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // Change 00분 → 15분 in the time picker.
-      await tester.tap(find.text('00분'));
+      // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
       await settle(tester);
-      await tester.tap(find.text('15분').last);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-start-input')),
+        '10:15',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        '11:15',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
       await settle(tester);
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      // 시간표 블록이 시작·끝을 함께 말한다(기본 60분).
+      // 시간표 블록이 시작·끝을 함께 말한다.
       expect(find.text('10:15\u201311:15'), findsOneWidget);
+    });
+
+    testWidgets('종료 시간을 직접 옮기면 소요 시간이 바뀐다 (#1090)', (tester) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('새 일정'));
+      await settle(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
+      await settle(tester);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        '11:30',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
+      await settle(tester);
+
+      await tester.tap(find.text('추가하기'));
+      await settle(tester);
+
+      expect(find.text('10:00\u201311:30'), findsOneWidget);
+    });
+
+    testWidgets('종료 시간이 시작보다 이르면 확인을 막는다 (#1090)', (tester) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('새 일정'));
+      await settle(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
+      await settle(tester);
+
+      // 종료를 시작(10시)보다 이른 6시로 옮긴다.
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        '06:00',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
+      await settle(tester);
+
+      // 모달이 그 자리에서 막는다 — 시트로 넘어가지 않는다.
+      expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -937,12 +965,10 @@ void main() {
       );
       await settle(tester);
 
-      // Booking details stay inside the expanded schedule card. Program and
-      // trainer memo editing have their own separate action.
+      // 일정 수정은 상세 패널을 바꿔치는 대신 가운데 모달로 뜬다(#1250).
+      // 프로그램·메모 편집은 각자 다른 자리다.
       expect(
-        find.byKey(
-          const ValueKey<String>('week-session-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('schedule-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
@@ -950,10 +976,20 @@ void main() {
         findsNothing,
       );
 
-      // Change 00분 → 30분 in the time picker and save.
-      await tester.tap(find.text('00분'));
+      // 시작을 15:00 → 15:30 으로 옮긴다. 종료는 건드리지 않으므로 그
+      // 대로(16:00) 남는다 — 두 값을 함께 보여 주는 모달이라, 시작만
+      // 바꿔도 소요 시간을 지켜 주던 예전 계산은 더 없다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
       await settle(tester);
-      await tester.tap(find.text('30분').last);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-start-input')),
+        '15:30',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-confirm')),
+      );
       await settle(tester);
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
@@ -964,14 +1000,14 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:30'),
+          matching: find.text('15:30\u201316:00'),
         ),
         findsOneWidget,
       );
       expect(find.text('15:00\u201316:00'), findsNothing);
     });
 
-    testWidgets('프로그램 수정 edits exercises inside the card', (tester) async {
+    testWidgets('프로그램 수정 opens a dialog to edit exercises', (tester) async {
       await openSchedule(tester);
 
       await openSession(tester, '박성호');
@@ -985,16 +1021,14 @@ void main() {
       );
       await settle(tester);
 
+      // 좁은 상세 패널이 아니라 가운데 모달로 열린다 — 세트·횟수/시간·
+      // 중량 칸이 잘리던 문제의 근본 원인이었다.
       expect(
-        find.byKey(
-          const ValueKey<String>('week-program-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
-        find.byKey(
-          const ValueKey<String>('week-session-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('schedule-editor-seed-schedule-3')),
         findsNothing,
       );
       await tester.enterText(
@@ -1022,9 +1056,7 @@ void main() {
       await settle(tester);
 
       expect(
-        find.byKey(
-          const ValueKey<String>('week-program-editor-seed-schedule-3'),
-        ),
+        find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsNothing,
       );
       expect(find.textContaining('15:00\u201316:00'), findsWidgets);
@@ -1054,7 +1086,7 @@ void main() {
 
       // 운동 목록 없이 메모만 연다.
       expect(
-        find.byKey(const ValueKey<String>('week-note-editor-seed-schedule-3')),
+        find.byKey(const ValueKey<String>('note-editor-seed-schedule-3')),
         findsOneWidget,
       );
       expect(
@@ -1154,6 +1186,38 @@ void main() {
       expect(find.textContaining('📤 오늘 PT 프로그램을 보냈어요'), findsNothing);
     });
 
+    testWidgets('완료 chip asks for confirmation before processing (#1227)', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+      await openSession(tester, '박성호'); // 예정 session
+
+      await revealInPanel(
+        tester,
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await settle(tester);
+
+      // 취소·노쇼처럼 완료도 종료 상태라 되돌릴 UI가 없다 — 확인 없이
+      // 바로 처리하지 않는다.
+      expect(find.text('일정 완료'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-complete-confirm')),
+        findsOneWidget,
+      );
+
+      // 취소를 누르면 처리되지 않고 예정 그대로 남는다.
+      await tester.tap(find.text('취소').last);
+      await settle(tester);
+      expect(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('완료 chip marks the session done and shows in 운동기록', (
       tester,
     ) async {
@@ -1172,11 +1236,14 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('session-complete-chip')),
       );
-      // 확인 다이얼로그 없이 누르는 즉시 완료 처리된다 — 메모는 언제든
-      // 상세 패널에서 따로 남길 수 있어, 매번 빈 메모란을 거칠 이유가
-      // 없다(#1106).
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await settle(tester);
+      // 완료는 예정에서만 갈리는 종료 상태라 되돌릴 UI가 없다 — 확인
+      // 다이얼로그를 거친 뒤에야 처리된다(#1227).
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-confirm')),
       );
       await settle(tester);
 
@@ -1524,6 +1591,10 @@ void main() {
       );
       await tester.tap(
         find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
+      await settle(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-confirm')),
       );
       await settle(tester);
 

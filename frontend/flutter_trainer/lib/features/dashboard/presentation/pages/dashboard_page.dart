@@ -6,13 +6,15 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
-import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
+import 'package:oncare_trainer/features/dashboard/domain/churn_risk.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/follow_up_card.dart';
+import 'package:oncare_trainer/features/dashboard/presentation/widgets/churn_risk_dialog.dart';
+import 'package:oncare_trainer/features/dashboard/presentation/widgets/task_progress_chart.dart';
+import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_tasks_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_timeline_card.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -25,9 +27,9 @@ import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 /// 대시보드 — the console's home: what needs doing today.
 ///
 /// Every number here is a link. The four KPI cards deep-link into the
-/// view that explains them (예약 → 스케줄, 답장 필요 → 필터된 고객 목록),
-/// because a dashboard the trainer can only read is a dashboard they
-/// stop opening.
+/// view that explains them (담당 고객 → 고객 명단, 메시지 → 안읽음 필터,
+/// 주의 고객/이탈 위험 → 해당 목록/다이얼로그), because a dashboard the
+/// trainer can only read is a dashboard they stop opening.
 class DashboardPage extends ConsumerWidget {
   /// Creates the dashboard.
   const DashboardPage({super.key});
@@ -36,22 +38,17 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final summaryAsync = ref.watch(dashboardSummaryProvider);
-    final coachingSummary = ref.watch(dashboardAiCoachingSummaryProvider);
-    final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
+    // 이탈 위험·활동 피드백은 대시보드 화면에 있을 때만 구독하는 별도
+    // provider다(dashboard_controller.dart 참고 — 30일 스케줄 구간을 도는
+    // 조회라 `dashboardSummaryProvider`처럼 앱 내내 살아 있으면 안 된다).
+    final churnRisk = ref.watch(dashboardChurnRiskProvider);
+    final activityFeedback = ref.watch(dashboardActivityFeedbackProvider);
     final today = nowKst();
 
     return PageScaffold(
       title: l.dashTitle,
       subtitle: dateLabel(l, today),
       headerCenter: const ClientSearchBar(),
-      actions: <Widget>[
-        ActionButton(
-          label: l.dashAddSchedule,
-          icon: Icons.add,
-          primary: true,
-          onPressed: () => context.go(AppRoutes.scheduleAt()),
-        ),
-      ],
       child: summaryAsync.when(
         loading: () => const Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
@@ -74,57 +71,50 @@ class DashboardPage extends ConsumerWidget {
         data: (summary) => LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= AppLayout.twoColumnBreakpoint;
+            // 왼쪽: 오늘의 일정 + (그 아래) AI 진단. 오른쪽: 오늘 할 일 +
+            // (그 아래) 할 일 진행률 — AI 진단이 그래프와 나란한 줄에 오도록
+            // 왼쪽 칸에 둔다.
+            final leftColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const TodayTimelineCard(),
+                const SizedBox(height: AppSpacing.lg),
+                AiSummaryCard(activityFeedback: activityFeedback),
+              ],
+            );
+            final rightColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                TodayTasksCard(entries: summary.attention),
+                const SizedBox(height: AppSpacing.lg),
+                const _TaskProgressCard(),
+              ],
+            );
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _KpiRow(
-                  summary: summary,
-                  reservations: reservations,
-                  wide: wide,
-                ),
+                _KpiRow(summary: summary, churnRisk: churnRisk, wide: wide),
                 const SizedBox(height: AppSpacing.lg),
-                if (wide) ...<Widget>[
+                if (wide)
                   Row(
                     key: const ValueKey<String>('dashboard-action-row'),
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Expanded(child: TodayTimelineCard()),
+                      // 5:4 — 딱 반반은 아니다.
+                      Expanded(flex: 5, child: leftColumn),
                       const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: AttentionCard(entries: summary.attention),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: _TodayTasksCard(entries: summary.attention),
-                      ),
+                      Expanded(flex: 4, child: rightColumn),
+                    ],
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      leftColumn,
+                      const SizedBox(height: AppSpacing.lg),
+                      rightColumn,
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // 파생된 신호(`오늘 할 일`) 아래에 트레이너가 직접 남긴 업무
-                  // 큐를 둔다 — 위는 "무엇이 눈에 띄나", 아래는 "무엇을 하기로
-                  // 했나"다(#869).
-                  const FollowUpCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(
-                    summary: coachingSummary,
-                    onRetry: () =>
-                        ref.invalidate(dashboardAiCoachingSummaryProvider),
-                  ),
-                ] else ...<Widget>[
-                  const TodayTimelineCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  AttentionCard(entries: summary.attention),
-                  const SizedBox(height: AppSpacing.lg),
-                  _TodayTasksCard(entries: summary.attention),
-                  const SizedBox(height: AppSpacing.lg),
-                  const FollowUpCard(),
-                  const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(
-                    summary: coachingSummary,
-                    onRetry: () =>
-                        ref.invalidate(dashboardAiCoachingSummaryProvider),
-                  ),
-                ],
               ],
             );
           },
@@ -134,173 +124,99 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-class _TodayTasksCard extends StatelessWidget {
-  const _TodayTasksCard({required this.entries});
+/// 몇 주 전까지 볼 수 있는가 — 무한정 뒤로 가면 SharedPreferences 에도 없는
+/// 빈 주만 계속 나온다.
+const int _maxTaskProgressWeeksBack = 8;
 
-  final List<AttentionClient> entries;
+/// 할 일 진행률 그래프가 보는 주 — 0 이 이번 주, 음수가 지난 주.
+final _taskProgressWeekOffsetProvider = StateProvider<int>(
+  (ref) => 0,
+  name: 'taskProgressWeekOffset',
+);
+
+/// 오늘 할 일 진행률 — 선택한 주의 일별 완료 현황, 지난 할일(carried-over)
+/// stacked in a different colour. `<`/`>` 로 지난 주 기록을 오갈 수 있다.
+class _TaskProgressCard extends ConsumerWidget {
+  const _TaskProgressCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 값 자체는 안 쓰지만, 오늘 할 일 카드가 새로 저장할 때마다 이 카드도
+    // 다시 그리게 만드는 구독이다 — SharedPreferences 는 스트림이 아니다.
+    ref.watch(taskProgressVersionProvider);
     final l = AppLocalizations.of(context);
-    final tasks = _buildTodayTasks(entries);
+    final store = ref.watch(dailyTaskProgressStoreProvider);
+    final offset = ref.watch(_taskProgressWeekOffsetProvider);
+    final today = nowKst();
+    final currentMonday = today.subtract(Duration(days: today.weekday - 1));
+    final monday = currentMonday.add(Duration(days: 7 * offset));
+    final dates = <DateTime>[
+      for (var i = 0; i < weekdayCount; i++) monday.add(Duration(days: i)),
+    ];
     return SectionCard(
-      title: l.dashTodayTasks,
-      trailing: Text(
-        tasks.isEmpty
-            ? l.dashTasksReviewed
-            : l.dashTasksNeedReview(tasks.length),
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      child: tasks.isEmpty
-          ? EmptyHint(message: l.dashTasksEmpty, icon: Icons.task_alt)
-          : Column(
-              children: <Widget>[
-                for (final task in tasks)
-                  _TaskRow(
-                    key: ValueKey<String>('dashboard-task-${task.alert.name}'),
-                    task: task,
-                    onTap: () {
-                      if (task.alert == ClientAlert.unanswered) {
-                        context.go(AppRoutes.messagesFor(task.entry.client.id));
-                        return;
-                      }
-                      context.go(
-                        AppRoutes.clientDetail(
-                          task.entry.client.id,
-                          section: AttentionCard.sectionFor(task.alert),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-    );
-  }
-}
-
-/// Selects at most one task per action type so a sodium-heavy roster does not
-/// turn the whole checklist into duplicate diet reviews.
-List<_DashboardTask> _buildTodayTasks(List<AttentionClient> entries) {
-  const order = <ClientAlert>[
-    ClientAlert.unanswered,
-    ClientAlert.lowCompletion,
-    ClientAlert.sodiumOver,
-  ];
-  final usedClientIds = <String>{};
-  final tasks = <_DashboardTask>[];
-  for (final alert in order) {
-    final matching = entries
-        .where((entry) => entry.alerts.contains(alert))
-        .toList(growable: false);
-    final entry = matching
-        .where((candidate) => !usedClientIds.contains(candidate.client.id))
-        .firstOrNull;
-    final selected = entry ?? matching.firstOrNull;
-    if (selected == null) continue;
-    tasks.add(_DashboardTask(entry: selected, alert: alert));
-    usedClientIds.add(selected.client.id);
-  }
-  return tasks;
-}
-
-class _DashboardTask {
-  const _DashboardTask({required this.entry, required this.alert});
-
-  final AttentionClient entry;
-  final ClientAlert alert;
-}
-
-class _TaskRow extends StatelessWidget {
-  const _TaskRow({super.key, required this.task, required this.onTap});
-
-  final _DashboardTask task;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final alert = task.alert;
-    final entry = task.entry;
-    final tone = switch (alert) {
-      ClientAlert.unanswered => AppColors.primary,
-      ClientAlert.sodiumOver => AppColors.overTarget,
-      ClientAlert.sugarOver => AppColors.overTarget,
-      ClientAlert.lowCompletion => AppColors.warning,
-    };
-    final type = switch (alert) {
-      ClientAlert.unanswered => l.dashTaskReply,
-      ClientAlert.sodiumOver => l.dashTaskDiet,
-      ClientAlert.sugarOver => l.dashTaskDiet,
-      ClientAlert.lowCompletion => l.dashTaskWorkout,
-    };
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Material(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.borderStrong),
-              borderRadius: const BorderRadius.all(AppRadius.md),
-            ),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.borderStrong),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tone.withValues(alpha: 0.12),
-                    borderRadius: const BorderRadius.all(AppRadius.pill),
-                  ),
-                  child: Text(
-                    type,
-                    style: TextStyle(
-                      color: tone,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    l.dashTaskReview(alert.label(l), entry.client.name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: AppColors.subtleForeground,
-                ),
-              ],
-            ),
+      title: l.dashTaskProgressTitle,
+      icon: Icons.stacked_bar_chart_outlined,
+      // 범례(오늘 처리/이월 처리)를 그래프 위 별도 줄 대신 제목 옆으로 —
+      // `SectionCard.trailing` 은 폭을 스스로 제한하지 않으므로(제목이
+      // 먼저 줄어드는 쪽으로 설계돼 있다), 여기서 직접 상한을 주고 그
+      // 안에서 FittedBox 로 한 번 더 줄어든다.
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 220),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TaskProgressLegend(
+                color: AppColors.primary,
+                label: l.dashTaskProgressToday,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              TaskProgressLegend(
+                color: AppColors.aiCardGradientEnd,
+                label: l.dashTaskProgressCarriedOver,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              IconButton(
+                key: const ValueKey<String>('task-progress-prev-week'),
+                onPressed: offset <= -_maxTaskProgressWeeksBack
+                    ? null
+                    : () => ref
+                          .read(_taskProgressWeekOffsetProvider.notifier)
+                          .state--,
+                icon: const Icon(Icons.chevron_left, size: 18),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: AppColors.subtleForeground,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              IconButton(
+                key: const ValueKey<String>('task-progress-next-week'),
+                onPressed: offset >= 0
+                    ? null
+                    : () => ref
+                          .read(_taskProgressWeekOffsetProvider.notifier)
+                          .state++,
+                icon: const Icon(Icons.chevron_right, size: 18),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: AppColors.subtleForeground,
+              ),
+            ],
           ),
         ),
+      ),
+      child: TaskProgressChart(
+        snapshots: <DailyTaskSnapshot?>[
+          for (final d in dates) store.read(ymd(d)),
+        ],
+        dates: dates,
+        labels: weekdayLabels(l),
+        todayIndex: offset == 0 ? elapsedWeekdays(today) - 1 : weekdayCount - 1,
+        isCurrentWeek: offset == 0,
       ),
     );
   }
@@ -311,28 +227,18 @@ class _TaskRow extends StatelessWidget {
 class _KpiRow extends StatelessWidget {
   const _KpiRow({
     required this.summary,
-    required this.reservations,
+    required this.churnRisk,
     required this.wide,
   });
 
   final DashboardSummary summary;
-  final int? reservations;
+  final List<ChurnRiskClient> churnRisk;
   final bool wide;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final cards = <Widget>[
-      StatCard(
-        label: l.dashTodayReservations,
-        // `null` means the source has no reservation data (real-API
-        // mode) — showing "0건" there would be a lie, so show a dash.
-        value: reservations?.toString() ?? '-',
-        unit: l.dashUnitCount,
-        icon: Icons.event_available_outlined,
-        hint: l.dashSeeInSchedule,
-        onTap: () => context.go(AppRoutes.scheduleAt()),
-      ),
       StatCard(
         label: l.dashMyClients,
         value: '${summary.activeClients}',
@@ -344,7 +250,7 @@ class _KpiRow extends StatelessWidget {
         onTap: () => context.go(AppRoutes.clients),
       ),
       StatCard(
-        label: l.dashNeedsReply,
+        label: l.dashMessages,
         value: '${summary.unreadTotal}',
         unit: l.dashUnitCount,
         icon: Icons.mark_chat_unread_outlined,
@@ -366,6 +272,19 @@ class _KpiRow extends StatelessWidget {
             ? l.dashNoIssues
             : l.dashCheckSodiumCompletion,
         onTap: () => context.go(AppRoutes.clientsFiltered('attention')),
+      ),
+      StatCard(
+        label: l.dashChurnRisk,
+        value: '${churnRisk.length}',
+        unit: l.dashUnitPeople,
+        icon: Icons.person_off_outlined,
+        // 주의 고객과 같은 빨강 — 톤다운한 빨강은 두 카드가 서로 다른
+        // 심각도처럼 읽혀 오히려 헷갈렸다. 아이콘은 배경을 꽉 채운 진한
+        // 톤으로 그려 더 눈에 띄게 한다.
+        tone: churnRisk.isEmpty ? StatTone.positive : StatTone.warn,
+        solidIcon: true,
+        hint: churnRisk.isEmpty ? l.dashChurnRiskNone : l.dashChurnRiskCheck,
+        onTap: () => showChurnRiskDialog(context, entries: churnRisk),
       ),
     ];
 

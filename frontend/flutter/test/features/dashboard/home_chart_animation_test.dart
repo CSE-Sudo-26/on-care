@@ -50,7 +50,7 @@ void main() {
     sodiumWarning: null,
   );
 
-  /// 홈 운동 카드는 이제 주간 조회가 실패하면 막대 대신 실패를 그린다(#962).
+  /// 홈 운동 카드는 주간 조회가 실패하면 카드 대신 실패를 그린다(#962).
   /// 예전에는 그 자리에 데모 상수가 들어가 provider 가 터져도 차트가 보였다 —
   /// 그래서 이 테스트들이 통과했다. 그림을 보는 테스트이니 값을 넣어 준다.
   const AsyncValue<ExerciseWeek> exerciseWeek = AsyncValue<ExerciseWeek>.data(
@@ -103,8 +103,10 @@ void main() {
     await tester.pump();
   }
 
-  final Finder exerciseChart = find.byKey(
-    const ValueKey<String>('dashboard-exercise-chart'),
+  // 홈 운동 카드는 이제 운동 탭 `이번 주` 카드를 그대로 쓴다 (#1183) —
+  // 움직이는 것은 주간 소모 막대가 아니라 유형별 목표 링 셋이다.
+  final Finder exerciseRings = find.byKey(
+    const ValueKey<String>('dashboard-exercise-week'),
   );
   final Finder nutritionChart = find.byKey(
     const ValueKey<String>('dashboard-nutrition-chart'),
@@ -118,15 +120,15 @@ void main() {
         .painter!;
   }
 
-  testWidgets('주간 운동 막대는 바닥에서 위로 자란다', (WidgetTester tester) async {
+  testWidgets('주간 운동 링은 12시에서 자라 돈다', (WidgetTester tester) async {
     await pumpHome(tester);
-    final Size size = tester.getSize(exerciseChart);
+    final Size size = tester.getSize(exerciseRings);
 
-    final CustomPainter atStart = painterIn(tester, exerciseChart);
+    final CustomPainter atStart = painterIn(tester, exerciseRings);
     await tester.pump(const Duration(milliseconds: 350));
-    final CustomPainter midway = painterIn(tester, exerciseChart);
+    final CustomPainter midway = painterIn(tester, exerciseRings);
     await tester.pumpAndSettle();
-    final CustomPainter settled = painterIn(tester, exerciseChart);
+    final CustomPainter settled = painterIn(tester, exerciseRings);
 
     final List<int> ink = (await tester.runAsync(() async {
       return <int>[
@@ -136,28 +138,28 @@ void main() {
       ];
     }))!;
 
-    expect(ink[1], greaterThan(ink[0]), reason: '막대가 커지지 않았다');
-    expect(ink[2], greaterThan(ink[1]), reason: '막대가 끝까지 자라지 않았다');
+    expect(ink[1], greaterThan(ink[0]), reason: '링이 자라지 않았다');
+    expect(ink[2], greaterThan(ink[1]), reason: '링이 끝까지 돌지 않았다');
   });
 
-  testWidgets('주간 운동 막대는 진입 애니메이션 동안 계속 다시 그려진다', (WidgetTester tester) async {
+  testWidgets('주간 운동 링은 진입 애니메이션 동안 계속 다시 그려진다', (WidgetTester tester) async {
     await pumpHome(tester);
-    expect(exerciseChart, findsOneWidget);
+    expect(exerciseRings, findsOneWidget);
 
-    final CustomPainter atStart = painterIn(tester, exerciseChart);
+    final CustomPainter atStart = painterIn(tester, exerciseRings);
     await tester.pump(const Duration(milliseconds: 300));
-    final CustomPainter midway = painterIn(tester, exerciseChart);
+    final CustomPainter midway = painterIn(tester, exerciseRings);
 
-    // 진행도가 올라갔다 = 막대 높이가 달라졌다.
+    // 진행도가 올라갔다 = 원호가 더 돌았다.
     expect(midway.shouldRepaint(atStart), isTrue);
 
     await tester.pumpAndSettle();
-    final CustomPainter settled = painterIn(tester, exerciseChart);
+    final CustomPainter settled = painterIn(tester, exerciseRings);
     expect(settled.shouldRepaint(midway), isTrue);
 
     // 끝난 뒤에는 더 이상 움직이지 않는다 — 계속 도는 애니메이션이 아니다.
     await tester.pump(const Duration(milliseconds: 300));
-    expect(painterIn(tester, exerciseChart).shouldRepaint(settled), isFalse);
+    expect(painterIn(tester, exerciseRings).shouldRepaint(settled), isFalse);
   });
 
   testWidgets('영양 지표를 바꾸면 추이 그래프 애니메이션이 다시 재생된다', (WidgetTester tester) async {
@@ -222,14 +224,14 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    final CustomPainter first = painterIn(tester, exerciseChart);
+    final CustomPainter first = painterIn(tester, exerciseRings);
     await tester.pump(const Duration(milliseconds: 300));
 
     // 진행도가 처음부터 1 이라 다시 그릴 일이 없다.
-    expect(painterIn(tester, exerciseChart).shouldRepaint(first), isFalse);
+    expect(painterIn(tester, exerciseRings).shouldRepaint(first), isFalse);
     expect(
       find.descendant(
-        of: exerciseChart,
+        of: exerciseRings,
         matching: find.byType(TweenAnimationBuilder<double>),
       ),
       findsNothing,

@@ -127,6 +127,9 @@ class _TrainerDetails extends ConsumerWidget {
         .map((String certification) => certification.trim())
         .where((String certification) => certification.isNotEmpty)
         .toList(growable: false);
+    // 소개/경력/자격증이 하나라도 있어야 "트레이너 소개" 박스를 그린다 —
+    // 이 조건은 바뀌지 않는다. 소속 헬스장은 그 박스가 이미 있을 때만 안에
+    // 합치고(#1255), 소개가 아예 없으면 예전처럼 별도로 보여준다.
     final bool hasProfile =
         intro.isNotEmpty || career.isNotEmpty || certifications.isNotEmpty;
     return Center(
@@ -237,8 +240,26 @@ class _TrainerDetails extends ConsumerWidget {
                         ],
                       ),
                     ],
+                    // 헬스장 → 트레이너 목록을 거쳐 이미 들어온 흐름이라 소속은
+                    // 별도 박스로 한 번 더 강조할 필요가 낮다 — 소개 박스가 이미
+                    // 있으면 그 안 한 줄로 합친다(#1255).
+                    if (gym != null) ...<Widget>[
+                      const SizedBox(height: 14),
+                      const Divider(height: 1, color: FigmaColors.hairline),
+                      const SizedBox(height: 12),
+                      _AffiliatedGymRow(gym: gym!),
+                    ],
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+            ] else if (gym != null) ...<Widget>[
+              // 소개할 내용이 아예 없으면 합칠 박스도 없다 — 소속만은 예전처럼
+              // 따로 보여준다.
+              _DetailSection(
+                icon: Icons.fitness_center,
+                title: l.exTrainerAffiliation,
+                child: _AffiliatedGymRow(gym: gym!),
               ),
               const SizedBox(height: 12),
             ],
@@ -255,88 +276,6 @@ class _TrainerDetails extends ConsumerWidget {
                 ),
               ),
             ),
-            if (gym != null) ...<Widget>[
-              const SizedBox(height: 12),
-              _DetailSection(
-                icon: Icons.fitness_center,
-                title: l.exTrainerAffiliation,
-                padding: EdgeInsets.zero,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => context.push(AppRoutes.gymDetailPath(gym!.id)),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: FigmaColors.primaryA(0.10),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.fitness_center,
-                              size: 21,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  gym!.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: FigmaColors.ink,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  gym!.address,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    height: 1.4,
-                                    color: AppColors.mutedForeground,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${gym!.distanceKm.toStringAsFixed(1)}km',
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.foreground,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(top: 10),
-                            child: Icon(
-                              Icons.chevron_right,
-                              color: FigmaColors.textFaint,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
             if (isMyTrainer) ...<Widget>[
               const SizedBox(height: 24),
               // 목록 카드에서 삭제를 여기로 옮겼다 (#1057).
@@ -405,18 +344,79 @@ class _CertChip extends StatelessWidget {
   }
 }
 
+/// 소속 헬스장 한 줄 — 이름·주소·거리, 누르면 헬스장 상세로. 예전에는 별도
+/// 카테고리 박스였지만 헬스장 → 트레이너 흐름에서는 중복 정보라
+/// `트레이너 소개` 박스 안 한 줄로 합쳤다(#1255).
+class _AffiliatedGymRow extends StatelessWidget {
+  const _AffiliatedGymRow({required this.gym});
+
+  final Gym gym;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+        borderRadius: BorderRadius.circular(10),
+        child: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.fitness_center,
+              size: 15,
+              color: FigmaColors.primary,
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    gym.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: FigmaColors.ink,
+                    ),
+                  ),
+                  Text(
+                    gym.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: FigmaColors.textFaint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DetailSection extends StatelessWidget {
   const _DetailSection({
     required this.icon,
     required this.title,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
   });
 
   final IconData icon;
   final String title;
   final Widget child;
-  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -451,7 +451,7 @@ class _DetailSection extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: FigmaColors.hairline),
-          Padding(padding: padding, child: child),
+          Padding(padding: const EdgeInsets.all(16), child: child),
         ],
       ),
     );

@@ -165,6 +165,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('완료한 추천 운동은 글자가 흐려진다 (#1196)', (WidgetTester tester) async {
+    const CoachRoutine done = CoachRoutine(
+      id: 'done-routine',
+      name: '코어 스트레칭',
+      minutes: 10,
+      type: '스트레칭',
+      reason: '허리 부담 완화',
+      source: 'trainer',
+      completed: true,
+    );
+
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _aiRoutine,
+      done,
+    ]);
+
+    Color colorOf(String text) =>
+        tester.widget<Text>(find.text(text)).style!.color!;
+
+    // 남은 줄은 검정 그대로 — 다음에 할 것이 먼저 읽혀야 한다.
+    expect(colorOf(_aiRoutine.name), FigmaColors.ink);
+    expect(colorOf(done.name), isNot(FigmaColors.ink));
+    expect(colorOf(done.reason), isNot(colorOf(_aiRoutine.reason)));
+  });
+
   testWidgets('추천 개인운동 카드가 한 영역에 트레이너·AI 추천을 함께 담는다 (#782)', (
     WidgetTester tester,
   ) async {
@@ -480,7 +505,7 @@ void main() {
     expect(find.text('trainer:${_assignedTrainer.id}'), findsOneWidget);
   });
 
-  testWidgets('트레이너 채팅은 말풍선 아래 시간과 입력창을 표시하고 메시지를 전송한다', (
+  testWidgets('트레이너 채팅은 말풍선 가장자리 시간과 입력창을 표시하고 메시지를 전송한다', (
     WidgetTester tester,
   ) async {
     final repository = MockMemberCoachRepository();
@@ -534,16 +559,9 @@ void main() {
     final Finder trainerTime = find.byKey(
       const Key('coach-message-time-seed-m18'),
     );
-    // 본문은 그 말풍선 **안에서** 찾는다. '확인했어요' 로 화면 전체를 뒤지면
-    // 첫날 메시지까지 걸려, 그 메시지가 뷰포트에 들어오는 순간 다중 일치로
-    // 깨진다 (리뷰 지적).
-    final Finder trainerBody = find.descendant(
-      of: trainerBubble,
-      matching: find.byType(Text),
-    );
     expect(
-      tester.getTopLeft(trainerTime).dy,
-      greaterThan(tester.getBottomLeft(trainerBody).dy),
+      tester.getTopLeft(trainerTime).dx,
+      greaterThan(tester.getTopRight(trainerBubble).dx),
     );
     expect(
       tester.getBottomLeft(trainerAvatar).dy,

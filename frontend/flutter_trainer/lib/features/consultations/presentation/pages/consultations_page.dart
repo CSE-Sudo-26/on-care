@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
@@ -29,7 +31,13 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// and the sidebar row is not rendered (see [consultationInboxEnabledProvider]).
 class ConsultationsPage extends ConsumerWidget {
   /// Creates the inbox page.
-  const ConsultationsPage({super.key});
+  const ConsultationsPage({super.key, this.returnTo, this.modal = false});
+
+  /// Entry surface (`dashboard` or null/default schedule).
+  final String? returnTo;
+
+  /// Whether the inbox is being shown over its entry surface.
+  final bool modal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,8 +45,9 @@ class ConsultationsPage extends ConsumerWidget {
     final filter = ref.watch(consultationFilterProvider);
     final inbox = ref.watch(consultationsProvider);
     final pending = ref.watch(consultationPendingCountProvider).valueOrNull;
+    final fromDashboard = returnTo == 'dashboard';
 
-    return PageScaffold(
+    final page = PageScaffold(
       title: l.consultTitle,
       subtitle: pending == null
           ? null
@@ -50,64 +59,117 @@ class ConsultationsPage extends ConsumerWidget {
           onPressed: () => ref.read(consultationFilterProvider.notifier).state =
               filter == 'pending' ? 'all' : 'pending',
         ),
+        if (modal)
+          IconButton(
+            key: const ValueKey<String>('consultations-close'),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+          ),
       ],
-      child: inbox.requests.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.only(top: AppSpacing.xxl),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-        error: (error, _) => _InboxMessage(
-          icon: Icons.error_outline,
-          title: l.consultLoadFailed,
-          detail: serverDetailOr(
-            l,
-            error is AppError ? error.message : null,
-            l.consultRetryLater,
-          ),
-          action: ActionButton(
-            label: l.actionRetry,
-            onPressed: () => ref.invalidate(consultationsProvider),
-          ),
-        ),
-        data: (list) => list.isEmpty
-            ? _InboxMessage(
-                icon: Icons.inbox_outlined,
-                title: filter == 'pending'
-                    ? l.consultEmptyPending
-                    : l.consultEmptyHistory,
-                detail: l.consultEmptyHint,
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  for (final request in list) ...<Widget>[
-                    _RequestCard(
-                      key: ValueKey<String>('consultation-${request.id}'),
-                      request: request,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  // 서버는 한 쪽만 준다(#980). 상한에 닿았을 때만 버튼을 띄운다 —
-                  // 늘 보이면 더 없는데도 누를 것이 있는 것처럼 읽힌다.
-                  if (inbox.hasMore)
-                    Align(
-                      child: ActionButton(
-                        key: const ValueKey<String>('consultation-load-more'),
-                        label: l.consultLoadMore,
-                        icon: Icons.history,
-                        onPressed: inbox.loadingMore
-                            ? null
-                            : () => ref
-                                  .read(consultationsProvider.notifier)
-                                  .loadMore(),
-                      ),
-                    ),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (!modal) ...<Widget>[
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ActionButton(
+                key: const ValueKey<String>('consultations-back-to-schedule'),
+                label: fromDashboard
+                    ? l.consultBackToDashboard
+                    : l.consultBackToSchedule,
+                icon: Icons.arrow_back,
+                onPressed: () => context.go(
+                  fromDashboard ? AppRoutes.dashboard : AppRoutes.schedule,
+                ),
               ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          inbox.requests.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.only(top: AppSpacing.xxl),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => _InboxMessage(
+              icon: Icons.error_outline,
+              title: l.consultLoadFailed,
+              detail: serverDetailOr(
+                l,
+                error is AppError ? error.message : null,
+                l.consultRetryLater,
+              ),
+              action: ActionButton(
+                label: l.actionRetry,
+                onPressed: () => ref.invalidate(consultationsProvider),
+              ),
+            ),
+            data: (list) => list.isEmpty
+                ? _InboxMessage(
+                    icon: Icons.inbox_outlined,
+                    title: filter == 'pending'
+                        ? l.consultEmptyPending
+                        : l.consultEmptyHistory,
+                    detail: l.consultEmptyHint,
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      for (final request in list) ...<Widget>[
+                        _RequestCard(
+                          key: ValueKey<String>('consultation-${request.id}'),
+                          request: request,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      // 서버는 한 쪽만 준다(#980). 상한에 닿았을 때만 버튼을 띄운다 —
+                      // 늘 보이면 더 없는데도 누를 것이 있는 것처럼 읽힌다.
+                      if (inbox.hasMore)
+                        Align(
+                          child: ActionButton(
+                            key: const ValueKey<String>(
+                              'consultation-load-more',
+                            ),
+                            label: l.consultLoadMore,
+                            icon: Icons.history,
+                            onPressed: inbox.loadingMore
+                                ? null
+                                : () => ref
+                                      .read(consultationsProvider.notifier)
+                                      .loadMore(),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+
+    if (!modal) return page;
+    return Dialog(
+      key: const ValueKey<String>('consultations-dialog'),
+      backgroundColor: AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(AppSpacing.xl),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.card),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: 960,
+        height: MediaQuery.sizeOf(context).height * .82,
+        child: page,
       ),
     );
   }
 }
+
+/// Opens the shared consultation inbox without leaving the current workspace.
+Future<void> showConsultationsDialog(BuildContext context) => showDialog<void>(
+  context: context,
+  builder: (_) => const ConsultationsPage(modal: true),
+);
 
 /// One request. Pending cards carry the 승인 / 거절 actions; decided ones
 /// keep their place under the 전체 filter as a read-only record.
@@ -177,9 +239,6 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
       // 로케일을 모른다. (#501)
       title: request.memberName.isEmpty ? l.unknownMember : request.memberName,
-      // 상담 요청은 트레이너 한 사람 앞으로만 온다 — 예전의 "헬스장 문의" 갈래는
-      // 없어졌다.
-      trailing: _Tag(label: l.consultTargetTrainer, tone: AppColors.primary),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -207,7 +266,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                       label: l.consultPreferredTime,
                       value:
                           '${dateLabel(l, request.preferredDate)} '
-                          '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
+                          '${preferredTimeLabel(l, request.preferredTimeCode)}',
                     ),
                   ],
                 ),
@@ -235,6 +294,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 ActionButton(
+                  key: ValueKey<String>('consultation-accept-${request.id}'),
                   label: l.consultApprove,
                   primary: true,
                   onPressed: _busy ? null : _accept,
@@ -286,6 +346,7 @@ class _RejectDialogState extends State<_RejectDialog> {
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
+            key: const ValueKey<String>('consultation-reject-reason'),
             controller: _controller,
             maxLength: 500,
             maxLines: 3,
@@ -304,6 +365,7 @@ class _RejectDialogState extends State<_RejectDialog> {
         ),
         TextButton(
           key: const ValueKey<String>('consultation-reject-confirm'),
+          style: TextButton.styleFrom(foregroundColor: AppColors.destructive),
           // Returns '' rather than null when left blank: null is the
           // cancel signal, and an empty note is a valid "no reason given".
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
@@ -433,35 +495,6 @@ class _Quote extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label, required this.tone});
-
-  final String label;
-  final Color tone;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: tone.withValues(alpha: 0.12),
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: tone,
-        ),
-      ),
     );
   }
 }

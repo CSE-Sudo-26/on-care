@@ -7,8 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -66,6 +70,10 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
   String _query = '';
   _GymSort _sort = _GymSort.recommended;
 
+  /// 목록을 접었는지 (#1186). 처음 들어오면 지도와 목록이 함께 보이고, 접으면
+  /// 목록이 사라지며 그 자리를 지도가 받는다.
+  bool _listCollapsed = false;
+
   List<Gym> _visibleGyms(List<Gym> gyms) {
     final String query = _query.trim().toLowerCase();
     final List<Gym> visible = gyms
@@ -96,6 +104,10 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
     final List<Gym> visible = _visibleGyms(
       gymsAsync.valueOrNull ?? const <Gym>[],
     );
+    // 상담 요청 확인 아이콘의 배지 — 대기 중인 요청이 있으면 점을 켠다(#1257).
+    final bool hasPendingConsultation = ref
+        .watch(consultationRequestControllerProvider)
+        .any((ConsultationRequest r) => r.status == ConsultationStatus.pending);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints outer) => Center(
@@ -106,44 +118,68 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _SearchField(
-                  hintText: l.exGymSearchPlaceholder,
-                  onChanged: (String value) => setState(() => _query = value),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _SearchField(
+                        hintText: l.exGymSearchPlaceholder,
+                        onChanged: (String value) =>
+                            setState(() => _query = value),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // 헤더의 채팅 버튼과 같은 자리·배지 모양이다 — 대기 중인
+                    // 상담 요청이 있으면 점이 켜진다(#1257).
+                    Semantics(
+                      button: true,
+                      label: l.exViewConsultationRequest,
+                      child: FigmaCircleButton(
+                        key: const Key('consult-history-shortcut'),
+                        icon: Icons.assignment_outlined,
+                        showDot: hasPendingConsultation,
+                        onTap: () =>
+                            context.push(AppRoutes.consultationHistory),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 // 지도는 자리에 고정된다 — 아래 목록을 아무리 밀어도 따라오지
-                // 않는다 (#1135).
-                _GymMap(gyms: visible),
+                // 않는다 (#1135). 목록을 접으면 그 자리를 지도가 받는다 (#1186).
+                _GymMap(gyms: visible, expanded: _listCollapsed),
                 const SizedBox(height: 16),
-                Text(
-                  l.exNearbyGyms,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
-                  ),
+                // 지도와 목록 사이의 구분 선 — 여기가 두 영역의 경계이고,
+                // 화살표가 그 경계에서 목록을 여닫는다 (#1186).
+                const Divider(height: 1, color: FigmaColors.hairline),
+                _NearbyHeader(
+                  title: l.exNearbyGyms,
+                  collapsed: _listCollapsed,
+                  onToggle: () =>
+                      setState(() => _listCollapsed = !_listCollapsed),
                 ),
-                const SizedBox(height: 10),
-                if (gymsAsync.hasValue)
-                  _ResultControls(
-                    countLabel: l.exResultCount(visible.length),
-                    sort: _sort,
-                    onSort: (_GymSort value) => setState(() => _sort = value),
-                  ),
-                const SizedBox(height: 10),
-                // 남는 높이를 목록이 쓴다. 운동 탭처럼 **높이가 열린 자리**(바깥이
-                // 스크롤 뷰)에 놓이면 남는 높이가 없으므로, 화면의 절반쯤을 목록
-                // 몫으로 떼어 준다 — 그래야 지도가 자리에 남고 목록만 구른다.
-                if (outer.hasBoundedHeight)
-                  Expanded(child: _results(context, gymsAsync, visible))
-                else
-                  SizedBox(
-                    height: math.max(
-                      MediaQuery.sizeOf(context).height * 0.45,
-                      280,
+                if (!_listCollapsed) ...<Widget>[
+                  if (gymsAsync.hasValue)
+                    _ResultControls(
+                      countLabel: l.exResultCount(visible.length),
+                      sort: _sort,
+                      onSort: (_GymSort value) => setState(() => _sort = value),
                     ),
-                    child: _results(context, gymsAsync, visible),
-                  ),
+                  const SizedBox(height: 10),
+                  // 남는 높이를 목록이 쓴다. 운동 탭처럼 **높이가 열린
+                  // 자리**(바깥이 스크롤 뷰)에 놓이면 남는 높이가 없으므로,
+                  // 화면의 절반쯤을 목록 몫으로 떼어 준다 — 그래야 지도가 자리에
+                  // 남고 목록만 구른다.
+                  if (outer.hasBoundedHeight)
+                    Expanded(child: _results(context, gymsAsync, visible))
+                  else
+                    SizedBox(
+                      height: math.max(
+                        MediaQuery.sizeOf(context).height * 0.45,
+                        280,
+                      ),
+                      child: _results(context, gymsAsync, visible),
+                    ),
+                ],
               ],
             ),
           ),
@@ -187,6 +223,62 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
           ),
         );
       },
+    );
+  }
+}
+
+/// `주변 헬스장` 머리줄 — 제목과 목록을 여닫는 화살표 (#1186).
+///
+/// 화살표는 목록이 열려 있으면 아래를(내릴 수 있다), 접혀 있으면 위를(다시
+/// 올릴 수 있다) 가리킨다.
+class _NearbyHeader extends StatelessWidget {
+  const _NearbyHeader({
+    required this.title,
+    required this.collapsed,
+    required this.onToggle,
+  });
+
+  final String title;
+  final bool collapsed;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String label = collapsed ? l.exGymListExpand : l.exGymListCollapse;
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: FigmaColors.ink,
+            ),
+          ),
+        ),
+        // 접힘 상태와 무엇을 할 수 있는지를 음성 안내에도 남긴다.
+        Semantics(
+          button: true,
+          expanded: !collapsed,
+          label: label,
+          child: IconButton(
+            key: const ValueKey<String>('gym-list-toggle'),
+            onPressed: onToggle,
+            tooltip: label,
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              collapsed
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -297,16 +389,25 @@ class _ResultControls extends StatelessWidget {
   }
 }
 
-class _GymListCard extends StatelessWidget {
+/// 결과 목록의 헬스장 카드 하나.
+///
+/// 이름·거리·평점·영업시간과 태그 아래에 **그 헬스장 소속 트레이너 전원**을
+/// 적는다 (#1185) — 여기가 헬스장을 견주는 자리인데, 정작 누가 있는지는 상세로
+/// 들어가야 알 수 있었다.
+class _GymListCard extends ConsumerWidget {
   const _GymListCard({required this.gym, required this.onTap, super.key});
 
   final Gym gym;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final BorderRadius radius = BorderRadius.circular(16);
+    // 트레이너를 아직 못 읽었거나 한 명도 없으면 이 부분은 통째로 없다 —
+    // 카드가 예전과 같은 모습으로 남는다.
+    final List<Trainer> trainers =
+        ref.watch(gymTrainersProvider(gym.id)).valueOrNull ?? const <Trainer>[];
     return Material(
       color: Colors.white,
       borderRadius: radius,
@@ -319,98 +420,112 @@ class _GymListCard extends StatelessWidget {
             borderRadius: radius,
             border: Border.all(color: FigmaColors.hairline),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.fitness_center,
-                  size: 21,
-                  color: FigmaColors.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      gym.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.ink,
-                      ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: FigmaColors.primaryA(0.10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 5),
-                    Row(
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.fitness_center,
+                      size: 21,
+                      color: FigmaColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          '${gym.distanceKm.toStringAsFixed(1)}km',
+                          gym.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 14,
-                          color: FigmaColors.orange,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          gym.rating.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
                             color: FigmaColors.ink,
                           ),
                         ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: <Widget>[
+                            Text(
+                              '${gym.distanceKm.toStringAsFixed(1)}km',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: FigmaColors.orange,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              gym.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          gym.weekdayHours == null
+                              ? gym.address
+                              : '${gym.address} · ${l.exGymWeekdayHours(gym.weekdayHours!)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                        if (gym.tags.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 9),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: <Widget>[
+                              for (final String tag in gym.tags.take(2))
+                                _TagChip(label: tag),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      gym.weekdayHours == null
-                          ? gym.address
-                          : '${gym.address} · ${l.exGymWeekdayHours(gym.weekdayHours!)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.mutedForeground,
-                      ),
+                  ),
+                  if (onTap != null) ...<Widget>[
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: FigmaColors.textFaint,
                     ),
-                    if (gym.tags.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 9),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: <Widget>[
-                          for (final String tag in gym.tags.take(2))
-                            _TagChip(label: tag),
-                        ],
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
-              if (onTap != null) ...<Widget>[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: FigmaColors.textFaint,
+              // 소속 트레이너는 카드 **폭 전체**를 쓴다 — 이름·직함과 추천
+              // 이유가 좁은 칸에서 두 번 접히지 않게.
+              for (final Trainer trainer in trainers) ...<Widget>[
+                const SizedBox(height: 9),
+                GymTrainerLine(
+                  key: Key('gym-trainer-${trainer.id}'),
+                  trainer: trainer,
                 ),
               ],
             ],
@@ -494,9 +609,12 @@ class _EmptyResults extends StatelessWidget {
 /// 목록에 보이는 헬스장을 카카오맵 핀으로 찍는다. `KAKAO_JS_KEY` 가 없거나
 /// SDK 로드가 실패하면 [_GymMiniMap] 그래픽으로 폴백한다(#329).
 class _GymMap extends StatelessWidget {
-  const _GymMap({required this.gyms});
+  const _GymMap({required this.gyms, this.expanded = false});
 
   final List<Gym> gyms;
+
+  /// 목록을 접어 지도만 남은 상태인지 (#1186). 목록이 쓰던 높이를 지도가 받는다.
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -508,7 +626,11 @@ class _GymMap extends StatelessWidget {
       // 핀이 여러 개 들어가야 해서 폴백 그래픽(150)보다 1.5배 높게 잡되, 화면이
       // 낮으면 그만큼 낮춘다 — 지도가 고정된 자리를 차지하므로(#1135) 여기서
       // 높이를 양보하지 않으면 작은 화면에서 목록이 설 자리가 없다.
-      height: math.min(225, MediaQuery.sizeOf(context).height * 0.28),
+      height: expanded
+          // 목록이 접혔으면 지도가 화면을 넉넉히 쓴다 — 목록을 내린 이유가
+          // 지도를 크게 보기 위해서다.
+          ? math.min(520, MediaQuery.sizeOf(context).height * 0.55)
+          : math.min(225, MediaQuery.sizeOf(context).height * 0.28),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: KakaoMapView(

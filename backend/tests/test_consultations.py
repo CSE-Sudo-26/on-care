@@ -120,7 +120,7 @@ def _payload(*, trainer_id: str | None = None) -> dict:
         "health_purpose_type": "general",
         "health_purpose_detail": "  건강 습관 개선  ",
         "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
-        "preferred_time_slot": "afternoon",
+        "preferred_time_slot": "14:30",
         "message": "  상담을 받고 싶습니다.  ",
         "data_sharing_consent": True,
     }
@@ -598,3 +598,33 @@ def test_consultation_out_carries_target_names(client, db_session):
         f"/v1/consultations/{created.json()['id']}", headers=_auth(token)
     ).json()
     assert detail["trainer_name"] == trainer.name
+
+
+def test_legacy_preferred_time_slot_values_still_read(client, db_session):
+    """예전 morning/afternoon/evening 값으로 저장된 행도 조회는 그대로 된다(#1256).
+
+    입력(`ConsultationCreate`)만 `flexible`/`HH:MM` 로 좁혔다 — 이미 저장된 행까지
+    좁히면 목록·상세 조회가 그 행에서 500 으로 죽는다. 컬럼이 `String(20)` 그대로라
+    마이그레이션 없이 값 형식만 바뀌었으므로, 과거 값이 여전히 읽혀야 한다.
+    """
+    member_id, token = _register_member(client)
+    trainer = _create_trainer(db_session)
+    legacy = ConsultationRequest(
+        id=f"consult-{uuid4().hex[:12]}",
+        member_id=member_id,
+        target_type="trainer",
+        trainer_id=trainer.id,
+        exercise_goal="health",
+        health_purpose_type="general",
+        preferred_date=clock.today().isoformat(),
+        preferred_time_slot="morning",
+        status="pending",
+    )
+    db_session.add(legacy)
+    db_session.commit()
+
+    response = client.get("/v1/consultations/me", headers=_auth(token))
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body[0]["preferred_time_slot"] == "morning"
