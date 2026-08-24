@@ -1477,8 +1477,9 @@ void main() {
       card.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
       await tester.pump();
 
-      // 오늘은 시드 데이터에 이미 다른 세션이 있다 — 내일로 골라 새로
-      // 만들어지는 그 세션 하나만 본다(위 날짜 테스트와 같은 이유).
+      // 오늘로 두면 이미 있는 세션과 섞인다 — 내일로 골라 방금 만든 것만
+      // 본다. 시드는 한 주 내내 일정이 차 있으므로(#1210) 그날의 유일한
+      // 세션이 아니라 **고른 시각으로** 찾는다.
       await tester.tap(
         find.byKey(const ValueKey<String>('program-register-date')),
       );
@@ -1496,7 +1497,11 @@ void main() {
             .watchDate(tomorrow)
             .first,
       );
-      expect(rows!.single.time, '14:30');
+      expect(
+        rows!.where((row) => row.time == '14:30'),
+        hasLength(1),
+        reason: '고른 시각 그대로 한 건만 등록된다',
+      );
 
       await tester.pump(const Duration(seconds: 3));
     });
