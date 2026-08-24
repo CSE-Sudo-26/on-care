@@ -78,7 +78,7 @@ flutter run -d chrome \
 | 회원 | `jisu@oncare.com` | 이지수 |
 | 회원 | `sungho@oncare.com` | 박성호 |
 
-> 시연에는 `minsu@oncare.com`(user-demo)이 가장 편합니다 — 트레이너의 1번 고객이고
+> 시연에는 `minsu@oncare.com`(user-7d4e9a2c5f18)이 가장 편합니다 — 트레이너의 1번 고객이고
 > 식단·운동·대화 시드가 셋 중 가장 두껍습니다. 한동안 빈 비밀번호 해시 때문에 로그인이
 > 막혀 있었지만 #577 에서 고쳐졌습니다.
 >
@@ -183,7 +183,7 @@ flutter test test_e2e/reservation_member_test.dart \
 
 ### 테스트가 고정하는 계약
 
-- 트레이너는 `trainer@oncare.com`, 회원은 `minsu@oncare.com`(`user-demo`), 권한 밖 회원은
+- 트레이너는 `trainer@oncare.com`, 회원은 `minsu@oncare.com`(`user-7d4e9a2c5f18`), 권한 밖 회원은
   `jisu@oncare.com`이며 모두 기본 `DEMO_LOGIN_PASSWORD=oncare123`을 씁니다.
 - `USE_MOCK_API=false`가 아니거나 앱과 검증용 API 클라이언트의 `API_BASE_URL`이 다르면
   **즉시 실패합니다.** 목업으로 새면서 초록불이 뜨는 것을 막습니다.

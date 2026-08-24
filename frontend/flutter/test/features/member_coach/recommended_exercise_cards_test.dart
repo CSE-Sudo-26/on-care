@@ -415,7 +415,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')));
+    await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-7d4e9a2c5f18-1')));
     await tester.pumpAndSettle();
     expect(find.text('루틴 수행 완료'), findsOneWidget);
     await tester.enterText(
@@ -427,7 +427,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final CoachRoutine completed = (await repository.fetchRoutines())
-        .firstWhere((CoachRoutine routine) => routine.id == 'seed-routine-user-demo-1');
+        .firstWhere((CoachRoutine routine) => routine.id == 'seed-routine-user-7d4e9a2c5f18-1');
     expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
     expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
     // 체크 박스는 그대로 있고 체크된 채로 남는다 — 한 일이 화면에서 사라지면
@@ -435,7 +435,7 @@ void main() {
     // 수 있으므로 잠기지 않는다 (#1131).
     final Checkbox box = tester.widget<Checkbox>(
       find.descendant(
-        of: find.byKey(const Key('completeRoutine-seed-routine-user-demo-1')),
+        of: find.byKey(const Key('completeRoutine-seed-routine-user-7d4e9a2c5f18-1')),
         matching: find.byType(Checkbox),
       ),
     );

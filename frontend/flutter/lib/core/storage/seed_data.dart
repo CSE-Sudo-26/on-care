@@ -18,14 +18,14 @@ const String kDietDayMessagesKey = 'diet_day_messages';
 
 /// 데모가 채우는 날들은 이제 이 앱이 정하지 않는다.
 ///
-/// 김민수(`user-demo`)는 트레이너 앱의 `seed-client-1` 과 같은 사람이라 두 앱을
+/// 김민수(`user-7d4e9a2c5f18`)는 트레이너 앱의 `seed-client-1` 과 같은 사람이라 두 앱을
 /// 나란히 놓고 시연하는데, 예전에는 두 앱과 백엔드가 각자 알고리즘으로 그의 과거를
 /// 만들어서 같은 날짜의 숫자가 서로 달랐다(#757). 지금은 셋 다 같은 픽스처를 읽는다
 /// — 며칠치를 채울지도 픽스처가 갖고 있다(`DemoFixture.historyWeeks`).
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v17']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v18']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -53,7 +53,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
   final now = nowKst();
   final today = _fmtDate(now);
 
-  final seedDate = await db.readValue('seeded_v17');
+  final seedDate = await db.readValue('seeded_v18');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -98,6 +98,10 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
   // v17: 식단·운동이 공유 픽스처에서 온다(#757). 올리지 않으면 오늘 이미 시드된
   // 설치가 예전 값을 들고 있어 트레이너 앱과 나란히 놓았을 때 숫자가 어긋난다.
   await db.deleteValue('seeded_v16');
+  // v18: 과거에 PT·기타 운동이 생기고, 운동 기록이 이름·세트·횟수를 함께 든다
+  // (#1265). 올리지 않으면 오늘 이미 시드된 설치가 그 값 없이 남아 근력을
+  // 분에서 되짚은 수로 보여 준다.
+  await db.deleteValue('seeded_v17');
   // Also clear the curated KV advice so re-seed state is fully reset: this
   // version re-writes it below, but if a later seed drops or renames the key
   // an existing install would otherwise keep the stale text forever.
@@ -141,7 +145,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
     await db.batch((Batch b) {
       b.insertAll(db.exerciseSessions, <ExerciseSessionsCompanion>[
         for (final FixtureDay day in days)
-          for (final MapEntry<String, ({int minutes, int calories})> entry
+          for (final MapEntry<String, _TypeTotals> entry
               in _byType(day.doneExercises).entries)
             ExerciseSessionsCompanion.insert(
               id: 'seed-ex-${day.date}-${entry.key}',
@@ -150,6 +154,12 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
               type: entry.key,
               minutes: entry.value.minutes,
               calories: entry.value.calories,
+              // 픽스처가 적어 둔 이름·세트·횟수를 그대로 남긴다 — 백엔드 시드와
+              // **같은 규칙**이라야 mock 모드와 실 API 모드가 같은 수를
+              // 말한다. (#1265)
+              name: Value(entry.value.name),
+              sets: Value(entry.value.sets),
+              reps: Value(entry.value.reps),
             ),
       ]);
     });
@@ -257,24 +267,65 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
     }),
   );
 
-  await db.putValue('seeded_v17', today);
+  await db.putValue('seeded_v18', today);
 }
 
-/// 운동을 종류별로 합친다 — {종류: (분, 칼로리)}. 픽스처 순서를 유지한다.
-Map<String, ({int minutes, int calories})> _byType(
-  List<FixtureExercise> exercises,
-) {
-  final Map<String, ({int minutes, int calories})> totals =
-      <String, ({int minutes, int calories})>{};
+/// 하루·한 종류로 접은 값. 운동 기록 한 행이 되는 그대로다.
+class _TypeTotals {
+  const _TypeTotals({
+    required this.minutes,
+    required this.calories,
+    required this.name,
+    this.sets,
+    this.reps,
+  });
+
+  final int minutes;
+  final int calories;
+  final String name;
+
+  /// 근력이면 그날 한 세트 수의 **합**. 다른 유형은 null 이다.
+  final int? sets;
+
+  /// 근력이면 그날 한 횟수 중 가장 많은 수. 세트와 달리 더하지 않는다 — 한
+  /// 세트당 수라 합계는 아무도 한 적 없는 값이 된다.
+  final int? reps;
+}
+
+/// 운동을 종류별로 합친다. 픽스처 순서를 유지한다.
+///
+/// 백엔드 시드(`seed_member_data._by_type`)와 **같은 규칙**이다 — 한쪽만 고치면
+/// mock 모드와 실 API 모드가 같은 날에 다른 수를 말한다. (#1265)
+Map<String, _TypeTotals> _byType(List<FixtureExercise> exercises) {
+  final Map<String, _TypeTotals> totals = <String, _TypeTotals>{};
   for (final FixtureExercise exercise in exercises) {
-    final ({int minutes, int calories}) prev =
-        totals[exercise.type] ?? (minutes: 0, calories: 0);
-    totals[exercise.type] = (
-      minutes: prev.minutes + exercise.minutes,
-      calories: prev.calories + exercise.calories,
+    final _TypeTotals? prev = totals[exercise.type];
+    final bool strength = exercise.type == 'strength';
+    totals[exercise.type] = _TypeTotals(
+      minutes: (prev?.minutes ?? 0) + exercise.minutes,
+      calories: (prev?.calories ?? 0) + exercise.calories,
+      name: prev == null || prev.name.isEmpty
+          ? exercise.name
+          : '${prev.name}, ${exercise.name}',
+      sets: strength ? _add(prev?.sets, exercise.sets) : null,
+      reps: strength ? _peak(prev?.reps, exercise.reps) : null,
     );
   }
   return totals;
+}
+
+/// 둘 다 없으면 null. 하나만 있으면 그 값 — 0 으로 채우지 않는다. 0 은
+/// "0세트를 했다" 가 되고 null 은 "적지 않았다" 다.
+int? _add(int? left, int? right) {
+  if (left == null) return right;
+  if (right == null) return left;
+  return left + right;
+}
+
+int? _peak(int? left, int? right) {
+  if (left == null) return right;
+  if (right == null) return left;
+  return left > right ? left : right;
 }
 
 String _fmtDate(DateTime d) =>

@@ -1,6 +1,6 @@
-"""데모 채팅 시드(user-demo) — 회원 앱·트레이너 앱과 같은 대화여야 한다. (#543)
+"""데모 채팅 시드(user-7d4e9a2c5f18) — 회원 앱·트레이너 앱과 같은 대화여야 한다. (#543)
 
-김민수는 회원 앱 데모 사용자(user-demo)와 같은 계정이라, 실서버로 붙여도
+김민수는 회원 앱 데모 사용자(user-7d4e9a2c5f18)와 같은 계정이라, 실서버로 붙여도
 데모에서 보던 대화가 그대로 이어져야 한다. 같은 목록을 고정하는 짝:
 
 * frontend/flutter/test/features/member_coach/demo_chat_thread_test.dart
@@ -14,7 +14,7 @@ from __future__ import annotations
 from sqlalchemy import select
 
 
-_MEMBER_ID = "user-demo"
+_MEMBER_ID = "user-7d4e9a2c5f18"
 
 # (sender, body) — 프론트 두 앱의 시드와 글자까지 같아야 한다. 백엔드는
 # 회원을 'member' 로 저장하고 트레이너 API 응답에서만 'client' 로 바꾼다.
