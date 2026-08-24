@@ -60,6 +60,10 @@ void main() {
       ),
     ]);
 
+    // 행 자체가 렌더됐는지 먼저 확인한다 — 아래 findsNothing 어서션들은
+    // 행이 아예 없어도 그대로 통과해 버려서, 이 양성 확인이 없으면 위양성이
+    // 된다.
+    expect(rowOf('steady'), findsOneWidget);
     expect(
       find.descendant(of: rowOf('steady'), matching: find.byType(InlineBarValue)),
       findsNothing,

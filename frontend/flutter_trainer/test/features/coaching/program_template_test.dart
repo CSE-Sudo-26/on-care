@@ -102,25 +102,37 @@ void main() {
       final generate = find.byKey(
         const ValueKey<String>('generate-routine-options'),
       );
+      // `scrollUntilVisible` 은 대상이 트리에 붙는 순간 멈춘다 — 뷰포트
+      // 가장자리에 걸칠 수 있어, 탭 전에 `ensureVisible`+`pump` 로 한 번 더
+      // 자리를 잡는다(`_applyRecommendedRoutine`, `coaching_page_test.dart`
+      // 와 같은 이유).
       await tester.scrollUntilVisible(generate, 150, scrollable: scrollable);
+      await tester.ensureVisible(generate);
+      await tester.pump();
       await tester.tap(generate);
       await tester.pumpAndSettle();
       final existing = find.byKey(
         const ValueKey<String>('routine-option-recommended'),
       );
       await tester.scrollUntilVisible(existing, 150, scrollable: scrollable);
+      await tester.ensureVisible(existing);
+      await tester.pump();
       await tester.tap(existing);
       await tester.pumpAndSettle();
       final complete = find.byKey(
         const ValueKey<String>('complete-routine-review'),
       );
       await tester.scrollUntilVisible(complete, 150, scrollable: scrollable);
+      await tester.ensureVisible(complete);
+      await tester.pump();
       await tester.tap(complete);
       await tester.pumpAndSettle();
       final apply = find.byKey(
         const ValueKey<String>('apply-routine-to-template'),
       );
       await tester.scrollUntilVisible(apply, 150, scrollable: scrollable);
+      await tester.ensureVisible(apply);
+      await tester.pump();
       await tester.tap(apply);
       await settle(tester);
 

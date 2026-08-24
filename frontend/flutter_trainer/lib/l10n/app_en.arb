@@ -802,6 +802,7 @@
   "schedFieldClient": "Client",
   "schedFieldType": "Type",
   "schedFieldTime": "Time",
+  "schedHourSuffix": "hr",
   "schedMinuteSuffix": "min",
   "schedFieldDuration": "Duration",
   "schedRepeat": "Repeat",

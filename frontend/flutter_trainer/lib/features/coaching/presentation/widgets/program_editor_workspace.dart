@@ -258,6 +258,10 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     // `didUpdateWidget` 은 build 도중이라 그 자리에서 바로 다이얼로그를 열
     // 수 없다. `didUpdateWidget` 자체는 동기 함수라 여기서 기다리지 않는다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 프레임이 끝난 뒤에야 불린다 — 그 사이 고객 전환 등으로 이 State 가
+      // 트리에서 빠졌다면 dispose 된 State 에서 context/setState 를 건드리게
+      // 된다.
+      if (!mounted) return;
       unawaited(_applyTemplateToSession(template));
     });
   }
@@ -272,6 +276,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       if (chosen == null || !mounted) return;
       targetIndex = chosen;
     }
+    // 다이얼로그를 기다리는 동안 세션이 지워졌을 수 있다 — 인덱스를 다시
+    // 확인한다.
+    if (targetIndex >= _draft.sessions.length) return;
     final target = _draft.sessions[targetIndex];
     final additions = <ProgramExerciseDraft>[
       for (final exercise in template.exercises)
@@ -1153,19 +1160,25 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: <Widget>[
-                      _metric(
-                        '${exercise.id}-sets',
-                        l.programEditorSets,
-                        exercise.sets,
-                        (v) => exercise.copyWith(sets: v),
-                        width: 90,
-                      ),
-                      _metric(
-                        '${exercise.id}-reps',
-                        l.programEditorReps,
-                        exercise.reps,
-                        (v) => exercise.copyWith(reps: v),
-                      ),
+                      // 세트·횟수는 근력에서만 잰다(#1029) — 그 외 유형은
+                      // 요약(`programExerciseMetrics`)이 이 값을 읽지 않아,
+                      // 여기서 계속 입력받으면 "입력했는데 사라졌다"로
+                      // 보인다.
+                      if (exercise.type == '근력') ...<Widget>[
+                        _metric(
+                          '${exercise.id}-sets',
+                          l.programEditorSets,
+                          exercise.sets,
+                          (v) => exercise.copyWith(sets: v),
+                          width: 90,
+                        ),
+                        _metric(
+                          '${exercise.id}-reps',
+                          l.programEditorReps,
+                          exercise.reps,
+                          (v) => exercise.copyWith(reps: v),
+                        ),
+                      ],
                       _metric(
                         '${exercise.id}-weight',
                         l.programEditorWeight,
@@ -1422,7 +1435,7 @@ class _DurationField extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            Text(l.schedFieldTime, style: _unitLabelStyle),
+            Text(l.schedHourSuffix, style: _unitLabelStyle),
             const SizedBox(width: AppSpacing.sm),
             _unitBox(
               fieldKey: ValueKey<String>('$fieldId-minute'),

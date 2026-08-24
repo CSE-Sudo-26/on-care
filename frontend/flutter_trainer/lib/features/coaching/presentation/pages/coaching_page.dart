@@ -213,6 +213,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
               type: kRoutineTypes.contains(exercise.type)
                   ? exercise.type
                   : kRoutineTypes.first,
+              // 근력이면 편집기에서 정한 세트·횟수를 그대로 템플릿에 담는다
+              // — 비워 두면 다시 열었을 때 기본값(3/10)으로 되돌아간 것처럼
+              // 보인다.
+              sets: exercise.type == '근력'
+                  ? (int.tryParse(exercise.sets.trim()) ?? 0)
+                  : 0,
+              reps: exercise.type == '근력' ? exercise.reps.trim() : '',
             ),
     ];
     if (exercises.isEmpty) {

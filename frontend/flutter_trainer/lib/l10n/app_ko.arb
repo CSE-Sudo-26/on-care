@@ -466,6 +466,7 @@
   "schedFieldClient": "고객",
   "schedFieldType": "유형",
   "schedFieldTime": "시간",
+  "schedHourSuffix": "시간",
   "schedMinuteSuffix": "분",
   "schedFieldDuration": "소요 시간",
   "schedRepeat": "반복",

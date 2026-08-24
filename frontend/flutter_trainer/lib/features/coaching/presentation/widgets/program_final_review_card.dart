@@ -280,7 +280,10 @@ class ProgramFinalReviewCard extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: registerDate,
+      // 자정을 넘긴 채로 검토 화면이 열려 있으면 `registerDate`(연 상태)가
+      // `today`(지금 다시 계산한 값)보다 이전일 수 있다 — `showDatePicker`
+      // 는 initialDate가 firstDate보다 빠르면 assertion으로 죽는다.
+      initialDate: registerDate.isBefore(today) ? today : registerDate,
       firstDate: today,
       lastDate: today.add(const Duration(days: 365)),
     );

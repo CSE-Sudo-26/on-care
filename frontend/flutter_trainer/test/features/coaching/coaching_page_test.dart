@@ -487,7 +487,10 @@ Future<void> _openFinalReview(WidgetTester tester) async {
 /// 이제 없다 — 그 결과(오늘 스케줄에 등록됨)를 보려는 테스트도 이 헬퍼를
 /// 쓴다.
 Future<void> _confirmAssign(WidgetTester tester) async {
-  final assign = find.text('고객에게 배정');
+  // 텍스트가 아니라 키로 찾는다 — 확인 다이얼로그의 submit 버튼도 같은
+  // 라벨(`programEditorAssign`)을 쓰므로, 텍스트 찾기는 라벨이 한 곳 더
+  // 생기면 `findsOneWidget` 위반으로 깨진다.
+  final assign = find.byKey(const ValueKey<String>('program-editor-assign'));
   await tester.scrollUntilVisible(
     assign,
     150,

@@ -82,7 +82,13 @@ class _ThrowingRoutineRepository implements TrainerRoutineRepository {
   Future<void> assignProgram(
     String memberId,
     Map<String, Object?> payload,
-  ) async {}
+  ) async {
+    // `assignRoutine` 과 같은 규칙 — 실제 프로그램 배정 경로가 이걸 부르면
+    // 시도가 기록되고 던져야, 아래 회귀 테스트의 `attempts` 어서션이
+    // "이 경로는 안 불렸다"를 실제로 검증한다.
+    attempts.add(payload['client_request_id'] as String?);
+    throw error;
+  }
 
   @override
   Future<void> updateRoutine(

@@ -779,9 +779,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: LabeledField(
                     label: l.programEditorSets,
                     child: TextFormField(
-                      key: ValueKey<String>(
-                        'routine-sets-$_selectedKey-$index-${exercise.sets}',
-                      ),
+                      key: ValueKey<String>('routine-sets-$_selectedKey-$index'),
                       initialValue: exercise.sets == 0
                           ? ''
                           : '${exercise.sets}',
@@ -801,9 +799,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: LabeledField(
                     label: l.programEditorReps,
                     child: TextFormField(
-                      key: ValueKey<String>(
-                        'routine-reps-$_selectedKey-$index-${exercise.reps}',
-                      ),
+                      key: ValueKey<String>('routine-reps-$_selectedKey-$index'),
                       initialValue: exercise.reps,
                       keyboardType: TextInputType.number,
                       style: _inputTextStyle,
@@ -950,6 +946,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   Widget _reviewedRoutineList() {
     final AppLocalizations l = AppLocalizations.of(context);
+    final korean = Localizations.localeOf(context).languageCode == 'ko';
     final optionName = _optionDisplayName(l, _selectedKey);
     final memo = _trainerMemo.text.trim();
     return Column(
@@ -1015,7 +1012,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   ),
                 ),
                 Text(
-                  l.minutesShort(exercise.minutes),
+                  // 근력은 트레이너가 세트·횟수로 정했다 — 시간(minutes)은 그
+                  // 경우 편집 화면에 아예 없어 값이 바뀌지 않으니, 요약도
+                  // 세트·횟수로 보여줘야 방금 고친 값과 어긋나지 않는다.
+                  exercise.type == '근력'
+                      ? (korean
+                            ? '${exercise.sets}세트 × ${exercise.reps}회'
+                            : '${exercise.sets} sets × ${exercise.reps} reps')
+                      : l.minutesShort(exercise.minutes),
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,

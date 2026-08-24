@@ -1540,6 +1540,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldTime => 'Time';
 
   @override
+  String get schedHourSuffix => 'hr';
+
+  @override
   String get schedMinuteSuffix => 'min';
 
   @override

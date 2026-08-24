@@ -1468,6 +1468,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldTime => '시간';
 
   @override
+  String get schedHourSuffix => '시간';
+
+  @override
   String get schedMinuteSuffix => '분';
 
   @override

@@ -2720,6 +2720,12 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get schedFieldTime;
 
+  /// No description provided for @schedHourSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'hr'**
+  String get schedHourSuffix;
+
   /// No description provided for @schedMinuteSuffix.
   ///
   /// In en, this message translates to:
