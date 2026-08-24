@@ -88,7 +88,7 @@ void main() {
     expect(today.every((r) => !r.id.startsWith('seed-schedule-w')), isTrue);
   });
 
-  test('PT는 10~22시 짝수 정시 60분, 상담은 홀수 정시 30분이다', () async {
+  test('PT와 상담은 규칙적인 시작 시간에 다양한 길이로 배치된다', () async {
     await seedIfEmpty(db, clock: _dayOfWeek(4));
 
     final rows = await db.select(db.trainerScheduleEntries).get();
@@ -115,21 +115,49 @@ void main() {
 
       if (row.type == SessionType.personalTraining) {
         expect(hour.isEven, isTrue, reason: '${row.date} ${row.time}');
-        expect(row.durationMinutes, 60, reason: '${row.date} ${row.time}');
+        expect(
+          <int>{30, 45, 50, 60, 90},
+          contains(row.durationMinutes),
+          reason: '${row.date} ${row.time}',
+        );
       } else if (row.type == SessionType.consultation) {
         expect(hour.isOdd, isTrue, reason: '${row.date} ${row.time}');
-        expect(row.durationMinutes, 30, reason: '${row.date} ${row.time}');
+        expect(
+          <int>{30, 45, 60},
+          contains(row.durationMinutes),
+          reason: '${row.date} ${row.time}',
+        );
       }
     }
 
-    for (final consultation in consultations) {
-      expect(
-        training.any(
-          (pt) => pt.date == consultation.date && pt.time == consultation.time,
-        ),
-        isFalse,
-        reason: '상담은 같은 날 PT가 없는 빈 시간에 배치한다',
-      );
+    expect(
+      training.map((r) => r.durationMinutes).toSet(),
+      containsAll(<int>{30, 45, 50, 60, 90}),
+    );
+    expect(
+      consultations.map((r) => r.durationMinutes).toSet(),
+      containsAll(<int>{30, 45, 60}),
+    );
+
+    for (final date in rows.map((r) => r.date).toSet()) {
+      final day = scheduled.where((r) => r.date == date).toList()
+        ..sort((a, b) => a.time.compareTo(b.time));
+      for (var index = 1; index < day.length; index++) {
+        final previous = day[index - 1];
+        final current = day[index];
+        final previousParts = previous.time.split(':').map(int.parse).toList();
+        final currentParts = current.time.split(':').map(int.parse).toList();
+        final previousEnd =
+            previousParts[0] * 60 +
+            previousParts[1] +
+            previous.durationMinutes;
+        final currentStart = currentParts[0] * 60 + currentParts[1];
+        expect(
+          previousEnd,
+          lessThanOrEqualTo(currentStart),
+          reason: '$date ${previous.time}와 ${current.time} 일정이 겹친다',
+        );
+      }
     }
   });
 

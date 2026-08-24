@@ -547,8 +547,8 @@ void main() {
       expect(find.text('22:00'), findsOneWidget);
 
       // 블록은 시간 범위와 종류를 함께 말한다.
-      expect(find.text('10:00\u201311:00'), findsWidgets);
-      expect(find.text('17:00\u201317:30'), findsWidgets);
+      expect(find.text('10:00\u201310:30'), findsWidgets);
+      expect(find.text('17:00\u201318:00'), findsWidgets);
       expect(find.text('김민수'), findsWidgets);
       expect(find.textContaining('이지수'), findsWidgets);
       expect(find.textContaining('박성호'), findsWidgets);
@@ -947,7 +947,7 @@ void main() {
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      expect(find.text('10:00\u201311:30'), findsOneWidget);
+      expect(find.text('10:00\u201311:30'), findsWidgets);
     });
 
     testWidgets('종료 시간이 시작보다 이르면 확인을 막는다 (#1090)', (tester) async {
@@ -1071,7 +1071,7 @@ void main() {
         find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsNothing,
       );
-      expect(find.textContaining('16:00\u201317:00'), findsWidgets);
+      expect(find.textContaining('16:00\u201316:45'), findsWidgets);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트'), findsOneWidget);
       // 프로그램만 고쳤으므로 원래 메모는 그대로 남는다.
@@ -1530,7 +1530,7 @@ void main() {
 
       expect(clientName, '윤가온'); // not reassigned to 김민수
       expect(type, '상담');
-      expect(duration, 30);
+      expect(duration, 60);
     });
 
     testWidgets('unsupported program action does not call chat repository', (
