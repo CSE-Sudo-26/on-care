@@ -1614,7 +1614,7 @@ class LocalApiInterceptor extends Interceptor {
   // ---- Profile (내 프로필 / 건강 목표) — AppKeyValues 로 영속 ----
 
   static const Map<String, Object?> _defaultProfile = <String, Object?>{
-    'id': 'user-demo',
+    'id': 'user-7d4e9a2c5f18',
     'name': '김민수',
     'email': 'minsu@oncare.com',
     'phone': '010-1234-5678',

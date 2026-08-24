@@ -47,7 +47,7 @@ const String trainerId = 'trainer-demo';
 
 /// `trainer-demo` 가 소속된 헬스장. 상담 동선이 이 헬스장 상세를 거친다.
 const String consultationGymId = 'gym-oncare-sinchon';
-const String memberId = 'user-demo';
+const String memberId = 'user-7d4e9a2c5f18';
 const String otherMemberId = 'user-jisu';
 const String demoPassword = 'oncare123';
 

@@ -1025,6 +1025,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultExerciseGoal => 'Training goal';
 
   @override
+  String get consultHealthPurpose => 'Health management purpose';
+
+  @override
   String get consultPreferredTime => 'Preferred time';
 
   @override

@@ -40,12 +40,12 @@ def test_purge_removes_every_chunk_of_one_record(client, db_session):
     """청킹 때문에 기록 하나가 문서 여러 개일 수 있다 — 단건 삭제로는 부족하다."""
     long_text = "회원 상태 메모. " * 400
     rag.ingest_personal_text(
-        db_session, "user-demo", long_text,
+        db_session, "user-7d4e9a2c5f18", long_text,
         domain="general", source="test", source_ref="ref-purge-1",
     )
     assert len(_docs_for(db_session, "ref-purge-1")) >= 1
 
-    removed = rag.purge_personal(db_session, "user-demo", "ref-purge-1")
+    removed = rag.purge_personal(db_session, "user-7d4e9a2c5f18", "ref-purge-1")
 
     assert removed >= 1
     assert _docs_for(db_session, "ref-purge-1") == []
@@ -54,7 +54,7 @@ def test_purge_removes_every_chunk_of_one_record(client, db_session):
 def test_purge_is_scoped_to_the_owner(client, db_session):
     """참조 id 가 겹치더라도 남의 문서를 지울 수 있는 경로를 열어 두지 않는다."""
     rag.ingest_personal_text(
-        db_session, "user-demo", "내 기록", domain="general", source="test",
+        db_session, "user-7d4e9a2c5f18", "내 기록", domain="general", source="test",
         source_ref="ref-shared",
     )
 
@@ -62,7 +62,7 @@ def test_purge_is_scoped_to_the_owner(client, db_session):
 
     assert removed == 0
     assert len(_docs_for(db_session, "ref-shared")) == 1
-    rag.purge_personal(db_session, "user-demo", "ref-shared")
+    rag.purge_personal(db_session, "user-7d4e9a2c5f18", "ref-shared")
 
 
 # ---- 운동: 생성 → 수정 → 삭제 ----
@@ -139,7 +139,7 @@ def test_repeated_edits_do_not_pile_up_documents(client, db_session):
 
 # ---- 식단: 수정 → 삭제 ----
 
-def _log_meal(db_session, user_id: str = "user-demo") -> str:
+def _log_meal(db_session, user_id: str = "user-7d4e9a2c5f18") -> str:
     """식단은 사진 분석(`POST /diet/analyze`)으로만 생기므로 서비스로 직접 만든다.
 
     검증 대상은 수정·삭제 경로이지 업로드가 아니다. 여기서 이미지를 태우면 인식기
@@ -209,7 +209,7 @@ def test_a_failed_embedding_leaves_the_old_documents_intact(
     예전엔 purge 를 먼저 커밋하고 ingest 를 따로 커밋해서, 그 사이에 임베딩이
     실패하면 기존 청크를 되살릴 방법이 없었다.
     """
-    user_id = "user-demo"
+    user_id = "user-7d4e9a2c5f18"
     ref = "atomicity-probe-1"
     rag.replace_personal_text(
         db_session, user_id, domain="exercise", source="exercise", source_ref=ref,
@@ -240,7 +240,7 @@ def test_a_failed_embedding_leaves_the_old_documents_intact(
 
 def test_replacing_never_exposes_a_moment_with_no_evidence(client, db_session):
     """삭제와 삽입이 한 트랜잭션이어야 한다 — 따로 커밋하면 근거가 빈 순간이 생긴다."""
-    user_id = "user-demo"
+    user_id = "user-7d4e9a2c5f18"
     ref = "atomicity-probe-2"
     rag.replace_personal_text(
         db_session, user_id, domain="exercise", source="exercise", source_ref=ref,
@@ -277,7 +277,7 @@ def test_replacing_never_exposes_a_moment_with_no_evidence(client, db_session):
 
 def test_emptying_a_record_clears_its_evidence(client, db_session):
     """기록이 비워진 것도 반영해야 할 변화다 — 옛 문서가 남으면 안 된다."""
-    user_id = "user-demo"
+    user_id = "user-7d4e9a2c5f18"
     ref = "atomicity-probe-3"
     rag.replace_personal_text(
         db_session, user_id, domain="exercise", source="exercise", source_ref=ref,

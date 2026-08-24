@@ -56,7 +56,7 @@ TRAINER_EMAIL = "trainer@oncare.com"
 TRAINER_NAME = "김트레이너"
 
 # 담당 회원: (user_id, email, name, goal, active, dormant, sort_order)
-# 김민수는 회원 앱 데모 사용자(user-demo)와 동일 계정을 공유한다.
+# 김민수는 회원 앱 데모 사용자(user-7d4e9a2c5f18)와 동일 계정을 공유한다.
 #
 # `active` 와 `dormant` 는 다른 축이다(#707). 화면에는 둘 다 '휴면'으로 보이지만
 # 뜻이 다르므로 시드도 두 경우를 각각 남긴다:
@@ -65,7 +65,7 @@ TRAINER_NAME = "김트레이너"
 #   * 문가영 — 담당은 그대로인데 트레이너가 휴면으로 내린 회원(dormant=True).
 #     활성/휴면 전환을 실 API 콘솔에서 그대로 눌러 볼 수 있는 fixture 다.
 _MEMBERS: list[tuple[str, str, str, str, bool, bool, int]] = [
-    ("user-demo", "minsu@oncare.com", "김민수", "혈압 관리 · 체중 감량", True, False, 1),
+    ("user-7d4e9a2c5f18", "minsu@oncare.com", "김민수", "혈압 관리 · 체중 감량", True, False, 1),
     ("user-jisu", "jisu@oncare.com", "이지수", "체력 강화 · 다이어트", True, False, 2),
     ("user-sungho", "sungho@oncare.com", "박성호", "근력 향상", False, False, 3),
     # 4~15: 트레이너 웹 목업 로스터와 같은 명단(#572). 주간 지표는 seed_roster 가
@@ -92,7 +92,7 @@ _MEMBERS: list[tuple[str, str, str, str, bool, bool, int]] = [
 #: 모드에 따라 다른 성별로 떴다(#960). 여기 값이 정답이고, 앱의 계산은 성별이
 #: 비어 있는 회원에게만 남는다.
 _MEMBER_GENDERS: dict[str, str] = {
-    "user-demo": "male",            # 김민수
+    "user-7d4e9a2c5f18": "male",            # 김민수
     "user-jisu": "female",          # 이지수
     "user-sungho": "male",          # 박성호
     "user-hayun": "female",         # 정하윤
@@ -192,7 +192,7 @@ def _seed_trainer_account(db: Session) -> None:
 
 
 def _seed_member_accounts(db: Session) -> None:
-    """담당 회원 User(멱등, 이메일 충돌 안전). user-demo 는 기존 데모 시드가 만든다."""
+    """담당 회원 User(멱등, 이메일 충돌 안전). user-7d4e9a2c5f18 는 기존 데모 시드가 만든다."""
     for user_id, email, name, _goal, _active, _dormant, _order in _MEMBERS:
         existing = db.scalar(select(models.User).where(models.User.id == user_id))
         if existing is not None:

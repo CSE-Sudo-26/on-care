@@ -98,6 +98,37 @@ void main() {
     );
   });
 
+  test('근력 세트는 픽스처가 적은 값 그대로다 (#1265)', () async {
+    // 예전에는 시드가 픽스처의 `sets` 를 버려서, 화면이 분에서 세트를 되짚었다 —
+    // 회원 앱과 트레이너 웹이 같은 날 근력을 다른 수로 말했다. 기대값은 여기
+    // 적지 않고 픽스처에서 계산한다.
+    final DateTime now = nowKst();
+    final String monday = _dateString(
+      DateTime(now.year, now.month, now.day - (now.weekday - 1)),
+    );
+    final DemoFixture fixture = DemoFixture.parse(
+      File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
+    );
+    final List<int> expected = List<int>.filled(7, 0);
+    for (final FixtureDay day in fixture
+        .daysFor(now)
+        .where((FixtureDay d) => d.weekStart == monday)) {
+      final int index = DateTime.parse(day.date).weekday - 1;
+      for (final FixtureExercise e in day.doneExercises) {
+        if (e.type == 'strength') expected[index] += e.sets ?? 0;
+      }
+    }
+    expect(expected.reduce((int a, int b) => a + b), greaterThan(0));
+
+    final res = await dio.get<Map<String, Object?>>('/exercise/weeks/current');
+    expect(
+      (res.data!['strength_sets']! as List<Object?>)
+          .map((Object? v) => (v! as num).toInt())
+          .toList(),
+      expected,
+    );
+  });
+
   test('dio → LocalApi → DashboardSummary aggregates seeded data', () async {
     final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
     final summary = DashboardSummary.fromJson(res.data!);

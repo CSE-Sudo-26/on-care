@@ -98,6 +98,65 @@ void main() {
     expect(days.where((FixtureDay d) => !d.hasRecord), isNotEmpty);
   });
 
+  test('과거에도 PT 사례가 흩어져 있다 (#1265)', () {
+    // 데모는 오늘 하루만 보는 것이 아니다. 지난주·전체로 넘겼을 때 PT 를 받은
+    // 날과 그때 무엇을 몇 세트 했는지가 없으면 과거가 통째로 비어 보인다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10), // 월
+      DateTime(2026, 8, 13), // 목
+      DateTime(2026, 8, 16), // 일
+      DateTime(2026, 12, 31), // 연말
+      DateTime(2028, 2, 29), // 윤년
+    ]) {
+      final List<FixtureDay> days = fixture.daysFor(now);
+      final List<FixtureDay> pastPt = days
+          .where((FixtureDay d) => d.isPt && d != days.last)
+          .toList();
+      expect(pastPt.length, greaterThanOrEqualTo(5), reason: '$now');
+      for (final FixtureDay day in pastPt) {
+        expect(day.clientFeedback, isNotEmpty, reason: day.date);
+        expect(day.trainerNote, isNotEmpty, reason: day.date);
+        expect(
+          day.exercises.any(
+            (FixtureExercise e) => e.type == 'strength' && e.sets != null,
+          ),
+          isTrue,
+          reason: '${day.date}: 세트를 적은 근력이 없다',
+        );
+      }
+    }
+  });
+
+  test('오늘 하루가 네 유형을 모두 담는다 (#1265)', () {
+    // 월요일에 열어도 이번 주 화면이 비지 않아야 한다 — 그날 하나로 네 유형과
+    // PT·피드백·메모가 모두 읽혀야 한다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10),
+      DateTime(2026, 8, 16),
+      DateTime(2027, 1, 1),
+    ]) {
+      final FixtureDay day = fixture.daysFor(now).last;
+      expect(
+        day.exercises.map((FixtureExercise e) => e.type).toSet(),
+        <String>{'cardio', 'strength', 'stretching', 'other'},
+        reason: '$now',
+      );
+      expect(day.isPt, isTrue, reason: '$now');
+    }
+  });
+
+  test('근력은 세트를 값으로 들고 다닌다 (#1262 · #1265)', () {
+    for (final FixtureDay day in fixture.daysFor(DateTime(2026, 8, 16))) {
+      for (final FixtureExercise e in day.exercises) {
+        if (e.type == 'strength') {
+          expect(e.sets, isNotNull, reason: '${day.date}: ${e.name}');
+        } else {
+          expect(e.sets, isNull, reason: '${day.date}: ${e.name}');
+        }
+      }
+    }
+  });
+
   test('주가 바뀌어도 하루가 사라지지 않는다', () {
     // 서머타임이 있는 지역에서 `Duration(days:)` 로 날짜를 옮기면 하루가 밀린다.
     // 픽스처는 날짜 연산만 쓰므로 어느 날에 열어도 연속이어야 한다.
