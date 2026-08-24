@@ -1703,6 +1703,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String progRepsValue(int reps) {
+    return '$reps reps';
+  }
+
+  @override
   String get progEmpty => 'No program planned yet';
 
   @override
@@ -2040,6 +2045,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldSets => 'Sets';
 
   @override
+  String get routineFieldReps => 'Reps';
+
+  @override
   String get routineFieldWeight => 'Weight';
 
   @override
@@ -2050,6 +2058,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineUnitSets => 'sets';
+
+  @override
+  String get routineUnitReps => 'reps';
 
   @override
   String get routineUnitKg => 'kg';

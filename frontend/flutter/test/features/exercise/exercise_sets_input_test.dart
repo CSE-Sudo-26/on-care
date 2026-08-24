@@ -1,6 +1,6 @@
-/// 운동 추가 시트 — 통일 스펙 (#1262, #1276).
+/// 운동 추가 시트 — 통일 스펙 (#1262, #1276, #1310).
 ///
-/// 근력은 세트·중량으로, 나머지는 시간으로 묻는다. 화면 여러 곳(홈 운동 카드·
+/// 근력은 세트·횟수·중량으로, 나머지는 시간으로 묻는다. 화면 여러 곳(홈 운동 카드·
 /// 운동 현황 링·주간 목표)이 근력을 이미 세트로 읽는데 시트만 분으로 물어,
 /// 회원이 적지 않은 수(분 ÷ 3)가 화면에 떴다.
 library;
@@ -19,6 +19,7 @@ class _CapturingRepository implements ExerciseRepository {
   ExerciseType? type;
   int? minutes;
   int? sets;
+  int? reps;
   double? weight;
   String? name;
   DateTime? date;
@@ -39,10 +40,21 @@ class _CapturingRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async {
-    _capture(type, minutes, sets, weight, name, date);
-    return _echo('new', type, minutes, calories, sets, weight, name, date);
+    _capture(type, minutes, sets, reps, weight, name, date);
+    return _echo(
+      'new',
+      type,
+      minutes,
+      calories,
+      sets,
+      reps,
+      weight,
+      name,
+      date,
+    );
   }
 
   @override
@@ -58,17 +70,19 @@ class _CapturingRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async {
     updatedId = id;
-    _capture(type, minutes, sets, weight, name, date);
-    return _echo(id, type, minutes, calories, sets, weight, name, date);
+    _capture(type, minutes, sets, reps, weight, name, date);
+    return _echo(id, type, minutes, calories, sets, reps, weight, name, date);
   }
 
   void _capture(
     ExerciseType type,
     int minutes,
     int? sets,
+    int? reps,
     double? weight,
     String name,
     DateTime date,
@@ -76,6 +90,7 @@ class _CapturingRepository implements ExerciseRepository {
     this.type = type;
     this.minutes = minutes;
     this.sets = sets;
+    this.reps = reps;
     this.weight = weight;
     this.name = name;
     this.date = date;
@@ -87,6 +102,7 @@ class _CapturingRepository implements ExerciseRepository {
     int minutes,
     int calories,
     int? sets,
+    int? reps,
     double? weight,
     String name,
     DateTime date,
@@ -97,6 +113,7 @@ class _CapturingRepository implements ExerciseRepository {
     minutes: minutes,
     calories: calories,
     sets: sets,
+    reps: reps,
     weight: weight,
     name: name,
     date: date,
@@ -175,7 +192,9 @@ Future<void> _save(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('근력을 고르면 시간 대신 세트·중량으로 묻는다', (WidgetTester tester) async {
+  testWidgets('근력을 고르면 시간 대신 세트·횟수·중량으로 묻는다', (
+    WidgetTester tester,
+  ) async {
     final _CapturingRepository repo = _CapturingRepository();
     await _openSheet(tester, repo);
 
@@ -188,14 +207,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('세트 수'), findsOneWidget);
+    expect(find.text('횟수'), findsOneWidget);
     expect(find.text('중량'), findsOneWidget);
     expect(find.text('운동 시간'), findsNothing);
     expect(find.byKey(const Key('exerciseSetsStepper')), findsOneWidget);
+    expect(find.byKey(const Key('exerciseRepsStepper')), findsOneWidget);
     expect(find.byKey(const Key('exerciseMinutesStepper')), findsNothing);
     expect(_stepperValue(tester, const Key('exerciseSetsStepper')), '12');
+    expect(_stepperValue(tester, const Key('exerciseRepsStepper')), '10');
   });
 
-  testWidgets('근력 기록은 세트·중량을 실어 저장한다', (WidgetTester tester) async {
+  testWidgets('근력 기록은 세트·횟수·중량을 실어 저장한다', (WidgetTester tester) async {
     final _CapturingRepository repo = _CapturingRepository();
     await _openSheet(tester, repo);
 
@@ -207,12 +229,15 @@ void main() {
     expect(repo.type, ExerciseType.strength);
     expect(repo.name, '스쿼트');
     expect(repo.sets, 12);
+    expect(repo.reps, 10);
     expect(repo.weight, 20.0);
     // 서버는 분(>0)도 받는다 — 세트당 벽시계 3분으로 환산한 값이다.
     expect(repo.minutes, 36);
   });
 
-  testWidgets('근력이 아닌 기록에는 세트·중량이 실리지 않는다', (WidgetTester tester) async {
+  testWidgets('근력이 아닌 기록에는 세트·횟수·중량이 실리지 않는다', (
+    WidgetTester tester,
+  ) async {
     final _CapturingRepository repo = _CapturingRepository();
     await _openSheet(tester, repo);
 
@@ -221,6 +246,7 @@ void main() {
 
     expect(repo.type, ExerciseType.cardio);
     expect(repo.sets, isNull);
+    expect(repo.reps, isNull);
     expect(repo.weight, isNull);
     expect(repo.minutes, 30);
   });
@@ -306,6 +332,7 @@ void main() {
         minutes: 45,
         calories: 270,
         sets: 15,
+        reps: 8,
         weight: 40.5,
         name: '벤치프레스',
         date: DateTime(2026, 8, 17),
@@ -314,12 +341,14 @@ void main() {
 
     expect(find.text('세트 수'), findsOneWidget);
     expect(_stepperValue(tester, const Key('exerciseSetsStepper')), '15');
+    expect(_stepperValue(tester, const Key('exerciseRepsStepper')), '8');
     expect(_stepperValue(tester, const Key('exerciseWeightStepper')), '40.5');
 
     await _save(tester);
 
     expect(repo.updatedId, 'ex-1');
     expect(repo.sets, 15);
+    expect(repo.reps, 8);
     expect(repo.weight, 40.5);
     expect(repo.name, '벤치프레스');
     // 지난 기록을 고쳐도 그 날짜에 그대로 남는다 — 오늘로 끌어오지 않는다.
@@ -344,7 +373,7 @@ void main() {
     expect(_stepperValue(tester, const Key('exerciseSetsStepper')), '10');
   });
 
-  testWidgets('근력이던 기록을 유산소로 고치면 세트·중량이 지워진다', (
+  testWidgets('근력이던 기록을 유산소로 고치면 세트·횟수·중량이 지워진다', (
     WidgetTester tester,
   ) async {
     final _CapturingRepository repo = _CapturingRepository();
@@ -358,6 +387,7 @@ void main() {
         minutes: 36,
         calories: 216,
         sets: 12,
+        reps: 10,
         weight: 30,
         name: '스쿼트',
       ),
@@ -369,6 +399,7 @@ void main() {
 
     expect(repo.type, ExerciseType.cardio);
     expect(repo.sets, isNull);
+    expect(repo.reps, isNull);
     expect(repo.weight, isNull);
   });
 }

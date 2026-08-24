@@ -1629,6 +1629,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String progRepsValue(int reps) {
+    return '$reps회';
+  }
+
+  @override
   String get progEmpty => '아직 계획된 프로그램이 없어요';
 
   @override
@@ -1954,6 +1959,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineFieldSets => '세트 수';
 
   @override
+  String get routineFieldReps => '횟수';
+
+  @override
   String get routineFieldWeight => '중량';
 
   @override
@@ -1964,6 +1972,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineUnitSets => '세트';
+
+  @override
+  String get routineUnitReps => '회';
 
   @override
   String get routineUnitKg => 'kg';
