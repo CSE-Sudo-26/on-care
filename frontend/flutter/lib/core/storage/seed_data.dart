@@ -18,7 +18,7 @@ const String kDietDayMessagesKey = 'diet_day_messages';
 
 /// 데모가 채우는 날들은 이제 이 앱이 정하지 않는다.
 ///
-/// 김민수(`user-demo`)는 트레이너 앱의 `seed-client-1` 과 같은 사람이라 두 앱을
+/// 김민수(`user-7d4e9a2c5f18`)는 트레이너 앱의 `seed-client-1` 과 같은 사람이라 두 앱을
 /// 나란히 놓고 시연하는데, 예전에는 두 앱과 백엔드가 각자 알고리즘으로 그의 과거를
 /// 만들어서 같은 날짜의 숫자가 서로 달랐다(#757). 지금은 셋 다 같은 픽스처를 읽는다
 /// — 며칠치를 채울지도 픽스처가 갖고 있다(`DemoFixture.historyWeeks`).

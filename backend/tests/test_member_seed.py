@@ -12,7 +12,7 @@ from sqlalchemy import func, select
 from app.core import clock
 
 
-_MEMBER_ID = "user-demo"
+_MEMBER_ID = "user-7d4e9a2c5f18"
 
 
 def _this_monday_iso() -> str:
