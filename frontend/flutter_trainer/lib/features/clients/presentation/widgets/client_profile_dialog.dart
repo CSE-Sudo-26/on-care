@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dar
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
+import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 
 /// Opens the merged 신체·목표·메모 dialog for [clientId].
 ///
@@ -64,7 +65,18 @@ class ClientProfileDialog extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
       key: const ValueKey<String>('client-profile-dialog'),
-      title: Text(l.clientProfileSectionTitle),
+      // 닫기는 다른 가운데 모달과 같은 자리·모양이다 — 오른쪽 위 X 하나로
+      // 충분해, 아래에 따로 `닫기` 글자 버튼을 두지 않는다.
+      title: Row(
+        children: <Widget>[
+          Expanded(child: Text(l.clientProfileSectionTitle)),
+          DialogCloseButton(
+            key: const ValueKey<String>('client-profile-dialog-close'),
+            tooltip: l.actionClose,
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
       content: SizedBox(
         // Same width as the two dialogs this replaces, so the form fields
         // keep the proportions trainers already know.
@@ -89,13 +101,6 @@ class ClientProfileDialog extends StatelessWidget {
           ),
         ),
       ),
-      actions: <Widget>[
-        TextButton(
-          key: const ValueKey<String>('client-profile-dialog-close'),
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.actionClose),
-        ),
-      ],
     );
   }
 }
@@ -584,6 +589,9 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
             counterText: '',
           ),
         ),
+        // 입력 상자와 바로 붙어 있으면 `추가` 가 상자의 일부처럼 보인다 —
+        // 다른 카드 사이 간격과 같은 여백을 준다.
+        const SizedBox(height: AppSpacing.sm),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
