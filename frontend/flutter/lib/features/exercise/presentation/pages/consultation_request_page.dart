@@ -14,6 +14,7 @@ import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/consult_time_range_picker.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 
@@ -83,44 +84,26 @@ class _ConsultationRequestPageState
     }
   }
 
-  /// 시작과 종료 시각을 차례로 고른다. 트레이너 일정과 같은 시계 다이얼을 써서
-  /// 두 앱이 같은 방식으로 정확한 범위를 입력한다.
+  /// 시작과 종료 시각을 한 다이얼에서 이어서 고른다. 트레이너 앱 스케줄
+  /// 탭의 시간 범위 선택기를 그대로 써서 두 앱이 같은 방식으로 정확한
+  /// 범위를 입력한다.
   Future<void> _selectTime() async {
-    final TimeOfDay? start = await showTimePicker(
+    final TimeRangeValue? picked = await showConsultTimeRangePicker(
       context: context,
-      initialTime: _preferredTimeOfDay ?? const TimeOfDay(hour: 10, minute: 0),
-      helpText: '시작 시간',
-      builder: _use24HourFormat,
+      start: _preferredTimeOfDay ?? const TimeOfDay(hour: 10, minute: 0),
+      end:
+          _preferredEndTimeOfDay ??
+          TimeOfDay(
+            hour: (_preferredTimeOfDay?.hour ?? 10) + 1,
+            minute: _preferredTimeOfDay?.minute ?? 0,
+          ),
     );
-    if (start == null || !mounted) return;
-    final TimeOfDay initialEnd = _preferredEndTimeOfDay ?? TimeOfDay(
-      hour: (start.hour + 1) % 24,
-      minute: start.minute,
-    );
-    final TimeOfDay? end = await showTimePicker(
-      context: context,
-      initialTime: initialEnd,
-      helpText: '종료 시간',
-      builder: _use24HourFormat,
-    );
-    if (end != null && mounted) {
-      final int startMinutes = start.hour * 60 + start.minute;
-      final int endMinutes = end.hour * 60 + end.minute;
-      if (endMinutes <= startMinutes) return;
-      setState(() {
-        _preferredTimeOfDay = start;
-        _preferredEndTimeOfDay = end;
-      });
-    }
+    if (picked == null || !mounted) return;
+    setState(() {
+      _preferredTimeOfDay = picked.start;
+      _preferredEndTimeOfDay = picked.end;
+    });
   }
-
-  /// 오전/오후 대신 24시간 형식 다이얼을 쓴다 — 선택 뒤 표시([_TimeField])도
-  /// 같은 형식이어야 하므로 짝을 맞춘다.
-  static Widget _use24HourFormat(BuildContext context, Widget? child) =>
-      MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
-      );
 
   /// 운동 목표가 "기타"면 문의 내용에 구체적으로 적어야 한다 — 그 내용이
   /// 서버로는 `health_purpose_detail`도 겸해서 나간다(#1112). 목표 선택
@@ -375,18 +358,11 @@ class _ConsultationRequestPageState
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ChoiceChip(
+                  _TimeFlexibleToggle(
                     key: const Key('consult-time-flexible'),
-                    label: Text(l.exTimeFlexible),
+                    label: l.exTimeFlexible,
                     selected: _timeFlexible,
-                    selectedColor: FigmaColors.primaryA(0.14),
-                    side: BorderSide(
-                      color: _timeFlexible
-                          ? FigmaColors.primary
-                          : FigmaColors.hairline,
-                    ),
-                    onSelected: (bool selected) =>
-                        setState(() => _timeFlexible = selected),
+                    onTap: () => setState(() => _timeFlexible = !_timeFlexible),
                   ),
                 ],
               ),
@@ -828,6 +804,52 @@ class _TimeField extends StatelessWidget {
               ),
               const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "시간 협의" 토글. [_TimeField]와 같은 자리에 나란히 서므로 패딩·모서리를
+/// 그대로 맞춘다 — `ChoiceChip`은 이 자리에서 늘어난 줄 높이만큼 채워지지
+/// 않고 제 기본 높이로만 남아, 옆 필드보다 낮게 떠 보였다(#1331).
+class _TimeFlexibleToggle extends StatelessWidget {
+  const _TimeFlexibleToggle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? FigmaColors.primaryA(0.14) : Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? FigmaColors.primary : FigmaColors.hairline,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: selected ? FigmaColors.primary : FigmaColors.ink,
+            ),
           ),
         ),
       ),
