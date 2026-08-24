@@ -1131,13 +1131,18 @@ class _WeekSlot {
 /// 트레이너의 한 주 — 10~22시 사이 짝수 정시는 1:1 PT, 그 사이 홀수
 /// 정시는 상담으로 둔다. 실제 운영 화면처럼 PT와 상담 길이는 다양하게 둔다.
 ///
+/// 요일마다 그 날의 **첫** 수업만 9:00·9:30 중 하나로 앞당길 수 있다 —
+/// 모든 요일이 10:00에 나란히 시작하면 시간표가 찍어낸 것처럼 보인다.
+/// 9시보다 이르게는 두지 않는다. 그 뒤 수업들은 기존대로 10~22시
+/// 짝수/홀수 정시 규칙을 그대로 따른다.
+///
 /// 오늘 몫은 [_schedule] 이 따로 들고 있어서, 오늘에 해당하는 요일은 시딩이
 /// 건너뛴다. 두 목록이 같은 날에 겹치면 오늘 화면에 없던 수업이 끼어든다.
 const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 월
   _WeekSlot(
     weekday: 1,
-    time: '10:00',
+    time: '09:00',
     clientName: '최우진',
     type: SessionType.personalTraining,
     durationMinutes: 30,
@@ -1170,7 +1175,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 화
   _WeekSlot(
     weekday: 2,
-    time: '10:00',
+    time: '09:30',
     clientName: '신유나',
     type: SessionType.personalTraining,
     durationMinutes: 45,
@@ -1228,7 +1233,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 목
   _WeekSlot(
     weekday: 4,
-    time: '10:00',
+    time: '09:00',
     clientName: '강서연',
     type: SessionType.personalTraining,
     durationMinutes: 90,
@@ -1286,7 +1291,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
   // 토
   _WeekSlot(
     weekday: 6,
-    time: '10:00',
+    time: '09:30',
     clientName: '정하윤',
     type: SessionType.personalTraining,
     durationMinutes: 45,
