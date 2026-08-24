@@ -1,13 +1,11 @@
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
+import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 
 /// Wire values the backend accepts for an exercise's origin.
 const List<String> kProgramExerciseSources = <String>['ai', 'trainer'];
 
-/// Longest value the backend stores per free-text exercise field
-/// (`ProgramDraftExercise` uses `max_length=30`). Trimming here means an
-/// over-long paste is saved shortened rather than 422-ing the whole draft.
-const int _kFieldMax = 30;
 const int _kMemoMax = 300;
 const int _kNameMax = 100;
 
@@ -34,34 +32,35 @@ Map<String, Object?> programExerciseToJson(
   'id': _cap(exercise.id, 64),
   // The backend requires a name; a blank row would reject the draft.
   'name': exercise.name.trim().isEmpty ? '-' : _cap(exercise.name, _kNameMax),
-  'sets': _cap(exercise.sets, _kFieldMax),
-  'reps': _cap(exercise.reps, _kFieldMax),
-  'weight': _cap(exercise.weight, _kFieldMax),
-  'duration': _cap(exercise.duration, _kFieldMax),
-  'distance': _cap(exercise.distance, _kFieldMax),
-  'rest': _cap(exercise.rest, _kFieldMax),
-  'rpe': _cap(exercise.rpe, _kFieldMax),
-  'memo': _cap(exercise.memo, _kMemoMax),
   'type': kRoutineTypes.contains(exercise.type) ? exercise.type : '근력',
+  'date': exercise.date == null ? null : ymd(exercise.date!),
+  // 근력은 세트·중량으로만 재고 시간을 싣지 않는다 — 두 편집기와 회원 기록이
+  // 같은 규칙을 쓴다 (#1276).
+  'duration': exercise.isStrength ? null : exercise.minutes.clamp(0, 600),
+  'sets': exercise.isStrength ? exercise.sets.clamp(0, 99) : null,
+  'weight': exercise.isStrength ? exercise.weight.clamp(0, 1000) : null,
+  'intensity': normaliseRoutineIntensity(exercise.intensity),
+  'memo': _cap(exercise.memo, _kMemoMax),
   'source': kProgramExerciseSources.contains(exercise.source)
       ? exercise.source
       : 'trainer',
 };
 
 /// `ProgramDraftExercise` JSON → [ProgramExerciseDraft].
+///
+/// 세트·중량·시간은 예전에 자유 문자열("10회"·"20kg")로 저장됐다 — 숫자만
+/// 되짚어 읽고, 없으면 기본값으로 연다.
 ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
     ProgramExerciseDraft(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      sets: json['sets'] as String? ?? '',
-      reps: json['reps'] as String? ?? '',
-      weight: json['weight'] as String? ?? '',
-      duration: json['duration'] as String? ?? '',
-      distance: json['distance'] as String? ?? '',
-      rest: json['rest'] as String? ?? '',
-      rpe: json['rpe'] as String? ?? '',
-      memo: json['memo'] as String? ?? '',
       type: json['type'] as String? ?? '근력',
+      date: DateTime.tryParse(json['date'] as String? ?? ''),
+      minutes: looseInt(json['duration']) ?? 30,
+      sets: looseInt(json['sets']) ?? 3,
+      weight: looseDouble(json['weight']) ?? 20,
+      intensity: normaliseRoutineIntensity(json['intensity'] as String?),
+      memo: json['memo'] as String? ?? '',
       source: json['source'] as String? ?? 'trainer',
     );
 

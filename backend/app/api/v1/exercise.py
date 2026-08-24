@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -26,6 +26,7 @@ from app.services.coach import personal_ingest
 from app.services.exercise_service import (
     weekly_goals,
     WEEKDAY_LABELS, build_current_week, monday_of_str, monday_of_this_week_str,
+    session_date_of,
 )
 
 router = APIRouter(tags=["exercise"])
@@ -37,24 +38,8 @@ def _session_date(row: ExerciseSession) -> str:
     적재 문구에 날짜를 넣으려면 되돌려야 한다 — "월요일"만 적으면 몇 주 전 기록도
     똑같이 보여 코치가 최근 것과 구분하지 못한다.
     """
-    from datetime import date as _d, timedelta
-
-    try:
-        monday = _d.fromisoformat(row.week_start)
-        return (monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))).isoformat()
-    except (ValueError, IndexError):
-        return row.week_start
-
-#: 저장은 표준 네 가지(유산소/근력/유연성/기타)로만 한다. 옛 값도 받아 접어
-#: 주는 이유는 아직 옛 어휘를 보내는 앱이 있기 때문이다 — 거절하면 기록이
-#: 통째로 사라지는데, 그건 유형 하나 어긋난 것보다 나쁘다. (#996)
-_ALLOWED_TYPES = set(exercise_types.CANONICAL_TYPES) | {
-    "walking",
-    "yoga",
-    "stretching",
-}
-_ALLOWED_INTENSITIES = {"light", "moderate", "high"}
-
+    resolved = session_date_of(row)
+    return resolved.isoformat() if resolved else row.week_start
 
 def _reject_if_derived(row: ExerciseSession) -> None:
     """트레이너 PT/배정 루틴에서 파생된 기록은 회원이 고칠 수 없다. (#499, #638)
@@ -113,15 +98,31 @@ def current_week(
     )
 
 
-def _sets_for(normalized_type: str, sets: int | None) -> int | None:
-    """저장할 세트 수. 근력이 아닌 유형에서 온 값은 버린다. (#1262)
+def _strength_only(normalized_type: str, value):
+    """근력에서만 의미 있는 값(세트·중량). 다른 유형에서 온 값은 버린다. (#1262)
 
     유산소를 세트로 세는 화면은 없다 — 받아 두면 집계가 읽지 않는 값이 기록에만
     남아, 나중에 그 값을 믿는 화면이 생겼을 때 조용히 어긋난다.
     """
     if normalized_type != exercise_types.STRENGTH:
         return None
-    return sets
+    return value
+
+
+def _weight_for(normalized_type: str, weight: float | None) -> float | None:
+    """저장할 중량. 근력만, 소수점 한 자리로 맞춘다. (#1276)"""
+    value = _strength_only(normalized_type, weight)
+    return None if value is None else round(value, 1)
+
+
+def _placement(day: date | None) -> tuple[str, str]:
+    """(주 시작 월요일, 요일 라벨). 날짜가 없으면 오늘이다.
+
+    한 스냅샷에서 둘을 함께 뽑는다 — 따로 읽으면 KST 자정 사이에 저장된 한
+    세션의 요일과 주차가 서로 다른 날을 가리킬 수 있다.
+    """
+    target = day or clock.today()
+    return monday_of_str(target.isoformat()), WEEKDAY_LABELS[target.weekday()]
 
 
 @router.post("/exercise/sessions", response_model=ExerciseSessionOut, status_code=201)
@@ -130,28 +131,20 @@ def add_session(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> ExerciseSessionOut:
-    if payload.type not in _ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 타입: {payload.type}")
-    if payload.intensity not in _ALLOWED_INTENSITIES:
-        raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 강도: {payload.intensity}")
-    # minutes(>0)·calories(>=0) 는 ExerciseSessionCreate 의 Field 제약에서 422 로 검증됨
-
-    # 요일 라벨과 주차를 같은 스냅샷에서 뽑는다 — 따로 읽으면 KST 자정 사이에
-    # 저장된 한 세션의 요일과 주차가 서로 다른 날을 가리킬 수 있다.
-    today = clock.today()
-    day_label = payload.day_label or WEEKDAY_LABELS[today.weekday()]
-    if day_label not in WEEKDAY_LABELS:
-        raise HTTPException(status_code=400, detail=f"잘못된 요일 라벨: {day_label}")
-
+    # type·intensity·date·minutes·calories 는 모두 ExerciseSessionCreate 의
+    # 타입·Field 제약에서 422 로 걸린다.
+    week_start, day_label = _placement(payload.date)
     normalized = exercise_types.normalize(payload.type)
     row = ExerciseSession(
         id=f"ex-{uuid.uuid4().hex[:12]}",
         user_id=current_user.id,
-        week_start=monday_of_str(today.isoformat()),
+        week_start=week_start,
         day_label=day_label,
         type=normalized,
+        name=payload.name.strip(),
         minutes=payload.minutes,
-        sets=_sets_for(normalized, payload.sets),
+        sets=_strength_only(normalized, payload.sets),
+        weight=_weight_for(normalized, payload.weight),
         calories=payload.calories,
         intensity=payload.intensity,
     )
@@ -179,13 +172,7 @@ def update_session(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> ExerciseSessionOut:
-    """운동 기록 수정(본인 소유만, 아니면 404). 유형/시간/칼로리/강도/요일 갱신."""
-    if payload.type not in _ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 타입: {payload.type}")
-    if payload.intensity not in _ALLOWED_INTENSITIES:
-        raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 강도: {payload.intensity}")
-    # minutes(>0)·calories(>=0) 는 ExerciseSessionCreate 의 Field 제약에서 422 로 검증됨
-
+    """운동 기록 수정(본인 소유만, 아니면 404). 유형/이름/시간/칼로리/강도/날짜 갱신."""
     row = db.scalar(
         select(ExerciseSession)
         .where(ExerciseSession.id == session_id)
@@ -195,16 +182,18 @@ def update_session(
         raise HTTPException(status_code=404, detail="운동 기록을 찾을 수 없습니다.")
     _reject_if_derived(row)
 
-    day_label = payload.day_label or row.day_label
-    if day_label not in WEEKDAY_LABELS:
-        raise HTTPException(status_code=400, detail=f"잘못된 요일 라벨: {day_label}")
+    # 날짜를 주지 않은 수정은 원래 있던 자리를 그대로 둔다 — 오늘로 끌어오면
+    # 지난 기록을 고치기만 해도 이번 주로 옮겨 간다.
+    if payload.date is not None:
+        row.week_start, row.day_label = _placement(payload.date)
 
     row.type = exercise_types.normalize(payload.type)
+    row.name = payload.name.strip()
     row.minutes = payload.minutes
-    row.sets = _sets_for(row.type, payload.sets)
+    row.sets = _strength_only(row.type, payload.sets)
+    row.weight = _weight_for(row.type, payload.weight)
     row.calories = payload.calories
     row.intensity = payload.intensity
-    row.day_label = day_label
     db.commit()
     db.refresh(row)
 

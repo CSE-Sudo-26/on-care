@@ -5,7 +5,10 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// 프로그램 한 줄 — 운동 이름과 세트·횟수·무게.
+/// 프로그램 한 줄 — 운동 이름과, 유형에 맞는 값.
+///
+/// 근력은 세트·중량으로, 나머지는 시간으로 읽는다 (#1276) — 유형마다 재는 단위가
+/// 다르다.
 class SessionProgramRow extends StatelessWidget {
   const SessionProgramRow({super.key, required this.index, required this.item});
 
@@ -15,8 +18,15 @@ class SessionProgramRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final detail = StringBuffer(l.progSetsByReps(item.sets, item.reps));
-    if (item.weight != '-') detail.write(' · ${item.weight}');
+    final List<String> parts = <String>[
+      if (item.type == '근력') ...<String>[
+        if (item.sets != null) l.progSetsValue(item.sets!),
+        if (item.weight != null && item.weight! > 0)
+          '${_trimZero(item.weight!)}${l.routineUnitKg}',
+      ] else if (item.duration != null)
+        l.minutesShort(item.duration!),
+    ];
+    final String detail = parts.join(' · ');
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -58,14 +68,15 @@ class SessionProgramRow extends StatelessWidget {
                     color: AppColors.foreground,
                   ),
                 ),
-                Text(
-                  detail.toString(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.subtleForeground,
+                if (detail.isNotEmpty)
+                  Text(
+                    detail,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.subtleForeground,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -74,6 +85,10 @@ class SessionProgramRow extends StatelessWidget {
     );
   }
 }
+
+/// 40.0 → "40", 40.5 → "40.5". 소수점 뒤 0 은 적지 않는다.
+String _trimZero(double v) =>
+    v == v.roundToDouble() ? '${v.round()}' : '$v';
 
 /// Shown inside an expanded 예정 session that has no program yet.
 ///

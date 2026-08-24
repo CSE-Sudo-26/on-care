@@ -25,7 +25,7 @@ enum ExerciseType { cardio, strength, yoga, walking, stretching, other }
 ///
 /// 표준 어휘는 네 가지(cardio·strength·flexibility·other)인데 이 enum 은 옛
 /// 이름을 아직 값으로 들고 있다 — `flexibility` 를 이름으로 찾으면 못 찾아
-/// **유연성 기록이 기타로 떨어졌다**. 옛 값도 자기 버킷으로 접어 읽는다. (#996)
+/// **스트레칭 기록이 기타로 떨어졌다**. 옛 값도 자기 버킷으로 접어 읽는다. (#996)
 ExerciseType _exerciseTypeFromString(String s) => switch (s) {
   'cardio' || 'walking' => ExerciseType.cardio,
   'strength' => ExerciseType.strength,
@@ -76,6 +76,9 @@ class ExerciseSession {
     this.trainerFeedback = '',
     this.completedAt,
     this.sets,
+    this.name = '',
+    this.weight,
+    this.date,
   });
 
   final String? id;
@@ -83,6 +86,17 @@ class ExerciseSession {
   final ExerciseType type;
   final int minutes;
   final int calories;
+
+  /// 회원이 적은 운동 이름. 유형은 집계 축이라 넷뿐이라, 무슨 운동을 했는지는
+  /// 이 칸에만 남는다. 이 필드가 생기기 전 기록은 비어 있다. (#1276)
+  final String name;
+
+  /// 근력 기록의 중량(kg). 세트와 짝이라 근력에만 있다. (#1276)
+  final double? weight;
+
+  /// 이 기록의 실제 날짜. 수정 시트가 원래 날짜로 열리려면 요일만으로는
+  /// 모자란다 — 몇 주 전 기록도 같은 요일 라벨을 갖는다. (#1276)
+  final DateTime? date;
 
   /// Saved workout intensity. Defaults to [ExerciseIntensity.moderate] for
   /// legacy payloads that predate the field.
@@ -135,6 +149,9 @@ class ExerciseSession {
         trainerFeedback: json['trainer_feedback'] as String? ?? '',
         completedAt: DateTime.tryParse(json['completed_at'] as String? ?? ''),
         sets: (json['sets'] as num?)?.toInt(),
+        name: json['name'] as String? ?? '',
+        weight: (json['weight'] as num?)?.toDouble(),
+        date: DateTime.tryParse(json['date'] as String? ?? ''),
       );
 }
 
@@ -235,11 +252,12 @@ class ExerciseWeek {
       dailyCalories: dailyCalories,
       cardioMinutes: parseDoubleList('cardio_minutes'),
       strengthMinutes: parseDoubleList('strength_minutes'),
-      // 표준 이름을 먼저 본다. 옛 이름은 서버가 아직 함께 내려주는 동안의
-      // 다리다 — 둘 다 없으면 빈 목록이라 그래프가 그 줄기만 비운다. (#997)
-      stretchingMinutes: parseDoubleList('flexibility_minutes').isNotEmpty
-          ? parseDoubleList('flexibility_minutes')
-          : parseDoubleList('stretching_minutes'),
+      // 표준 이름을 먼저 본다. 옛 이름(flexibility)은 서버가 아직 함께
+      // 내려주는 동안의 다리다 — 둘 다 없으면 빈 목록이라 그래프가 그 줄기만
+      // 비운다. (#997, #1276)
+      stretchingMinutes: parseDoubleList('stretching_minutes').isNotEmpty
+          ? parseDoubleList('stretching_minutes')
+          : parseDoubleList('flexibility_minutes'),
       otherMinutes: parseDoubleList('other_minutes'),
       strengthSets: parseDoubleList('strength_sets'),
     );

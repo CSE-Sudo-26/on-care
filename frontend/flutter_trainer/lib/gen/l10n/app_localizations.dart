@@ -1190,18 +1190,6 @@ abstract class AppLocalizations {
   /// **'See all'**
   String get clientsSeeAll;
 
-  /// No description provided for @clientsNameRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a name'**
-  String get clientsNameRequired;
-
-  /// No description provided for @clientsAddFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t add the client. Please try again'**
-  String get clientsAddFailed;
-
   /// No description provided for @memberHealthLoadFailed.
   ///
   /// In en, this message translates to:
@@ -1304,53 +1292,29 @@ abstract class AppLocalizations {
   /// **'Enter a value between {min} and {max}.'**
   String memberHealthRange(String min, String max);
 
-  /// No description provided for @clientsDuplicateName.
-  ///
-  /// In en, this message translates to:
-  /// **'A client with that name already exists'**
-  String get clientsDuplicateName;
-
-  /// No description provided for @clientsAddTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a client'**
-  String get clientsAddTitle;
-
-  /// No description provided for @clientsNameLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Client name'**
-  String get clientsNameLabel;
-
-  /// No description provided for @clientsGoalLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Goal (e.g. weight loss · strength)'**
-  String get clientsGoalLabel;
-
-  /// No description provided for @clientsAddAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Add'**
-  String get clientsAddAction;
-
   /// No description provided for @clientInviteTitle.
   ///
   /// In en, this message translates to:
-  /// **'Invite a member'**
+  /// **'Add a new client'**
   String get clientInviteTitle;
 
   /// No description provided for @clientInviteIntro.
   ///
   /// In en, this message translates to:
-  /// **'Find a member by email and send a coaching request. They appear in your client list once they accept in the app.'**
+  /// **'Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.'**
   String get clientInviteIntro;
 
-  /// No description provided for @clientInviteEmailLabel.
+  /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Member email'**
-  String get clientInviteEmailLabel;
+  /// **'Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.'**
+  String get clientInviteIntroImmediate;
+
+  /// No description provided for @clientInviteMemberIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Member ID'**
+  String get clientInviteMemberIdLabel;
 
   /// No description provided for @clientInviteLookupAction.
   ///
@@ -1370,16 +1334,28 @@ abstract class AppLocalizations {
   /// **'Send request'**
   String get clientInviteSendAction;
 
+  /// No description provided for @clientInviteConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get clientInviteConnectAction;
+
   /// No description provided for @clientInviteSent.
   ///
   /// In en, this message translates to:
   /// **'Sent a coaching request to {name}'**
   String clientInviteSent(String name);
 
+  /// No description provided for @clientInviteConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected with {name}'**
+  String clientInviteConnected(String name);
+
   /// No description provided for @clientInviteNotFound.
   ///
   /// In en, this message translates to:
-  /// **'No member uses that email'**
+  /// **'No member uses that member ID'**
   String get clientInviteNotFound;
 
   /// No description provided for @clientInviteFailed.
@@ -1388,11 +1364,11 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send the request. Please try again'**
   String get clientInviteFailed;
 
-  /// No description provided for @clientInviteEmailRequired.
+  /// No description provided for @clientInviteMemberIdRequired.
   ///
   /// In en, this message translates to:
-  /// **'Enter an email'**
-  String get clientInviteEmailRequired;
+  /// **'Enter a member ID'**
+  String get clientInviteMemberIdRequired;
 
   /// No description provided for @clientInviteAlreadyCoached.
   ///
@@ -3026,11 +3002,11 @@ abstract class AppLocalizations {
   /// **'Optional'**
   String get progOptional;
 
-  /// No description provided for @progSetsByReps.
+  /// No description provided for @progSetsValue.
   ///
   /// In en, this message translates to:
-  /// **'{sets} × {reps}'**
-  String progSetsByReps(int sets, String reps);
+  /// **'{sets} sets'**
+  String progSetsValue(int sets);
 
   /// No description provided for @progEmpty.
   ///
@@ -3625,6 +3601,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Intensity'**
   String get routineFieldIntensity;
+
+  /// No description provided for @routineFieldDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get routineFieldDate;
+
+  /// No description provided for @routineFieldExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise name'**
+  String get routineFieldExerciseName;
+
+  /// No description provided for @routineFieldExerciseNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Treadmill'**
+  String get routineFieldExerciseNameHint;
+
+  /// No description provided for @routineFieldSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get routineFieldSets;
+
+  /// No description provided for @routineFieldWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get routineFieldWeight;
+
+  /// No description provided for @routineFieldCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated calories'**
+  String get routineFieldCalories;
+
+  /// No description provided for @routineUnitMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get routineUnitMinutes;
+
+  /// No description provided for @routineUnitSets.
+  ///
+  /// In en, this message translates to:
+  /// **'sets'**
+  String get routineUnitSets;
+
+  /// No description provided for @routineUnitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get routineUnitKg;
+
+  /// No description provided for @routineKcalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} kcal'**
+  String routineKcalValue(int count);
 
   /// No description provided for @intensityLight.
   ///

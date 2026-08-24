@@ -155,6 +155,6 @@ void main() {
     expect(find.text('이번 주 소모'), findsOneWidget);
     expect(find.text('유산소'), findsOneWidget);
     expect(find.text('근력'), findsOneWidget);
-    expect(find.text('유연성'), findsOneWidget);
+    expect(find.text('스트레칭'), findsOneWidget);
   });
 }

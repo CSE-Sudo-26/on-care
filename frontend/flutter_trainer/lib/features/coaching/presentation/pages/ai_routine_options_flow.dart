@@ -454,8 +454,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          RoutineMinutesSlider(
+          RoutineMinutesField(
             key: const ValueKey<String>('generation-minutes'),
+            keyPrefix: 'generation-minutes',
             minutes: _minutes,
             label: l.routineFieldTotalMinutes,
             onChanged: (minutes) => setState(() {
@@ -813,8 +814,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               ],
             )
           else
-            RoutineMinutesSlider(
+            RoutineMinutesField(
               key: ValueKey<String>('routine-minutes-$index'),
+              keyPrefix: 'routine-minutes-$index',
               minutes: exercise.minutes,
               onChanged: (minutes) => setState(() {
                 _edited[index] = _edited[index].copyWith(minutes: minutes);
@@ -881,7 +883,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               ],
             )
           else
-            RoutineMinutesSlider(
+            RoutineMinutesField(
               key: const ValueKey<String>('new-exercise-minutes'),
               minutes: _newExerciseMinutes,
               onChanged: (minutes) => setState(() {
