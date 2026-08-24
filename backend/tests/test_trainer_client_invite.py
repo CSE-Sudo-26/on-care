@@ -159,6 +159,7 @@ def test_lookup_finds_a_member_by_exact_member_id(client, db_session):
     assert body["name"] == "김찾음"
     assert body["has_trainer"] is False
     assert body["invite_pending"] is False
+    assert "email" not in body
 
 
 def test_lookup_does_not_answer_partial_member_id(client, db_session):

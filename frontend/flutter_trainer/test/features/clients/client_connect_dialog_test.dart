@@ -46,7 +46,7 @@ class _FakeInviteRepository implements ClientInviteRepository {
       id: 'tci-new',
       memberId: memberId,
       memberName: found?.name ?? '',
-      memberEmail: found?.email ?? '',
+      memberEmail: '',
       status: connectsImmediately
           ? ClientInviteStatus.accepted
           : ClientInviteStatus.pending,
@@ -69,7 +69,6 @@ MemberLookup _lookup({
 }) => MemberLookup(
   memberId: 'user-a3f9c81e4b2d',
   name: '김민수',
-  email: 'minsu@oncare.com',
   hasTrainer: hasTrainer,
   coachedByMe: coachedByMe,
   invitePending: invitePending,
@@ -197,11 +196,38 @@ void main() {
     await _pumpDialog(tester, repository);
 
     expect(find.text('이지수'), findsOneWidget);
+    // 회원 ID만 아는 트레이너에게 이메일까지 보여줄 이유가 없다.
+    expect(find.text('jisu@oncare.com'), findsNothing);
 
     await tester.tap(find.text('요청 거두기'));
     await tester.pumpAndSettle();
 
     expect(repository.cancelled, <String>['tci-1']);
+  });
+
+  testWidgets('찾은 뒤 입력값을 바꾸면 확인 카드가 사라진다', (tester) async {
+    // 회원 A를 찾고 나서 입력값만 B로 바꾸면, 다시 찾기 전까지는 화면에 A가
+    // 남아 있으면 안 된다 — 그대로 두면 트레이너가 B를 연결한다고 착각한 채
+    // A에게 요청을 보내게 된다.
+    await _pumpDialog(tester, _FakeInviteRepository(found: _lookup()));
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('client-connect-member-id')),
+      'user-a3f9c81e4b2d',
+    );
+    await tester.tap(find.text('찾기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('김민수'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('client-connect-member-id')),
+      'user-different-member',
+    );
+    await tester.pump();
+
+    expect(find.text('김민수'), findsNothing);
+    expect(find.text('담당 요청 보내기'), findsNothing);
   });
 
   testWidgets('가운데 뜨는 작은 창으로 열린다', (tester) async {

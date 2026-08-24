@@ -1189,7 +1189,6 @@ class MemberLookupOut(BaseModel):
 
     member_id: str
     name: str
-    email: str
     #: 이미 활성 담당 트레이너가 있는가. 누구인지는 밝히지 않는다.
     has_trainer: bool
     #: 그 담당이 나인가 — 명단에 이미 있는 회원을 다시 찾은 경우.

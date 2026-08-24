@@ -77,7 +77,7 @@ class DemoClientInviteRepository implements ClientInviteRepository {
       final row = await (_db.select(
         _db.trainerClients,
       )..where((t) => t.id.equals(demoAlreadyLinkedClientId))).getSingleOrNull();
-      if (row != null) return _linkedLookup(row.id, row.name);
+      if (row != null) return _linkedLookup(normalized, row.name);
     }
 
     final prospect = findDemoProspectiveMemberById(normalized);
@@ -93,7 +93,6 @@ class DemoClientInviteRepository implements ClientInviteRepository {
     return MemberLookup(
       memberId: prospect.id,
       name: prospect.name,
-      email: '',
       hasTrainer: false,
       coachedByMe: false,
       invitePending: false,
@@ -103,7 +102,6 @@ class DemoClientInviteRepository implements ClientInviteRepository {
   MemberLookup _linkedLookup(String memberId, String name) => MemberLookup(
     memberId: memberId,
     name: name,
-    email: '',
     hasTrainer: true,
     coachedByMe: true,
     invitePending: false,

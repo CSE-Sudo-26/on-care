@@ -117,7 +117,6 @@ def lookup_member(db: Session, trainer_id: str, member_id: str) -> MemberLookupO
     return MemberLookupOut(
         member_id=member.id,
         name=member.name,
-        email=member.email,
         # 누가 담당인지까지는 밝히지 않는다. 요청을 보낼 수 있는지만 알면 된다.
         has_trainer=current is not None,
         coached_by_me=current == trainer_id,

@@ -75,7 +75,7 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
       final found = await ref
           .read(clientInviteRepositoryProvider)
           .lookup(memberId);
-      if (!mounted) return;
+      if (!mounted || _memberId.text.trim() != memberId) return;
       setState(() => _found = found);
     } on NotFoundError {
       if (!mounted) return;
@@ -219,6 +219,11 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
                         ),
                         controller: _memberId,
                         autocorrect: false,
+                        onChanged: (_) {
+                          if (_found != null) {
+                            setState(() => _found = null);
+                          }
+                        },
                         onSubmitted: (_) => _lookup(),
                         decoration: InputDecoration(
                           labelText: l.clientInviteMemberIdLabel,
@@ -424,25 +429,13 @@ class _PendingInviteRow extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  invite.memberName,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.foreground,
-                  ),
-                ),
-                Text(
-                  invite.memberEmail,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ],
+            child: Text(
+              invite.memberName,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+              ),
             ),
           ),
           TextButton(

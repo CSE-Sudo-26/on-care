@@ -318,6 +318,9 @@ void main() {
       final found = await demo.lookup('user-7d4e9a2c5f18');
 
       expect(found.name, '김민수');
+      // 로스터 행의 id(seed-client-1)가 아니라 조회에 쓴 회원 ID가 그대로
+      // 나와야 한다 — 백엔드의 User.id 기반 응답 계약과 같은 모양이어야 한다.
+      expect(found.memberId, 'user-7d4e9a2c5f18');
       expect(found.hasTrainer, isTrue);
       expect(found.coachedByMe, isTrue);
       expect(found.canInvite, isFalse);
