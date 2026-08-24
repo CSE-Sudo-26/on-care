@@ -782,6 +782,30 @@ abstract class AppLocalizations {
   /// **'Analysis failed'**
   String get dietAnalysisFailed;
 
+  /// Label of the date a photo-analysed meal is logged under.
+  ///
+  /// In en, this message translates to:
+  /// **'Record date'**
+  String get dietRecordDate;
+
+  /// Button that opens the date picker on the analysis result sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date'**
+  String get dietRecordDateChange;
+
+  /// Confirmation after moving an analysed meal to another day.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to {date}'**
+  String dietRecordDateMoved(String date);
+
+  /// Error shown when moving an analysed meal to another day fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change the date. Please try again shortly.'**
+  String get dietRecordDateFailed;
+
   /// No description provided for @dietAnalysisDone.
   ///
   /// In en, this message translates to:
@@ -1013,7 +1037,7 @@ abstract class AppLocalizations {
   /// No description provided for @exTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Flexibility'**
+  /// **'Stretching'**
   String get exTypeFlexibility;
 
   /// No description provided for @exTypeOtherChip.
@@ -1357,6 +1381,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exercise Type'**
   String get exExerciseType;
+
+  /// No description provided for @exExerciseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get exExerciseDate;
+
+  /// No description provided for @exExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise Name'**
+  String get exExerciseName;
+
+  /// No description provided for @exExerciseNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Treadmill'**
+  String get exExerciseNameHint;
+
+  /// No description provided for @exExerciseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get exExerciseWeight;
+
+  /// No description provided for @exUnitMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get exUnitMinutes;
+
+  /// No description provided for @exUnitSets.
+  ///
+  /// In en, this message translates to:
+  /// **'sets'**
+  String get exUnitSets;
+
+  /// No description provided for @exUnitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get exUnitKg;
+
+  /// No description provided for @exEnterName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter an exercise name'**
+  String get exEnterName;
 
   /// No description provided for @exExerciseDuration.
   ///
@@ -1741,6 +1813,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User'**
   String get myDefaultUserName;
+
+  /// No description provided for @myMemberIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'My member ID'**
+  String get myMemberIdLabel;
+
+  /// No description provided for @myMemberIdCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Member ID copied'**
+  String get myMemberIdCopied;
 
   /// No description provided for @mySettingsTitle.
   ///
@@ -3263,13 +3347,13 @@ abstract class AppLocalizations {
   /// No description provided for @myGoalFlexibilityWeekly.
   ///
   /// In en, this message translates to:
-  /// **'Weekly flexibility (min)'**
+  /// **'Weekly stretching (min)'**
   String get myGoalFlexibilityWeekly;
 
   /// No description provided for @myGoalExerciseSuggestionNote.
   ///
   /// In en, this message translates to:
-  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week'**
+  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week'**
   String get myGoalExerciseSuggestionNote;
 
   /// No description provided for @myGoalExerciseApplySuggestion.

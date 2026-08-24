@@ -290,4 +290,77 @@ void main() {
     );
     expect(row.totalCalories, 100);
   });
+
+  test('PUT /diet/entries/{id} 는 기록을 고른 날짜로 옮긴다 (#1241)', () async {
+    final DateTime now = nowKst();
+    final String today =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    await db
+        .into(db.dietEntries)
+        .insert(
+          DietEntriesCompanion.insert(
+            id: 'diet-move',
+            date: today,
+            mealType: 'lunch',
+            timeLabel: '12:00',
+            foodsJson: jsonEncode(<Map<String, Object?>>[
+              <String, Object?>{'name': '점심', 'calories': 300},
+            ]),
+            totalCalories: 300,
+          ),
+        );
+
+    final moved = await dio.put<Map<String, Object?>>(
+      '/diet/entries/diet-move',
+      data: <String, Object?>{'date': '2026-08-03'},
+    );
+    expect(moved.statusCode, 200);
+
+    final row = await (db.select(
+      db.dietEntries,
+    )..where((table) => table.id.equals('diet-move'))).getSingle();
+    expect(row.date, '2026-08-03');
+
+    // 옮긴 날짜에서 보이고 오늘에서는 빠진다.
+    final target = await dio.get<Map<String, Object?>>('/diet/days/2026-08-03');
+    expect((target.data!['entries']! as List<Object?>).length, 1);
+    final left = await dio.get<Map<String, Object?>>('/diet/days/$today');
+    expect(left.data!['entries'], isEmpty);
+  });
+
+  test('PUT /diet/entries/{id} 는 형식이 틀리거나 아직 오지 않은 날짜를 거절한다', () async {
+    await db
+        .into(db.dietEntries)
+        .insert(
+          DietEntriesCompanion.insert(
+            id: 'diet-bad-date',
+            date: '2026-08-03',
+            mealType: 'lunch',
+            timeLabel: '12:00',
+            foodsJson: '[]',
+            totalCalories: 0,
+          ),
+        );
+    final DateTime tomorrow = nowKst().add(const Duration(days: 1));
+    final String tomorrowWire =
+        '${tomorrow.year.toString().padLeft(4, '0')}-'
+        '${tomorrow.month.toString().padLeft(2, '0')}-'
+        '${tomorrow.day.toString().padLeft(2, '0')}';
+
+    for (final String value in <String>['20260801', '2026-13-01', tomorrowWire]) {
+      final response = await dio.put<Map<String, Object?>>(
+        '/diet/entries/diet-bad-date',
+        data: <String, Object?>{'date': value},
+        options: Options(validateStatus: (_) => true),
+      );
+      expect(response.statusCode, 400, reason: value);
+    }
+
+    final row = await (db.select(
+      db.dietEntries,
+    )..where((table) => table.id.equals('diet-bad-date'))).getSingle();
+    expect(row.date, '2026-08-03');
+  });
 }

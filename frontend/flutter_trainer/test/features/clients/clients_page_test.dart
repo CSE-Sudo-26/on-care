@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
@@ -15,6 +18,33 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// [ClientInviteRepository] 가 꺼진 빌드 — 신규 고객 등록 진입점 자체가
+/// 없는 상태를 흉내낸다.
+class _NoInviteClientInviteRepository implements ClientInviteRepository {
+  const _NoInviteClientInviteRepository();
+
+  @override
+  bool get supportsInvites => false;
+
+  @override
+  bool get connectsImmediately => false;
+
+  @override
+  Future<MemberLookup> lookup(String memberId) async =>
+      throw const NotFoundError();
+
+  @override
+  Future<ClientInvite> invite(String memberId, {String? message}) async =>
+      throw const ValidationError();
+
+  @override
+  Future<List<ClientInvite>> listSent({String status = 'pending'}) async =>
+      const <ClientInvite>[];
+
+  @override
+  Future<void> cancel(String inviteId) async {}
+}
 
 class _ReadOnlyClientRepository extends DriftClientRepository {
   const _ReadOnlyClientRepository(super.db);
@@ -438,7 +468,51 @@ void main() {
       );
     });
 
-    testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
+    testWidgets(
+      '신규 고객 등록 — 회원 ID로 아직 연결되지 않은 회원을 찾아 연결한다',
+      (tester) async {
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.clients,
+        );
+
+        await tester.tap(find.text('신규 고객'));
+        await settle(tester);
+
+        await tester.enterText(
+          find.byKey(const ValueKey<String>('client-connect-member-id')),
+          'USER-8F2A41C9D6E3', // 대소문자는 같은 회원 ID다
+        );
+        await tester.tap(find.text('찾기'));
+        await settle(tester);
+
+        // 확인 카드는 이름만 보여준다 — 성별·나이는 트레이너가 여기서
+        // 입력하지 않는다.
+        expect(find.text('이수아'), findsOneWidget);
+        expect(find.text('연결하기'), findsOneWidget);
+
+        await tester.tap(find.text('연결하기'));
+        await settle(tester);
+
+        // 연결 성공 후 고객 리스트가 (재시작 없이) 즉시 반영된다 — 실제
+        // repository/drift 스트림 결과이지, 화면에 끼워 넣은 값이 아니다.
+        await scrollToClient(tester, find.text('이수아'));
+        expect(find.text('이수아'), findsWidgets);
+        final card = find.ancestor(
+          of: find.text('이수아').last,
+          matching: find.byType(ClientCard),
+        );
+        // 연결된 프로필은 데모 명부가 가진 실제 성별·나이를 그대로 쓴다 —
+        // 회원 id 해시로 지어낸 값이 아니다(#960 과 같은 폴백을 타지 않는다).
+        expect(
+          find.descendant(of: card, matching: find.textContaining('여성')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('이미 연결된 회원 ID를 입력하면 중복 안내가 뜬다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -448,46 +522,22 @@ void main() {
       await tester.tap(find.text('신규 고객'));
       await settle(tester);
 
-      final sheetFields = find.descendant(
-        of: find.byType(BottomSheet),
-        matching: find.byType(TextField),
+      // 이미 담당 중인 김민수(seed-client-1)의 회원 ID다 — 회원 앱 MY 탭이
+      // 데모 모드에서 보여주는 것과 같은 값이다.
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-7d4e9a2c5f18',
       );
-      await tester.enterText(sheetFields.first, '최수진');
-      await tester.enterText(sheetFields.last, '체중 감량');
-      await tester.tap(find.text('등록하기'));
+      await tester.tap(find.text('찾기'));
       await settle(tester);
 
-      // New client appended at the end of the list. Customer cards show
-      // identity details instead of chat placeholders or unread badges.
-      await tester.scrollUntilVisible(
-        find.text('최수진'),
-        150,
-        scrollable: find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is Scrollable &&
-                  widget.axisDirection == AxisDirection.down,
-            )
-            .first,
-      );
-      expect(find.text('최수진'), findsWidgets);
-      final card = find.ancestor(
-        of: find.text('최수진').last,
-        matching: find.byType(ClientCard),
-      );
-      expect(
-        find.descendant(of: card, matching: find.text('아직 대화가 없어요')),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: card, matching: find.textContaining('세')),
-        findsOneWidget,
-      );
+      expect(find.text('김민수'), findsWidgets);
+      expect(find.text('이미 담당하고 있는 회원이에요'), findsOneWidget);
+      // 이유만 보여 주고 끝내지 않는다 — 연결 버튼 자체가 없다.
+      expect(find.text('연결하기'), findsNothing);
     });
 
-    testWidgets('registering a duplicate name is blocked with an error', (
-      tester,
-    ) async {
+    testWidgets('존재하지 않는 회원 ID는 찾을 수 없음으로 안내한다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -497,17 +547,15 @@ void main() {
       await tester.tap(find.text('신규 고객'));
       await settle(tester);
 
-      final sheetFields = find.descendant(
-        of: find.byType(BottomSheet),
-        matching: find.byType(TextField),
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-no-such-member',
       );
-      await tester.enterText(sheetFields.first, '김민수');
-      await tester.tap(find.text('등록하기'));
+      await tester.tap(find.text('찾기'));
       await settle(tester);
 
-      // Sheet stays open with an inline error; no second 김민수 created.
-      expect(find.text('이미 같은 이름의 고객이 있어요'), findsOneWidget);
-      expect(find.text('신규 고객 등록'), findsOneWidget);
+      expect(find.text('그 회원 ID를 쓰는 회원을 찾지 못했어요'), findsOneWidget);
+      expect(find.text('연결하기'), findsNothing);
     });
 
     testWidgets('the detail header chip toggles 활성/휴면', (tester) async {
@@ -540,6 +588,9 @@ void main() {
         extraOverrides: [
           clientRepositoryProvider.overrideWith(
             (ref) => _ReadOnlyClientRepository(ref.watch(appDatabaseProvider)),
+          ),
+          clientInviteRepositoryProvider.overrideWithValue(
+            const _NoInviteClientInviteRepository(),
           ),
         ],
       );

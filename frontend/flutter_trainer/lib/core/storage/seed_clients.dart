@@ -355,7 +355,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 걷기', 25, '유산소', '회복기 심박 관리'),
-      _Routine('골반 안정화', 15, '유연성', '산후 코어 재활'),
+      _Routine('골반 안정화', 15, '스트레칭', '산후 코어 재활'),
       _Routine('밴드 로우', 12, '근력', '상체 자세 교정'),
     ],
     history: <_History>[
@@ -442,7 +442,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('LSD 러닝', 45, '유산소', '유산소 기반 다지기'),
       _Routine('힙 힌지 드릴', 12, '근력', '러닝 이코노미 개선'),
-      _Routine('종아리 스트레칭', 10, '유연성', '부상 예방'),
+      _Routine('종아리 스트레칭', 10, '스트레칭', '부상 예방'),
     ],
     history: <_History>[
       _History(
@@ -513,7 +513,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('주말 회복 걷기', 30, '유산소', '주말 나트륨 배출'),
       _Routine('전신 서킷', 20, '근력', '평일 루틴 유지'),
-      _Routine('상체 스트레칭', 10, '유연성', '피로 해소'),
+      _Routine('상체 스트레칭', 10, '스트레칭', '피로 해소'),
     ],
     history: <_History>[
       _History(
@@ -566,7 +566,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('체력 측정 걷기', 20, '유산소', '기초 체력 파악'),
       _Routine('맨몸 스쿼트', 10, '근력', '하체 기준선 측정'),
-      _Routine('전신 스트레칭', 10, '유연성', '가동범위 확인'),
+      _Routine('전신 스트레칭', 10, '스트레칭', '가동범위 확인'),
     ],
     history: <_History>[],
     chat: <_Chat>[],
@@ -606,7 +606,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 걷기', 20, '유산소', '혈압 우선 안정'),
-      _Routine('호흡 이완', 10, '유연성', '교감신경 완화'),
+      _Routine('호흡 이완', 10, '스트레칭', '교감신경 완화'),
       _Routine('의자 스쿼트', 8, '근력', '최소 부하로 재시작'),
     ],
     history: <_History>[
@@ -667,7 +667,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('퇴근 후 걷기', 15, '유산소', '짧게라도 유지'),
-      _Routine('목·어깨 스트레칭', 10, '유연성', '장시간 착석 보완'),
+      _Routine('목·어깨 스트레칭', 10, '스트레칭', '장시간 착석 보완'),
       _Routine('플랭크', 5, '근력', '최소 코어 유지'),
     ],
     history: <_History>[
@@ -737,7 +737,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('실내 자전거', 20, '유산소', '무릎 부담 없는 유산소'),
       _Routine('레그 익스텐션', 12, '근력', '대퇴사두 재건'),
-      _Routine('무릎 가동범위', 10, '유연성', '재활 프로토콜'),
+      _Routine('무릎 가동범위', 10, '스트레칭', '재활 프로토콜'),
     ],
     history: <_History>[
       _History(
@@ -799,7 +799,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('트레드밀 경사 걷기', 25, '유산소', '정체 구간 자극 변화'),
       _Routine('풀업 어시스트', 12, '근력', '상체 자극 전환'),
-      _Routine('전신 스트레칭', 10, '유연성', '회복'),
+      _Routine('전신 스트레칭', 10, '스트레칭', '회복'),
     ],
     history: <_History>[
       _History(
@@ -843,7 +843,7 @@ const List<_Client> _clients = <_Client>[
     ],
     aiRoutine: <_Routine>[
       _Routine('가벼운 걷기', 20, '유산소', '복귀 준비'),
-      _Routine('전신 스트레칭', 15, '유연성', '휴식기 유연성 유지'),
+      _Routine('전신 스트레칭', 15, '스트레칭', '휴식기 스트레칭 유지'),
       _Routine('맨몸 스쿼트', 8, '근력', '최소 근력 유지'),
     ],
     history: <_History>[
@@ -966,7 +966,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('러닝머신', 30, '유산소', '나트륨 배출 지원'),
       _Routine('전신 근력 서킷', 25, '근력', '현 루틴 유지'),
-      _Routine('스트레칭', 10, '유연성', '회복'),
+      _Routine('스트레칭', 10, '스트레칭', '회복'),
     ],
     history: <_History>[
       _History(
@@ -1011,7 +1011,7 @@ const List<_Client> _clients = <_Client>[
     aiRoutine: <_Routine>[
       _Routine('걷기', 20, '유산소', '습관 형성 우선'),
       _Routine('맨몸 스쿼트', 8, '근력', '부담 없는 시작'),
-      _Routine('전신 스트레칭', 10, '유연성', '운동 후 회복'),
+      _Routine('전신 스트레칭', 10, '스트레칭', '운동 후 회복'),
     ],
     history: <_History>[
       _History(

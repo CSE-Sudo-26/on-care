@@ -190,6 +190,23 @@
   "dietOpenSettingsFailed": "Couldn't open Settings. Turn on camera and photo access under Settings > Oncare.",
   "dietAnalyzing": "Analyzing…",
   "dietAnalysisFailed": "Analysis failed",
+  "dietRecordDate": "Record date",
+  "@dietRecordDate": {
+    "description": "Label of the date a photo-analysed meal is logged under."
+  },
+  "dietRecordDateChange": "Change date",
+  "@dietRecordDateChange": {
+    "description": "Button that opens the date picker on the analysis result sheet."
+  },
+  "dietRecordDateMoved": "Moved to {date}",
+  "@dietRecordDateMoved": {
+    "description": "Confirmation after moving an analysed meal to another day.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "dietRecordDateFailed": "Could not change the date. Please try again shortly.",
+  "@dietRecordDateFailed": {
+    "description": "Error shown when moving an analysed meal to another day fails."
+  },
   "dietAnalysisDone": "Analysis complete!",
   "dietAiNutritionResult": "AI Nutrition Result",
   "dietAnalyzingBody": "Analyzing the food in your photo",
@@ -228,7 +245,7 @@
   "dietDeleteMeal": "Delete Meal",
   "exTypeCardio": "Cardio",
   "exTypeStrength": "Strength",
-  "exTypeFlexibility": "Flexibility",
+  "exTypeFlexibility": "Stretching",
   "exTypeOtherChip": "Other",
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
@@ -350,6 +367,14 @@
   "exEditExercise": "Edit Exercise Record",
   "exSave": "Save",
   "exExerciseType": "Exercise Type",
+  "exExerciseDate": "Date",
+  "exExerciseName": "Exercise Name",
+  "exExerciseNameHint": "e.g. Squat, Treadmill",
+  "exExerciseWeight": "Weight",
+  "exUnitMinutes": "min",
+  "exUnitSets": "sets",
+  "exUnitKg": "kg",
+  "exEnterName": "Please enter an exercise name",
   "exExerciseDuration": "Duration",
   "exExerciseSets": "Sets",
   "exSetsCount": "{sets} sets",
@@ -509,6 +534,8 @@
   "exKakaoMapArea": "Kakao Map area",
   "myTabTitle": "MY",
   "myDefaultUserName": "User",
+  "myMemberIdLabel": "My member ID",
+  "myMemberIdCopied": "Member ID copied",
   "mySettingsTitle": "Settings",
   "myProfileTitle": "My Profile",
   "myNotifTitle": "Notification Settings",
@@ -953,8 +980,8 @@
   "myGoalBurnDaily": "Daily calories burned (kcal)",
   "myGoalCardioWeekly": "Weekly cardio (min)",
   "myGoalStrengthWeekly": "Weekly strength (sets)",
-  "myGoalFlexibilityWeekly": "Weekly flexibility (min)",
-  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week",
+  "myGoalFlexibilityWeekly": "Weekly stretching (min)",
+  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week",
   "myGoalExerciseApplySuggestion": "Use suggested goals",
   "@myGoalsExerciseSection": {
     "description": "Section label in the health goals sheet."

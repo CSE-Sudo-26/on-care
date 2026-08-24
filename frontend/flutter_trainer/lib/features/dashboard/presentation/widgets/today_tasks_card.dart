@@ -14,6 +14,7 @@ import 'package:oncare_trainer/features/consultations/data/repositories/consulta
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store.dart';
+import 'package:oncare_trainer/features/dashboard/data/demo_task_history.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -112,8 +113,13 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
     _initializedForDate = today;
     final store = ref.read(dailyTaskProgressStoreProvider);
     final snapshot = store.read(today);
-    final yesterdayDate = ymd(nowKst().subtract(const Duration(days: 1)));
-    final yesterday = store.read(yesterdayDate);
+    final DateTime yesterdayDay = nowKst().subtract(const Duration(days: 1));
+    final yesterdayDate = ymd(yesterdayDay);
+    // 어제 기록이 없으면 데모 이력을 본다 — 그 안의 미완료 키는 데모 전용이라
+    // 오늘의 실제 항목을 이월로 끌어가지 않는다(#1203).
+    final yesterday =
+        store.read(yesterdayDate) ??
+        ref.read(demoTaskHistoryProvider).snapshotFor(yesterdayDay);
     _checkedKeys = snapshot == null
         ? <String>{}
         : allKeys.where((k) => !snapshot.pendingKeys.contains(k)).toSet();
@@ -214,6 +220,13 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
           (c.lastRoutine.trim().isEmpty || c.lastRoutine.trim() == '-'),
     );
     final activeClients = clients.where((c) => c.active);
+    // 데모·새 계정의 이월 항목(#1203). 실제 이력이 시작되면 사라진다.
+    final demoCarriedOver = ref
+        .watch(demoTaskHistoryProvider)
+        .snapshotFor(nowKst().subtract(const Duration(days: 1)));
+    final TrainerClient? demoCarryOverClient = activeClients.isEmpty
+        ? null
+        : activeClients.first;
 
     return <_Mission>[
       for (final request in consultations.where((r) => r.isPending))
@@ -254,6 +267,23 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
           client: client,
           subtitle: l.dashTodoProgramSubtitle,
           onTap: () => context.go(AppRoutes.coachingFor(client.id)),
+        ),
+      // 데모 이월 항목은 실제 미션 뒤에 붙인다 — 카드가 이 목록의 순서대로
+      // 카테고리를 채우므로, 앞에 두면 실제 할 일이 한 칸씩 밀린다.
+      if (demoCarriedOver != null && demoCarryOverClient != null)
+        _Mission(
+          key: DemoTaskHistory.kDemoCarryOverKey,
+          keyword: l.dashTodoDiet,
+          keywordColor: AppColors.overTarget,
+          title: demoCarryOverClient.name,
+          client: demoCarryOverClient,
+          subtitle: l.dashTodoCarriedOverDemoSubtitle,
+          onTap: () => context.go(
+            AppRoutes.clientDetail(
+              demoCarryOverClient.id,
+              section: AttentionCard.sectionFor(ClientAlert.sodiumOver),
+            ),
+          ),
         ),
       for (final client in activeClients)
         _Mission(

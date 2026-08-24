@@ -289,7 +289,7 @@ void main() {
           session(
             date: ymd(wednesday),
             program: const <ProgramItem>[
-              ProgramItem(name: '스쿼트', sets: 3, reps: '12회', weight: '60kg'),
+              ProgramItem(name: '스쿼트', sets: 3, weight: 60),
             ],
           ),
           session(date: ymd(sunday), status: '공백'),

@@ -260,9 +260,11 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     final ExerciseIntensity level = exerciseIntensityFromLabel(intensity);
     final ExerciseSession session = await exercise.addSession(
       type: type,
+      // 배정 이름이 곧 이 운동의 이름이다 — 회원이 따로 적지 않는다. (#1276)
+      name: routine.name,
       minutes: minutes,
       calories: estimateExerciseCalories(type, minutes, intensity: level),
-      dayLabel: kWeekdayLabelsKo[(nowKst().weekday - 1).clamp(0, 6)],
+      date: nowKst(),
       intensity: level,
     );
     final String? id = session.id;

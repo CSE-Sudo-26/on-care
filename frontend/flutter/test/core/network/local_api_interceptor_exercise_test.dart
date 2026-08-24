@@ -10,9 +10,27 @@ import 'package:oncare/core/utils/clock.dart';
 String _currentMonday() {
   final now = nowKst();
   final m = DateTime(now.year, now.month, now.day - (now.weekday - 1));
-  return '${m.year.toString().padLeft(4, '0')}-'
-      '${m.month.toString().padLeft(2, '0')}-'
-      '${m.day.toString().padLeft(2, '0')}';
+  return _ymd(m);
+}
+
+String _ymd(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+/// 이번 주 `label` 요일의 날짜. 기록은 요일이 아니라 날짜로 보낸다 (#1276).
+String _day(String label) {
+  final DateTime monday = DateTime.parse(_currentMonday());
+  final int index = <String>[
+    '월',
+    '화',
+    '수',
+    '목',
+    '금',
+    '토',
+    '일',
+  ].indexOf(label);
+  return _ymd(DateTime(monday.year, monday.month, monday.day + index));
 }
 
 void main() {
@@ -136,7 +154,7 @@ void main() {
         'type': 'cardio',
         'minutes': 40,
         'calories': 300,
-        'day_label': '화',
+        'date': _day('화'),
       },
     );
     expect(add.statusCode, 200);
@@ -162,7 +180,7 @@ void main() {
         'minutes': 40,
         'calories': 300,
         'intensity': 'high',
-        'day_label': '화',
+        'date': _day('화'),
       },
     );
     expect(add.data!['intensity'], 'high');
@@ -183,7 +201,7 @@ void main() {
         'minutes': 40,
         'calories': 250,
         'intensity': 'light',
-        'day_label': '화',
+        'date': _day('화'),
       },
     );
     expect(put.data!['intensity'], 'light');
@@ -192,7 +210,7 @@ void main() {
   test('POST /exercise/sessions defaults intensity to moderate', () async {
     final add = await dio.post<Map<String, Object?>>(
       '/exercise/sessions',
-      data: <String, Object?>{'type': 'cardio', 'minutes': 20, 'day_label': '목'},
+      data: <String, Object?>{'type': 'cardio', 'minutes': 20, 'date': _day('목')},
     );
     expect(add.data!['intensity'], 'moderate');
   });
@@ -347,7 +365,7 @@ void main() {
         'minutes': 36,
         'sets': 12,
         'calories': 216,
-        'day_label': '화',
+        'date': _day('화'),
       },
     );
     expect(res.data!['sets'], 12);
@@ -368,7 +386,7 @@ void main() {
         'type': 'strength',
         'minutes': 30,
         'calories': 180,
-        'day_label': '목',
+        'date': _day('목'),
       },
     );
     expect(res.data!['sets'], isNull);
@@ -388,7 +406,7 @@ void main() {
         'minutes': 30,
         'sets': 12,
         'calories': 270,
-        'day_label': '토',
+        'date': _day('토'),
       },
     );
     expect(res.data!['sets'], isNull);
@@ -402,7 +420,7 @@ void main() {
         'minutes': 36,
         'sets': 12,
         'calories': 216,
-        'day_label': '일',
+        'date': _day('일'),
       },
     )).data!['id']! as String;
 
@@ -413,7 +431,7 @@ void main() {
         'minutes': 36,
         'sets': null,
         'calories': 324,
-        'day_label': '일',
+        'date': _day('일'),
       },
     );
     expect(res.data!['sets'], isNull);

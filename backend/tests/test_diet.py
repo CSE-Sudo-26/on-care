@@ -673,6 +673,74 @@ def test_update_entry_rejects_negative_nutrition(client, field, value):
     assert r.status_code == 422
 
 
+def test_update_entry_moves_record_to_the_chosen_day(client, db_session):
+    """지난 식사의 사진을 오늘 올려도 실제로 먹은 날에 남는다. (#1241)"""
+    from datetime import timedelta
+
+    from app.core import clock
+    from app.models.models import DietEntry
+
+    entry_id = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    ).json()["entry_id"]
+    assert any(
+        e["id"] == entry_id
+        for e in client.get("/v1/diet/days/today").json()["entries"]
+    )
+
+    two_days_ago = (clock.today() - timedelta(days=2)).isoformat()
+    r = client.put(f"/v1/diet/entries/{entry_id}", json={"date": two_days_ago})
+    assert r.status_code == 200, r.text
+
+    # 오늘에서 빠지고 고른 날짜에서 보인다 — 한쪽만 옮기면 하루 합계가 두 날에
+    # 겹친다.
+    assert all(
+        e["id"] != entry_id
+        for e in client.get("/v1/diet/days/today").json()["entries"]
+    )
+    moved = client.get(f"/v1/diet/days/{two_days_ago}").json()["entries"]
+    assert any(e["id"] == entry_id for e in moved)
+
+    db_session.expire_all()
+    assert db_session.get(DietEntry, entry_id).date == two_days_ago
+
+
+def test_update_entry_rejects_a_day_that_has_not_happened(client):
+    """먹지 않은 식사는 기록할 수 없다 — 앞날은 거절한다. (#1241)"""
+    from datetime import timedelta
+
+    from app.core import clock
+
+    entry_id = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    ).json()["entry_id"]
+
+    tomorrow = (clock.today() + timedelta(days=1)).isoformat()
+    assert client.put(
+        f"/v1/diet/entries/{entry_id}", json={"date": tomorrow}
+    ).status_code == 422
+    # 오늘은 그대로 받는다 — 경계가 하루 어긋나 있지 않은지 함께 본다.
+    assert client.put(
+        f"/v1/diet/entries/{entry_id}", json={"date": clock.today().isoformat()}
+    ).status_code == 200
+
+
+@pytest.mark.parametrize("value", ["2026-13-01", "2026-08-32", "20260801", "오늘", ""])
+def test_update_entry_rejects_malformed_date(client, value):
+    entry_id = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    ).json()["entry_id"]
+
+    r = client.put(f"/v1/diet/entries/{entry_id}", json={"date": value})
+    assert r.status_code == 422
+
+
 def test_update_entry_hides_other_users_record(client, db_session):
     from app.services.diet_service import today_str as _today_str
     from app.models.models import DietEntry, User

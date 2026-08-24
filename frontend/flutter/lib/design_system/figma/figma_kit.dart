@@ -27,9 +27,12 @@ class FigmaColors {
   static const Color oniEnd = Color(0xFF2A9BCA); // Oni avatar gradient end
 
   // Semantic accents
-  static const Color green = Color(0xFF34C9A0); // protein / good bar
-  static const Color greenText = Color(0xFF22A882); // good delta text
-  static const Color greenTag = Color(0xFF34C782); // coaching 운동 tag
+  // 초록의 뜻은 셋으로 갈린다(#1239) — 완료·성공은 [statusGreen], 성취는
+  // `AppColors.achievement`, 아래 셋은 **식단·코칭 화면의 계열색**이다.
+  // 상태를 말하지 않으므로 완료 표시에 쓰지 않는다.
+  static const Color green = Color(0xFF34C9A0); // 식단 촬영 아이콘 배경 12%
+  static const Color greenText = Color(0xFF22A882); // 식단 촬영 아이콘
+  static const Color greenTag = Color(0xFF34C782); // 코칭 시트의 운동 태그
   static const Color orange = Color(0xFFFF953C); // fat bar / warn fill
   static const Color orangeText = Color(0xFFE8760A); // warn text
   static const Color heartOrange = Color(
@@ -66,8 +69,9 @@ class FigmaColors {
   // Dots / status
   static const Color redDot = Color(0xFFFF3B5C);
   static const Color dangerRed = Color(0xFFF04438); // 초과/경고 강조(나트륨 초과 등)
+  /// 완료·성공, 그리고 `지금 연결됨`(트레이너·AI 코치 온라인 점). 두 앱이
+  /// 같은 값을 쓴다 — `AppColors.success` 와 같은 초록이다(#1239).
   static const Color statusGreen = Color(0xFF34C759);
-  static const Color onlineGreen = Color(0xFF4ADE80);
 
   // Surfaces
   static const Color softBlue = Color(0xFFF2F9FB); // pill / accent bg
@@ -83,7 +87,6 @@ class FigmaColors {
   //
   // 사용자앱 화면은 대부분 [FigmaColors] 를 읽으므로, 두 앱 공통 시맨틱 토큰을
   // 여기서도 같은 이름으로 꺼내 쓴다. 값의 출처는 [AppColors] 한 곳이다.
-  static const Color statusNormal = AppColors.statusNormal;
   static const Color statusWithinGoal = AppColors.statusWithinGoal;
   static const Color statusCaution = AppColors.statusCaution;
   static const Color statusCautionFill = AppColors.statusCautionFill;

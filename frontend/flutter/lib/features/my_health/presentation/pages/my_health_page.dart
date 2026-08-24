@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -139,6 +140,7 @@ class _ProfileCard extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final String name = profile?.name ?? '';
     final String email = profile?.email ?? '';
+    final String memberId = profile?.id ?? '';
     final String initial = name.isNotEmpty ? name.substring(0, 1) : '·';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -148,57 +150,143 @@ class _ProfileCard extends StatelessWidget {
         border: Border.all(color: FigmaColors.hairline),
         boxShadow: kCardShadow,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 52,
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[FigmaColors.primary, FigmaColors.primaryDeep],
-              ),
-              border: Border.all(color: FigmaColors.primary, width: 2.5),
-            ),
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  name.isEmpty ? l.myDefaultUserName : name,
+          Row(
+            children: <Widget>[
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: <Color>[
+                      FigmaColors.primary,
+                      FigmaColors.primaryDeep,
+                    ],
+                  ),
+                  border: Border.all(color: FigmaColors.primary, width: 2.5),
+                ),
+                child: Text(
+                  initial,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  email,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.mutedForeground,
-                  ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      name.isEmpty ? l.myDefaultUserName : name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      email,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          if (memberId.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: FigmaColors.hairline),
+            const SizedBox(height: 12),
+            _MemberIdRow(label: l.myMemberIdLabel, memberId: memberId),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// 트레이너가 신규 고객 등록에서 입력하는 값과 같은 ID다 — 트레이너웹은
+/// 성별·나이를 직접 받지 않고 이 ID로 회원을 찾아 연결한다. 복사 버튼을
+/// 두는 이유는 트레이너에게 구두로 불러 주거나 옮겨 적기 쉬워야 해서다.
+class _MemberIdRow extends StatelessWidget {
+  const _MemberIdRow({required this.label, required this.memberId});
+
+  final String label;
+  final String memberId;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                memberId,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: FigmaColors.ink,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Semantics(
+          button: true,
+          label: label,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () async {
+              await Clipboard.setData(ClipboardData(text: memberId));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l.myMemberIdCopied)),
+              );
+            },
+            child: Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: FigmaColors.softBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.copy_rounded,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
