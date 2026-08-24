@@ -998,12 +998,6 @@ abstract class AppLocalizations {
   /// **'Delete Meal'**
   String get dietDeleteMeal;
 
-  /// No description provided for @exTypeWalking.
-  ///
-  /// In en, this message translates to:
-  /// **'Walking'**
-  String get exTypeWalking;
-
   /// No description provided for @exTypeCardio.
   ///
   /// In en, this message translates to:
@@ -1016,17 +1010,11 @@ abstract class AppLocalizations {
   /// **'Strength'**
   String get exTypeStrength;
 
-  /// No description provided for @exTypeYoga.
+  /// No description provided for @exTypeFlexibility.
   ///
   /// In en, this message translates to:
-  /// **'Yoga'**
-  String get exTypeYoga;
-
-  /// No description provided for @exTypeStretching.
-  ///
-  /// In en, this message translates to:
-  /// **'Stretching'**
-  String get exTypeStretching;
+  /// **'Flexibility'**
+  String get exTypeFlexibility;
 
   /// No description provided for @exTypeOtherChip.
   ///
@@ -3227,13 +3215,13 @@ abstract class AppLocalizations {
   /// No description provided for @myGoalFlexibilityWeekly.
   ///
   /// In en, this message translates to:
-  /// **'Weekly stretching (min)'**
+  /// **'Weekly flexibility (min)'**
   String get myGoalFlexibilityWeekly;
 
   /// No description provided for @myGoalExerciseSuggestionNote.
   ///
   /// In en, this message translates to:
-  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week'**
+  /// **'Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week'**
   String get myGoalExerciseSuggestionNote;
 
   /// No description provided for @myGoalExerciseApplySuggestion.

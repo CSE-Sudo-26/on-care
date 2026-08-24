@@ -547,7 +547,7 @@ void main() {
     // 도넛 세그먼트도 같은 화면에서 한국어로 굳어 있었다.
     expect(en.exTypeCardio, 'Cardio');
     expect(en.exTypeStrength, 'Strength');
-    expect(en.exTypeStretching, 'Stretching');
+    expect(en.exTypeFlexibility, 'Flexibility');
     expect(ko.exTypeCardio, '유산소');
   });
 

@@ -226,11 +226,9 @@
   "dietSodiumHint": "Recommended under 2,000mg/day",
   "dietSugarHint": "Recommended under 50g/day",
   "dietDeleteMeal": "Delete Meal",
-  "exTypeWalking": "Walking",
   "exTypeCardio": "Cardio",
   "exTypeStrength": "Strength",
-  "exTypeYoga": "Yoga",
-  "exTypeStretching": "Stretching",
+  "exTypeFlexibility": "Flexibility",
   "exTypeOtherChip": "Other",
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
@@ -931,8 +929,8 @@
   "myGoalBurnDaily": "Daily calories burned (kcal)",
   "myGoalCardioWeekly": "Weekly cardio (min)",
   "myGoalStrengthWeekly": "Weekly strength (sets)",
-  "myGoalFlexibilityWeekly": "Weekly stretching (min)",
-  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min stretching a week",
+  "myGoalFlexibilityWeekly": "Weekly flexibility (min)",
+  "myGoalExerciseSuggestionNote": "Suggested: 300 kcal a day · 150 min cardio · 21 sets · 60 min flexibility a week",
   "myGoalExerciseApplySuggestion": "Use suggested goals",
   "@myGoalsExerciseSection": {
     "description": "Section label in the health goals sheet."

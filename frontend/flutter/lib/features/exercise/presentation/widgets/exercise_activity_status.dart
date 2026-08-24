@@ -55,7 +55,7 @@ Color kindColor(ExerciseLoadKind kind) => switch (kind) {
 String kindLabel(AppLocalizations l, ExerciseLoadKind kind) => switch (kind) {
   ExerciseLoadKind.cardio => l.exTypeCardio,
   ExerciseLoadKind.strength => l.exTypeStrength,
-  ExerciseLoadKind.flexibility => l.exTypeStretching,
+  ExerciseLoadKind.flexibility => l.exTypeFlexibility,
 };
 
 /// 유형의 **원래 단위**로 읽는다 — 유산소·스트레칭은 분, 근력은 세트.

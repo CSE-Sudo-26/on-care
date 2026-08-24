@@ -10,15 +10,14 @@ import 'package:oncare/features/exercise/presentation/controllers/exercise_contr
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 // Backend value sent as `dayLabel` — DO NOT localize (persisted to the server).
-/// The "운동 종류" chip display labels, kept index-1:1 with [ExerciseType] so a
-/// saved type round-trips losslessly into the edit sheet (mirrors `_typeLabel`).
+/// The "운동 종류" chip display labels — 유산소 / 근력 / 유연성 / 기타 네 가지다
+/// (#996). 걷기는 유산소로, 요가·스트레칭은 유연성으로 접혀 있다: 유형은 집계
+/// 축이지 운동 이름이 아니라, 서버·트레이너 앱도 이 네 가지만 쓴다.
 /// Only the display strings are localized — the index→type mapping is fixed.
 List<String> _exerciseTypeLabels(AppLocalizations l) => <String>[
-  l.exTypeWalking, // walking
   l.exTypeCardio, // cardio
   l.exTypeStrength, // strength
-  l.exTypeYoga, // yoga
-  l.exTypeStretching, // stretching
+  l.exTypeFlexibility, // flexibility (= ExerciseType.stretching)
   l.exTypeOtherChip, // other
 ];
 
@@ -32,22 +31,19 @@ List<String> _levelLabels(AppLocalizations l) => <String>[
 
 /// Chip index → backend [ExerciseType] (1:1 with [_exerciseTypeLabels]).
 ExerciseType _typeFromIndex(int i) => switch (i) {
-  0 => ExerciseType.walking,
-  1 => ExerciseType.cardio,
-  2 => ExerciseType.strength,
-  3 => ExerciseType.yoga,
-  4 => ExerciseType.stretching,
+  0 => ExerciseType.cardio,
+  1 => ExerciseType.strength,
+  2 => ExerciseType.stretching, // 유연성 버킷
   _ => ExerciseType.other,
 };
 
-/// [ExerciseType] → chip index (for pre-filling the edit sheet, lossless).
+/// [ExerciseType] → chip index. 옛 값(걷기·요가)으로 저장된 기록도 자기 버킷
+/// 칩을 켠 채 열린다 — 유형이 넷으로 접힌 뒤에도 예전 기록은 남아 있다.
 int _indexFromType(ExerciseType t) => switch (t) {
-  ExerciseType.walking => 0,
-  ExerciseType.cardio => 1,
-  ExerciseType.strength => 2,
-  ExerciseType.yoga => 3,
-  ExerciseType.stretching => 4,
-  ExerciseType.other => 5,
+  ExerciseType.cardio || ExerciseType.walking => 0,
+  ExerciseType.strength => 1,
+  ExerciseType.stretching || ExerciseType.yoga => 2,
+  ExerciseType.other => 3,
 };
 
 /// 칩 index → 강도. `_levelLabels` 와 1:1 이다.
@@ -127,7 +123,7 @@ class _ExerciseAddSheet extends ConsumerStatefulWidget {
 class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   late int _type = widget.session != null
       ? _indexFromType(widget.session!.type)
-      : 1;
+      : 0; // 기본값은 유산소 — 칩 목록의 첫 칸이다.
   // Intensity is persisted on ExerciseSession, so an edit reopens at the
   // saved level (가벼움/보통/높음); a new session defaults to 보통.
   late int _level = widget.session?.intensity.index ?? 1;
@@ -237,7 +233,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
             child: ListView(
               key: const Key('exerciseAddContent'),
               shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              // 아래 여백을 준다 — 0 이면 마지막 칼로리 상자가 시트 끝선에
+              // 붙어 잘린 것처럼 보였다.
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
               children: <Widget>[
                 _Label(l.exExerciseType),
                 const SizedBox(height: 10),
