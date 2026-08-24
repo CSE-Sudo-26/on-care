@@ -340,16 +340,26 @@ Future<void> seedIfEmpty(
               // 시드에 적힌 순서 그대로 뒤섞여 나왔다(#1087). 초는 그 안에서만
               // 배열 순서로 미세 조정한다 — 한 대화 안의 메시지는 이미
               // 시간순으로 적혀 있어 순서가 그대로 유지된다.
-              createdAt: chatEpoch.add(
-                Duration(
-                  days:
-                      _chatSpreadDays -
-                      client.daysAgo -
-                      (lastDayIndex - client.chat[i].dayIndex),
-                  minutes: _minutesOfDay(client.chat[i].timeLabel),
-                  seconds: i,
-                ),
-              ),
+              createdAt: client.id == 1
+                  // 김민수는 회원 앱 데모 사용자와 같은 사람이다. 두 화면이
+                  // 같은 DateTime 데이터를 받아야 날짜 구분선도 같은 날을
+                  // 말한다(#1292).
+                  ? DateTime(2026).add(
+                      Duration(
+                        days: client.chat[i].dayIndex,
+                        minutes: _minutesOfDay(client.chat[i].timeLabel),
+                      ),
+                    )
+                  : chatEpoch.add(
+                      Duration(
+                        days:
+                            _chatSpreadDays -
+                            client.daysAgo -
+                            (lastDayIndex - client.chat[i].dayIndex),
+                        minutes: _minutesOfDay(client.chat[i].timeLabel),
+                        seconds: i,
+                      ),
+                    ),
             ),
         ]);
       });
