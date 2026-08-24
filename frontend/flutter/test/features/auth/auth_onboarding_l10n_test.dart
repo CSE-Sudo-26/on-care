@@ -49,13 +49,11 @@ const Map<String, String> _koBefore = <String, String>{
   'onboardSaveFailed': '저장에 실패했어요. 잠시 후 다시 시도해 주세요',
   'onboardBasicTitle': '기본 정보',
   'onboardBasicSubtitle': '맞춤 건강 관리를 위해 기본 정보를 알려주세요.',
-  'onboardBirthHint': '생년월일 (YYYY-MM-DD)',
   'onboardHeightHint': '키 (cm)',
   'onboardHealthTitle': '건강 상태',
   'onboardHealthSubtitle': '관리 중인 만성질환을 선택해 주세요. (복수 선택 가능)',
   'onboardGoalTitle': '건강 목표',
   'onboardGoalSubtitle': '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.',
-  'onboardSodiumGoalHint': '하루 나트륨 목표 (mg)',
   'onboardGenderMale': '남성',
   'onboardGenderFemale': '여성',
   'onboardGenderOther': '기타',
@@ -64,6 +62,39 @@ const Map<String, String> _koBefore = <String, String>{
   'onboardConditionDyslipidemia': '고지혈증',
   'onboardConditionObesity': '비만',
 };
+
+/// 온보딩 개편에서 새로 생긴 문구. [_koBefore] 는 #642 에서 *옮기기 전* 화면을
+/// 못 박아 둔 표라 여기에 섞지 않고 따로 둔다 — 아래 en/차이 검사는 두 표를
+/// 함께 돈다.
+const Map<String, String> _koAdded = <String, String>{
+  'onboardOptionalTag': '(선택)',
+  'onboardSkipStep': '이 단계 건너뛰기',
+  'onboardBirthLabel': '생년월일',
+  'onboardBirthYearHint': '년',
+  'onboardBirthMonthHint': '월',
+  'onboardBirthDayHint': '일',
+  'onboardGenderLabel': '성별',
+  'onboardBmiUnderweight': '저체중',
+  'onboardBmiNormal': '정상',
+  'onboardBmiPreObese': '비만 전단계',
+  'onboardBmiObese1': '1단계 비만',
+  'onboardBmiObese2': '2단계 비만',
+  'onboardBmiObese3': '3단계 비만',
+  'onboardBmiSourceNote': '기준: 대한비만학회 비만 진료지침(아시아·태평양 기준)',
+  'onboardDietTitle': '식단 목표',
+  'onboardDietSubtitle': '권장값을 미리 채워 뒀어요. 원하는 값으로 바꿔도 괜찮아요.',
+  'onboardExerciseTitle': '운동 목표',
+  'onboardExerciseSubtitle': '세계보건기구 권고를 기준으로 채워 뒀어요. 원하는 값으로 바꿔도 괜찮아요.',
+  'onboardRecommendedPersonal': '나이·성별·키·체중으로 계산한 권장값이에요',
+  'onboardRecommendedFallback': '기본 권장값이에요. 1단계에서 생년월일·성별·키·체중을 채우면 더 정확해져요',
+  'onboardResetToRecommended': '권장값으로 되돌리기',
+  'onboardDietSourceNote':
+      '출처: 2020 한국인 영양소 섭취기준(에너지필요추정량·에너지적정비율) · WHO 나트륨·자유당 섭취 권고',
+  'onboardExerciseSourceNote': '출처: WHO 신체활동 지침(2020) — 주 150분 중강도 유산소, 주 2회 이상 근력',
+};
+
+/// 두 표를 합친 것. 로케일 검사는 새 문구까지 함께 본다.
+Map<String, String> get _koAll => <String, String>{..._koBefore, ..._koAdded};
 
 /// 키 이름 → 그 로케일의 문구.
 String _read(AppLocalizations l, String key) => switch (key) {
@@ -98,13 +129,11 @@ String _read(AppLocalizations l, String key) => switch (key) {
   'onboardSaveFailed' => l.onboardSaveFailed,
   'onboardBasicTitle' => l.onboardBasicTitle,
   'onboardBasicSubtitle' => l.onboardBasicSubtitle,
-  'onboardBirthHint' => l.onboardBirthHint,
   'onboardHeightHint' => l.onboardHeightHint,
   'onboardHealthTitle' => l.onboardHealthTitle,
   'onboardHealthSubtitle' => l.onboardHealthSubtitle,
   'onboardGoalTitle' => l.onboardGoalTitle,
   'onboardGoalSubtitle' => l.onboardGoalSubtitle,
-  'onboardSodiumGoalHint' => l.onboardSodiumGoalHint,
   'onboardGenderMale' => l.onboardGenderMale,
   'onboardGenderFemale' => l.onboardGenderFemale,
   'onboardGenderOther' => l.onboardGenderOther,
@@ -112,6 +141,29 @@ String _read(AppLocalizations l, String key) => switch (key) {
   'onboardConditionDiabetes' => l.onboardConditionDiabetes,
   'onboardConditionDyslipidemia' => l.onboardConditionDyslipidemia,
   'onboardConditionObesity' => l.onboardConditionObesity,
+  'onboardOptionalTag' => l.onboardOptionalTag,
+  'onboardSkipStep' => l.onboardSkipStep,
+  'onboardBirthLabel' => l.onboardBirthLabel,
+  'onboardBirthYearHint' => l.onboardBirthYearHint,
+  'onboardBirthMonthHint' => l.onboardBirthMonthHint,
+  'onboardBirthDayHint' => l.onboardBirthDayHint,
+  'onboardGenderLabel' => l.onboardGenderLabel,
+  'onboardBmiUnderweight' => l.onboardBmiUnderweight,
+  'onboardBmiNormal' => l.onboardBmiNormal,
+  'onboardBmiPreObese' => l.onboardBmiPreObese,
+  'onboardBmiObese1' => l.onboardBmiObese1,
+  'onboardBmiObese2' => l.onboardBmiObese2,
+  'onboardBmiObese3' => l.onboardBmiObese3,
+  'onboardBmiSourceNote' => l.onboardBmiSourceNote,
+  'onboardDietTitle' => l.onboardDietTitle,
+  'onboardDietSubtitle' => l.onboardDietSubtitle,
+  'onboardExerciseTitle' => l.onboardExerciseTitle,
+  'onboardExerciseSubtitle' => l.onboardExerciseSubtitle,
+  'onboardRecommendedPersonal' => l.onboardRecommendedPersonal,
+  'onboardRecommendedFallback' => l.onboardRecommendedFallback,
+  'onboardResetToRecommended' => l.onboardResetToRecommended,
+  'onboardDietSourceNote' => l.onboardDietSourceNote,
+  'onboardExerciseSourceNote' => l.onboardExerciseSourceNote,
   _ => fail('알 수 없는 키: $key'),
 };
 
@@ -146,7 +198,7 @@ void main() {
   testWidgets('ko 문구가 옮기기 전과 같다', (WidgetTester tester) async {
     final AppLocalizations l = await _localizations(tester, const Locale('ko'));
 
-    for (final MapEntry<String, String> entry in _koBefore.entries) {
+    for (final MapEntry<String, String> entry in _koAll.entries) {
       expect(_read(l, entry.key), entry.value, reason: entry.key);
     }
   });
@@ -155,7 +207,7 @@ void main() {
     final AppLocalizations l = await _localizations(tester, const Locale('en'));
 
     final RegExp hangul = RegExp(r'[가-힣]');
-    for (final String key in _koBefore.keys) {
+    for (final String key in _koAll.keys) {
       final String value = _read(l, key);
       expect(
         hangul.hasMatch(value),
@@ -178,7 +230,7 @@ void main() {
       const Locale('en'),
     );
 
-    for (final String key in _koBefore.keys) {
+    for (final String key in _koAll.keys) {
       expect(_read(en, key), isNot(_read(ko, key)), reason: key);
     }
   });

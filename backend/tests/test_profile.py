@@ -56,6 +56,48 @@ def test_onboarding_saves_profile_and_marks_done(client):
     assert got.json()["daily_sodium_mg"] == 2000
 
 
+def test_onboarding_saves_the_same_goal_columns_as_health_goals(client):
+    """온보딩이 채운 목표 열 칸이 MY 건강 목표가 고치는 열과 같은 열이어야 한다.
+
+    예전에는 온보딩이 칼로리·나트륨·당류 셋만 받아, 탄단지와 운동 목표는 화면이
+    보내도 조용히 버려졌다 — 가입 직후의 홈·식단·운동 탭이 회원이 정한 적 없는
+    기본값을 목표선으로 그렸다.
+    """
+    token, _ = _register_and_login(client)
+    goals = {
+        "daily_calories": 2565,
+        "daily_sodium_mg": 2000,
+        "daily_sugar_g": 64,
+        "daily_carbs_g": 353,
+        "daily_protein_g": 128,
+        "daily_fat_g": 71,
+        "daily_burn_kcal": 300,
+        "weekly_cardio_minutes": 150,
+        "weekly_strength_sets": 21,
+        "weekly_flexibility_minutes": 60,
+    }
+    r = client.post("/v1/users/me/onboarding", json=goals, headers=_auth(token))
+    assert r.status_code == 200, r.text
+    for field, value in goals.items():
+        assert r.json()[field] == value, field
+
+    # 다시 읽어도 그대로다 — 응답만 맞고 저장이 안 되는 일이 없어야 한다.
+    got = client.get("/v1/users/me/profile", headers=_auth(token))
+    assert got.status_code == 200
+    for field, value in goals.items():
+        assert got.json()[field] == value, field
+
+    # 이어서 MY 건강 목표가 같은 열을 고칠 수 있다.
+    put = client.put(
+        "/v1/users/me/health-goals",
+        json={"weekly_cardio_minutes": 210},
+        headers=_auth(token),
+    )
+    assert put.status_code == 200, put.text
+    assert put.json()["weekly_cardio_minutes"] == 210
+    assert put.json()["daily_carbs_g"] == 353
+
+
 @pytest.mark.parametrize(
     "invalid_body",
     [
