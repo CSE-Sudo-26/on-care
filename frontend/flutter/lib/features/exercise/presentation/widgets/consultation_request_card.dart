@@ -143,7 +143,18 @@ class ConsultationRequestCard extends StatelessWidget {
                         'cancel-consultation-${request.id}',
                       ),
                       onPressed: onCancel,
-                      child: Text(l.actionCancel),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.destructive,
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: Text(
+                        l.actionCancel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ],
