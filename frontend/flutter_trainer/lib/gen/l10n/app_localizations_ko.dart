@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1316,6 +1315,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsWeeklyCompletion => '주간 이행률';
+
+  @override
+  String get clientWeeklyRoutineAdherence => '주간 루틴 이행률';
+
+  @override
+  String get clientRoutineAdherenceUnmeasured => '미집계';
 
   @override
   String get reportsCompletionByDay => '주간 운동 이행률';

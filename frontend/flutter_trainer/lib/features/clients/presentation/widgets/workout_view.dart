@@ -78,6 +78,10 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
       // 기간 토글이 목록을 지배한다는 이 화면의 규칙과도 어긋난다.
       if (_period == ClientPeriod.today) _PendingRoutines(clientId: client.id),
       const SizedBox(height: AppSpacing.md),
+      // 현황을 본 다음 같은 기간의 AI 해석을 읽고, 바로 아래에서 날짜별
+      // 근거를 확인한다. 긴 기록 끝에 분석을 두지 않는다. (#1284)
+      _ExerciseAiComment(clientId: client.id, period: _period),
+      const SizedBox(height: AppSpacing.md),
       // 기록은 이 목록 하나다. 예전에는 날짜별 목록 아래에 `운동 기록` 카드
       // 목록이 또 있어, 이번 주·전체에서 같은 날의 같은 운동이 두 벌로
       // 나왔다(#1025). 미션 카드는 버리지 않고 이 목록의 펼친 자리로 들어왔다.
@@ -91,8 +95,6 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
       ),
       const SizedBox(height: AppSpacing.sm),
       _DailyExerciseRecords(clientId: client.id, period: _period),
-      const SizedBox(height: AppSpacing.md),
-      _ExerciseAiComment(clientId: client.id, period: _period),
     ];
     if (embedded) {
       return Column(

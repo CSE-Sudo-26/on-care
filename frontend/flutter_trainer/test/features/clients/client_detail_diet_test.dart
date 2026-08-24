@@ -300,14 +300,8 @@ void main() {
       // 끼니 카드와 같다. 예전에는 이름을 쉼표로 이어 붙인 한 줄뿐이었다.
       expect(find.text('스크램블 에그'), findsOneWidget);
       expect(find.text('딸기'), findsOneWidget);
-      expect(
-        find.textContaining('칼로리', findRichText: true),
-        findsWidgets,
-      );
-      expect(
-        find.text('탄수화물 10g · 단백질 13.5g · 지방 14.5g'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('칼로리', findRichText: true), findsWidgets);
+      expect(find.text('탄수화물 10g · 단백질 13.5g · 지방 14.5g'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('점심'),
         150,
@@ -394,10 +388,7 @@ void main() {
       );
       expect(find.text('아직 기록된 식단이 없어요'), findsNothing);
       // 끼니 카드의 탄단지는 한 줄로 함께 적는다 (#1166).
-      expect(
-        find.textContaining('탄수화물 0g · 단백질 0g · 지방 0g'),
-        findsWidgets,
-      );
+      expect(find.textContaining('탄수화물 0g · 단백질 0g · 지방 0g'), findsWidgets);
     });
 
     testWidgets('macro values wrap without overflow on a narrow screen', (
@@ -490,6 +481,16 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.text('AI 분석'), findsOneWidget);
+      expect(
+        tester
+            .getTopLeft(find.byKey(const ValueKey<String>('diet-ai-analysis')))
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(find.byKey(const ValueKey<String>('diet-meal-아침')))
+              .dy,
+        ),
+      );
 
       await tester.tap(find.byKey(const Key('client-period-week')));
       await tester.pumpAndSettle();
@@ -502,6 +503,18 @@ void main() {
       );
       expect(find.text('AI 기간 분석'), findsOneWidget);
       expect(find.text('AI 분석'), findsNothing);
+      expect(
+        tester
+            .getTopLeft(find.byKey(const ValueKey<String>('diet-ai-analysis')))
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey<String>('diet-daily-records')),
+              )
+              .dy,
+        ),
+      );
     });
 
     testWidgets('세 기간의 AI 카드 제목이 서로 다르다 (#1025)', (tester) async {
