@@ -1,8 +1,8 @@
-/// 헬스장 찾기 화면의 지도와 결과 목록. (#865 → #1135)
+/// 헬스장 찾기 화면의 지도와 결과 시트. (#865 → #1135 → #1274)
 ///
-/// 지도 위에 결과 시트를 얹어 두던 때에는, 목록을 밀면 시트가 먼저 커지며
-/// 지도까지 함께 밀려 올라갔다. 지금은 **지도가 자리에 고정**되고 그 아래
-/// 목록만 스크롤한다. 목록을 상자로 한 번 더 감싸지도 않는다.
+/// 지도는 **자리에 고정**되고 그 위로 목록 시트가 오르내린다. 목록을 밀어도
+/// 지도는 움직이지 않는다 — 예전에 지도까지 함께 밀려 올라가던 것이 이
+/// 화면에서 가장 다루기 나빴던 부분이다.
 library;
 
 import 'package:flutter/material.dart';
@@ -70,22 +70,21 @@ void main() {
     // 결과 개수와 정렬 줄, 그리고 카드가 함께 읽힌다.
     expect(find.textContaining('개'), findsWidgets);
     expect(find.text('주변 헬스장'), findsOneWidget);
-    // 지도를 덮던 시트는 없다 (#1135).
-    expect(find.byType(DraggableScrollableSheet), findsNothing);
+    // 처음 자리는 반반이다 — 지도와 목록이 함께 읽힌다 (#1274).
+    expect(find.byType(DraggableScrollableSheet), findsOneWidget);
   });
 
   testWidgets('목록을 밀어도 지도는 제자리다 (#1135)', (tester) async {
     await _pumpFinder(tester);
     final double before = _mapTop(tester);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -260));
+    await tester.drag(
+      find.byKey(const Key('gym-result-sheet')),
+      const Offset(0, -260),
+    );
     await tester.pumpAndSettle();
 
-    expect(
-      _mapTop(tester),
-      before,
-      reason: '목록을 밀었더니 지도까지 따라 올라갔다',
-    );
+    expect(_mapTop(tester), before, reason: '목록을 밀었더니 지도까지 따라 올라갔다');
   });
 
   testWidgets('검색 결과가 없으면 빈 문구가 그 자리에 뜬다', (tester) async {

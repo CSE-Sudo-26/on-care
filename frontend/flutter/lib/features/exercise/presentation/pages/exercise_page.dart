@@ -75,52 +75,66 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 108),
-              children: <Widget>[
-                // 벨 배지는 서버 미읽음을 본다. 이 build 에는 ref 가 없어 여기서만
-                // 지역적으로 얻는다 — 헤더 전체를 다시 그리지 않는다.
-                Consumer(
-                  builder: (BuildContext context, WidgetRef ref, Widget? _) =>
-                      FigmaTabHeader(
-                        title: l.pageExerciseTitle,
-                        trailingAction: const TrainerChatHeaderButton(),
-                        onBell: () => context.push(AppRoutes.notification),
-                        bellHasUnread:
-                            (ref
-                                    .watch(notificationUnreadProvider)
-                                    .valueOrNull ??
-                                0) >
-                            0,
-                        onCalendar: () => showScheduleCalendarSheet(context),
-                      ),
-                ),
-                _SubTabs(
-                  active: _subTab,
-                  onChanged: (int i) => setState(() => _subTab = i),
-                ),
-                const SizedBox(height: 16),
-                if (_subTab == 0)
-                  const _RecordTab()
-                else
-                  GymTab(
-                    selectedSlot: ref.watch(
-                      exerciseSelectedReservationSlotProvider,
+            // 헬스장 탭은 **높이를 받아야 한다**. 헬스장 찾기 화면의 결과
+            // 시트가 제 자리 안에서 굴러야 지도가 따라 움직이지 않는데,
+            // 페이지 전체가 하나의 `ListView` 이면 그 자리가 열려 있어 바깥
+            // 페이지가 대신 구른다 (#1274). 그래서 헬스장 탭에서만 머리와 탭
+            // 줄을 고정하고 남는 높이를 탭에 넘긴다 — 운동 기록 탭은 여러
+            // 섹션을 이어 붙인 긴 화면이라 예전처럼 통째로 구른다.
+            child: _subTab == 0
+                ? ListView(
+                    padding: const EdgeInsets.only(bottom: 108),
+                    children: <Widget>[
+                      _header(context, l),
+                      _subTabs(),
+                      const SizedBox(height: 16),
+                      const _RecordTab(),
+                    ],
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 108),
+                    child: Column(
+                      children: <Widget>[
+                        _header(context, l),
+                        _subTabs(),
+                        const SizedBox(height: 16),
+                        Expanded(child: _gymTab()),
+                      ],
                     ),
-                    onSlot: (String s) {
-                      final StateController<String?> notifier = ref.read(
-                        exerciseSelectedReservationSlotProvider.notifier,
-                      );
-                      notifier.state = notifier.state == s ? null : s;
-                    },
                   ),
-              ],
-            ),
           ),
         ),
       ),
     );
   }
+
+  /// 페이지 머리. 벨 배지는 서버 미읽음을 본다 — 이 build 에는 ref 가 없어
+  /// 여기서만 지역적으로 얻는다. 헤더 전체를 다시 그리지 않는다.
+  Widget _header(BuildContext context, AppLocalizations l) => Consumer(
+    builder: (BuildContext context, WidgetRef ref, Widget? _) => FigmaTabHeader(
+      title: l.pageExerciseTitle,
+      trailingAction: const TrainerChatHeaderButton(),
+      onBell: () => context.push(AppRoutes.notification),
+      bellHasUnread:
+          (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
+      onCalendar: () => showScheduleCalendarSheet(context),
+    ),
+  );
+
+  Widget _subTabs() => _SubTabs(
+    active: _subTab,
+    onChanged: (int i) => setState(() => _subTab = i),
+  );
+
+  Widget _gymTab() => GymTab(
+    selectedSlot: ref.watch(exerciseSelectedReservationSlotProvider),
+    onSlot: (String s) {
+      final StateController<String?> notifier = ref.read(
+        exerciseSelectedReservationSlotProvider.notifier,
+      );
+      notifier.state = notifier.state == s ? null : s;
+    },
+  );
 }
 
 class _SubTabs extends StatelessWidget {
