@@ -191,6 +191,7 @@ class MockExerciseRepository implements ExerciseRepository {
     required int calories,
     required String dayLabel,
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final session = ExerciseSession(
@@ -201,11 +202,17 @@ class MockExerciseRepository implements ExerciseRepository {
       calories: calories,
       intensity: intensity,
       dateLabel: '오늘',
+      sets: _setsFor(type, sets),
     );
     _sessions.add(session);
     _totalCalories += calories;
     return session;
   }
+
+  /// 저장할 세트 수. 근력이 아닌 유형에서 온 값은 버린다 — 서버(`_sets_for`)와
+  /// 같은 규칙이라야 데모와 실 API 가 같은 기록을 남긴다. (#1262)
+  int? _setsFor(ExerciseType type, int? sets) =>
+      type == ExerciseType.strength ? sets : null;
 
   @override
   Future<void> deleteSession(String id) async {
@@ -224,6 +231,7 @@ class MockExerciseRepository implements ExerciseRepository {
     required int calories,
     required String dayLabel,
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final int idx = _sessions.indexWhere((ExerciseSession s) => s.id == id);
@@ -238,6 +246,7 @@ class MockExerciseRepository implements ExerciseRepository {
       dateLabel: old?.dateLabel ?? '오늘',
       timeLabel: old?.timeLabel,
       items: old?.items ?? const <String>[],
+      sets: _setsFor(type, sets),
     );
     if (idx >= 0 && old != null) {
       _totalCalories = _nonNeg(_totalCalories - old.calories + calories);

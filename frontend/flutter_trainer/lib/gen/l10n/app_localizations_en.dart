@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1574,6 +1575,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEndBeforeStart => 'End time must be after the start time';
 
   @override
+  String get schedTimeRangeTitle => 'Select time';
+
+  @override
+  String get schedTimeRangeConfirm => 'Confirm';
+
+  @override
+  String get schedTimeRangeInvalid => 'Enter a valid time (HH:mm)';
+
+  @override
   String get schedRepeat => 'Repeat';
 
   @override
@@ -2358,13 +2368,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalOther => 'Other';
 
   @override
-  String get slotMorning => 'Morning';
+  String get slotAm => 'AM';
 
   @override
-  String get slotAfternoon => 'Afternoon';
-
-  @override
-  String get slotEvening => 'Evening';
+  String get slotPm => 'PM';
 
   @override
   String get slotFlexible => 'Flexible';

@@ -47,8 +47,11 @@ class ExerciseSessions extends Table {
   TextColumn get id => text()();
   TextColumn get weekStart => text()(); // Monday YYYY-MM-DD
   TextColumn get dayLabel => text()(); // 월/화/수/...
-  TextColumn get type => text()(); // cardio|strength|yoga|walking
+  TextColumn get type => text()(); // cardio|strength|flexibility|other
   IntColumn get minutes => integer()();
+  /// 근력 기록의 세트 수. 근력이 아니거나 세트를 모르는 기록은 null 이고,
+  /// 그때는 분에서 환산해 읽는다. (#1262)
+  IntColumn get sets => integer().nullable()();
   IntColumn get calories => integer()();
   TextColumn get intensity =>
       text().withDefault(const Constant('moderate'))(); // light|moderate|high
@@ -116,7 +119,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -158,6 +161,10 @@ class AppDatabase extends _$AppDatabase {
         // 필요해졌다. 그 두 값은 목업 쪽에만 있었고 테이블에는 자리가 없었다.
         await m.addColumn(dietEntries, dietEntries.aiComment);
         await m.addColumn(dietEntries, dietEntries.photoAsset);
+      }
+      if (from < 8) {
+        // 근력 세트 수 컬럼 추가 — 기존 기록은 null 이라 분에서 환산해 읽는다.
+        await m.addColumn(exerciseSessions, exerciseSessions.sets);
       }
     },
   );

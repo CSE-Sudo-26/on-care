@@ -94,7 +94,7 @@ class DemoConsultationRepository implements ConsultationRepository {
               goalCode: 'fitness',
               purposeCode: 'general',
               preferredDate: nowKst().add(const Duration(days: 1)),
-              preferredTimeCode: 'evening',
+              preferredTimeCode: '19:00',
               status: 'pending',
               message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
             ),
