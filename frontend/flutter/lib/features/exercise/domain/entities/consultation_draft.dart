@@ -14,20 +14,23 @@ enum HealthPurposeType { weight, chronic, rehab, general, none, other }
 /// 남긴다(#1256) — 과거 `PreferredTimeSlot{morning,afternoon,evening,flexible}`
 /// enum을 대체한다.
 class PreferredTime {
-  const PreferredTime.flexible() : timeOfDay = null;
-  const PreferredTime.at(TimeOfDay this.timeOfDay);
+  const PreferredTime.flexible() : start = null, end = null;
+  const PreferredTime.at(TimeOfDay time) : start = time, end = time;
+  const PreferredTime.range(this.start, this.end);
 
   /// null 이면 "시간 협의".
-  final TimeOfDay? timeOfDay;
+  final TimeOfDay? start;
+  final TimeOfDay? end;
+  TimeOfDay? get timeOfDay => start;
 
-  bool get isFlexible => timeOfDay == null;
+  bool get isFlexible => start == null;
 
   @override
   bool operator ==(Object other) =>
-      other is PreferredTime && other.timeOfDay == timeOfDay;
+      other is PreferredTime && other.start == start && other.end == end;
 
   @override
-  int get hashCode => timeOfDay.hashCode;
+  int get hashCode => Object.hash(start, end);
 }
 
 /// 백엔드 `ConsultationCreate` 의 Literal 값과 문자 그대로 같아야 한다.
@@ -64,10 +67,12 @@ HealthPurposeType healthPurposeFromExerciseGoal(ExerciseGoal goal) =>
     };
 
 String preferredTimeSlotToWire(PreferredTime t) {
-  final TimeOfDay? at = t.timeOfDay;
-  if (at == null) return 'flexible';
-  return '${at.hour.toString().padLeft(2, '0')}:'
-      '${at.minute.toString().padLeft(2, '0')}';
+  final TimeOfDay? start = t.start;
+  if (start == null) return 'flexible';
+  String hm(TimeOfDay value) => '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}';
+  final TimeOfDay end = t.end ?? start;
+  return start == end ? hm(start) : '${hm(start)}-${hm(end)}';
 }
 
 /// 상담 신청 내용. 대상은 트레이너 한 사람이다 — 헬스장 전체로 보내는 갈래는
@@ -159,15 +164,22 @@ HealthPurposeType healthPurposeFromWire(String? s) => switch (s) {
 
 /// `HH:MM` 이면 그 시각으로, 그 외(과거 `morning`/`afternoon`/`evening`
 /// 값이나 알 수 없는 값 포함)는 전부 "시간 협의"로 떨어뜨린다(#1256).
-final RegExp _kTimePattern = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$');
+final RegExp _kTimePattern = RegExp(
+  r'^([01]\d|2[0-3]):([0-5]\d)(?:-([01]\d|2[0-3]):([0-5]\d))?$',
+);
 
 PreferredTime preferredTimeSlotFromWire(String? s) {
   final RegExpMatch? match = s == null ? null : _kTimePattern.firstMatch(s);
   if (match == null) return const PreferredTime.flexible();
-  return PreferredTime.at(
-    TimeOfDay(
-      hour: int.parse(match.group(1)!),
-      minute: int.parse(match.group(2)!),
-    ),
+  final start = TimeOfDay(
+    hour: int.parse(match.group(1)!),
+    minute: int.parse(match.group(2)!),
   );
+  final end = match.group(3) == null
+      ? start
+      : TimeOfDay(
+          hour: int.parse(match.group(3)!),
+          minute: int.parse(match.group(4)!),
+        );
+  return PreferredTime.range(start, end);
 }

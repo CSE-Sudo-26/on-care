@@ -84,6 +84,16 @@ class ConsultationRequestController
     state = <ConsultationRequest>[saved, ...state];
     return saved;
   }
+
+  Future<void> cancel(String id) async {
+    await _repository.cancel(id);
+    state = <ConsultationRequest>[
+      for (final request in state)
+        request.id == id
+            ? request.copyWith(status: ConsultationStatus.cancelled)
+            : request,
+    ];
+  }
 }
 
 final consultationRequestControllerProvider =
