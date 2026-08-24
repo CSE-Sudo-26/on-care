@@ -47,7 +47,7 @@ void main() {
     ) async {
       await openSheet(tester);
 
-      expect(find.textContaining('오전 10:00 – 오전 11:00'), findsOneWidget);
+      expect(find.textContaining('10:00 – 11:00'), findsOneWidget);
       await tester.tap(
         find.byKey(const ValueKey<String>('slot-time-range')),
       );
