@@ -110,18 +110,29 @@ void main() {
       final parts = row.time.split(':');
       final hour = int.parse(parts.first);
       final minute = int.parse(parts.last);
-      expect(hour, inInclusiveRange(10, 22), reason: '${row.date} ${row.time}');
-      expect(minute, 0, reason: '${row.date} ${row.time}');
+      expect(hour, inInclusiveRange(9, 22), reason: '${row.date} ${row.time}');
+
+      // 하루의 첫 수업만 9:00·9:30 으로 앞당길 수 있다 — 모든 요일이
+      // 나란히 10:00에 시작하지 않도록 하는 예외다(#1319). 그 시간대는
+      // 짝수·홀수 정시 규칙에서 벗어난다.
+      if (hour == 9) {
+        expect(<int>{0, 30}, contains(minute), reason: '${row.date} ${row.time}');
+      } else {
+        expect(minute, 0, reason: '${row.date} ${row.time}');
+        if (row.type == SessionType.personalTraining) {
+          expect(hour.isEven, isTrue, reason: '${row.date} ${row.time}');
+        } else if (row.type == SessionType.consultation) {
+          expect(hour.isOdd, isTrue, reason: '${row.date} ${row.time}');
+        }
+      }
 
       if (row.type == SessionType.personalTraining) {
-        expect(hour.isEven, isTrue, reason: '${row.date} ${row.time}');
         expect(
           <int>{30, 45, 50, 60, 90},
           contains(row.durationMinutes),
           reason: '${row.date} ${row.time}',
         );
       } else if (row.type == SessionType.consultation) {
-        expect(hour.isOdd, isTrue, reason: '${row.date} ${row.time}');
         expect(
           <int>{30, 45, 60},
           contains(row.durationMinutes),

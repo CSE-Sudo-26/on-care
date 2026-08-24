@@ -61,7 +61,10 @@ class GymTab extends ConsumerWidget {
     if (myGymAsync.isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20),
-        child: _SectionLoading(height: 180),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: _SectionLoading(height: 180),
+        ),
       );
     }
     if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
@@ -70,7 +73,10 @@ class GymTab extends ConsumerWidget {
       return const GymFinderView();
     }
 
-    return Padding(
+    // 이 탭은 높이를 받아 놓인다 (#1274) — 연결된 헬스장 화면은 섹션이 여럿인
+    // 긴 화면이라 제 스크롤을 갖는다. 찾기 화면은 스스로 시트를 굴리므로 이
+    // 스크롤을 타지 않는다.
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,6 +439,16 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     );
   }
 
+  String _slotWhen(BuildContext context, TrainerSlot slot) {
+    final MaterialLocalizations m = MaterialLocalizations.of(context);
+    final DateTime end = slot.startsAt.add(
+      Duration(minutes: slot.durationMinutes),
+    );
+    final String start = m.formatTimeOfDay(TimeOfDay.fromDateTime(slot.startsAt));
+    final String finish = m.formatTimeOfDay(TimeOfDay.fromDateTime(end));
+    return '${m.formatMediumDate(slot.startsAt)}\n$start–$finish';
+  }
+
   Future<void> _reserve(AppLocalizations l, TrainerSlot slot) async {
     if (_reserving != null) return;
     final AppToastHost toast = AppToastHost.of(context);
@@ -618,28 +634,34 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                       _SlotNotice(message: l.exSlotsAllBooked),
                       const SizedBox(height: 10),
                     ],
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final TrainerSlot slot in slots)
-                          _SlotChip(
+                    LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        const double gap = 8;
+                        final double itemWidth = (constraints.maxWidth - gap) / 2;
+                        return Wrap(
+                          spacing: gap,
+                          runSpacing: 8,
+                          children: <Widget>[
+                            for (final TrainerSlot slot in slots)
+                              SizedBox(
+                                width: itemWidth,
+                                child: _SlotChip(
                             key: ValueKey<String>('slot-chip-${slot.id}'),
                             // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
                             // 남으므로(#1136) 실제로는 늘 같은 값이다.
                             type: l.exSlotTypePersonalTraining,
-                            label: _when(context, l, slot.startsAt),
-                            // 한 사람 몫뿐인 자리라 빈 자리에는 덧붙일 수가
-                            // 없다 — 마감된 자리만 그 사실을 적는다(#1072).
-                            sub: slot.booked ? l.exSlotFull : null,
+                            label: _slotWhen(context, slot),
                             selected: picked?.id == slot.id,
                             // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
                             // 선택도 잠근다.
                             onTap: slot.booked || busy
                                 ? null
                                 : () => widget.onSlot(slot.id),
-                          ),
-                      ],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                     if (picked != null) ...<Widget>[
                       const SizedBox(height: 10),
@@ -1132,7 +1154,6 @@ class _SlotChip extends StatelessWidget {
     super.key,
     required this.type,
     required this.label,
-    required this.sub,
     required this.selected,
     required this.onTap,
   });
@@ -1143,8 +1164,6 @@ class _SlotChip extends StatelessWidget {
 
   final String label;
 
-  /// 라벨 아래 한 줄. 마감된 자리에만 붙고, 빈 자리는 시각만 보인다.
-  final String? sub;
   final bool selected;
 
   /// null 이면 마감된 자리다 — 눌리지 않고 흐리게 그려진다.
@@ -1187,27 +1206,13 @@ class _SlotChip extends StatelessWidget {
               ),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: selected
                       ? Colors.white
                       : (disabled ? FigmaColors.textFaint : FigmaColors.ink),
-                ),
-              ),
-              // 마감 문구가 붙는 자리는 **늘 잡아 둔다** (#1136). 문구가 있을
-              // 때만 줄이 생기면 마감된 칩만 키가 커져, 같은 줄의 자리들이
-              // 서로 다른 크기로 보인다.
-              Text(
-                sub ?? '',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.8)
-                      : (disabled
-                            ? FigmaColors.textFaint
-                            : AppColors.mutedForeground),
                 ),
               ),
             ],
