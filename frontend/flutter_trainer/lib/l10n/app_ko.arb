@@ -838,6 +838,7 @@
   "dashTodoSodiumSubtitle": "나트륨 {sodiumMg}mg · 목표 {targetMg}mg",
   "dashTodoSugarSubtitle": "당류 {sugarG}g · 목표 {targetG}g",
   "dashTodoCompletionSubtitle": "이행률 저조 · 최근 기록 확인",
+  "dashTodoCarriedOverDemoSubtitle": "어제 남긴 식단 피드백",
   "dashTodoProgramSubtitle": "최근 등록한 프로그램 없음",
   "dashTodoReportSubtitle": "이번 주 리포트 작성 대상",
   "dashTaskDismissTitle": "이 항목을 삭제할까요?",
