@@ -46,7 +46,9 @@ class ReportWeekNav extends StatelessWidget {
   /// 두어야 화살표가 밀리지 않는다.
   static const double _thisWeekSlot = 100;
 
-  static const double _gap = AppSpacing.sm;
+  /// 스케줄 탭 날짜 행(`ScheduleDateNavBar._gap`)과 같은 값이다. 좁게
+  /// 붙여 두면 `이번 주` 버튼이 나타났을 때 화살표 사이가 옹색해 보인다.
+  static const double _gap = AppSpacing.lg;
 
   @override
   Widget build(BuildContext context) {
