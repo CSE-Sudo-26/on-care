@@ -400,7 +400,17 @@ void main() {
         // 그 값에서 바로 수정할 수 있다.
         await tester.tap(find.byKey(const ValueKey<String>('routine-stage-0')));
         await tester.pumpAndSettle();
-        expect(find.text('45분'), findsWidgets);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(
+                  const ValueKey<String>('generation-minutes-field'),
+                ),
+              )
+              .controller!
+              .text,
+          '45',
+        );
         final highIntensityLabel = tester.widget<Text>(find.text('높음'));
         expect(highIntensityLabel.style?.color, AppColors.accent);
       },
@@ -431,11 +441,10 @@ void main() {
           ),
         );
 
-        final minutesSlider = find.descendant(
-          of: find.byKey(const ValueKey<String>('generation-minutes')),
-          matching: find.byType(Slider),
+        await tester.enterText(
+          find.byKey(const ValueKey<String>('generation-minutes-field')),
+          '60',
         );
-        tester.widget<Slider>(minutesSlider).onChanged?.call(60);
         await tester.pump();
 
         await tester.tap(
@@ -640,15 +649,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
-    final minutesSlider = find.descendant(
-      of: find.byKey(const ValueKey<String>('routine-minutes-0')),
-      matching: find.byType(Slider),
+    final minutesField = find.byKey(
+      const ValueKey<String>('routine-minutes-0-field'),
     );
-    tester.widget<Slider>(minutesSlider).onChanged?.call(20);
+    await tester.enterText(minutesField, '20');
     await tester.pump();
-    expect(find.text('20분'), findsWidgets);
-    // 유형은 네 가지다 (#996).
-    for (final category in <String>['유산소', '근력', '유연성', '기타']) {
+    expect(tester.widget<TextField>(minutesField).controller!.text, '20');
+    // 유형은 네 가지다 (#996, #1276).
+    for (final category in <String>['유산소', '근력', '스트레칭', '기타']) {
       expect(
         find.byKey(ValueKey<String>('routine-category-B-0-$category')),
         findsOneWidget,

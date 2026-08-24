@@ -88,7 +88,7 @@ class MockTrainerRoutineSuggestionRepository
       id: 'demo-suggestion-thoracic',
       name: '흉추 회전 스트레칭',
       minutes: 10,
-      type: '유연성',
+      type: '스트레칭',
       reason: '등 위쪽을 돌려 어깨 부담을 줄이는 스트레칭이에요. 통증이 있으면 멈추세요.',
       evidence: <String>['최근 PT 피드백 반영'],
     ),

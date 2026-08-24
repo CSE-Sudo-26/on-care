@@ -10,12 +10,14 @@ abstract interface class ReservationSlotRepository {
 
   Future<ReservationSlot> create({
     required DateTime startsAt,
+    int durationMinutes = 60,
     required String sessionType,
   });
 
   Future<ReservationSlot> update(
     String id, {
     DateTime? startsAt,
+    int? durationMinutes,
     String? sessionType,
   });
 
@@ -40,12 +42,14 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
   @override
   Future<ReservationSlot> create({
     required DateTime startsAt,
+    int durationMinutes = 60,
     required String sessionType,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/trainer/reservation-slots',
       data: <String, dynamic>{
         'starts_at': startsAt.toUtc().toIso8601String(),
+        'duration_minutes': durationMinutes,
         'session_type': sessionType,
       },
     );
@@ -56,12 +60,14 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
   Future<ReservationSlot> update(
     String id, {
     DateTime? startsAt,
+    int? durationMinutes,
     String? sessionType,
   }) async {
     final response = await _dio.put<Map<String, dynamic>>(
       '/trainer/reservation-slots/$id',
       data: <String, dynamic>{
         'starts_at': ?startsAt?.toUtc().toIso8601String(),
+        'duration_minutes': ?durationMinutes,
         'session_type': ?sessionType,
       },
     );
@@ -106,6 +112,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   @override
   Future<ReservationSlot> create({
     required DateTime startsAt,
+    int durationMinutes = 60,
     required String sessionType,
   }) async {
     _validateFuture(startsAt);
@@ -114,6 +121,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     final slot = ReservationSlot(
       id: 'slot-${DateTime.now().microsecondsSinceEpoch}',
       startsAt: startsAt,
+      durationMinutes: durationMinutes,
       booked: false,
       isClosed: false,
       sessionType: sessionType,
@@ -126,6 +134,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   Future<ReservationSlot> update(
     String id, {
     DateTime? startsAt,
+    int? durationMinutes,
     String? sessionType,
   }) async {
     final index = _slots.indexWhere((slot) => slot.id == id);
@@ -138,6 +147,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     final updated = ReservationSlot(
       id: old.id,
       startsAt: startsAt ?? old.startsAt,
+      durationMinutes: durationMinutes ?? old.durationMinutes,
       booked: old.booked,
       isClosed: old.isClosed,
       sessionType: sessionType ?? old.sessionType,
@@ -154,6 +164,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     final closed = ReservationSlot(
       id: old.id,
       startsAt: old.startsAt,
+      durationMinutes: old.durationMinutes,
       booked: old.booked,
       isClosed: true,
       sessionType: old.sessionType,

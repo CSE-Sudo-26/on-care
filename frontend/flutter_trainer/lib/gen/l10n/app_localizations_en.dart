@@ -637,12 +637,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsSeeAll => 'See all';
 
   @override
-  String get clientsNameRequired => 'Enter a name';
-
-  @override
-  String get clientsAddFailed => 'Couldn\'t add the client. Please try again';
-
-  @override
   String get memberHealthLoadFailed =>
       'Couldn\'t load the member profile. Please try again';
 
@@ -698,29 +692,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get clientsDuplicateName => 'A client with that name already exists';
-
-  @override
-  String get clientsAddTitle => 'Add a client';
-
-  @override
-  String get clientsNameLabel => 'Client name';
-
-  @override
-  String get clientsGoalLabel => 'Goal (e.g. weight loss · strength)';
-
-  @override
-  String get clientsAddAction => 'Add';
-
-  @override
-  String get clientInviteTitle => 'Invite a member';
+  String get clientInviteTitle => 'Add a new client';
 
   @override
   String get clientInviteIntro =>
-      'Find a member by email and send a coaching request. They appear in your client list once they accept in the app.';
+      'Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.';
 
   @override
-  String get clientInviteEmailLabel => 'Member email';
+  String get clientInviteIntroImmediate =>
+      'Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.';
+
+  @override
+  String get clientInviteMemberIdLabel => 'Member ID';
 
   @override
   String get clientInviteLookupAction => 'Find';
@@ -732,19 +715,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientInviteSendAction => 'Send request';
 
   @override
+  String get clientInviteConnectAction => 'Connect';
+
+  @override
   String clientInviteSent(String name) {
     return 'Sent a coaching request to $name';
   }
 
   @override
-  String get clientInviteNotFound => 'No member uses that email';
+  String clientInviteConnected(String name) {
+    return 'Connected with $name';
+  }
+
+  @override
+  String get clientInviteNotFound => 'No member uses that member ID';
 
   @override
   String get clientInviteFailed =>
       'Couldn\'t send the request. Please try again';
 
   @override
-  String get clientInviteEmailRequired => 'Enter an email';
+  String get clientInviteMemberIdRequired => 'Enter a member ID';
 
   @override
   String get clientInviteAlreadyCoached => 'You already coach this member';
@@ -1713,8 +1704,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progOptional => 'Optional';
 
   @override
-  String progSetsByReps(int sets, String reps) {
-    return '$sets × $reps';
+  String progSetsValue(int sets) {
+    return '$sets sets';
   }
 
   @override
@@ -2041,6 +2032,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineFieldIntensity => 'Intensity';
+
+  @override
+  String get routineFieldDate => 'Date';
+
+  @override
+  String get routineFieldExerciseName => 'Exercise name';
+
+  @override
+  String get routineFieldExerciseNameHint => 'e.g. Squat, Treadmill';
+
+  @override
+  String get routineFieldSets => 'Sets';
+
+  @override
+  String get routineFieldWeight => 'Weight';
+
+  @override
+  String get routineFieldCalories => 'Estimated calories';
+
+  @override
+  String get routineUnitMinutes => 'min';
+
+  @override
+  String get routineUnitSets => 'sets';
+
+  @override
+  String get routineUnitKg => 'kg';
+
+  @override
+  String routineKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
 
   @override
   String get intensityLight => 'Light';
@@ -2784,6 +2811,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dashTodoCompletionSubtitle =>
       'Low completion · check recent records';
+
+  @override
+  String get dashTodoCarriedOverDemoSubtitle =>
+      'Diet feedback left over from yesterday';
 
   @override
   String get dashTodoProgramSubtitle => 'No recent program sent';

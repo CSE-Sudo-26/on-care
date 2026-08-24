@@ -45,7 +45,7 @@ def test_rule_based_plans_differ_and_respect_available_minutes():
     # 각 계획의 운동 시간 합 == total_minutes, 모든 타입 허용값.
     for plan in (a, b):
         assert sum(e["minutes"] for e in plan["exercises"]) == plan["total_minutes"]
-        assert all(e["type"] in {"유산소", "근력", "유연성", "기타"} for e in plan["exercises"])
+        assert all(e["type"] in {"유산소", "근력", "스트레칭", "기타"} for e in plan["exercises"])
         assert all(e["minutes"] >= 1 for e in plan["exercises"])
 
 

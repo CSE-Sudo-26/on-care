@@ -133,7 +133,11 @@ def create_trainer_slot(
 ) -> TrainerSlotOut:
     try:
         return reservation_service.create_slot(
-            db, trainer.id, payload.starts_at, payload.session_type
+            db,
+            trainer.id,
+            payload.starts_at,
+            payload.session_type,
+            payload.duration_minutes,
         )
     except ReservationError as exc:
         raise _slot_error(exc) from exc

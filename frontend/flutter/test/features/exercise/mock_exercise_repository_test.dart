@@ -157,11 +157,14 @@ void main() {
       final int restDay = before.dailyMinutes.indexOf(0);
       expect(restDay, greaterThanOrEqualTo(0), reason: '이번 주가 이미 꽉 찼다');
 
+      final DateTime monday = _friday.subtract(
+        Duration(days: _friday.weekday - 1),
+      );
       final ExerciseSession added = await r.addSession(
         type: ExerciseType.cardio,
         minutes: 30,
         calories: 200,
-        dayLabel: before.dayLabels[restDay],
+        date: monday.add(Duration(days: restDay)),
       );
 
       final ExerciseWeek after = await r.fetchThisWeek();
@@ -223,12 +226,15 @@ void main() {
       );
       final int day = before.dayLabels.indexOf(target.dayLabel);
 
+      final DateTime monday = _friday.subtract(
+        Duration(days: _friday.weekday - 1),
+      );
       await r.updateSession(
         id: target.id!,
         type: ExerciseType.strength,
         minutes: target.minutes + 30,
         calories: target.calories + 180,
-        dayLabel: target.dayLabel,
+        date: monday.add(Duration(days: day)),
       );
 
       final ExerciseWeek after = await r.fetchThisWeek();

@@ -355,7 +355,7 @@ def _candidates_for(signals: _Signals) -> list[_Candidate]:
             _Candidate(
                 name="하체·전신 회복 스트레칭",
                 minutes=10,
-                type="유연성",
+                type="스트레칭",
                 reason=(
                     "최근 수업과 근력 운동 뒤 회복을 돕는 가벼운 스트레칭이에요. "
                     "통증이 느껴지면 멈추세요."
@@ -390,7 +390,7 @@ def _candidates_for(signals: _Signals) -> list[_Candidate]:
             _Candidate(
                 name="목·어깨 스트레칭",
                 minutes=8,
-                type="유연성",
+                type="스트레칭",
                 reason=(
                     "다음 수업을 준비하는 가벼운 스트레칭이에요. "
                     "가동 범위 안에서만 움직이세요."

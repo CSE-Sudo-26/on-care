@@ -74,17 +74,14 @@ void main() {
     test('편집기가 지원하는 값이 하나도 빠지지 않고 실린다', () {
       final payload = programDraftToJson(
         _editorDraft(
-          exercises: const <ProgramExerciseDraft>[
+          exercises: <ProgramExerciseDraft>[
             ProgramExerciseDraft(
               id: 'exercise-2',
               name: '레그프레스',
-              sets: '4',
-              reps: '12회',
-              weight: '60kg',
-              duration: '15',
-              distance: '0',
-              rest: '90',
-              rpe: '8',
+              date: DateTime(2026, 8, 24),
+              sets: 4,
+              weight: 60.5,
+              intensity: 'high',
               memo: '무릎 각도 확인',
               source: 'ai',
             ),
@@ -102,12 +99,12 @@ void main() {
               as Map<String, Object?>;
       // AI 제안인지 트레이너가 넣은 것인지의 구분이 그대로 나간다.
       expect(exercise['source'], 'ai');
-      expect(exercise['sets'], '4');
-      expect(exercise['reps'], '12회');
-      expect(exercise['weight'], '60kg');
-      expect(exercise['duration'], '15');
-      expect(exercise['rest'], '90');
-      expect(exercise['rpe'], '8');
+      expect(exercise['date'], '2026-08-24');
+      expect(exercise['sets'], 4);
+      expect(exercise['weight'], 60.5);
+      expect(exercise['intensity'], 'high');
+      // 근력은 세트·중량으로만 잰다 — 시간은 싣지 않는다 (#1276).
+      expect(exercise['duration'], isNull);
       expect(exercise['memo'], '무릎 각도 확인');
     });
 
@@ -217,13 +214,10 @@ void main() {
               <String, Object?>{
                 'id': 'exercise-2',
                 'name': '레그프레스',
+                // 예전 초안은 자유 문자열로 저장돼 있다 — 숫자만 되짚어
+                // 읽는다 (#1276).
                 'sets': '4',
-                'reps': '12회',
                 'weight': '60kg',
-                'duration': '',
-                'distance': '',
-                'rest': '90',
-                'rpe': '8',
                 'memo': '무릎 각도 확인',
                 'type': '근력',
                 'source': 'ai',
@@ -244,7 +238,8 @@ void main() {
       expect(state.sessions.single.name, '세션 A');
       final exercise = state.sessions.single.exercises.single;
       expect(exercise.name, '레그프레스');
-      expect(exercise.weight, '60kg');
+      expect(exercise.sets, 4);
+      expect(exercise.weight, 60.0);
       expect(exercise.source, 'ai');
       // 복원한 초안은 기존 배정·일정 등록 경로에 그대로 쓸 수 있다.
       expect(state.supportsAssignment, isTrue);

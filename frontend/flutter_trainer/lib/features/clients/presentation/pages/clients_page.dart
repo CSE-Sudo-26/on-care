@@ -11,8 +11,8 @@ import 'package:oncare_trainer/features/clients/domain/client_filter.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_connect_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_invite_sheet.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
@@ -54,28 +54,20 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     context.go(AppRoutes.clients);
   }
 
-  Future<void> _openAddClientSheet(BuildContext context) =>
-      _openSheet(context, const _AddClientSheet());
-
-  /// 실 API 에서 고객이 생기는 길 — 회원에게 담당 요청을 보낸다. (#919)
+  /// 신규 고객 등록 — 회원 ID로 기존 회원을 찾아 연결한다. (#919)
   ///
-  /// 데모의 '신규 고객 등록' 과 버튼은 같은 자리지만 하는 일이 다르다. 데모는
-  /// 로컬 명단에 바로 넣고, 실 API 는 회원의 수락을 기다린다 — 담당 관계는
-  /// 상대의 기록을 여는 권한이라 트레이너 혼자 만들 수 없다.
-  Future<void> _openInviteSheet(BuildContext context) =>
-      _openSheet(context, const ClientInviteSheet());
-
-  Future<void> _openSheet(BuildContext context, Widget sheet) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (context) => sheet,
-    );
-  }
+  /// 트레이너가 성별·나이 같은 인적 사항을 입력해 새 고객을 만드는 방식은
+  /// 없다 — 실 API 와 데모 모두 이 한 창을 연다. 실 API 는 회원의 수락을
+  /// 기다리는 요청을 보내고([ClientInviteRepository.connectsImmediately] 가
+  /// `false`), 데모는 회원 ID가 확인되면 그 자리에서 연결한다(`true`) — 답할
+  /// 회원 백엔드가 없어서다. 담당 관계는 상대의 기록을 여는 권한이라 트레이너
+  /// 혼자 일방적으로 만들 수 없다는 원칙은 실 API 쪽에서 그대로 지켜진다.
+  ///
+  /// 상담 요청 인박스(`showConsultationsDialog`)와 같은 자리에서 여는
+  /// 작업이라 같은 형식(가운데 뜨는 작은 창)으로 통일한다 — 하나는 아래에서
+  /// 올라오고 하나는 가운데 뜨면, 두 흐름이 다른 화면처럼 읽힌다.
+  Future<void> _openConnectDialog(BuildContext context) =>
+      showDialog<void>(context: context, builder: (_) => const ClientConnectDialog());
 
   @override
   Widget build(BuildContext context) {
@@ -89,15 +81,10 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
     final lastChatAt =
         ref.watch(lastChatAtProvider).valueOrNull ?? const <String, DateTime>{};
-    // Roster mutations exist only in demo/mock mode — the real backend has
-    // no add-client endpoint (the roster is derived from trainer↔member
-    // links), so hide the 신규 고객 등록 entry when hitting the real API.
-    final canManageRoster = ref
-        .watch(clientRepositoryProvider)
-        .supportsRosterMutations;
-    // 실 API 에는 명단에 직접 넣는 경로가 없는 대신 담당 요청이 있다. 둘 다
-    // 없는 빌드에서는 진입점 자체를 그리지 않는다. (#919)
-    final canInvite = ref.watch(clientInvitesEnabledProvider);
+    // 신규 고객 등록은 회원 ID로 찾아 연결하는 한 경로뿐이다 — 실 API 와
+    // 데모 모두 [clientInvitesEnabledProvider] 가 켜져 있다. 이 provider 가
+    // 꺼진 빌드에서만 진입점 자체를 그리지 않는다. (#919)
+    final canConnect = ref.watch(clientInvitesEnabledProvider);
     final activeFilter = clientFilterFrom(widget.filter);
 
     final Widget page = clientsAsync.when(
@@ -156,14 +143,12 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
             all.where((c) => c.active).length,
           ),
           actions: <Widget>[
-            if (canManageRoster || canInvite)
+            if (canConnect)
               ActionButton(
                 label: l.clientsNew,
                 icon: Icons.person_add_alt,
                 primary: true,
-                onPressed: () => canManageRoster
-                    ? _openAddClientSheet(context)
-                    : _openInviteSheet(context),
+                onPressed: () => _openConnectDialog(context),
               ),
           ],
           child: LayoutBuilder(
@@ -991,164 +976,6 @@ class _FilterBanner extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.mutedForeground,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 신규 고객 등록 시트의 입력칸 공통 테두리 — 검정 밑줄 대신 둥근 네모.
-const OutlineInputBorder _sheetInputBorder = OutlineInputBorder(
-  borderRadius: BorderRadius.all(AppRadius.lg),
-  borderSide: BorderSide.none,
-);
-
-/// Bottom sheet collecting the new client's 이름/목표.
-class _AddClientSheet extends ConsumerStatefulWidget {
-  const _AddClientSheet();
-
-  @override
-  ConsumerState<_AddClientSheet> createState() => _AddClientSheetState();
-}
-
-class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
-  final TextEditingController _name = TextEditingController();
-  final TextEditingController _goal = TextEditingController();
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _goal.dispose();
-    super.dispose();
-  }
-
-  /// Set when the entered name is blank or already taken.
-  String? _nameError;
-
-  Future<void> _save() async {
-    if (_saving) return;
-    final name = _name.text.trim();
-    // await 전에 잡아 둔다 — 뒤 실패 경로에서 context 를 다시 만지면 async gap
-    // 을 건너 쓰게 된다(navigator 를 미리 잡아 두는 것과 같은 이유).
-    final AppLocalizations l = AppLocalizations.of(context);
-    if (name.isEmpty) {
-      setState(() => _nameError = l.clientsNameRequired);
-      return;
-    }
-    setState(() {
-      _saving = true;
-      _nameError = null;
-    });
-    final navigator = Navigator.of(context);
-    bool added;
-    try {
-      added = await ref
-          .read(clientRepositoryProvider)
-          .addClient(name: name, goal: _goal.text);
-    } catch (_) {
-      // An unexpected DB failure must not leave the sheet silently stuck —
-      // surface it inline like the duplicate case. `finally` clears the
-      // saving flag on every path (CodeRabbit review).
-      if (mounted) setState(() => _nameError = l.clientsAddFailed);
-      return;
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-    if (!mounted) return;
-    if (!added) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      // Duplicate name — schedules resolve their client by name, so
-      // allowing it would misattribute chat/운동기록 (review PR 243).
-      setState(() => _nameError = l.clientsDuplicateName);
-      return;
-    }
-    navigator.pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            l.clientsAddTitle,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: AppColors.foreground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          TextField(
-            controller: _name,
-            decoration: InputDecoration(
-              hintText: l.clientsNameLabel,
-              hintStyle: const TextStyle(color: AppColors.subtleForeground),
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.inputBackground,
-              errorText: _nameError,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              border: _sheetInputBorder,
-              enabledBorder: _sheetInputBorder,
-              focusedBorder: _sheetInputBorder,
-            ),
-            onChanged: (_) {
-              if (_nameError != null) setState(() => _nameError = null);
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _goal,
-            decoration: InputDecoration(
-              hintText: l.clientsGoalLabel,
-              hintStyle: const TextStyle(color: AppColors.subtleForeground),
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.inputBackground,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              border: _sheetInputBorder,
-              enabledBorder: _sheetInputBorder,
-              focusedBorder: _sheetInputBorder,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Material(
-            color: AppColors.primary,
-            borderRadius: const BorderRadius.all(AppRadius.lg),
-            child: InkWell(
-              onTap: _saving ? null : _save,
-              borderRadius: const BorderRadius.all(AppRadius.lg),
-              child: Container(
-                height: 44,
-                alignment: Alignment.center,
-                child: Text(
-                  l.clientsAddAction,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryForeground,
-                  ),
                 ),
               ),
             ),
