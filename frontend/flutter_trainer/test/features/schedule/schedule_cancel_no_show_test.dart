@@ -290,7 +290,7 @@ void main() {
 
       expect(find.textContaining('취소·노쇼로 남기세요'), findsNothing);
       expect(
-        find.text('10:00–11:00 김민수님 PT 일정을 삭제할까요?'),
+        find.text('10:00–10:30 김민수님 PT 일정을 삭제할까요?'),
         findsOneWidget,
       );
     });
