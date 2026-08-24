@@ -1329,6 +1329,9 @@ class TrainerReservationSlot(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    duration_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="60", default=60
+    )
     capacity: Mapped[int] = mapped_column(Integer)
     remaining: Mapped[int] = mapped_column(Integer)
     session_type: Mapped[str] = mapped_column(

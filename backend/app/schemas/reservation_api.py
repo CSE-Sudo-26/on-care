@@ -13,6 +13,7 @@ class TrainerSlotOut(BaseModel):
     id: str
     trainer_id: str
     starts_at: datetime
+    duration_minutes: int = 60
     capacity: int
     remaining: int
     is_closed: bool = False
@@ -21,6 +22,7 @@ class TrainerSlotOut(BaseModel):
 
 class TrainerSlotCreate(BaseModel):
     starts_at: datetime
+    duration_minutes: int | None = Field(default=None, ge=5, le=600)
     session_type: SessionType = "1:1 PT"
 
     @model_validator(mode="after")
@@ -32,6 +34,7 @@ class TrainerSlotCreate(BaseModel):
 
 class TrainerSlotUpdate(BaseModel):
     starts_at: datetime | None = None
+    duration_minutes: int | None = Field(default=None, ge=5, le=600)
     session_type: SessionType | None = None
     is_closed: bool | None = None
 

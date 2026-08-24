@@ -428,6 +428,41 @@ void main() {
       );
     }
 
+    Future<void> enterTimeRange(
+      WidgetTester tester, {
+      required String start,
+      required String end,
+      bool confirm = true,
+    }) async {
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-time-range-field')),
+      );
+      await settle(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-start-input')),
+        start,
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('session-time-range-end-input')),
+        end,
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      if (confirm) {
+        final confirmButton = find.byKey(
+          const ValueKey<String>('session-time-range-confirm'),
+        );
+        await tester.ensureVisible(confirmButton);
+        await tester.pump();
+        await tester.tap(
+          confirmButton,
+        );
+        await settle(tester);
+      }
+    }
+
     /// [day] 의 일정을 지워 빈 날로 만든다.
     ///
     /// 시드는 이번 주 월~일을 모두 채운다(#1210). "일정이 없는 날" 흐름을 보는
@@ -892,24 +927,7 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
-      );
-      await settle(tester);
-
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-start-input')),
-        '10:15',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-end-input')),
-        '11:15',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-      );
-      await settle(tester);
+      await enterTimeRange(tester, start: '10:15', end: '11:15');
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -924,19 +942,7 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
-      );
-      await settle(tester);
-
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-end-input')),
-        '11:30',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-      );
-      await settle(tester);
+      await enterTimeRange(tester, start: '10:00', end: '11:30');
 
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -950,27 +956,17 @@ void main() {
       await tester.tap(find.text('새 일정'));
       await settle(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
+      await enterTimeRange(
+        tester,
+        start: '10:00',
+        end: '06:00',
+        confirm: false,
       );
-      await settle(tester);
 
-      // 종료를 시작(10시)보다 이른 6시로 옮긴다.
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-end-input')),
-        '06:00',
-      );
-      await tester.tap(
+      final confirm = tester.widget<FilledButton>(
         find.byKey(const ValueKey<String>('session-time-range-confirm')),
       );
-      await settle(tester);
-
-      // 모달이 그 자리에서 막는다 — 시트로 넘어가지 않는다.
-      expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-        findsOneWidget,
-      );
+      expect(confirm.onPressed, isNull);
     });
 
     testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
@@ -1000,21 +996,7 @@ void main() {
         findsNothing,
       );
 
-      // 시작을 15:00 → 15:30 으로 옮긴다. 종료는 건드리지 않으므로 그
-      // 대로(16:00) 남는다 — 두 값을 함께 보여 주는 모달이라, 시작만
-      // 바꿔도 소요 시간을 지켜 주던 예전 계산은 더 없다.
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-field')),
-      );
-      await settle(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('session-time-range-start-input')),
-        '15:30',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('session-time-range-confirm')),
-      );
-      await settle(tester);
+      await enterTimeRange(tester, start: '15:30', end: '16:30');
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
       await tester.tap(find.text('저장하기'));
@@ -1024,7 +1006,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:00'),
+          matching: find.text('15:30\u201316:30'),
         ),
         findsOneWidget,
       );
