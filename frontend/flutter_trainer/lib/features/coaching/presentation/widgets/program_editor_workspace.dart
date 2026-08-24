@@ -77,6 +77,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   // 운동인지가 다르기 때문이다.
   DateTime _newExerciseDate = _todayDate();
   int _newExerciseSets = 3;
+  int _newExerciseReps = 10;
   double _newExerciseWeight = 20;
   int _newExerciseMinutes = 30;
   String _newExerciseIntensity = 'moderate';
@@ -291,6 +292,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
           type: exercise.type,
           minutes: exercise.minutes > 0 ? exercise.minutes : 30,
           sets: exercise.sets > 0 ? exercise.sets : 3,
+          reps: exercise.reps > 0 ? exercise.reps : 10,
           weight: exercise.weight > 0 ? exercise.weight : 20,
           // `source` 는 그대로 서버 계약값(`trainer`)으로 남긴다 — 출처
           // 배지만 이 값을 우선해서 `<템플릿명> 템플릿 추가` 를 보여 준다.
@@ -418,6 +420,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               exerciseType: _newExerciseType,
               exerciseDate: _newExerciseDate,
               exerciseSets: _newExerciseSets,
+              exerciseReps: _newExerciseReps,
               exerciseWeight: _newExerciseWeight,
               exerciseMinutes: _newExerciseMinutes,
               exerciseIntensity: _newExerciseIntensity,
@@ -440,6 +443,8 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
                   setState(() => _newExerciseDate = value),
               onExerciseSetsChanged: (value) =>
                   setState(() => _newExerciseSets = value),
+              onExerciseRepsChanged: (value) =>
+                  setState(() => _newExerciseReps = value),
               onExerciseWeightChanged: (value) =>
                   setState(() => _newExerciseWeight = value),
               onExerciseMinutesChanged: (value) =>
@@ -526,9 +531,10 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             name: name,
             type: _newExerciseType,
             date: _newExerciseDate,
-            // 근력은 세트·중량으로, 그 외 유형은 시간으로 잰다 — 쓰지 않는
-            // 쪽도 값을 들고 있어야 유형을 오갈 때 각자의 값이 남는다.
+            // 근력은 세트·횟수·중량으로, 그 외 유형은 시간으로 잰다 — 쓰지
+            // 않는 쪽도 값을 들고 있어야 유형을 오갈 때 각자의 값이 남는다.
             sets: _newExerciseSets,
+            reps: _newExerciseReps,
             weight: _newExerciseWeight,
             minutes: _newExerciseMinutes,
             intensity: _newExerciseIntensity,
@@ -546,6 +552,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       _newExerciseType = '근력';
       _newExerciseDate = _todayDate();
       _newExerciseSets = 3;
+      _newExerciseReps = 10;
       _newExerciseWeight = 20;
       _newExerciseMinutes = 30;
       _newExerciseIntensity = 'moderate';
@@ -591,9 +598,13 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             memo: item.reason,
             type: item.type,
             source: 'ai',
-            // 2단계에서 직접 채운 세트가 있으면 그대로 옮긴다 — 없으면
-            // [ProgramExerciseDraft] 기본값을 그대로 둔다.
+            // 2단계에서 직접 채운 세트·횟수·중량이 있으면 그대로 옮긴다 —
+            // 없으면 [ProgramExerciseDraft] 기본값을 그대로 둔다. 셋 중
+            // 하나라도 흘리면 트레이너가 방금 적은 값을 편집기에서 다시
+            // 물어야 한다 (#1310).
             sets: item.sets > 0 ? item.sets : 3,
+            reps: item.reps > 0 ? item.reps : 10,
+            weight: item.weight > 0 ? item.weight : 20,
           ),
     ];
     if (additions.isEmpty) return;
@@ -623,6 +634,7 @@ class _SessionEditor extends StatefulWidget {
     required this.exerciseType,
     required this.exerciseDate,
     required this.exerciseSets,
+    required this.exerciseReps,
     required this.exerciseWeight,
     required this.exerciseMinutes,
     required this.exerciseIntensity,
@@ -636,6 +648,7 @@ class _SessionEditor extends StatefulWidget {
     required this.onExerciseTypeChanged,
     required this.onExerciseDateChanged,
     required this.onExerciseSetsChanged,
+    required this.onExerciseRepsChanged,
     required this.onExerciseWeightChanged,
     required this.onExerciseMinutesChanged,
     required this.onExerciseIntensityChanged,
@@ -654,6 +667,7 @@ class _SessionEditor extends StatefulWidget {
   final String exerciseType;
   final DateTime exerciseDate;
   final int exerciseSets;
+  final int exerciseReps;
   final double exerciseWeight;
   final int exerciseMinutes;
   final String exerciseIntensity;
@@ -669,6 +683,7 @@ class _SessionEditor extends StatefulWidget {
   final ValueChanged<String> onExerciseTypeChanged;
   final ValueChanged<DateTime> onExerciseDateChanged;
   final ValueChanged<int> onExerciseSetsChanged;
+  final ValueChanged<int> onExerciseRepsChanged;
   final ValueChanged<double> onExerciseWeightChanged;
   final ValueChanged<int> onExerciseMinutesChanged;
   final ValueChanged<String> onExerciseIntensityChanged;
@@ -888,8 +903,8 @@ class _SessionEditorState extends State<_SessionEditor> {
                     onChanged: widget.onExerciseDateChanged,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  // 유형을 먼저 골라야 아래 입력칸이 세트·중량인지 시간인지
-                  // 정해진다.
+                  // 유형을 먼저 골라야 아래 입력칸이 세트·횟수·중량인지
+                  // 시간인지 정해진다.
                   RoutineCategoryChips(
                     keyPrefix: 'custom-exercise-category',
                     value: widget.exerciseType,
@@ -901,6 +916,12 @@ class _SessionEditorState extends State<_SessionEditor> {
                       keyPrefix: 'custom-exercise-sets',
                       sets: widget.exerciseSets,
                       onChanged: widget.onExerciseSetsChanged,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    RoutineRepsField(
+                      keyPrefix: 'custom-exercise-reps',
+                      reps: widget.exerciseReps,
+                      onChanged: widget.onExerciseRepsChanged,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     RoutineWeightField(
@@ -1181,7 +1202,7 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   // 회원 앱의 운동 추가 시트와 같은 칸이다 (#1276) — 날짜 →
-                  // 종류 → 시간(또는 세트·중량) → 강도 → 예상 칼로리.
+                  // 종류 → 시간(또는 세트·횟수·중량) → 강도 → 예상 칼로리.
                   RoutineDateField(
                     keyPrefix: '${exercise.id}-date',
                     date: exercise.date ?? _todayDate(),
@@ -1202,6 +1223,13 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                       sets: exercise.sets,
                       onChanged: (value) =>
                           widget.onChanged(exercise.copyWith(sets: value)),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    RoutineRepsField(
+                      keyPrefix: '${exercise.id}-reps',
+                      reps: exercise.reps,
+                      onChanged: (value) =>
+                          widget.onChanged(exercise.copyWith(reps: value)),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     RoutineWeightField(
@@ -1334,7 +1362,7 @@ class _ExerciseSummary extends StatelessWidget {
   }
 }
 
-/// 운동 한 줄의 지표 요약 — 근력은 세트·중량, 그 외 유형은 시간.
+/// 운동 한 줄의 지표 요약 — 근력은 세트·횟수·중량, 그 외 유형은 시간.
 ///
 /// 최종 검토 화면이 같은 함수를 쓴다 (#1028) — 검토 화면이 편집기와 다른
 /// 방식으로 값을 그리면, 트레이너가 확인한 내용과 실제로 나가는 payload 가
@@ -1349,6 +1377,11 @@ List<String> programExerciseMetrics(
     metrics.add(
       korean ? '${exercise.sets}세트' : '${exercise.sets} sets',
     );
+    if (exercise.reps > 0) {
+      metrics.add(
+        korean ? '${exercise.reps}회' : '${exercise.reps} reps',
+      );
+    }
     if (exercise.weight > 0) {
       final double w = exercise.weight;
       metrics.add('${w == w.roundToDouble() ? w.round() : w}kg');

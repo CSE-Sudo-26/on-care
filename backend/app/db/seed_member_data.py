@@ -269,22 +269,22 @@ _HEALTH_PROFILE: dict[str, dict] = {
 # member_id 는 유효 회원일 때만 연결(아니면 표시용 이름만). 프론트 TRAINER_SCHEDULE 정렬.
 _SCHEDULE: list[tuple[str, str, str | None, str, int, str, str, list[dict]]] = [
     ("10:00", "김민수", "user-demo", "1:1 PT", 60, "완료", "무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.", [
-        {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
-        {"name": "레그컬", "sets": 3, "reps": "12회", "weight": "40kg"},
-        {"name": "카프레이즈", "sets": 3, "reps": "20회", "weight": "자체중량"},
-        {"name": "하체 스트레칭", "sets": 1, "reps": "10분", "weight": "-"},
+        {"name": "레그프레스", "type": "근력", "sets": 3, "reps": 12, "weight": 80},
+        {"name": "레그컬", "type": "근력", "sets": 3, "reps": 12, "weight": 40},
+        {"name": "카프레이즈", "type": "근력", "sets": 3, "reps": 20},
+        {"name": "하체 스트레칭", "type": "스트레칭", "duration": 10},
     ]),
     ("12:00", "이지수", "user-jisu", "1:1 PT", 50, "완료", "데드리프트 자세 안정적. 다음 세션 60kg 도전.", [
-        {"name": "데드리프트", "sets": 4, "reps": "8회", "weight": "55kg"},
-        {"name": "루마니안 데드리프트", "sets": 3, "reps": "10회", "weight": "40kg"},
-        {"name": "플랭크", "sets": 3, "reps": "45초", "weight": "-"},
-        {"name": "코어 서킷", "sets": 2, "reps": "12회", "weight": "-"},
+        {"name": "데드리프트", "type": "근력", "sets": 4, "reps": 8, "weight": 55},
+        {"name": "루마니안 데드리프트", "type": "근력", "sets": 3, "reps": 10, "weight": 40},
+        {"name": "플랭크", "type": "근력", "sets": 3},
+        {"name": "코어 서킷", "type": "근력", "sets": 2, "reps": 12},
     ]),
     ("14:00", "", None, "", 0, "공백", "", []),
     ("15:00", "박성호", "user-sungho", "1:1 PT", 60, "예정", "", [
-        {"name": "벤치프레스", "sets": 4, "reps": "8회", "weight": "65kg"},
-        {"name": "인클라인 덤벨 프레스", "sets": 3, "reps": "10회", "weight": "26kg"},
-        {"name": "트라이셉스 딥", "sets": 3, "reps": "12회", "weight": "-"},
+        {"name": "벤치프레스", "type": "근력", "sets": 4, "reps": 8, "weight": 65},
+        {"name": "인클라인 덤벨 프레스", "type": "근력", "sets": 3, "reps": 10, "weight": 26},
+        {"name": "트라이셉스 딥", "type": "근력", "sets": 3, "reps": 12},
     ]),
     # 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다(#988).
     ("17:00", "윤가온", None, "상담", 30, "예정", "", []),

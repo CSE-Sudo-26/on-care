@@ -68,6 +68,7 @@ AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
     date: DateTime.tryParse(_str(json['exercise_date'])),
     intensity: normaliseRoutineIntensity(json['intensity'] as String?),
     sets: (json['sets'] as num?)?.toInt(),
+    reps: (json['reps'] as num?)?.toInt(),
     weight: (json['weight'] as num?)?.toDouble(),
   );
 }
@@ -89,8 +90,10 @@ Map<String, Object?> assignRoutineToJson(
     'type': type,
     'exercise_date': r.date == null ? null : _ymd(r.date!),
     'intensity': normaliseRoutineIntensity(r.intensity),
-    // 세트·중량은 근력에만 싣는다 — 서버도 다른 유형에서는 버린다. (#1276)
+    // 세트·횟수·중량은 근력에만 싣는다 — 서버도 다른 유형에서는 버린다.
+    // (#1276, #1310)
     'sets': strength ? r.sets?.clamp(1, 99) : null,
+    'reps': strength ? r.reps?.clamp(1, 999) : null,
     'weight': strength ? r.weight?.clamp(0, 1000) : null,
     'reason': _truncate(r.reason, 200),
     'source': r.source == 'trainer' ? 'trainer' : 'ai',

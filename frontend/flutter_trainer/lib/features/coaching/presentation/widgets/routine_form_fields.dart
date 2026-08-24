@@ -130,6 +130,37 @@ class RoutineSetsField extends StatelessWidget {
   }
 }
 
+/// 근력의 한 세트당 횟수 한 칸. (#1310)
+///
+/// 세트·중량만으로는 근력 한 줄이 재현되지 않는다 — "12세트 60kg" 은 한 번에
+/// 몇 개를 들었는지가 빠져 있어, 다음 주에 같은 운동을 다시 짤 근거가 없다.
+class RoutineRepsField extends StatelessWidget {
+  const RoutineRepsField({
+    required this.reps,
+    required this.onChanged,
+    this.keyPrefix,
+    super.key,
+  });
+
+  final int reps;
+  final ValueChanged<int> onChanged;
+  final String? keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _LabeledStepper(
+      label: l.routineFieldReps,
+      value: reps.toDouble(),
+      min: 1,
+      max: 999,
+      suffix: l.routineUnitReps,
+      keyPrefix: keyPrefix ?? 'routine-reps',
+      onChanged: (double v) => onChanged(v.round()),
+    );
+  }
+}
+
 /// 근력의 중량 한 칸. 소수점 한 자리까지 받는다 — 원판은 0.5kg 단위다.
 class RoutineWeightField extends StatelessWidget {
   const RoutineWeightField({

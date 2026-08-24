@@ -85,31 +85,36 @@ class RoutineExercise {
     required this.minutes,
     required this.type,
     this.sets = 0,
-    this.reps = '',
+    this.reps = 0,
+    this.weight = 0,
   });
 
   final String name;
   final int minutes;
   final String type;
 
-  /// 근력 운동에서만 쓴다(#1029) — 서버가 주는 A/B 후보는 아직 이 값을 모르니
-  /// 기본값(0/빈 문자열)으로 시작하고, 트레이너가 이 화면에서 직접 채운다.
-  /// `ProgramExerciseDraft` 로 넘어갈 때 그대로 옮겨진다.
+  /// 근력 운동에서만 쓴다(#1029, #1310) — 세트 수·한 세트당 횟수·중량(kg).
+  /// 서버가 주는 A/B 후보는 아직 이 값을 모르니 0 으로 시작하고, 트레이너가
+  /// 이 화면에서 직접 채운다. `ProgramExerciseDraft` 로 넘어갈 때 그대로
+  /// 옮겨진다 — 셋 중 하나라도 빠지면 프로그램 편집기에서 다시 물어야 한다.
   final int sets;
-  final String reps;
+  final int reps;
+  final double weight;
 
   RoutineExercise copyWith({
     String? name,
     int? minutes,
     String? type,
     int? sets,
-    String? reps,
+    int? reps,
+    double? weight,
   }) => RoutineExercise(
     name: name ?? this.name,
     minutes: minutes ?? this.minutes,
     type: type ?? this.type,
     sets: sets ?? this.sets,
     reps: reps ?? this.reps,
+    weight: weight ?? this.weight,
   );
 }
 

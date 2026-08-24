@@ -1143,8 +1143,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 30,
     note: '출근 전 수업. 상체 위주로 짧게 끊어 간다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '랫풀다운', 'sets': 4, 'reps': '10회', 'weight': '35kg'},
-      <String, Object?>{'name': '숄더프레스', 'sets': 3, 'reps': '12회', 'weight': '12kg'},
+      <String, Object?>{'name': '랫풀다운', 'type': '근력', 'sets': 4, 'reps': 10, 'weight': 35},
+      <String, Object?>{'name': '숄더프레스', 'type': '근력', 'sets': 3, 'reps': 12, 'weight': 12},
     ],
   ),
   _WeekSlot(
@@ -1163,8 +1163,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 90,
     note: '데드리프트 자세 교정 중. 허리 통증 여부를 매 세트 확인한다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '데드리프트', 'sets': 4, 'reps': '8회', 'weight': '60kg'},
-      <String, Object?>{'name': '백익스텐션', 'sets': 3, 'reps': '15회', 'weight': '맨몸'},
+      <String, Object?>{'name': '데드리프트', 'type': '근력', 'sets': 4, 'reps': 8, 'weight': 60},
+      <String, Object?>{'name': '백익스텐션', 'type': '근력', 'sets': 3, 'reps': 15},
     ],
   ),
   // 화
@@ -1184,8 +1184,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 50,
     note: '어깨 가동 범위 회복 단계. 중량보다 자세를 본다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '밴드 외전', 'sets': 3, 'reps': '20회', 'weight': '밴드'},
-      <String, Object?>{'name': '인클라인 푸시업', 'sets': 3, 'reps': '12회', 'weight': '맨몸'},
+      <String, Object?>{'name': '밴드 외전', 'type': '근력', 'sets': 3, 'reps': 20},
+      <String, Object?>{'name': '인클라인 푸시업', 'type': '근력', 'sets': 3, 'reps': 12},
     ],
   ),
   _WeekSlot(
@@ -1205,8 +1205,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 60,
     note: '체지방 감량 목표. 근력과 유산소를 반씩 섞는다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '고블릿 스쿼트', 'sets': 4, 'reps': '12회', 'weight': '16kg'},
-      <String, Object?>{'name': '로잉머신', 'sets': 1, 'reps': '15분', 'weight': '-'},
+      <String, Object?>{'name': '고블릿 스쿼트', 'type': '근력', 'sets': 4, 'reps': 12, 'weight': 16},
+      <String, Object?>{'name': '로잉머신', 'type': '유산소', 'duration': 15},
     ],
   ),
   _WeekSlot(
@@ -1234,8 +1234,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 90,
     note: '전신 순환. 세트 사이 휴식을 45초로 줄여 본다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '케틀벨 스윙', 'sets': 4, 'reps': '15회', 'weight': '12kg'},
-      <String, Object?>{'name': '플랭크', 'sets': 3, 'reps': '45초', 'weight': '맨몸'},
+      <String, Object?>{'name': '케틀벨 스윙', 'type': '근력', 'sets': 4, 'reps': 15, 'weight': 12},
+      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3},
     ],
   ),
   _WeekSlot(
@@ -1271,8 +1271,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 30,
     note: '주 2회 중 두 번째 수업. 월요일에 못 채운 하체를 넣는다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '레그프레스', 'sets': 4, 'reps': '12회', 'weight': '70kg'},
-      <String, Object?>{'name': '런지', 'sets': 3, 'reps': '20보', 'weight': '8kg'},
+      <String, Object?>{'name': '레그프레스', 'type': '근력', 'sets': 4, 'reps': 12, 'weight': 70},
+      <String, Object?>{'name': '런지', 'type': '근력', 'sets': 3, 'reps': 20, 'weight': 8},
     ],
   ),
   _WeekSlot(
@@ -1292,8 +1292,8 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     durationMinutes: 45,
     note: '주말 수업. 평일보다 길게 가져가되 마무리 스트레칭을 넉넉히 둔다.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '체스트프레스', 'sets': 4, 'reps': '10회', 'weight': '25kg'},
-      <String, Object?>{'name': '시티드로우', 'sets': 3, 'reps': '12회', 'weight': '30kg'},
+      <String, Object?>{'name': '체스트프레스', 'type': '근력', 'sets': 4, 'reps': 10, 'weight': 25},
+      <String, Object?>{'name': '시티드로우', 'type': '근력', 'sets': 3, 'reps': 12, 'weight': 30},
     ],
   ),
   // 김민수는 넣지 않는다 — 그의 하루는 공유 픽스처가 정하고(#757), 여기서 수업을

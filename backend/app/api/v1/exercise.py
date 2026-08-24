@@ -99,7 +99,7 @@ def current_week(
 
 
 def _strength_only(normalized_type: str, value):
-    """근력에서만 의미 있는 값(세트·중량). 다른 유형에서 온 값은 버린다. (#1262)
+    """근력에서만 의미 있는 값(세트·횟수·중량). 다른 유형에서 온 값은 버린다. (#1262)
 
     유산소를 세트로 세는 화면은 없다 — 받아 두면 집계가 읽지 않는 값이 기록에만
     남아, 나중에 그 값을 믿는 화면이 생겼을 때 조용히 어긋난다.
@@ -144,6 +144,7 @@ def add_session(
         name=payload.name.strip(),
         minutes=payload.minutes,
         sets=_strength_only(normalized, payload.sets),
+        reps=_strength_only(normalized, payload.reps),
         weight=_weight_for(normalized, payload.weight),
         calories=payload.calories,
         intensity=payload.intensity,
@@ -191,6 +192,7 @@ def update_session(
     row.name = payload.name.strip()
     row.minutes = payload.minutes
     row.sets = _strength_only(row.type, payload.sets)
+    row.reps = _strength_only(row.type, payload.reps)
     row.weight = _weight_for(row.type, payload.weight)
     row.calories = payload.calories
     row.intensity = payload.intensity
