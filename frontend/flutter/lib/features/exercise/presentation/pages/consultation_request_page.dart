@@ -76,18 +76,6 @@ class _ConsultationRequestPageState
       initialDate: _preferredDate ?? today,
       firstDate: today,
       lastDate: DateTime(today.year + 100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            datePickerTheme: const DatePickerThemeData(
-              backgroundColor: Colors.white,
-              headerBackgroundColor: Colors.white,
-              surfaceTintColor: Colors.transparent,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (selected != null && mounted) {
       setState(() => _preferredDate = selected);
