@@ -294,10 +294,11 @@ class _SuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
+      key: ValueKey<String>('routine-suggestion-surface-${suggestion.id}'),
       decoration: BoxDecoration(
-        color: AppColors.inputBackground,
+        color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.md),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderStrong),
       ),
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -408,6 +409,7 @@ class _SuggestionCard extends StatelessWidget {
                   'routine-suggestion-dismiss-${suggestion.id}',
                 ),
                 label: l.suggestionDismiss,
+                tone: AppColors.subtleForeground,
                 onPressed: busy ? null : onDismiss,
               ),
               // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
@@ -449,10 +451,9 @@ class _EvidenceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.sm),
-        border: Border.all(color: AppColors.borderStrong),
+      decoration: const BoxDecoration(
+        color: AppColors.accentSurface,
+        borderRadius: BorderRadius.all(AppRadius.pill),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -464,7 +465,7 @@ class _EvidenceChip extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: AppColors.subtleForeground,
+            color: AppColors.accent,
           ),
         ),
       ),
