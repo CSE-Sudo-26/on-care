@@ -913,11 +913,15 @@ double _sidebarSplitMinHeight(BuildContext context) {
   final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
   final extraScale = (scale - 1).clamp(0.0, 2.0);
   final rowHeight = 64 + 56 * extraScale;
-  // 두 카드 모두 dense 패딩(AppSpacing.md 상하) + 아이콘 헤더 한 줄 +
-  // 헤더 아래 간격(AppSpacing.sm)을 쓴다 — 헤더 한 줄만 있을 때의 카드
-  // 최소 높이를 넉넉히 어림한다.
-  const cardChrome = AppSpacing.md * 2 + 22 + AppSpacing.sm;
-  return rowHeight * 5 + cardChrome + AppSpacing.lg + cardChrome;
+  // 두 카드 모두 dense 패딩(AppSpacing.md 상하) + 헤더 아래 간격
+  // (AppSpacing.sm)을 쓴다. 헤더 줄 높이는 카드마다 다르다 — 고객 목록
+  // 헤더는 아이콘 16 + 글자뿐이지만, 템플릿 카드 헤더는 편집 가능할 때
+  // `template-new` IconButton(28×28, `_TemplateCard` 참고)을 달아 그
+  // 28px 가 기준이 된다. 더 큰 쪽으로 어림해야 경계에서 카드가 헤더
+  // 한 줄도 못 그리는 채로 `canSplit`이 켜지지 않는다.
+  const listChrome = AppSpacing.md * 2 + 22 + AppSpacing.sm;
+  const templateChrome = AppSpacing.md * 2 + 28 + AppSpacing.sm;
+  return rowHeight * 5 + listChrome + AppSpacing.lg + templateChrome;
 }
 
 class _MemberProgramList extends StatefulWidget {
@@ -1498,6 +1502,11 @@ class _TemplateCard extends ConsumerWidget {
         title: l.coachTemplates,
         icon: Icons.dashboard_customize_outlined,
         dense: true,
+        // 정상 경로와 같은 규칙이다 — `fixedBox`(넓은 사이드바)일 때는
+        // 오류 상태도 부모가 준 고정 높이를 그대로 받아야 한다. 여기서
+        // 빠뜨리면 오류가 난 그 순간에만 카드가 제 높이를 못 지켜
+        // RenderFlex 오버플로우가 난다(코드리뷰).
+        expandChild: fixedBox,
         child: Text(
           l.coachTemplateLoadFailed,
           style: const TextStyle(
