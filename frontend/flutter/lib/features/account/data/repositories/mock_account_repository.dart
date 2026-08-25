@@ -158,6 +158,8 @@ class MockAccountRepository implements AccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
+    String? conditions,
+    String? goals,
     GoalUpdate? dailyCalories,
     GoalUpdate? dailySodiumMg,
     GoalUpdate? dailySugarG,
@@ -181,7 +183,9 @@ class MockAccountRepository implements AccountRepository {
       gender: _profile.gender,
       heightCm: _profile.heightCm,
       weightKg: _profile.weightKg,
-      goals: _profile.goals,
+      // 관리 초점과 자유 입력 운동 목표도 이 화면에서 고친다(#1471).
+      conditions: conditions ?? _profile.conditions,
+      goals: goals ?? _profile.goals,
       dailyCalories: dailyCalories == null
           ? _profile.dailyCalories
           : dailyCalories.value,

@@ -1704,21 +1704,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardWeightHint => 'Weight (kg)';
 
   @override
-  String get onboardHealthTitle => 'Health conditions';
+  String get onboardHealthTitle => 'Health goals';
 
   @override
   String get onboardHealthSubtitle =>
-      'Select the chronic conditions you manage. (Choose any that apply)';
+      'Pick what you want to focus on in your health care. (multiple allowed)';
 
   @override
-  String get onboardGoalTitle => 'Health goals';
+  String get onboardGoalTitle => 'Exercise goal';
 
   @override
   String get onboardGoalSubtitle =>
       'Tell us what you want to achieve. You can change this later.';
 
   @override
-  String get onboardGoalHint => 'Health and exercise goals';
+  String get onboardGoalHint => 'e.g. Finish a 5K within three months';
 
   @override
   String get onboardOptionalTag => '(optional)';
@@ -1963,10 +1963,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHealthGoalsTitle => 'Health goals';
 
   @override
+  String get myGoalsFocusSection => 'What you want to focus on';
+
+  @override
+  String get myGoalsFocusHint =>
+      'Pick what you want to focus on in your health care. (multiple allowed)';
+
+  @override
+  String get myGoalsFocusHypertension => 'Blood pressure';
+
+  @override
+  String get myGoalsFocusDiabetes => 'Blood sugar';
+
+  @override
+  String get myGoalsExerciseNote => 'Exercise goal';
+
+  @override
+  String get myGoalsExerciseNoteHint => 'e.g. Finish a 5K within three months';
+
+  @override
   String get myGoalsDietSection => 'Diet goals';
 
   @override
-  String get myGoalsExerciseSection => 'Exercise goals';
+  String get myGoalsExerciseSection => 'Exercise targets';
 
   @override
   String get myGoalBurnDaily => 'Daily calories burned (kcal)';
