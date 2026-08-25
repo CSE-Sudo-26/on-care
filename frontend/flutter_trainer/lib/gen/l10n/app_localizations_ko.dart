@@ -832,6 +832,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metricSugar => '당류';
 
   @override
+  String get clientDietMacrosMissing => '탄·단·지 기록 없음';
+
+  @override
   String get metricCarbs => '탄수화물';
 
   @override
