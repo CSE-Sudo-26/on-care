@@ -127,21 +127,21 @@ void main() {
     await tester.tap(find.byKey(const Key('diet-period-tab-month')));
     await tester.pumpAndSettle();
 
-    final Iterable<Color> painted = tester
-        .widgetList<ColoredBox>(find.byType(ColoredBox))
-        .map((ColoredBox box) => box.color);
     final Iterable<Color?> filled = tester
         .widgetList<Container>(find.byType(Container))
         .map((Container box) => (box.decoration as BoxDecoration?)?.color);
 
-    // 초과한 날은 탄단지로 쪼개지 않는다 — 나트륨·당류와 같은 한 색 덩어리다.
-    // 쌓여 있었다면 이 색은 나오지 않는다(쌓는 쪽은 `ColoredBox` 를 쓴다).
     expect(
       filled.contains(FigmaColors.dangerRed.withValues(alpha: 0.85)),
       isTrue,
       reason: '초과한 날의 막대가 아직 통짜 빨강이 아니다',
     );
-    // 넘기지 않은 날은 그대로 파랑 세 단계다 — 전부 빨개지면 초과가 무의미해진다.
-    expect(painted.contains(FigmaColors.macroCarbs), isTrue);
+    // 넘기지 않은 날은 회색 한 색이다 (#1427). 전부 빨개지면 초과가
+    // 무의미해지고, 색이 회색뿐이면 초과를 말할 수 없다 — 둘 다 있어야 한다.
+    expect(
+      filled.contains(FigmaColors.barNeutral.withValues(alpha: 0.85)),
+      isTrue,
+      reason: '목표 이내인 날의 막대가 회색이 아니다',
+    );
   });
 }

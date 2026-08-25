@@ -96,19 +96,19 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
+                                // 프로그램 탭 고객 목록과 같은 기준이다(#1423).
                                 ClientIdentity(
                                   client: client,
-                                  nameStyle: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: selected
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: AppColors.foreground,
+                                  nameStyle: clientListNameStyle(
+                                    selected: selected,
                                   ),
                                 ),
                                 // 어느 고객의 리포트를 열지 고르는 자리다 —
                                 // 이름만으로는 고를 근거가 되지 않는다(#898).
-                                ClientGoalLabel(client: client, fontSize: 11),
+                                ClientGoalLabel(
+                                  client: client,
+                                  fontSize: clientListGoalFontSize,
+                                ),
                               ],
                             ),
                           ),
