@@ -245,6 +245,9 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
 /// 목록 스크롤과 같은 방향이라 폰에서 목록이 넘어가지 않았다. 끄는 동작을
 /// 없애면 목록에 닿은 손은 언제나 목록의 것이다.
 ///
+/// 지도는 위에 **가로로 긴 띠 하나**로 고정된다(높이 고정, #1382). 목록만 보는
+/// 자리에서는 그 띠가 통째로 사라진다 — 아래쪽에 지도가 다시 나오는 일은 없다.
+///
 /// 지도와 목록은 **자리를 나눠 갖는다** — 겹치지 않는다. 겹쳐 두면 웹에서
 /// 목록 위의 터치가 아래 지도(플랫폼 뷰, DOM 요소)로 새어 나간다 (#1362).
 /// 그래서 목록을 굴려도 지도는 움직이지 않고, 지도를 끌어도 목록은 그대로다.
@@ -266,14 +269,14 @@ class _GymMapAndList extends StatefulWidget {
   final Widget? controls;
   final Widget resultSliver;
 
-  /// 반반 자리에서 지도가 갖는 몫. 위에 **가로로 길게** 눕는 띠다 — 절반을 다
-  /// 주면 목록에 카드 한 장 반이 남는다.
-  static const double kMapFraction = 0.42;
+  /// 지도 띠의 높이. **고정값**이다 (#1382) — 위에 가로로 길게 눕는 띠 하나이고,
+  /// 그 아래는 목록뿐이다. 화면 비율로 잡으면 큰 폰에서 지도가 화면 절반을
+  /// 먹어 머리줄·탭 줄까지 밀려 보이지 않는다.
+  static const double kMapHeight = 200;
 
-  /// 그 몫의 위·아래 한계. 낮은 화면에서 지도가 띠도 못 되게 얇아지지 않고,
-  /// 큰 화면에서 목록을 밀어내지도 않는다.
-  static const double kMapMin = 150;
-  static const double kMapMax = 280;
+  /// 자리가 좁을 때 지도가 가져갈 수 있는 최대 몫. 목록이 카드 한 장도 못
+  /// 세우게 두지 않는다.
+  static const double kMapMaxFraction = 0.45;
 
   @override
   State<_GymMapAndList> createState() => _GymMapAndListState();
@@ -288,27 +291,26 @@ class _GymMapAndListState extends State<_GymMapAndList> {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints box) {
         final double height = box.maxHeight;
-        // 자리 자체가 좁으면 한계보다 그 자리를 따른다 — 지도가 부모를 넘겨
+        // 좁은 자리에서는 고정값보다 그 자리를 따른다 — 지도가 부모를 넘겨
         // 목록을 밀어내면 안 된다.
-        final double cap = math.min(_GymMapAndList.kMapMax, height * 0.6);
-        final double floor = math.min(_GymMapAndList.kMapMin, cap);
-        final double mapHeight = _listOnly
-            ? 0
-            : (height * _GymMapAndList.kMapFraction).clamp(floor, cap);
+        final double mapHeight = math.min(
+          _GymMapAndList.kMapHeight,
+          height * _GymMapAndList.kMapMaxFraction,
+        );
         return Column(
           children: <Widget>[
-            // 지도는 위에 붙박이다. 높이만 두 자리 사이에서 바뀐다.
-            AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: SizedBox(
+            // 지도는 위에 가로로 긴 띠 하나로 **붙박이**다 (#1382). 목록만 보는
+            // 자리에서는 크기를 0 으로 줄이는 대신 **트리에서 아예 뺀다** —
+            // 웹에서 지도는 플랫폼 뷰(DOM 요소)라, 크기가 애니메이션으로
+            // 흔들리는 상자 안에 있으면 제 상자를 벗어나 머리줄·탭 줄 위를
+            // 덮었다. 사각 클립도 함께 씌워 상자 밖으로 넘치지 못하게 한다.
+            if (!_listOnly)
+              SizedBox(
                 key: const Key('gym-map-slot'),
                 height: mapHeight,
                 width: double.infinity,
-                child: mapHeight == 0 ? null : _GymMap(gyms: widget.gyms),
+                child: ClipRect(child: _GymMap(gyms: widget.gyms)),
               ),
-            ),
             Expanded(
               child: _SheetSurface(
                 key: const Key('gym-result-sheet'),
