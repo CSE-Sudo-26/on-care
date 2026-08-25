@@ -29,6 +29,112 @@ _STRETCH_KEYWORDS = ("스트레칭", "요가", "폼롤러")
 _CARDIO_KEYWORDS = ("걷기", "러닝", "자전거", "유산소", "인터벌", "달리기")
 
 
+#: 주의사항·대화에서 찾는 부담 부위와, 그 부위에 부담이 큰 운동 이름의 조각.
+#: (#1440) 진단을 하지 않는다 — **무엇을 빼야 안전한가**만 안다.
+_CAUTION_RULES: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
+    (
+        "무릎",
+        ("무릎", "슬개", "반월"),
+        ("러닝", "달리기", "점프", "스쿼트", "런지", "계단"),
+    ),
+    (
+        "허리",
+        ("허리", "요추", "디스크"),
+        ("데드리프트", "윗몸", "점프", "러닝", "달리기"),
+    ),
+    (
+        "어깨",
+        ("어깨", "회전근", "견관절"),
+        ("숄더", "오버헤드", "푸시업", "벤치", "풀업"),
+    ),
+    (
+        "발목",
+        ("발목", "족저"),
+        ("러닝", "달리기", "점프", "줄넘기", "계단"),
+    ),
+)
+
+#: 이 말이 보이면 강도를 올리지 않고 전문가 확인을 권한다. 운동으로 판단할
+#: 문제가 아니다.
+_ESCALATION_KEYWORDS = (
+    "가슴 통증",
+    "흉통",
+    "호흡 곤란",
+    "숨이 차",
+    "실신",
+    "어지럼",
+    "수술",
+    "골절",
+)
+
+
+def _caution_text(conditions: str, recent_messages: list[str] | tuple[str, ...]) -> str:
+    """주의사항으로 읽을 글 — 건강 프로필과 최근 대화를 한 덩어리로 본다."""
+    return " ".join([conditions, *recent_messages]).strip()
+
+
+def cautions_in(
+    conditions: str,
+    recent_messages: list[str] | tuple[str, ...] = (),
+) -> list[str]:
+    """조심할 부위 이름. 없으면 빈 목록이다. (#1440)"""
+    text = _caution_text(conditions, recent_messages)
+    if not text:
+        return []
+    return [
+        part for part, keywords, _ in _CAUTION_RULES if any(k in text for k in keywords)
+    ]
+
+
+def needs_professional_check(
+    conditions: str,
+    recent_messages: list[str] | tuple[str, ...] = (),
+) -> bool:
+    """운동 구성으로 답할 수 없는 상태인가 — 그러면 강도를 올리지 않는다."""
+    text = _caution_text(conditions, recent_messages)
+    return any(keyword in text for keyword in _ESCALATION_KEYWORDS)
+
+
+def _avoids(name: str, cautions: list[str]) -> bool:
+    """이 운동이 조심할 부위에 부담을 주는가."""
+    for part, _, risky in _CAUTION_RULES:
+        if part in cautions and any(token in name for token in risky):
+            return True
+    return False
+
+
+def _safe_parts(
+    parts: list[tuple[str, str, int]],
+    cautions: list[str],
+) -> list[tuple[str, str, int]]:
+    """부담이 큰 운동을 저충격 대안으로 바꾼다. 남는 것이 없으면 대안만 남는다."""
+    if not cautions:
+        return parts
+    kept = [part for part in parts if not _avoids(part[0], cautions)]
+    if len(kept) == len(parts):
+        return parts
+    alternatives = [
+        (_STRETCH[0], _STRETCH[1], 2),
+        (_CARDIO_EASY[0], _CARDIO_EASY[1], 2),
+    ]
+    for alternative in alternatives:
+        if not any(part[0] == alternative[0] for part in kept):
+            kept.append(alternative)
+        if len(kept) >= len(parts):
+            break
+    return kept or alternatives
+
+
+def _caution_suffix(cautions: list[str], escalate: bool) -> str:
+    """근거 문장에 붙일 안전 메모. 트레이너가 무엇이 반영됐는지 읽는 자리다."""
+    parts: list[str] = []
+    if cautions:
+        parts.append(f" 주의사항({', '.join(cautions)}) 반영: 해당 부위 부담 동작을 뺐습니다.")
+    if escalate:
+        parts.append(" 강도는 올리지 않았습니다 — 전문가 확인 후 조정하세요.")
+    return "".join(parts)
+
+
 def _guess_type(name: str) -> str:
     if any(keyword in name for keyword in _STRETCH_KEYWORDS):
         return "스트레칭"
@@ -95,6 +201,8 @@ def rule_based_plans(
     intensity_preference: str,
     trainer_note: str,
     frequent_exercises: list[str] | tuple[str, ...] = (),
+    conditions: str = "",
+    recent_messages: list[str] | tuple[str, ...] = (),
 ) -> tuple[dict, dict]:
     """결정적 규칙형 A/B. 회원 수치를 근거 문구에 인용한다.
 
@@ -103,12 +211,19 @@ def rule_based_plans(
     인자 하나로 갈리므로, 개인화 여부에 따라 별도 함수를 유지·동기화할 필요가
     없다.
     """
+    # 안전 주의사항은 LLM 이 죽은 주에도 지켜야 한다(#1440). 건강 프로필의
+    # 주의사항과 최근 대화를 같은 기준으로 읽어, 부담이 큰 동작을 빼고 저충격
+    # 대안으로 바꾼다. 진단은 하지 않는다 — 무엇을 빼야 안전한가만 본다.
+    cautions = cautions_in(conditions, recent_messages)
+    escalate = needs_professional_check(conditions, recent_messages)
     if frequent_exercises:
         return _pattern_based_plans(
             frequent_exercises=list(frequent_exercises),
             available_minutes=available_minutes,
             intensity_preference=intensity_preference,
             trainer_note=trainer_note,
+            cautions=cautions,
+            escalate=escalate,
         )
 
     over = sodium_today_mg > SODIUM_TARGET_MG
@@ -130,13 +245,14 @@ def rule_based_plans(
         "label": "회복·지속 중심",
         "total_minutes": total_a,
         "intensity": "낮음",
-        "exercises": _compose(total_a, parts_a),
+        "exercises": _compose(total_a, _safe_parts(parts_a, cautions)),
         "reason": "짧고 지속하기 쉬운 회복 중심 루틴",
         "rationale": (
             f"오늘 나트륨 {sodium_today_mg}mg"
             f"{' (목표 초과)' if over else ''}, 최근 운동 완료율 "
             f"{avg_completion_rate}% → 부담이 적은 유산소·스트레칭으로 지속 가능성에 집중."
             + _note_suffix(trainer_note)
+            + _caution_suffix(cautions, escalate)
         ),
     }
 
@@ -156,14 +272,16 @@ def rule_based_plans(
         "key": "B",
         "label": "강도·운동량 중심",
         "total_minutes": total_b,
-        "intensity": _B_LABEL.get(intensity_preference, "높음"),
-        "exercises": _compose(total_b, parts_b),
+        # 판단이 어려운 상태에서는 강도를 올리지 않는다.
+        "intensity": "보통" if escalate else _B_LABEL.get(intensity_preference, "높음"),
+        "exercises": _compose(total_b, _safe_parts(parts_b, cautions)),
         "reason": "운동량과 강도를 높인 루틴",
         "rationale": (
             f"목표 '{goal_label}' 기준, 완료율 {avg_completion_rate}%로 "
             f"{'상향 여력이 있어' if avg_completion_rate >= 60 else '점진적으로'} "
             f"근력·유산소를 더해 운동량을 높임."
             + _note_suffix(trainer_note)
+            + _caution_suffix(cautions, escalate)
         ),
     }
     return plan_a, plan_b
@@ -175,6 +293,8 @@ def _pattern_based_plans(
     available_minutes: int,
     intensity_preference: str,
     trainer_note: str,
+    cautions: list[str] | None = None,
+    escalate: bool = False,
 ) -> tuple[dict, dict]:
     """반복 패턴이 확인된 회원용 A/B(#776).
 
@@ -182,8 +302,13 @@ def _pattern_based_plans(
     B안 — 점진적 강화형: 같은 핵심 운동에 하나만 더해 운동량을 소폭 늘린다.
     두 안 모두 완전히 새로운 루틴을 만들지 않는다는 이슈의 요구를 반영한다.
     """
-    core = frequent_exercises[:3]
-    core_parts = [(name, _guess_type(name), 2) for name in core]
+    safe = list(cautions or [])
+    # 반복해 온 운동이라도 지금 아픈 부위에 부담이 되면 그대로 다시 내밀지
+    # 않는다(#1440).
+    core = [name for name in frequent_exercises if not _avoids(name, safe)][:3]
+    if not core:
+        core = frequent_exercises[:1]
+    core_parts = _safe_parts([(name, _guess_type(name), 2) for name in core], safe)
     core_label = ", ".join(core)
     intensity_label = _B_LABEL.get(intensity_preference, "보통")
 
@@ -200,29 +325,37 @@ def _pattern_based_plans(
         "reason": "최근 자주 수행한 운동을 그대로 유지",
         "rationale": (
             f"최근 기록에서 반복 확인된 운동({core_label})을 유지하고 "
-            "부족한 부분만 보완." + _note_suffix(trainer_note)
+            "부족한 부분만 보완."
+            + _note_suffix(trainer_note)
+            + _caution_suffix(safe, escalate)
         ),
     }
 
     # 이미 핵심으로 쓴 운동은 제외하고 라이브러리에서 하나만 더한다 — 셋 다
     # 겹치는 것은 사실상 없지만(반복 기록은 자유 텍스트, 라이브러리는 고정
     # 한국어 이름), 겹쳐도 첫 후보로 안전하게 넘어가게 기본값을 둔다.
-    extra_pool = (_STRENGTH, _CARDIO_HARD, _STRENGTH2)
+    extra_pool = (_STRENGTH, _CARDIO_HARD, _STRENGTH2, _STRETCH, _CARDIO_EASY)
     extra_name, extra_type = next(
-        ((name, type_) for name, type_ in extra_pool if name not in core),
-        extra_pool[0],
+        (
+            (name, type_)
+            for name, type_ in extra_pool
+            if name not in core and not _avoids(name, safe)
+        ),
+        (_STRETCH[0], _STRETCH[1]),
     )
     total_b = available_minutes
     plan_b = {
         "key": "B",
         "label": "점진적 강화형",
         "total_minutes": total_b,
-        "intensity": _B_LABEL.get(intensity_preference, "높음"),
+        "intensity": "보통" if escalate else _B_LABEL.get(intensity_preference, "높음"),
         "exercises": _compose(total_b, [*core_parts, (extra_name, extra_type, 1)]),
         "reason": "기존 핵심 운동을 유지하며 운동량을 소폭 확대",
         "rationale": (
             f"기존 핵심 운동({core_label})은 유지하고 '{extra_name}'을(를) 더해 "
-            "운동량을 점진적으로 늘림." + _note_suffix(trainer_note)
+            "운동량을 점진적으로 늘림."
+            + _note_suffix(trainer_note)
+            + _caution_suffix(safe, escalate)
         ),
     }
     return plan_a, plan_b
