@@ -418,6 +418,13 @@ void main() {
     await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-7d4e9a2c5f18-1')));
     await tester.pumpAndSettle();
     expect(find.text('루틴 수행 완료'), findsOneWidget);
+    // 회원이 운동의 세부 내용을 지정하는 자리는 없다 — 실제 수행 시간 입력은
+    // 내려갔고, 남긴 값은 강도와 피드백뿐이다 (#1360).
+    expect(find.byKey(const Key('routineCompletionMinutes')), findsNothing);
+    final TextField feedback = tester.widget<TextField>(
+      find.byKey(const Key('routineCompletionNote')),
+    );
+    expect(feedback.maxLength, 100);
     await tester.enterText(
       find.byKey(const Key('routineCompletionNote')),
       '허리는 편안했어요',
@@ -429,7 +436,7 @@ void main() {
     final CoachRoutine completed = (await repository.fetchRoutines())
         .firstWhere((CoachRoutine routine) => routine.id == 'seed-routine-user-7d4e9a2c5f18-1');
     expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
-    expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
+    expect(find.text('내 피드백: 허리는 편안했어요'), findsOneWidget);
     // 체크 박스는 그대로 있고 체크된 채로 남는다 — 한 일이 화면에서 사라지면
     // 무엇을 했는지 다시 확인할 데가 없다. (#1021) 다시 누르면 되묻고 되돌릴
     // 수 있으므로 잠기지 않는다 (#1131).
@@ -442,6 +449,8 @@ void main() {
     expect(box.value, isTrue);
     expect(box.onChanged, isNotNull);
     expect(completed.completedIntensity, 'high');
+    // 기록에 남는 시간은 배정된 값 그대로다 (#1360).
+    expect(completed.completedMinutes, 15);
   });
 
   testWidgets('완료한 루틴에 트레이너 피드백을 표시한다', (WidgetTester tester) async {

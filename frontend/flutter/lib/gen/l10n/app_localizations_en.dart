@@ -2081,7 +2081,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachRoutineMyNote(String note) {
-    return 'My note: $note';
+    return 'My feedback: $note';
   }
 
   @override
@@ -2091,13 +2091,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachRoutineCompleteTitle => 'Mark routine done';
-
-  @override
-  String get coachRoutineMinutesLabel => 'Actual minutes';
-
-  @override
-  String get coachRoutineMinutesError =>
-      'Enter a value between 1 and 600 minutes';
 
   @override
   String get coachRoutineIntensity => 'Intensity';
@@ -2112,7 +2105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachIntensityHigh => 'High';
 
   @override
-  String get coachRoutineNoteLabel => 'Note (optional)';
+  String get coachRoutineNoteLabel => 'Feedback (optional)';
 
   @override
   String get coachRoutineNoteHint =>

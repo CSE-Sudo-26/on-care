@@ -1,14 +1,13 @@
-# Contributing to On-Care
+# 팀 작업 규약
 
-On-Care 프로젝트에 기여해 주셔서 감사합니다. 본 문서는 캡스톤 팀 내부 협업과 외부 기여자를 위한 작업·리뷰 규약을 정리한 것입니다.
+본 문서는 On-Care 팀이 따르는 브랜치·커밋·PR·리뷰 규약을 정리한 것입니다.
 
 ---
 
 ## 1. 시작하기 전에
 
-1. 리포지토리를 fork 또는 clone 합니다.
-2. 작업할 이슈가 없다면 먼저 [Issues](../../issues) 에 새 이슈를 등록하고, 작업 내용·기대 결과를 명시합니다.
-3. 모든 작업은 main 브랜치에서 분기한 별도 브랜치에서 진행합니다.
+1. 작업할 이슈가 없다면 먼저 [Issues](https://github.com/CSE-Sudo-26/on-care/issues) 에 새 이슈를 등록하고, 작업 내용·기대 결과를 명시합니다.
+2. 모든 작업은 main 브랜치에서 분기한 별도 브랜치에서 진행합니다.
 
 ---
 
@@ -63,7 +62,7 @@ chore(repo): remove unused api/ and package.json from old calculator demo
 ### 4.1 PR 생성
 
 - PR 제목은 커밋 메시지와 동일한 Conventional Commits 형식을 사용합니다.
-- 본문은 `.github/pull_request_template.md` 의 모든 섹션(Summary / Changes / Commits / Notes / Test Plan / Related Issues / Checklist) 을 채웁니다.
+- 본문은 [`.github/pull_request_template.md`](../.github/pull_request_template.md) 의 모든 섹션(Summary / Changes / Commits / Notes / Test Plan / Related Issues / Checklist) 을 채웁니다.
 - 관련 이슈가 있으면 본문에 `Closes #<issue-number>` 를 명시해 머지 시 자동 close 되도록 합니다.
 
 ### 4.2 Reviewers & Assignees
@@ -127,5 +126,4 @@ gh api repos/actions/checkout/git/ref/tags/v4 --jq .object.sha
 
 ## 8. 질문이 있다면
 
-- 협업 규약 관련: [Issues](../../issues) 에 `question` 라벨로 등록
-- 보안 취약점 신고: [SECURITY.md](SECURITY.md) 참고
+- 협업 규약 관련: [Issues](https://github.com/CSE-Sudo-26/on-care/issues) 에 `question` 라벨로 등록

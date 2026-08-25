@@ -189,6 +189,9 @@ class MemberHealthProfileUpdate(PartialUpdate):
 
 class ClientDietEntryOut(BaseModel):
     """고객 식단 서브탭 한 끼 — 프론트 ClientDietEntry 계약 정렬."""
+    #: `DietEntry.id`. 같은 날 같은 끼니(예: 간식 두 번)가 meal_type 중복을
+    #: 막는 제약 없이 저장될 수 있어, 화면 목록의 키로 meal 라벨을 쓸 수 없다.
+    id: str = ""
     meal: str        # 아침|점심|저녁|간식
     items: str       # 음식명 나열
     # 회원이 자기 앱에서 보는 것과 같은 끼니 카드를 트레이너도 본다(#1166).
@@ -445,6 +448,13 @@ class RoutineSuggestionCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     minutes: int = Field(ge=0, le=600)
     type: RoutineType
+    #: 근력이면 세트 수·한 세트당 횟수·중량(kg). 배정(`RoutineAssignRequest`)과
+    #: 같은 계약이다 — 승인하는 순간 이 행이 그대로 배정이 되므로, 여기서 받지
+    #: 않으면 근력 제안은 세트가 빈 채로 회원에게 간다(#1321). 다른 유형에서
+    #: 와도 저장하지 않는다.
+    sets: int | None = Field(default=None, gt=0, le=99)
+    reps: int | None = Field(default=None, gt=0, le=999)
+    weight: float | None = Field(default=None, ge=0, le=1000)
     reason: str = Field(default="", max_length=200)
     #: 이 후보의 근거 문구. 트레이너가 승인 판단에 쓰는 재료이고 회원에게는
     #: 전달되지 않는다. 개수·길이를 묶는 이유는 카드 한 장이 읽히는 분량을
@@ -467,6 +477,12 @@ class RoutineSuggestionApproveRequest(PartialUpdate):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     minutes: int | None = Field(default=None, ge=0, le=600)
     type: RoutineType | None = None
+    #: 근력이면 세트 수·한 세트당 횟수·중량(kg). 트레이너가 승인 직전에 고치는
+    #: 자리라, 유형을 근력으로 바꾸며 이 셋을 함께 채우는 것이 이 화면의 흔한
+    #: 흐름이다(#1321).
+    sets: int | None = Field(default=None, gt=0, le=99)
+    reps: int | None = Field(default=None, gt=0, le=999)
+    weight: float | None = Field(default=None, ge=0, le=1000)
     reason: str | None = Field(default=None, max_length=200)
 
 

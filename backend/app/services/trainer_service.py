@@ -473,6 +473,7 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         items = ", ".join(_food_names(r.foods_json))
         photo_id = photo_ids.get(r.id)
         out.append(ClientDietEntryOut(
+            id=r.id,
             meal=_meal_kr(r.meal_type),
             items=items,
             # 회원 앱 끼니 카드와 같은 재료를 그대로 넘긴다(#1166). 이름만 이어
@@ -1203,6 +1204,9 @@ def create_routine_suggestion(
     minutes: int,
     type_: str,
     reason: str,
+    sets: int | None = None,
+    reps: int | None = None,
+    weight: float | None = None,
     evidence: Sequence[str] | None = None,
     client_request_id: str | None = None,
 ) -> RoutineOut:
@@ -1232,6 +1236,12 @@ def create_routine_suggestion(
         name=name,
         minutes=minutes,
         type=type_,
+        # 세트·횟수·중량은 근력에만 남긴다 — 배정([assign_routine])과 같은
+        # 규칙이다. 승인하면 이 행이 그대로 배정이 되므로 여기서 규칙이 갈리면
+        # 승인 전후로 값이 달라진다. (#1321)
+        sets=sets if type_ == "근력" else None,
+        reps=reps if type_ == "근력" else None,
+        weight=round(weight, 1) if weight is not None and type_ == "근력" else None,
         reason=reason,
         source="ai",
         status=ROUTINE_PENDING,
@@ -1309,6 +1319,9 @@ def approve_routine_suggestion(
     name: str | None = None,
     minutes: int | None = None,
     type_: str | None = None,
+    sets: int | None = None,
+    reps: int | None = None,
+    weight: float | None = None,
     reason: str | None = None,
 ) -> RoutineOut:
     """제안을 승인해 회원에게 배정한다. 준 값이 있으면 그것으로 고쳐서 승인한다.
@@ -1325,6 +1338,19 @@ def approve_routine_suggestion(
         row.type = type_
     if reason is not None:
         row.reason = reason
+    if sets is not None:
+        row.sets = sets
+    if reps is not None:
+        row.reps = reps
+    if weight is not None:
+        row.weight = round(weight, 1)
+    # 유형을 근력이 아닌 것으로 바꿔 승인하면 세트·횟수·중량을 지운다 — 남겨
+    # 두면 유산소 배정이 세트를 들고 회원에게 간다. 판단 기준은 **고친 뒤의**
+    # 유형이다. (#1321)
+    if row.type != "근력":
+        row.sets = None
+        row.reps = None
+        row.weight = None
     row.status = ROUTINE_APPROVED
     row.reviewed_at = clock.now()
     row.reviewed_by = trainer_id

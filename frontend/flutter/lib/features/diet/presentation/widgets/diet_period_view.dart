@@ -899,7 +899,12 @@ class _Bar extends StatelessWidget {
         ),
       );
     }
-    if (d == null || !d.hasMacros) {
+    // 목표를 넘긴 날은 **통으로 빨강** 한 색이다 (#1352). 탄단지를 빨강 세
+    // 단계로 쌓아 봤지만(#1201), 같은 카드의 나트륨·당류는 초과를 한 색으로
+    // 말하고 있어 칼로리만 초과의 생김새가 달랐다 — 지표마다 다른 문법으로
+    // 넘김을 말하면 눈이 매번 다시 배워야 한다. 넘기지 않은 날은 지금처럼
+    // 탄·단·지 파랑 세 단계로 쌓는다.
+    if (over || d == null || !d.hasMacros) {
       return Container(
         height: height,
         decoration: BoxDecoration(
@@ -935,30 +940,16 @@ class _Bar extends StatelessWidget {
     //
     // 위에서부터 나머지·지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
     // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
-    // 목표를 넘긴 날은 **빨강 세 단계**로 쌓는다 (#1201). 예전에는 쌓은 막대를
-    // 파랑 그대로 두고 초과는 목표선과 툴팁만 말했는데, 같은 카드의 나트륨·당류와
-    // 오늘 화면이 이미 초과를 빨강으로 가르고 있어 칼로리만 어긋났다. 진하기
-    // 순서(탄 → 단 → 지)는 파랑 때와 같으므로 어느 칸이 무엇인지는 그대로 읽힌다.
+    // 여기까지 온 날은 목표 안이다 — 넘긴 날은 위에서 한 색으로 끝냈다.
     final List<({Color color, double kcal})>
     parts = <({Color color, double kcal})>[
       // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
       // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
       if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
-      if (d.fatKcal > 0)
-        (
-          color: over ? FigmaColors.macroFatOver : FigmaColors.macroFat,
-          kcal: d.fatKcal,
-        ),
+      if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
       if (d.proteinKcal > 0)
-        (
-          color: over ? FigmaColors.macroProteinOver : FigmaColors.macroProtein,
-          kcal: d.proteinKcal,
-        ),
-      if (d.carbsKcal > 0)
-        (
-          color: over ? FigmaColors.macroCarbsOver : FigmaColors.macroCarbs,
-          kcal: d.carbsKcal,
-        ),
+        (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
+      if (d.carbsKcal > 0) (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
     ];
     return ClipRRect(
       borderRadius: radius,

@@ -406,9 +406,7 @@ class _RecommendedExerciseRowState
     final _RoutineCompletionInput? input =
         await showDialog<_RoutineCompletionInput>(
           context: context,
-          builder: (_) => _RoutineCompletionDialog(
-            initialMinutes: routine.minutes > 0 ? routine.minutes : 1,
-          ),
+          builder: (_) => const _RoutineCompletionDialog(),
         );
     if (input == null || !mounted) return;
 
@@ -418,7 +416,11 @@ class _RecommendedExerciseRowState
           .read(memberCoachRepositoryProvider)
           .completeRoutine(
             routine.id,
-            minutes: input.minutes,
+            // 시간은 **배정된 값 그대로** 간다 (#1360). 운동의 세부 내용은
+            // 추천이 정하는 것이라 회원이 고쳐 넣을 자리가 아니다. 계획 시간이
+            // 비어 있는 배정만 1분으로 받는다 — 0분짜리 기록은 주간 집계에서
+            // 한 적 없는 운동과 구분되지 않는다.
+            minutes: routine.minutes > 0 ? routine.minutes : 1,
             intensity: input.intensity,
             memberNote: input.note,
           );
@@ -594,10 +596,10 @@ class _RecommendedExerciseRowState
               ),
             ],
           ),
-          // 내가 남긴 메모도 트레이너 피드백과 **같은 모양의 상자**로 놓는다.
+          // 내가 남긴 피드백도 트레이너 피드백과 **같은 모양의 상자**로 놓는다.
           // 예전에는 맨 텍스트라 본문 기본 크기(카드 제목보다 크다)로 찍혀,
-          // 카드에서 메모만 혼자 커 보였다. 색만 달리해 누가 쓴 글인지
-          // 구분한다 — 내 메모는 흰 바탕, 트레이너 피드백은 파란 바탕.
+          // 카드에서 그 줄만 혼자 커 보였다. 색만 달리해 누가 쓴 글인지
+          // 구분한다 — 내 피드백은 흰 바탕, 트레이너 피드백은 파란 바탕.
           if (routine.memberNote.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
             Container(
@@ -646,21 +648,17 @@ class _RecommendedExerciseRowState
 }
 
 class _RoutineCompletionInput {
-  const _RoutineCompletionInput({
-    required this.minutes,
-    required this.intensity,
-    required this.note,
-  });
+  const _RoutineCompletionInput({required this.intensity, required this.note});
 
-  final int minutes;
   final String intensity;
   final String note;
 }
 
+/// 체크했을 때 뜨는 완료 입력. 회원이 정하는 것은 **얼마나 힘들었는지와
+/// 피드백** 뿐이다 (#1360) — 시간·구성 같은 운동의 세부 내용은 추천이 든 값을
+/// 그대로 쓴다.
 class _RoutineCompletionDialog extends StatefulWidget {
-  const _RoutineCompletionDialog({required this.initialMinutes});
-
-  final int initialMinutes;
+  const _RoutineCompletionDialog();
 
   @override
   State<_RoutineCompletionDialog> createState() =>
@@ -668,22 +666,15 @@ class _RoutineCompletionDialog extends StatefulWidget {
 }
 
 class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  late final TextEditingController _minutesController;
+  /// 피드백 길이 상한. 카드에 그대로 펼쳐 보여 주는 글이라 몇 줄 안에서
+  /// 끝나야 한다 (#1360).
+  static const int _noteMaxLength = 100;
+
   final TextEditingController _noteController = TextEditingController();
   String _intensity = 'moderate';
 
   @override
-  void initState() {
-    super.initState();
-    _minutesController = TextEditingController(
-      text: '${widget.initialMinutes}',
-    );
-  }
-
-  @override
   void dispose() {
-    _minutesController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -693,26 +684,10 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
     final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(l.coachRoutineCompleteTitle),
-      content: Form(
-        key: _formKey,
+      content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            TextFormField(
-              key: const Key('routineCompletionMinutes'),
-              controller: _minutesController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l.coachRoutineMinutesLabel,
-              ),
-              validator: (String? value) {
-                final int? minutes = int.tryParse(value ?? '');
-                return minutes == null || minutes < 1 || minutes > 600
-                    ? l.coachRoutineMinutesError
-                    : null;
-              },
-            ),
-            const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(l.coachRoutineIntensity),
@@ -742,10 +717,10 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               },
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            TextField(
               key: const Key('routineCompletionNote'),
               controller: _noteController,
-              maxLength: 1000,
+              maxLength: _noteMaxLength,
               maxLines: 3,
               decoration: InputDecoration(
                 labelText: l.coachRoutineNoteLabel,
@@ -762,16 +737,12 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
         ),
         FilledButton(
           key: const Key('confirmRoutineCompletion'),
-          onPressed: () {
-            if (!(_formKey.currentState?.validate() ?? false)) return;
-            Navigator.of(context).pop(
-              _RoutineCompletionInput(
-                minutes: int.parse(_minutesController.text),
-                intensity: _intensity,
-                note: _noteController.text,
-              ),
-            );
-          },
+          onPressed: () => Navigator.of(context).pop(
+            _RoutineCompletionInput(
+              intensity: _intensity,
+              note: _noteController.text,
+            ),
+          ),
           child: Text(l.coachRoutineSubmit),
         ),
       ],
