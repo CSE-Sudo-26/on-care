@@ -524,9 +524,9 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
               extra: _openDay == ymd(day.date) && day.logged
                   ? _DayMeals(clientId: widget.clientId, date: day.date)
                   : null,
-              summary:
-                  '${formatNumber(day.calories)} ${l.unitKcal} · '
-                  '${l.dietSodiumValue(day.sodiumMg)}',
+              // 화살표 옆 요약에는 칼로리·나트륨을 더 이상 보이지 않는다 —
+              // 펼쳤을 때 details 알약이 같은 값을 이미 보여 준다.
+              summary: '',
               details: <({String label, String value})>[
                 (
                   label: l.metricCalories,

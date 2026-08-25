@@ -559,7 +559,7 @@ class _MacroDetail extends StatelessWidget {
                   maxLines: 1,
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.foreground,
                   ),
                 ),
@@ -909,6 +909,8 @@ class _MacroBar extends StatelessWidget {
               // 목표 안쪽 막대는 [AppColors.dietChart] — 이 앱의 브랜드
               // 남색이다. 한때 초록이었지만(#1027) 초록은 `정상` 으로 읽혀
               // 목표에 한참 못 미친 날까지 괜찮다고 말해 걷어냈다(#1168).
+              // 판단은 초과 여부만 하고, 초과한 날만 [AppColors.overTarget]
+              // 으로 갈린다(#1239).
               : AppColors.dietChart.withValues(alpha: 0.85),
           borderRadius: radius,
         ),

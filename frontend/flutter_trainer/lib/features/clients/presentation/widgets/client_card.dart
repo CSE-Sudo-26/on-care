@@ -4,7 +4,6 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
@@ -108,8 +107,6 @@ class ClientCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      _WeeklyRoutineAdherence(client: client),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                         child: Divider(
@@ -179,79 +176,7 @@ class _CompactClientContent extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _WeeklyRoutineAdherence(client: client, compact: true),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// 이번 주에 기록된 날만 평균낸 루틴 수행률.
-///
-/// 0은 미수행이 아니라 미집계이므로 빈 주를 0% 실패처럼 그리지 않는다. 주의
-/// 배지와 고객 검색이 쓰는 [recordedCompletionMean]을 그대로 사용해 고객
-/// 목록 안에서 같은 회원을 서로 다른 숫자로 말하지 않게 한다. (#1284)
-class _WeeklyRoutineAdherence extends StatelessWidget {
-  const _WeeklyRoutineAdherence({required this.client, this.compact = false});
-
-  final TrainerClient client;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final double? mean = recordedCompletionMean(client);
-    final int? percent = mean?.round();
-    final String valueLabel = percent == null
-        ? l.clientRoutineAdherenceUnmeasured
-        : '$percent%';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                l.clientWeeklyRoutineAdherence,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: compact ? 10.5 : 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              valueLabel,
-              style: TextStyle(
-                fontSize: compact ? 10.5 : 11.5,
-                fontWeight: FontWeight.w700,
-                color: percent == null
-                    ? AppColors.mutedForeground
-                    : AppColors.foreground,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Semantics(
-          label: l.clientWeeklyRoutineAdherence,
-          value: valueLabel,
-          child: ExcludeSemantics(
-            child: LinearProgressIndicator(
-              key: ValueKey<String>('client-weekly-adherence-${client.id}'),
-              value: (mean ?? 0).clamp(0, 100) / 100,
-              minHeight: compact ? 4 : 6,
-              borderRadius: const BorderRadius.all(AppRadius.pill),
-              backgroundColor: AppColors.borderStrong,
-              color: AppColors.accent,
-            ),
           ),
         ),
       ],

@@ -628,16 +628,24 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                           entries: dayEntries,
                         )
                       : null,
-                  summary:
-                      '${day.minutes}${l.unitMinutes} · '
-                      '${formatNumber(day.calories)} ${l.unitKcal}',
+                  // 이번 주·전체에서는 화살표 옆 요약(분·칼로리)을 지운다 —
+                  // 펼쳤을 때 details 알약이 같은 값을 이미 보여 준다.
+                  // 오늘은 기존 그대로 둔다(요청 범위가 이번 주·전체라서).
+                  summary: today
+                      ? '${day.minutes}${l.unitMinutes} · '
+                            '${formatNumber(day.calories)} ${l.unitKcal}'
+                      : '',
                   details: <({String label, String value})>[
                     (
                       label: l.clientTrendWorkoutMinutes,
                       value: '${day.minutes}${l.unitMinutes}',
                     ),
                     (
-                      label: l.metricCalories,
+                      // 이번 주·전체에서는 "소모 칼로리"로 — 오늘은 기존
+                      // 라벨을 유지한다(요청 범위가 이번 주·전체라서).
+                      label: today
+                          ? l.metricCalories
+                          : l.clientTrendCaloriesBurned,
                       value: '${formatNumber(day.calories)} ${l.unitKcal}',
                     ),
                     if (day.cardioMinutes > 0)
