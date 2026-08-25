@@ -1357,6 +1357,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chartNoRecord => '기록 없음';
 
   @override
+  String get chartNotYet => '아직 오지 않은 날';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '목표 초과 +$amount $unit';
+  }
+
+  @override
   String get reportsSendStateSent => '전송됨';
 
   @override

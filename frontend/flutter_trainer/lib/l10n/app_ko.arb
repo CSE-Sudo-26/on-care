@@ -437,6 +437,14 @@
   "workoutDoneOfTotal": "{total}개 중 {done}개 완료",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "기록 없음",
+  "chartNotYet": "아직 오지 않은 날",
+  "chartOverGoal": "목표 초과 +{amount} {unit}",
+  "@chartOverGoal": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  },
   "reportsSendStateSent": "전송됨",
   "reportsSendStateSending": "전송 중…",
   "reportsShare": "공유",
