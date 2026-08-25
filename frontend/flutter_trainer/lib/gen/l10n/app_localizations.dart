@@ -1691,7 +1691,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatDemoRoutineSent.
   ///
   /// In en, this message translates to:
-  /// **'An AI-built routine was sent to {name}'**
+  /// **'A personalized workout recommendation was sent to {name}'**
   String chatDemoRoutineSent(String name);
 
   /// No description provided for @chatDemoNotified.

@@ -572,7 +572,9 @@ class _SystemBanner extends StatelessWidget {
 }
 
 /// The "루틴 전송됨" system banner at the end of the seeded thread (mock:
-/// the green centered notice under the last message).
+/// the centered notice under the last message). Same navy tone as
+/// [_SystemBanner] — not green (#1379): green read as a different kind of
+/// "완료" than this routine-sent notice means.
 class _SentBanner extends StatelessWidget {
   const _SentBanner({required this.clientName, super.key});
 
@@ -588,16 +590,16 @@ class _SentBanner extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: AppColors.success.withValues(alpha: 0.08),
+          color: AppColors.accentSurface,
           borderRadius: const BorderRadius.all(AppRadius.card),
-          border: Border.all(color: AppColors.success.withValues(alpha: 0.25)),
+          border: Border.all(color: AppColors.borderStrong),
         ),
         child: Column(
           children: <Widget>[
             IconLabel(
               icon: Icons.check_circle_outline,
               label: l.chatDemoRoutineSent(clientName),
-              color: AppColors.success,
+              color: AppColors.accent,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 2),

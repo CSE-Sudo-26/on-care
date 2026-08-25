@@ -1238,7 +1238,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachChatDemoRoutineReceived => 'AI 분석 기반 루틴을 받았어요';
+  String get coachChatDemoRoutineReceived => '개인 추천운동을 받았어요';
 
   @override
   String get coachChatDemoNotified => '알림으로도 전달됐어요';

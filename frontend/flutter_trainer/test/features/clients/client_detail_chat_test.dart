@@ -424,7 +424,7 @@ void main() {
       expect(find.text('실제 고객 답장'), findsOneWidget);
       expect(find.text('2026년 7월 31일 금요일'), findsOneWidget);
       expect(find.textContaining('AI가 김민수님의 식단'), findsNothing);
-      expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
+      expect(find.textContaining('개인 추천운동'), findsNothing);
 
       final bubble = find.byKey(
         const ValueKey<String>('trainer-message-bubble-live-1'),
@@ -512,7 +512,7 @@ void main() {
       // 목록 맨 아래에 고정돼 있으면 방금 보낸 답장이 그 앞으로 들어가,
       // 화면에서는 "내가 보낸 말이 루틴 전송보다 먼저" 로 읽힌다.
       // 배너는 날이 바뀌는 자리마다 한 번씩 더 있다 — 닫는 배너는 맨 뒤다.
-      final banner = find.textContaining('AI 분석 기반 루틴이').last;
+      final banner = find.textContaining('개인 추천운동이').last;
       final sent = find.text('다음 세션 때 봬요!').last;
       expect(banner, findsOneWidget);
       expect(

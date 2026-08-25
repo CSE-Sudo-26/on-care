@@ -877,7 +877,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String chatDemoRoutineSent(String name) {
-    return 'AI 분석 기반 루틴이 $name님에게 전송됐어요';
+    return '개인 추천운동이 $name님에게 전송됐어요';
   }
 
   @override
