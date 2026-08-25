@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_re
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// 트레이너 회원가입 화면 — 사용자 앱 회원가입과 동일한 디자인. 이름/이메일/
 /// 비밀번호와 **헬스장 초대 코드**로 계정을 만들고, 성공 시 자동 로그인해 고객
@@ -57,7 +58,6 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
 
   Future<void> _register() async {
     if (_loading) return;
-    final messenger = ScaffoldMessenger.of(context);
     final name = _name.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
@@ -66,34 +66,21 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
     final requiresInviteCode = !ref.read(appConfigProvider).useMockApi;
     final inviteCode = _inviteCode.text.trim();
     if (email.isEmpty || password.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrEmptyCredentials),
-        ),
-      );
+      showAppToast(context, AppLocalizations.of(context).authErrEmptyCredentials);
       return;
     }
     if (password.length < 8) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrPasswordTooShort),
-        ),
-      );
+      showAppToast(context, AppLocalizations.of(context).authErrPasswordTooShort);
       return;
     }
     if (password != confirm) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrPasswordMismatch),
-        ),
-      );
+      showAppToast(context, AppLocalizations.of(context).authErrPasswordMismatch);
       return;
     }
     if (requiresInviteCode && inviteCode.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrInviteCodeRequired),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).authErrInviteCodeRequired,
       );
       return;
     }
@@ -115,14 +102,14 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
       setState(() => _loading = false);
-      messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
+      showAppToast(context, authFailureText(l, e), kind: AppToastKind.error);
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrSignUpFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).authErrSignUpFailed,
+        kind: AppToastKind.error,
       );
     }
   }

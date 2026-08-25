@@ -4,6 +4,7 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
@@ -20,9 +21,14 @@ import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 /// after send/read (see [ChatView]).
 abstract interface class ChatRepository {
   Stream<List<ClientChatMessage>> watchThread(String clientId);
+
+  /// [reportWeekStart]가 있으면 이 메시지는 리포트 PDF 전송 안내다(#1378) —
+  /// 데모/드리프트 구현만 이 값을 저장한다. 실서버는 `/report/send-pdf`가
+  /// 첨부 메타데이터를 직접 만들어 붙이므로 여기로 오지 않는다.
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   });
   Stream<Map<String, int>> watchUnreadCounts();
   Future<void> markThreadRead(String clientId);
@@ -43,7 +49,30 @@ class DriftChatRepository implements ChatRepository {
       ..orderBy(<OrderingTerm Function($ClientChatMessagesTable)>[
         (t) => OrderingTerm(expression: t.createdAt),
       ]);
-    return query.watch().map((rows) => rows.map(_toEntity).toList());
+    return query.watch().asyncMap((rows) async {
+      final markers = await _reportWeekStarts(rows.map((r) => r.id));
+      return rows.map((row) => _toEntity(row, markers[row.id])).toList();
+    });
+  }
+
+  /// 이 배치의 메시지 중 리포트 전송 안내인 것의 그 주(YYYY-MM-DD).
+  ///
+  /// 별도 컬럼 없이 [AppKeyValues] 행 하나로 표시한다(#1378) — 안읽음 마킹과
+  /// 같은 방식(위 [watchUnreadCounts] 주석). 스키마 마이그레이션이 없다.
+  Future<Map<String, String>> _reportWeekStarts(
+    Iterable<String> messageIds,
+  ) async {
+    final keys = <String>[
+      for (final id in messageIds) '$_reportKeyPrefix$id',
+    ];
+    if (keys.isEmpty) return const <String, String>{};
+    final rows =
+        await (_db.select(_db.appKeyValues)..where((t) => t.key.isIn(keys)))
+            .get();
+    return <String, String>{
+      for (final row in rows)
+        row.key.substring(_reportKeyPrefix.length): row.value,
+    };
   }
 
   /// Appends a trainer message and refreshes the client's list-card
@@ -54,16 +83,18 @@ class DriftChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
     final now = nowKst();
+    final id = 'chat-$clientId-${now.microsecondsSinceEpoch}';
     await _db.transaction(() async {
       await _db
           .into(_db.clientChatMessages)
           .insert(
             ClientChatMessagesCompanion.insert(
-              id: 'chat-$clientId-${now.microsecondsSinceEpoch}',
+              id: id,
               clientId: clientId,
               sender: 'trainer',
               body: trimmed,
@@ -71,6 +102,9 @@ class DriftChatRepository implements ChatRepository {
               createdAt: now,
             ),
           );
+      if (reportWeekStart != null) {
+        await _db.putValue('$_reportKeyPrefix$id', ymd(reportWeekStart));
+      }
       await (_db.update(
         _db.trainerClients,
       )..where((t) => t.id.equals(clientId))).write(
@@ -143,14 +177,16 @@ class DriftChatRepository implements ChatRepository {
   }
 
   static const String _readKeyPrefix = 'chat_read_';
+  static const String _reportKeyPrefix = 'report_msg_';
 
-  ClientChatMessage _toEntity(ClientChatMessageRow row) {
+  ClientChatMessage _toEntity(ClientChatMessageRow row, String? weekStart) {
     return ClientChatMessage(
       id: row.id,
       sender: row.sender == 'trainer' ? ChatSender.trainer : ChatSender.client,
       body: row.body,
       timeLabel: row.timeLabel,
       createdAt: row.createdAt,
+      reportWeekStart: weekStart == null ? null : DateTime.tryParse(weekStart),
     );
   }
 

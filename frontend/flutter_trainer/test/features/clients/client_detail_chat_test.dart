@@ -44,9 +44,14 @@ class _SlowChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
-    return super.sendTrainerMessage(clientId: clientId, text: text);
+    return super.sendTrainerMessage(
+      clientId: clientId,
+      text: text,
+      reportWeekStart: reportWeekStart,
+    );
   }
 }
 
@@ -62,6 +67,7 @@ class _ControllableChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) => gate;
 }
 
@@ -109,6 +115,7 @@ class _StaticLiveChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {}
 
   @override
@@ -499,6 +506,44 @@ void main() {
       // preview, keeping the two-pane workspace in sync.
       expect(find.text('다음 세션 때 봐요!'), findsWidgets);
     });
+
+    testWidgets(
+      '리포트 전송 메시지는 일반 말풍선이 아니라 카드로 뜨고, 누르면 리포트로 이동한다 (#1378)',
+      (tester) async {
+        final container = await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.messagesFor('seed-client-1'),
+        );
+        // 데모/드리프트는 PDF를 저장하지 못한다 — reportWeekStart만 실어
+        // 보내도 채팅이 카드로 구분해 그려야 한다.
+        await container
+            .read(chatRepositoryProvider)
+            .sendTrainerMessage(
+              clientId: 'seed-client-1',
+              text: '김민수님, 8월 18일 – 8월 24일 주간 리포트 정리해서 보내드려요.',
+              reportWeekStart: DateTime(2026, 8, 18),
+            );
+        await settle(tester);
+
+        final notice = find.textContaining('8월 18일 – 8월 24일 주간 리포트를 보냈어요');
+        expect(notice, findsOneWidget);
+        // 본문 그대로의 일반 말풍선은 그려지지 않는다.
+        expect(
+          find.text('김민수님, 8월 18일 – 8월 24일 주간 리포트 정리해서 보내드려요.'),
+          findsNothing,
+        );
+
+        await tester.tap(notice);
+        await settle(tester);
+
+        final ctx = tester.element(find.byType(Navigator).first);
+        final location = GoRouter.of(
+          ctx,
+        ).routerDelegate.currentConfiguration.uri.toString();
+        expect(location, AppRoutes.reportFor('seed-client-1'));
+      },
+    );
 
     testWidgets('a sent message lands below the routine-sent banner', (
       tester,

@@ -12,6 +12,7 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/search/domain/client_search.dart';
@@ -778,8 +779,10 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
       alignment: Alignment.topCenter,
       backgroundColor: Colors.transparent,
       elevation: 0,
+      // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+      // 드롭다운 위로 겹쳐 뜰 수 있다.
       insetPadding: const EdgeInsets.only(
-        top: AppSpacing.xxl,
+        top: AppToastStyle.dialogTopClearance,
         left: AppSpacing.lg,
         right: AppSpacing.lg,
       ),

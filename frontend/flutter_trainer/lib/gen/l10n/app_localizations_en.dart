@@ -898,6 +898,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
 
   @override
+  String chatReportSentNotice(Object range) {
+    return 'Sent the $range weekly report';
+  }
+
+  @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
 
   @override
@@ -1249,6 +1254,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportsSent(String name) {
     return 'Report sent to $name';
   }
+
+  @override
+  String get reportsGoToChat => 'Go to chat';
 
   @override
   String get reportsScheduleWarning =>
@@ -2217,7 +2225,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachHistoryEmpty => 'You haven\'t sent any programs yet';
 
   @override
-  String get coachHomework => 'Homework';
+  String get coachHomework => 'Personal';
+
+  @override
+  String get coachPersonalTraining => 'PT';
 
   @override
   String coachRoutineSummary(String name, int minutes) {
@@ -2228,8 +2239,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachTrainer => 'Trainer';
 
   @override
-  String coachSessionExercises(String type, int count) {
-    return '$type · $count exercises';
+  String coachSessionProgramSummary(String name, int count) {
+    return '$name + $count more';
   }
 
   @override
@@ -2308,7 +2319,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiAnalysedData => 'Analysed this client\'s data';
+  String get aiAnalysedData =>
+      'Reviewed the workout goal, recent activity, and today\'s nutrition';
 
   @override
   String get aiGoal => 'Goal';
@@ -2318,6 +2330,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiOverTarget => ' · over target';
+
+  @override
+  String get aiRecentCompletion => 'Recent completion';
+
+  @override
+  String get aiNoCompletionData => 'No activity logged this week';
+
+  @override
+  String get aiCompletionLow => ' · needs attention';
+
+  @override
+  String get aiDietSignal => 'Diet warning';
+
+  @override
+  String aiSodiumOverDaysSuffix(int days) {
+    return ' · over target on $days of the last 7 days';
+  }
+
+  @override
+  String get aiSugarAlsoOver => ' · sugar also over';
 
   @override
   String get aiBasisRuleBased => ' · rule-based';
@@ -2335,7 +2367,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Edit names, durations and structure just like the existing suggestion.';
 
   @override
-  String get aiAddExerciseManually => 'Write it yourself';
+  String get aiAddExerciseManually => 'Add exercise manually';
 
   @override
   String get aiExerciseNameExample => 'e.g. leg press, 3 sets';
@@ -2395,7 +2427,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiRecentRoutine => 'Recent routine';
+  String get aiRecentRoutine => 'Recent activity';
 
   @override
   String get aiTrainerNoteEditable => 'Trainer\'s note · editable';
@@ -2421,7 +2453,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiPromptTitle => 'Tell the AI what program you want';
 
   @override
-  String get aiPromptLabel => 'Your request (plain language)';
+  String get aiPromptLabel => 'Your request';
 
   @override
   String get aiPromptHint =>
@@ -2429,7 +2461,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiPromptBlurb =>
-      'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.';
+      'Your request goes to the AI with the member\'s data (up to 500 characters). Write the member note in the next step.';
 
   @override
   String get aiGenerateGoalBased => 'Generate goal-based routine';
@@ -2570,6 +2602,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String aiBasisGoalCompletion(String goal, int rate) {
     return '$goal · based on $rate% completion';
+  }
+
+  @override
+  String aiBasisTrainerRequest(String request) {
+    return 'Request: \"$request\"';
   }
 
   @override

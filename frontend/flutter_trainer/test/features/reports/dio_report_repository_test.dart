@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -34,6 +36,8 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(<String, String>{});
+    registerFallbackValue(FormData());
+    registerFallbackValue(Options());
   });
 
   setUp(() {
@@ -213,6 +217,64 @@ void main() {
 
     expect(
       () => repo.send(clientId: 'm1', weekStart: weekStart, message: 'x'),
+      throwsA(isA<ServerError>()),
+    );
+  });
+
+  test('sendPdf posts the week, message and pdf bytes as multipart (#1378)', () async {
+    const sendPdfPath = '/trainer/clients/m1/report/send-pdf';
+    when(
+      () => dio.post<Map<String, Object?>>(
+        sendPdfPath,
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer((_) async => _ok(<String, dynamic>{}, sendPdfPath));
+
+    await repo.sendPdf(
+      clientId: 'm1',
+      weekStart: weekStart,
+      bytes: Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+      fileName: '김민수_2026-08-03_주간리포트.pdf',
+      message: '이번 주 잘하셨어요',
+    );
+
+    final captured =
+        verify(
+              () => dio.post<Map<String, Object?>>(
+                sendPdfPath,
+                data: captureAny(named: 'data'),
+                options: any(named: 'options'),
+              ),
+            ).captured.single
+            as FormData;
+    final fields = <String, String>{
+      for (final entry in captured.fields) entry.key: entry.value,
+    };
+    expect(fields['week_start'], '2026-08-03');
+    // 전송되는 것은 화면에서 트레이너가 본 문구 그대로다.
+    expect(fields['message'], '이번 주 잘하셨어요');
+    expect(captured.files.single.value.filename, '김민수_2026-08-03_주간리포트.pdf');
+  });
+
+  test('a failed sendPdf throws instead of reporting success', () async {
+    const sendPdfPath = '/trainer/clients/m1/report/send-pdf';
+    when(
+      () => dio.post<Map<String, Object?>>(
+        sendPdfPath,
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenThrow(_httpError(500, sendPdfPath));
+
+    expect(
+      () => repo.sendPdf(
+        clientId: 'm1',
+        weekStart: weekStart,
+        bytes: Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+        fileName: 'report.pdf',
+        message: 'x',
+      ),
       throwsA(isA<ServerError>()),
     );
   });
