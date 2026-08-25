@@ -28,7 +28,6 @@ import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
-import 'package:oncare_trainer/features/coaching/presentation/widgets/program_final_review_card.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -446,60 +445,52 @@ Future<void> _applyRecommendedRoutine(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 편집기의 `전송 확인` 을 눌러 전송 화면을 연다 (#1028).
+/// 편집기 하단의 `보내기` 버튼을 찾아 화면에 보이게 한다.
 ///
-/// 배정·PT 등록 버튼은 더 이상 편집기에 없다 — 프로그램이 회원에게 가려면
-/// 반드시 이 단계를 지난다. 이미 검토 중이면 아무 일도 하지 않는다.
-Future<void> _openFinalReview(WidgetTester tester) async {
-  if (find
-      .byKey(const ValueKey<String>('program-final-review'))
-      .evaluate()
-      .isNotEmpty) {
-    return;
-  }
-  final review = find.byKey(const ValueKey<String>('program-editor-review'));
+/// 비활성 상태면(운동이 없으면) 먼저 AI 추천을 반영해 채운다 — 편집기가
+/// 이미 운동을 갖고 있으면(트레이너가 직접 채웠거나 이미 반영했다면)
+/// 여기서 다시 채우지 않는다. 조건 없이 AI 흐름을 다시 밟으면 방금 지운
+/// 운동이 되살아난다.
+Future<Finder> _ensureSendButtonReady(WidgetTester tester) async {
+  final send = find.byKey(const ValueKey<String>('program-editor-send'));
   await tester.scrollUntilVisible(
-    review,
+    send,
     150,
     scrollable: find.byType(Scrollable).first,
   );
-  await tester.ensureVisible(review);
+  await tester.ensureVisible(send);
   await tester.pump();
-  // 편집기가 이미 운동을 갖고 있으면(트레이너가 직접 채웠거나 이미
-  // 반영했다면) 여기서 다시 채우지 않는다 — 조건 없이 AI 흐름을 다시 밟으면
-  // 방금 지운 운동이 되살아난다.
-  if (tester.widget<ActionButton>(review).onPressed == null) {
+  if (tester.widget<ActionButton>(send).onPressed == null) {
     await _applyRecommendedRoutine(tester);
+    // `일정 추가`/`보내기` 는 이제 박스 하단에 있다 — 화면 아래쪽에 뜨는
+    // 스낵바(`템플릿에 반영` 등, 4초짜리)와 같은 자리라, 스낵바가 사라지기
+    // 전에 탭하면 그 스낵바의 오버레이가 탭을 가로챈다. 표시 시간이 지나면
+    // 닫힘 애니메이션이 시작되는데, 그 애니메이션은 한 번의 큰
+    // `pump(duration)` 로는 끝까지 처리되지 않는다 — 그 다음 프레임이
+    // 따로 있어야 실제로 트리에서 빠진다. `pumpAndSettle` 로 마저 재운다.
+    await tester.pump(const Duration(seconds: 4, milliseconds: 100));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      review,
+      send,
       150,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(review);
+    await tester.ensureVisible(send);
     await tester.pump();
   }
-  await tester.tap(review);
-  await tester.pump();
+  return send;
 }
 
-/// `고객에게 배정` 을 누르고 확인창까지 통과한다(#1029) — 이 버튼 하나가
-/// 배정과 PT 등록을 함께 한다. 예전에 따로 있던 `PT 스케줄에 등록` 버튼은
-/// 이제 없다 — 그 결과(오늘 스케줄에 등록됨)를 보려는 테스트도 이 헬퍼를
-/// 쓴다.
-Future<void> _confirmAssign(WidgetTester tester) async {
-  // 텍스트가 아니라 키로 찾는다 — 확인 다이얼로그의 submit 버튼도 같은
-  // 라벨(`programEditorAssign`)을 쓰므로, 텍스트 찾기는 라벨이 한 곳 더
-  // 생기면 `findsOneWidget` 위반으로 깨진다.
-  final assign = find.byKey(const ValueKey<String>('program-editor-assign'));
-  await tester.scrollUntilVisible(
-    assign,
-    150,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.ensureVisible(assign);
-  await tester.pump();
-  await tester.tap(assign);
+/// `보내기` 를 눌러 확인창까지 통과하고 실제로 배정한다(#1029) — 이 버튼
+/// 하나가 확인·배정·PT 등록을 함께 한다. `PT 스케줄에 등록` 버튼은 따로
+/// 없다 — 그 결과(오늘 스케줄에 등록됨)를 보려는 테스트도 이 헬퍼를 쓴다.
+Future<void> _sendProgram(WidgetTester tester) async {
+  final send = await _ensureSendButtonReady(tester);
+  await tester.tap(send);
   await tester.pumpAndSettle();
+  // 텍스트가 아니라 키로 찾는다 — 확인 다이얼로그의 submit 버튼도 편집기의
+  // `일정 추가` 버튼과 같은 라벨(`programEditorAddSchedule`)을 쓰므로,
+  // 텍스트 찾기는 라벨이 한 곳 더 생기면 `findsOneWidget` 위반으로 깨진다.
   await tester.tap(
     find.byKey(const ValueKey<String>('program-assign-confirm-submit')),
   );
@@ -1284,8 +1275,7 @@ void main() {
 
       // The open form's TextField adds an inner Scrollable — target the
       // page ListView explicitly.
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 4)); // reset window
@@ -1339,8 +1329,7 @@ void main() {
       await tester.tap(find.text('박성호'));
       await settle(tester);
 
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await settle(tester);
 
       // 박성호는 오늘 15:00 에 이미 예정된 세션이 있다 — 새 세션을 만드는
@@ -1370,8 +1359,7 @@ void main() {
     ) async {
       await openTab(tester);
 
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await settle(tester);
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
 
@@ -1393,7 +1381,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await _openFinalReview(tester);
+      await _ensureSendButtonReady(tester);
       final dateButton = find.byKey(
         const ValueKey<String>('program-register-date'),
       );
@@ -1404,7 +1392,8 @@ void main() {
       );
       await tester.ensureVisible(dateButton);
       await tester.pump();
-      // 기본값은 오늘 — YYYY-MM-DD 로 표시된다.
+      // 기본값은 오늘 — YYYY-MM-DD 로 표시된다. 다이얼로그 없이 박스
+      // 하단에 바로 보이는 칩이다.
       expect(
         find.descendant(of: dateButton, matching: find.text(ymd(nowKst()))),
         findsOneWidget,
@@ -1415,7 +1404,7 @@ void main() {
       expect(find.byType(DatePickerDialog), findsOneWidget);
       await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
 
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await settle(tester);
       expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
 
@@ -1446,7 +1435,22 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await _openFinalReview(tester);
+      await _ensureSendButtonReady(tester);
+
+      // `showTimePicker` 의 다이얼(원형) UI는 좌표로 값을 골라야 해서
+      // 픽셀 위치에 취약하다 — 다른 팝업 콜백 테스트(`_selectExerciseAction`)
+      // 처럼 위젯을 직접 잡아 콜백을 불러 값을 확정한다.
+      final workspace = tester.widget<ProgramEditorWorkspace>(
+        find.byType(ProgramEditorWorkspace),
+      );
+      workspace.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
+      await tester.pump();
+
+      // 날짜·시각 칩은 다이얼로그 없이 박스 하단에 바로 보인다 — 방금
+      // 고른 시각이 그 칩에 그대로 보이는지 확인하고, 날짜는 내일로
+      // 고른다. 오늘로 두면 이미 있는 세션과 섞인다 — 시드는 한 주 내내
+      // 일정이 차 있으므로(#1210) 그날의 유일한 세션이 아니라 **고른
+      // 시각으로** 찾는다.
       final timeButton = find.byKey(
         const ValueKey<String>('program-register-time'),
       );
@@ -1457,36 +1461,23 @@ void main() {
       );
       await tester.ensureVisible(timeButton);
       await tester.pump();
-      // 기본값은 오전 10시.
       expect(
         find.descendant(
           of: timeButton,
           matching: find.text(
-            const TimeOfDay(hour: 10, minute: 0).format(tester.element(timeButton)),
+            const TimeOfDay(hour: 14, minute: 30).format(tester.element(timeButton)),
           ),
         ),
         findsOneWidget,
       );
 
-      // `showTimePicker` 의 다이얼(원형) UI는 좌표로 값을 골라야 해서
-      // 픽셀 위치에 취약하다 — 다른 팝업 콜백 테스트(`_selectExerciseAction`)
-      // 처럼 콜백을 직접 불러 값을 확정한다.
-      final card = tester.widget<ProgramFinalReviewCard>(
-        find.byType(ProgramFinalReviewCard),
-      );
-      card.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
-      await tester.pump();
-
-      // 오늘로 두면 이미 있는 세션과 섞인다 — 내일로 골라 방금 만든 것만
-      // 본다. 시드는 한 주 내내 일정이 차 있으므로(#1210) 그날의 유일한
-      // 세션이 아니라 **고른 시각으로** 찾는다.
       await tester.tap(
         find.byKey(const ValueKey<String>('program-register-date')),
       );
       await tester.pumpAndSettle();
       await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
 
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await settle(tester);
       expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
 
@@ -1509,8 +1500,7 @@ void main() {
     testWidgets('send shows confirmation then resets edits', (tester) async {
       await openTab(tester);
 
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await tester.pump();
 
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
@@ -1526,15 +1516,15 @@ void main() {
         ),
         findsNothing,
       );
-      final review = find.byKey(
-        const ValueKey<String>('program-editor-review'),
+      final send = find.byKey(
+        const ValueKey<String>('program-editor-send'),
       );
       await tester.scrollUntilVisible(
-        review,
+        send,
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(tester.widget<ActionButton>(review).onPressed, isNull);
+      expect(tester.widget<ActionButton>(send).onPressed, isNull);
     });
 
     testWidgets('mashing 스케줄 등록 registers only once', (tester) async {
@@ -1550,18 +1540,20 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await _openFinalReview(tester);
+      final send = await _ensureSendButtonReady(tester);
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('program-assign-confirm-submit')),
+      );
       // 배정+PT 등록이 한 버튼에 묶였다(#1029) — 배정은 빠르지만 그 뒤로
       // 이어지는 등록이 느린 채로 남아 있는 동안, 버튼은 계속 잠겨 있다
-      // (`assigning`). 그 잠긴 창 안에서 두 번째 탭을 흉내 낸다.
-      await _confirmAssign(tester);
+      // (`sending`). 그 잠긴 창 안에서 두 번째 탭을 흉내 낸다.
       await tester.pump(const Duration(milliseconds: 50));
       // Second tap lands mid-flight — the button is now disabled, so this
-      // must NOT trigger a second register. Key (not text) — the confirm
-      // dialog's own submit button shares the same label and may still be
-      // mid-close.
+      // must NOT trigger a second register.
       await tester.tap(
-        find.byKey(const ValueKey<String>('program-editor-assign')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
         warnIfMissed: false,
       );
       await settle(tester);
@@ -1588,8 +1580,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await tester.pump(const Duration(milliseconds: 50));
 
       // Switch client while the write for 김민수 is still in flight —
@@ -1604,17 +1595,12 @@ void main() {
       await tester.tap(find.text('이지수'));
       await settle(tester);
 
-      // 이지수's card must not claim the registration, and her button
+      // 이지수's card must not claim the registration, and her send button
       // must not be left disabled by the previous client's guard. The
       // editor is a lazy list, so bring the button back into view first.
-      await _openFinalReview(tester);
-      await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
+      final send = await _ensureSendButtonReady(tester);
       expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
-      expect(find.text('고객에게 배정'), findsOneWidget);
+      expect(tester.widget<ActionButton>(send).onPressed, isNotNull);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
     });
@@ -1633,8 +1619,7 @@ void main() {
       );
       await goTo(tester, AppRoutes.coaching);
 
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
@@ -1663,8 +1648,8 @@ void main() {
       await goTo(tester, AppRoutes.coaching);
 
       // 편집기는 매번 빈 상태로 시작한다(#1028) — 회원을 오갈 때마다 그
-      // 회원의 편집기는 새로 만들어지기 때문이다. `_openFinalReview` 가 AI
-      // 흐름 전체를 다시 밟게 두면(느려서) 아래 5초 지연과 우연히 겹칠 수
+      // 회원의 편집기는 새로 만들어지기 때문이다. `_ensureSendButtonReady` 가
+      // AI 흐름 전체를 다시 밟게 두면(느려서) 아래 5초 지연과 우연히 겹칠 수
       // 있으므로, 이 타이밍 테스트에서는 직접 운동 하나를 빠르게 넣어 둔다.
       Future<void> quicklyFillEditor() async {
         final scrollable = find.byType(Scrollable).first;
@@ -1685,12 +1670,10 @@ void main() {
       }
 
       Future<void> tapRegister() async {
-        // 회원을 바꾸면 검토가 닫힌다 — 등록마다 다시 최종 검토를 연다.
-        // `고객에게 배정` 이 배정+PT 등록을 함께 한다(#1029) — 등록만의
-        // 재진입 방지는 여전히 `_registeringClientIds`(고객별) 가 맡는다.
+        // `보내기` 가 배정+PT 등록을 함께 한다(#1029) — 등록만의 재진입
+        // 방지는 여전히 `_registeringClientIds`(고객별) 가 맡는다.
         await quicklyFillEditor();
-        await _openFinalReview(tester);
-        await _confirmAssign(tester);
+        await _sendProgram(tester);
         await tester.pump(const Duration(milliseconds: 30));
       }
 
@@ -1740,8 +1723,7 @@ void main() {
       await goTo(tester, AppRoutes.coaching);
 
       // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
-      await _openFinalReview(tester);
-      await _confirmAssign(tester);
+      await _sendProgram(tester);
       await tester.pump(const Duration(milliseconds: 50));
 
       await tester.scrollUntilVisible(
@@ -1802,24 +1784,23 @@ void main() {
         await _selectExerciseAction(tester, 'delete');
       }
 
-      // 운동이 하나도 없으면 최종 검토 자체가 열리지 않는다 — 전송 버튼은
-      // 그 화면에만 있으므로, 여기서 막히면 회원에게 갈 길도 함께 막힌다
-      // (#1028).
-      final review = find.byKey(const ValueKey<String>('program-editor-review'));
+      // 운동이 하나도 없으면 `보내기` 자체가 잠긴다 — 확인창도 뜨지 않으니
+      // 회원에게 갈 길도 함께 막힌다 (#1028).
+      final send = find.byKey(const ValueKey<String>('program-editor-send'));
       await tester.scrollUntilVisible(
-        review,
+        send,
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(review);
+      await tester.ensureVisible(send);
       await tester.pump();
-      expect(tester.widget<ActionButton>(review).onPressed, isNull);
+      expect(tester.widget<ActionButton>(send).onPressed, isNull);
       expect(find.text('PT 스케줄에 등록'), findsNothing);
       expect(find.text('고객에게 배정'), findsNothing);
     });
   });
 
-  group('CoachingPage — 전송은 최종 검토에서만 (#1028)', () {
+  group('CoachingPage — 전송은 보내기 확인창을 거쳐서만 (#1028)', () {
     Future<void> openTab(
       WidgetTester tester, {
       Size size = const Size(1600, 1200),
@@ -1838,7 +1819,7 @@ void main() {
     testWidgets('편집기 화면에는 배정·PT 등록이 아예 없다', (tester) async {
       await openTab(tester);
 
-      // 화면 어디에도 전송 버튼이 없다 — 스크롤 밖에 숨어 있는 것이 아니라
+      // 화면 어디에도 실제 배정·등록 버튼이 없다 — 확인창을 열기 전까지는
       // 위젯 트리에 만들어지지 않는다.
       expect(
         find.byKey(const ValueKey<String>('program-editor-assign')),
@@ -1850,92 +1831,33 @@ void main() {
       );
       expect(find.text('고객에게 배정'), findsNothing);
       expect(find.text('PT 스케줄에 등록'), findsNothing);
-      expect(
-        find.byKey(const ValueKey<String>('program-final-review')),
-        findsNothing,
-      );
     });
 
-    testWidgets('최종 검토를 열면 전송 버튼이 생기고, 돌아가면 다시 사라진다', (tester) async {
-      await openTab(tester);
-
-      await _openFinalReview(tester);
-      expect(
-        find.byKey(const ValueKey<String>('program-final-review')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-assign')),
-        findsOneWidget,
-      );
-
-      // 편집기로 돌아가면 전송 자리도 함께 닫힌다.
-      final backButton = find.byKey(
-        const ValueKey<String>('program-review-back'),
-      );
-      await tester.scrollUntilVisible(
-        backButton,
-        -150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(backButton);
-      await tester.pump();
-      await tester.tap(backButton);
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-assign')),
-        findsNothing,
-      );
-    });
-
-    testWidgets('최종 검토 화면이 보여 주는 구성이 곧 편집기의 구성이다', (tester) async {
-      await openTab(tester);
-
-      // 프로그램 정보 박스는 빈 상태로 시작한다(#1028 후속) — 먼저 AI 코칭
-      // 보조 제안을 편집기에 반영한다.
-      await _applyRecommendedRoutine(tester);
-
-      // 편집기에서 운동 하나를 지우고 검토를 연다 — 검토 화면은 지운 뒤의
-      // 구성을 보여 줘야 한다. 화면과 payload 가 어긋나면 트레이너가 확인한
-      // 것과 다른 것이 회원에게 간다.
-      await _selectExerciseAction(tester, 'delete');
-      await _openFinalReview(tester);
-
-      final review = find.byKey(const ValueKey<String>('program-final-review'));
-      expect(
-        find.descendant(of: review, matching: find.text('저강도 유산소 (걷기)')),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: review, matching: find.text('하체 스트레칭')),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('회원을 바꾸면 검토가 닫힌다 — 다른 회원의 구성을 물려받지 않는다', (
+    testWidgets('보내기를 누르면 확인창이 뜨고, 취소하면 아무 일도 일어나지 않는다', (
       tester,
     ) async {
       await openTab(tester);
-      await _openFinalReview(tester);
+
+      final send = await _ensureSendButtonReady(tester);
+      await tester.tap(send);
+      await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey<String>('program-final-review')),
+        find.byKey(const ValueKey<String>('program-assign-confirm')),
         findsOneWidget,
       );
 
-      await tester.scrollUntilVisible(
-        find.text('이지수'),
-        -150,
-        scrollable: find.byType(Scrollable).first,
+      await tester.tap(
+        find.byKey(const ValueKey<String>('program-assign-confirm-cancel')),
       );
-      await tester.ensureVisible(find.text('이지수'));
-      await tester.pump();
-      await tester.tap(find.text('이지수'));
-      await settle(tester);
+      await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey<String>('program-final-review')),
+        find.byKey(const ValueKey<String>('program-assign-confirm')),
         findsNothing,
       );
+      expect(find.text('김민수님에게 전송 완료!'), findsNothing);
+      // 취소했으니 편집기 내용도 그대로 남아 있고, 다시 눌러 보낼 수 있다.
+      expect(tester.widget<ActionButton>(send).onPressed, isNotNull);
     });
 
     testWidgets(
@@ -2064,24 +1986,17 @@ void main() {
     }
 
     Future<void> tapSend(WidgetTester tester) async {
-      await _openFinalReview(tester);
-      // `_openFinalReview` 가 편집기를 채우려고 AI 흐름을 지났다면(#1028)
-      // `템플릿에 반영` 스낵바가 큐에 남아 있을 수 있다 — 같은
+      final send = await _ensureSendButtonReady(tester);
+      // `_ensureSendButtonReady` 가 편집기를 채우려고 AI 흐름을 지났다면
+      // (#1028) `템플릿에 반영` 스낵바가 큐에 남아 있을 수 있다 — 같은
       // `ScaffoldMessenger` 를 쓰므로, 그 스낵바가 다 사라질 때까지 기다려
       // 둬야 전송 실패 스낵바가 곧바로 보인다.
       await tester.pump(const Duration(seconds: 5));
-      await tester.scrollUntilVisible(
-        find.text('고객에게 배정'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(find.text('고객에게 배정'));
-      await tester.pump();
-      await tester.tap(find.text('고객에게 배정'));
+      await tester.tap(send);
       await tester.pumpAndSettle();
-      // `고객에게 배정` 은 곧장 mutation 하지 않고 확인창을 한 번 더
-      // 거친다(#1029) — 배정과 PT 등록이 한 버튼에 묶인 만큼, 실제로
-      // 나가기 전에 확인해야 한다.
+      // `보내기` 는 곧장 mutation 하지 않고 확인창을 한 번 더 거친다
+      // (#1029) — 배정과 PT 등록이 한 버튼에 묶인 만큼, 실제로 나가기
+      // 전에 확인해야 한다.
       await tester.tap(
         find.byKey(const ValueKey<String>('program-assign-confirm-submit')),
       );

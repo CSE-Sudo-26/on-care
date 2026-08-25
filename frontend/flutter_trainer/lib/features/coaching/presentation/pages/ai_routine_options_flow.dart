@@ -279,8 +279,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   /// 최종 검토에서 확정한 구성을 **바로 고객에게 보내지 않고**, 2열의
   /// (지금은 비어 있는) `프로그램 정보` 박스로만 반영한다.
   ///
-  /// 실제 전송은 프로그램 탭의 단일 `보내기`(최종 검토 단계, `ProgramFinalReviewCard`)
-  /// 에서만 일어난다 — 여기서는 서버를 호출하지 않는다. 반영은
+  /// 실제 전송은 프로그램 탭 편집기의 단일 `보내기` 버튼에서만 일어난다 —
+  /// 여기서는 서버를 호출하지 않는다. 반영은
   /// [CoachingPage]가 넘겨준 [AiRoutineOptionsFlow.onReviewCompleted] 콜백을
   /// 통해 편집기의 `aiSuggestions` 로 흘러가고, 편집기가 그 값이 바뀔 때마다
   /// 세션 1에 병합한다(`ProgramEditorWorkspace.didUpdateWidget`).
