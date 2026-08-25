@@ -793,3 +793,63 @@ def test_trainer_client_exercise_advice_requires_own_client(client):
         headers=_auth(token),
     )
     assert denied.status_code in (403, 404), denied.text
+
+
+# ---- 회원 앱과 같은 목표 필드 (#1449) ----
+
+
+def test_member_health_profile_carries_the_member_app_goals(client):
+    """트레이너가 읽는 건강 프로필이 회원 앱 마이페이지와 같은 목표를 담는다."""
+    token = _trainer_token(client)
+
+    updated = client.put(
+        "/v1/trainer/clients/user-jisu/health-profile",
+        json={
+            "daily_calories": 2100,
+            "daily_sugar_g": 45,
+            "daily_carbs_g": 260,
+            "daily_protein_g": 130,
+            "daily_fat_g": 55,
+            "daily_burn_kcal": 320,
+            "weekly_cardio_minutes": 150,
+            "weekly_strength_sets": 21,
+            "weekly_flexibility_minutes": 60,
+        },
+        headers=_auth(token),
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["daily_burn_kcal"] == 320
+    assert body["weekly_cardio_minutes"] == 150
+    assert body["weekly_strength_sets"] == 21
+    assert body["weekly_flexibility_minutes"] == 60
+    assert body["daily_protein_g"] == 130
+
+    # 다시 읽어도 같은 값이다 — 한쪽에서 고친 목표가 다른 쪽에서 옛 값으로
+    # 남지 않는다.
+    again = client.get(
+        "/v1/trainer/clients/user-jisu/health-profile", headers=_auth(token)
+    )
+    assert again.status_code == 200
+    assert again.json()["weekly_strength_sets"] == 21
+
+
+def test_member_app_sees_the_goals_the_trainer_saved(client):
+    """트레이너가 저장한 목표를 회원 앱이 자기 화면에서 그대로 읽는다."""
+    trainer_token = _trainer_token(client)
+    saved = client.put(
+        "/v1/trainer/clients/user-jisu/health-profile",
+        json={"weekly_cardio_minutes": 175, "daily_burn_kcal": 410},
+        headers=_auth(trainer_token),
+    )
+    assert saved.status_code == 200
+
+    member_token = client.post(
+        "/v1/auth/login",
+        data={"username": "jisu@oncare.com", "password": "oncare123"},
+    ).json()["access_token"]
+    mine = client.get("/v1/users/me/profile", headers=_auth(member_token))
+
+    assert mine.status_code == 200
+    assert mine.json()["weekly_cardio_minutes"] == 175
+    assert mine.json()["daily_burn_kcal"] == 410

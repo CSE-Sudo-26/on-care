@@ -1268,6 +1268,78 @@ abstract class AppLocalizations {
   /// **'Member goals'**
   String get memberHealthGoals;
 
+  /// No description provided for @memberHealthDietGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition goals'**
+  String get memberHealthDietGoal;
+
+  /// No description provided for @memberHealthExerciseGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise goals'**
+  String get memberHealthExerciseGoal;
+
+  /// No description provided for @memberHealthGoalCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily calories (kcal)'**
+  String get memberHealthGoalCalories;
+
+  /// No description provided for @memberHealthGoalSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sodium (mg)'**
+  String get memberHealthGoalSodium;
+
+  /// No description provided for @memberHealthGoalSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sugar (g)'**
+  String get memberHealthGoalSugar;
+
+  /// No description provided for @memberHealthGoalCarbs.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily carbs (g)'**
+  String get memberHealthGoalCarbs;
+
+  /// No description provided for @memberHealthGoalProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily protein (g)'**
+  String get memberHealthGoalProtein;
+
+  /// No description provided for @memberHealthGoalFat.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily fat (g)'**
+  String get memberHealthGoalFat;
+
+  /// No description provided for @memberHealthGoalBurnDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily burn (kcal)'**
+  String get memberHealthGoalBurnDaily;
+
+  /// No description provided for @memberHealthGoalCardioWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly cardio (min)'**
+  String get memberHealthGoalCardioWeekly;
+
+  /// No description provided for @memberHealthGoalStrengthWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly strength (sets)'**
+  String get memberHealthGoalStrengthWeekly;
+
+  /// No description provided for @memberHealthGoalFlexibilityWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly stretching (min)'**
+  String get memberHealthGoalFlexibilityWeekly;
+
   /// No description provided for @memberHealthWeeklyGoal.
   ///
   /// In en, this message translates to:
