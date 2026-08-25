@@ -430,6 +430,23 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               maxLines: 5,
               maxLength: _promptMaxLength,
               style: _inputTextStyle,
+              buildCounter:
+                  (
+                    BuildContext context, {
+                    required int currentLength,
+                    required bool isFocused,
+                    required int? maxLength,
+                  }) => Transform.translate(
+                    offset: const Offset(AppSpacing.md, 0),
+                    child: Text(
+                      '$currentLength/$maxLength',
+                      key: const ValueKey<String>('ai-prompt-counter'),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.subtleForeground,
+                      ),
+                    ),
+                  ),
               decoration: _inputDecoration(
                 hintText: l.aiPromptHint,
                 outlined: true,
@@ -1138,9 +1155,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       isDense: true,
       filled: true,
       fillColor: outlined ? AppColors.card : AppColors.inputBackground,
-      counterStyle: outlined
-          ? const TextStyle(fontSize: 11.5, color: AppColors.subtleForeground)
-          : null,
       border: outlined
           ? const OutlineInputBorder(
               borderRadius: BorderRadius.all(AppRadius.md),
@@ -1205,7 +1219,6 @@ String _strengthSummary(RoutineExercise exercise, {required bool korean}) {
   final String weight = w == w.roundToDouble() ? '${w.round()}' : '$w';
   return '$base · ${weight}kg';
 }
-
 
 class _RoutineChoice {
   const _RoutineChoice({

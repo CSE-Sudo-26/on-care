@@ -568,9 +568,10 @@ void main() {
           .color,
       AppColors.borderStrong,
     );
+    expect(initialPrompt.buildCounter, isNotNull);
     expect(
-      initialPrompt.decoration?.counterStyle?.color,
-      AppColors.subtleForeground,
+      find.byKey(const ValueKey<String>('ai-prompt-counter')),
+      findsOneWidget,
     );
     // 서버 상한(`trainer_note`, 500자)을 화면에서 먼저 막는다.
     expect(initialPrompt.maxLength, 500);
