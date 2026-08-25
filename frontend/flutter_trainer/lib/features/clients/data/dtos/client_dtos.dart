@@ -37,6 +37,7 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
 /// `GET /v1/trainer/clients/{id}/diet` element → [ClientDietEntry].
 ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
   return ClientDietEntry(
+    id: _str(json['id']),
     meal: _str(json['meal']),
     items: _str(json['items']),
     calories: _int(json['calories']),
