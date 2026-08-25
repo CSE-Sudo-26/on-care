@@ -1773,20 +1773,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myNotifNewMessageHint => '고객이 메시지를 보내면 사이드바 뱃지로 알려드려요';
 
   @override
-  String get myNotifSessionReminder => '수업 시작 전 알림';
-
-  @override
-  String get myNotifSessionReminderHint => '예정된 세션이 다가오면 대시보드에서 강조해요';
-
-  @override
-  String get myReminderLead => '알림 시점';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes분 전';
-  }
-
-  @override
   String get myAccount => '계정';
 
   @override

@@ -1853,21 +1853,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'A sidebar badge appears when a client messages you';
 
   @override
-  String get myNotifSessionReminder => 'Session reminders';
-
-  @override
-  String get myNotifSessionReminderHint =>
-      'Upcoming sessions are highlighted on the dashboard';
-
-  @override
-  String get myReminderLead => 'Remind me';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes min before';
-  }
-
-  @override
   String get myAccount => 'Account';
 
   @override
