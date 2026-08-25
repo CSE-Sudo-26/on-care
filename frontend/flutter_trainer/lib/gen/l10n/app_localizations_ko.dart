@@ -990,7 +990,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String consultApproved(String name) {
-    return '$name 고객을 담당으로 등록했어요';
+    return '$name님의 상담 요청을 승인했어요. 스케줄 탭에서 일정을 추가해 주세요.';
+  }
+
+  @override
+  String consultScheduleCreated(String name) {
+    return '$name님의 상담 일정을 등록했어요';
   }
 
   @override
@@ -1451,7 +1456,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
-  String get schedDetailTitle => '상세 스케줄';
+  String get schedDetailTitle => '상세 일정';
 
   @override
   String get schedDeleteTitle => '일정 삭제';
