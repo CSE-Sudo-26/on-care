@@ -408,6 +408,16 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(l.aiPromptTitle, style: _sectionTitleStyle),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l.aiPromptBlurb,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.mutedForeground,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           LabeledField(
             label: l.aiPromptLabel,
@@ -419,15 +429,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               maxLength: _promptMaxLength,
               style: _inputTextStyle,
               decoration: _inputDecoration(hintText: l.aiPromptHint),
-            ),
-          ),
-          Text(
-            l.aiPromptBlurb,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 10.5,
-              color: AppColors.mutedForeground,
             ),
           ),
         ],
