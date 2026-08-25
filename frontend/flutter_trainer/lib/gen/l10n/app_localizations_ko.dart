@@ -1105,6 +1105,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientFeedback => '고객 피드백';
 
   @override
+  String clientFeedbackOn(String name) {
+    return '$name에 대한 고객 피드백';
+  }
+
+  @override
+  String get clientFeedbackPersonal => '개인 운동에 대한 고객 피드백';
+
+  @override
+  String get clientFeedbackSession => '이 세션에 대한 고객 피드백';
+
+  @override
+  String get workoutKindAiPersonal => 'AI 개인운동';
+
+  @override
   String get trainerNote => '트레이너 메모';
 
   @override
