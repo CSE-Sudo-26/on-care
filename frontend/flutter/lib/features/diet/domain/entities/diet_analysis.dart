@@ -34,6 +34,9 @@ class DietAnalysisResult {
     required this.totalSodiumMg,
     required this.totalSugarG,
     required this.coachComment,
+    this.totalCarbsG = 0,
+    this.totalProteinG = 0,
+    this.totalFatG = 0,
   });
 
   final String entryId;
@@ -41,6 +44,14 @@ class DietAnalysisResult {
   final int totalCalories;
   final int totalSodiumMg;
   final double totalSugarG;
+
+  /// 총 탄수화물·단백질·지방(g). 서버는 이미 함께 내려주고 있었는데 앱이 읽지
+  /// 않아, 분석 결과가 칼로리·나트륨·당류만 말했다(#1432). 값이 없는 응답은
+  /// 0 으로 떨어진다 — 화면은 서버가 준 값을 그대로 적는다.
+  final double totalCarbsG;
+  final double totalProteinG;
+  final double totalFatG;
+
   final String coachComment;
 
   factory DietAnalysisResult.fromResponse(Map<String, Object?> json) {
@@ -56,6 +67,9 @@ class DietAnalysisResult {
       totalCalories: (analysis['total_calories'] as num?)?.toInt() ?? 0,
       totalSodiumMg: (analysis['total_sodium_mg'] as num?)?.toInt() ?? 0,
       totalSugarG: (analysis['total_sugar_g'] as num?)?.toDouble() ?? 0,
+      totalCarbsG: (analysis['total_carbs_g'] as num?)?.toDouble() ?? 0,
+      totalProteinG: (analysis['total_protein_g'] as num?)?.toDouble() ?? 0,
+      totalFatG: (analysis['total_fat_g'] as num?)?.toDouble() ?? 0,
       coachComment: (analysis['coach_comment'] as String?) ?? '',
     );
   }

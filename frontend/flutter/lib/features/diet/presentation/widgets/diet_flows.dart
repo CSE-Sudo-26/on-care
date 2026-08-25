@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' show DateFormat;
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/core/utils/portrait_date_picker.dart';
@@ -775,9 +775,13 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: _body(),
+          // 결과가 길어지면 시트 안에서 스크롤한다 — 탄·단·지 줄이 붙으면서
+          // 작은 화면에서는 버튼이 시트 밖으로 밀렸다(#1432).
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: _body(),
+            ),
           ),
         ],
       ),
@@ -967,23 +971,51 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           value: '${r.totalSugarG}',
           unit: l.dietUnitG,
         ),
+        const SizedBox(height: 8),
+        // 탄·단·지는 칼로리를 나눈 것이라 한 줄에 묶는다 — 나트륨·당류처럼
+        // 따로 세우면 같은 칼로리를 설명하는 값이라는 것이 보이지 않는다.
+        // 색·이름·단위는 식단 탭의 기존 규칙 그대로다(#1432).
+        _MacroRow(
+          key: const Key('diet-result-macros'),
+          carbsG: r.totalCarbsG,
+          proteinG: r.totalProteinG,
+          fatG: r.totalFatG,
+        ),
         if (r.coachComment.isNotEmpty) ...<Widget>[
           const SizedBox(height: 12),
           Container(
+            key: const Key('diet-result-coach-comment'),
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: FigmaColors.statBg,
+              // AI 가 쓴 말은 수치 카드와 같은 회색이면 서버가 잰 값처럼
+              // 읽힌다. AI 조언 카드와 같은 옅은 파랑을 쓴다(#1432).
+              color: FigmaColors.softBlue,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              r.coachComment,
-              style: const TextStyle(
-                fontSize: 13.5,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: AppColors.foreground,
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.only(top: 1, right: 8),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 15,
+                    color: FigmaColors.primary,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    r.coachComment,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1012,6 +1044,99 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       ],
     );
   }
+}
+
+/// 탄·단·지 한 줄. 값 셋이 한 칼로리를 나눈 것이라 한 상자 안에 나란히 선다.
+///
+/// 색은 기간 그래프가 쓰는 브랜드 색의 농담 셋이다 — 같은 세 값이 화면마다
+/// 다른 색이면 색이 뜻을 잃는다. 서버가 0 을 주면 0 을 적는다: 값을 감추면
+/// 분석이 그 영양소를 재지 못한 것인지 정말 0 인지 알 수 없다.
+class _MacroRow extends StatelessWidget {
+  const _MacroRow({
+    super.key,
+    required this.carbsG,
+    required this.proteinG,
+    required this.fatG,
+  });
+
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<({String label, double grams, Color color})> parts =
+        <({String label, double grams, Color color})>[
+          (label: l.homeMacroCarbs, grams: carbsG, color: FigmaColors.macroCarbs),
+          (
+            label: l.homeMacroProtein,
+            grams: proteinG,
+            color: FigmaColors.macroProtein,
+          ),
+          (label: l.homeMacroFat, grams: fatG, color: FigmaColors.macroFat),
+        ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: <Widget>[
+          for (final part in parts)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(right: 5),
+                        decoration: BoxDecoration(
+                          color: part.color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Flexible(
+                        child: Text(
+                          part.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_macroText(part.grams)}${l.dietUnitG}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: FigmaColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 소수 첫째 자리까지만. 정수는 콤마만 — 식단 탭의 다른 수치와 같은 서식이다.
+  static String _macroText(double grams) => grams == grams.roundToDouble()
+      ? NumberFormat('#,###').format(grams)
+      : NumberFormat('#,##0.#').format(grams);
 }
 
 class _ResultRow extends StatelessWidget {
