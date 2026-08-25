@@ -1078,6 +1078,7 @@
   "@reportsWeeksAgo": {"placeholders": {"count": {"type": "int"}}},
   "reportsAiTitle": "AI 코칭 보조 · 리포트 요약",
   "reportsAiNextWeek": "다음 주 코칭 제안",
+  "reportsAiMoreWatchpoints": "외 {count}건은 리포트 본문에서 확인하세요.",
   "reportsActionSodium": "국물·절임 반찬을 절반만 남기도록 안내해 주세요.",
   "reportsActionSugar": "당류가 목표({target}g)를 넘긴 날이 있어요. 음료·간식부터 짚어 주세요.",
   "reportsActionLowCompletion": "루틴 난이도를 한 단계 낮춰 완수 경험을 먼저 만들어 주세요.",
