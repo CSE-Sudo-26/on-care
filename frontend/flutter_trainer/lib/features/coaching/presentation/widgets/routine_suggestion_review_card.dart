@@ -453,10 +453,9 @@ class _EvidenceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.sm),
-        border: Border.all(color: AppColors.borderStrong),
+      decoration: const BoxDecoration(
+        color: AppColors.accentSurface,
+        borderRadius: BorderRadius.all(AppRadius.pill),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -468,7 +467,7 @@ class _EvidenceChip extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: AppColors.subtleForeground,
+            color: AppColors.accent,
           ),
         ),
       ),
