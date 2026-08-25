@@ -78,17 +78,37 @@ class ConsultationsPage extends ConsumerWidget {
 
     final page = PageScaffold(
       title: l.consultTitle,
-      // 모달로 뜰 때는 페이지 전용 헤더(고정 88 높이) 아래에 상단 여백까지
-      // 그대로 물려받아 제목과 필터 칩 사이가 과하게 벌어졌다 — 모달 안에서는
-      // 위쪽만 좁힌다.
-      contentPadding: modal
-          ? const EdgeInsets.fromLTRB(
-              AppLayout.pagePadding,
-              AppSpacing.sm,
-              AppLayout.pagePadding,
-              AppLayout.pagePadding,
-            )
-          : const EdgeInsets.all(AppLayout.pagePadding),
+      // 메시지 탭 고객 리스트 상단의 `전체 / 읽지 않음 N` 칩과 같은 언어다 —
+      // 글자 토글(`전체 보기`/`대기 중만`) 대신 두 상태를 한눈에 본다. 부제
+      // 자리에 그대로 얹는다: 본문 쪽에 별도 줄로 끼워 넣으면 헤더가 이미
+      // 부제 한 줄만큼 예약해 둔 높이(`AppLayout.pageHeaderHeight`)가 빈
+      // 채로 남아 그 아래에 또 여백을 넣는 꼴이 된다.
+      subtitleWidget: Padding(
+        // 제목과 칩 사이를 살짝 띄운다 — 헤더 전체는 고정 높이 안에서
+        // 세로 가운데 정렬되므로, 둘이 붙어 있으면 그 블록이 위로
+        // 치우쳐 보이고 우측 닫기 버튼과도 중심이 안 맞아 보였다.
+        padding: const EdgeInsets.only(top: AppSpacing.sm),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _ConsultFilterChip(
+              key: const ValueKey<String>('consultation-filter-all'),
+              label: l.consultFilterAll,
+              selected: filter == 'all',
+              onTap: () =>
+                  ref.read(consultationFilterProvider.notifier).state = 'all',
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _ConsultFilterChip(
+              key: const ValueKey<String>('consultation-filter-pending'),
+              label: l.consultFilterPendingCount(pending ?? 0),
+              selected: filter == 'pending',
+              onTap: () => ref.read(consultationFilterProvider.notifier).state =
+                  'pending',
+            ),
+          ],
+        ),
+      ),
       actions: <Widget>[
         if (modal)
           IconButton(
@@ -98,42 +118,18 @@ class ConsultationsPage extends ConsumerWidget {
             icon: const Icon(Icons.close),
           ),
       ],
+      // 위쪽만 줄인다 — 기본값(`AppLayout.pagePadding`)은 헤더가 부제
+      // 없이 끝날 때를 기준으로 맞춘 여백이라, 칩이 그 부제 자리를 채운
+      // 지금은 칩과 본문 사이가 필요 이상으로 벌어져 보였다.
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppLayout.pagePadding,
+        AppSpacing.sm,
+        AppLayout.pagePadding,
+        AppLayout.pagePadding,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          // 메시지 탭 고객 리스트 상단의 `전체 / 읽지 않음 N` 칩과 같은 언어다
-          // — 글자 토글(`전체 보기`/`대기 중만`) 대신 두 상태를 한눈에 본다.
-          // 예전에는 헤더 우측 `actions` 자리에 있었는데, 그 자리는 액션마다
-          // 자동으로 여백을 더해 칩 사이가 메시지 탭보다 넓어 보였고, 바로
-          // 위 `대기 중 N건` 부제와 같은 정보를 두 번 말하고 있었다 — 부제를
-          // 없애고 그 자리로 옮긴다.
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _ConsultFilterChip(
-                key: const ValueKey<String>('consultation-filter-all'),
-                label: l.consultFilterAll,
-                selected: filter == 'all',
-                onTap: () =>
-                    ref.read(consultationFilterProvider.notifier).state = 'all',
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              _ConsultFilterChip(
-                key: const ValueKey<String>('consultation-filter-pending'),
-                label: l.consultFilterPendingCount(pending ?? 0),
-                selected: filter == 'pending',
-                onTap: () =>
-                    ref.read(consultationFilterProvider.notifier).state =
-                        'pending',
-              ),
-            ],
-          ),
-          // 이 칩 아래로 바로 본문(목록 또는 빈/에러 안내)이 온다 — 그
-          // 안내들은 자기 위에도 여백을 두므로, 여기서는 칩과 아래를
-          // 구분할 만큼만 둔다. 예전 `AppSpacing.lg` 는 칩이 헤더에 있어
-          // 부제 자리와 떨어져 있을 때 맞춘 값이라, 지금 자리에서는 아래
-          // 여백과 겹쳐 필요 이상으로 벌어져 보였다.
-          const SizedBox(height: AppSpacing.sm),
           if (!modal) ...<Widget>[
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -368,15 +364,16 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final request = widget.request;
-    final String memberName = request.memberName.isEmpty
+    // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
+    // 로케일을 모른다. (#501)
+    final String name = request.memberName.isEmpty
         ? l.unknownMember
         : request.memberName;
     return SectionCard(
-      // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
-      // 로케일을 모른다. (#501)
-      title: memberName,
-      // 아바타를 제목 자리에 함께 세운다 — 예전에는 본문 쪽에 따로 있어
-      // 이름과 한 덩어리로 읽히지 않았다(#1395).
+      title: name,
+      // 아바타를 이름 옆(제목 자리)에 둔다 — 예전에는 아바타가 운동
+      // 목표·희망 일시 줄과 한 Row에 있어 이름은 카드 제목으로, 아바타는
+      // 그 아래 필드 줄 옆으로 떨어져 보였다(#1395).
       titleWidget: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -384,16 +381,21 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
             label: request.memberName.isEmpty
                 ? '?'
                 : request.memberName.characters.first,
+            size: 28,
           ),
           const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text(
-              memberName,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
-                color: AppColors.foreground,
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                name,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.foreground,
+                ),
               ),
             ),
           ),
@@ -416,14 +418,20 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
           ),
           _Field(
             label: l.consultPreferredTime,
-            value:
-                '${dateLabel(l, request.preferredDate)} '
-                '${_preferredTimeRangeLabel(l, request.preferredTimeCode)}',
+            // 대기 중일 때만 정확한 시간까지 본다 — 승인·거절이 끝나면
+            // 그 요청이 원래 몇 시를 원했는지는 더 이상 결정에 쓸 정보가
+            // 아니다. 승인된 세션의 실제 시간은 스케줄 화면이 말한다.
+            value: request.isPending
+                ? '${dateLabel(l, request.preferredDate)} '
+                      '${_preferredTimeRangeLabel(l, request.preferredTimeCode)}'
+                : dateLabel(l, request.preferredDate),
           ),
-          if (request.message != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            _Quote(label: l.consultMessage, text: request.message!),
-          ],
+          if (request.message != null)
+            _Field(
+              label: l.consultMessage,
+              value: request.message!,
+              bold: false,
+            ),
           // 상태는 이제 위 배지가 말한다 — 거절 사유만 있으면 별도로
           // 덧붙인다(회원에게 보낸 알림 본문과 같은 문구).
           if (request.status == 'rejected' &&
@@ -576,10 +584,14 @@ class _StatusBadge extends StatelessWidget {
 }
 
 class _Field extends StatelessWidget {
-  const _Field({required this.label, required this.value});
+  const _Field({required this.label, required this.value, this.bold = true});
 
   final String label;
   final String value;
+
+  /// 문의 내용처럼 회원이 직접 쓴 글은 다른 항목과 굵기를 맞추지 않는다 —
+  /// 원문 그대로라는 느낌을 남긴다.
+  final bool bold;
 
   @override
   Widget build(BuildContext context) {
@@ -602,61 +614,15 @@ class _Field extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 color: AppColors.foreground,
-                fontWeight: FontWeight.w600,
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// The member's own note, set apart from the structured fields.
-///
-/// [label] 은 위의 다른 항목(운동 목표·관리 목적·희망 일시)과 같은 자리다 —
-/// 라벨 없이 인용구만 있으면 이 글이 회원이 직접 쓴 문의 내용이라는 것이
-/// 위 항목들과의 시각적 구분(색상 배경)에만 기대게 된다(#1092).
-class _Quote extends StatelessWidget {
-  const _Quote({required this.label, required this.text});
-
-  final String label;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppColors.subtleForeground,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: const BoxDecoration(
-            color: AppColors.accentSurface,
-            borderRadius: BorderRadius.all(AppRadius.card),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: AppColors.foreground,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
