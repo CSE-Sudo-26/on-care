@@ -396,7 +396,7 @@ const String kimMinsuFixtureJson = r'''
     },
     {
       "offset": 1,
-      "label": "AI 루틴 · 자율 운동",
+      "label": "AI 개인운동",
       "pt": false,
       "clientFeedback": "하체 스트레칭은 시간이 없어서 못 했어요",
       "trainerNote": "",
@@ -458,7 +458,7 @@ const String kimMinsuFixtureJson = r'''
     },
     {
       "offset": 2,
-      "label": "AI 루틴 · 자율 운동",
+      "label": "AI 개인운동",
       "pt": false,
       "clientFeedback": "오늘은 다 했어요! 뿌듯해요 💪",
       "trainerNote": "",
@@ -517,7 +517,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -558,7 +558,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -593,7 +593,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -610,7 +610,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -654,7 +654,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -686,7 +686,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -730,7 +730,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -768,7 +768,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -809,7 +809,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -844,7 +844,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -861,7 +861,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -905,7 +905,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -937,7 +937,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -978,7 +978,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1019,7 +1019,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1063,7 +1063,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1098,7 +1098,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -1115,7 +1115,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1159,7 +1159,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1194,7 +1194,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1238,7 +1238,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1276,7 +1276,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1317,7 +1317,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1352,7 +1352,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -1369,7 +1369,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1413,7 +1413,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1445,7 +1445,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1496,7 +1496,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1534,7 +1534,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1575,7 +1575,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1610,7 +1610,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -1627,7 +1627,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1671,7 +1671,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1703,7 +1703,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1747,7 +1747,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1785,7 +1785,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1826,7 +1826,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1919,7 +1919,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1960,7 +1960,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -1992,7 +1992,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2033,7 +2033,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2074,7 +2074,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2120,7 +2120,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -2137,7 +2137,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2180,7 +2180,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2224,7 +2224,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2262,7 +2262,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2303,7 +2303,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2338,7 +2338,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -2355,7 +2355,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2399,7 +2399,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2431,7 +2431,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2475,7 +2475,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2513,7 +2513,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2554,7 +2554,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2589,7 +2589,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -2606,7 +2606,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2650,7 +2650,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2682,7 +2682,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2723,7 +2723,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2771,7 +2771,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2815,7 +2815,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2850,7 +2850,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -2867,7 +2867,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2911,7 +2911,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2946,7 +2946,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -2990,7 +2990,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3028,7 +3028,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3069,7 +3069,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3104,7 +3104,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -3121,7 +3121,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3165,7 +3165,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3197,7 +3197,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3241,7 +3241,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3279,7 +3279,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3320,7 +3320,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3416,7 +3416,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3460,7 +3460,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3492,7 +3492,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3536,7 +3536,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3574,7 +3574,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3615,7 +3615,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3647,7 +3647,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -3664,7 +3664,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3705,7 +3705,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3737,7 +3737,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3778,7 +3778,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3819,7 +3819,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3865,7 +3865,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -3882,7 +3882,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3925,7 +3925,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -3969,7 +3969,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4007,7 +4007,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4048,7 +4048,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4083,7 +4083,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -4100,7 +4100,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4144,7 +4144,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4176,7 +4176,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4227,7 +4227,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4265,7 +4265,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4306,7 +4306,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4341,7 +4341,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -4358,7 +4358,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4402,7 +4402,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4434,7 +4434,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4475,7 +4475,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4516,7 +4516,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4560,7 +4560,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4595,7 +4595,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -4612,7 +4612,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4656,7 +4656,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4691,7 +4691,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4735,7 +4735,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4773,7 +4773,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4814,7 +4814,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4910,7 +4910,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4954,7 +4954,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -4986,7 +4986,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5030,7 +5030,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5068,7 +5068,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5109,7 +5109,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5144,7 +5144,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -5161,7 +5161,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5205,7 +5205,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5237,7 +5237,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5281,7 +5281,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5319,7 +5319,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5360,7 +5360,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5392,7 +5392,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -5409,7 +5409,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5450,7 +5450,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5482,7 +5482,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5523,7 +5523,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5564,7 +5564,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5610,7 +5610,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -5627,7 +5627,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5670,7 +5670,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5714,7 +5714,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5752,7 +5752,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5793,7 +5793,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5828,7 +5828,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -5845,7 +5845,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5889,7 +5889,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5921,7 +5921,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -5965,7 +5965,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6003,7 +6003,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6044,7 +6044,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6079,7 +6079,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -6096,7 +6096,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6140,7 +6140,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6172,7 +6172,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6213,7 +6213,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6254,7 +6254,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6298,7 +6298,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6394,7 +6394,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6438,7 +6438,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6473,7 +6473,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6517,7 +6517,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6555,7 +6555,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6596,7 +6596,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6631,7 +6631,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -6648,7 +6648,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6692,7 +6692,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6724,7 +6724,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6768,7 +6768,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6806,7 +6806,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6847,7 +6847,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6882,7 +6882,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -6899,7 +6899,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6943,7 +6943,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -6975,7 +6975,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7019,7 +7019,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7057,7 +7057,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7098,7 +7098,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7130,7 +7130,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -7147,7 +7147,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7188,7 +7188,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7220,7 +7220,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7261,7 +7261,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7302,7 +7302,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7348,7 +7348,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -7365,7 +7365,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7408,7 +7408,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7452,7 +7452,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7490,7 +7490,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7531,7 +7531,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7566,7 +7566,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -7583,7 +7583,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7627,7 +7627,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7659,7 +7659,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7703,7 +7703,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7741,7 +7741,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7782,7 +7782,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7878,7 +7878,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7922,7 +7922,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7954,7 +7954,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -7995,7 +7995,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8036,7 +8036,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8080,7 +8080,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8115,7 +8115,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -8132,7 +8132,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8176,7 +8176,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8211,7 +8211,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8255,7 +8255,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8293,7 +8293,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8334,7 +8334,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8369,7 +8369,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -8386,7 +8386,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8430,7 +8430,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8462,7 +8462,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8506,7 +8506,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8544,7 +8544,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8585,7 +8585,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8620,7 +8620,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -8637,7 +8637,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8681,7 +8681,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8713,7 +8713,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8757,7 +8757,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8795,7 +8795,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8836,7 +8836,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 1,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8868,7 +8868,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -8885,7 +8885,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8926,7 +8926,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 4,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8958,7 +8958,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -8999,7 +8999,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -9040,7 +9040,7 @@ const String kimMinsuFixtureJson = r'''
       "days": [
         {
           "weekday": 0,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -9086,7 +9086,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [],
           "meals": [
@@ -9103,7 +9103,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 3,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -9146,7 +9146,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 5,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
@@ -9190,7 +9190,7 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 6,
-          "label": "AI 루틴 · 자율 운동",
+          "label": "AI 개인운동",
           "pt": false,
           "exercises": [
             {
