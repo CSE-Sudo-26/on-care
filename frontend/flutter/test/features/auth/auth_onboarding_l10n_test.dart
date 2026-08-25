@@ -50,9 +50,10 @@ const Map<String, String> _koBefore = <String, String>{
   'onboardBasicTitle': '기본 정보',
   'onboardBasicSubtitle': '맞춤 건강 관리를 위해 기본 정보를 알려주세요.',
   'onboardHeightHint': '키 (cm)',
-  'onboardHealthTitle': '건강 상태',
-  'onboardHealthSubtitle': '관리 중인 만성질환을 선택해 주세요. (복수 선택 가능)',
-  'onboardGoalTitle': '건강 목표',
+  // 2단계는 진단받은 질환이 아니라 **어디에 초점을 둘지**를 묻는다(#1471).
+  'onboardHealthTitle': '건강 목표',
+  'onboardHealthSubtitle': '건강 관리에서 더 집중하고 싶은 항목을 선택해 주세요. (복수 선택 가능)',
+  'onboardGoalTitle': '운동 목표',
   'onboardGoalSubtitle': '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.',
   'onboardGenderMale': '남성',
   'onboardGenderFemale': '여성',
