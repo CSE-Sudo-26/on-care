@@ -915,7 +915,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String chatDemoRoutineSent(String name) {
-    return 'An AI-built routine was sent to $name';
+    return 'A personalized workout recommendation was sent to $name';
   }
 
   @override

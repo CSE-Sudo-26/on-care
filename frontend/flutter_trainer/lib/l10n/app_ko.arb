@@ -274,7 +274,7 @@
   "chatReportSentNotice": "{range} 주간 리포트를 보냈어요",
   "chatDemoAnalyzed": "AI가 {name}님의 식단·운동 데이터를 분석했어요",
   "chatDemoReportSent": "트레이너님께 요약 리포트가 전송됐어요",
-  "chatDemoRoutineSent": "AI 분석 기반 루틴이 {name}님에게 전송됐어요",
+  "chatDemoRoutineSent": "개인 추천운동이 {name}님에게 전송됐어요",
   "chatDemoNotified": "고객 앱에 알림이 전달됐어요",
   "chatInputHint": "메시지 입력...",
   "chatInsightDiscomfortTitle": "{part} 불편 표현 감지",
