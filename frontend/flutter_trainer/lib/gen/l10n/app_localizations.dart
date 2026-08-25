@@ -2786,6 +2786,12 @@ abstract class AppLocalizations {
   /// **'Date'**
   String get schedFieldDate;
 
+  /// No description provided for @schedFieldStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get schedFieldStartDate;
+
   /// No description provided for @schedFieldTime.
   ///
   /// In en, this message translates to:
@@ -2827,6 +2833,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End time must be after the start time'**
   String get schedEndBeforeStart;
+
+  /// No description provided for @schedReopenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch back to upcoming?'**
+  String get schedReopenTitle;
+
+  /// No description provided for @schedReopenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving a completed session forward switches it back to upcoming, and the workout log it created will be removed.'**
+  String get schedReopenBody;
+
+  /// No description provided for @schedReopenConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to upcoming'**
+  String get schedReopenConfirm;
+
+  /// No description provided for @schedReopenPastBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'A completed session can only move to a future date'**
+  String get schedReopenPastBlocked;
 
   /// No description provided for @schedTimeRangeTitle.
   ///

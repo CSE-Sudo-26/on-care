@@ -153,6 +153,7 @@ class DioScheduleRepository implements ScheduleRepository {
   @override
   Future<void> updateSession(
     String id, {
+    String? date,
     required String clientName,
     String? clientId,
     required String time,
@@ -164,6 +165,7 @@ class DioScheduleRepository implements ScheduleRepository {
       () => _dio.put<Map<String, dynamic>>(
         '/trainer/schedule/${Uri.encodeComponent(id)}',
         data: <String, Object?>{
+          'date': ?date,
           'client_name': clientName,
           'member_id': ?clientId,
           'time': time,
@@ -171,6 +173,16 @@ class DioScheduleRepository implements ScheduleRepository {
           'duration_minutes': durationMinutes,
           'note': note,
         },
+      ),
+    );
+  }
+
+  @override
+  Future<void> reopenSession(String id, {required String date}) async {
+    await _mutate(
+      () => _dio.post<Map<String, dynamic>>(
+        '/trainer/schedule/${Uri.encodeComponent(id)}/reopen',
+        data: <String, Object?>{'date': date},
       ),
     );
   }
@@ -280,7 +292,7 @@ class DioScheduleRepository implements ScheduleRepository {
   }
 
   @override
-  Future<void> addRecurringSessions({
+  Future<List<ScheduleSession>> addRecurringSessions({
     required DateTime start,
     required String time,
     required WeeklyRecurrence rule,
@@ -291,8 +303,9 @@ class DioScheduleRepository implements ScheduleRepository {
     String note = '',
     String? clientRequestId,
   }) async {
+    late final List<dynamic> rows;
     try {
-      await _dio.post<List<dynamic>>(
+      final res = await _dio.post<List<dynamic>>(
         '/trainer/schedule/recurring',
         data: _recurringBody(
           start: start,
@@ -306,6 +319,7 @@ class DioScheduleRepository implements ScheduleRepository {
           clientRequestId: clientRequestId,
         ),
       );
+      rows = res.data ?? const <dynamic>[];
     } on DioException catch (e) {
       // 겹치는 회차는 서버가 409 와 함께 목록으로 알려 준다 — 화면이 어느 주가
       // 문제인지 짚어 줄 수 있도록 타입 있는 오류로 올린다(#870).
@@ -314,6 +328,10 @@ class DioScheduleRepository implements ScheduleRepository {
       throw AppError.fromDio(e);
     }
     _bump();
+    return <ScheduleSession>[
+      for (final row in rows)
+        if (row is Map<String, dynamic>) scheduleSessionFromJson(row),
+    ];
   }
 
   Map<String, Object?> _recurringBody({

@@ -56,9 +56,15 @@ abstract interface class ScheduleRepository {
     String note,
   });
 
-  /// Edits a booked session's time/client/type/duration/note.
+  /// Edits a booked session's date/time/client/type/duration/note.
+  ///
+  /// [date] is omitted for most edits — a booked session's day doesn't
+  /// normally move. It's accepted here so an already-완료 session can be
+  /// rescheduled forward via [reopenSession] without a second, parallel
+  /// update path for every other field.
   Future<void> updateSession(
     String id, {
+    String? date,
     required String clientName,
     String? clientId,
     required String time,
@@ -66,6 +72,13 @@ abstract interface class ScheduleRepository {
     required int durationMinutes,
     required String note,
   });
+
+  /// 완료 세션을 [date](미래)의 예정으로 되돌린다. (#1396)
+  ///
+  /// 일정 수정에서 완료된 회차의 날짜를 앞으로 옮길 때만 쓴다 — 완료가 남긴
+  /// 파생 기록(트레이너 이력·회원 운동기록)을 함께 지운다. 예정 세션이나
+  /// 과거·오늘 날짜에는 쓸 수 없다(구현이 거부한다).
+  Future<void> reopenSession(String id, {required String date});
 
   /// Replaces the exercise program and trainer memo without changing the
   /// booking itself.
@@ -112,7 +125,11 @@ abstract interface class ScheduleRepository {
   /// [ScheduleSeriesConflictError] 로 멈춘다. 겹친 것만 빼고 나머지를 만들면
   /// 트레이너는 몇 회차가 생겼는지 화면을 세어 봐야 알고, 빠진 주는 나중에
   /// 발견된다.
-  Future<void> addRecurringSessions({
+  ///
+  /// 만들어진 세션들을 돌려준다 — 일정 수정에서 기존 회차를 반복의 시작으로
+  /// 만들 때, 오늘 이전 날짜의 회차를 [completeSession] 으로 이어서 완료
+  /// 처리하려면 그 id 가 필요하다(#1396).
+  Future<List<ScheduleSession>> addRecurringSessions({
     required DateTime start,
     required String time,
     required WeeklyRecurrence rule,
@@ -273,10 +290,11 @@ class DriftScheduleRepository implements ScheduleRepository {
         );
   }
 
-  /// Edits a booked session's time/client/type/duration.
+  /// Edits a booked session's date/time/client/type/duration.
   @override
   Future<void> updateSession(
     String id, {
+    String? date,
     required String clientName,
     String? clientId,
     required String time,
@@ -288,6 +306,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       _db.trainerScheduleEntries,
     )..where((t) => t.id.equals(id))).write(
       TrainerScheduleEntriesCompanion(
+        date: date == null ? const Value.absent() : Value(date),
         clientId: Value(clientId),
         clientName: Value(clientName),
         time: Value(time),
@@ -296,6 +315,34 @@ class DriftScheduleRepository implements ScheduleRepository {
         note: Value(note),
       ),
     );
+  }
+
+  /// 완료 세션을 [date](미래)의 예정으로 되돌린다(#1396). 데모 DB에는 완료가
+  /// 남긴 파생 기록이 세션 id로 되짚어지지 않는 키를 쓰므로(`hist-$id-시각`),
+  /// `deleteSession` 과 같은 한계로 그 이력까지 지우지는 않는다 — 로컬
+  /// 데모에서만 남는 흔적이라 실 서버(`DioScheduleRepository`)와 달리 여기는
+  /// 상태·날짜만 되돌린다.
+  @override
+  Future<void> reopenSession(String id, {required String date}) async {
+    final table = _db.trainerScheduleEntries;
+    final today = ymd(nowKst());
+    if (date.compareTo(today) <= 0) {
+      throw StateError('reopen requires a future date: $date');
+    }
+    await _db.transaction(() async {
+      final session = await (_db.select(
+        table,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+      if (session == null || session.status != ScheduleStatus.done) {
+        throw StateError('session not completed: $id');
+      }
+      await (_db.update(table)..where((t) => t.id.equals(id))).write(
+        TrainerScheduleEntriesCompanion(
+          date: Value(date),
+          status: const Value(ScheduleStatus.upcoming),
+        ),
+      );
+    });
   }
 
   /// Replaces the exercise program and trainer memo without changing the
@@ -577,7 +624,7 @@ class DriftScheduleRepository implements ScheduleRepository {
   }
 
   @override
-  Future<void> addRecurringSessions({
+  Future<List<ScheduleSession>> addRecurringSessions({
     required DateTime start,
     required String time,
     required WeeklyRecurrence rule,
@@ -596,28 +643,41 @@ class DriftScheduleRepository implements ScheduleRepository {
     if (preview.conflicts.isNotEmpty) {
       throw ScheduleSeriesConflictError(preview.conflicts);
     }
-    if (preview.dates.isEmpty) return;
+    if (preview.dates.isEmpty) return const <ScheduleSession>[];
     // 한 트랜잭션에 넣는다 — 중간에 실패해 몇 주만 남는 상태가 실서버의
     // '전부 아니면 전무' 와 어긋나면, 데모에서 확인한 동작이 거짓이 된다.
+    final created = <ScheduleSession>[];
     await _db.transaction(() async {
       for (final day in preview.dates) {
-        await _db
-            .into(_db.trainerScheduleEntries)
-            .insert(
-              TrainerScheduleEntriesCompanion.insert(
-                id: 'sched-${day.millisecondsSinceEpoch}-${time.hashCode}',
-                date: ymd(day),
-                time: time,
-                clientId: Value(clientId),
-                clientName: Value(clientName),
-                type: Value(type),
-                durationMinutes: Value(durationMinutes),
-                status: ScheduleStatus.upcoming,
-                note: Value(note),
-              ),
-            );
+        final companion = TrainerScheduleEntriesCompanion.insert(
+          id: 'sched-${day.millisecondsSinceEpoch}-${time.hashCode}',
+          date: ymd(day),
+          time: time,
+          clientId: Value(clientId),
+          clientName: Value(clientName),
+          type: Value(type),
+          durationMinutes: Value(durationMinutes),
+          status: ScheduleStatus.upcoming,
+          note: Value(note),
+        );
+        await _db.into(_db.trainerScheduleEntries).insert(companion);
+        created.add(
+          ScheduleSession(
+            id: companion.id.value,
+            date: companion.date.value,
+            time: time,
+            clientId: clientId,
+            clientName: clientName,
+            type: type,
+            durationMinutes: durationMinutes,
+            status: ScheduleStatus.upcoming,
+            note: note,
+            program: const <ProgramItem>[],
+          ),
+        );
       }
     });
+    return created;
   }
 
   ScheduleSession _toEntity(TrainerScheduleRow row) {
