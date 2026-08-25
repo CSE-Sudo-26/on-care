@@ -1319,6 +1319,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsWeeklyCompletion => '주간 이행률';
 
   @override
+  String get clientWeeklyRoutineAdherence => '주간 루틴 이행률';
+
+  @override
+  String get clientRoutineAdherenceUnmeasured => '미집계';
+
+  @override
   String get reportsCompletionByDay => '주간 운동 이행률';
 
   @override
