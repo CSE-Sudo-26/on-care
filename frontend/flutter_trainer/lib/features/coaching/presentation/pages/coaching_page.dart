@@ -471,31 +471,67 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         children: <Widget>[
                           SizedBox(
                             width: 260,
-                            // 고객 목록(5줄 고정)에 템플릿 카드가 더해지면
-                            // 짧은 창에서는 열이 화면보다 길어진다. 이 열
-                            // 안에서만 스크롤하게 두어 오른쪽과 따로 움직인다.
-                            child: SingleChildScrollView(
-                              key: const ValueKey<String>(
-                                'coaching-sidebar-scroll',
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  _MemberProgramList(
-                                    clients: clients,
-                                    selectedId: selected.id,
-                                    onSelect: _selectClient,
+                            // 고객 목록(5줄 고정)은 그 자리·높이 그대로 두고,
+                            // 템플릿 카드가 늘어나는 만큼만 그 아래 남는
+                            // 공간 안에서 따로 스크롤한다 — 예전처럼 열
+                            // 전체를 한 스크롤로 묶으면 템플릿을 보려고
+                            // 내릴 때 고객 목록까지 함께 밀려 올라갔다.
+                            //
+                            // 다만 이 열에 실제로 주어진 높이가 고객 목록
+                            // 하나만으로도 빠듯할 만큼 짧으면(작은 창) 그대로
+                            // 나누지 않는다 — 템플릿 카드는 헤더 한 줄 만큼의
+                            // 최소 높이도 없이는 그릴 수 없어 RenderFlex
+                            // 오버플로우가 난다. 그런 창에서는 예전처럼 열
+                            // 전체를 한 스크롤로 묶어 오버플로우 대신
+                            // 스크롤로 흡수한다.
+                            child: LayoutBuilder(
+                              builder: (context, sidebarConstraints) {
+                                final canSplit =
+                                    sidebarConstraints.maxHeight >=
+                                    _sidebarSplitMinHeight(context);
+                                final list = _MemberProgramList(
+                                  clients: clients,
+                                  selectedId: selected.id,
+                                  onSelect: _selectClient,
+                                );
+                                final template = _TemplateCard(
+                                  key: const ValueKey<String>(
+                                    'program-template-sidebar',
                                   ),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  _TemplateCard(
+                                  onApply: _applyTemplate,
+                                  fixedBox: canSplit,
+                                );
+                                if (!canSplit) {
+                                  return SingleChildScrollView(
                                     key: const ValueKey<String>(
-                                      'program-template-sidebar',
+                                      'coaching-sidebar-scroll',
                                     ),
-                                    onApply: _applyTemplate,
-                                  ),
-                                ],
-                              ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        list,
+                                        const SizedBox(height: AppSpacing.lg),
+                                        template,
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    list,
+                                    const SizedBox(height: AppSpacing.lg),
+                                    // 남는 세로 공간은 전부 템플릿 카드가
+                                    // 갖는다 — 카드 박스 자체가 이 높이로
+                                    // 고정되고, 카드 내부가 그 안에서만
+                                    // 스크롤한다.
+                                    Expanded(child: template),
+                                  ],
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: AppSpacing.lg),
@@ -867,6 +903,21 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       ),
     );
   }
+}
+
+/// 1열이 "고객 목록 고정 + 템플릿 카드만 스크롤"로 나뉘려면 필요한 최소
+/// 높이 — 고객 목록 5줄([_MemberProgramList], 글자 배율 반영) + 그 아래
+/// 간격 + 템플릿 카드가 최소한 헤더 한 줄을 그릴 수 있는 높이를 더한
+/// 값이다. 실제 주어진 높이가 이보다 작으면 나누지 않는다(호출부 참고).
+double _sidebarSplitMinHeight(BuildContext context) {
+  final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+  final extraScale = (scale - 1).clamp(0.0, 2.0);
+  final rowHeight = 64 + 56 * extraScale;
+  // 두 카드 모두 dense 패딩(AppSpacing.md 상하) + 아이콘 헤더 한 줄 +
+  // 헤더 아래 간격(AppSpacing.sm)을 쓴다 — 헤더 한 줄만 있을 때의 카드
+  // 최소 높이를 넉넉히 어림한다.
+  const cardChrome = AppSpacing.md * 2 + 22 + AppSpacing.sm;
+  return rowHeight * 5 + cardChrome + AppSpacing.lg + cardChrome;
 }
 
 class _MemberProgramList extends StatefulWidget {
@@ -1375,9 +1426,20 @@ String _dateChipLabel(AppLocalizations l, DateTime date) {
 
 /// One selectable register-day chip.
 class _TemplateCard extends ConsumerWidget {
-  const _TemplateCard({super.key, required this.onApply});
+  const _TemplateCard({
+    super.key,
+    required this.onApply,
+    this.fixedBox = false,
+  });
 
   final ValueChanged<ProgramTemplate> onApply;
+
+  /// 넓은 화면 사이드바(`Expanded`로 높이가 이미 정해진 자리)에서만 켠다 —
+  /// 카드 박스를 그 높이로 고정하고 목록만 안에서 스크롤한다. 좁은 화면의
+  /// `_libraryChildren`는 페이지 자체가 스크롤하는 `ListView` 안이라 높이가
+  /// 정해져 있지 않다(unbounded) — 여기서 켜면 `Expanded`/내부 스크롤이
+  /// 레이아웃 예외를 던진다.
+  final bool fixedBox;
 
   /// 만들기·편집 다이얼로그. 시작 구성을 열면 저장이 '새로 만들기' 가 된다.
   Future<void> _edit(BuildContext context, {ProgramTemplate? template}) {
@@ -1445,10 +1507,95 @@ class _TemplateCard extends ConsumerWidget {
         ),
       );
     }
+    // 넓은 사이드바(`fixedBox`)에서만 카드 박스를 고정 높이로 만들고, 그
+    // 안에서 목록만 스크롤한다. 좁은 화면(페이지 자체가 스크롤하는
+    // `ListView` 안, 높이 unbounded)에서는 예전처럼 자연스러운 높이로
+    // 그린다 — 거기서 고정 높이를 쓰면 `Expanded`가 레이아웃 예외를 던진다.
+    final body = LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 680 ? 3 : 1;
+        final width =
+            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+        return Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: <Widget>[
+            for (final template in templates)
+              SizedBox(
+                width: width,
+                child: Material(
+                  color: AppColors.inputBackground,
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  child: InkWell(
+                    onTap: () => onApply(template),
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  template.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.foreground,
+                                  ),
+                                ),
+                              ),
+                              if (canEdit)
+                                _TemplateMenu(
+                                  template: template,
+                                  onEdit: () =>
+                                      _edit(context, template: template),
+                                  onDelete: template.isStarter
+                                      ? null
+                                      : () => _delete(context, ref, template),
+                                )
+                              else
+                                const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 17,
+                                  color: AppColors.primary,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            l.coachTemplateSummaryWithGoal(
+                              template.goal,
+                              template.exercises.length,
+                              template.totalMinutes,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              height: 1.35,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.subtleForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
     return SectionCard(
       title: l.coachTemplates,
       icon: Icons.dashboard_customize_outlined,
       dense: true,
+      expandChild: fixedBox,
       // 아이콘만 쓴다(#1028) — 이 카드는 260px 고정 폭 사이드바에 있어,
       // 영어·큰 글자 배율에서 "새 템플릿" 글자가 제목과 함께 넘친다.
       trailing: canEdit
@@ -1462,86 +1609,12 @@ class _TemplateCard extends ConsumerWidget {
               constraints: const BoxConstraints.tightFor(width: 28, height: 28),
             )
           : null,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 680 ? 3 : 1;
-          final width =
-              (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
-          return Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: <Widget>[
-              for (final template in templates)
-                SizedBox(
-                  width: width,
-                  child: Material(
-                    color: AppColors.inputBackground,
-                    borderRadius: const BorderRadius.all(AppRadius.md),
-                    child: InkWell(
-                      onTap: () => onApply(template),
-                      borderRadius: const BorderRadius.all(AppRadius.md),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: Text(
-                                    template.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.foreground,
-                                    ),
-                                  ),
-                                ),
-                                if (canEdit)
-                                  _TemplateMenu(
-                                    template: template,
-                                    onEdit: () =>
-                                        _edit(context, template: template),
-                                    onDelete: template.isStarter
-                                        ? null
-                                        : () => _delete(context, ref, template),
-                                  )
-                                else
-                                  const Icon(
-                                    Icons.add_circle_outline,
-                                    size: 17,
-                                    color: AppColors.primary,
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              l.coachTemplateSummaryWithGoal(
-                                template.goal,
-                                template.exercises.length,
-                                template.totalMinutes,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                height: 1.35,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.subtleForeground,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+      child: fixedBox
+          ? SingleChildScrollView(
+              key: const ValueKey<String>('coaching-template-scroll'),
+              child: body,
+            )
+          : body,
     );
   }
 }
@@ -1577,7 +1650,7 @@ class _TemplateMenu extends StatelessWidget {
       tooltip: '',
       padding: EdgeInsets.zero,
       iconSize: 17,
-      icon: const Icon(Icons.more_horiz, color: AppColors.subtleForeground),
+      icon: const Icon(Icons.more_vert, color: AppColors.subtleForeground),
       color: AppColors.card,
       elevation: 4,
       shape: const RoundedRectangleBorder(
