@@ -528,6 +528,10 @@ Future<void> _sendProgram(WidgetTester tester) async {
 
 /// `showDatePicker` 의 기본 달력에서 [date] 를 고르고 확인한다 (#1028).
 ///
+/// 프로그램 편집 화면(`program_editor_workspace.dart`)은 [showPortraitDatePicker]
+/// 가 아니라 Material 기본 `showDatePicker` 를 그대로 쓴다 — 그 흐름을 고르는
+/// 헬퍼라 여기서도 기본 `DatePickerDialog` 와 텍스트 버튼을 그대로 찾는다.
+///
 /// 지금 보이는 달과 [date] 의 달이 다르면(예: 오늘이 말일이라 "내일"이 다음
 /// 달인 경우) 한 달 넘긴다 — 오늘에서 하루 넘어가는 것뿐이라 한 번이면 된다.
 Future<void> _pickDateInPicker(WidgetTester tester, DateTime date) async {

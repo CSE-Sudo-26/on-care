@@ -269,30 +269,20 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
                   onSelected: _select,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(l.actionCancel),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: FilledButton(
-                        key: const ValueKey<String>(
-                          'consult-time-range-confirm',
-                        ),
-                        onPressed: endMinutes > startMinutes
-                            ? () => Navigator.pop(context, (
-                                start: _start,
-                                end: _end,
-                              ))
-                            : null,
-                        child: Text(l.actionConfirm),
-                      ),
-                    ),
-                  ],
+                // X 로 이미 닫을 수 있으니, 취소 버튼은 확인과 나란히 둘
+                // 필요가 없다(#1450 대응 이슈).
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    key: const ValueKey<String>('consult-time-range-confirm'),
+                    onPressed: endMinutes > startMinutes
+                        ? () => Navigator.pop(context, (
+                            start: _start,
+                            end: _end,
+                          ))
+                        : null,
+                    child: Text(l.actionConfirm),
+                  ),
                 ),
               ],
             ),
