@@ -87,6 +87,11 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   late List<String> _clientOptions;
   late List<String> _typeOptions;
 
+  /// 수정하는 회차의 고객이 트레이너의 등록 고객 목록에 없는가(상담 신청자
+  /// 등). 그렇다면 드롭다운으로 **고를 수 있는 옵션**처럼 보이면 안 된다 —
+  /// 예약 슬롯의 `typeLocked`와 같은 자리다: 값만 보여주고 잠근다(#1396).
+  late bool _clientLocked;
+
   /// [base] plus [current] when it isn't already offered.
   static List<T> _withCurrent<T>(List<T> base, T? current) {
     if (current == null || base.contains(current)) return List<T>.of(base);
@@ -103,6 +108,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
         ? e!.clientName
         : widget.clientNames.first;
     _clientOptions = _withCurrent(widget.clientNames, _client);
+    _clientLocked = e != null && !widget.clientNames.contains(_client);
 
     _type = e != null && e.type.isNotEmpty ? e.type : _types.first;
     _typeOptions = _withCurrent(_types, _type);
@@ -178,11 +184,26 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       showAppToast(context, l.schedEndBeforeStart);
       return;
     }
+    final e = widget.existing;
+    final String newDate = ymd(_date);
+    final bool reopening =
+        e != null && e.status == ScheduleStatus.done && newDate != e.date;
+    if (reopening) {
+      // 완료 세션은 미래로만 되돌린다 — 오늘·과거는 "완료 취소"이지 반복
+      // 시작 회차를 다시 잡는 일이 아니다(#1396).
+      if (newDate.compareTo(ymd(todayKst())) <= 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.schedReopenPastBlocked)));
+        return;
+      }
+      final confirmed = await _confirmReopen(l);
+      if (confirmed != true || !mounted) return;
+    }
     setState(() => _saving = true);
     final repo = ref.read(scheduleRepositoryProvider);
     final navigator = Navigator.of(context);
     try {
-      final e = widget.existing;
       if (e == null && _repeatDays.isNotEmpty) {
         final start = _date;
         final rule = _rule;
@@ -221,9 +242,16 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           durationMinutes: duration,
           note: _note.text.trim(),
         );
+      } else if (_repeatDays.isNotEmpty) {
+        // 수정 + 반복: 이 회차를 시리즈의 시작으로 삼는다. 이 회차 자체는
+        // 새로 만들지 않고 그대로 고친 뒤, 그다음 회차부터 반복으로
+        // 만든다(#1396).
+        await _saveEditAsRepeatStart(repo, e, duration, newDate, reopening);
       } else {
+        if (reopening) await repo.reopenSession(e.id, date: newDate);
         await repo.updateSession(
           e.id,
+          date: newDate == e.date ? null : newDate,
           clientName: _client,
           time: _time,
           type: _type,
@@ -258,6 +286,87 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     }
   }
 
+  /// [e] 를 반복의 시작 회차로 고치고, 그다음 날부터 나머지 회차를 만든다.
+  /// 과거·오늘 날짜로 만들어진 회차는 이어서 완료 처리한다 — "반복하면
+  /// 지난 회차는 완료로, 앞으로는 예정으로" 규칙이다(#1396).
+  Future<void> _saveEditAsRepeatStart(
+    ScheduleRepository repo,
+    ScheduleSession e,
+    int duration,
+    String newDate,
+    bool reopening,
+  ) async {
+    if (reopening) await repo.reopenSession(e.id, date: newDate);
+    await repo.updateSession(
+      e.id,
+      date: newDate == e.date ? null : newDate,
+      clientName: _client,
+      time: _time,
+      type: _type,
+      durationMinutes: duration,
+      note: _note.text.trim(),
+    );
+
+    // 이 회차가 이미 시리즈의 첫 회차다 — 나머지는 그다음 날부터.
+    final int? remainingCount = _endsByCount
+        ? (_repeatCount - 1).clamp(0, maxSeriesOccurrences)
+        : null;
+    if (_endsByCount && (remainingCount ?? 0) <= 0) return;
+    final rule = WeeklyRecurrence(
+      weekdays: _repeatDays,
+      count: remainingCount,
+      until: _endsByCount ? null : _repeatUntil,
+    );
+    final nextStart = _date.add(const Duration(days: 1));
+    final preview = await repo.previewRecurring(
+      start: nextStart,
+      time: _time,
+      rule: rule,
+    );
+    if (preview.conflicts.isNotEmpty) {
+      throw ScheduleSeriesConflictError(preview.conflicts);
+    }
+    final created = await repo.addRecurringSessions(
+      start: nextStart,
+      time: _time,
+      rule: rule,
+      clientName: _client,
+      type: _type,
+      durationMinutes: duration,
+      note: '',
+      clientRequestId: _requestId,
+    );
+    final today = ymd(todayKst());
+    for (final session in created) {
+      if (session.date.compareTo(today) <= 0) {
+        await repo.completeSession(session.id);
+      }
+    }
+  }
+
+  /// 완료 세션을 미래로 옮기기 전 확인. 되돌리면 완료가 남긴 운동 기록이
+  /// 사라진다는 것을 미리 말해 준다(#1396).
+  Future<bool?> _confirmReopen(AppLocalizations l) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l.schedReopenTitle),
+        content: Text(l.schedReopenBody),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('confirm-reopen-session'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l.schedReopenConfirm),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickUntil() async {
     final start = _date;
     final picked = await showPortraitDatePicker(
@@ -274,8 +383,10 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     });
   }
 
-  /// 새 일정의 날짜를 고른다 — 기본값은 시트를 연 시점의 선택된 날짜다.
-  /// 지난 기록을 남기려는 경우도 있어(#870 반복과 달리) 과거 날짜도 막지 않는다.
+  /// 날짜를 고른다 — 새 일정은 시트를 연 시점의 선택된 날짜가 기본값이고,
+  /// 수정은 그 회차의 날짜가 기본값이다. 지난 기록을 남기려는 경우도 있어
+  /// (#870 반복과 달리) 과거 날짜도 막지 않는다 — 완료 세션을 미래로 옮기는
+  /// 특별한 경우는 `_save` 가 별도로 확인을 받는다(#1396).
   Future<void> _pickDate() async {
     final today = todayKst();
     final first = _date.isBefore(today) ? _date : today;
@@ -347,19 +458,24 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                       constraints: const BoxConstraints(minWidth: 96),
                       child: _pillField(
                         label: l.schedFieldClient,
-                        child: DropdownButton<String>(
-                          value: _client,
-                          underline: const SizedBox.shrink(),
-                          items: <DropdownMenuItem<String>>[
-                            for (final name in _clientOptions)
-                              DropdownMenuItem<String>(
-                                value: name,
-                                child: Text(name, style: _fieldValueStyle),
+                        // 등록된 고객이 아니면(상담 신청자 등) 고를 수 없게
+                        // 값만 보여준다 — 드롭다운은 실제로 옮길 수 있는
+                        // 고객 목록만 옵션으로 내놓는다(#1396).
+                        child: _clientLocked
+                            ? Text(_client, style: _fieldValueStyle)
+                            : DropdownButton<String>(
+                                value: _client,
+                                underline: const SizedBox.shrink(),
+                                items: <DropdownMenuItem<String>>[
+                                  for (final name in _clientOptions)
+                                    DropdownMenuItem<String>(
+                                      value: name,
+                                      child: Text(name, style: _fieldValueStyle),
+                                    ),
+                                ],
+                                onChanged: (v) =>
+                                    setState(() => _client = v ?? _client),
                               ),
-                          ],
-                          onChanged: (v) =>
-                              setState(() => _client = v ?? _client),
-                        ),
                       ),
                     ),
                   ),
@@ -397,24 +513,19 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
               // "언제부터 언제까지"라 그 형태로 바로 고르는 편이 낫다(#1090).
               // 시작·종료를 한 번에 고르는 모달을 연다(#1229, #1250).
               //
-              // 날짜는 새 일정에만 고를 수 있다 — 이미 잡힌 회차의 날짜를
-              // 옮기는 일은 저장소가 지원하지 않는다(수정은 그 회차의 시간·
-              // 고객·유형만 바꾼다).
-              if (widget.existing == null)
-                Row(
-                  children: <Widget>[
-                    Expanded(child: _dateField(l)),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(child: _timeField(l)),
-                  ],
-                )
-              else
-                _timeField(l),
-              // 반복은 새 일정에만 있다(#870). 이미 잡힌 회차를 고치는 일은 그
-              // 회차 하나의 일이고, 여기서 규칙을 다시 받으면 나머지 회차까지
-              // 건드리는 것처럼 읽힌다.
-              if (widget.existing == null) ...<Widget>[
-                _sheetField(
+              // 날짜도 수정에서 고칠 수 있다(#1396) — 완료된 회차를 앞으로
+              // 옮기는 흐름은 `_save` 가 별도로 확인을 받은 뒤 처리한다.
+              Row(
+                children: <Widget>[
+                  Expanded(child: _dateField(l)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: _timeField(l)),
+                ],
+              ),
+              // 반복은 수정에서도 켤 수 있다(#1396) — 이 회차를 반복의 시작
+              // 회차로 삼고, 나머지는 새로 만든다. 이미 만들어진 이 회차
+              // 자체는 다시 만들지 않는다(`_save` 참고).
+              _sheetField(
                   label: l.schedRepeat,
                   stacked: true,
                   child: Column(
@@ -510,8 +621,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                       ],
                     ],
                   ),
-                ),
-              ],
+              ),
               if (widget.existing == null)
                 _sheetField(
                   label: l.schedNote,
@@ -614,14 +724,17 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     );
   }
 
-  /// 새 일정의 날짜 필드 — 기본값은 시트를 연 시점의 선택된 날짜이고, 눌러서
-  /// 다른 날짜로 바꿀 수 있다.
+  /// 날짜 필드 — 눌러서 다른 날짜로 바꿀 수 있다. 반복을 켜면 이 값이 반복
+  /// 시리즈의 시작일도 겸하므로 라벨만 "시작 날짜"로 바뀐다(필드 자체는
+  /// 그대로다, #1396).
   Widget _dateField(AppLocalizations l) {
     return GestureDetector(
       key: const ValueKey<String>('session-date-field'),
       onTap: _pickDate,
       child: _pillField(
-        label: l.schedFieldDate,
+        label: _repeatDays.isNotEmpty
+            ? l.schedFieldStartDate
+            : l.schedFieldDate,
         child: Row(
           children: <Widget>[
             Expanded(

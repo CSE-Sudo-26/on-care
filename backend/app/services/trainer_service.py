@@ -3120,6 +3120,8 @@ def update_session(
         raise ScheduleConflict(
             "완료·취소·노쇼로 마무리된 세션은 수정할 수 없습니다."
         )
+    if "date" in fields:
+        s.date = fields["date"]
     if "time" in fields:
         s.time = fields["time"]
     if "client_name" in fields:
@@ -3179,6 +3181,43 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
     db.delete(s)
     db.commit()
     return True
+
+
+def reopen_session(
+    db: Session, trainer_id: str, session_id: str, *, new_date: str
+) -> ScheduleSessionOut | None:
+    """완료 세션을 미래 날짜의 예정으로 되돌린다. (#1396)
+
+    수정 화면에서 완료된 회차의 날짜를 앞으로 옮기며 "예정으로 바꿀까요?" 확인을
+    거친 저장이 부르는 자리다 — 임의로 완료를 취소하는 일반 수정 경로는 아니다.
+    완료가 남긴 파생 기록(트레이너 이력·회원 운동기록)은 [delete_session] 과
+    같은 자리(id)를 지운다 — 그대로 두면 되돌린 뒤에도 "이미 했던 운동"으로
+    남아 회원 집계가 거짓이 된다.
+    """
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if _is_reservation_schedule(db, session_id):
+        raise ScheduleConflict(
+            "예약으로 생성된 일정은 일반 일정 화면에서 되돌릴 수 없습니다."
+        )
+    if s.status != SCHEDULE_DONE:
+        raise ScheduleConflict("완료된 세션만 예정으로 되돌릴 수 있습니다.")
+    if new_date <= today_iso():
+        raise ScheduleConflict("미래 날짜로만 되돌릴 수 있습니다.")
+
+    hist = db.get(RoutineHistory, f"sched-hist-{s.id}")
+    if hist is not None:
+        db.delete(hist)
+    derived = db.get(ExerciseSession, _derived_exercise_id(s.id))
+    if derived is not None:
+        db.delete(derived)
+
+    s.date = new_date
+    s.status = SCHEDULE_UPCOMING
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)
 
 
 #: PT 완료가 파생시키는 회원 운동 기록의 종류. `TrainerSchedule.type` 은 화면용

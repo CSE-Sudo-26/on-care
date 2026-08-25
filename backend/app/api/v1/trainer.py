@@ -62,7 +62,7 @@ from app.schemas.trainer_api import (
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCancelRequest, ScheduleCompleteRequest,
     ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
-    ScheduleRecurringPreviewOut, ScheduleRecurringRequest,
+    ScheduleRecurringPreviewOut, ScheduleRecurringRequest, ScheduleReopenRequest,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     MemberLookupOut,
     TrainerClientInviteCreate, TrainerClientInviteOut,
@@ -1554,6 +1554,29 @@ def trainer_cancel_session(
         )
     except trainer_service.ScheduleError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post("/trainer/schedule/{session_id}/reopen", response_model=ScheduleSessionOut)
+def trainer_reopen_session(
+    session_id: str,
+    payload: ScheduleReopenRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """완료 세션을 미래 날짜의 예정으로 되돌린다(예정→완료의 역방향). (#1396)
+
+    일정 수정 화면에서 완료된 회차의 날짜를 앞으로 옮길 때만 쓰는 경로다 —
+    완료 시 적재된 파생 기록(트레이너 이력·회원 운동기록)을 함께 지운다.
+    """
+    try:
+        out = trainer_service.reopen_session(
+            db, trainer.id, session_id, new_date=payload.date
+        )
     except trainer_service.ScheduleConflict as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     if out is None:

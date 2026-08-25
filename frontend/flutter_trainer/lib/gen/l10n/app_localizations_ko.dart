@@ -1519,6 +1519,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldDate => '날짜';
 
   @override
+  String get schedFieldStartDate => '시작 날짜';
+
+  @override
   String get schedFieldTime => '시간';
 
   @override
@@ -1538,6 +1541,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedEndBeforeStart => '종료 시간은 시작 시간보다 늦어야 해요';
+
+  @override
+  String get schedReopenTitle => '예정으로 바꿀까요?';
+
+  @override
+  String get schedReopenBody =>
+      '완료된 세션을 앞으로 옮기면 예정 상태로 되돌아가고, 그 완료가 남긴 운동 기록은 사라져요.';
+
+  @override
+  String get schedReopenConfirm => '예정으로 바꾸기';
+
+  @override
+  String get schedReopenPastBlocked => '완료된 세션은 미래 날짜로만 옮길 수 있어요';
 
   @override
   String get schedTimeRangeTitle => '시간 선택';

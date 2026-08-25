@@ -1592,6 +1592,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldDate => 'Date';
 
   @override
+  String get schedFieldStartDate => 'Start date';
+
+  @override
   String get schedFieldTime => 'Time';
 
   @override
@@ -1611,6 +1614,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedEndBeforeStart => 'End time must be after the start time';
+
+  @override
+  String get schedReopenTitle => 'Switch back to upcoming?';
+
+  @override
+  String get schedReopenBody =>
+      'Moving a completed session forward switches it back to upcoming, and the workout log it created will be removed.';
+
+  @override
+  String get schedReopenConfirm => 'Switch to upcoming';
+
+  @override
+  String get schedReopenPastBlocked =>
+      'A completed session can only move to a future date';
 
   @override
   String get schedTimeRangeTitle => 'Select time';
