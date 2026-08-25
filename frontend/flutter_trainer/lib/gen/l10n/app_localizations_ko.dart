@@ -678,8 +678,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '회원 ID로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
 
   @override
-  String get clientInviteIntroImmediate =>
-      '회원 ID로 고객을 확인한 뒤 바로 등록해요. 성별·나이·운동 목표는 데모 회원 정보에서 가져와요.';
+  String get clientInviteIntroImmediate => '회원 ID로 고객을 확인한 뒤 바로 등록해요.';
 
   @override
   String get clientInviteMemberIdLabel => '회원 ID';
@@ -741,9 +740,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteConfirmPrompt => '이 고객이 맞나요?';
-
-  @override
-  String get clientInviteGoalLabel => '운동 목표';
 
   @override
   String get coachTemplateNew => '새 템플릿';

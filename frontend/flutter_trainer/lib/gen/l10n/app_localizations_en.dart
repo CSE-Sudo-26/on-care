@@ -703,7 +703,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteIntroImmediate =>
-      'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.';
+      'Find a client by member ID and register them right away.';
 
   @override
   String get clientInviteMemberIdLabel => 'Member ID';
@@ -769,9 +769,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteConfirmPrompt => 'Is this the right client?';
-
-  @override
-  String get clientInviteGoalLabel => 'Goal';
 
   @override
   String get coachTemplateNew => 'New template';

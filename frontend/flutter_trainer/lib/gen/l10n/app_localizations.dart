@@ -1313,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.'**
+  /// **'Find a client by member ID and register them right away.'**
   String get clientInviteIntroImmediate;
 
   /// No description provided for @clientInviteMemberIdLabel.
@@ -1429,12 +1429,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Is this the right client?'**
   String get clientInviteConfirmPrompt;
-
-  /// No description provided for @clientInviteGoalLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Goal'**
-  String get clientInviteGoalLabel;
 
   /// No description provided for @coachTemplateNew.
   ///
