@@ -2142,6 +2142,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get routineFieldExerciseNameHintCardio =>
+      'e.g. Treadmill, Indoor cycling';
+
+  @override
+  String get routineFieldExerciseNameHintStrength => 'e.g. Squat, Bench press';
+
+  @override
+  String get routineFieldExerciseNameHintFlexibility =>
+      'e.g. Full-body stretch, Yoga';
+
+  @override
+  String get routineFieldExerciseNameHintOther =>
+      'e.g. Rehab exercise, Sports activity';
+
+  @override
   String get routineFieldSets => 'Sets';
 
   @override
@@ -3380,9 +3395,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get programEditorSessionEmpty =>
       'Add exercises to build this session.';
-
-  @override
-  String get programEditorExerciseSearch => 'Search exercises or enter one';
 
   @override
   String get programEditorAdd => 'Add';

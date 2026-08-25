@@ -258,12 +258,22 @@ class RoutineNameField extends StatelessWidget {
     required this.controller,
     this.label,
     this.keyPrefix = 'routine-exercise-name',
+    this.hint,
+    this.onSubmitted,
+    this.autofocus = false,
     super.key,
   });
 
   final TextEditingController controller;
   final String? label;
   final String keyPrefix;
+
+  /// 유형별 예시 문구(#1483) — 없으면 일반 예시로 떨어진다.
+  /// [routineTypeNameHint] 로 만든다.
+  final String? hint;
+
+  final ValueChanged<String>? onSubmitted;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +287,8 @@ class RoutineNameField extends StatelessWidget {
           key: ValueKey<String>(keyPrefix),
           controller: controller,
           maxLength: 100,
+          autofocus: autofocus,
+          onSubmitted: onSubmitted,
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -285,7 +297,7 @@ class RoutineNameField extends StatelessWidget {
           decoration: InputDecoration(
             isDense: true,
             counterText: '',
-            hintText: l.routineFieldExerciseNameHint,
+            hintText: hint ?? l.routineFieldExerciseNameHint,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: AppSpacing.sm + 2,

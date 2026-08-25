@@ -2054,6 +2054,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineFieldExerciseNameHint => '예) 스쿼트, 러닝머신';
 
   @override
+  String get routineFieldExerciseNameHintCardio => '예) 러닝머신, 실내 자전거';
+
+  @override
+  String get routineFieldExerciseNameHintStrength => '예) 스쿼트, 벤치프레스';
+
+  @override
+  String get routineFieldExerciseNameHintFlexibility => '예) 전신 스트레칭, 요가';
+
+  @override
+  String get routineFieldExerciseNameHintOther => '예) 재활 운동, 스포츠 활동';
+
+  @override
   String get routineFieldSets => '세트 수';
 
   @override
@@ -3239,9 +3251,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorSessionEmpty => '운동을 추가해 세션을 구성하세요.';
-
-  @override
-  String get programEditorExerciseSearch => '운동 이름 검색 또는 직접 입력';
 
   @override
   String get programEditorAdd => '추가';
