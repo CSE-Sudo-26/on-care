@@ -2135,7 +2135,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachRoutineCompleteTitle => 'Mark routine done';
+  String get coachRoutineCompleteTitle => 'Mark personal exercise done';
 
   @override
   String get coachRoutineIntensity => 'Intensity';

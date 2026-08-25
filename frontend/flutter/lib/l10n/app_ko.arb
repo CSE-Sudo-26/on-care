@@ -718,7 +718,7 @@
   "coachRoutineCancelFailed": "개인 운동을 취소하지 못했어요",
   "coachRoutineMyNote": "내 피드백: {note}",
   "coachRoutineTrainerFeedback": "트레이너 피드백: {feedback}",
-  "coachRoutineCompleteTitle": "루틴 수행 완료",
+  "coachRoutineCompleteTitle": "개인운동 수행 완료",
   "coachRoutineIntensity": "수행 강도",
   "coachIntensityLight": "가벼움",
   "coachIntensityModerate": "보통",

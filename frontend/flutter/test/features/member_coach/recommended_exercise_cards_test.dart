@@ -417,7 +417,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('completeRoutine-seed-routine-user-7d4e9a2c5f18-1')));
     await tester.pumpAndSettle();
-    expect(find.text('루틴 수행 완료'), findsOneWidget);
+    // 화면에서 부르는 이름을 `개인운동` 으로 통일했다(#1457).
+    expect(find.text('개인운동 수행 완료'), findsOneWidget);
     // 회원이 운동의 세부 내용을 지정하는 자리는 없다 — 실제 수행 시간 입력은
     // 내려갔고, 남긴 값은 강도와 피드백뿐이다 (#1360).
     expect(find.byKey(const Key('routineCompletionMinutes')), findsNothing);

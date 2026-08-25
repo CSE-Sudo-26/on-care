@@ -1240,7 +1240,7 @@
       }
     }
   },
-  "coachRoutineCompleteTitle": "Mark routine done",
+  "coachRoutineCompleteTitle": "Mark personal exercise done",
   "@coachRoutineCompleteTitle": {
     "description": "Title of the completion dialog."
   },

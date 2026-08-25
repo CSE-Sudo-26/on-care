@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/errors/app_error.dart';
+import 'package:oncare/design_system/atoms/app_choice_chip.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -526,10 +527,15 @@ class _RecommendedExerciseRowState
                       widget.sourceLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
+                        // 누가 정한 운동인지는 보조 설명이 아니다 — 회색이면
+                        // 옆의 부연과 무게가 같다(#1457). 완료한 줄에서는
+                        // 본문이 흐려지므로 같은 파랑을 한 단계 옅게 둔다.
+                        color: widget.routine.completed
+                            ? FigmaColors.primaryA(0.55)
+                            : FigmaColors.primary,
                       ),
                     ),
                   ],
@@ -688,28 +694,31 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               child: Text(l.coachRoutineIntensity),
             ),
             const SizedBox(height: 6),
-            SegmentedButton<String>(
+            // 운동 직접 추가 화면과 같은 분리형 칩이다(#1457). 셋이 하나의
+            // 타원으로 이어진 `SegmentedButton` 은 같은 3단계 강도를 다른
+            // UI 로 보이게 했다. value 는 서버로 나가는 계약이라 그대로 두고,
+            // 라벨만 로케일을 따른다(#847).
+            Row(
               key: const Key('routineCompletionIntensity'),
-              // value 는 서버로 나가는 계약이라 그대로 두고, 라벨만 로케일을
-              // 따른다(#847).
-              segments: <ButtonSegment<String>>[
-                ButtonSegment<String>(
-                  value: 'light',
-                  label: Text(l.coachIntensityLight),
-                ),
-                ButtonSegment<String>(
-                  value: 'moderate',
-                  label: Text(l.coachIntensityModerate),
-                ),
-                ButtonSegment<String>(
-                  value: 'high',
-                  label: Text(l.coachIntensityHigh),
-                ),
+              children: <Widget>[
+                for (final ({String value, String label}) option
+                    in <({String value, String label})>[
+                      (value: 'light', label: l.coachIntensityLight),
+                      (value: 'moderate', label: l.coachIntensityModerate),
+                      (value: 'high', label: l.coachIntensityHigh),
+                    ]) ...<Widget>[
+                  if (option.value != 'light') const SizedBox(width: 8),
+                  Expanded(
+                    child: AppChoiceChip(
+                      key: Key('routineIntensity-${option.value}'),
+                      label: option.label,
+                      selected: _intensity == option.value,
+                      center: true,
+                      onTap: () => setState(() => _intensity = option.value),
+                    ),
+                  ),
+                ],
               ],
-              selected: <String>{_intensity},
-              onSelectionChanged: (Set<String> selected) {
-                setState(() => _intensity = selected.single);
-              },
             ),
             const SizedBox(height: 12),
             TextField(
