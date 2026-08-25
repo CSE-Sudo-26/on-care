@@ -1406,6 +1406,30 @@ abstract class AppLocalizations {
   /// **'e.g. Squat, Treadmill'**
   String get exExerciseNameHint;
 
+  /// No description provided for @exExerciseNameHintCardio.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Treadmill, Indoor cycling'**
+  String get exExerciseNameHintCardio;
+
+  /// No description provided for @exExerciseNameHintStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Bench press'**
+  String get exExerciseNameHintStrength;
+
+  /// No description provided for @exExerciseNameHintFlexibility.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Full-body stretch, Yoga'**
+  String get exExerciseNameHintFlexibility;
+
+  /// No description provided for @exExerciseNameHintOther.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Rehab exercise, Sports activity'**
+  String get exExerciseNameHintOther;
+
   /// No description provided for @exExerciseReps.
   ///
   /// In en, this message translates to:

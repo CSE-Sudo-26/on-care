@@ -721,6 +721,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exExerciseNameHint => '예) 스쿼트, 러닝머신';
 
   @override
+  String get exExerciseNameHintCardio => '예) 러닝머신, 실내 자전거';
+
+  @override
+  String get exExerciseNameHintStrength => '예) 스쿼트, 벤치프레스';
+
+  @override
+  String get exExerciseNameHintFlexibility => '예) 전신 스트레칭, 요가';
+
+  @override
+  String get exExerciseNameHintOther => '예) 재활 운동, 스포츠 활동';
+
+  @override
   String get exExerciseReps => '횟수';
 
   @override

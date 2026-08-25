@@ -738,6 +738,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get exExerciseNameHintCardio => 'e.g. Treadmill, Indoor cycling';
+
+  @override
+  String get exExerciseNameHintStrength => 'e.g. Squat, Bench press';
+
+  @override
+  String get exExerciseNameHintFlexibility => 'e.g. Full-body stretch, Yoga';
+
+  @override
+  String get exExerciseNameHintOther => 'e.g. Rehab exercise, Sports activity';
+
+  @override
   String get exExerciseReps => 'Reps';
 
   @override
