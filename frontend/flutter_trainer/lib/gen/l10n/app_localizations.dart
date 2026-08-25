@@ -3893,8 +3893,14 @@ abstract class AppLocalizations {
   /// No description provided for @coachHomework.
   ///
   /// In en, this message translates to:
-  /// **'Homework'**
+  /// **'Personal'**
   String get coachHomework;
+
+  /// No description provided for @coachPersonalTraining.
+  ///
+  /// In en, this message translates to:
+  /// **'PT'**
+  String get coachPersonalTraining;
 
   /// No description provided for @coachRoutineSummary.
   ///
@@ -3908,11 +3914,11 @@ abstract class AppLocalizations {
   /// **'Trainer'**
   String get coachTrainer;
 
-  /// No description provided for @coachSessionExercises.
+  /// No description provided for @coachSessionProgramSummary.
   ///
   /// In en, this message translates to:
-  /// **'{type} · {count} exercises'**
-  String coachSessionExercises(String type, int count);
+  /// **'{name} + {count} more'**
+  String coachSessionProgramSummary(String name, int count);
 
   /// No description provided for @aiReasonSodium.
   ///
@@ -4037,7 +4043,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAnalysedData.
   ///
   /// In en, this message translates to:
-  /// **'Analysed this client\'s data'**
+  /// **'Reviewed the workout goal, recent routine, and today\'s nutrition'**
   String get aiAnalysedData;
 
   /// No description provided for @aiGoal.
@@ -4085,7 +4091,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAddExerciseManually.
   ///
   /// In en, this message translates to:
-  /// **'Write it yourself'**
+  /// **'Add exercise manually'**
   String get aiAddExerciseManually;
 
   /// No description provided for @aiExerciseNameExample.
@@ -4235,7 +4241,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiPromptLabel.
   ///
   /// In en, this message translates to:
-  /// **'Your request (plain language)'**
+  /// **'Your request'**
   String get aiPromptLabel;
 
   /// No description provided for @aiPromptHint.
@@ -4247,7 +4253,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiPromptBlurb.
   ///
   /// In en, this message translates to:
-  /// **'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.'**
+  /// **'Your request goes to the AI with the member\'s data (up to 500 characters). Write the member note in the next step.'**
   String get aiPromptBlurb;
 
   /// No description provided for @aiGenerateGoalBased.

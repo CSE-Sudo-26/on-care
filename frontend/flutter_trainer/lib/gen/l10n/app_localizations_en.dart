@@ -2198,7 +2198,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachHistoryEmpty => 'You haven\'t sent any programs yet';
 
   @override
-  String get coachHomework => 'Homework';
+  String get coachHomework => 'Personal';
+
+  @override
+  String get coachPersonalTraining => 'PT';
 
   @override
   String coachRoutineSummary(String name, int minutes) {
@@ -2209,8 +2212,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachTrainer => 'Trainer';
 
   @override
-  String coachSessionExercises(String type, int count) {
-    return '$type · $count exercises';
+  String coachSessionProgramSummary(String name, int count) {
+    return '$name + $count more';
   }
 
   @override
@@ -2289,7 +2292,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiAnalysedData => 'Analysed this client\'s data';
+  String get aiAnalysedData =>
+      'Reviewed the workout goal, recent routine, and today\'s nutrition';
 
   @override
   String get aiGoal => 'Goal';
@@ -2316,7 +2320,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Edit names, durations and structure just like the existing suggestion.';
 
   @override
-  String get aiAddExerciseManually => 'Write it yourself';
+  String get aiAddExerciseManually => 'Add exercise manually';
 
   @override
   String get aiExerciseNameExample => 'e.g. leg press, 3 sets';
@@ -2402,7 +2406,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiPromptTitle => 'Tell the AI what program you want';
 
   @override
-  String get aiPromptLabel => 'Your request (plain language)';
+  String get aiPromptLabel => 'Your request';
 
   @override
   String get aiPromptHint =>
@@ -2410,7 +2414,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiPromptBlurb =>
-      'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.';
+      'Your request goes to the AI with the member\'s data (up to 500 characters). Write the member note in the next step.';
 
   @override
   String get aiGenerateGoalBased => 'Generate goal-based routine';

@@ -1127,7 +1127,8 @@
   "coachSentHistory": "Sent history",
   "coachHistoryFailed": "Couldn't load history",
   "coachHistoryEmpty": "You haven't sent any programs yet",
-  "coachHomework": "Homework",
+  "coachHomework": "Personal",
+  "coachPersonalTraining": "PT",
   "coachRoutineSummary": "{name} · {minutes} min",
   "@coachRoutineSummary": {
     "placeholders": {
@@ -1140,15 +1141,11 @@
     }
   },
   "coachTrainer": "Trainer",
-  "coachSessionExercises": "{type} · {count} exercises",
-  "@coachSessionExercises": {
+  "coachSessionProgramSummary": "{name} + {count} more",
+  "@coachSessionProgramSummary": {
     "placeholders": {
-      "type": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
+      "name": { "type": "String" },
+      "count": { "type": "int" }
     }
   },
   "aiReasonSodium": "Sodium is over target today, so lean into low-intensity cardio.",
@@ -1212,7 +1209,7 @@
       }
     }
   },
-  "aiAnalysedData": "Analysed this client's data",
+  "aiAnalysedData": "Reviewed the workout goal, recent routine, and today's nutrition",
   "aiGoal": "Goal",
   "aiTodaySodium": "Sodium today",
   "aiOverTarget": " · over target",
@@ -1227,7 +1224,7 @@
     }
   },
   "aiEditBlurb": "Edit names, durations and structure just like the existing suggestion.",
-  "aiAddExerciseManually": "Write it yourself",
+  "aiAddExerciseManually": "Add exercise manually",
   "aiExerciseNameExample": "e.g. leg press, 3 sets",
   "aiRegister": "Add",
   "aiNoteForClient": "A note to send with it",
@@ -1279,9 +1276,9 @@
   "aiConditionsAutoHint": "Leave blank to auto-fill from recent history or goals.",
   "aiConditionsEditToggle": "Edit recommended conditions",
   "aiPromptTitle": "Tell the AI what program you want",
-  "aiPromptLabel": "Your request (plain language)",
+  "aiPromptLabel": "Your request",
   "aiPromptHint": "e.g. Build a 40-minute program that goes easy on the legs and leans on cardio",
-  "aiPromptBlurb": "Your request goes to the AI together with the member's data (up to 500 characters). The note the member receives is written separately in the next step.",
+  "aiPromptBlurb": "Your request goes to the AI with the member's data (up to 500 characters). Write the member note in the next step.",
   "aiGenerateGoalBased": "Generate goal-based routine",
   "aiStatusTemplateTitle": "Goal-based starter routine",
   "aiStatusTemplateBody": "Not enough workout history yet to personalize — this starts from a goal-based default.",

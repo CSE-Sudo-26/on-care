@@ -1693,8 +1693,6 @@ class _SendHistoryCard extends ConsumerWidget {
     // so the trainer could send the same routine again believing nothing
     // had gone out.
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
-    final today = ymd(nowKst());
-
     return SectionCard(
       title: l.coachSentHistory,
       icon: Icons.history,
@@ -1724,17 +1722,7 @@ class _SendHistoryCard extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: <Widget>[
-                      SizedBox(
-                        width: 46,
-                        child: Text(
-                          l.coachHomework,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.brandOrange,
-                          ),
-                        ),
-                      ),
+                      _SendHistoryTypeBadge(label: l.coachHomework),
                       Expanded(
                         child: Text(
                           l.coachRoutineSummary(routine.name, routine.minutes),
@@ -1778,27 +1766,15 @@ class _SendHistoryCard extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: <Widget>[
-                      SizedBox(
-                        width: 46,
-                        child: Text(
-                          s.date == today
-                              ? l.labelToday
-                              : s.date.substring(5).replaceAll('-', '/'),
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: s.date == today
-                                ? AppColors.primary
-                                : AppColors.subtleForeground,
-                          ),
-                        ),
-                      ),
+                      _SendHistoryTypeBadge(label: l.coachPersonalTraining),
                       Expanded(
                         child: Text(
-                          l.coachSessionExercises(
-                            sessionTypeLabel(l, s.type),
-                            s.program.length,
-                          ),
+                          s.program.length == 1
+                              ? s.program.first.name
+                              : l.coachSessionProgramSummary(
+                                  s.program.first.name,
+                                  s.program.length - 1,
+                                ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -1824,6 +1800,48 @@ class _SendHistoryCard extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// 전송 이력의 프로그램 종류 — 개인운동과 PT를 같은 디자인 언어로 구분한다.
+class _SendHistoryTypeBadge extends StatelessWidget {
+  const _SendHistoryTypeBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 46,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          key: ValueKey<String>('send-history-type-$label'),
+          width: 40,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 6,
+            vertical: 2,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.accentSurface,
+            borderRadius: BorderRadius.all(AppRadius.pill),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accent,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

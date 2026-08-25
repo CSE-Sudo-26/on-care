@@ -2110,7 +2110,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachHistoryEmpty => '아직 보낸 프로그램이 없어요';
 
   @override
-  String get coachHomework => '숙제';
+  String get coachHomework => '개인';
+
+  @override
+  String get coachPersonalTraining => 'PT';
 
   @override
   String coachRoutineSummary(String name, int minutes) {
@@ -2121,8 +2124,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTrainer => '트레이너';
 
   @override
-  String coachSessionExercises(String type, int count) {
-    return '$type · 운동 $count개';
+  String coachSessionProgramSummary(String name, int count) {
+    return '$name 외 $count개';
   }
 
   @override
@@ -2196,7 +2199,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiAnalysedData => '고객 데이터를 분석했어요';
+  String get aiAnalysedData => '운동 목표와 최근 루틴, 오늘의 식단 정보를 확인했어요';
 
   @override
   String get aiGoal => '목표';
@@ -2222,7 +2225,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiEditBlurb => '기존 AI 추천과 같은 방식으로 운동명·시간·구성을 수정할 수 있어요.';
 
   @override
-  String get aiAddExerciseManually => '직접 작성하기';
+  String get aiAddExerciseManually => '운동 직접 추가하기';
 
   @override
   String get aiExerciseNameExample => '예: 레그프레스 3세트';
@@ -2305,14 +2308,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiPromptTitle => 'AI에게 원하는 프로그램을 말해 주세요';
 
   @override
-  String get aiPromptLabel => '요청 내용 (자연어)';
+  String get aiPromptLabel => '요청 내용';
 
   @override
   String get aiPromptHint => '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘';
 
   @override
   String get aiPromptBlurb =>
-      '적어 둔 요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객에게 보낼 메모는 다음 단계에서 따로 적어요.';
+      '요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객용 메모는 다음 단계에서 작성해요.';
 
   @override
   String get aiGenerateGoalBased => '목표 기반 루틴 생성';
