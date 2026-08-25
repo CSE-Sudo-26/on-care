@@ -259,6 +259,7 @@
   "metricCalories": "칼로리",
   "metricSodium": "나트륨",
   "metricSugar": "당류",
+  "clientDietMacrosMissing": "탄·단·지 기록 없음",
   "metricCarbs": "탄수화물",
   "metricProtein": "단백질",
   "metricFat": "지방",
