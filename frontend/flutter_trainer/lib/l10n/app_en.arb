@@ -740,6 +740,14 @@
   "workoutDoneOfTotal": "{done} of {total} done",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "Not logged",
+  "chartNotYet": "Not yet",
+  "chartOverGoal": "{amount} {unit} over goal",
+  "@chartOverGoal": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  },
   "reportsSendStateSent": "Sent",
   "reportsSendStateSending": "Sending…",
   "reportsShare": "Share",
@@ -946,17 +954,6 @@
   "myNotifications": "Notifications",
   "myNotifNewMessage": "New message alerts",
   "myNotifNewMessageHint": "A sidebar badge appears when a client messages you",
-  "myNotifSessionReminder": "Session reminders",
-  "myNotifSessionReminderHint": "Upcoming sessions are highlighted on the dashboard",
-  "myReminderLead": "Remind me",
-  "myMinutesBefore": "{minutes} min before",
-  "@myMinutesBefore": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
   "myAccount": "Account",
   "myChangePassword": "Change password",
   "myChangePasswordHint": "We'll confirm your current password first",

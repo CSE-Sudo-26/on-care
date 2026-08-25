@@ -136,7 +136,8 @@ void main() {
 
     // 설명되지 않는 칼로리가 절반쯤이므로 `나머지` 구간이 있어야 한다.
     final Iterable<(Color, double)> rest = segments.where(
-      ((Color, double) s) => s.$1 == AppColors.borderStrong,
+      // `나머지` 는 회원 앱과 같은 트랙 색이다 (#1400).
+      ((Color, double) s) => s.$1 == AppColors.inputBackground,
     );
     expect(rest, hasLength(1), reason: '설명되지 않는 칼로리가 자리를 차지해야 한다');
     expect(rest.single.$2 / total, closeTo((1560 - 780) / 1560, 0.03));
@@ -165,7 +166,7 @@ void main() {
 
     final List<(Color, double)> segments = segmentsOf(tester);
     expect(
-      segments.where(((Color, double) s) => s.$1 == AppColors.borderStrong),
+      segments.where(((Color, double) s) => s.$1 == AppColors.inputBackground),
       isEmpty,
     );
     expect(segments, hasLength(3));

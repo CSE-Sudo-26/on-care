@@ -437,6 +437,14 @@
   "workoutDoneOfTotal": "{total}개 중 {done}개 완료",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "기록 없음",
+  "chartNotYet": "아직 오지 않은 날",
+  "chartOverGoal": "목표 초과 +{amount} {unit}",
+  "@chartOverGoal": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  },
   "reportsSendStateSent": "전송됨",
   "reportsSendStateSending": "전송 중…",
   "reportsShare": "공유",
@@ -564,10 +572,6 @@
   "myNotifications": "알림",
   "myNotifNewMessage": "새 메시지 알림",
   "myNotifNewMessageHint": "고객이 메시지를 보내면 사이드바 뱃지로 알려드려요",
-  "myNotifSessionReminder": "수업 시작 전 알림",
-  "myNotifSessionReminderHint": "예정된 세션이 다가오면 대시보드에서 강조해요",
-  "myReminderLead": "알림 시점",
-  "myMinutesBefore": "{minutes}분 전",
   "myAccount": "계정",
   "myChangePassword": "비밀번호 변경",
   "myChangePasswordHint": "현재 비밀번호를 확인한 뒤 교체해요",

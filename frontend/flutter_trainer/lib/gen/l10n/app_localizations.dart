@@ -2534,6 +2534,18 @@ abstract class AppLocalizations {
   /// **'Not logged'**
   String get chartNoRecord;
 
+  /// No description provided for @chartNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get chartNotYet;
+
+  /// No description provided for @chartOverGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} {unit} over goal'**
+  String chartOverGoal(String amount, String unit);
+
   /// No description provided for @reportsSendStateSent.
   ///
   /// In en, this message translates to:
@@ -3259,30 +3271,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A sidebar badge appears when a client messages you'**
   String get myNotifNewMessageHint;
-
-  /// No description provided for @myNotifSessionReminder.
-  ///
-  /// In en, this message translates to:
-  /// **'Session reminders'**
-  String get myNotifSessionReminder;
-
-  /// No description provided for @myNotifSessionReminderHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming sessions are highlighted on the dashboard'**
-  String get myNotifSessionReminderHint;
-
-  /// No description provided for @myReminderLead.
-  ///
-  /// In en, this message translates to:
-  /// **'Remind me'**
-  String get myReminderLead;
-
-  /// No description provided for @myMinutesBefore.
-  ///
-  /// In en, this message translates to:
-  /// **'{minutes} min before'**
-  String myMinutesBefore(int minutes);
 
   /// No description provided for @myAccount.
   ///
