@@ -796,6 +796,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exLogged => 'Exercise logged';
 
   @override
+  String get exOwnRecords => 'Workouts you logged';
+
+  @override
+  String get exOwnRecordsEmpty => 'No workouts logged yet';
+
+  @override
+  String get exOwnRecordSource => 'Self-logged';
+
+  @override
+  String get exDeleteExercise => 'Delete workout';
+
+  @override
+  String get exDeleteExerciseBody => 'Deleting this record cannot be undone.';
+
+  @override
+  String get exDeleted => 'Workout deleted';
+
+  @override
+  String get exDeleteFailed => 'Could not delete. Please try again in a moment';
+
+  @override
+  String get exCannotDelete => 'This record cannot be deleted';
+
+  @override
   String get exSaveFailed => 'Couldn\'t save. Please try again in a moment';
 
   @override
