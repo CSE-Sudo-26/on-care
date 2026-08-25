@@ -1281,6 +1281,20 @@ void main() {
       // 1단계: 조건 설정.
       expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
       expect(find.byType(ProgramEditorWorkspace), findsNothing);
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('ai-manual-create')),
+            )
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey<String>('routine-stage-0')),
+              )
+              .dy,
+        ),
+      );
       await expectBlankManualEditor();
 
       // 2단계: 후보 선택·편집.

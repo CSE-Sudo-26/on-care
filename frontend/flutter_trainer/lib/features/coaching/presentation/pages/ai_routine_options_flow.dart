@@ -306,16 +306,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final content = <Widget>[
-      KeyedSubtree(
-        key: _topKey,
-        child: _ProgressStepper(
-          stage: _stage,
-          maxReachedStage: _maxReachedStage,
-          onStageTap: _goToStage,
-        ),
-      ),
       if (widget.onManualCreate != null) ...<Widget>[
-        const SizedBox(height: AppSpacing.xs),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -336,7 +327,16 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             label: Text(l.aiManualCreate),
           ),
         ),
+        const SizedBox(height: AppSpacing.sm),
       ],
+      KeyedSubtree(
+        key: _topKey,
+        child: _ProgressStepper(
+          stage: _stage,
+          maxReachedStage: _maxReachedStage,
+          onStageTap: _goToStage,
+        ),
+      ),
       const SizedBox(height: AppSpacing.lg),
       if (_stage == 0) ...<Widget>[
         _assistantAnalysis(),
