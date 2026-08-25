@@ -9,8 +9,10 @@ import 'package:oncare_trainer/features/reports/data/repositories/report_reposit
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/bar_line_chart.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/activity_charts.dart';
 import 'package:oncare_trainer/shared/widgets/metric_pill.dart';
 
 /// 운동 상자가 견주는 값.
@@ -116,6 +118,8 @@ class _ComparisonBox extends StatelessWidget {
     required this.goal,
     required this.segments,
     required this.legend,
+    this.barColor,
+    this.lineColor,
     required this.higherIsBetter,
     required this.loading,
     required this.emptyLabel,
@@ -142,6 +146,11 @@ class _ComparisonBox extends StatelessWidget {
 
   /// 조각이 무엇인지 적는 줄.
   final Widget? legend;
+
+  /// 지금 고른 지표의 색. 주지 않으면 그래프의 기본 브랜드 색이다 — 식단
+  /// 상자는 지금까지처럼 지표와 무관하게 한 색을 쓴다(#1424).
+  final Color? barColor;
+  final Color? lineColor;
 
   final bool? higherIsBetter;
   final bool loading;
@@ -237,6 +246,8 @@ class _ComparisonBox extends StatelessWidget {
               ceiling: ceiling,
               goal: goal,
               segments: segments,
+              barColor: barColor,
+              lineColor: lineColor,
               format: format,
               emptyLabel: emptyLabel,
               highlightIndex: 1,
@@ -272,6 +283,21 @@ class _ExerciseComparisonBoxState
         ExerciseCompareMetric.strength => l.routineTypeStrength,
         ExerciseCompareMetric.stretching => l.routineTypeStretching,
       };
+
+  /// 지금 고른 지표의 색. 유형 셋은 다른 운동 그래프(주간 운동 시간·이행률
+  /// 막대)와 같은 램프를, 소모 칼로리는 그 셋이 함께 만든 결과를 뜻하는
+  /// [kBurnColor] 를 쓴다 — 같은 값이 화면마다 다른 색이면 색이 뜻을 잃는다.
+  Color get _metricColor => switch (_metric) {
+    ExerciseCompareMetric.burned => kBurnColor,
+    ExerciseCompareMetric.cardio => kindColor(ExerciseKind.cardio),
+    ExerciseCompareMetric.strength => kindColor(ExerciseKind.strength),
+    ExerciseCompareMetric.stretching => kindColor(ExerciseKind.stretching),
+  };
+
+  /// 꺾은선은 같은 색의 한 단계 진한 쪽이다. 스트레칭처럼 옅은 색은 흰 바탕
+  /// 위에서 선이 거의 보이지 않는다 — 막대와 같은 계열을 유지하면서 선만
+  /// 또렷하게 둔다.
+  Color get _metricLineColor => Color.lerp(_metricColor, Colors.black, 0.3)!;
 
   double? _value(ClientExercisePeriod? period) {
     if (period == null) return null;
@@ -328,6 +354,10 @@ class _ExerciseComparisonBoxState
       goal: null,
       segments: null,
       legend: null,
+      // 지표를 바꾸면 그래프 색도 바뀐다 — 알약만 보고 무엇을 보고 있는지
+      // 되짚지 않아도 되게(#1424).
+      barColor: _metricColor,
+      lineColor: _metricLineColor,
       // 운동은 많이 할수록 좋은 값이다.
       higherIsBetter: true,
       loading: week.isLoading || before.isLoading,
