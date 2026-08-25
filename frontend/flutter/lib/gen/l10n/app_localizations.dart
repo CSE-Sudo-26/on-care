@@ -1514,6 +1514,54 @@ abstract class AppLocalizations {
   /// **'Exercise logged'**
   String get exLogged;
 
+  /// No description provided for @exOwnRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts you logged'**
+  String get exOwnRecords;
+
+  /// No description provided for @exOwnRecordsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No workouts logged yet'**
+  String get exOwnRecordsEmpty;
+
+  /// No description provided for @exOwnRecordSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-logged'**
+  String get exOwnRecordSource;
+
+  /// No description provided for @exDeleteExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete workout'**
+  String get exDeleteExercise;
+
+  /// No description provided for @exDeleteExerciseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting this record cannot be undone.'**
+  String get exDeleteExerciseBody;
+
+  /// No description provided for @exDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout deleted'**
+  String get exDeleted;
+
+  /// No description provided for @exDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete. Please try again in a moment'**
+  String get exDeleteFailed;
+
+  /// No description provided for @exCannotDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'This record cannot be deleted'**
+  String get exCannotDelete;
+
   /// No description provided for @exSaveFailed.
   ///
   /// In en, this message translates to:
