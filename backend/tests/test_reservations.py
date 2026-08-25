@@ -225,6 +225,41 @@ def test_reservation_persists_and_appears_in_trainer_schedule(
     assert any(row["id"] == schedule.id for row in timeline.json())
 
 
+def test_trainer_slot_list_shows_booker_name_but_member_list_does_not(
+    client, created_slots
+):
+    """트레이너는 자기 슬롯 목록에서 예약자 이름을 본다(#1394).
+
+    같은 정보를 회원용 목록에는 싣지 않는다 — 남의 예약을 볼 이유가 없다.
+    """
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    assert booked.status_code == 201, booked.text
+
+    trainer_view = client.get(
+        "/v1/trainer/reservation-slots", headers=_headers(trainer_token)
+    )
+    assert trainer_view.status_code == 200, trainer_view.text
+    trainer_row = next(
+        row for row in trainer_view.json() if row["id"] == slot["id"]
+    )
+    assert trainer_row["booked_by_name"] == "이지수"
+
+    member_view = client.get(
+        "/v1/trainers/trainer-demo/slots", headers=_headers(member_token)
+    )
+    assert member_view.status_code == 200, member_view.text
+    member_row = next(row for row in member_view.json() if row["id"] == slot["id"])
+    assert member_row["booked_by_name"] is None
+
+
 def test_reserved_schedule_cannot_be_updated_or_deleted_as_regular_schedule(
     client, db_session, created_slots
 ):
