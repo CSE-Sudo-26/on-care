@@ -14,6 +14,7 @@ class TrainerSlot {
     required this.startsAt,
     required this.booked,
     required this.sessionType,
+    this.durationMinutes = 60,
   });
 
   final String id;
@@ -31,6 +32,7 @@ class TrainerSlot {
   /// 계약값이다. 회원이 이 시간을 예약하면 만들어지는 일정이 이 종류를
   /// 그대로 물려받는다.
   final String sessionType;
+  final int durationMinutes;
 
   TrainerSlot copyWith({bool? booked}) {
     return TrainerSlot(
@@ -39,6 +41,7 @@ class TrainerSlot {
       startsAt: startsAt,
       booked: booked ?? this.booked,
       sessionType: sessionType,
+      durationMinutes: durationMinutes,
     );
   }
 }

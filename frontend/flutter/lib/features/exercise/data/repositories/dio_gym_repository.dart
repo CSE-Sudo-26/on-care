@@ -39,6 +39,7 @@ class DioGymRepository implements GymRepository {
     // 들이지 않는다(#1072).
     booked: ((j['remaining'] as num?) ?? 0).toInt() <= 0,
     sessionType: (j['session_type'] as String?) ?? '1:1 PT',
+    durationMinutes: (j['duration_minutes'] as num?)?.toInt() ?? 60,
   );
 
   static Trainer _trainer(Map<String, Object?> j) => Trainer(

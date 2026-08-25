@@ -193,6 +193,7 @@ class MockExerciseRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
@@ -205,6 +206,7 @@ class MockExerciseRepository implements ExerciseRepository {
       intensity: intensity,
       dateLabel: _dateLabel(_ymd(date)),
       sets: _strengthOnly(type, sets),
+      reps: _strengthOnly(type, reps),
       name: name,
       weight: _strengthOnly(type, weight),
       date: date,
@@ -214,9 +216,9 @@ class MockExerciseRepository implements ExerciseRepository {
     return session;
   }
 
-  /// 근력에서만 의미 있는 값(세트·중량). 다른 유형에서 온 값은 버린다 —
+  /// 근력에서만 의미 있는 값(세트·횟수·중량). 다른 유형에서 온 값은 버린다 —
   /// 서버(`_strength_only`)와 같은 규칙이라야 데모와 실 API 가 같은 기록을
-  /// 남긴다. (#1262, #1276)
+  /// 남긴다. (#1262, #1276, #1310)
   T? _strengthOnly<T>(ExerciseType type, T? value) =>
       type == ExerciseType.strength ? value : null;
 
@@ -239,6 +241,7 @@ class MockExerciseRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
@@ -257,6 +260,7 @@ class MockExerciseRepository implements ExerciseRepository {
       timeLabel: old?.timeLabel,
       items: old?.items ?? const <String>[],
       sets: _strengthOnly(type, sets),
+      reps: _strengthOnly(type, reps),
       name: name,
       weight: _strengthOnly(type, weight),
       date: date,

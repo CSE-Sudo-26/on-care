@@ -568,7 +568,7 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
     """
     import json
 
-    from app.models.models import DietEntry, RoutineHistory
+    from app.models.models import DietEntry, ExerciseSession, RoutineHistory
     from app.services.trainer_service import week_start_of
 
     last_week = week_start_of(clock.today()) - timedelta(days=7)
@@ -583,6 +583,11 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
             model.date >= last_week.isoformat(),
             model.date <= sunday,
         ).delete(synchronize_session=False)
+    # 운동 기록은 날짜가 아니라 (그 주 월요일, 요일) 로 저장된다 — 주차로 지운다.
+    db_session.query(ExerciseSession).filter(
+        ExerciseSession.user_id == "user-jisu",
+        ExerciseSession.week_start == last_week.isoformat(),
+    ).delete(synchronize_session=False)
     db_session.add(
         DietEntry(
             id=f"t-diet-{uuid4().hex[:8]}",
@@ -610,6 +615,22 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
             ),
         )
     )
+    # 요일 칸이 읽는 곳은 여기다 — 이행률과 달리 실제로 한 운동만 남는다(#1288).
+    # id 앞자리를 공유해 뒤의 순번이 정렬을 정한다 — 리포트가 그 순서로 적는다.
+    batch = uuid4().hex[:8]
+    for order, (kind, name) in enumerate((("cardio", "걷기 30분"), ("strength", "코어 강화"))):
+        db_session.add(
+            ExerciseSession(
+                id=f"t-ex-{batch}-{order}",
+                user_id="user-jisu",
+                week_start=last_week.isoformat(),
+                day_label="화",
+                type=kind,
+                name=name,
+                minutes=30,
+                calories=150,
+            )
+        )
     db_session.commit()
 
     token = _trainer_token(client)
@@ -628,14 +649,13 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
     assert body["calories_week"][1] == 700
     assert body["sugar_week"][1] == 12.5
     assert body["week_completion"][1] == 80
-    # 그날 이행률이 어디서 나온 값인지 — 배정된 운동이 함께 온다(#754).
+    # 그날 **실제로 한** 운동이 함께 온다(#754, #1288). 배정 목록이 아니라 운동
+    # 기록에서 오므로 미수행(✗)은 실리지 않는다 — 배정에 날짜가 없어 "그날
+    # 배정됐는데 안 했다" 가 만들어지지 않는다.
     assert len(body["days"]) == 7
     assert body["days"][1]["completion"] == 80
-    assert body["days"][1]["exercises"] == [
-        "걷기 30분 ✓",
-        "코어 강화 ✓",
-        "스트레칭 ✗",
-    ]
+    assert body["days"][1]["exercises"] == ["걷기 30분", "코어 강화"]
+    assert all("✗" not in name for name in body["days"][1]["exercises"])
     assert body["days"][0]["completion"] == 0
     assert body["days"][0]["exercises"] == []
     # 기록이 없는 날은 0 이고, 이번 주 수치가 섞여 들어오지 않는다.
@@ -643,6 +663,93 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
     assert body["sodium_avg"] == 2400  # 기록된 하루만 나눈다
     assert body["sodium_over_days"] == 1
     assert body["completion_avg"] == 80
+
+
+def test_report_lists_exercise_a_member_logged_alone(client, db_session):
+    """회원 혼자 한 운동도 요일 칸에 온다. (#1288)
+
+    예전에는 요일 칸이 `routine_history` 에서 왔는데, 그 표에 쓰는 경로는 PT 세션
+    완료 하나뿐이었다. 회원이 배정 루틴을 수행하든 직접 기록하든 결과는
+    `exercise_sessions` 로 가므로, PT 가 없던 날은 트레이너가 리포트에서 아무것도
+    볼 수 없었다.
+    """
+    from app.models.models import ExerciseSession, RoutineHistory
+    from app.services.trainer_service import week_start_of
+
+    last_week = week_start_of(clock.today()) - timedelta(days=7)
+    sunday = (last_week + timedelta(days=6)).isoformat()
+    # 이행률의 재료(`routine_history`)를 비워 둔 채로 확인한다 — 요일 칸이 그것과
+    # 무관하게 채워져야 이 이슈가 풀린 것이다.
+    db_session.query(RoutineHistory).filter(
+        RoutineHistory.member_id == "user-jisu",
+        RoutineHistory.date >= last_week.isoformat(),
+        RoutineHistory.date <= sunday,
+    ).delete(synchronize_session=False)
+    db_session.query(ExerciseSession).filter(
+        ExerciseSession.user_id == "user-jisu",
+        ExerciseSession.week_start == last_week.isoformat(),
+    ).delete(synchronize_session=False)
+    db_session.add(
+        ExerciseSession(
+            id=f"t-solo-{uuid4().hex[:8]}",
+            user_id="user-jisu",
+            week_start=last_week.isoformat(),
+            day_label="목",
+            type="strength",
+            name="데드리프트",
+            minutes=40,
+            calories=260,
+            source="member",
+        )
+    )
+    db_session.commit()
+
+    token = _trainer_token(client)
+    r = client.get(
+        "/v1/trainer/clients/user-jisu/report",
+        params={"week_start": last_week.isoformat()},
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["days"][3]["exercises"] == ["데드리프트"]
+    # 이행률은 여전히 배정 쪽 지표라 비어 있다 — 두 값의 출처가 다르다.
+    assert body["days"][3]["completion"] == 0
+
+
+def test_report_falls_back_to_the_type_label_when_a_record_has_no_name(
+    client, db_session
+):
+    """이름 칸이 생기기 전(#1276)의 기록도 무엇을 했는지는 남는다. (#1288)"""
+    from app.models.models import ExerciseSession
+
+    last_week_monday = clock.today() - timedelta(days=clock.today().weekday() + 7)
+    db_session.query(ExerciseSession).filter(
+        ExerciseSession.user_id == "user-jisu",
+        ExerciseSession.week_start == last_week_monday.isoformat(),
+    ).delete(synchronize_session=False)
+    db_session.add(
+        ExerciseSession(
+            id=f"t-noname-{uuid4().hex[:8]}",
+            user_id="user-jisu",
+            week_start=last_week_monday.isoformat(),
+            day_label="월",
+            type="cardio",
+            name="",
+            minutes=25,
+            calories=180,
+        )
+    )
+    db_session.commit()
+
+    token = _trainer_token(client)
+    r = client.get(
+        "/v1/trainer/clients/user-jisu/report",
+        params={"week_start": last_week_monday.isoformat()},
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["days"][0]["exercises"] == ["유산소"]
 
 
 def test_report_rejects_a_week_that_has_not_arrived(client):

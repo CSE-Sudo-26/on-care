@@ -1,7 +1,7 @@
 /// 식단 영양 요약의 도넛 모션과 초과 색 (#1201 · #1202).
 ///
 ///  * 오늘 화면의 달성률 도넛은 12시에서 지금 비율까지 채워지며 들어온다.
-///  * 전체 화면의 칼로리 막대는 목표를 넘긴 날만 빨강 세 단계로 쌓인다.
+///  * 전체 화면의 칼로리 막대는 목표를 넘긴 날만 통으로 빨갛다 (#1352).
 library;
 
 import 'package:flutter/material.dart';
@@ -119,7 +119,7 @@ void main() {
     expect(_donutValue(tester), settled);
   });
 
-  testWidgets('목표를 넘긴 날의 칼로리 막대는 빨강 세 단계다 (#1201)', (
+  testWidgets('목표를 넘긴 날의 칼로리 막대는 통으로 빨강이다 (#1352)', (
     WidgetTester tester,
   ) async {
     await _pumpDiet(tester, repository: _OverAndUnderDietRepository());
@@ -130,14 +130,18 @@ void main() {
     final Iterable<Color> painted = tester
         .widgetList<ColoredBox>(find.byType(ColoredBox))
         .map((ColoredBox box) => box.color);
+    final Iterable<Color?> filled = tester
+        .widgetList<Container>(find.byType(Container))
+        .map((Container box) => (box.decoration as BoxDecoration?)?.color);
 
-    // 초과한 날이 하나라도 있으면 빨강 세 단계 중 진한 칸(탄수화물)이 보인다.
+    // 초과한 날은 탄단지로 쪼개지 않는다 — 나트륨·당류와 같은 한 색 덩어리다.
+    // 쌓여 있었다면 이 색은 나오지 않는다(쌓는 쪽은 `ColoredBox` 를 쓴다).
     expect(
-      painted.contains(FigmaColors.macroCarbsOver),
+      filled.contains(FigmaColors.dangerRed.withValues(alpha: 0.85)),
       isTrue,
-      reason: '초과한 날의 막대가 아직 파랑이다',
+      reason: '초과한 날의 막대가 아직 통짜 빨강이 아니다',
     );
-    // 넘기지 않은 날은 그대로 파랑이다 — 전부 빨개지면 초과가 무의미해진다.
+    // 넘기지 않은 날은 그대로 파랑 세 단계다 — 전부 빨개지면 초과가 무의미해진다.
     expect(painted.contains(FigmaColors.macroCarbs), isTrue);
   });
 }

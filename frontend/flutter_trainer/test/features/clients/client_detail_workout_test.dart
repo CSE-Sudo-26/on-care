@@ -491,7 +491,7 @@ void main() {
 
       final Finder cancel = find.byKey(
         const ValueKey<String>(
-          'workout-cancel-routine-seed-routine-user-demo-0',
+          'workout-cancel-routine-seed-routine-user-7d4e9a2c5f18-0',
         ),
       );
       expect(cancel, findsOneWidget);
@@ -539,7 +539,7 @@ void main() {
       await tester.tap(
         find.byKey(
           const ValueKey<String>(
-            'workout-cancel-routine-seed-routine-user-demo-0',
+            'workout-cancel-routine-seed-routine-user-7d4e9a2c5f18-0',
           ),
         ),
       );

@@ -14,6 +14,7 @@ import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/consult_time_range_picker.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 
@@ -53,6 +54,7 @@ class _ConsultationRequestPageState
   /// "시간 협의"를 골랐는가. 고르면 [_preferredTimeOfDay] 는 쓰지 않는다(#1256).
   bool _timeFlexible = false;
   TimeOfDay? _preferredTimeOfDay;
+  TimeOfDay? _preferredEndTimeOfDay;
   bool _attempted = false;
   bool _submitting = false;
 
@@ -76,45 +78,31 @@ class _ConsultationRequestPageState
       initialDate: _preferredDate ?? today,
       firstDate: today,
       lastDate: DateTime(today.year + 100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            datePickerTheme: const DatePickerThemeData(
-              backgroundColor: Colors.white,
-              headerBackgroundColor: Colors.white,
-              surfaceTintColor: Colors.transparent,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (selected != null && mounted) {
       setState(() => _preferredDate = selected);
     }
   }
 
-  /// 정확한 시각 선택. 다이얼(시계판) 대신 **키보드 입력**을 기본으로 연다 —
-  /// 회원이 시각을 이미 알고 있는 상태로 오는 화면이라 다이얼보다 빠르다(#1256).
+  /// 시작과 종료 시각을 한 다이얼에서 이어서 고른다. 트레이너 앱 스케줄
+  /// 탭의 시간 범위 선택기를 그대로 써서 두 앱이 같은 방식으로 정확한
+  /// 범위를 입력한다.
   Future<void> _selectTime() async {
-    final TimeOfDay? selected = await showTimePicker(
+    final TimeRangeValue? picked = await showConsultTimeRangePicker(
       context: context,
-      initialTime: _preferredTimeOfDay ?? const TimeOfDay(hour: 10, minute: 0),
-      initialEntryMode: TimePickerEntryMode.input,
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            timePickerTheme: const TimePickerThemeData(
-              backgroundColor: Colors.white,
-            ),
+      start: _preferredTimeOfDay ?? const TimeOfDay(hour: 10, minute: 0),
+      end:
+          _preferredEndTimeOfDay ??
+          TimeOfDay(
+            hour: (_preferredTimeOfDay?.hour ?? 10) + 1,
+            minute: _preferredTimeOfDay?.minute ?? 0,
           ),
-          child: child!,
-        );
-      },
     );
-    if (selected != null && mounted) {
-      setState(() => _preferredTimeOfDay = selected);
-    }
+    if (picked == null || !mounted) return;
+    setState(() {
+      _preferredTimeOfDay = picked.start;
+      _preferredEndTimeOfDay = picked.end;
+    });
   }
 
   /// 운동 목표가 "기타"면 문의 내용에 구체적으로 적어야 한다 — 그 내용이
@@ -133,7 +121,8 @@ class _ConsultationRequestPageState
       _exerciseGoal != null &&
       !_otherGoalDetailMissing &&
       _preferredDate != null &&
-      (_timeFlexible || _preferredTimeOfDay != null) &&
+      (_timeFlexible ||
+          (_preferredTimeOfDay != null && _preferredEndTimeOfDay != null)) &&
       _dataSharingConsent;
 
   Future<void> _submit({
@@ -163,12 +152,13 @@ class _ConsultationRequestPageState
         healthPurposeType == HealthPurposeType.other ? message : null;
     final PreferredTime preferredTime = _timeFlexible
         ? const PreferredTime.flexible()
-        : PreferredTime.at(_preferredTimeOfDay!);
+        : PreferredTime.range(_preferredTimeOfDay!, _preferredEndTimeOfDay!);
     final ConsultationRequest request = ConsultationRequest(
       id: 'consult-${now.microsecondsSinceEpoch}',
       trainerId: trainer.id,
       trainerName: trainer.name,
       trainerRole: trainer.role,
+      trainerGymName: gym.name,
       // 라벨이 아니라 계약 enum 을 담는다 — 라벨을 저장하면 서버에서 복원할 때
       // 문구를 만들 수 없다(#327).
       exerciseGoal: exerciseGoal,
@@ -354,35 +344,32 @@ class _ConsultationRequestPageState
             const SizedBox(height: 20),
             _FieldTitle(title: l.exPreferredTime),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                ChoiceChip(
-                  key: const Key('consult-time-flexible'),
-                  label: Text(l.exTimeFlexible),
-                  selected: _timeFlexible,
-                  selectedColor: FigmaColors.primaryA(0.14),
-                  side: BorderSide(
-                    color: _timeFlexible
-                        ? FigmaColors.primary
-                        : FigmaColors.hairline,
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    child: _TimeField(
+                      key: const Key('consult-time'),
+                      start: _preferredTimeOfDay,
+                      end: _preferredEndTimeOfDay,
+                      enabled: !_timeFlexible,
+                      onTap: _selectTime,
+                    ),
                   ),
-                  onSelected: (bool selected) =>
-                      setState(() => _timeFlexible = selected),
-                ),
-              ],
-            ),
-            // 협의가 아니면 정확한 시각을 고른다 — 기본으로 키보드 입력이 뜬다.
-            if (!_timeFlexible) ...<Widget>[
-              const SizedBox(height: 8),
-              _TimeField(
-                key: const Key('consult-time'),
-                time: _preferredTimeOfDay,
-                onTap: _selectTime,
+                  const SizedBox(width: 8),
+                  _TimeFlexibleToggle(
+                    key: const Key('consult-time-flexible'),
+                    label: l.exTimeFlexible,
+                    selected: _timeFlexible,
+                    onTap: () => setState(() => _timeFlexible = !_timeFlexible),
+                  ),
+                ],
               ),
-            ],
-            if (_attempted && !_timeFlexible && _preferredTimeOfDay == null)
+            ),
+            if (_attempted &&
+                !_timeFlexible &&
+                (_preferredTimeOfDay == null || _preferredEndTimeOfDay == null))
               _ErrorText(l.exTimeRequired),
             const SizedBox(height: 20),
             _FieldTitle(title: l.exConsultMessage),
@@ -759,22 +746,32 @@ class _DateField extends StatelessWidget {
 /// 정확한 희망 시각 입력 필드. [_DateField]와 같은 자리·스타일이다 — 눌렀을 때
 /// 뜨는 게 날짜 대신 [showTimePicker](키보드 입력 기본)일 뿐이다(#1256).
 class _TimeField extends StatelessWidget {
-  const _TimeField({required this.time, required this.onTap, super.key});
+  const _TimeField({
+    required this.start,
+    required this.end,
+    required this.enabled,
+    required this.onTap,
+    super.key,
+  });
 
-  final TimeOfDay? time;
+  final TimeOfDay? start;
+  final TimeOfDay? end;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String text = time == null
+    final MaterialLocalizations m = MaterialLocalizations.of(context);
+    final String text = start == null || end == null
         ? l.exSelectTime
-        : MaterialLocalizations.of(context).formatTimeOfDay(time!);
+        : '${m.formatTimeOfDay(start!, alwaysUse24HourFormat: true)}'
+              '–${m.formatTimeOfDay(end!, alwaysUse24HourFormat: true)}';
     return Material(
       color: FigmaColors.softBlue,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
@@ -796,10 +793,10 @@ class _TimeField extends StatelessWidget {
                   text,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: time == null
+                    fontWeight: start == null
                         ? FontWeight.w500
                         : FontWeight.w700,
-                    color: time == null
+                    color: start == null || !enabled
                         ? AppColors.mutedForeground
                         : FigmaColors.ink,
                   ),
@@ -807,6 +804,52 @@ class _TimeField extends StatelessWidget {
               ),
               const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "시간 협의" 토글. [_TimeField]와 같은 자리에 나란히 서므로 패딩·모서리를
+/// 그대로 맞춘다 — `ChoiceChip`은 이 자리에서 늘어난 줄 높이만큼 채워지지
+/// 않고 제 기본 높이로만 남아, 옆 필드보다 낮게 떠 보였다(#1331).
+class _TimeFlexibleToggle extends StatelessWidget {
+  const _TimeFlexibleToggle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? FigmaColors.primaryA(0.14) : Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? FigmaColors.primary : FigmaColors.hairline,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: selected ? FigmaColors.primary : FigmaColors.ink,
+            ),
           ),
         ),
       ),

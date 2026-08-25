@@ -70,7 +70,7 @@ void main() {
         '10:00',
         '12:00',
         '14:00',
-        '15:00',
+        '16:00',
         '17:00',
         '19:00',
       ]);
@@ -328,7 +328,9 @@ void main() {
       final repo = DriftScheduleRepository(db);
       // A PAST session — completing it retro-logs the class. Future
       // sessions can't be completed (see the next test).
-      final yesterday = nowKst().subtract(const Duration(days: 1));
+      // 이번 주는 데모 일정으로 채워져 있다. 실행 요일에 따라 어제가 시드와
+      // 겹치지 않도록, 항상 시드 주간 밖의 지난 날짜를 쓴다.
+      final yesterday = nowKst().subtract(const Duration(days: 14));
       await repo.addSession(
         date: ymd(yesterday),
         clientName: '이지수',
@@ -336,7 +338,9 @@ void main() {
         type: '1:1 PT',
         durationMinutes: 60,
       );
-      final slot = (await repo.watchDate(ymd(yesterday)).first).single;
+      final slot = (await repo.watchDate(ymd(yesterday)).first).firstWhere(
+        (entry) => entry.clientName == '이지수' && entry.time == '11:00',
+      );
 
       await repo.completeSession(slot.id, note: '어제 세션 뒤늦게 기록');
 
@@ -547,8 +551,8 @@ void main() {
       expect(find.text('22:00'), findsOneWidget);
 
       // 블록은 시간 범위와 종류를 함께 말한다.
-      expect(find.text('10:00\u201311:00'), findsWidgets);
-      expect(find.text('17:00\u201317:30'), findsOneWidget);
+      expect(find.text('10:00\u201310:30'), findsWidgets);
+      expect(find.text('17:00\u201318:00'), findsWidgets);
       expect(find.text('김민수'), findsWidgets);
       expect(find.textContaining('이지수'), findsWidgets);
       expect(find.textContaining('박성호'), findsWidgets);
@@ -947,7 +951,7 @@ void main() {
       await tester.tap(find.text('추가하기'));
       await settle(tester);
 
-      expect(find.text('10:00\u201311:30'), findsOneWidget);
+      expect(find.text('10:00\u201311:30'), findsWidgets);
     });
 
     testWidgets('종료 시간이 시작보다 이르면 확인을 막는다 (#1090)', (tester) async {
@@ -969,7 +973,7 @@ void main() {
       expect(confirm.onPressed, isNull);
     });
 
-    testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
+    testWidgets('일정 수정 moves 박성호 to a 15-minute step (16:00 → 16:30)', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -996,7 +1000,7 @@ void main() {
         findsNothing,
       );
 
-      await enterTimeRange(tester, start: '15:30', end: '16:30');
+      await enterTimeRange(tester, start: '16:30', end: '17:30');
       await tester.ensureVisible(find.text('저장하기'));
       await tester.pump();
       await tester.tap(find.text('저장하기'));
@@ -1006,11 +1010,17 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('15:30\u201316:30'),
+          matching: find.text('16:30\u201317:30'),
         ),
         findsOneWidget,
       );
-      expect(find.text('15:00\u201316:00'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('week-detail')),
+          matching: find.text('16:00\u201317:00'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('프로그램 수정 opens a dialog to edit exercises', (tester) async {
@@ -1065,7 +1075,7 @@ void main() {
         find.byKey(const ValueKey<String>('program-editor-seed-schedule-3')),
         findsNothing,
       );
-      expect(find.textContaining('15:00\u201316:00'), findsWidgets);
+      expect(find.textContaining('16:00\u201316:45'), findsWidgets);
       expect(find.text('덤벨 플라이'), findsOneWidget);
       expect(find.textContaining('4세트'), findsOneWidget);
       // 프로그램만 고쳤으므로 원래 메모는 그대로 남는다.
@@ -1524,7 +1534,7 @@ void main() {
 
       expect(clientName, '윤가온'); // not reassigned to 김민수
       expect(type, '상담');
-      expect(duration, 30);
+      expect(duration, 60);
     });
 
     testWidgets('unsupported program action does not call chat repository', (

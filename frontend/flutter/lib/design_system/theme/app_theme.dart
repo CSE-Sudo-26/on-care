@@ -37,6 +37,30 @@ class AppTheme {
     backgroundColor: AppColors.card,
   );
 
+  /// 날짜 선택 다이얼로그는 **흰 바탕**이다.
+  ///
+  /// Material 3 은 달력의 바탕으로 `surfaceContainerHigh` 를 쓰는데, 이 앱에서
+  /// 그 자리는 브랜드 하늘색(`AppColors.accent`)이다. 그래서 식단·운동·일정 등
+  /// 날짜를 고르는 모든 창이 옅은 파랑으로 깔려, 정작 그 창을 띄운 흰 카드·시트와
+  /// 따로 놀았다. 다른 다이얼로그([_dialogTheme])와 같은 흰색으로 맞춘다.
+  ///
+  /// `surfaceTintColor` 를 투명으로 두는 것까지가 한 벌이다 — 비워 두면 M3 가
+  /// 높이에 따라 브랜드 색을 다시 얹어 흰색이 미묘하게 물든다.
+  static const DatePickerThemeData _datePickerTheme = DatePickerThemeData(
+    backgroundColor: AppColors.card,
+    headerBackgroundColor: AppColors.card,
+    headerForegroundColor: AppColors.foreground,
+    surfaceTintColor: Colors.transparent,
+  );
+
+  /// 시간 선택 다이얼(시계 UI)도 [_datePickerTheme]와 같은 이유로 **흰 바탕**
+  /// 이다 — `dialBackgroundColor` 역시 `surfaceContainerHighest`(옅은 파랑)를
+  /// 물려받아 시계 판이 하늘색으로 떴다.
+  static const TimePickerThemeData _timePickerTheme = TimePickerThemeData(
+    backgroundColor: AppColors.card,
+    dialBackgroundColor: AppColors.card,
+  );
+
   /// `SnackBar` 을 **떠 있는 형태**로 고정한다. (#1259)
   ///
   /// 앱이 띄우는 알림은 [showAppToast] 로 화면 위쪽 오버레이에 뜬다. 이 테마는
@@ -118,6 +142,8 @@ class AppTheme {
         color: AppColors.primary,
       ),
       dialogTheme: _dialogTheme,
+      datePickerTheme: _datePickerTheme,
+      timePickerTheme: _timePickerTheme,
       bottomSheetTheme: _bottomSheetTheme,
       snackBarTheme: _snackBarTheme,
     );
