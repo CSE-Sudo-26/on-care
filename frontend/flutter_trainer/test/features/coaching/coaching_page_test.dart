@@ -22,10 +22,12 @@ import 'package:oncare_trainer/features/clients/domain/entities/routine_history_
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_final_review_card.dart';
@@ -854,6 +856,135 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('템플릿이 늘어나도 고객 목록은 자리·높이 그대로다 (레이아웃/스크롤 1차 수정)', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1600, 1200);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
+
+      final listFinder = find.byKey(
+        const ValueKey<String>('program-client-list-scroll'),
+      );
+      final beforeTopLeft = tester.getTopLeft(listFinder);
+      final beforeSize = tester.getSize(listFinder);
+
+      // 시작 구성 3개뿐이던 템플릿을 10개 더 저장해, 템플릿 카드가
+      // 사이드바 높이를 훌쩍 넘도록 만든다.
+      final repo = container.read(trainerProgramTemplateRepositoryProvider);
+      for (var i = 0; i < 10; i++) {
+        await repo.create(
+          name: '늘어난 템플릿 $i',
+          goal: '테스트',
+          exercises: const <TemplateExercise>[
+            TemplateExercise(name: '스쿼트', minutes: 15, type: '근력'),
+          ],
+        );
+      }
+      container.invalidate(programTemplatesProvider);
+      await tester.pump();
+      await tester.pump();
+
+      // 고객 목록의 화면 위치·크기는 템플릿이 늘기 전과 똑같아야 한다 —
+      // 템플릿 카드가 커진 만큼은 그 아래 영역 안에서만 흡수되어야 한다.
+      expect(tester.getTopLeft(listFinder), beforeTopLeft);
+      expect(tester.getSize(listFinder), beforeSize);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('짧은 화면에서 템플릿이 많아도 오버플로우 없이 템플릿 영역만 스크롤한다', (
+      tester,
+    ) async {
+      // "화면 높이가 비교적 작은 경우" 케이스 — 폭은 3열이 뜨는 넓이를
+      // 유지하고 높이만 줄인다.
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1600, 640);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
+
+      final repo = container.read(trainerProgramTemplateRepositoryProvider);
+      for (var i = 0; i < 10; i++) {
+        await repo.create(
+          name: '늘어난 템플릿 $i',
+          goal: '테스트',
+          exercises: const <TemplateExercise>[
+            TemplateExercise(name: '스쿼트', minutes: 15, type: '근력'),
+          ],
+        );
+      }
+      container.invalidate(programTemplatesProvider);
+      await tester.pump();
+      await tester.pump();
+
+      // 짧은 창에서도 RenderFlex 오버플로우 없이 그려져야 한다.
+      expect(tester.takeException(), isNull);
+
+      final templateScroll = find.byKey(
+        const ValueKey<String>('coaching-template-scroll'),
+      );
+      expect(templateScroll, findsOneWidget);
+      final scrollableState = tester.state<ScrollableState>(
+        find
+            .descendant(of: templateScroll, matching: find.byType(Scrollable))
+            .first,
+      );
+      // 템플릿이 남는 공간보다 많아졌으니 이 컨테이너 안에서 스크롤할
+      // 거리가 있어야 한다.
+      expect(scrollableState.position.maxScrollExtent, greaterThan(0));
+
+      final beforeOffset = scrollableState.position.pixels;
+      await tester.drag(templateScroll, const Offset(0, -80));
+      await tester.pump();
+      expect(scrollableState.position.pixels, greaterThan(beforeOffset));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      '아주 짧은 화면에서는 고객 목록 하나만으로도 빠듯해 오버플로우 없이 열 전체가 스크롤로 물러난다',
+      (tester) async {
+        // 실제로 1600×550 에서 "BOTTOM OVERFLOWED BY 60 PIXELS" 가 났던
+        // 창 높이 — 고객 목록(5줄) 하나만으로도 이 열에 남는 여유가
+        // 거의 없어, 템플릿 카드를 `Expanded` 로 억지로 나누면 카드
+        // 헤더 한 줄 그릴 자리도 없다.
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1600, 550);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.coaching,
+        );
+
+        // 나누지 않고 예전처럼 열 전체를 한 스크롤로 묶은 경로로
+        // 떨어져야 한다 — 오버플로우가 나지 않아야 한다.
+        expect(
+          find.byKey(const ValueKey<String>('coaching-sidebar-scroll')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey<String>('program-client-list-scroll')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey<String>('program-template-sidebar')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('client data buttons switch the diet summary to workout data', (
       tester,
