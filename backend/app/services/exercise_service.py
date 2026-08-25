@@ -18,9 +18,12 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from app.core import clock
-from app.services import exercise_types, period_window
+from app.services import exercise_activity, exercise_types, period_window
 
-WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
+#: 요일 라벨(월=0 … 일=6). 순서를 두 벌 두지 않으려고 논리 운동일 모듈의 정의를
+#: 그대로 쓴다 — 여기서 한 칸이라도 어긋나면 같은 기록이 화면과 AI 에서 다른
+#: 날짜가 된다. (#1264)
+WEEKDAY_LABELS = list(exercise_activity.WEEKDAY_LABELS)
 
 #: 운동 타입별 분당 소모 칼로리. 회원 앱의 `_estimateCalories`
 #: (`exercise_flows.dart`) 표를 그대로 옮긴 값이다 — 수기 입력은 앱이 계산해
@@ -54,14 +57,14 @@ def session_date_of(row) -> date | None:
     """기록의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다. (#1276)
 
     요일만으로는 몇 주 전 기록과 이번 주 기록이 구분되지 않는다 — 앱이 수정
-    시트를 열 때 원래 날짜를 되살리려면 여기서 되돌려야 한다. 값이 깨졌으면
-    None 이다: 지어낸 날짜보다 빈 칸이 낫다.
+    시트를 열 때 원래 날짜를 되살리려면 여기서 되돌려야 한다.
+
+    계산은 [exercise_activity.activity_date_of] 하나뿐이다(#1264). 예전에는 같은
+    환산을 여기서 한 벌 더 갖고 있었고, 그쪽만 깨진 옛 행에서 빈 칸을 냈다 —
+    화면은 날짜 없는 기록을, AI 는 폴백으로 되살린 날짜를 보는 상태였다. 셋 중
+    어느 것으로도 알 수 없을 때만 None 이다: 지어낸 날짜보다 빈 칸이 낫다.
     """
-    try:
-        monday = date.fromisoformat(row.week_start)
-        return monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))
-    except (AttributeError, TypeError, ValueError):
-        return None
+    return exercise_activity.activity_date_of(row)
 
 
 def monday_of_this_week_str() -> str:
@@ -291,21 +294,6 @@ class ExerciseDayTotals:
         return max(order, key=lambda t: (self.by_type.get(t, 0), -order.index(t)))
 
 
-def _date_of(week_start: str, day_label: str) -> date | None:
-    """`week_start`(월요일) + 요일 라벨 → 실제 날짜.
-
-    운동 기록은 날짜가 아니라 (그 주 월요일, 요일) 로 저장된다. 구간을 물어보려면
-    실제 날짜로 되돌려야 한다.
-    """
-    if day_label not in WEEKDAY_LABELS:
-        return None
-    try:
-        monday = date.fromisoformat(week_start)
-    except ValueError:
-        return None
-    return monday + timedelta(days=WEEKDAY_LABELS.index(day_label))
-
-
 def daily_totals(rows: list, start: str, end: str) -> list[ExerciseDayTotals]:
     """[start, end] 구간의 기록 있는 날만 날짜순으로. (#1025)
 
@@ -314,7 +302,9 @@ def daily_totals(rows: list, start: str, end: str) -> list[ExerciseDayTotals]:
     """
     per_day: dict[date, dict] = {}
     for row in rows:
-        when = _date_of(row.week_start, row.day_label)
+        # 구간 판정의 날짜도 화면과 같은 규칙이다 — 여기만 따로 세면 코치의
+        # '최근 N일' 이 회원이 보는 기록과 다른 날을 가리킨다. (#1264)
+        when = exercise_activity.activity_date_of(row)
         if when is None or not (start <= when.isoformat() <= end):
             continue
         bucket = per_day.setdefault(

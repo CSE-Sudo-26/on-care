@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ import 'package:oncare_trainer/features/reports/presentation/widgets/report_pdf_
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_share_menu.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_summary_hint.dart';
 import 'package:oncare_trainer/features/reports/presentation/widgets/report_week_nav.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_file_name.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
@@ -23,6 +26,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -129,7 +133,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Future<void> _saveFeedback(WeeklyReport report, String body) async {
     if (_savingFeedback) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _savingFeedback = true);
     try {
       await ref
@@ -146,12 +149,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         )),
       );
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.reportsFeedbackSaved)));
+      showAppToast(context, l.reportsFeedbackSaved, kind: AppToastKind.success);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.reportsFeedbackSaveFailed)),
-      );
+      showAppToast(context, l.reportsFeedbackSaveFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _savingFeedback = false);
     }
@@ -243,21 +244,59 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     );
   }
 
+  /// 리포트 PDF binary. [_send]의 기본 전송과 [_openPdfExport]의 내보내기가
+  /// 같은 문서를 만든다 — 전송이 실제로 받는 것과 내보내기 미리보기가 다른
+  /// 문서면 안 된다.
+  Future<Uint8List> _generateReportPdf(
+    AppLocalizations l,
+    WeeklyReport report,
+    String feedback,
+  ) async {
+    WeeklyReport? previous;
+    try {
+      previous = await ref.read(
+        weeklyReportProvider((
+          client: report.client,
+          weekStart: report.weekStart.subtract(const Duration(days: 7)),
+        )).future,
+      );
+    } catch (_) {
+      // 전주 집계가 없어도 현재 주차 PDF는 생성할 수 있다.
+    }
+    return ref
+        .read(reportPdfGeneratorProvider)
+        .generate(
+          l: l,
+          report: report,
+          feedback: feedback,
+          previousReport: previous,
+        );
+  }
+
+  /// 헤더 공유 메뉴의 기본 전송 — PDF로 만들어 보낸다(#1378). 예전에는 순수
+  /// 텍스트만 갔는데, 회원 채팅에서 PDF를 열람하는 길(#778, #921)이 이미 있어
+  /// 굳이 글만 보낼 이유가 없었다. "PDF 내보내기"(별도 저장·인쇄용, [_openPdfExport])는
+  /// 그대로 둔다.
   Future<void> _send(WeeklyReport report, String message) async {
     final AppLocalizations l = AppLocalizations.of(context);
     final id = report.client.id;
     if (_sending != null || _sent.contains(id)) return;
-    // messenger 와 마찬가지로 l 도 위에서 await 전에 잡아 뒀다.
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = id);
     try {
+      final bytes = await _generateReportPdf(l, report, message);
       await ref
           .read(reportRepositoryProvider)
-          .send(clientId: id, weekStart: report.weekStart, message: message);
+          .sendPdf(
+            clientId: id,
+            weekStart: report.weekStart,
+            bytes: bytes,
+            fileName: reportPdfFileName(l, report),
+            message: message,
+          );
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = null);
-      messenger.showSnackBar(SnackBar(content: Text(l.reportsSendFailed)));
+      showAppToast(context, l.reportsSendFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -265,39 +304,27 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _sending = null;
       _sent.add(id);
     });
-    messenger.showSnackBar(
-      SnackBar(content: Text(l.reportsSent(report.client.name))),
+    // 전송 확인은 하단 SnackBar가 아니라 상단 토스트로 뜬다 — 채팅으로
+    // 바로 넘어갈 수 있는 동작 버튼을 붙이기 위해서다(#1378).
+    showAppToast(
+      context,
+      l.reportsSent(report.client.name),
+      kind: AppToastKind.success,
+      action: AppToastAction(
+        label: l.reportsGoToChat,
+        onTap: () => context.go(AppRoutes.messagesFor(id)),
+      ),
     );
   }
 
   Future<void> _openPdfExport(WeeklyReport report) async {
     if (_generatingPdf) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // await 를 넘어 `context` 를 다시 읽지 않도록 messenger 와 함께 미리 잡아
-    // 둔다. PDF 문구도 화면과 같은 로케일이어야 한다 (#964).
+    // PDF 문구도 화면과 같은 로케일이어야 한다 (#964).
     final AppLocalizations l = AppLocalizations.of(context);
     final feedback = _messageFor(l, report, _savedDraftOf(report));
     setState(() => _generatingPdf = true);
     try {
-      WeeklyReport? previous;
-      try {
-        previous = await ref.read(
-          weeklyReportProvider((
-            client: report.client,
-            weekStart: report.weekStart.subtract(const Duration(days: 7)),
-          )).future,
-        );
-      } catch (_) {
-        // 전주 집계가 없어도 현재 주차 PDF는 생성할 수 있다.
-      }
-      final bytes = await ref
-          .read(reportPdfGeneratorProvider)
-          .generate(
-            l: l,
-            report: report,
-            feedback: feedback,
-            previousReport: previous,
-          );
+      final bytes = await _generateReportPdf(l, report, feedback);
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -305,9 +332,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       );
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l.reportsPdfGenerationFailed)),
-        );
+        showAppToast(context, l.reportsPdfGenerationFailed, kind: AppToastKind.error);
       }
     } finally {
       if (mounted) setState(() => _generatingPdf = false);

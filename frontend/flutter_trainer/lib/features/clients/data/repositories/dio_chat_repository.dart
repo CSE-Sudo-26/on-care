@@ -66,7 +66,10 @@ class DioChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
+    // reportWeekStart는 데모/드리프트 전용이다 — 실서버는 `/report/send-pdf`가
+    // 첨부 메타데이터를 직접 붙이므로 이 경로로 오지 않는다.
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
     final encodedId = Uri.encodeComponent(clientId);

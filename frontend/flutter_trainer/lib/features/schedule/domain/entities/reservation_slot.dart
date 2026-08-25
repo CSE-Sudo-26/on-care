@@ -11,6 +11,7 @@ class ReservationSlot {
     required this.booked,
     required this.isClosed,
     required this.sessionType,
+    this.bookedByName,
   });
 
   final String id;
@@ -26,6 +27,10 @@ class ReservationSlot {
   /// (`상담`) — 스케줄 탭의 세션 종류와 같은 계약값이다(#1083).
   final String sessionType;
 
+  /// 이 자리를 잡은 회원 이름. [booked] 인 트레이너용 슬롯에서만 채워진다
+  /// (#1394) — 서버가 트레이너 목록에서만 이 값을 내려준다.
+  final String? bookedByName;
+
   factory ReservationSlot.fromJson(Map<String, dynamic> json) {
     return ReservationSlot(
       id: json['id'] as String,
@@ -36,6 +41,7 @@ class ReservationSlot {
       booked: ((json['remaining'] as num?) ?? 0).toInt() <= 0,
       isClosed: json['is_closed'] as bool? ?? false,
       sessionType: json['session_type'] as String? ?? '1:1 PT',
+      bookedByName: json['booked_by_name'] as String?,
     );
   }
 }

@@ -53,6 +53,7 @@ class _FailingChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async => throw Exception('chat write failed');
 }
 
@@ -65,9 +66,14 @@ class _SlowChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    return super.sendTrainerMessage(clientId: clientId, text: text);
+    return super.sendTrainerMessage(
+      clientId: clientId,
+      text: text,
+      reportWeekStart: reportWeekStart,
+    );
   }
 }
 
@@ -316,6 +322,7 @@ class _FakeRealChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     if (failSend) throw Exception('note failed');
   }
@@ -820,6 +827,19 @@ void main() {
           find.descendant(of: overview, matching: find.text('전송 이력')),
           findsOneWidget,
         );
+        expect(find.text('개인'), findsWidgets);
+        expect(find.text('숙제'), findsNothing);
+        final personalBadge = find
+            .byKey(const ValueKey<String>('send-history-type-개인'))
+            .first;
+        final ptBadge = find
+            .byKey(const ValueKey<String>('send-history-type-PT'))
+            .first;
+        expect(personalBadge, findsOneWidget);
+        expect(ptBadge, findsOneWidget);
+        expect(tester.getSize(personalBadge), tester.getSize(ptBadge));
+        expect(find.text('레그프레스 외 3개'), findsOneWidget);
+        expect(find.text('1:1 PT · 운동 4개'), findsNothing);
         expect(
           tester.getBottomRight(sugar).dy,
           lessThanOrEqualTo(tester.view.physicalSize.height),
@@ -1222,7 +1242,10 @@ void main() {
 
         // 클릭해야 나타나던 배너는 없다 — 흐름 자체가 항상 프로그램 정보
         // 박스 위에 있다.
-        expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
+        expect(
+          find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'),
+          findsOneWidget,
+        );
         expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
         // The persistent shell proves this lives inline in the tab, not a
         // dialog/page. Asserted on the sidebar's profile footer rather than

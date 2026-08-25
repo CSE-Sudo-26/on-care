@@ -407,6 +407,7 @@
   "chatTooLong": "Message is too long (2000 characters max)",
   "chatSendFailed": "Couldn't send the message. Please try again",
   "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
+  "chatReportSentNotice": "Sent the {range} weekly report",
   "chatLoadFailed": "Couldn't load the conversation",
   "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
   "@chatDemoAnalyzed": {
@@ -417,7 +418,7 @@
     }
   },
   "chatDemoReportSent": "A summary report was sent to you",
-  "chatDemoRoutineSent": "An AI-built routine was sent to {name}",
+  "chatDemoRoutineSent": "A personalized workout recommendation was sent to {name}",
   "@chatDemoRoutineSent": {
     "placeholders": {
       "name": {
@@ -649,6 +650,7 @@
   "reportsWeekly": "Weekly report",
   "reportsSendFailed": "Couldn't send the report. Please try again",
   "reportsSent": "Report sent to {name}",
+  "reportsGoToChat": "Go to chat",
   "@reportsSent": {
     "placeholders": {
       "name": {
@@ -831,6 +833,7 @@
   "schedFieldClient": "Client",
   "schedFieldType": "Type",
   "schedFieldDate": "Date",
+  "schedFieldStartDate": "Start date",
   "schedFieldTime": "Time",
   "schedHourSuffix": "hr",
   "schedMinuteSuffix": "min",
@@ -838,6 +841,10 @@
   "schedFieldStart": "Start",
   "schedFieldEnd": "End",
   "schedEndBeforeStart": "End time must be after the start time",
+  "schedReopenTitle": "Switch back to upcoming?",
+  "schedReopenBody": "Moving a completed session forward switches it back to upcoming, and the workout log it created will be removed.",
+  "schedReopenConfirm": "Switch to upcoming",
+  "schedReopenPastBlocked": "A completed session can only move to a future date",
   "schedTimeRangeTitle": "Select time",
   "schedTimeRangeConfirm": "Confirm",
   "schedTimeRangeInvalid": "Enter a valid time (HH:mm)",
@@ -1127,7 +1134,8 @@
   "coachSentHistory": "Sent history",
   "coachHistoryFailed": "Couldn't load history",
   "coachHistoryEmpty": "You haven't sent any programs yet",
-  "coachHomework": "Homework",
+  "coachHomework": "Personal",
+  "coachPersonalTraining": "PT",
   "coachRoutineSummary": "{name} · {minutes} min",
   "@coachRoutineSummary": {
     "placeholders": {
@@ -1140,15 +1148,11 @@
     }
   },
   "coachTrainer": "Trainer",
-  "coachSessionExercises": "{type} · {count} exercises",
-  "@coachSessionExercises": {
+  "coachSessionProgramSummary": "{name} + {count} more",
+  "@coachSessionProgramSummary": {
     "placeholders": {
-      "type": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
+      "name": { "type": "String" },
+      "count": { "type": "int" }
     }
   },
   "aiReasonSodium": "Sodium is over target today, so lean into low-intensity cardio.",
@@ -1212,10 +1216,23 @@
       }
     }
   },
-  "aiAnalysedData": "Analysed this client's data",
+  "aiAnalysedData": "Reviewed the workout goal, recent activity, and today's nutrition",
   "aiGoal": "Goal",
   "aiTodaySodium": "Sodium today",
   "aiOverTarget": " · over target",
+  "aiRecentCompletion": "Recent completion",
+  "aiNoCompletionData": "No activity logged this week",
+  "aiCompletionLow": " · needs attention",
+  "aiDietSignal": "Diet warning",
+  "aiSodiumOverDaysSuffix": " · over target on {days} of the last 7 days",
+  "@aiSodiumOverDaysSuffix": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "aiSugarAlsoOver": " · sugar also over",
   "aiBasisRuleBased": " · rule-based",
   "aiChatEvidenceTitle": "Recent conversation used",
   "aiEditOption": "Edit {option}",
@@ -1227,7 +1244,7 @@
     }
   },
   "aiEditBlurb": "Edit names, durations and structure just like the existing suggestion.",
-  "aiAddExerciseManually": "Write it yourself",
+  "aiAddExerciseManually": "Add exercise manually",
   "aiExerciseNameExample": "e.g. leg press, 3 sets",
   "aiRegister": "Add",
   "aiNoteForClient": "A note to send with it",
@@ -1271,7 +1288,7 @@
       }
     }
   },
-  "aiRecentRoutine": "Recent routine",
+  "aiRecentRoutine": "Recent activity",
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
   "aiGenerateConditions": "Conditions",
@@ -1279,9 +1296,9 @@
   "aiConditionsAutoHint": "Leave blank to auto-fill from recent history or goals.",
   "aiConditionsEditToggle": "Edit recommended conditions",
   "aiPromptTitle": "Tell the AI what program you want",
-  "aiPromptLabel": "Your request (plain language)",
+  "aiPromptLabel": "Your request",
   "aiPromptHint": "e.g. Build a 40-minute program that goes easy on the legs and leans on cardio",
-  "aiPromptBlurb": "Your request goes to the AI together with the member's data (up to 500 characters). The note the member receives is written separately in the next step.",
+  "aiPromptBlurb": "Your request goes to the AI with the member's data (up to 500 characters). Write the member note in the next step.",
   "aiGenerateGoalBased": "Generate goal-based routine",
   "aiStatusTemplateTitle": "Goal-based starter routine",
   "aiStatusTemplateBody": "Not enough workout history yet to personalize — this starts from a goal-based default.",
@@ -1348,6 +1365,14 @@
       },
       "rate": {
         "type": "int"
+      }
+    }
+  },
+  "aiBasisTrainerRequest": "Request: \"{request}\"",
+  "@aiBasisTrainerRequest": {
+    "placeholders": {
+      "request": {
+        "type": "String"
       }
     }
   },

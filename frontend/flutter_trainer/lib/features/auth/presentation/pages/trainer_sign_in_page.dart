@@ -9,6 +9,7 @@ import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_re
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// Trainer login screen — email/password login plus a "로그인 없이 데모
 /// 둘러보기" bypass. Layout follows the user app's sign-in page; the
@@ -52,7 +53,6 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
 
   Future<void> _social(String provider) async {
     if (_loading) return;
-    final messenger = ScaffoldMessenger.of(context);
     final destination = _destination;
     setState(() => _loading = true);
     try {
@@ -66,26 +66,21 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       // 이미 해제된 context 를 조회하게 된다.
       if (!mounted) return;
       setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrSocialFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).authErrSocialFailed,
+        kind: AppToastKind.error,
       );
     }
   }
 
   Future<void> _login() async {
     if (_loading) return;
-    final messenger = ScaffoldMessenger.of(context);
     final destination = _destination;
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrEmptyCredentials),
-        ),
-      );
+      showAppToast(context, AppLocalizations.of(context).authErrEmptyCredentials);
       return;
     }
     setState(() => _loading = true);
@@ -99,14 +94,14 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
       setState(() => _loading = false);
-      messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
+      showAppToast(context, authFailureText(l, e), kind: AppToastKind.error);
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).authErrSignInFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).authErrSignInFailed,
+        kind: AppToastKind.error,
       );
     }
   }

@@ -750,6 +750,9 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
   }
 }
 
+/// 읽지 않음 배지의 지름. 원을 유지하려면 가로·세로가 같아야 한다 (#1418).
+const double _kUnreadBadgeSize = 18;
+
 class _ChatButton extends StatelessWidget {
   const _ChatButton({required this.unread, required this.onTap});
 
@@ -799,21 +802,33 @@ class _ChatButton extends StatelessWidget {
               ),
               if (unread > 0) ...<Widget>[
                 const SizedBox(width: 8),
+                // 한 자리 수는 **정원**이어야 한다 (#1418, gym_tab.dart의
+                // _TrainerChatButton과 같은 패턴, #1138). 좌우 여백만 주면
+                // 글자 높이만큼 세로로 길어져 알약처럼 보였다. 최소 지름을
+                // 정해 두고 숫자는 그 안에서 줄인다 — `99+` 도 같은 원 안에
+                // 들어간다.
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 1,
-                  ),
+                  width: _kUnreadBadgeSize,
+                  height: _kUnreadBadgeSize,
+                  alignment: Alignment.center,
                   decoration: const BoxDecoration(
                     color: FigmaColors.redDot,
-                    borderRadius: BorderRadius.all(Radius.circular(999)),
+                    shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    unreadLabel,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        unreadLabel,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),

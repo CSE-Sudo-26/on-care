@@ -2,11 +2,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_file_name.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_sender.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// A generated report's explicit delivery actions.
 ///
@@ -30,31 +31,14 @@ class ReportPdfExportDialog extends ConsumerStatefulWidget {
 class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
   bool _sending = false;
 
-  /// 파일명은 로컬 저장뿐 아니라 multipart 헤더의 `filename` 으로도 그대로
-  /// 나간다. 경로 구분자 외에 제어문자까지 지우는 이유다 — 고객 이름에 개행이
-  /// 섞이면 헤더가 깨진다. 지운 결과가 비면 날짜만 남은 이름이 되므로 대체어를
-  /// 쓴다.
-  String _fileNameFor(AppLocalizations l) {
-    final safeName = widget.report.client.name
-        .replaceAll(RegExp(r'[/\\:*?"<>|\x00-\x1f\x7f]'), '_')
-        .trim();
-    final name = safeName.replaceAll('_', '').trim().isEmpty
-        ? l.reportsPdfFallbackClient
-        : safeName;
-    return '${name}_${ymd(widget.report.weekStart)}_주간리포트.pdf';
-  }
-
   Future<void> _run(Future<void> Function() action, String success) async {
     final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await action();
-      if (mounted) messenger.showSnackBar(SnackBar(content: Text(success)));
+      if (mounted) showAppToast(context, success, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l.reportsPdfActionFailed)),
-        );
+        showAppToast(context, l.reportsPdfActionFailed, kind: AppToastKind.error);
       }
     }
   }
@@ -70,7 +54,7 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
             clientId: widget.report.client.id,
             weekStart: widget.report.weekStart,
             bytes: widget.bytes,
-            fileName: _fileNameFor(l),
+            fileName: reportPdfFileName(l, widget.report),
             message: l.reportsPdfMessage,
           ),
       l.reportsPdfSent(widget.report.client.name),
@@ -97,7 +81,7 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
         TextButton.icon(
           key: const ValueKey<String>('report-pdf-save'),
           onPressed: () => _run(
-            () => actions.save(widget.bytes, _fileNameFor(l)),
+            () => actions.save(widget.bytes, reportPdfFileName(l, widget.report)),
             l.reportsPdfSaveStarted,
           ),
           icon: const Icon(Icons.download_outlined),
@@ -106,7 +90,7 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
         TextButton.icon(
           key: const ValueKey<String>('report-pdf-print'),
           onPressed: () => _run(
-            () => actions.print(widget.bytes, _fileNameFor(l)),
+            () => actions.print(widget.bytes, reportPdfFileName(l, widget.report)),
             l.reportsPdfPrintOpened,
           ),
           icon: const Icon(Icons.print_outlined),

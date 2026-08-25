@@ -37,6 +37,7 @@ class _PdfChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {}
 
   @override

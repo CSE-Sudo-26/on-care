@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/follow_up_task.d
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/follow_up_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/follow_up_task_repository.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// [clientId] 의 후속 관리 목록을 연다.
 ///
@@ -76,9 +77,7 @@ class _ClientFollowUpDialogState extends ConsumerState<ClientFollowUpDialog> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message, kind: AppToastKind.error);
   }
 
   void _reload() {

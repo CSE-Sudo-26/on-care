@@ -443,7 +443,7 @@
   "coachChatInputHint": "트레이너에게 메시지 보내기...",
   "coachChatDemoAnalyzed": "AI가 내 식단·운동 데이터를 분석했어요",
   "coachChatDemoReportSent": "{trainer}님께 요약 리포트가 전송됐어요",
-  "coachChatDemoRoutineReceived": "AI 분석 기반 루틴을 받았어요",
+  "coachChatDemoRoutineReceived": "개인 추천운동을 받았어요",
   "coachChatDemoNotified": "알림으로도 전달됐어요",
   "coachCtaChat": "AI와 대화하기",
   "navAddRecordTitle": "새 기록 추가",

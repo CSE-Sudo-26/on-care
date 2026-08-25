@@ -18,6 +18,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 
@@ -99,20 +100,18 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
       if (!mounted) return;
       setState(() => _statusSaving = false);
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(l, error.message, l.clientStatusChangeFailed),
-          ),
-        ),
+      showAppToast(
+        context,
+        serverDetailOr(l, error.message, l.clientStatusChangeFailed),
+        kind: AppToastKind.error,
       );
     } on Object {
       if (!mounted) return;
       setState(() => _statusSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).clientStatusChangeFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).clientStatusChangeFailed,
+        kind: AppToastKind.error,
       );
     }
   }

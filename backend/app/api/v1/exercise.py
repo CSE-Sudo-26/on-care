@@ -21,7 +21,7 @@ from app.models.models import ExerciseSession, HealthProfile
 from app.schemas.exercise_api import (
     ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
 )
-from app.services import exercise_types
+from app.services import exercise_activity, exercise_types
 from app.services.coach import personal_ingest
 from app.services.exercise_service import (
     weekly_goals,
@@ -115,14 +115,23 @@ def _weight_for(normalized_type: str, weight: float | None) -> float | None:
     return None if value is None else round(value, 1)
 
 
-def _placement(day: date | None) -> tuple[str, str]:
-    """(주 시작 월요일, 요일 라벨). 날짜가 없으면 오늘이다.
+def _placement(day: date | None) -> tuple[str, str, datetime]:
+    """(주 시작 월요일, 요일 라벨, 완료 시각). 날짜가 없으면 오늘이다.
 
-    한 스냅샷에서 둘을 함께 뽑는다 — 따로 읽으면 KST 자정 사이에 저장된 한
+    한 스냅샷에서 셋을 함께 뽑는다 — 따로 읽으면 KST 자정 사이에 저장된 한
     세션의 요일과 주차가 서로 다른 날을 가리킬 수 있다.
+
+    `completed_at` 을 여기서 같이 정하는 이유는 그 값이 **적은 날이 아니라 한
+    날**이어야 하기 때문이다(#1264). 저장 시각(`clock.now()`)을 쓰면 어제 운동을
+    오늘 적었을 때 회원 화면은 어제로, 시각을 읽는 쪽은 오늘로 갈린다. 정오인
+    까닭은 [exercise_activity.noon] 에 적어 두었다.
     """
     target = day or clock.today()
-    return monday_of_str(target.isoformat()), WEEKDAY_LABELS[target.weekday()]
+    return (
+        monday_of_str(target.isoformat()),
+        WEEKDAY_LABELS[target.weekday()],
+        exercise_activity.noon(target),
+    )
 
 
 @router.post("/exercise/sessions", response_model=ExerciseSessionOut, status_code=201)
@@ -133,7 +142,7 @@ def add_session(
 ) -> ExerciseSessionOut:
     # type·intensity·date·minutes·calories 는 모두 ExerciseSessionCreate 의
     # 타입·Field 제약에서 422 로 걸린다.
-    week_start, day_label = _placement(payload.date)
+    week_start, day_label, completed_at = _placement(payload.date)
     normalized = exercise_types.normalize(payload.type)
     row = ExerciseSession(
         id=f"ex-{uuid.uuid4().hex[:12]}",
@@ -148,6 +157,9 @@ def add_session(
         weight=_weight_for(normalized, payload.weight),
         calories=payload.calories,
         intensity=payload.intensity,
+        # 세 날짜 필드가 같은 날을 가리킨다 — 하나만 채우면 읽는 자리마다 다른
+        # 날짜를 본다. (#1264)
+        completed_at=completed_at,
     )
     db.add(row)
     db.commit()
@@ -186,7 +198,9 @@ def update_session(
     # 날짜를 주지 않은 수정은 원래 있던 자리를 그대로 둔다 — 오늘로 끌어오면
     # 지난 기록을 고치기만 해도 이번 주로 옮겨 간다.
     if payload.date is not None:
-        row.week_start, row.day_label = _placement(payload.date)
+        # 옮길 때도 셋을 함께 옮긴다 — `completed_at` 만 옛 날짜에 남으면 그
+        # 기록의 날짜가 화면과 다른 곳에서 갈린다. (#1264)
+        row.week_start, row.day_label, row.completed_at = _placement(payload.date)
 
     row.type = exercise_types.normalize(payload.type)
     row.name = payload.name.strip()

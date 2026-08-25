@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import date as _date
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import PurePath
 from typing import Annotated, Literal
 
@@ -62,7 +62,7 @@ from app.schemas.trainer_api import (
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCancelRequest, ScheduleCompleteRequest,
     ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
-    ScheduleRecurringPreviewOut, ScheduleRecurringRequest,
+    ScheduleRecurringPreviewOut, ScheduleRecurringRequest, ScheduleReopenRequest,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     MemberLookupOut,
     TrainerClientInviteCreate, TrainerClientInviteOut,
@@ -81,6 +81,7 @@ from app.schemas.trainer_api import (
 )
 from app.services import (
     diet_service,
+    exercise_activity,
     exercise_service,
     period_window,
     chat_image_storage,
@@ -560,16 +561,13 @@ def _week_starts_between(start: str, end: str) -> list[str]:
     """[start, end] 를 덮는 모든 주의 월요일.
 
     구간의 첫날이 주 가운데면 그 주 월요일부터 담는다 — 월요일이 구간 밖이어도
-    그 주의 기록은 구간 안에 있을 수 있다.
+    그 주의 기록은 구간 안에 있을 수 있다. 계산은 논리 운동일 모듈 하나에
+    맡긴다(#1264): 조회 구간을 넓히는 규칙이 갈리면 AI 와 이 화면이 서로 다른
+    주를 읽는다.
     """
-    first = _date.fromisoformat(monday_of_str(start))
-    last = _date.fromisoformat(end)
-    out: list[str] = []
-    cursor = first
-    while cursor <= last:
-        out.append(cursor.isoformat())
-        cursor += timedelta(days=7)
-    return out
+    return exercise_activity.week_starts_covering(
+        _date.fromisoformat(start), _date.fromisoformat(end)
+    )
 
 
 @router.get(
@@ -1556,6 +1554,29 @@ def trainer_cancel_session(
         )
     except trainer_service.ScheduleError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post("/trainer/schedule/{session_id}/reopen", response_model=ScheduleSessionOut)
+def trainer_reopen_session(
+    session_id: str,
+    payload: ScheduleReopenRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """완료 세션을 미래 날짜의 예정으로 되돌린다(예정→완료의 역방향). (#1396)
+
+    일정 수정 화면에서 완료된 회차의 날짜를 앞으로 옮길 때만 쓰는 경로다 —
+    완료 시 적재된 파생 기록(트레이너 이력·회원 운동기록)을 함께 지운다.
+    """
+    try:
+        out = trainer_service.reopen_session(
+            db, trainer.id, session_id, new_date=payload.date
+        )
     except trainer_service.ScheduleConflict as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     if out is None:

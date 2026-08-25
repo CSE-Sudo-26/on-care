@@ -9,18 +9,42 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 승인이 만드는 세션의 소요 시간(분). 백엔드 기본값과 같다.
 const int _defaultConsultationDurationMinutes = 30;
+
+/// `HH:mm` 에 [minutes] 를 더한다. 자정을 넘기면 다음 날로 넘어가지 않고
+/// 24시간 안에서만 돈다 — 희망 시각 표시용이라 날짜가 바뀌는 값까지 다룰
+/// 필요는 없다.
+String _addMinutes(String hhmm, int minutes) {
+  final parts = hhmm.split(':');
+  final total = int.parse(parts[0]) * 60 + int.parse(parts[1]) + minutes;
+  final hour = (total ~/ 60) % 24;
+  final minute = total % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
+}
+
+/// 희망 시각 문구 — 정확한 시각(`HH:mm`)이면 기본 상담 소요 시간을 더해
+/// 시작–종료로 보여준다. 회원이 이미 범위를 준 코드(`HH:mm-HH:mm`)나
+/// `flexible`/레거시 값은 [preferredTimeLabel] 그대로 둔다.
+String _preferredTimeRangeLabel(AppLocalizations l, String code) {
+  final String label = preferredTimeLabel(l, code);
+  final String? start = preferredStartTime(code);
+  if (start == null || label.contains('–')) return label;
+  return '$start–${_addMinutes(start, _defaultConsultationDurationMinutes)}';
+}
 
 /// 상담 요청 — the inbox where a member becomes a client.
 ///
@@ -187,7 +211,14 @@ class ConsultationsPage extends ConsumerWidget {
       key: const ValueKey<String>('consultations-dialog'),
       backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(AppSpacing.xl),
+      // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+      // 대화상자 위로 겹쳐 뜰 수 있다.
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppToastStyle.dialogTopClearance,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(AppRadius.card),
       ),
@@ -233,13 +264,12 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       _busy = true;
       _conflict = null;
     });
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
     final AppLocalizations l = AppLocalizations.of(context);
     final String failureText = l.consultActionFailed;
     try {
       await action();
-      messenger.showSnackBar(SnackBar(content: Text(success)));
+      if (!mounted) return;
+      showAppToast(context, success, kind: AppToastKind.success);
     } on AppError catch (e) {
       // A failed decision usually means the request moved on without us —
       // another trainer at the same gym accepted it first. Refresh before
@@ -247,10 +277,13 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // can keep pressing 승인 on something already decided (review).
       ref.invalidate(consultationsProvider);
       ref.invalidate(consultationPendingCountProvider);
+      if (!mounted) return;
       // 409 carries the server's reason (이미 처리됨 / 다른 트레이너가 담당 중)
       // — that sentence is the whole point, so it is shown verbatim.
-      messenger.showSnackBar(
-        SnackBar(content: Text(serverDetailOr(l, e.message, failureText))),
+      showAppToast(
+        context,
+        serverDetailOr(l, e.message, failureText),
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -273,7 +306,6 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       _conflict = null;
     });
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final request = widget.request;
     final String? startTime = preferredStartTime(request.preferredTimeCode);
     try {
@@ -289,8 +321,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 durationMinutes: _defaultConsultationDurationMinutes,
               ),
       );
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.consultApproved(request.memberName))),
+      if (!mounted) return;
+      showAppToast(
+        context,
+        l.consultApproved(request.memberName),
+        kind: AppToastKind.success,
       );
     } on ConsultationScheduleConflictError catch (e) {
       if (mounted) {
@@ -301,10 +336,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     } on AppError catch (e) {
       ref.invalidate(consultationsProvider);
       ref.invalidate(consultationPendingCountProvider);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(serverDetailOr(l, e.message, l.consultActionFailed)),
-        ),
+      if (!mounted) return;
+      showAppToast(
+        context,
+        serverDetailOr(l, e.message, l.consultActionFailed),
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -337,8 +373,9 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       title: name,
       // 아바타를 이름 옆(제목 자리)에 둔다 — 예전에는 아바타가 운동
       // 목표·희망 일시 줄과 한 Row에 있어 이름은 카드 제목으로, 아바타는
-      // 그 아래 필드 줄 옆으로 떨어져 보였다.
+      // 그 아래 필드 줄 옆으로 떨어져 보였다(#1395).
       titleWidget: Row(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           ClientAvatar(
             label: request.memberName.isEmpty
@@ -386,7 +423,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
             // 아니다. 승인된 세션의 실제 시간은 스케줄 화면이 말한다.
             value: request.isPending
                 ? '${dateLabel(l, request.preferredDate)} '
-                      '${preferredTimeLabel(l, request.preferredTimeCode)}'
+                      '${_preferredTimeRangeLabel(l, request.preferredTimeCode)}'
                 : dateLabel(l, request.preferredDate),
           ),
           if (request.message != null)
