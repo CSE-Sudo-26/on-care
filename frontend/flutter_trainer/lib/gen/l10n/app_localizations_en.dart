@@ -898,6 +898,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
 
   @override
+  String chatReportSentNotice(Object range) {
+    return 'Sent the $range weekly report';
+  }
+
+  @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
 
   @override
@@ -1249,6 +1254,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportsSent(String name) {
     return 'Report sent to $name';
   }
+
+  @override
+  String get reportsGoToChat => 'Go to chat';
 
   @override
   String get reportsScheduleWarning =>

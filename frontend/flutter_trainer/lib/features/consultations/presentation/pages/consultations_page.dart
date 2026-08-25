@@ -8,6 +8,7 @@ import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
@@ -179,7 +180,14 @@ class ConsultationsPage extends ConsumerWidget {
       key: const ValueKey<String>('consultations-dialog'),
       backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(AppSpacing.xl),
+      // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+      // 대화상자 위로 겹쳐 뜰 수 있다.
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppToastStyle.dialogTopClearance,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(AppRadius.card),
       ),

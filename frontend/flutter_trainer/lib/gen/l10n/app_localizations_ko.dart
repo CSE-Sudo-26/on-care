@@ -865,6 +865,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
 
   @override
+  String chatReportSentNotice(Object range) {
+    return '$range 주간 리포트를 보냈어요';
+  }
+
+  @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';
 
   @override
@@ -1206,6 +1211,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String reportsSent(String name) {
     return '$name님에게 리포트를 보냈어요';
   }
+
+  @override
+  String get reportsGoToChat => '채팅으로 이동하기';
 
   @override
   String get reportsScheduleWarning => '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요';
