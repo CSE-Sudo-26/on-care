@@ -136,12 +136,27 @@ void main() {
       isTrue,
       reason: '초과한 날의 막대가 아직 통짜 빨강이 아니다',
     );
-    // 넘기지 않은 날은 회색 한 색이다 (#1427). 전부 빨개지면 초과가
-    // 무의미해지고, 색이 회색뿐이면 초과를 말할 수 없다 — 둘 다 있어야 한다.
+    // 목표 이내인 날은 탄단지 색을 쌓는다 (#1479). 전부 빨개지면 초과 표시가
+    // 무의미해지므로 빨간 단색 막대와 누적 막대가 한 화면에 함께 있어야 한다.
+    final Finder calorieBars = find.byWidgetPredicate((Widget widget) {
+      final Key? key = widget.key;
+      return key is ValueKey<String> &&
+          RegExp(r'^diet-period-bar-\d+$').hasMatch(key.value);
+    });
+    final Set<Color> segmentColors = tester
+        .widgetList<ColoredBox>(
+          find.descendant(of: calorieBars, matching: find.byType(ColoredBox)),
+        )
+        .map((ColoredBox segment) => segment.color)
+        .toSet();
     expect(
-      filled.contains(FigmaColors.barNeutral.withValues(alpha: 0.85)),
-      isTrue,
-      reason: '목표 이내인 날의 막대가 회색이 아니다',
+      segmentColors,
+      containsAll(<Color>[
+        FigmaColors.macroCarbs,
+        FigmaColors.macroProtein,
+        FigmaColors.macroFat,
+      ]),
+      reason: '목표 이내인 날의 탄단지 누적 막대가 없다',
     );
   });
 }
