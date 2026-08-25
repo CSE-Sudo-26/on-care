@@ -766,16 +766,24 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             ),
             if (!_aiWizardVisible)
               Padding(
-                padding: const EdgeInsets.only(
-                  top: AppSpacing.sm,
-                  bottom: AppSpacing.sm,
-                ),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     key: const ValueKey<String>('return-to-ai-flow'),
                     onPressed: () => setState(() => _aiWizardVisible = true),
-                    icon: const Icon(Icons.auto_awesome, size: 16),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.chevron_left, size: 18),
                     label: Text(l.aiReturnToWizard),
                   ),
                 ),

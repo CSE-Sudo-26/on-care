@@ -315,18 +315,29 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         ),
       ),
       if (widget.onManualCreate != null) ...<Widget>[
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
             key: const ValueKey<String>('ai-manual-create'),
             onPressed: widget.onManualCreate,
-            icon: const Icon(Icons.edit_note, size: 16),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.edit_note_outlined, size: 14),
             label: Text(l.aiManualCreate),
           ),
         ),
       ],
-      const SizedBox(height: AppSpacing.xl),
+      const SizedBox(height: AppSpacing.lg),
       if (_stage == 0) ...<Widget>[
         _assistantAnalysis(),
         const SizedBox(height: AppSpacing.lg),

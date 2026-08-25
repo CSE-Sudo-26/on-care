@@ -457,6 +457,7 @@ Future<void> _openManualProgram(WidgetTester tester) async {
   await tester.pump();
   await tester.tap(manual);
   await tester.pumpAndSettle();
+  expect(find.byType(ProgramEditorWorkspace), findsOneWidget);
 }
 
 /// 편집기 하단의 `보내기` 버튼을 찾아 화면에 보이게 한다.
@@ -1264,9 +1265,14 @@ void main() {
       }
 
       Future<void> returnToAi() async {
-        await tester.tap(
-          find.byKey(const ValueKey<String>('return-to-ai-flow')),
+        final back = find.byKey(
+          const ValueKey<String>('return-to-ai-flow'),
         );
+        expect(
+          find.descendant(of: back, matching: find.byIcon(Icons.chevron_left)),
+          findsOneWidget,
+        );
+        await tester.tap(back);
         await tester.pumpAndSettle();
         expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
         expect(find.byType(ProgramEditorWorkspace), findsNothing);
