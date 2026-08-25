@@ -89,7 +89,8 @@ abstract interface class ScheduleRepository {
   });
 
   /// Attaches [program] to the client's earliest upcoming PT session on
-  /// [date], or creates a new one at [time] when none exists.
+  /// [date], or creates a new one at [time] for [durationMinutes] when none
+  /// exists.
   ///
   /// Returns `true` when an existing session was updated and `false` when a
   /// new session was created. Both mock and real implementations expose the
@@ -100,6 +101,7 @@ abstract interface class ScheduleRepository {
     required String clientId,
     required String clientName,
     required String time,
+    required int durationMinutes,
     required List<ProgramItem> program,
   });
 
@@ -357,9 +359,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       _db.trainerScheduleEntries,
     )..where((t) => t.id.equals(id))).write(
       TrainerScheduleEntriesCompanion(
-        programJson: Value(
-          jsonEncode(programToJson(program)),
-        ),
+        programJson: Value(jsonEncode(programToJson(program))),
         note: Value(note),
       ),
     );
@@ -371,6 +371,7 @@ class DriftScheduleRepository implements ScheduleRepository {
     required String clientId,
     required String clientName,
     required String time,
+    required int durationMinutes,
     required List<ProgramItem> program,
   }) {
     final table = _db.trainerScheduleEntries;
@@ -419,7 +420,7 @@ class DriftScheduleRepository implements ScheduleRepository {
               clientId: Value(clientId),
               clientName: Value(clientName),
               type: const Value(SessionType.personalTraining),
-              durationMinutes: const Value(60),
+              durationMinutes: Value(durationMinutes),
               status: ScheduleStatus.upcoming,
               programJson: Value(encodedProgram),
             ),
@@ -716,7 +717,9 @@ String _programItemLabel(ProgramItem item) {
     if (item.sets != null) parts.add('${item.sets}세트');
     final double? weight = item.weight;
     if (weight != null && weight > 0) {
-      parts.add('${weight == weight.roundToDouble() ? weight.round() : weight}kg');
+      parts.add(
+        '${weight == weight.roundToDouble() ? weight.round() : weight}kg',
+      );
     }
   } else if (item.duration != null) {
     parts.add('${item.duration}분');

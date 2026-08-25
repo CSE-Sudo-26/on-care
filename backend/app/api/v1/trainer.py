@@ -1459,6 +1459,7 @@ def trainer_register_schedule_program(
         member_id,
         date=payload.date,
         time=payload.time,
+        duration_minutes=payload.duration_minutes,
         client_name=payload.client_name,
         program=payload.program,
     )
