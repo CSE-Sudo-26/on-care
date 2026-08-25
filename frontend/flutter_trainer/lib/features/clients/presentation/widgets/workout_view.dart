@@ -628,16 +628,14 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                           entries: dayEntries,
                         )
                       : null,
-                  summary:
-                      '${day.minutes}${l.unitMinutes} · '
-                      '${formatNumber(day.calories)} ${l.unitKcal}',
                   details: <({String label, String value})>[
                     (
                       label: l.clientTrendWorkoutMinutes,
                       value: '${day.minutes}${l.unitMinutes}',
                     ),
                     (
-                      label: l.metricCalories,
+                      // 섭취 칼로리와 같은 말로 부르지 않는다(#1465).
+                      label: l.clientTrendCaloriesBurned,
                       value: '${formatNumber(day.calories)} ${l.unitKcal}',
                     ),
                     if (day.cardioMinutes > 0)

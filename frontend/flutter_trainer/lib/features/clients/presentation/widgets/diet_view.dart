@@ -524,9 +524,9 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
               extra: _openDay == ymd(day.date) && day.logged
                   ? _DayMeals(clientId: widget.clientId, date: day.date)
                   : null,
-              summary:
-                  '${formatNumber(day.calories)} ${l.unitKcal} · '
-                  '${l.dietSodiumValue(day.sodiumMg)}',
+              // 칼로리 → 나트륨 → 당류 순서다. 탄·단·지는 따로 선 항목이
+              // 아니라 **칼로리의 구성**이라, 칼로리 알약 안에 작고 옅게
+              // 붙인다(#1465) — `탄단지` 라는 상위 용어도 함께 사라진다.
               details: <({String label, String value})>[
                 (
                   label: l.metricCalories,
@@ -534,15 +534,14 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
                 ),
                 (label: l.metricSodium, value: l.dietSodiumValue(day.sodiumMg)),
                 (label: l.metricSugar, value: '${_grams(day.sugarG)}g'),
-                if (day.hasMacros)
-                  (
-                    label: l.dietMacros,
-                    value:
-                        '${l.metricCarbs} ${_grams(day.carbsG)}g · '
-                        '${l.metricProtein} ${_grams(day.proteinG)}g · '
-                        '${l.metricFat} ${_grams(day.fatG)}g',
-                  ),
               ],
+              notes: <String, String>{
+                if (day.hasMacros)
+                  l.metricCalories:
+                      '${l.metricCarbs} ${_grams(day.carbsG)}g · '
+                      '${l.metricProtein} ${_grams(day.proteinG)}g · '
+                      '${l.metricFat} ${_grams(day.fatG)}g',
+              },
             ),
         ],
       ),
