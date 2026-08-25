@@ -13,6 +13,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/connected_gym_card.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -60,7 +61,10 @@ class GymTab extends ConsumerWidget {
     if (myGymAsync.isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20),
-        child: _SectionLoading(height: 180),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: _SectionLoading(height: 180),
+        ),
       );
     }
     if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
@@ -69,7 +73,10 @@ class GymTab extends ConsumerWidget {
       return const GymFinderView();
     }
 
-    return Padding(
+    // 이 탭은 높이를 받아 놓인다 (#1274) — 연결된 헬스장 화면은 섹션이 여럿인
+    // 긴 화면이라 제 스크롤을 갖는다. 찾기 화면은 스스로 시트를 굴리므로 이
+    // 스크롤을 타지 않는다.
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,13 +143,21 @@ class _MyGymSection extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _MyGymCard(
+                ConnectedGymCard(
                   gym: gym,
                   trainer: trainer,
-                  onGymTap: () =>
-                      context.push(AppRoutes.gymDetailPath(gym.id)),
-                  onTrainerChatTap: onTrainerChatTap,
-                  unreadCoachMessages: unreadCoachMessages,
+                  onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onTrainerDetail: trainer == null
+                      ? null
+                      : () => context.push(
+                          AppRoutes.trainerDetailPath(trainer!.id),
+                        ),
+                  footer: onTrainerChatTap == null
+                      ? null
+                      : _TrainerChatButton(
+                          unread: unreadCoachMessages,
+                          onTap: onTrainerChatTap!,
+                        ),
                 ),
                 if (trainer != null) ...<Widget>[
                   const SizedBox(height: 12),
@@ -160,6 +175,8 @@ class _MyGymSection extends StatelessWidget {
   }
 }
 
+// TODO(#1313): remove after the shared card rollout is verified.
+// ignore: unused_element
 class _MyGymCard extends StatelessWidget {
   const _MyGymCard({
     required this.gym,
@@ -271,7 +288,6 @@ class _MyGymCard extends StatelessWidget {
             GymTrainerLine(
               key: const Key('gym-trainer-line-mine'),
               trainer: trainer!,
-              connected: true,
               // 고를 이유가 아니라 이미 함께 하는 사람이다 — 추천 이유는 뺀다.
               showReason: false,
               onDetail: () =>
@@ -413,14 +429,31 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
   /// 취소 요청이 오가는 동안 잡고 있는 예약 id. 예약과 같은 이유로 잠근다.
   String? _cancelling;
 
-  /// 로케일에 맞는 "8월 8일 오후 7:00" 형태. 고정 문자열이 아니라 실제 시각을
-  /// 쓰므로 날이 바뀌어도 어긋나지 않는다.
+  /// 24시간(HH:mm) 표기로 고정한다 — 로케일 기본(오전/오후 12시간제)을 쓰던
+  /// `MaterialLocalizations.formatTimeOfDay` 대신이다. 빈 예약 시간을
+  /// 트레이너 쪽 스케줄·모달과 같은 표기로 보여준다.
+  static String _hhmm(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:'
+      '${t.minute.toString().padLeft(2, '0')}';
+
+  /// "8월 8일 19:00" 형태. 고정 문자열이 아니라 실제 시각을 쓰므로 날이
+  /// 바뀌어도 어긋나지 않는다.
   String _when(BuildContext context, AppLocalizations l, DateTime at) {
     final MaterialLocalizations m = MaterialLocalizations.of(context);
     return l.exSlotWhen(
       m.formatMediumDate(at),
-      m.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+      _hhmm(TimeOfDay.fromDateTime(at)),
     );
+  }
+
+  String _slotWhen(BuildContext context, TrainerSlot slot) {
+    final MaterialLocalizations m = MaterialLocalizations.of(context);
+    final DateTime end = slot.startsAt.add(
+      Duration(minutes: slot.durationMinutes),
+    );
+    final String start = _hhmm(TimeOfDay.fromDateTime(slot.startsAt));
+    final String finish = _hhmm(TimeOfDay.fromDateTime(end));
+    return '${m.formatMediumDate(slot.startsAt)}\n$start–$finish';
   }
 
   Future<void> _reserve(AppLocalizations l, TrainerSlot slot) async {
@@ -441,7 +474,8 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     // 방금 잡은 예약이 '내 예약'에도 나타나야 취소가 걸린다. (#502)
     ref.invalidate(myReservationsProvider);
-    toast.show(l.exReserveConfirmedSlotGym(label, widget.gym.name),
+    toast.show(
+      l.exReserveConfirmedSlotGym(label, widget.gym.name),
       kind: AppToastKind.success,
     );
   }
@@ -488,9 +522,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     // 좌석이 돌아왔으므로 슬롯도 함께 다시 읽는다.
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     ref.invalidate(myReservationsProvider);
-    toast.show(l.exCancelDone(label),
-      kind: AppToastKind.success,
-    );
+    toast.show(l.exCancelDone(label), kind: AppToastKind.success);
   }
 
   @override
@@ -609,28 +641,38 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                       _SlotNotice(message: l.exSlotsAllBooked),
                       const SizedBox(height: 10),
                     ],
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final TrainerSlot slot in slots)
-                          _SlotChip(
-                            key: ValueKey<String>('slot-chip-${slot.id}'),
-                            // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
-                            // 남으므로(#1136) 실제로는 늘 같은 값이다.
-                            type: l.exSlotTypePersonalTraining,
-                            label: _when(context, l, slot.startsAt),
-                            // 한 사람 몫뿐인 자리라 빈 자리에는 덧붙일 수가
-                            // 없다 — 마감된 자리만 그 사실을 적는다(#1072).
-                            sub: slot.booked ? l.exSlotFull : null,
-                            selected: picked?.id == slot.id,
-                            // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
-                            // 선택도 잠근다.
-                            onTap: slot.booked || busy
-                                ? null
-                                : () => widget.onSlot(slot.id),
-                          ),
-                      ],
+                    LayoutBuilder(
+                      builder:
+                          (BuildContext context, BoxConstraints constraints) {
+                            const double gap = 8;
+                            final double itemWidth =
+                                (constraints.maxWidth - gap) / 2;
+                            return Wrap(
+                              spacing: gap,
+                              runSpacing: 8,
+                              children: <Widget>[
+                                for (final TrainerSlot slot in slots)
+                                  SizedBox(
+                                    width: itemWidth,
+                                    child: _SlotChip(
+                                      key: ValueKey<String>(
+                                        'slot-chip-${slot.id}',
+                                      ),
+                                      // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
+                                      // 남으므로(#1136) 실제로는 늘 같은 값이다.
+                                      type: l.exSlotTypePersonalTraining,
+                                      label: _slotWhen(context, slot),
+                                      selected: picked?.id == slot.id,
+                                      // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
+                                      // 선택도 잠근다.
+                                      onTap: slot.booked || busy
+                                          ? null
+                                          : () => widget.onSlot(slot.id),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                     ),
                     if (picked != null) ...<Widget>[
                       const SizedBox(height: 10),
@@ -1123,7 +1165,6 @@ class _SlotChip extends StatelessWidget {
     super.key,
     required this.type,
     required this.label,
-    required this.sub,
     required this.selected,
     required this.onTap,
   });
@@ -1134,8 +1175,6 @@ class _SlotChip extends StatelessWidget {
 
   final String label;
 
-  /// 라벨 아래 한 줄. 마감된 자리에만 붙고, 빈 자리는 시각만 보인다.
-  final String? sub;
   final bool selected;
 
   /// null 이면 마감된 자리다 — 눌리지 않고 흐리게 그려진다.
@@ -1178,27 +1217,13 @@ class _SlotChip extends StatelessWidget {
               ),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: selected
                       ? Colors.white
                       : (disabled ? FigmaColors.textFaint : FigmaColors.ink),
-                ),
-              ),
-              // 마감 문구가 붙는 자리는 **늘 잡아 둔다** (#1136). 문구가 있을
-              // 때만 줄이 생기면 마감된 칩만 키가 커져, 같은 줄의 자리들이
-              // 서로 다른 크기로 보인다.
-              Text(
-                sub ?? '',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.8)
-                      : (disabled
-                            ? FigmaColors.textFaint
-                            : AppColors.mutedForeground),
                 ),
               ),
             ],

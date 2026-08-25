@@ -68,6 +68,30 @@ class ConsultationHistoryPage extends ConsumerWidget {
                           ConsultationRequestCard(
                             key: ValueKey<String>('consult-history-${r.id}'),
                             request: r,
+                            onCancel: () async {
+                              final bool? confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (BuildContext dialogContext) => AlertDialog(
+                                  title: const Text('상담 요청을 취소할까요?'),
+                                  content: const Text('취소한 요청은 다시 되돌릴 수 없어요.'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dialogContext, false),
+                                      child: const Text('유지'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dialogContext, true),
+                                      child: Text(l.actionCancel),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                await ref
+                                    .read(consultationRequestControllerProvider.notifier)
+                                    .cancel(r.id);
+                              }
+                            },
                           ),
                           const SizedBox(height: 12),
                         ],

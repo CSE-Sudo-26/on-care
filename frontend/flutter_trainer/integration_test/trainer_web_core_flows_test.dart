@@ -22,7 +22,7 @@ import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_pag
 const String _trainerEmail = 'trainer@oncare.com';
 const String _memberEmail = 'jisu@oncare.com';
 const String _password = 'oncare123';
-const String _clientId = 'user-demo';
+const String _clientId = 'user-7d4e9a2c5f18';
 const String _consultationMemberName = '이지수';
 const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 const Duration _fixtureApiTimeout = Duration(seconds: 15);

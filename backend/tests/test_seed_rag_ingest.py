@@ -184,7 +184,7 @@ def test_the_sweep_is_skippable(client, db_session, monkeypatch):
         lambda db, member_id: called.append(member_id) or 0,
     )
 
-    seed_member_data._ingest_seeded_documents(db_session, {"user-demo"})
+    seed_member_data._ingest_seeded_documents(db_session, {"user-7d4e9a2c5f18"})
 
     assert called == []
 
@@ -200,7 +200,7 @@ def test_ensure_checks_and_inserts_inside_one_lock(client, db_session):
     """
     from app.services.coach.rag import ensure_personal_text
 
-    user_id = "user-demo"
+    user_id = "user-7d4e9a2c5f18"
     ref = "ensure-probe-1"
 
     first = ensure_personal_text(
@@ -223,7 +223,7 @@ def test_ensure_does_not_embed_when_the_record_is_already_indexed(
     """이미 있으면 임베딩을 부르지 않는다 — 기동마다 전량 재임베딩하면 의미가 없다."""
     from app.services.coach import rag
 
-    user_id = "user-demo"
+    user_id = "user-7d4e9a2c5f18"
     ref = "ensure-probe-2"
     rag.ensure_personal_text(
         db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",

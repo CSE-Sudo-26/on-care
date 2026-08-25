@@ -735,6 +735,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get exExerciseReps => 'Reps';
+
+  @override
   String get exExerciseWeight => 'Weight';
 
   @override
@@ -742,6 +745,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exUnitSets => 'sets';
+
+  @override
+  String get exUnitReps => 'reps';
 
   @override
   String get exUnitKg => 'kg';
@@ -758,6 +764,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String exSetsCount(int sets) {
     return '$sets sets';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps reps';
   }
 
   @override
@@ -1398,6 +1409,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exTimeFlexible => 'Discuss Later';
+
+  @override
+  String get exTimeRangeTitle => 'Select time';
+
+  @override
+  String get exTimeRangeStartTime => 'Start time';
+
+  @override
+  String get exTimeRangeEndTime => 'End time';
+
+  @override
+  String get exTimeRangeStartHourStep => 'Start hour';
+
+  @override
+  String get exTimeRangeStartMinuteStep => 'Start minute';
+
+  @override
+  String get exTimeRangeEndHourStep => 'End hour';
+
+  @override
+  String get exTimeRangeEndMinuteStep => 'End minute';
+
+  @override
+  String get exSlotAm => 'AM';
+
+  @override
+  String get exSlotPm => 'PM';
+
+  @override
+  String get exTimeRangeInvalidEnd => 'End time is earlier than start time';
+
+  @override
+  String get exTimeRangePrevStep => 'Previous step';
+
+  @override
+  String get exTimeRangeNextStep => 'Next step';
 
   @override
   String get exConsultMessage => 'Message';

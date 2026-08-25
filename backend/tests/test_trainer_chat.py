@@ -217,20 +217,20 @@ def test_chat_thread_is_paginated(client, db_session):
     ids = [f"chat-page-{i}" for i in range(60)]
     for i, cid in enumerate(ids):
         db_session.add(ChatMessage(
-            id=cid, trainer_id=TRAINER_ID, member_id="user-demo",
+            id=cid, trainer_id=TRAINER_ID, member_id="user-7d4e9a2c5f18",
             sender="member", body=f"m{i}", created_at=base + timedelta(seconds=i),
         ))
     db_session.commit()
     try:
         token = _tok(client)
         # 기본 제한 50 이하 — 오래된 메시지가 60건 있어도 한 번에 다 오지 않는다
-        msgs = client.get("/v1/trainer/clients/user-demo/chat", headers=_h(token)).json()
+        msgs = client.get("/v1/trainer/clients/user-7d4e9a2c5f18/chat", headers=_h(token)).json()
         assert len(msgs) <= 50
         # limit 쿼리 존중
-        r10 = client.get("/v1/trainer/clients/user-demo/chat?limit=10", headers=_h(token))
+        r10 = client.get("/v1/trainer/clients/user-7d4e9a2c5f18/chat?limit=10", headers=_h(token))
         assert len(r10.json()) == 10
         # 잘못된 before → 422
-        bad = client.get("/v1/trainer/clients/user-demo/chat?before=notadate", headers=_h(token))
+        bad = client.get("/v1/trainer/clients/user-7d4e9a2c5f18/chat?before=notadate", headers=_h(token))
         assert bad.status_code == 422
     finally:
         db_session.query(ChatMessage).filter(

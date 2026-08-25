@@ -260,13 +260,19 @@ class LocalApiInterceptor extends Interceptor {
     final intensity = (body['intensity'] as String? ?? existing.intensity)
         .trim();
     final name = ((body['name'] as String?) ?? existing.name).trim();
-    // 유형을 근력에서 바꾼 수정이면 세트·중량이 지워진다 — 남겨 두면 유산소
-    // 기록이 세트를 들고 있게 된다.
+    // 유형을 근력에서 바꾼 수정이면 세트·횟수·중량이 지워진다 — 남겨 두면
+    // 유산소 기록이 세트를 들고 있게 된다.
     final sets = _strengthOnly(
       type,
       body.containsKey('sets')
           ? (body['sets'] as num?)?.toInt()
           : existing.sets,
+    );
+    final reps = _strengthOnly(
+      type,
+      body.containsKey('reps')
+          ? (body['reps'] as num?)?.toInt()
+          : existing.reps,
     );
     final weight = _strengthOnly(
       type,
@@ -291,6 +297,7 @@ class LocalApiInterceptor extends Interceptor {
         weekStart: Value(weekStart),
         dayLabel: Value(dayLabel),
         sets: Value(sets),
+        reps: Value(reps),
         weight: Value(weight),
       ),
     );
@@ -304,6 +311,7 @@ class LocalApiInterceptor extends Interceptor {
         name: name,
         minutes: minutes,
         sets: sets,
+        reps: reps,
         weight: weight,
         calories: calories,
         intensity: intensity,
@@ -966,6 +974,7 @@ class LocalApiInterceptor extends Interceptor {
           name: r.name,
           minutes: r.minutes,
           sets: r.sets,
+          reps: r.reps,
           weight: r.weight,
           calories: r.calories,
           intensity: r.intensity,
@@ -1118,6 +1127,7 @@ class LocalApiInterceptor extends Interceptor {
     final intensity = (payload['intensity'] as String?) ?? 'moderate';
     final name = ((payload['name'] as String?) ?? '').trim();
     final sets = _strengthOnly(type, (payload['sets'] as num?)?.toInt());
+    final reps = _strengthOnly(type, (payload['reps'] as num?)?.toInt());
     final weight = _strengthOnly(type, (payload['weight'] as num?)?.toDouble());
     final (String weekStart, String dayLabel) = _placement(payload['date']);
 
@@ -1135,6 +1145,7 @@ class LocalApiInterceptor extends Interceptor {
             calories: calories,
             intensity: Value(intensity),
             sets: Value(sets),
+            reps: Value(reps),
             weight: Value(weight),
           ),
         );
@@ -1149,6 +1160,7 @@ class LocalApiInterceptor extends Interceptor {
         name: name,
         minutes: minutes,
         sets: sets,
+        reps: reps,
         weight: weight,
         calories: calories,
         intensity: intensity,
@@ -1166,6 +1178,7 @@ class LocalApiInterceptor extends Interceptor {
     required String name,
     required int minutes,
     required int? sets,
+    required int? reps,
     required double? weight,
     required int calories,
     required String intensity,
@@ -1177,6 +1190,7 @@ class LocalApiInterceptor extends Interceptor {
     'name': name,
     'minutes': minutes,
     'sets': sets,
+    'reps': reps,
     'weight': weight,
     'calories': calories,
     'intensity': intensity,
@@ -1600,7 +1614,7 @@ class LocalApiInterceptor extends Interceptor {
   // ---- Profile (내 프로필 / 건강 목표) — AppKeyValues 로 영속 ----
 
   static const Map<String, Object?> _defaultProfile = <String, Object?>{
-    'id': 'user-demo',
+    'id': 'user-7d4e9a2c5f18',
     'name': '김민수',
     'email': 'minsu@oncare.com',
     'phone': '010-1234-5678',

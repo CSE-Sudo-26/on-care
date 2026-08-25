@@ -85,11 +85,11 @@ CoachSession coachSessionFromJson(Map<String, Object?> json) {
                 }
                 return CoachProgramItem(
                   name: _str(item['name']),
-                  sets: item['sets'] is num
-                      ? (item['sets']! as num).toInt()
-                      : 0,
-                  reps: _str(item['reps']),
-                  weight: _str(item['weight']),
+                  // 예전 행에는 `"12회"`·`"80kg"` 같은 문자열이 남아 있다 —
+                  // 숫자만 되짚어 읽는다. (#1310)
+                  sets: _looseInt(item['sets']),
+                  reps: _looseInt(item['reps']),
+                  weight: _looseDouble(item['weight']),
                 );
               })
               .toList(growable: false)
@@ -141,6 +141,21 @@ CoachAttachment? _attachment(Object? value) {
 }
 
 String _str(Object? v) => v is String ? v : '';
+
+/// 숫자이거나, 숫자를 품은 옛 문자열("12회")이거나, 아무것도 아니거나. (#1310)
+int _looseInt(Object? v) {
+  if (v is num) return v.toInt();
+  if (v is! String) return 0;
+  final String digits = v.replaceAll(RegExp(r'[^0-9]'), '');
+  return digits.isEmpty ? 0 : int.parse(digits);
+}
+
+/// [_looseInt] 의 소수 판 — 중량("80kg"·"12.5")용.
+double _looseDouble(Object? v) {
+  if (v is num) return v.toDouble();
+  if (v is! String) return 0;
+  return double.tryParse(v.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+}
 
 String _requiredString(Map<String, Object?> json, String key) {
   final Object? value = json[key];

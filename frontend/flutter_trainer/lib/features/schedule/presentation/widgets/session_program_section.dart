@@ -21,6 +21,7 @@ class SessionProgramRow extends StatelessWidget {
     final List<String> parts = <String>[
       if (item.type == '근력') ...<String>[
         if (item.sets != null) l.progSetsValue(item.sets!),
+        if (item.reps != null && item.reps! > 0) l.progRepsValue(item.reps!),
         if (item.weight != null && item.weight! > 0)
           '${_trimZero(item.weight!)}${l.routineUnitKg}',
       ] else if (item.duration != null)

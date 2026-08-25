@@ -25,7 +25,8 @@ from app.schemas.consultation_api import (
     ConsultationStatusFilter,
     TrainerConsultationOut,
 )
-from app.services import notification_service
+from app.schemas.trainer_api import ScheduleSessionOut
+from app.services import notification_service, trainer_service
 
 
 class InvalidConsultationRequest(Exception):
@@ -52,6 +53,10 @@ class ConsultationAlreadyDecided(Exception):
     """이미 승인·거절된 요청을 다시 처리하려 함 — 409."""
 
 
+class ConsultationNotCancellable(Exception):
+    """회원이 취소하려는 요청이 더 이상 대기 중이 아님 — 409."""
+
+
 class MemberAlreadyCoached(Exception):
     """회원에게 이미 다른 트레이너의 활성 담당이 있음 — 409.
 
@@ -59,6 +64,18 @@ class MemberAlreadyCoached(Exception):
     그때는 IntegrityError 라 트레이너에게 보여 줄 말이 없다. 먼저 확인해서 이유를
     돌려준다.
     """
+
+
+class ConsultationScheduleConflict(Exception):
+    """승인하며 잡으려는 시간에 이미 다른 일정이 있음 — 409.
+
+    `trainer_service.ScheduleSeriesConflict` 와 같은 모양이다 — 겹치는 세션을 들고
+    다녀야 화면이 "OO님 일정과 겹쳐요" 를 그릴 수 있다.
+    """
+
+    def __init__(self, conflicts: list[ScheduleSessionOut]) -> None:
+        super().__init__("겹치는 일정이 있습니다.")
+        self.conflicts = conflicts
 
 
 def _pending_query(member_id: str, payload: ConsultationCreate):
@@ -173,10 +190,19 @@ def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[Co
     """
     trainer_ids = {r.trainer_id for r in rows if r.trainer_id}
     trainer_names: dict[str, str] = {}
+    trainer_gyms: dict[str, str] = {}
     if trainer_ids:
         trainer_names = {
             u.id: u.name
             for u in db.scalars(select(User).where(User.id.in_(trainer_ids))).all()
+        }
+        trainer_gyms = {
+            trainer_id: gym_name or profile_name or ""
+            for trainer_id, gym_name, profile_name in db.execute(
+                select(TrainerProfile.trainer_id, Place.name, TrainerProfile.gym_name)
+                .outerjoin(Place, Place.id == TrainerProfile.gym_id)
+                .where(TrainerProfile.trainer_id.in_(trainer_ids))
+            ).all()
         }
 
     out: list[ConsultationOut] = []
@@ -184,8 +210,30 @@ def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[Co
         item = ConsultationOut.model_validate(row)
         # 트레이너가 지워졌으면 이름은 None 으로 남는다 — 앱이 폴백 문구를 쓴다.
         item.trainer_name = trainer_names.get(row.trainer_id or "")
+        item.trainer_gym_name = trainer_gyms.get(row.trainer_id or "") or None
         out.append(item)
     return out
+
+
+def cancel_my_consultation(
+    db: Session, member_id: str, consultation_id: str
+) -> ConsultationOut:
+    row = db.scalar(
+        select(ConsultationRequest).where(
+            ConsultationRequest.id == consultation_id,
+            ConsultationRequest.member_id == member_id,
+        )
+    )
+    if row is None:
+        raise ConsultationNotFound()
+    if row.status != "pending":
+        raise ConsultationNotCancellable()
+    row.status = "cancelled"
+    row.decided_at = _now()
+    row.decision_note = None
+    db.commit()
+    db.refresh(row)
+    return attach_target_names(db, [row])[0]
 
 
 def _apply_cursor(query, before: datetime | None, before_id: str | None):
@@ -521,6 +569,16 @@ def accept(
     )
     if existing is not None and existing.trainer_id != trainer_id:
         raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중인 회원입니다.")
+
+    # 담당 링크를 만들기 전에 겹침부터 본다 — 겹치면 아무것도 만들지 않는다
+    # (링크도, 헬스장 연결도, 스케줄도). 화면이 승인 버튼 옆에 짚어 줄 수 있도록
+    # 겹친 세션을 들고 다닌다.
+    if schedule_date is not None:
+        conflicts = trainer_service.conflicting_sessions(
+            db, trainer_id, [(schedule_date.isoformat(), schedule_time or "00:00")]
+        )
+        if conflicts:
+            raise ConsultationScheduleConflict(conflicts)
 
     if existing is None:
         attach_member_to_trainer(

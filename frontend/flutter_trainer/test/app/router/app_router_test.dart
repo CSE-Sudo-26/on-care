@@ -57,12 +57,12 @@ void main() {
   // 새로고침·공유 링크는 부팅 위치가 곧 목적지다. 세션이 아직 unknown 인 첫
   // 평가에서 그 목적지를 버리면 복원 뒤에는 돌아갈 곳이 남지 않는다. (#701)
   group('deep-link resume', () {
-    const String thread = '/messages?client=user-demo';
+    const String thread = '/messages?client=user-7d4e9a2c5f18';
 
     test('the destination is parked on the sign-in URL while restoring', () {
       expect(
         sessionRedirect(SessionStatus.unknown, thread),
-        '${AppRoutes.signIn}?from=%2Fmessages%3Fclient%3Duser-demo',
+        '${AppRoutes.signIn}?from=%2Fmessages%3Fclient%3Duser-7d4e9a2c5f18',
       );
     });
 

@@ -38,6 +38,13 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       left.month == right.month &&
       left.day == right.day;
 
+  /// 24시간 표기로 고정한다 — `TimeOfDay.format(context)` 는 로케일 기본값
+  /// (오전/오후 12시간제)을 따라가 이 시트만 다른 곳(스케줄 시간표 등)과
+  /// 다른 표기로 보였다.
+  static String _hhmm(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:'
+      '${t.minute.toString().padLeft(2, '0')}';
+
   DateTime _startsAt(TimeOfDay time) =>
       DateTime(_date.year, _date.month, _date.day, time.hour, time.minute);
 
@@ -120,9 +127,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('${l.schedFieldStart} – ${l.schedFieldEnd}'),
-                trailing: Text(
-                  '${time.format(context)} – ${endTime.format(context)}',
-                ),
+                trailing: Text('${_hhmm(time)} – ${_hhmm(endTime)}'),
                 onTap: () async {
                   final picked = await showScheduleTimeRangePicker(
                     context: context,
@@ -164,10 +169,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               child: Text(l.actionCancel),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                (time, endTime, type),
-              ),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, (time, endTime, type)),
               child: Text(l.actionSave),
             ),
           ],
@@ -312,7 +315,17 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     final AppLocalizations l = AppLocalizations.of(context);
     final slots = ref.watch(reservationSlotsProvider);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return SafeArea(
+    // 가운데 모달로 뜬다(#1250 과 같은 자리) — 닫기(X)는 카드 바깥
+    // `_openCenteredDialog` 가 이미 그려 주므로 여기서 또 두지 않는다.
+    // `Dialog` 자체는 투명이라(#1250) 배경은 이 위젯이 직접 그린다 — 예전
+    // 바텀시트는 `showModalBottomSheet` 의 `backgroundColor` 로 받았는데,
+    // 가운데 모달로 옮기며 그 배경이 통째로 빠졌었다.
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: const BorderRadius.all(AppRadius.lg),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.xl,
@@ -325,23 +338,12 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      l.slotManageTitle,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: l.actionClose,
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+              Text(
+                l.slotManageTitle,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -355,10 +357,12 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               // 옅은 채움만 쓰고 테두리를 넣지 않는다 — 기본
               // `OutlinedButton` 의 짙은 윤곽선은 이 시트에서 유일하게
               // 선을 두른 요소라 눈에 튀었다(#1090).
+              // 가운데 모달(최대 560)에서는 넷을 한 줄에 두면 넘친다 — 두 줄로
+              // 나눈다. 새 일정 모달의 고객·유형/날짜·시간과 같은 두 칸짜리
+              // 줄 언어다.
               Row(
                 children: <Widget>[
                   Expanded(
-                    flex: 3,
                     child: PopupMenuButton<String>(
                       key: const ValueKey<String>('slot-session-type'),
                       enabled: !_saving,
@@ -378,7 +382,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    flex: 3,
                     child: _tappableField(
                       key: const ValueKey<String>('slot-date'),
                       onTap: _saving ? null : _pickDate,
@@ -388,19 +391,18 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: <Widget>[
                   Expanded(
-                    flex: 5,
                     child: _tappableField(
                       key: const ValueKey<String>('slot-time-range'),
-                      onTap: _saving
-                          ? null
-                          : _pickRange,
+                      onTap: _saving ? null : _pickRange,
                       child: _compactField(
                         icon: Icons.schedule_outlined,
-                        label:
-                            '${_time.format(context)} – '
-                            '${_endTime.format(context)}',
+                        label: '${_hhmm(_time)} – ${_hhmm(_endTime)}',
                       ),
                     ),
                   ),
@@ -463,8 +465,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                                 width: 132,
                                 alignment: Alignment.center,
                                 child: Text(
-                                  '${TimeOfDay.fromDateTime(slot.startsAt).format(context)} – '
-                                  '${TimeOfDay.fromDateTime(slot.startsAt.add(Duration(minutes: slot.durationMinutes))).format(context)}',
+                                  '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt))} – '
+                                  '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt.add(Duration(minutes: slot.durationMinutes))))}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w800,
                                   ),

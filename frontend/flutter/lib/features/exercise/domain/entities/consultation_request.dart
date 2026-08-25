@@ -1,7 +1,7 @@
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 
-enum ConsultationStatus { pending, accepted, rejected }
+enum ConsultationStatus { pending, accepted, rejected, cancelled }
 
 class ConsultationRequest {
   const ConsultationRequest({
@@ -19,11 +19,12 @@ class ConsultationRequest {
     required this.createdAt,
     this.decisionNote,
     this.decidedAt,
+    this.trainerGymName,
   });
 
   /// 서버가 접수하며 준 id 로 갈아끼울 때 쓴다 — 화면이 만든 임시 id 는 트레이너
   /// 앱과 이어지지 않는다(#327).
-  ConsultationRequest copyWith({String? id}) => ConsultationRequest(
+  ConsultationRequest copyWith({String? id, ConsultationStatus? status}) => ConsultationRequest(
     id: id ?? this.id,
     trainerId: trainerId,
     trainerName: trainerName,
@@ -34,10 +35,11 @@ class ConsultationRequest {
     preferredDate: preferredDate,
     preferredTimeSlot: preferredTimeSlot,
     message: message,
-    status: status,
+    status: status ?? this.status,
     createdAt: createdAt,
     decisionNote: decisionNote,
     decidedAt: decidedAt,
+    trainerGymName: trainerGymName,
   );
 
   final String id;
@@ -46,6 +48,7 @@ class ConsultationRequest {
   final String? trainerId;
   final String? trainerName;
   final String? trainerRole;
+  final String? trainerGymName;
 
   /// 표시용 라벨이 아니라 **계약 enum** 을 들고 있다. 서버는 코드를 주므로, 라벨을
   /// 저장하면 `GET /consultations/me` 로 복원할 때 문구를 만들 수 없다(#327).
@@ -83,6 +86,7 @@ ConsultationRequest consultationFromJson(Map<String, Object?> j) {
     trainerName: j['trainer_name'] as String?,
     // 서버는 트레이너 직함을 상담 응답에 담지 않는다. 목록 카드는 이름만 쓴다.
     trainerRole: null,
+    trainerGymName: j['trainer_gym_name'] as String?,
     exerciseGoal: exerciseGoalFromWire(j['exercise_goal'] as String?),
     healthPurposeType: healthPurposeFromWire(
       j['health_purpose_type'] as String?,
@@ -97,6 +101,7 @@ ConsultationRequest consultationFromJson(Map<String, Object?> j) {
     status: switch (j['status']) {
       'accepted' => ConsultationStatus.accepted,
       'rejected' => ConsultationStatus.rejected,
+      'cancelled' => ConsultationStatus.cancelled,
       _ => ConsultationStatus.pending,
     },
     createdAt:

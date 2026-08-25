@@ -252,7 +252,7 @@ void main() {
 
     expect(find.text('직접 쓴 메모'), findsOneWidget);
     expect(find.text('무릎이 아파요'), findsOneWidget);
-    expect(find.text('채팅에서 감지'), findsOneWidget);
+    expect(find.text('신체 불편 표현 감지'), findsOneWidget);
   });
 
   testWidgets('the client detail memo action opens the merged dialog (#1024)', (
@@ -309,7 +309,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('무릎이 가볍게 당기긴 했는데 괜찮아요'), findsOneWidget);
-      expect(find.text('채팅에서 감지'), findsOneWidget);
+      expect(find.text('신체 불편 표현 감지'), findsOneWidget);
     });
   });
 

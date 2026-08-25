@@ -65,6 +65,7 @@ class _FixedWeekRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async => throw UnimplementedError();
 
@@ -81,6 +82,7 @@ class _FixedWeekRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async => throw UnimplementedError();
 }

@@ -38,6 +38,7 @@ class DioExerciseRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
@@ -50,6 +51,7 @@ class DioExerciseRepository implements ExerciseRepository {
         name: name,
         intensity: intensity,
         sets: sets,
+        reps: reps,
         weight: weight,
       ),
     );
@@ -59,8 +61,9 @@ class DioExerciseRepository implements ExerciseRepository {
   /// 생성·수정이 같은 몸통을 쓴다 — 한쪽에만 필드를 더하면 수정한 기록에서
   /// 그 값이 조용히 사라진다.
   ///
-  /// `sets`·`weight` 는 null 이어도 실어 보낸다. 유형을 근력에서 바꾼 수정이면
-  /// 그 null 이 옛 값을 지우는데, 빼고 보내면 서버가 예전 값을 그대로 둔다.
+  /// `sets`·`reps`·`weight` 는 null 이어도 실어 보낸다. 유형을 근력에서 바꾼
+  /// 수정이면 그 null 이 옛 값을 지우는데, 빼고 보내면 서버가 예전 값을 그대로
+  /// 둔다.
   static Map<String, Object?> _sessionBody({
     required ExerciseType type,
     required int minutes,
@@ -69,12 +72,14 @@ class DioExerciseRepository implements ExerciseRepository {
     required String name,
     required ExerciseIntensity intensity,
     required int? sets,
+    required int? reps,
     required double? weight,
   }) => <String, Object?>{
     'type': type.name,
     'name': name,
     'minutes': minutes,
     'sets': sets,
+    'reps': reps,
     'weight': weight,
     'calories': calories,
     'intensity': intensity.name,
@@ -96,6 +101,7 @@ class DioExerciseRepository implements ExerciseRepository {
     String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
     int? sets,
+    int? reps,
     double? weight,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
@@ -108,6 +114,7 @@ class DioExerciseRepository implements ExerciseRepository {
         name: name,
         intensity: intensity,
         sets: sets,
+        reps: reps,
         weight: weight,
       ),
     );

@@ -120,9 +120,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder gymCard() => find.byWidgetPredicate(
-    (Widget widget) => widget.runtimeType.toString() == '_GymSummaryCard',
-  );
+  Finder gymCard() => find.byKey(const Key('my-gym-info-card'));
 
   Future<Gym?> connectedGym(WidgetTester tester) {
     return ProviderScope.containerOf(
@@ -136,7 +134,6 @@ void main() {
     ).read(myTrainerProvider.future);
   }
 
-
   testWidgets('연결된 헬스장과 담당 트레이너가 트레이너 앱 시드와 같다', (WidgetTester tester) async {
     await pumpMyTab(tester);
     await tester.scrollUntilVisible(
@@ -146,7 +143,12 @@ void main() {
     );
 
     expect(find.text('온케어짐 신촌점'), findsOneWidget);
-    expect(find.text('김트레이너 · 퍼스널 트레이너'), findsOneWidget);
+    expect(find.text('김트레이너'), findsOneWidget);
+    expect(find.text('퍼스널 트레이너'), findsOneWidget);
+    expect(find.textContaining('상세보기'), findsNothing);
+    expect(find.byKey(const Key('gymTrainerDetailButton')), findsOneWidget);
+    expect(find.byKey(const Key('connectedGymIcon')), findsOneWidget);
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
   });
 
   testWidgets('영어 로케일에서 섹션 액션이 영어로 표시된다', (WidgetTester tester) async {

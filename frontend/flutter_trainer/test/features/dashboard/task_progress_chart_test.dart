@@ -4,7 +4,7 @@ import 'package:oncare_trainer/features/dashboard/data/daily_task_progress_store
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/task_progress_chart.dart';
 
 void main() {
-  testWidgets('percent labels sit above and rise with their stacked bars', (
+  testWidgets('bar heights follow completion rates instead of task counts', (
     tester,
   ) async {
     const snapshots = <DailyTaskSnapshot?>[
@@ -15,15 +15,21 @@ void main() {
         pendingKeys: <String>{},
       ),
       DailyTaskSnapshot(
-        total: 10,
-        completedToday: 3,
-        completedCarriedOver: 2,
+        total: 4,
+        completedToday: 2,
+        completedCarriedOver: 0,
         pendingKeys: <String>{},
       ),
       DailyTaskSnapshot(
         total: 10,
-        completedToday: 6,
-        completedCarriedOver: 4,
+        completedToday: 5,
+        completedCarriedOver: 0,
+        pendingKeys: <String>{},
+      ),
+      DailyTaskSnapshot(
+        total: 6,
+        completedToday: 4,
+        completedCarriedOver: 2,
         pendingKeys: <String>{},
       ),
     ];
@@ -39,9 +45,10 @@ void main() {
                 DateTime(2026, 8, 24),
                 DateTime(2026, 8, 25),
                 DateTime(2026, 8, 26),
+                DateTime(2026, 8, 27),
               ],
-              labels: const <String>['월', '화', '수'],
-              todayIndex: 2,
+              labels: const <String>['월', '화', '수', '목'],
+              todayIndex: 3,
             ),
           ),
         ),
@@ -63,9 +70,10 @@ void main() {
       expect(labelRects[i].bottom, lessThanOrEqualTo(barRects[i].top));
     }
     expect(labelRects[1].top, lessThan(labelRects[0].top));
-    expect(labelRects[2].top, lessThan(labelRects[1].top));
+    expect(barRects[2].height, closeTo(barRects[1].height, 0.01));
+    expect(barRects[3].height, greaterThan(barRects[2].height));
     expect(find.text('10%'), findsOneWidget);
-    expect(find.text('50%'), findsOneWidget);
+    expect(find.text('50%'), findsNWidgets(2));
     expect(find.text('100%'), findsOneWidget);
   });
 }

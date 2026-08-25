@@ -88,8 +88,9 @@ void main() {
       expect(session.note, '오른쪽 어깨 가동 범위를 확인해 주세요.');
       expect(session.program.single.name, '숄더 프레스');
       expect(session.program.single.sets, 4);
-      expect(session.program.single.reps, '12회');
-      expect(session.program.single.weight, '10kg');
+      // 옛 행에 남은 문자열도 숫자로 되짚어 읽는다 (#1310).
+      expect(session.program.single.reps, 12);
+      expect(session.program.single.weight, 10);
     });
 
     test('날짜가 깨져도 던지지 않는다', () {

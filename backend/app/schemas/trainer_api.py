@@ -318,6 +318,27 @@ LooseInt = Annotated[int | None, BeforeValidator(_loose_int)]
 LooseFloat = Annotated[float | None, BeforeValidator(_loose_float)]
 
 
+def _loose_int_zero(value: object) -> object:
+    """`_loose_int` 의 "적지 않음 = 0" 판 — 템플릿 운동용. (#1310)
+
+    템플릿은 없는 값을 None 이 아니라 0 으로 둔다. 이미 저장된 템플릿에는
+    `"10회"` 같은 문자열이 남아 있어, 그대로 읽으면 트레이너가 만들어 둔
+    템플릿이 통째로 열리지 않는다.
+    """
+    coerced = _loose_int(value)
+    return 0 if coerced is None else coerced
+
+
+def _loose_float_zero(value: object) -> object:
+    """`_loose_float` 의 "적지 않음 = 0" 판 — 템플릿 중량용. (#1310)"""
+    coerced = _loose_float(value)
+    return 0.0 if coerced is None else coerced
+
+
+LooseIntZero = Annotated[int, BeforeValidator(_loose_int_zero)]
+LooseFloatZero = Annotated[float, BeforeValidator(_loose_float_zero)]
+
+
 class ProgramDraftExercise(BaseModel):
     """초안의 운동 한 항목 — 편집기 `ProgramExerciseDraft` 계약 정렬.
 
@@ -326,8 +347,9 @@ class ProgramDraftExercise(BaseModel):
     프로그램을 회원 기록과 나란히 집계할 수가 없었다 — 지금은 회원 앱의 운동
     추가와 같은 스펙(날짜·종류·이름·시간 또는 세트·중량·강도)을 쓴다.
 
-    횟수·거리·휴식·RPE 는 뺐다. 통일 스펙에 없는 칸이고, 강도가 RPE 자리를
-    대신한다.
+    거리·휴식·RPE 는 뺐다. 통일 스펙에 없는 칸이고, 강도가 RPE 자리를
+    대신한다. 횟수는 한때 같이 뺐다가 되살렸다(#1310) — 세트·중량만으로는
+    근력 한 줄이 재현되지 않는다.
     """
     id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=100)
@@ -336,8 +358,9 @@ class ProgramDraftExercise(BaseModel):
     date: _date | None = None
     #: 유산소·스트레칭·기타의 운동 시간(분). 근력은 세트로 재므로 비어 있다.
     duration: LooseInt = Field(default=None, ge=0, le=600)
-    #: 근력의 세트 수와 중량(kg). 다른 유형에서는 비어 있다.
+    #: 근력의 세트 수·한 세트당 횟수·중량(kg). 다른 유형에서는 비어 있다.
     sets: LooseInt = Field(default=None, ge=0, le=99)
+    reps: LooseInt = Field(default=None, ge=0, le=999)
     weight: LooseFloat = Field(default=None, ge=0, le=1000)
     intensity: RoutineIntensity = "moderate"
     memo: str = Field(default="", max_length=300)
@@ -364,8 +387,10 @@ class RoutineOut(BaseModel):
     #: 트레이너가 언제 하라고 보낸 배정인가. 날짜를 정하지 않았으면 비어 있다.
     exercise_date: _date | None = None
     intensity: RoutineIntensity = "moderate"
-    #: 근력 루틴의 세트 수와 중량(kg). 다른 유형은 비어 있다. (#1276)
+    #: 근력 루틴의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 비어 있다.
+    #: (#1276, #1310)
     sets: int | None = None
+    reps: int | None = None
     weight: float | None = None
     reason: str
     source: RoutineSource
@@ -399,8 +424,10 @@ class RoutineAssignRequest(BaseModel):
     #: 언제 하라고 보내는 배정인가. 회원 앱 운동 추가와 같은 칸이다. (#1276)
     exercise_date: _date | None = None
     intensity: RoutineIntensity = "moderate"
-    #: 근력이면 세트 수와 중량(kg). 다른 유형에서 와도 저장하지 않는다.
+    #: 근력이면 세트 수·한 세트당 횟수·중량(kg). 다른 유형에서 와도 저장하지
+    #: 않는다.
     sets: int | None = Field(default=None, gt=0, le=99)
+    reps: int | None = Field(default=None, gt=0, le=999)
     weight: float | None = Field(default=None, ge=0, le=1000)
     reason: str = Field(default="", max_length=200)
     source: RoutineSource = "trainer"
@@ -418,6 +445,13 @@ class RoutineSuggestionCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     minutes: int = Field(ge=0, le=600)
     type: RoutineType
+    #: 근력이면 세트 수·한 세트당 횟수·중량(kg). 배정(`RoutineAssignRequest`)과
+    #: 같은 계약이다 — 승인하는 순간 이 행이 그대로 배정이 되므로, 여기서 받지
+    #: 않으면 근력 제안은 세트가 빈 채로 회원에게 간다(#1321). 다른 유형에서
+    #: 와도 저장하지 않는다.
+    sets: int | None = Field(default=None, gt=0, le=99)
+    reps: int | None = Field(default=None, gt=0, le=999)
+    weight: float | None = Field(default=None, ge=0, le=1000)
     reason: str = Field(default="", max_length=200)
     #: 이 후보의 근거 문구. 트레이너가 승인 판단에 쓰는 재료이고 회원에게는
     #: 전달되지 않는다. 개수·길이를 묶는 이유는 카드 한 장이 읽히는 분량을
@@ -440,6 +474,12 @@ class RoutineSuggestionApproveRequest(PartialUpdate):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     minutes: int | None = Field(default=None, ge=0, le=600)
     type: RoutineType | None = None
+    #: 근력이면 세트 수·한 세트당 횟수·중량(kg). 트레이너가 승인 직전에 고치는
+    #: 자리라, 유형을 근력으로 바꾸며 이 셋을 함께 채우는 것이 이 화면의 흔한
+    #: 흐름이다(#1321).
+    sets: int | None = Field(default=None, gt=0, le=99)
+    reps: int | None = Field(default=None, gt=0, le=999)
+    weight: float | None = Field(default=None, ge=0, le=1000)
     reason: str | None = Field(default=None, max_length=200)
 
 
@@ -817,6 +857,9 @@ class ProgramItem(BaseModel):
     date: _date | None = None
     duration: LooseInt = Field(default=None, ge=0, le=600)
     sets: LooseInt = Field(default=None, ge=0, le=99)
+    #: 근력의 한 세트당 횟수. 세트·중량과 한 벌이다(#1310) — 셋이 다 있어야
+    #: 트레이너가 짠 근력 한 줄이 회원 화면에서 그대로 재현된다.
+    reps: LooseInt = Field(default=None, ge=0, le=999)
     weight: LooseFloat = Field(default=None, ge=0, le=1000)
     intensity: RoutineIntensity = "moderate"
     session: str = Field(default="", max_length=100)
@@ -1306,17 +1349,23 @@ _TEMPLATE_MAX_EXERCISES = 20
 class ProgramTemplateExercise(BaseModel):
     """템플릿 안의 운동 한 줄.
 
-    `sets`/`reps` 는 근력 운동에서만 쓴다(#1029) — `ProgramItem` 과 같은
-    계약(`sets: int`, `reps: str`)이라, 템플릿을 적용해 만든 운동이 프로그램
-    편집기·배정 payload 로 넘어갈 때 값이 그대로 옮겨진다. 비근력 운동은
-    `minutes` 만 쓰고 이 둘은 기본값(0/빈 문자열)으로 둔다.
+    `sets`/`reps`/`weight` 는 근력 운동에서만 쓴다 — `ProgramItem` 과 같은
+    계약이라, 템플릿을 적용해 만든 운동이 프로그램 편집기·배정 payload 로
+    넘어갈 때 값이 그대로 옮겨진다. 비근력 운동은 `minutes` 만 쓰고 셋은
+    기본값(0)으로 둔다.
+
+    횟수는 `"10회"` 같은 문자열이 아니라 수다(#1310). 문자열이던 동안에는
+    편집기·배정 payload 가 쓰는 정수와 어긋나 값을 옮길 때마다 숫자만
+    되짚어야 했다. 중량은 앱이 보내던 값을 서버가 받을 자리가 없어 조용히
+    버려지고 있었다 — 같은 스펙으로 함께 받는다.
     """
 
     name: str = Field(min_length=1, max_length=100)
     minutes: int = Field(ge=1, le=300)
     type: RoutineType = "근력"
-    sets: int = Field(default=0, ge=0, le=99)
-    reps: str = Field(default="", max_length=30)
+    sets: LooseIntZero = Field(default=0, ge=0, le=99)
+    reps: LooseIntZero = Field(default=0, ge=0, le=999)
+    weight: LooseFloatZero = Field(default=0, ge=0, le=1000)
 
 
 class TrainerProgramTemplateOut(BaseModel):

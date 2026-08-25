@@ -370,9 +370,11 @@
   "exExerciseDate": "Date",
   "exExerciseName": "Exercise Name",
   "exExerciseNameHint": "e.g. Squat, Treadmill",
+  "exExerciseReps": "Reps",
   "exExerciseWeight": "Weight",
   "exUnitMinutes": "min",
   "exUnitSets": "sets",
+  "exUnitReps": "reps",
   "exUnitKg": "kg",
   "exEnterName": "Please enter an exercise name",
   "exExerciseDuration": "Duration",
@@ -381,6 +383,14 @@
   "@exSetsCount": {
     "placeholders": {
       "sets": {
+        "type": "int"
+      }
+    }
+  },
+  "exRepsCount": "{reps} reps",
+  "@exRepsCount": {
+    "placeholders": {
+      "reps": {
         "type": "int"
       }
     }
@@ -716,6 +726,18 @@
   "exSelectTime": "Select a time",
   "exPreferredTime": "Preferred Time",
   "exTimeFlexible": "Discuss Later",
+  "exTimeRangeTitle": "Select time",
+  "exTimeRangeStartTime": "Start time",
+  "exTimeRangeEndTime": "End time",
+  "exTimeRangeStartHourStep": "Start hour",
+  "exTimeRangeStartMinuteStep": "Start minute",
+  "exTimeRangeEndHourStep": "End hour",
+  "exTimeRangeEndMinuteStep": "End minute",
+  "exSlotAm": "AM",
+  "exSlotPm": "PM",
+  "exTimeRangeInvalidEnd": "End time is earlier than start time",
+  "exTimeRangePrevStep": "Previous step",
+  "exTimeRangeNextStep": "Next step",
   "exConsultMessage": "Message",
   "exConsultMessageHint": "Share your exercise experience or anything helpful for the consultation.",
   "exSendConsultRequest": "Send Consultation Request",

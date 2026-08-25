@@ -10,7 +10,7 @@
 실제 데이터"다. 트레이너 API 는 이 데이터를 그대로 읽어 로스터를 집계하므로,
 트레이너↔회원 데이터 공유가 시드 단계에서부터 실제로 성립한다.
 
-김민수(`user-demo`)만은 이 파일이 값을 만들지 않는다. 그는 사용자 앱의 데모 계정과
+김민수(`user-7d4e9a2c5f18`)만은 이 파일이 값을 만들지 않는다. 그는 사용자 앱의 데모 계정과
 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 세 곳이 각자 계산하니 같은 날짜의
 숫자가 서로 달랐다(#757). 그의 하루는 `app/db/demo_fixture.py` 가 읽는 픽스처가
 정하고, 여기서는 그것을 테이블에 옮기기만 한다. 나머지 회원은 아래 상수들이 만든다.
@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import or_, select
@@ -70,7 +71,7 @@ def _safe_commit(db: Session) -> None:
 # — 프론트 seed 와 동일 수치.
 # 하루 나트륨 합 == _SODIUM_WEEK[member][-1](오늘) 이 되도록 맞춰 둠.
 #
-# 김민수(`user-demo`)는 여기 없다 — 그의 하루는 픽스처가 정한다(#757). 아래 상수는
+# 김민수(`user-7d4e9a2c5f18`)는 여기 없다 — 그의 하루는 픽스처가 정한다(#757). 아래 상수는
 # 전부 그를 뺀 나머지 회원용이다.
 _TODAY_MEALS: dict[
     str, list[tuple[str, str, int, int, float, float, float, float]]
@@ -159,8 +160,8 @@ def _valid_member_ids(db: Session) -> set[str]:
 
 # 회원별 채팅 스레드 (sender: trainer|client, text, days_ago) — 프론트 시드와 정렬.
 #
-# user-demo 스레드는 회원 앱·트레이너 앱의 데모 시드와 **같은 대화**여야 한다.
-# 김민수는 회원 앱 데모 사용자(user-demo)와 같은 계정이라, 실서버로 붙여도
+# user-7d4e9a2c5f18 스레드는 회원 앱·트레이너 앱의 데모 시드와 **같은 대화**여야 한다.
+# 김민수는 회원 앱 데모 사용자(user-7d4e9a2c5f18)와 같은 계정이라, 실서버로 붙여도
 # 데모에서 보던 대화가 그대로 이어져야 하기 때문이다. 같은 목록이 아래 두 곳에
 # 있다 — 한 곳만 고치면 그 파일의 테스트가 깨진다:
 #   * frontend/flutter_trainer/lib/core/storage/seed_clients.dart (트레이너 시점)
@@ -171,7 +172,7 @@ def _valid_member_ids(db: Session) -> set[str]:
 # 걸친 대화가 30분짜리 수다로 보이고, 화면이 날짜로 묶는 자리(하루치 AI 분석
 # 안내)도 하나로 뭉친다.
 _CHAT: dict[str, list[tuple[str, str, int]]] = {
-    "user-demo": [
+    "user-7d4e9a2c5f18": [
         # 1일차.
         ("trainer", "민수님, 지난주 기록 정리해 봤는데 요일마다 이행률이 들쭉날쭉하네요. 바쁜 요일이 정해져 있나요?", 5),
         ("client", "화요일이랑 목요일이 야근이 많아요 😥", 5),
@@ -209,7 +210,7 @@ _CHAT: dict[str, list[tuple[str, str, int]]] = {
 }
 
 # 픽스처가 없는 회원의 AI 배정 루틴 (name, minutes, type, reason).
-# 김민수(user-demo)는 여기 없다 — 공유 픽스처의 `routines` 가 원본이다(#1199).
+# 김민수(user-7d4e9a2c5f18)는 여기 없다 — 공유 픽스처의 `routines` 가 원본이다(#1199).
 _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
     "user-jisu": [
         ("인터벌 런닝", 25, "유산소", "체지방 연소 효율↑"),
@@ -240,7 +241,7 @@ _WEEKDAY_INDEX: dict[str, int] = {
 # 동일. 위험도·활동점수·기본정보 + 목표치는 구조화 컬럼(goal_*/daily_*)에 넣는다.
 # conditions 는 위험도 서술에서 추론(목업엔 명시 없음). 키(height_cm)·성별은 목업에 없어 비운다.
 _HEALTH_PROFILE: dict[str, dict] = {
-    "user-demo": {
+    "user-7d4e9a2c5f18": {
         "risk_title": "고혈압·당뇨 위험 주의",
         "risk_body": "최근 혈압과 혈당 추세가 다소 높습니다. 식단·운동 관리에 신경 써주세요.",
         "risk_level": "medium",
@@ -268,23 +269,23 @@ _HEALTH_PROFILE: dict[str, dict] = {
 # 트레이너 오늘 타임라인 (time, client, member_id, type, duration, status, note, program).
 # member_id 는 유효 회원일 때만 연결(아니면 표시용 이름만). 프론트 TRAINER_SCHEDULE 정렬.
 _SCHEDULE: list[tuple[str, str, str | None, str, int, str, str, list[dict]]] = [
-    ("10:00", "김민수", "user-demo", "1:1 PT", 60, "완료", "무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.", [
-        {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
-        {"name": "레그컬", "sets": 3, "reps": "12회", "weight": "40kg"},
-        {"name": "카프레이즈", "sets": 3, "reps": "20회", "weight": "자체중량"},
-        {"name": "하체 스트레칭", "sets": 1, "reps": "10분", "weight": "-"},
+    ("10:00", "김민수", "user-7d4e9a2c5f18", "1:1 PT", 60, "완료", "무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.", [
+        {"name": "레그프레스", "type": "근력", "sets": 3, "reps": 12, "weight": 80},
+        {"name": "레그컬", "type": "근력", "sets": 3, "reps": 12, "weight": 40},
+        {"name": "카프레이즈", "type": "근력", "sets": 3, "reps": 20},
+        {"name": "하체 스트레칭", "type": "스트레칭", "duration": 10},
     ]),
     ("12:00", "이지수", "user-jisu", "1:1 PT", 50, "완료", "데드리프트 자세 안정적. 다음 세션 60kg 도전.", [
-        {"name": "데드리프트", "sets": 4, "reps": "8회", "weight": "55kg"},
-        {"name": "루마니안 데드리프트", "sets": 3, "reps": "10회", "weight": "40kg"},
-        {"name": "플랭크", "sets": 3, "reps": "45초", "weight": "-"},
-        {"name": "코어 서킷", "sets": 2, "reps": "12회", "weight": "-"},
+        {"name": "데드리프트", "type": "근력", "sets": 4, "reps": 8, "weight": 55},
+        {"name": "루마니안 데드리프트", "type": "근력", "sets": 3, "reps": 10, "weight": 40},
+        {"name": "플랭크", "type": "근력", "sets": 3},
+        {"name": "코어 서킷", "type": "근력", "sets": 2, "reps": 12},
     ]),
     ("14:00", "", None, "", 0, "공백", "", []),
     ("15:00", "박성호", "user-sungho", "1:1 PT", 60, "예정", "", [
-        {"name": "벤치프레스", "sets": 4, "reps": "8회", "weight": "65kg"},
-        {"name": "인클라인 덤벨 프레스", "sets": 3, "reps": "10회", "weight": "26kg"},
-        {"name": "트라이셉스 딥", "sets": 3, "reps": "12회", "weight": "-"},
+        {"name": "벤치프레스", "type": "근력", "sets": 4, "reps": 8, "weight": 65},
+        {"name": "인클라인 덤벨 프레스", "type": "근력", "sets": 3, "reps": 10, "weight": 26},
+        {"name": "트라이셉스 딥", "type": "근력", "sets": 3, "reps": 12},
     ]),
     # 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다(#988).
     ("17:00", "윤가온", None, "상담", 30, "예정", "", []),
@@ -615,10 +616,25 @@ def _seed_routines(db: Session, member_id: str) -> None:
 _FIXTURE_ID_PREFIX = "seed-fix-"
 
 
+@dataclass(frozen=True)
+class _TypeTotals:
+    """하루·한 종류로 접은 값. 운동 기록 한 행이 되는 그대로다."""
+
+    minutes: int
+    calories: int
+    name: str
+    #: 근력이면 그날 한 세트 수의 **합**. 다른 유형은 None 이다.
+    sets: int | None = None
+    #: 근력이면 그날 한 횟수 중 가장 많은 수. 세트와 달리 더하지 않는다 — 한
+    #: 세트당 수라 합계는 아무도 한 적 없는 값이 된다(#1310 의 PT 파생 기록과
+    #: 같은 규칙).
+    reps: int | None = None
+
+
 def _by_type(
     exercises: tuple[FixtureExercise, ...],
-) -> dict[str, tuple[int, int, str]]:
-    """운동을 종류별로 합친다 — {종류: (분, 칼로리, 이름)}. 픽스처 순서를 유지한다.
+) -> dict[str, _TypeTotals]:
+    """운동을 종류별로 합친다. 픽스처 순서를 유지한다.
 
     종류는 표준 어휘로 접어서 센다 (#996). 픽스처가 아직 옛 이름을 쓰더라도
     DB 에는 표준 값만 들어가야 앱이 유형을 다시 매핑하지 않는다.
@@ -627,17 +643,57 @@ def _by_type(
     이름으로 적기 때문이다(#1288). 종류로 합치면서 이름까지 버리면 데모의 요일
     칸이 "유산소 · 근력" 두 줄로만 남는다. PT 완료가 만드는 기록도 여러 운동을
     쉼표로 잇는 같은 규칙을 쓴다.
+
+    세트·횟수도 함께 접는다 (#1265). 예전에는 픽스처가 적어 둔 세트를 버려서,
+    화면이 분에서 세트를 되짚었다 — 같은 회원의 같은 날 근력이 앱마다 다른 수로
+    보였다.
     """
-    totals: dict[str, tuple[int, int, str]] = {}
+    totals: dict[str, _TypeTotals] = {}
     for exercise in exercises:
         kind = exercise_types.normalize(exercise.type)
-        minutes, calories, names = totals.get(kind, (0, 0, ""))
-        totals[kind] = (
-            minutes + exercise.minutes,
-            calories + exercise.calories,
-            f"{names}, {exercise.name}" if names else exercise.name,
+        prev = totals.get(kind)
+        strength = kind == exercise_types.STRENGTH
+        totals[kind] = _TypeTotals(
+            minutes=(prev.minutes if prev else 0) + exercise.minutes,
+            calories=(prev.calories if prev else 0) + exercise.calories,
+            name=(
+                f"{prev.name}, {exercise.name}"
+                if prev and prev.name
+                else exercise.name
+            ),
+            sets=(
+                _add(prev.sets if prev else None, exercise.sets)
+                if strength
+                else None
+            ),
+            reps=(
+                _peak(prev.reps if prev else None, exercise.reps)
+                if strength
+                else None
+            ),
         )
     return totals
+
+
+def _add(left: int | None, right: int | None) -> int | None:
+    """둘 다 없으면 None. 하나만 있으면 그 값 — 0 으로 채우지 않는다.
+
+    0 은 "0세트를 했다" 가 되고, None 은 "적지 않았다" 다. 그래프가 둘을 다르게
+    읽는다.
+    """
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return left + right
+
+
+def _peak(left: int | None, right: int | None) -> int | None:
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return max(left, right)
 
 
 def _seed_from_fixture(db: Session, member_id: str) -> None:
@@ -728,16 +784,20 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
         # 하루에 같은 종류가 둘일 수 있어(PT 날의 레그프레스·레그컬은 둘 다 근력)
         # 종류로 합친다. 주간 활동 그래프가 하루·종류당 한 칸을 그리므로 나눠 넣을
         # 자리도 없다.
-        for kind, (minutes, calories, name) in _by_type(day.done_exercises).items():
+        for kind, totals in _by_type(day.done_exercises).items():
             db.add(models.ExerciseSession(
                 id=f"{_FIXTURE_ID_PREFIX}ex-{member_id}-{day.iso}-{kind}",
                 user_id=member_id,
                 week_start=day.week_start,
                 day_label=day.day_label,
                 type=kind,
-                name=name,
-                minutes=minutes,
-                calories=calories,
+                name=totals.name,
+                minutes=totals.minutes,
+                calories=totals.calories,
+                # 픽스처가 적어 둔 세트·횟수를 그대로 남긴다 — 없으면 화면이
+                # 분에서 세트를 되짚어 아무도 적은 적 없는 수를 그린다. (#1265)
+                sets=totals.sets,
+                reps=totals.reps,
                 intensity="moderate",
                 # 실제로 운동한 날의 시각을 함께 적는다 (#1264). `created_at` 은
                 # 재시드 시각이라, 이것이 없으면 35주 전 운동도 방금 만든 행으로

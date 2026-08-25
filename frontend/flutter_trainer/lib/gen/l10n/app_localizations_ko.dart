@@ -946,10 +946,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultNoPending => '대기 중인 요청이 없어요';
 
   @override
-  String get consultShowAll => '전체 보기';
+  String get consultFilterAll => '전체';
 
   @override
-  String get consultShowPending => '대기 중만';
+  String consultFilterPendingCount(int count) {
+    return '대기 $count';
+  }
 
   @override
   String get consultLoadMore => '지난 요청 더 보기';
@@ -981,10 +983,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejected => '상담 요청을 거절했어요';
 
   @override
+  String consultScheduleConflict(String name, String time) {
+    return '$name님 $time 일정과 겹쳐요';
+  }
+
+  @override
+  String get consultDecisionNote => '거절 사유';
+
+  @override
   String get consultTargetTrainer => '트레이너 지정';
 
   @override
   String get consultExerciseGoal => '운동 목표';
+
+  @override
+  String get consultHealthPurpose => '건강관리 목적';
 
   @override
   String get consultPreferredTime => '희망 일시';
@@ -1011,7 +1024,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectAction => '거절하기';
 
   @override
-  String get consultStatusApproved => '담당 고객으로 등록됨';
+  String get consultStatusPending => '대기중';
+
+  @override
+  String get consultStatusAccepted => '승인됨';
 
   @override
   String get workoutRecords => '운동 기록';
@@ -1129,11 +1145,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get consultStatusRejected => '거절됨';
-
-  @override
-  String consultStatusRejectedWithNote(String note) {
-    return '거절됨 · $note';
-  }
 
   @override
   String get dateToday => '오늘';
@@ -1474,6 +1485,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldType => '유형';
 
   @override
+  String get schedFieldDate => '날짜';
+
+  @override
   String get schedFieldTime => '시간';
 
   @override
@@ -1507,16 +1521,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedRepeat => '반복';
 
   @override
-  String get schedRepeatNone => '반복 없음';
-
-  @override
   String get schedRepeatWeekly => '매주';
 
   @override
   String get schedRepeatDays => '반복 요일';
-
-  @override
-  String get schedRepeatEnd => '종료';
 
   @override
   String get schedRepeatEndByCount => '횟수';
@@ -1528,6 +1536,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String schedRepeatCount(int count) {
     return '$count회';
   }
+
+  @override
+  String get schedRepeatCountUnit => '회';
 
   @override
   String schedRepeatPreview(int count, String first, String last) {
@@ -1626,6 +1637,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String progSetsValue(int sets) {
     return '$sets세트';
+  }
+
+  @override
+  String progRepsValue(int reps) {
+    return '$reps회';
   }
 
   @override
@@ -1954,6 +1970,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineFieldSets => '세트 수';
 
   @override
+  String get routineFieldReps => '횟수';
+
+  @override
   String get routineFieldWeight => '중량';
 
   @override
@@ -1964,6 +1983,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineUnitSets => '세트';
+
+  @override
+  String get routineUnitReps => '회';
 
   @override
   String get routineUnitKg => 'kg';

@@ -55,20 +55,20 @@ HISTORY_WEEKS = 35
 # 회원 화면은 `코어 스트레칭 10분`, 고객 탭은 `코어 서킷 15분`, 프로그램 탭은
 # `코어 강화 10분` 이었다.
 #
-# 값은 백엔드 시드(`seed_member_data._ROUTINES['user-demo']`)를 따른다. 실 API
+# 값은 백엔드 시드(`seed_member_data._ROUTINES['user-7d4e9a2c5f18']`)를 따른다. 실 API
 # 모드에서 두 앱이 실제로 받는 것이 그 목록이므로, 데모가 다른 값을 보여 주면
 # 모드를 바꿀 때마다 화면이 달라진다.
 #
 # 유형은 화면이 그대로 쓰는 한국어다(유산소·근력·스트레칭). 회원 앱은 `스트레칭`,
 # 트레이너 그래프는 `스트레칭` 이라 부르지만 재는 값은 같다.
 ROUTINES: list[tuple[str, str, int, str, str, str]] = [
-    ("seed-routine-user-demo-0", "저강도 유산소 (걷기)", 30, "유산소",
+    ("seed-routine-user-7d4e9a2c5f18-0", "저강도 유산소 (걷기)", 30, "유산소",
      "혈압 안정에 효과적", "ai"),
-    ("seed-routine-user-demo-1", "하체 스트레칭", 15, "스트레칭",
+    ("seed-routine-user-7d4e9a2c5f18-1", "하체 스트레칭", 15, "스트레칭",
      "혈액순환 개선", "trainer"),
-    ("seed-routine-user-demo-2", "코어 강화", 10, "근력",
+    ("seed-routine-user-7d4e9a2c5f18-2", "코어 강화", 10, "근력",
      "기초대사량 향상", "ai"),
-    ("seed-routine-user-demo-3", "어깨 관절 보호 스트레칭", 8, "스트레칭",
+    ("seed-routine-user-7d4e9a2c5f18-3", "어깨 관절 보호 스트레칭", 8, "스트레칭",
      "PT 피드백 반영 · 오른쪽 어깨 보호", "trainer"),
 ]
 
@@ -174,25 +174,91 @@ MEALS: dict[str, tuple[str, str, str, str, list[str]]] = {
 # 이행률은 여기 항목의 `done` 개수에서 나온다 — 퍼센트를 따로 적으면 화면의
 # "3개 중 2개 완료" 와 숫자가 갈라진다(#754).
 #
-# (이름, 종류, 분, 칼로리). 수요일은 휴식이라 항목이 없다 — 사용자앱의 주간
-# 활동 그래프와 백엔드 시드가 이미 쓰던 리듬이다.
-ROUTINE: dict[int, list[tuple[str, str, int]]] = {
+# (이름, 종류, 분) 또는 근력이면 (이름, 종류, 분, 세트, 횟수). 수요일은 휴식이라
+# 항목이 없다 — 사용자앱의 주간 활동 그래프와 백엔드 시드가 이미 쓰던 리듬이다.
+#
+# 근력에 세트·횟수를 적는 이유: 화면 여러 곳이 근력을 세트로 읽는데(#1262),
+# 픽스처가 분만 들고 있으면 저마다 분에서 되짚어 아무도 적은 적 없는 수를
+# 그린다. 이름에 적힌 `4세트` 를 화면이 다시 세게 두어도 마찬가지다.
+ROUTINE: dict[int, list[tuple]] = {
     0: [("저강도 유산소 (걷기) 30분", "cardio", 30),
-        ("코어 강화 10분", "strength", 10),
+        ("코어 강화 10분", "strength", 10, 3, 15),
         ("하체 스트레칭 5분", "stretching", 5)],
     1: [("저강도 유산소 (걷기) 40분", "cardio", 40),
         ("하체 스트레칭 10분", "stretching", 10)],
     2: [],
     3: [("저강도 유산소 (걷기) 35분", "cardio", 35),
-        ("코어 강화 20분", "strength", 20),
+        ("코어 강화 20분", "strength", 20, 5, 15),
         ("하체 스트레칭 5분", "stretching", 5)],
     4: [("저강도 유산소 (걷기) 45분", "cardio", 45),
         ("어깨 관절 보호 스트레칭 10분", "stretching", 10)],
     5: [("저강도 유산소 (걷기) 25분", "cardio", 25),
-        ("코어 강화 30분", "strength", 30),
+        ("코어 강화 30분", "strength", 30, 8, 12),
         ("하체 스트레칭 15분", "stretching", 15)],
     6: [("저강도 유산소 (걷기) 20분", "cardio", 20),
         ("하체 스트레칭 10분", "stretching", 10)],
+}
+
+# ── 과거의 PT 세션 ─────────────────────────────────────────────────────────
+# {몇 주 전: (요일, 라벨·피드백·메모, 운동들)}
+#
+# 데모는 오늘 하루만 보는 것이 아니다. 지난주·전체로 넘겨도 PT 를 받은 날과 그때
+# 무엇을 몇 세트 했는지, 회원이 뭐라고 했고 트레이너가 뭘 적어 뒀는지가 보여야
+# "충분히 구현된 제품"으로 읽힌다. 예전에는 과거 35주가 전부 `AI 루틴 · 자율 운동`
+# 한 줄이었고 PT 는 오늘 하나뿐이었다. (#1265)
+#
+# 수요일에 둔다 — 격자에서 비어 있는 요일이라 그날의 자율 운동과 겹치지 않는다.
+# 5~6주 간격으로 흩어 두어 어느 기간을 열어도 하나는 걸린다.
+PT_LABEL = "PT 세션 · 트레이너 지도"
+
+PT_SESSIONS: dict[int, tuple[int, str, str, list[tuple]]] = {
+    5: (2, "레그프레스 무게가 붙었어요. 마지막 세트가 힘들었어요.",
+        "하체 근력 향상 확인. 다음 세션 레그프레스 5kg 증량.",
+        [("레그프레스 70kg · 4세트", "strength", 12, 4, 12),
+         ("레그컬 35kg · 3세트", "strength", 9, 3, 12),
+         ("카프레이즈 자체중량 · 3세트", "strength", 6, 3, 20),
+         ("마무리 러닝머신 15분", "cardio", 15),
+         ("하체 스트레칭 10분", "stretching", 10)]),
+    11: (2, "데드리프트 자세를 잡아주셔서 허리가 편했어요.",
+         "데드리프트 힙힌지 안정적. 중량 55kg 유지 후 다음 달 60kg.",
+         [("데드리프트 55kg · 4세트", "strength", 12, 4, 8),
+          ("루마니안 데드리프트 40kg · 3세트", "strength", 9, 3, 10),
+          ("플랭크 45초 · 3세트", "strength", 6, 3, 3),
+          ("마무리 러닝머신 12분", "cardio", 12),
+          ("허리 스트레칭 10분", "stretching", 10)]),
+    17: (2, "어깨가 아직 조금 불편해서 무게를 낮췄어요.",
+         "오른쪽 어깨 가동범위 제한. 숄더프레스 중량 낮추고 밴드 보강 병행.",
+         [("숄더프레스 10kg · 4세트", "strength", 12, 4, 12),
+          ("밴드 외전 · 3세트", "strength", 6, 3, 20),
+          ("인클라인 푸시업 · 3세트", "strength", 9, 3, 12),
+          ("마무리 러닝머신 10분", "cardio", 10),
+          ("어깨 관절 보호 스트레칭 12분", "stretching", 12)]),
+    23: (2, "벤치프레스가 처음이라 어색했지만 재밌었어요 💪",
+         "상체 근력 기초 확인. 벤치프레스 35kg 로 시작해 자세 우선.",
+         [("벤치프레스 35kg · 4세트", "strength", 12, 4, 10),
+          ("체스트프레스 25kg · 3세트", "strength", 9, 3, 12),
+          ("랫풀다운 30kg · 3세트", "strength", 9, 3, 12),
+          ("마무리 러닝머신 15분", "cardio", 15),
+          ("상체 스트레칭 10분", "stretching", 10)]),
+    29: (2, "첫 PT 라 긴장했는데 생각보다 할 만했어요.",
+         "첫 세션. 체력 수준 점검 위주로 가볍게 진행.",
+         [("고블릿 스쿼트 12kg · 3세트", "strength", 9, 3, 12),
+          ("케틀벨 스윙 12kg · 3세트", "strength", 9, 3, 15),
+          ("코어 서킷 · 2세트", "strength", 6, 2, 12),
+          ("마무리 러닝머신 10분", "cardio", 10),
+          ("전신 스트레칭 12분", "stretching", 12)]),
+}
+
+# ── 그 밖의 운동 ───────────────────────────────────────────────────────────
+# {몇 주 전: (요일, (이름, 종류, 분))}
+#
+# `other` 는 목표가 없는 나머지 운동이다. 유형이 넷인데 데모에는 셋뿐이라, 유형별
+# 분해 화면에서 `기타` 칸이 늘 0 이었다 — 그 칸이 실제로 동작하는지 시연에서 볼 수
+# 없었다. 주말에 한 번씩, 서로 다른 주에 둔다. (#1265)
+OTHER_ACTIVITIES: dict[int, tuple[int, tuple[str, str, int]]] = {
+    3: (5, ("북한산 등산 90분", "other", 90)),
+    8: (6, ("탁구 40분", "other", 40)),
+    14: (5, ("자전거 라이딩 60분", "other", 60)),
 }
 
 #: 분당 칼로리. 종류마다 다르다 — 걷기와 스트레칭을 같은 값으로 두면 주간 활동
@@ -355,10 +421,10 @@ RECENT: list[dict] = [
         "trainerNote": "무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.",
         "dayMessage": "점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.",
         "exercises": [
-            ("벤치프레스 40kg · 4세트", "strength", 12, True, 4),
-            ("덤벨 숄더프레스 10kg · 4세트", "strength", 10, True, 4),
-            ("랫풀다운 45kg · 4세트", "strength", 12, True, 4),
-            ("플랭크 60초 · 3세트", "strength", 6, True, 3),
+            ("벤치프레스 40kg · 4세트", "strength", 12, True, 4, 10),
+            ("덤벨 숄더프레스 10kg · 4세트", "strength", 10, True, 4, 12),
+            ("랫풀다운 45kg · 4세트", "strength", 12, True, 4, 12),
+            ("플랭크 60초 · 3세트", "strength", 6, True, 3, 3),
         ],
         "meals": [
             (B_EGG, "seed-diet-breakfast", "08:20",
@@ -378,7 +444,7 @@ RECENT: list[dict] = [
         "dayMessage": "약속이 있어 칼로리와 당류가 목표를 넘은 하루예요. 오늘은 가볍게 시작해 보세요.",
         "exercises": [
             ("저강도 유산소 (걷기) 30분", "cardio", 30, True),
-            ("코어 강화 10분", "strength", 10, True),
+            ("코어 강화 10분", "strength", 10, True, 3, 15),
             ("하체 스트레칭 15분", "stretching", 15, False),
         ],
         "meals": [
@@ -399,7 +465,7 @@ RECENT: list[dict] = [
         "dayMessage": "연어와 현미밥으로 탄단지 균형을 잘 맞췄어요.",
         "exercises": [
             ("저강도 유산소 (걷기) 30분", "cardio", 30, True),
-            ("코어 강화 10분", "strength", 10, True),
+            ("코어 강화 10분", "strength", 10, True, 3, 15),
             ("하체 스트레칭 15분", "stretching", 15, True),
         ],
         "meals": [
@@ -437,7 +503,12 @@ def _meal_entry(
 
 
 def _exercise(
-    name: str, kind: str, minutes: int, done: bool, sets: int | None = None
+    name: str,
+    kind: str,
+    minutes: int,
+    done: bool,
+    sets: int | None = None,
+    reps: int | None = None,
 ) -> dict:
     entry = {
         "name": name,
@@ -446,24 +517,57 @@ def _exercise(
         "calories": round(minutes * KCAL_PER_MIN[kind]),
         "done": done,
     }
-    # 근력만 세트를 갖는다. 유산소·스트레칭은 분이 곧 값이다.
+    # 근력만 세트·횟수를 갖는다. 유산소·스트레칭·기타는 분이 곧 값이다.
     if sets is not None:
         entry["sets"] = sets
+    if reps is not None:
+        entry["reps"] = reps
     return entry
 
 
-def _grid_day(weekday: int, plan: list[str | None], skipped: int) -> dict:
+def _grid_day(
+    weeks_ago: int, weekday: int, plan: list[str | None], skipped: int
+) -> dict:
+    """주 격자의 하루. 그 자리에 PT 가 잡혀 있으면 PT 날이 된다.
+
+    PT 날은 자율 운동 대신 그날 실제로 한 운동이 들어가고, 라벨·피드백·메모가
+    함께 붙는다. 끼니는 그 주의 계획을 그대로 쓴다 — PT 를 받았다고 먹은 것이
+    달라지지는 않는다.
+    """
+    meals = [_meal_entry(meal) for meal in plan if meal is not None]
+    session = PT_SESSIONS.get(weeks_ago)
+    if session is not None and session[0] == weekday:
+        _, feedback, note, routine = session
+        return {
+            "weekday": weekday,
+            "label": PT_LABEL,
+            "pt": True,
+            "clientFeedback": feedback,
+            "trainerNote": note,
+            # PT 날은 트레이너와 함께 끝까지 한다 — 못 한 항목을 두지 않는다.
+            "exercises": [
+                _exercise(item[0], item[1], item[2], True, *item[3:])
+                for item in routine
+            ],
+            "meals": meals,
+        }
+
     routine = ROUTINE[weekday]
     kept = len(routine) - skipped
+    exercises = [
+        _exercise(item[0], item[1], item[2], index < kept, *item[3:])
+        for index, item in enumerate(routine)
+    ]
+    extra = OTHER_ACTIVITIES.get(weeks_ago)
+    if extra is not None and extra[0] == weekday:
+        name, kind, minutes = extra[1]
+        exercises.append(_exercise(name, kind, minutes, True))
     return {
         "weekday": weekday,
         "label": "AI 루틴 · 자율 운동",
         "pt": False,
-        "exercises": [
-            _exercise(name, kind, minutes, index < kept)
-            for index, (name, kind, minutes) in enumerate(routine)
-        ],
-        "meals": [_meal_entry(meal) for meal in plan if meal is not None],
+        "exercises": exercises,
+        "meals": meals,
     }
 
 
@@ -474,12 +578,16 @@ def build() -> dict:
         days = []
         for weekday in range(7):
             plan = plans[weekday]
-            if plan is None:
+            session = PT_SESSIONS.get(index)
+            if plan is None and not (session and session[0] == weekday):
                 # 기록이 아예 없는 날. 루틴도 남기지 않는다 — 식단만 비고 운동만
                 # 남으면 그날 화면이 반쪽으로 읽힌다.
                 days.append({"weekday": weekday, "exercises": [], "meals": []})
                 continue
-            days.append(_grid_day(weekday, plan, skips.get(weekday, 0)))
+            plan = plan or []
+            days.append(
+                _grid_day(index, weekday, plan, skips.get(weekday, 0))
+            )
         weeks.append({"weeksAgo": index, "note": note, "days": days})
 
     recent = []
@@ -509,7 +617,7 @@ def build() -> dict:
         ),
         "member": {
             "name": "김민수",
-            "userAppSeedId": "user-demo",
+            "userAppSeedId": "user-7d4e9a2c5f18",
             "trainerClientId": "seed-client-1",
         },
         "historyWeeks": HISTORY_WEEKS,

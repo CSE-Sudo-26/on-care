@@ -1400,6 +1400,12 @@ abstract class AppLocalizations {
   /// **'e.g. Squat, Treadmill'**
   String get exExerciseNameHint;
 
+  /// No description provided for @exExerciseReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps'**
+  String get exExerciseReps;
+
   /// No description provided for @exExerciseWeight.
   ///
   /// In en, this message translates to:
@@ -1417,6 +1423,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'sets'**
   String get exUnitSets;
+
+  /// No description provided for @exUnitReps.
+  ///
+  /// In en, this message translates to:
+  /// **'reps'**
+  String get exUnitReps;
 
   /// No description provided for @exUnitKg.
   ///
@@ -1447,6 +1459,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{sets} sets'**
   String exSetsCount(int sets);
+
+  /// No description provided for @exRepsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{reps} reps'**
+  String exRepsCount(int reps);
 
   /// No description provided for @exEnterSets.
   ///
@@ -2605,6 +2623,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discuss Later'**
   String get exTimeFlexible;
+
+  /// No description provided for @exTimeRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get exTimeRangeTitle;
+
+  /// No description provided for @exTimeRangeStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get exTimeRangeStartTime;
+
+  /// No description provided for @exTimeRangeEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get exTimeRangeEndTime;
+
+  /// No description provided for @exTimeRangeStartHourStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Start hour'**
+  String get exTimeRangeStartHourStep;
+
+  /// No description provided for @exTimeRangeStartMinuteStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Start minute'**
+  String get exTimeRangeStartMinuteStep;
+
+  /// No description provided for @exTimeRangeEndHourStep.
+  ///
+  /// In en, this message translates to:
+  /// **'End hour'**
+  String get exTimeRangeEndHourStep;
+
+  /// No description provided for @exTimeRangeEndMinuteStep.
+  ///
+  /// In en, this message translates to:
+  /// **'End minute'**
+  String get exTimeRangeEndMinuteStep;
+
+  /// No description provided for @exSlotAm.
+  ///
+  /// In en, this message translates to:
+  /// **'AM'**
+  String get exSlotAm;
+
+  /// No description provided for @exSlotPm.
+  ///
+  /// In en, this message translates to:
+  /// **'PM'**
+  String get exSlotPm;
+
+  /// No description provided for @exTimeRangeInvalidEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End time is earlier than start time'**
+  String get exTimeRangeInvalidEnd;
+
+  /// No description provided for @exTimeRangePrevStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get exTimeRangePrevStep;
+
+  /// No description provided for @exTimeRangeNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get exTimeRangeNextStep;
 
   /// No description provided for @exConsultMessage.
   ///

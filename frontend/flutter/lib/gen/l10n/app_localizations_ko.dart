@@ -718,6 +718,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exExerciseNameHint => '예) 스쿼트, 러닝머신';
 
   @override
+  String get exExerciseReps => '횟수';
+
+  @override
   String get exExerciseWeight => '중량';
 
   @override
@@ -725,6 +728,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exUnitSets => '세트';
+
+  @override
+  String get exUnitReps => '회';
 
   @override
   String get exUnitKg => 'kg';
@@ -741,6 +747,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String exSetsCount(int sets) {
     return '$sets세트';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps회';
   }
 
   @override
@@ -1368,6 +1379,42 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exTimeFlexible => '시간 협의';
+
+  @override
+  String get exTimeRangeTitle => '시간 선택';
+
+  @override
+  String get exTimeRangeStartTime => '시작 시간';
+
+  @override
+  String get exTimeRangeEndTime => '종료 시간';
+
+  @override
+  String get exTimeRangeStartHourStep => '시작 시';
+
+  @override
+  String get exTimeRangeStartMinuteStep => '시작 분';
+
+  @override
+  String get exTimeRangeEndHourStep => '종료 시';
+
+  @override
+  String get exTimeRangeEndMinuteStep => '종료 분';
+
+  @override
+  String get exSlotAm => '오전';
+
+  @override
+  String get exSlotPm => '오후';
+
+  @override
+  String get exTimeRangeInvalidEnd => '종료 시간이 시작 시간보다 빠릅니다';
+
+  @override
+  String get exTimeRangePrevStep => '이전 단계';
+
+  @override
+  String get exTimeRangeNextStep => '다음 단계';
 
   @override
   String get exConsultMessage => '문의 내용';

@@ -614,7 +614,7 @@ void main() {
         final repo = DriftAiRoutineRepository(db);
 
         final minsu = await repo
-            .watchRoutine('user-demo', clientName: '김민수')
+            .watchRoutine('user-7d4e9a2c5f18', clientName: '김민수')
             .first;
 
         expect(minsu.length, 4);

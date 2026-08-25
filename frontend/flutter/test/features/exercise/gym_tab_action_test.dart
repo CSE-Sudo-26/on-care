@@ -153,9 +153,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder myGymCard() => find.byWidgetPredicate(
-    (Widget widget) => widget.runtimeType.toString() == '_MyGymCard',
-  );
+  Finder myGymCard() => find.byKey(const Key('my-gym-info-card'));
 
   Finder reservationPanel() => find.byWidgetPredicate(
     (Widget widget) => widget.runtimeType.toString() == '_ReservationPanel',

@@ -24,7 +24,7 @@ class DriftAiRoutineRepository implements AiRoutineRepository {
 
   /// The AI suggestions for [clientId], in seeded order.
   ///
-  /// Real API clients use backend ids (`user-demo`) while the bundled
+  /// Real API clients use backend ids (`user-7d4e9a2c5f18`) while the bundled
   /// suggestions use demo ids (`seed-client-1`). [clientName] lets a live
   /// roster resolve the corresponding local suggestion set.
   @override

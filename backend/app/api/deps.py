@@ -5,7 +5,7 @@
 그래서 current_user 는 다음 규칙으로 동작합니다:
 
   1) Authorization: Bearer <유효한 토큰> 이 있으면 → 그 사용자
-  2) 없거나 무효하면 → 데모 사용자(user-demo) 로 폴백
+  2) 없거나 무효하면 → 데모 사용자(user-7d4e9a2c5f18) 로 폴백
 
 이렇게 하면 프론트가 USE_MOCK_API=false 로 전환해도(아직 토큰 없음)
 화면이 데모 데이터로 정상 렌더되고, Stage 4 에서 로그인이 붙으면

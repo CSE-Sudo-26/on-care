@@ -9,7 +9,8 @@ class AiRoutineItem {
     required this.type,
     required this.reason,
     this.sets = 0,
-    this.reps = '',
+    this.reps = 0,
+    this.weight = 0,
   });
 
   /// Row id (used to key per-item edits).
@@ -27,9 +28,10 @@ class AiRoutineItem {
   /// Why the AI suggests it (e.g. "혈압 안정에 효과적").
   final String reason;
 
-  /// 근력 운동에서만 쓴다(#1029) — 2단계 프로그램 선택에서 트레이너가 채운
-  /// 값을 그대로 옮긴다. drift `ClientAiRoutines` 행에는 이 값이 없어 기본값
-  /// (0/빈 문자열)으로 읽힌다.
+  /// 근력 운동에서만 쓴다(#1029, #1310) — 2단계 프로그램 선택에서 트레이너가
+  /// 채운 세트·횟수·중량을 그대로 옮긴다. drift `ClientAiRoutines` 행에는 이
+  /// 값이 없어 0 으로 읽힌다.
   final int sets;
-  final String reps;
+  final int reps;
+  final double weight;
 }

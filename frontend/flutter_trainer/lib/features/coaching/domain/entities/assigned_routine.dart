@@ -13,6 +13,7 @@ class AssignedRoutine {
     this.date,
     this.intensity = 'moderate',
     this.sets,
+    this.reps,
     this.weight,
   });
 
@@ -36,8 +37,10 @@ class AssignedRoutine {
   /// 없어 늘 '보통'으로 계산됐다. (#1276)
   final String intensity;
 
-  /// 근력 루틴의 세트 수와 중량(kg). 다른 유형은 null 이다. (#1276)
+  /// 근력 루틴의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 null 이다.
+  /// (#1276, #1310)
   final int? sets;
+  final int? reps;
   final double? weight;
 
   /// Why this routine — surfaced to the member.

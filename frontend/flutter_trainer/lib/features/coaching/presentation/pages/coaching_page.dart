@@ -727,6 +727,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                           reason: l.coachReviewed,
                           sets: exercises[index].sets,
                           reps: exercises[index].reps,
+                          weight: exercises[index].weight,
                         ),
                     ];
                   });

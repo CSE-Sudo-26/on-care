@@ -10,6 +10,7 @@ import 'package:oncare/features/auth/presentation/controllers/session_controller
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/connected_gym_card.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
@@ -893,12 +894,11 @@ class _TrainerGymSection extends ConsumerWidget {
               _GymSectionError(onRetry: () => ref.invalidate(myGymProvider)),
           data: (Gym? gym) => gym == null
               ? _GymSectionEmpty(onFind: onFindGym)
-              : _GymSummaryCard(
+              : ConnectedGymCard(
                   gym: gym,
                   trainer: trainer,
-                  onOpenGym: () =>
-                      context.push(AppRoutes.gymDetailPath(gym.id)),
-                  onOpenTrainer: trainer == null
+                  onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onTrainerDetail: trainer == null
                       ? null
                       : () => context.push(
                           AppRoutes.trainerDetailPath(trainer.id),
@@ -906,8 +906,9 @@ class _TrainerGymSection extends ConsumerWidget {
                   // 헬스장은 이미 연결돼 있고 트레이너만 없는 상태다. 헬스장을
                   // 찾는 화면이 아니라 **그 헬스장의 소속 트레이너**로 보낸다 —
                   // 예전에는 라벨이 '트레이너 찾기'인데 헬스장 탭으로 갔다(#793).
-                  onFindTrainer: () =>
-                      context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onFindTrainer: () => context.push(
+                    AppRoutes.gymDetailPath(gym.id),
+                  ),
                 ),
         ),
       ],
@@ -917,6 +918,8 @@ class _TrainerGymSection extends ConsumerWidget {
 
 /// 연결된 헬스장과 담당 트레이너를 각각 한 줄로 보여준다. 두 연결은 따로
 /// 관리된다 — 트레이너만 떼거나, 헬스장을 떼면서 함께 정리하거나.
+// TODO(#1313): remove after the shared card rollout is verified.
+// ignore: unused_element
 class _GymSummaryCard extends StatelessWidget {
   const _GymSummaryCard({
     required this.gym,
