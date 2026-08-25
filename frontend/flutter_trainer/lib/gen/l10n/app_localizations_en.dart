@@ -1426,6 +1426,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartNoRecord => 'Not logged';
 
   @override
+  String get chartNotYet => 'Not yet';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '$amount $unit over goal';
+  }
+
+  @override
   String get reportsSendStateSent => 'Sent';
 
   @override

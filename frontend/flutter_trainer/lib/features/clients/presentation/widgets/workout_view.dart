@@ -63,7 +63,9 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
     // 있어, /history 가 실패해도 운동현황은 그대로 보인다.
     final children = <Widget>[
       ClientPeriodSection(
-        icon: Icons.monitor_heart_outlined,
+        // 회원 앱 `운동 현황` 제목이 쓰는 것과 같은 아이콘이다 (회원 앱 #1126)
+        // — 같은 섹션을 두 화면이 다른 그림으로 가리키면 안 된다.
+        icon: Icons.fitness_center,
         title: l.clientTrendTitle,
         period: _period,
         onChanged: (ClientPeriod p) => setState(() => _period = p),
