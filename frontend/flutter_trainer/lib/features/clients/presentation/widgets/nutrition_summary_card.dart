@@ -232,7 +232,8 @@ class NutritionSummaryCard extends StatelessWidget {
                   children: <Widget>[
                     for (final _Item m in minerals) ...<Widget>[
                       _MineralItem(item: m),
-                      if (m != minerals.last) const SizedBox(height: AppSpacing.md),
+                      if (m != minerals.last)
+                        const SizedBox(height: AppSpacing.md),
                     ],
                   ],
                 );

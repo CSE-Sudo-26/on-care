@@ -257,6 +257,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashActivityTabDiet => 'Diet';
 
   @override
+  String get dashActivityTabClient => 'Client';
+
+  @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
 
   @override
@@ -351,7 +354,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashAiSummaryTitle => 'AI diagnosis';
+  String get dashAiSummaryTitle => 'Activity feedback';
 
   @override
   String get dashAiNoClients =>
@@ -1432,6 +1435,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartNoRecord => 'Not logged';
 
   @override
+  String get chartNotYet => 'Not yet';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '$amount $unit over goal';
+  }
+
+  @override
   String get reportsSendStateSent => 'Sent';
 
   @override
@@ -1849,21 +1860,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get myNotifNewMessageHint =>
       'A sidebar badge appears when a client messages you';
-
-  @override
-  String get myNotifSessionReminder => 'Session reminders';
-
-  @override
-  String get myNotifSessionReminderHint =>
-      'Upcoming sessions are highlighted on the dashboard';
-
-  @override
-  String get myReminderLead => 'Remind me';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes min before';
-  }
 
   @override
   String get myAccount => 'Account';

@@ -3,7 +3,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
-/// A kind of bullet on the "AI 진단" card's 트레이너 활동 피드백 list.
+/// A kind of bullet on the "활동 피드백" card's 트레이너 활동 피드백 list.
 enum ActivityFeedbackKind {
   /// 개인 운동 이행률/이탈 위험 감지에 따른 난이도 조정 안내.
   difficultyReview,
@@ -43,16 +43,18 @@ enum ActivityFeedbackKind {
   };
 
   /// The destination tab's own name — the CTA is a short "프로그램 >" link,
-  /// not a full sentence like "AI 루틴 만들러 가기". Each kind's fix lives
-  /// on a different tab (프로그램, 메시지, 식단), so the label names that tab.
+  /// not a full sentence like "AI 루틴 만들러 가기". 이행률/이탈 위험은
+  /// 각각 프로그램·메시지라는 독립된 탭으로 가서 그 탭 이름을 그대로
+  /// 쓰지만, 식단 피드백 미완료는 고객 상세(식단 섹션)로 가므로 "식단"이
+  /// 아니라 "고객"이 실제 목적지다.
   String tabLabel(AppLocalizations l) => switch (this) {
     ActivityFeedbackKind.difficultyReview => l.dashActivityTabProgram,
     ActivityFeedbackKind.inactiveSevenDays => l.dashActivityTabChat,
-    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityTabDiet,
+    ActivityFeedbackKind.dietFeedbackPending => l.dashActivityTabClient,
   };
 }
 
-/// One bullet on the "AI 진단" card's 트레이너 활동 피드백 list.
+/// One bullet on the "활동 피드백" card's 트레이너 활동 피드백 list.
 class ActivityFeedbackItem {
   /// Creates a feedback bullet.
   const ActivityFeedbackItem({
@@ -76,7 +78,7 @@ class ActivityFeedbackItem {
   int get count => clientNames.length;
 }
 
-/// Builds the "AI 진단" card's activity-feedback bullets from the same
+/// Builds the "활동 피드백" card's activity-feedback bullets from the same
 /// per-client signals [buildChurnRisk] uses — this list is deliberately
 /// wider than 이탈 위험 (it surfaces every client with *any* one matching
 /// signal, not only the ones that cross the 이탈 위험 threshold).

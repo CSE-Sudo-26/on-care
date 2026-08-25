@@ -382,29 +382,47 @@ class _ConversationTile extends StatelessWidget {
                             ),
                           ),
                           if (unread > 0)
-                            Container(
-                              key: ValueKey<String>(
-                                'messages-unread-${client.id}',
-                              ),
-                              margin: const EdgeInsets.only(
+                            Padding(
+                              padding: const EdgeInsets.only(
                                 left: AppSpacing.xs,
                               ),
-                              constraints: const BoxConstraints(minWidth: 20),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.all(AppRadius.pill),
-                              ),
-                              child: Text(
-                                '$unread',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
+                              // 원 자체(정확히 20x20)와 앞 여백을 한 Container에
+                              // 같이 두면 margin까지 포함해 측정돼 타원처럼
+                              // 잡히기 쉽다 — 여백은 Padding으로 밖에 둔다.
+                              child: Container(
+                                key: ValueKey<String>(
+                                  'messages-unread-${client.id}',
+                                ),
+                                width: 20,
+                                height: 20,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                // 앱 전체 글자 배율(#995, 1.10배)이 고정
+                                // fontSize에도 곱해져, Text만 두면 원 높이를
+                                // 넘겨 위아래로 삐져나온다 — Container는
+                                // 자식을 자르지 않으니 그 삐져나온 부분이
+                                // 세로로 긴 타원처럼 보였다. FittedBox로
+                                // 원 안에 들어갈 만큼 항상 줄인다.
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      unread > 99 ? '99+' : '$unread',
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

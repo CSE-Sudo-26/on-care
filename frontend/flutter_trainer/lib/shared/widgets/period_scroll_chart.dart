@@ -60,6 +60,12 @@ class PeriodChartSelection extends ChangeNotifier {
   }
 }
 
+/// 축 라벨 한 칸의 폭. 가장 긴 날짜(`12/31`)가 글자 배율을 올려도 들어가도록
+/// 넉넉히 잡는다 — 넘치면 잘리지는 않지만 옆 라벨과 가까워진다. 라벨끼리는
+/// [PeriodScrollChart.labelBuilder] 가 빈 문자열로 띄워 두는 간격만큼 떨어져
+/// 있어서(30칸 화면에서 열네 칸), 이 폭이 서로 겹칠 일은 없다. (회원 앱 #1240)
+const double _axisLabelWidth = 52;
+
 /// `전체` 기간 그래프의 뼈대 — 가로 스크롤 + 날짜 선택. (#1018)
 ///
 /// 예전에는 한 달치를 한 화면에 욱여넣어 막대가 실처럼 얇았고, 그 앞의 기록은
@@ -85,6 +91,9 @@ class PeriodScrollChart extends StatefulWidget {
     this.goalLabel,
     this.goalLabelStyle = ChartGoalAxis.defaultStyle,
     this.daysPerScreen = 30,
+    this.topGap = 0,
+    this.background,
+    this.boldSelectedLabel = false,
   });
 
   /// 칸 개수(= 날짜 수). 0 이면 아무것도 그리지 않는다.
@@ -121,6 +130,19 @@ class PeriodScrollChart extends StatefulWidget {
 
   /// 한 화면에 보일 날 수.
   final int daysPerScreen;
+
+  /// 막대 **뒤**에 까는 그림 — 눈금선·달 경계처럼 데이터가 아닌 것. 스크롤
+  /// 안쪽에 깔리므로 옆으로 밀면 함께 흐른다. null 이면 아무것도 깔지 않는다.
+  final CustomPainter? background;
+
+  /// 고른 칸의 축 라벨을 진하게 적을지. 운동 `전체` 그래프가 쓴다 — 한 칸이
+  /// 한 주라, 어느 주를 고른 것인지 라벨에서도 읽혀야 한다.
+  final bool boldSelectedLabel;
+
+  /// 그래프 위에 얹을 빈 칸. 고른 날의 세로선이 이 칸까지 올라와 **위의 머리
+  /// 카드에 닿는다** — 선이 중간에서 끊기면 그 카드가 어느 막대의 것인지
+  /// 말해 주지 못한다. (회원 앱 #1123)
+  final double topGap;
 
   @override
   State<PeriodScrollChart> createState() => _PeriodScrollChartState();
@@ -177,6 +199,7 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
       builder: (BuildContext context, BoxConstraints constraints) {
         final double viewport = constraints.maxWidth;
         final double slot = viewport / widget.daysPerScreen;
+        final double contentWidth = math.max(slot * widget.count, viewport);
         final bool changed = slot != _slot || viewport != _viewport;
         _slot = slot;
         _viewport = viewport;
@@ -197,63 +220,101 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
               ? const NeverScrollableScrollPhysics()
               : const BouncingScrollPhysics(),
           child: SizedBox(
-            width: math.max(slot * widget.count, viewport),
+            width: contentWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 SizedBox(
-                  height: widget.height,
+                  height: widget.height + widget.topGap,
                   child: Stack(
                     children: <Widget>[
+                      // 눈금선과 달 경계는 막대보다도 더 뒤에 깔린다 — 데이터가
+                      // 아니라 데이터를 읽을 자를 그린 것이다.
+                      if (widget.background != null)
+                        Positioned.fill(
+                          top: widget.topGap,
+                          child: CustomPaint(painter: widget.background),
+                        ),
+                      // 목표선은 막대 **뒤**에 깔린다 — 회원 앱과 같은 순서다.
+                      // 목표치 라벨은 스크롤 바깥 왼쪽 칸([ChartGoalAxis])이
+                      // 들고 있어, 막대가 덮을 자리에 있지 않다. (#1071)
+                      if (widget.goalBottom != null)
+                        GoalLineOverlay(bottom: widget.goalBottom!),
                       if (widget.selectedIndex != null)
                         _SelectionLine(
                           left: slot * widget.selectedIndex! + slot / 2,
-                          height: widget.height,
+                          height: widget.height + widget.topGap,
                         ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: <Widget>[
-                          for (int i = 0; i < widget.count; i++)
-                            SizedBox(
-                              width: slot,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => widget.onSelected?.call(
-                                  widget.selectedIndex == i ? null : i,
+                      // 막대는 빈 칸(topGap) **아래에서만** 선다 — 그 빈 칸은
+                      // 고른 날의 세로선이 머리 카드까지 올라갈 자리다.
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: widget.topGap),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: <Widget>[
+                              for (int i = 0; i < widget.count; i++)
+                                SizedBox(
+                                  width: slot,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () => widget.onSelected?.call(
+                                      widget.selectedIndex == i ? null : i,
+                                    ),
+                                    child: widget.barBuilder(context, i),
+                                  ),
                                 ),
-                                child: widget.barBuilder(context, i),
-                              ),
-                            ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
-                      // 목표선은 막대 **위**에 얹는다. 뒤에 깔면 목표에 가까운
-                      // 막대가 `목표 N` 라벨을 덮어, 정작 견줄 기준이 안 보인다.
-                      // 점선이라 데이터와 경쟁하지도 않는다.
-                      if (widget.goalBottom != null)
-                        GoalLineOverlay(bottom: widget.goalBottom!),
                     ],
                   ),
                 ),
                 const SizedBox(height: 6),
+                // 라벨은 칸보다 넓다 — 한 화면에 30칸이면 칸은 10px 남짓인데
+                // `12/31` 은 그 두 배가 넘는다. 칸 안에 앉히면 글자가 칸
+                // 경계에서 잘려 `666`, `77` 처럼 읽혔다(회원 앱 #1240). 칸
+                // 가운데를 기준으로 라벨에 제 폭을 주어 얹는다.
                 SizedBox(
                   height: 14,
-                  child: Row(
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: <Widget>[
                       for (int i = 0; i < widget.count; i++)
-                        SizedBox(
-                          width: slot,
-                          child: Center(
+                        if (widget.labelBuilder(i).isNotEmpty)
+                          Positioned(
+                            // 양 끝 라벨은 그래프 폭 안으로 당긴다 — 밖으로
+                            // 나간 만큼은 스크롤 뷰가 잘라 버린다.
+                            left: (slot * i + slot / 2 - _axisLabelWidth / 2)
+                                .clamp(
+                                  0.0,
+                                  math.max(contentWidth - _axisLabelWidth, 0.0),
+                                ),
+                            width: _axisLabelWidth,
                             child: Text(
                               widget.labelBuilder(i),
                               maxLines: 1,
-                              style: const TextStyle(
+                              // 줄바꿈도 줄임표도 두지 않는다. 글자가 제 폭을
+                              // 넘기면 칸 가운데를 기준으로 좌우로 넘쳐 나가고,
+                              // 그래야 날짜가 온전히 읽힌다.
+                              softWrap: false,
+                              overflow: TextOverflow.visible,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.mutedForeground,
+                                fontWeight: widget.boldSelectedLabel
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color:
+                                    widget.boldSelectedLabel &&
+                                        widget.selectedIndex == i
+                                    ? AppColors.foreground
+                                    : AppColors.mutedForeground,
                               ),
                             ),
                           ),
-                        ),
                     ],
                   ),
                 ),

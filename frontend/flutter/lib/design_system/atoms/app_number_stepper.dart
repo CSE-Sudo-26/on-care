@@ -111,7 +111,7 @@ class _AppNumberStepperState extends State<AppNumberStepper> {
     final bool canIncrease = widget.value < widget.max;
     return Row(
       children: <Widget>[
-        _RoundButton(
+        _StepButton(
           key: const Key('numberStepperDecrement'),
           icon: Icons.remove,
           onTap: canDecrease ? () => _bump(-widget.step) : null,
@@ -169,7 +169,7 @@ class _AppNumberStepperState extends State<AppNumberStepper> {
             ),
           ),
         ),
-        _RoundButton(
+        _StepButton(
           key: const Key('numberStepperIncrement'),
           icon: Icons.add,
           onTap: canIncrease ? () => _bump(widget.step) : null,
@@ -179,35 +179,27 @@ class _AppNumberStepperState extends State<AppNumberStepper> {
   }
 }
 
-class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon, required this.onTap, super.key});
+/// −/+ 기호만 있는 버튼. 원형 배경도 테두리도 두르지 않는다 — 입력 칸 하나에
+/// 테두리가 셋(칸 + 원 둘)이면 어느 쪽이 값인지 눈이 헷갈린다. 대신 누르는
+/// 자리는 44 x 44 로 남겨 손가락이 닿는 넓이는 그대로다. (#1404)
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.onTap, super.key});
 
   final IconData icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final bool on = onTap != null;
-    return Material(
-      color: on ? FigmaColors.softBlue : Colors.white,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: on ? FigmaColors.primary : FigmaColors.hairline,
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: on ? FigmaColors.primary : AppColors.mutedForeground,
-          ),
+    return InkResponse(
+      onTap: onTap,
+      radius: 24,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Icon(
+          icon,
+          size: 24,
+          color: onTap != null ? FigmaColors.primary : AppColors.mutedForeground,
         ),
       ),
     );

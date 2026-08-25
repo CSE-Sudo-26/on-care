@@ -79,6 +79,7 @@
   "dashActivityTabProgram": "프로그램",
   "dashActivityTabChat": "메시지",
   "dashActivityTabDiet": "식단",
+  "dashActivityTabClient": "고객",
   "dashLoadFailed": "대시보드를 불러오지 못했어요",
   "dashTodayReservations": "오늘 예약",
   "dashUnitCount": "건",
@@ -106,7 +107,7 @@
   "dashActivityDietFeedbackTitle": "식단 피드백 미완료",
   "dashActivityDietFeedbackDesc": "{names} 고객이 나트륨·당류 초과 등 식단 주의 신호가 있는데 최근 7일간 피드백을 받지 못했어요. 식단 코멘트를 남겨 확인했다는 걸 알려 주세요.",
   "dashActivityMoreClients": "{shown} 외 {count}명",
-  "dashAiSummaryTitle": "AI 진단",
+  "dashAiSummaryTitle": "활동 피드백",
   "dashAiNoClients": "아직 담당 고객이 없어요. 고객을 등록하면 식단·운동 데이터를 모아 코칭 포인트를 짚어 드릴게요.",
   "dashAiAllOnTrack": "담당 고객 {total}명 모두 목표 범위 안이에요. 지금 강도를 유지하면서 다음 주 목표를 올려 보세요.",
   "dashAiLoading": "식단·운동·최근 대화를 종합하고 있어요…",
@@ -439,6 +440,14 @@
   "workoutDoneOfTotal": "{total}개 중 {done}개 완료",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "기록 없음",
+  "chartNotYet": "아직 오지 않은 날",
+  "chartOverGoal": "목표 초과 +{amount} {unit}",
+  "@chartOverGoal": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  },
   "reportsSendStateSent": "전송됨",
   "reportsSendStateSending": "전송 중…",
   "reportsShare": "공유",
@@ -566,10 +575,6 @@
   "myNotifications": "알림",
   "myNotifNewMessage": "새 메시지 알림",
   "myNotifNewMessageHint": "고객이 메시지를 보내면 사이드바 뱃지로 알려드려요",
-  "myNotifSessionReminder": "수업 시작 전 알림",
-  "myNotifSessionReminderHint": "예정된 세션이 다가오면 대시보드에서 강조해요",
-  "myReminderLead": "알림 시점",
-  "myMinutesBefore": "{minutes}분 전",
   "myAccount": "계정",
   "myChangePassword": "비밀번호 변경",
   "myChangePasswordHint": "현재 비밀번호를 확인한 뒤 교체해요",

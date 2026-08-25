@@ -9,12 +9,16 @@ import 'package:oncare_trainer/features/dashboard/domain/activity_feedback.dart'
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/oni_avatar.dart';
 
-/// "AI 진단" — 트레이너 활동 피드백 3가지(이행률·이탈 위험 감지, 7일 이상
-/// 활동 저조, 식단 피드백 미완료)를 풀어서 보여 주는 카드.
+/// "활동 피드백" — 트레이너 활동 피드백 3가지(이행률·이탈 위험 감지, 7일
+/// 이상 활동 저조, 식단 피드백 미완료)를 풀어서 보여 주는 카드.
 ///
 /// 이전에는 규칙 기반 코칭 요약(고객별 상태·근거·운동 중심)을 함께 그렸는데,
-/// "AI 진단" 이라는 이름에 맞춰 활동 피드백 하나로 좁혔다 — 두 정보가 한
-/// 카드에 있으면 어느 쪽을 먼저 읽어야 할지 애매했다.
+/// 활동 피드백 하나로 좁혔다 — 두 정보가 한 카드에 있으면 어느 쪽을 먼저
+/// 읽어야 할지 애매했다.
+///
+/// 제목은 "AI 진단"이었지만 실제로는 AI(LLM) 를 부르지 않고 클라이언트에서
+/// 규칙(`buildActivityFeedback`/`computeChurnSignals`)으로만 계산한다 —
+/// 이름이 실제로 하는 일과 달라 "활동 피드백"으로 고쳤다.
 class AiSummaryCard extends StatelessWidget {
   /// Creates the card.
   const AiSummaryCard({super.key, required this.activityFeedback});

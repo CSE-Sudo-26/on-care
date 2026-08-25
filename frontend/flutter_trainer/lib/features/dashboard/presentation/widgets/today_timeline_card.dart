@@ -6,7 +6,6 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_chips.dart';
@@ -36,10 +35,6 @@ class TodayTimelineCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final schedule = ref.watch(todayScheduleProvider);
-    // 설정의 '수업 시작 전 알림' 이 이 강조를 켜고 끈다. 켜져 있으면 시작이
-    // 알림 시점 안으로 들어온 세션을 눈에 띄게 그린다 — 설정 화면이 "대시보드에서
-    // 강조해요" 라고 적어 두고 실제로는 아무 일도 하지 않았다(#817).
-    final settings = ref.watch(trainerSettingsProvider);
     final clients =
         ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
 
@@ -92,9 +87,6 @@ class TodayTimelineCard extends ConsumerWidget {
                   // 로스터에 없는 고객(상담으로 잡힌 가망 고객)도 이름만
                   // 부른다 — 스케줄 탭과 같은 표기다(#1012).
                   fallbackName: session.clientName,
-                  imminent:
-                      settings.sessionReminders &&
-                      startsWithin(session, settings.reminderLeadMinutes),
                   onTap: () => context.go(
                     AppRoutes.scheduleAt(
                       date: session.date,
@@ -217,7 +209,6 @@ class _Row extends StatelessWidget {
     required this.session,
     required this.client,
     required this.fallbackName,
-    required this.imminent,
     required this.onTap,
   });
 
@@ -226,9 +217,6 @@ class _Row extends StatelessWidget {
 
   /// 로스터에서 못 찾은 고객을 부를 이름.
   final String fallbackName;
-
-  /// 시작이 알림 시점 안으로 들어온 세션인가. (#817)
-  final bool imminent;
 
   final VoidCallback onTap;
 
@@ -286,13 +274,7 @@ class _Row extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: const BorderRadius.all(AppRadius.sm),
-      child: Container(
-        decoration: imminent
-            ? const BoxDecoration(
-                color: AppColors.accentSurface,
-                borderRadius: BorderRadius.all(AppRadius.sm),
-              )
-            : null,
+      child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
         // 오른쪽 칸(완료/예정 + 상태 알약)이 둘로 쌓이면 왼쪽보다 키가 커진다
         // — Row 기본값인 가운데 정렬이라 시간·점도 그 가운데로 맞춰진다.
