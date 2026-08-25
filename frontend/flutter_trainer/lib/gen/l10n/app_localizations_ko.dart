@@ -3329,6 +3329,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsAiNextWeek => '다음 주 코칭 제안';
 
   @override
+  String reportsAiMoreWatchpoints(int count) {
+    return '외 $count건은 리포트 본문에서 확인하세요.';
+  }
+
+  @override
   String get reportsActionSodium => '국물·절임 반찬을 절반만 남기도록 안내해 주세요.';
 
   @override
