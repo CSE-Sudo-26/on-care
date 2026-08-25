@@ -2024,7 +2024,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String coachRoutineMyNote(String note) {
-    return '내 메모: $note';
+    return '내 피드백: $note';
   }
 
   @override
@@ -2034,12 +2034,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachRoutineCompleteTitle => '루틴 수행 완료';
-
-  @override
-  String get coachRoutineMinutesLabel => '실제 수행 시간(분)';
-
-  @override
-  String get coachRoutineMinutesError => '1~600분 사이로 입력해 주세요';
 
   @override
   String get coachRoutineIntensity => '수행 강도';
@@ -2054,7 +2048,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachIntensityHigh => '높음';
 
   @override
-  String get coachRoutineNoteLabel => '메모(선택)';
+  String get coachRoutineNoteLabel => '피드백(선택)';
 
   @override
   String get coachRoutineNoteHint => '힘들었던 점이나 몸 상태를 남겨 보세요';
