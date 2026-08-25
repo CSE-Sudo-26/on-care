@@ -180,6 +180,24 @@ class _TrainerDetails extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 22),
+            // 추천 목록에서 골라 들어온 흐름이라, **왜 추천됐는지**가 소개보다
+            // 먼저다(#1445). 소개가 없는 트레이너도 이 박스는 늘 있어 소속·
+            // 상담 CTA 와의 순서가 흔들리지 않는다.
+            _DetailSection(
+              key: const Key('trainer-detail-reason'),
+              icon: Icons.auto_awesome_outlined,
+              title: l.exRecommendationReason,
+              child: Text(
+                trainer.reason ?? l.exTrainerRecommendationReason,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             // 트레이너 앱 프로필(소개·경력·자격증)과 같은 값을 보여준다.
             if (hasProfile) ...<Widget>[
               _DetailSection(
@@ -252,7 +270,6 @@ class _TrainerDetails extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
             ] else if (gym != null) ...<Widget>[
               // 소개할 내용이 아예 없으면 합칠 박스도 없다 — 소속만은 예전처럼
               // 따로 보여준다.
@@ -261,21 +278,7 @@ class _TrainerDetails extends ConsumerWidget {
                 title: l.exTrainerAffiliation,
                 child: _AffiliatedGymRow(gym: gym!),
               ),
-              const SizedBox(height: 12),
             ],
-            _DetailSection(
-              icon: Icons.auto_awesome_outlined,
-              title: l.exRecommendationReason,
-              child: Text(
-                trainer.reason ?? l.exTrainerRecommendationReason,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.primary,
-                ),
-              ),
-            ),
             if (isMyTrainer) ...<Widget>[
               const SizedBox(height: 24),
               // 목록 카드에서 삭제를 여기로 옮겼다 (#1057).
@@ -409,6 +412,7 @@ class _AffiliatedGymRow extends StatelessWidget {
 
 class _DetailSection extends StatelessWidget {
   const _DetailSection({
+    super.key,
     required this.icon,
     required this.title,
     required this.child,
