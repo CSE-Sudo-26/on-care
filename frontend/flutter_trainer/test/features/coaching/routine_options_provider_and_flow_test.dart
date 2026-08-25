@@ -305,7 +305,7 @@ void main() {
     });
 
     testWidgets('자연어 요청은 trainer_note 로 그대로 나가고, 직접 작성 경로는 '
-        '`직접 작성하기` 로 불린다', (tester) async {
+        '`운동 직접 추가하기` 로 불린다', (tester) async {
       final repo = await pumpFlow(tester);
 
       const prompt = '하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘';
@@ -319,7 +319,7 @@ void main() {
       // 지어낸 새 필드가 아니라 백엔드가 실제로 읽는 자유 텍스트로 나간다.
       expect(repo.lastTrainerNote, prompt);
 
-      expect(find.text('직접 작성하기'), findsOneWidget);
+      expect(find.text('운동 직접 추가하기'), findsOneWidget);
       expect(find.text('운동 직접 등록'), findsNothing);
     });
 
@@ -544,12 +544,35 @@ void main() {
 
     // 조건 설정 단계에는 자연어 요청 칸이 있고(#1028), 예시 문구는 입력 전
     // 참고용이라 흐린 placeholder 로 남는다.
-    expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
+    expect(
+      find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'),
+      findsOneWidget,
+    );
+    // 분석 제목과 생성 버튼의 AI 아이콘은 유지하되 요청 제목 아이콘만 뺀다.
+    expect(find.byIcon(Icons.auto_awesome), findsNWidgets(2));
+    expect(find.text('요청 내용'), findsOneWidget);
+    final promptBlurb = tester.widget<Text>(
+      find.textContaining('요청은 고객 데이터와 함께 AI에 전달돼요'),
+    );
+    expect(promptBlurb.maxLines, 1);
+    expect(promptBlurb.overflow, TextOverflow.ellipsis);
     final promptField = find.byKey(
       const ValueKey<String>('ai-natural-language-prompt'),
     );
     final initialPrompt = tester.widget<TextField>(promptField);
     expect(initialPrompt.decoration?.hintStyle?.color, AppColors.mutedForeground);
+    expect(initialPrompt.decoration?.fillColor, AppColors.card);
+    expect(
+      (initialPrompt.decoration?.enabledBorder! as OutlineInputBorder)
+          .borderSide
+          .color,
+      AppColors.borderStrong,
+    );
+    expect(initialPrompt.buildCounter, isNotNull);
+    expect(
+      find.byKey(const ValueKey<String>('ai-prompt-counter')),
+      findsOneWidget,
+    );
     // 서버 상한(`trainer_note`, 500자)을 화면에서 먼저 막는다.
     expect(initialPrompt.maxLength, 500);
     expect(
@@ -580,9 +603,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // A/B + the existing recommendation are shown together. The layout
-    // adapts — side by side when the column is wide enough, a scrolling
-    // rail when it isn't — so this asserts the three options themselves
-    // rather than which of the two containers rendered them.
+    // adapts — side by side when the column is wide enough, stacked
+    // vertically when it isn't — so this asserts the three options
+    // themselves rather than which of the two layouts rendered them.
     expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
     expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
     expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
