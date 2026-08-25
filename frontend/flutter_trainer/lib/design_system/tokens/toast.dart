@@ -14,7 +14,10 @@ import 'package:oncare_trainer/design_system/tokens/typography.dart';
 class AppToastStyle {
   AppToastStyle._();
 
-  static const Color background = AppColors.foreground;
+  /// 트레이너 앱의 기존 `SnackBarThemeData.backgroundColor`와 같은 남색이다
+  /// — 위치만 위로 옮기는 것이지, 알림의 브랜드 색까지 검정으로 바꾸는 게
+  /// 아니다.
+  static const Color background = AppColors.secondary;
 
   static const Color foreground = Color(0xFFFFFFFF);
 
