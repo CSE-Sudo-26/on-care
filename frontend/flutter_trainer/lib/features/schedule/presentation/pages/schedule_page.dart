@@ -9,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -25,6 +26,7 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
@@ -141,7 +143,14 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(AppSpacing.lg),
+        // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+        // 대화상자 위로 겹쳐 뜰 수 있다.
+        insetPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppToastStyle.dialogTopClearance,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: 560,
@@ -290,12 +299,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ),
     );
     if (ok != true || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(scheduleRepositoryProvider).deleteSession(s.id);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.schedDeleteFailed)));
+      showAppToast(context, l.schedDeleteFailed, kind: AppToastKind.error);
     }
   }
 
@@ -335,7 +343,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ),
     );
     if (ok != true || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(scheduleRepositoryProvider)
@@ -344,7 +351,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // A DB or programJson-decode failure must not escape to the UI —
       // the session stays 예정 and the trainer is told (review PR 237).
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.schedCompleteFailed)));
+      showAppToast(context, l.schedCompleteFailed, kind: AppToastKind.error);
     }
   }
 
@@ -359,7 +366,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       builder: (context) => CancelSessionDialog(session: s),
     );
     if (result == null || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref
@@ -367,7 +373,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           .cancelSession(s.id, source: result.source, reason: result.reason);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.schedCancelFailed)));
+      showAppToast(context, l.schedCancelFailed, kind: AppToastKind.error);
     }
   }
 
@@ -403,12 +409,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ),
     );
     if (ok != true || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(scheduleRepositoryProvider).markNoShow(s.id);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.schedNoShowFailed)));
+      showAppToast(context, l.schedNoShowFailed, kind: AppToastKind.error);
     }
   }
 
@@ -418,7 +423,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// 않는다. 성공하면 세션 행에 남아, 화면이 '전송됨' 을 사실대로 말한다.
   Future<void> _sendProgram(ScheduleSession s) async {
     if (_sendingProgramId != null) return;
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     setState(() => _sendingProgramId = s.id);
     try {
@@ -430,12 +434,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           );
       if (!mounted) return;
       _sendRequestIds.remove(s.id); // 다음 전송은 새 시도다.
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.schedSentTo(s.clientName))),
-      );
+      showAppToast(context, l.schedSentTo(s.clientName), kind: AppToastKind.success);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
+      showAppToast(context, l.coachSendFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _sendingProgramId = null);
     }

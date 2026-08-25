@@ -211,6 +211,7 @@ void main() {
         isFalse,
         reason: '채워진 버튼이 아니라 테두리만 있는 보조 버튼이다',
       );
+      expect(dismiss.tone, AppColors.subtleForeground);
       // 카드 안만 본다. 프로그램 탭 전체를 뒤지면 다른 영역에 `TextButton`
       // 하나만 생겨도, 이 카드의 거절 버튼이 멀쩡한데 테스트가 깨진다.
       expect(
@@ -266,6 +267,15 @@ void main() {
     expect(find.text('최근 PT 피드백 반영'), findsOneWidget);
     // 검토 필요 건수.
     expect(find.text('검토 필요 2'), findsOneWidget);
+
+    final surface = tester.widget<Container>(
+      find.byKey(
+        const ValueKey<String>('routine-suggestion-surface-s-shoulder'),
+      ),
+    );
+    final decoration = surface.decoration! as BoxDecoration;
+    expect(decoration.color, AppColors.card);
+    expect((decoration.border! as Border).top.color, AppColors.borderStrong);
   });
 
   testWidgets(

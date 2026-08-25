@@ -14,6 +14,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_repeat_preview.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/number_stepper.dart';
 
 /// Bottom sheet for booking or editing a session: client, type, time
@@ -174,15 +175,12 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     final AppLocalizations l = AppLocalizations.of(context);
     final int duration = _endTotalMinutes - _startTotalMinutes;
     if (duration <= 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.schedEndBeforeStart)));
+      showAppToast(context, l.schedEndBeforeStart);
       return;
     }
     setState(() => _saving = true);
     final repo = ref.read(scheduleRepositoryProvider);
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final e = widget.existing;
       if (e == null && _repeatDays.isNotEmpty) {
@@ -246,8 +244,9 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     } catch (_) {
       // Surface the failure and keep the sheet open so the input isn't
       // lost (review PR 218).
-      if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.schedSaveFailed)));
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showAppToast(context, l.schedSaveFailed, kind: AppToastKind.error);
       return;
     }
     if (mounted) setState(() => _saving = false);
