@@ -233,3 +233,140 @@ def test_existing_assignments_stay_visible(client):
     client.delete(
         f"/v1/trainer/clients/{MEMBER}/routines/{row['id']}", headers=_h(token)
     )
+
+
+# ── 근력 제안의 세트·횟수·중량 (#1321) ─────────────────────────────────────
+#
+# 제안은 승인하는 순간 **같은 행이 배정이 된다.** 그래서 근력을 세트·횟수·중량
+# 없이 만들면, 회원이 그 운동을 완료할 때 서버가 남길 값이 없고 그래프는 분에서
+# 세트를 되짚어 아무도 적은 적 없는 수를 그린다.
+
+
+def _create(client, token: str, **overrides) -> dict:
+    body = {
+        "name": f"힙 브리지 {uuid4().hex[:6]}",
+        "minutes": 12,
+        "type": "근력",
+        "sets": 4,
+        "reps": 12,
+        "weight": 20.5,
+        "reason": "하체 근력 보강",
+    }
+    body.update(overrides)
+    created = client.post(
+        f"/v1/trainer/clients/{MEMBER}/routine-suggestions",
+        headers=_h(token),
+        json=body,
+    )
+    assert created.status_code == 201, created.text
+    return created.json()
+
+
+def test_a_strength_suggestion_keeps_its_sets_reps_and_weight(client):
+    token = _trainer_token(client)
+    row = _create(client, token)
+    try:
+        assert (row["sets"], row["reps"], row["weight"]) == (4, 12, 20.5)
+
+        pending = client.get(
+            f"/v1/trainer/clients/{MEMBER}/routine-suggestions",
+            headers=_h(token),
+        ).json()
+        mine = next(r for r in pending if r["id"] == row["id"])
+        assert (mine["sets"], mine["reps"], mine["weight"]) == (4, 12, 20.5)
+    finally:
+        client.delete(
+            f"/v1/trainer/clients/{MEMBER}/routines/{row['id']}",
+            headers=_h(token),
+        )
+
+
+def test_approving_carries_the_strength_values_into_the_assignment(client):
+    """승인은 새 행을 만들지 않는다 — 그래도 값이 살아 있는지 배정 목록에서 본다."""
+    token = _trainer_token(client)
+    row = _create(client, token)
+    try:
+        approved = client.post(
+            f"/v1/trainer/routine-suggestions/{row['id']}/approve",
+            headers=_h(token),
+            json={},
+        )
+        assert approved.status_code == 200, approved.text
+        assert (
+            approved.json()["sets"],
+            approved.json()["reps"],
+            approved.json()["weight"],
+        ) == (4, 12, 20.5)
+
+        assigned = client.get(
+            f"/v1/trainer/clients/{MEMBER}/routines", headers=_h(token)
+        ).json()
+        mine = next(r for r in assigned if r["id"] == row["id"])
+        assert (mine["sets"], mine["reps"], mine["weight"]) == (4, 12, 20.5)
+    finally:
+        client.delete(
+            f"/v1/trainer/clients/{MEMBER}/routines/{row['id']}",
+            headers=_h(token),
+        )
+
+
+def test_editing_the_strength_values_while_approving(client):
+    """승인 직전에 고친 값이 배정에 남는다 — 수정 창이 하는 일이 이것이다."""
+    token = _trainer_token(client)
+    row = _create(client, token)
+    try:
+        approved = client.post(
+            f"/v1/trainer/routine-suggestions/{row['id']}/approve",
+            headers=_h(token),
+            json={"sets": 5, "reps": 8, "weight": 32.5},
+        )
+        assert approved.status_code == 200, approved.text
+        body = approved.json()
+        assert (body["sets"], body["reps"], body["weight"]) == (5, 8, 32.5)
+    finally:
+        client.delete(
+            f"/v1/trainer/clients/{MEMBER}/routines/{row['id']}",
+            headers=_h(token),
+        )
+
+
+def test_a_non_strength_suggestion_drops_the_values(client):
+    """유산소를 세트로 세는 화면은 없다 — 값이 와도 남기지 않는다."""
+    token = _trainer_token(client)
+    row = _create(client, token, type="유산소", name=f"걷기 {uuid4().hex[:6]}")
+    try:
+        assert row["sets"] is None
+        assert row["reps"] is None
+        assert row["weight"] is None
+    finally:
+        client.delete(
+            f"/v1/trainer/clients/{MEMBER}/routines/{row['id']}",
+            headers=_h(token),
+        )
+
+
+def test_approving_as_another_type_clears_the_strength_values(client):
+    """근력이던 제안을 유산소로 바꿔 승인하면 세트가 남지 않는다.
+
+    남겨 두면 유산소 배정이 세트를 들고 회원에게 간다. 판단 기준은 고친 뒤의
+    유형이다.
+    """
+    token = _trainer_token(client)
+    row = _create(client, token)
+    try:
+        approved = client.post(
+            f"/v1/trainer/routine-suggestions/{row['id']}/approve",
+            headers=_h(token),
+            json={"type": "유산소", "minutes": 25},
+        )
+        assert approved.status_code == 200, approved.text
+        body = approved.json()
+        assert body["type"] == "유산소"
+        assert body["sets"] is None
+        assert body["reps"] is None
+        assert body["weight"] is None
+    finally:
+        client.delete(
+            f"/v1/trainer/clients/{MEMBER}/routines/{row['id']}",
+            headers=_h(token),
+        )

@@ -91,6 +91,12 @@ class _RoutineSuggestionReviewCardState
             name: edit?.name,
             minutes: edit?.minutes,
             type: edit?.type,
+            // 근력이면 수정 창이 채운 세 값이 함께 간다. 그대로 승인(edit 이
+            // null)이면 아무것도 보내지 않고, 서버가 제안 행에 이미 들고 있는
+            // 값을 그대로 배정으로 옮긴다. (#1321)
+            sets: edit?.sets,
+            reps: edit?.reps,
+            weight: edit?.weight,
             reason: edit?.reason,
           ),
       l.suggestionApproved(edit?.name ?? suggestion.name, widget.clientName),
@@ -316,7 +322,9 @@ class _SuggestionCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                l.minutesShort(suggestion.minutes),
+                // 근력은 시간이 아니라 세트·횟수·중량으로 적는다 — 최종 검토
+                // dialog·수정 창과 같은 함수를 쓴다. (#1321)
+                routineSuggestionAmountLabel(l, suggestion),
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
