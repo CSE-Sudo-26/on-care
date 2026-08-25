@@ -284,6 +284,65 @@ def test_strength_sets_persist_and_are_counted(client):
     assert week["strength_sets"][0] == 12
 
 
+def test_strength_reps_persist_with_sets_and_weight(client):
+    """세트·횟수·중량이 한 벌로 남는다 — 셋 중 하나만 빠져도 기록이 재현되지 않는다. (#1310)"""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "strength", "minutes": 36, "sets": 12, "reps": 10,
+            "weight": 62.5, "calories": 216, "date": _day("월"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert (body["sets"], body["reps"], body["weight"]) == (12, 10, 62.5)
+
+    week = client.get("/v1/exercise/weeks/current", headers=h).json()
+    stored = next(s for s in week["sessions"] if s["id"] == body["id"])
+    assert stored["reps"] == 10
+
+
+def test_reps_ignored_for_non_strength_types(client):
+    """유산소를 횟수로 세는 화면은 없다 — 세트와 같은 규칙이다. (#1310)"""
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "cardio", "minutes": 30, "reps": 10,
+            "calories": 180, "date": _day("목"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["reps"] is None
+
+
+def test_update_to_another_type_clears_reps(client):
+    """근력이던 기록을 유산소로 고치면 횟수도 함께 지워진다. (#1310)"""
+    h = _login(client)
+    sid = client.post(
+        "/v1/exercise/sessions",
+        json={
+            "type": "strength", "minutes": 36, "sets": 12, "reps": 10,
+            "calories": 216, "date": _day("금"),
+        },
+        headers=h,
+    ).json()["id"]
+
+    r = client.put(
+        f"/v1/exercise/sessions/{sid}",
+        json={
+            "type": "cardio", "minutes": 30, "reps": 10,
+            "calories": 180, "date": _day("금"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["reps"] is None
+
+
 def test_strength_sets_derived_from_minutes_when_absent(client):
     """세트를 안 보낸 근력 기록은 분에서 환산해 센다 — 옛 기록도 같은 길이다."""
     h = _login(client)

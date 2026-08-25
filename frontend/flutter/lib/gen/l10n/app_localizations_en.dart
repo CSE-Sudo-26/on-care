@@ -735,6 +735,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get exExerciseReps => 'Reps';
+
+  @override
   String get exExerciseWeight => 'Weight';
 
   @override
@@ -742,6 +745,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exUnitSets => 'sets';
+
+  @override
+  String get exUnitReps => 'reps';
 
   @override
   String get exUnitKg => 'kg';
@@ -758,6 +764,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String exSetsCount(int sets) {
     return '$sets sets';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps reps';
   }
 
   @override
@@ -1400,6 +1411,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTimeFlexible => 'Discuss Later';
 
   @override
+  String get exTimeRangeTitle => 'Select time';
+
+  @override
+  String get exTimeRangeStartTime => 'Start time';
+
+  @override
+  String get exTimeRangeEndTime => 'End time';
+
+  @override
+  String get exTimeRangeStartHourStep => 'Start hour';
+
+  @override
+  String get exTimeRangeStartMinuteStep => 'Start minute';
+
+  @override
+  String get exTimeRangeEndHourStep => 'End hour';
+
+  @override
+  String get exTimeRangeEndMinuteStep => 'End minute';
+
+  @override
+  String get exSlotAm => 'AM';
+
+  @override
+  String get exSlotPm => 'PM';
+
+  @override
+  String get exTimeRangeInvalidEnd => 'End time is earlier than start time';
+
+  @override
+  String get exTimeRangePrevStep => 'Previous step';
+
+  @override
+  String get exTimeRangeNextStep => 'Next step';
+
+  @override
   String get exConsultMessage => 'Message';
 
   @override
@@ -1615,9 +1662,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tell us a little about yourself so we can tailor your care.';
 
   @override
-  String get onboardBirthHint => 'Date of birth (YYYY-MM-DD)';
-
-  @override
   String get onboardHeightHint => 'Height (cm)';
 
   @override
@@ -1641,7 +1685,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardGoalHint => 'Health and exercise goals';
 
   @override
-  String get onboardSodiumGoalHint => 'Daily sodium goal (mg)';
+  String get onboardOptionalTag => '(optional)';
+
+  @override
+  String get onboardSkipStep => 'Skip this step';
+
+  @override
+  String get onboardBirthLabel => 'Date of birth';
+
+  @override
+  String get onboardBirthYearHint => 'Year';
+
+  @override
+  String get onboardBirthMonthHint => 'Month';
+
+  @override
+  String get onboardBirthDayHint => 'Day';
+
+  @override
+  String onboardBirthYearValue(int year) {
+    return '$year';
+  }
+
+  @override
+  String onboardBirthMonthValue(int month) {
+    return '$month';
+  }
+
+  @override
+  String onboardBirthDayValue(int day) {
+    return '$day';
+  }
+
+  @override
+  String get onboardGenderLabel => 'Gender';
+
+  @override
+  String onboardAgeSummary(int age) {
+    return '$age years old';
+  }
+
+  @override
+  String onboardBmiSummary(String bmi, String category) {
+    return 'BMI $bmi · $category';
+  }
+
+  @override
+  String get onboardBmiUnderweight => 'Underweight';
+
+  @override
+  String get onboardBmiNormal => 'Normal';
+
+  @override
+  String get onboardBmiPreObese => 'Pre-obese';
+
+  @override
+  String get onboardBmiObese1 => 'Obesity class I';
+
+  @override
+  String get onboardBmiObese2 => 'Obesity class II';
+
+  @override
+  String get onboardBmiObese3 => 'Obesity class III';
+
+  @override
+  String get onboardBmiSourceNote =>
+      'Cut-offs: Korean Society for the Study of Obesity guideline (Asia-Pacific)';
+
+  @override
+  String get onboardDietTitle => 'Diet goals';
+
+  @override
+  String get onboardDietSubtitle =>
+      'We prefilled suggested goals. Change anything you like.';
+
+  @override
+  String get onboardExerciseTitle => 'Exercise goals';
+
+  @override
+  String get onboardExerciseSubtitle =>
+      'Prefilled from the World Health Organization guideline. Change anything you like.';
+
+  @override
+  String get onboardRecommendedPersonal =>
+      'Suggested from your age, gender, height and weight';
+
+  @override
+  String get onboardRecommendedFallback =>
+      'App defaults. Fill in step 1 to get a suggestion tailored to you';
+
+  @override
+  String get onboardResetToRecommended => 'Reset to suggested';
+
+  @override
+  String get onboardDietSourceNote =>
+      'Sources: Dietary Reference Intakes for Koreans 2020 (EER, AMDR) · WHO sodium and free-sugar guidelines';
+
+  @override
+  String get onboardExerciseSourceNote =>
+      'Source: WHO guidelines on physical activity (2020) — 150 min of moderate cardio and 2+ strength days a week';
 
   @override
   String get onboardGenderMale => 'Male';
@@ -1785,7 +1927,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHealthGoalsTitle => 'Health goals';
 
   @override
-  String get myGoalsDietSection => 'Daily diet goals';
+  String get myGoalsDietSection => 'Diet goals';
 
   @override
   String get myGoalsExerciseSection => 'Exercise goals';

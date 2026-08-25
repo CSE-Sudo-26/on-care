@@ -41,6 +41,7 @@ Map<String, Object?> programItemToJson(ProgramItem item) => <String, Object?>{
   'date': item.date == null ? null : ymd(item.date!),
   'duration': item.duration,
   'sets': item.sets,
+  'reps': item.reps,
   'weight': item.weight,
   'intensity': item.intensity,
   'session': item.session,
@@ -67,6 +68,7 @@ ProgramItem programItemFromJson(Map<String, Object?> entry) => ProgramItem(
   date: DateTime.tryParse(_str(entry['date'])),
   duration: looseInt(entry['duration']),
   sets: looseInt(entry['sets']),
+  reps: looseInt(entry['reps']),
   weight: looseDouble(entry['weight']),
   intensity:
       entry['intensity'] is String && (entry['intensity'] as String).isNotEmpty

@@ -34,10 +34,11 @@ Map<String, Object?> programExerciseToJson(
   'name': exercise.name.trim().isEmpty ? '-' : _cap(exercise.name, _kNameMax),
   'type': kRoutineTypes.contains(exercise.type) ? exercise.type : '근력',
   'date': exercise.date == null ? null : ymd(exercise.date!),
-  // 근력은 세트·중량으로만 재고 시간을 싣지 않는다 — 두 편집기와 회원 기록이
-  // 같은 규칙을 쓴다 (#1276).
+  // 근력은 세트·횟수·중량으로만 재고 시간을 싣지 않는다 — 두 편집기와 회원
+  // 기록이 같은 규칙을 쓴다 (#1276, #1310).
   'duration': exercise.isStrength ? null : exercise.minutes.clamp(0, 600),
   'sets': exercise.isStrength ? exercise.sets.clamp(0, 99) : null,
+  'reps': exercise.isStrength ? exercise.reps.clamp(0, 999) : null,
   'weight': exercise.isStrength ? exercise.weight.clamp(0, 1000) : null,
   'intensity': normaliseRoutineIntensity(exercise.intensity),
   'memo': _cap(exercise.memo, _kMemoMax),
@@ -48,8 +49,8 @@ Map<String, Object?> programExerciseToJson(
 
 /// `ProgramDraftExercise` JSON → [ProgramExerciseDraft].
 ///
-/// 세트·중량·시간은 예전에 자유 문자열("10회"·"20kg")로 저장됐다 — 숫자만
-/// 되짚어 읽고, 없으면 기본값으로 연다.
+/// 세트·횟수·중량·시간은 예전에 자유 문자열("10회"·"20kg")로 저장됐다 —
+/// 숫자만 되짚어 읽고, 없으면 기본값으로 연다.
 ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
     ProgramExerciseDraft(
       id: json['id'] as String? ?? '',
@@ -58,6 +59,7 @@ ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
       date: DateTime.tryParse(json['date'] as String? ?? ''),
       minutes: looseInt(json['duration']) ?? 30,
       sets: looseInt(json['sets']) ?? 3,
+      reps: looseInt(json['reps']) ?? 10,
       weight: looseDouble(json['weight']) ?? 20,
       intensity: normaliseRoutineIntensity(json['intensity'] as String?),
       memo: json['memo'] as String? ?? '',

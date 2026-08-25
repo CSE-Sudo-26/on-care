@@ -732,6 +732,7 @@ def trainer_assign_routine(
         exercise_date=payload.exercise_date,
         intensity=payload.intensity,
         sets=payload.sets,
+        reps=payload.reps,
         weight=payload.weight,
     )
 
@@ -782,6 +783,9 @@ def trainer_create_routine_suggestion(
         name=payload.name.strip(),
         minutes=payload.minutes,
         type_=payload.type,
+        sets=payload.sets,
+        reps=payload.reps,
+        weight=payload.weight,
         reason=payload.reason,
         evidence=payload.evidence,
         client_request_id=payload.client_request_id,
@@ -811,6 +815,9 @@ def trainer_approve_routine_suggestion(
             name=name.strip() if name is not None else None,
             minutes=fields.get("minutes"),
             type_=fields.get("type"),
+            sets=fields.get("sets"),
+            reps=fields.get("reps"),
+            weight=fields.get("weight"),
             reason=fields.get("reason"),
         )
     except trainer_service.RoutineNotFound as exc:
@@ -2228,6 +2235,16 @@ def trainer_accept_consultation(
         consultation_service.MemberAlreadyCoached,
     ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except consultation_service.ConsultationScheduleConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": str(exc),
+                "conflicts": [
+                    conflict.model_dump(mode="json") for conflict in exc.conflicts
+                ],
+            },
+        ) from exc
 
 
 @router.post(

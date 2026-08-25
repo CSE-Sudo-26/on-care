@@ -7,7 +7,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 /// 프로그램 편집기가 들고 있는 운동 한 행의 초안.
 ///
 /// 회원 앱의 운동 추가 시트와 같은 칸을 받는다(#1276) — 날짜·종류·이름·
-/// 시간(또는 세트·중량)·강도, 그리고 그 값들에서 나오는 예상 칼로리.
+/// 시간(또는 세트·횟수·중량)·강도, 그리고 그 값들에서 나오는 예상 칼로리.
 ///
 /// 이름만 컨트롤러다. 나머지는 숫자·날짜·선택값이라 자유 입력이 아니고,
 /// 편집기가 값을 직접 바꾸고 setState 한다.
@@ -18,6 +18,7 @@ class ProgramDraft {
     required this.date,
     required this.minutes,
     required this.sets,
+    required this.reps,
     required this.weight,
     required this.intensity,
   }) : name = TextEditingController(text: name);
@@ -28,17 +29,19 @@ class ProgramDraft {
     date: item.date ?? _today(),
     minutes: item.duration ?? 30,
     sets: item.sets ?? 3,
+    reps: item.reps ?? 10,
     weight: item.weight ?? 20,
     intensity: normaliseRoutineIntensity(item.intensity),
   );
 
-  /// 새 운동 행의 기본값 — 오늘, 근력 3세트 20kg, 보통 강도.
+  /// 새 운동 행의 기본값 — 오늘, 근력 3세트 10회 20kg, 보통 강도.
   factory ProgramDraft.empty() => ProgramDraft(
     name: '',
     type: '근력',
     date: _today(),
     minutes: 30,
     sets: 3,
+    reps: 10,
     weight: 20,
     intensity: 'moderate',
   );
@@ -59,11 +62,12 @@ class ProgramDraft {
   /// 유산소·스트레칭·기타의 운동 시간(분). 근력은 세트로 재므로 쓰지 않는다.
   int minutes;
 
-  /// 근력의 세트 수와 중량(kg). 다른 유형에서는 쓰지 않는다.
+  /// 근력의 세트 수·한 세트당 횟수·중량(kg). 다른 유형에서는 쓰지 않는다.
   ///
   /// 시간과 따로 들고 있어야 유형을 근력↔유산소로 오갈 때 각자의 값이 남는다 —
   /// 하나로 쓰면 30분이 30세트가 되어 돌아온다.
   int sets;
+  int reps;
   double weight;
 
   /// 운동 강도 계약값.
@@ -81,14 +85,15 @@ class ProgramDraft {
     intensity: intensity,
   );
 
-  /// 이 행을 저장 형태로. 근력이 아니면 세트·중량을 싣지 않는다 — 유산소를
-  /// 세트로 세는 화면은 없다.
+  /// 이 행을 저장 형태로. 근력이 아니면 세트·횟수·중량을 싣지 않는다 —
+  /// 유산소를 세트로 세는 화면은 없다.
   ProgramItem toItem({String session = ''}) => ProgramItem(
     name: name.text.trim(),
     type: type,
     date: date,
     duration: isStrength ? null : minutes,
     sets: isStrength ? sets : null,
+    reps: isStrength ? reps : null,
     weight: isStrength ? weight : null,
     intensity: intensity,
     session: session,

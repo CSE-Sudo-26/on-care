@@ -992,6 +992,15 @@ class $ExerciseSessionsTable extends ExerciseSessions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _repsMeta = const VerificationMeta('reps');
+  @override
+  late final GeneratedColumn<int> reps = GeneratedColumn<int>(
+    'reps',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _weightMeta = const VerificationMeta('weight');
   @override
   late final GeneratedColumn<double> weight = GeneratedColumn<double>(
@@ -1045,6 +1054,7 @@ class $ExerciseSessionsTable extends ExerciseSessions
     name,
     minutes,
     sets,
+    reps,
     weight,
     calories,
     intensity,
@@ -1111,6 +1121,12 @@ class $ExerciseSessionsTable extends ExerciseSessions
         sets.isAcceptableOrUnknown(data['sets']!, _setsMeta),
       );
     }
+    if (data.containsKey('reps')) {
+      context.handle(
+        _repsMeta,
+        reps.isAcceptableOrUnknown(data['reps']!, _repsMeta),
+      );
+    }
     if (data.containsKey('weight')) {
       context.handle(
         _weightMeta,
@@ -1174,6 +1190,10 @@ class $ExerciseSessionsTable extends ExerciseSessions
         DriftSqlType.int,
         data['${effectivePrefix}sets'],
       ),
+      reps: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reps'],
+      ),
       weight: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}weight'],
@@ -1215,6 +1235,9 @@ class ExerciseSessionRow extends DataClass
   /// 그때는 분에서 환산해 읽는다. (#1262)
   final int? sets;
 
+  /// 근력 기록의 한 세트당 횟수. 세트·중량과 한 벌이라 근력에만 있다. (#1310)
+  final int? reps;
+
   /// 근력 기록의 중량(kg). 세트와 짝이라 근력에만 있다. (#1276)
   final double? weight;
   final int calories;
@@ -1228,6 +1251,7 @@ class ExerciseSessionRow extends DataClass
     required this.name,
     required this.minutes,
     this.sets,
+    this.reps,
     this.weight,
     required this.calories,
     required this.intensity,
@@ -1244,6 +1268,9 @@ class ExerciseSessionRow extends DataClass
     map['minutes'] = Variable<int>(minutes);
     if (!nullToAbsent || sets != null) {
       map['sets'] = Variable<int>(sets);
+    }
+    if (!nullToAbsent || reps != null) {
+      map['reps'] = Variable<int>(reps);
     }
     if (!nullToAbsent || weight != null) {
       map['weight'] = Variable<double>(weight);
@@ -1263,6 +1290,7 @@ class ExerciseSessionRow extends DataClass
       name: Value(name),
       minutes: Value(minutes),
       sets: sets == null && nullToAbsent ? const Value.absent() : Value(sets),
+      reps: reps == null && nullToAbsent ? const Value.absent() : Value(reps),
       weight: weight == null && nullToAbsent
           ? const Value.absent()
           : Value(weight),
@@ -1285,6 +1313,7 @@ class ExerciseSessionRow extends DataClass
       name: serializer.fromJson<String>(json['name']),
       minutes: serializer.fromJson<int>(json['minutes']),
       sets: serializer.fromJson<int?>(json['sets']),
+      reps: serializer.fromJson<int?>(json['reps']),
       weight: serializer.fromJson<double?>(json['weight']),
       calories: serializer.fromJson<int>(json['calories']),
       intensity: serializer.fromJson<String>(json['intensity']),
@@ -1302,6 +1331,7 @@ class ExerciseSessionRow extends DataClass
       'name': serializer.toJson<String>(name),
       'minutes': serializer.toJson<int>(minutes),
       'sets': serializer.toJson<int?>(sets),
+      'reps': serializer.toJson<int?>(reps),
       'weight': serializer.toJson<double?>(weight),
       'calories': serializer.toJson<int>(calories),
       'intensity': serializer.toJson<String>(intensity),
@@ -1317,6 +1347,7 @@ class ExerciseSessionRow extends DataClass
     String? name,
     int? minutes,
     Value<int?> sets = const Value.absent(),
+    Value<int?> reps = const Value.absent(),
     Value<double?> weight = const Value.absent(),
     int? calories,
     String? intensity,
@@ -1329,6 +1360,7 @@ class ExerciseSessionRow extends DataClass
     name: name ?? this.name,
     minutes: minutes ?? this.minutes,
     sets: sets.present ? sets.value : this.sets,
+    reps: reps.present ? reps.value : this.reps,
     weight: weight.present ? weight.value : this.weight,
     calories: calories ?? this.calories,
     intensity: intensity ?? this.intensity,
@@ -1343,6 +1375,7 @@ class ExerciseSessionRow extends DataClass
       name: data.name.present ? data.name.value : this.name,
       minutes: data.minutes.present ? data.minutes.value : this.minutes,
       sets: data.sets.present ? data.sets.value : this.sets,
+      reps: data.reps.present ? data.reps.value : this.reps,
       weight: data.weight.present ? data.weight.value : this.weight,
       calories: data.calories.present ? data.calories.value : this.calories,
       intensity: data.intensity.present ? data.intensity.value : this.intensity,
@@ -1360,6 +1393,7 @@ class ExerciseSessionRow extends DataClass
           ..write('name: $name, ')
           ..write('minutes: $minutes, ')
           ..write('sets: $sets, ')
+          ..write('reps: $reps, ')
           ..write('weight: $weight, ')
           ..write('calories: $calories, ')
           ..write('intensity: $intensity, ')
@@ -1377,6 +1411,7 @@ class ExerciseSessionRow extends DataClass
     name,
     minutes,
     sets,
+    reps,
     weight,
     calories,
     intensity,
@@ -1393,6 +1428,7 @@ class ExerciseSessionRow extends DataClass
           other.name == this.name &&
           other.minutes == this.minutes &&
           other.sets == this.sets &&
+          other.reps == this.reps &&
           other.weight == this.weight &&
           other.calories == this.calories &&
           other.intensity == this.intensity &&
@@ -1407,6 +1443,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
   final Value<String> name;
   final Value<int> minutes;
   final Value<int?> sets;
+  final Value<int?> reps;
   final Value<double?> weight;
   final Value<int> calories;
   final Value<String> intensity;
@@ -1420,6 +1457,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     this.name = const Value.absent(),
     this.minutes = const Value.absent(),
     this.sets = const Value.absent(),
+    this.reps = const Value.absent(),
     this.weight = const Value.absent(),
     this.calories = const Value.absent(),
     this.intensity = const Value.absent(),
@@ -1434,6 +1472,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     this.name = const Value.absent(),
     required int minutes,
     this.sets = const Value.absent(),
+    this.reps = const Value.absent(),
     this.weight = const Value.absent(),
     required int calories,
     this.intensity = const Value.absent(),
@@ -1453,6 +1492,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     Expression<String>? name,
     Expression<int>? minutes,
     Expression<int>? sets,
+    Expression<int>? reps,
     Expression<double>? weight,
     Expression<int>? calories,
     Expression<String>? intensity,
@@ -1467,6 +1507,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
       if (name != null) 'name': name,
       if (minutes != null) 'minutes': minutes,
       if (sets != null) 'sets': sets,
+      if (reps != null) 'reps': reps,
       if (weight != null) 'weight': weight,
       if (calories != null) 'calories': calories,
       if (intensity != null) 'intensity': intensity,
@@ -1483,6 +1524,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     Value<String>? name,
     Value<int>? minutes,
     Value<int?>? sets,
+    Value<int?>? reps,
     Value<double?>? weight,
     Value<int>? calories,
     Value<String>? intensity,
@@ -1497,6 +1539,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
       name: name ?? this.name,
       minutes: minutes ?? this.minutes,
       sets: sets ?? this.sets,
+      reps: reps ?? this.reps,
       weight: weight ?? this.weight,
       calories: calories ?? this.calories,
       intensity: intensity ?? this.intensity,
@@ -1529,6 +1572,9 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
     if (sets.present) {
       map['sets'] = Variable<int>(sets.value);
     }
+    if (reps.present) {
+      map['reps'] = Variable<int>(reps.value);
+    }
     if (weight.present) {
       map['weight'] = Variable<double>(weight.value);
     }
@@ -1557,6 +1603,7 @@ class ExerciseSessionsCompanion extends UpdateCompanion<ExerciseSessionRow> {
           ..write('name: $name, ')
           ..write('minutes: $minutes, ')
           ..write('sets: $sets, ')
+          ..write('reps: $reps, ')
           ..write('weight: $weight, ')
           ..write('calories: $calories, ')
           ..write('intensity: $intensity, ')
@@ -2928,6 +2975,7 @@ typedef $$ExerciseSessionsTableCreateCompanionBuilder =
       Value<String> name,
       required int minutes,
       Value<int?> sets,
+      Value<int?> reps,
       Value<double?> weight,
       required int calories,
       Value<String> intensity,
@@ -2943,6 +2991,7 @@ typedef $$ExerciseSessionsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<int> minutes,
       Value<int?> sets,
+      Value<int?> reps,
       Value<double?> weight,
       Value<int> calories,
       Value<String> intensity,
@@ -2991,6 +3040,11 @@ class $$ExerciseSessionsTableFilterComposer
 
   ColumnFilters<int> get sets => $composableBuilder(
     column: $table.sets,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reps => $composableBuilder(
+    column: $table.reps,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3059,6 +3113,11 @@ class $$ExerciseSessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get reps => $composableBuilder(
+    column: $table.reps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get weight => $composableBuilder(
     column: $table.weight,
     builder: (column) => ColumnOrderings(column),
@@ -3109,6 +3168,9 @@ class $$ExerciseSessionsTableAnnotationComposer
 
   GeneratedColumn<int> get sets =>
       $composableBuilder(column: $table.sets, builder: (column) => column);
+
+  GeneratedColumn<int> get reps =>
+      $composableBuilder(column: $table.reps, builder: (column) => column);
 
   GeneratedColumn<double> get weight =>
       $composableBuilder(column: $table.weight, builder: (column) => column);
@@ -3167,6 +3229,7 @@ class $$ExerciseSessionsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<int> minutes = const Value.absent(),
                 Value<int?> sets = const Value.absent(),
+                Value<int?> reps = const Value.absent(),
                 Value<double?> weight = const Value.absent(),
                 Value<int> calories = const Value.absent(),
                 Value<String> intensity = const Value.absent(),
@@ -3180,6 +3243,7 @@ class $$ExerciseSessionsTableTableManager
                 name: name,
                 minutes: minutes,
                 sets: sets,
+                reps: reps,
                 weight: weight,
                 calories: calories,
                 intensity: intensity,
@@ -3195,6 +3259,7 @@ class $$ExerciseSessionsTableTableManager
                 Value<String> name = const Value.absent(),
                 required int minutes,
                 Value<int?> sets = const Value.absent(),
+                Value<int?> reps = const Value.absent(),
                 Value<double?> weight = const Value.absent(),
                 required int calories,
                 Value<String> intensity = const Value.absent(),
@@ -3208,6 +3273,7 @@ class $$ExerciseSessionsTableTableManager
                 name: name,
                 minutes: minutes,
                 sets: sets,
+                reps: reps,
                 weight: weight,
                 calories: calories,
                 intensity: intensity,

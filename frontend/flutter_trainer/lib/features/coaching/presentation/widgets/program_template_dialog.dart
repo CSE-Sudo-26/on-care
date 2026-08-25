@@ -18,9 +18,9 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 열었을 때도 저장은 '새로 만들기'** 다 — 시작 구성은 저장된 행이 아니라
 /// 고칠 대상이 없고, 손을 대는 순간 그 트레이너의 첫 템플릿이 된다.
 ///
-/// 운동 줄은 이름·시간·종류 셋뿐이다. 세트·중량까지 담지 않는 이유는 템플릿이
-/// 프로그램이 아니라 **블록**이기 때문이다 — 회원마다 달라지는 값은 적용한 뒤
-/// 편집기에서 정한다.
+/// 운동 줄은 회원 앱·프로그램 편집기와 같은 스펙이다 — 근력이면 세트·횟수·
+/// 중량, 그 외 유형이면 시간. 템플릿은 프로그램이 아니라 **블록**이라 여기 적은
+/// 값은 시작점이고, 회원마다 달라지는 값은 적용한 뒤 편집기에서 고친다.
 class ProgramTemplateDialog extends ConsumerStatefulWidget {
   const ProgramTemplateDialog({super.key, this.template});
 
@@ -191,15 +191,16 @@ class _ProgramTemplateDialogState extends ConsumerState<ProgramTemplateDialog> {
 
 /// 편집 중인 운동 한 줄. 컨트롤러를 들고 있어 다이얼로그가 닫힐 때 정리한다.
 ///
-/// `sets`/`reps` 는 근력일 때만 쓴다(#1029) — 그 외 유형은 [minutes] 만
-/// 쓴다. 유형을 근력으로 바꾼 뒤 시간 칸은 화면에서 숨지만 값은 그대로
-/// 남아 있다(기본 10분) — 백엔드 계약(`ProgramTemplateExercise.minutes`)이
-/// 여전히 1 이상을 요구하기 때문이다.
+/// `sets`/`reps`/`weight` 는 근력일 때만 쓴다(#1029, #1310) — 그 외 유형은
+/// [minutes] 만 쓴다. 유형을 근력으로 바꾼 뒤 시간 칸은 화면에서 숨지만 값은
+/// 그대로 남아 있다(기본 10분) — 백엔드 계약
+/// (`ProgramTemplateExercise.minutes`)이 여전히 1 이상을 요구하기 때문이다.
 class _ExerciseDraft {
   _ExerciseDraft({
     required this.name,
     required this.minutes,
     required this.sets,
+    required this.reps,
     required this.weight,
     required this.type,
   }) : key = _nextKey++;
@@ -208,6 +209,7 @@ class _ExerciseDraft {
     name: TextEditingController(),
     minutes: TextEditingController(text: '10'),
     sets: TextEditingController(text: '3'),
+    reps: TextEditingController(text: '10'),
     weight: TextEditingController(text: '20'),
     type: kRoutineTypes.first,
   );
@@ -217,6 +219,9 @@ class _ExerciseDraft {
     minutes: TextEditingController(text: '${exercise.minutes}'),
     sets: TextEditingController(
       text: exercise.sets > 0 ? '${exercise.sets}' : '3',
+    ),
+    reps: TextEditingController(
+      text: exercise.reps > 0 ? '${exercise.reps}' : '10',
     ),
     weight: TextEditingController(
       text: exercise.weight > 0 ? '${exercise.weight}' : '20',
@@ -232,6 +237,7 @@ class _ExerciseDraft {
   final TextEditingController name;
   final TextEditingController minutes;
   final TextEditingController sets;
+  final TextEditingController reps;
   final TextEditingController weight;
   String type;
 
@@ -249,6 +255,7 @@ class _ExerciseDraft {
       // 비근력은 저장하지 않는다 — 화면에서 숨긴 값이 조용히 실리면
       // 안 쓰는 필드가 남아 있는 것처럼 보인다.
       sets: isStrength ? (int.tryParse(sets.text.trim()) ?? 0) : 0,
+      reps: isStrength ? (int.tryParse(reps.text.trim()) ?? 0) : 0,
       weight: isStrength ? (double.tryParse(weight.text.trim()) ?? 0) : 0,
     );
   }
@@ -257,6 +264,7 @@ class _ExerciseDraft {
     name.dispose();
     minutes.dispose();
     sets.dispose();
+    reps.dispose();
     weight.dispose();
   }
 }
@@ -292,7 +300,6 @@ class _ExerciseRow extends StatelessWidget {
           Row(
             children: <Widget>[
               Expanded(
-                flex: 3,
                 child: TextField(
                   controller: draft.name,
                   style: _fieldStyle,
@@ -302,8 +309,20 @@ class _ExerciseRow extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              // 근력은 세트·횟수로, 그 외 유형은 시간으로 잰다(#1029).
+              IconButton(
+                tooltip: l.a11yRemoveExercise,
+                onPressed: onRemove,
+                icon: const Icon(Icons.remove_circle_outline),
+                color: AppColors.mutedForeground,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          // 근력은 세트·횟수·중량으로, 그 외 유형은 시간으로 잰다
+          // (#1029, #1310). 숫자 칸은 이름 아래 제 줄에 둔다 — 한 줄에 넷을
+          // 밀어 넣으면 라벨이 잘려 무슨 칸인지 읽히지 않는다.
+          Row(
+            children: <Widget>[
               if (isStrength) ...<Widget>[
                 Expanded(
                   child: TextField(
@@ -315,6 +334,20 @@ class _ExerciseRow extends StatelessWidget {
                     ],
                     decoration: InputDecoration(
                       labelText: l.programEditorSets,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextField(
+                    controller: draft.reps,
+                    style: _fieldStyle,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    decoration: InputDecoration(
+                      labelText: l.programEditorReps,
                     ),
                   ),
                 ),
@@ -348,12 +381,6 @@ class _ExerciseRow extends StatelessWidget {
                     ),
                   ),
                 ),
-              IconButton(
-                tooltip: l.a11yRemoveExercise,
-                onPressed: onRemove,
-                icon: const Icon(Icons.remove_circle_outline),
-                color: AppColors.mutedForeground,
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),

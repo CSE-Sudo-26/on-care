@@ -538,27 +538,88 @@ class _GoalsForm extends ConsumerStatefulWidget {
 }
 
 class _GoalsFormState extends ConsumerState<_GoalsForm> {
-  late final TextEditingController _kcal = _ctl(widget.initial.dailyCalories);
-  late final TextEditingController _sodium = _ctl(widget.initial.dailySodiumMg);
-  late final TextEditingController _sugar = _ctl(widget.initial.dailySugarG);
-  late final TextEditingController _carbs = _ctl(widget.initial.dailyCarbsG);
+  late final TextEditingController _kcal = _ctl(
+    widget.initial.dailyCalories,
+    UserProfile.defaultDailyCalories,
+  );
+  late final TextEditingController _sodium = _ctl(
+    widget.initial.dailySodiumMg,
+    UserProfile.defaultDailySodiumMg,
+  );
+  late final TextEditingController _sugar = _ctl(
+    widget.initial.dailySugarG,
+    UserProfile.defaultDailySugarG,
+  );
+  late final TextEditingController _carbs = _ctl(
+    widget.initial.dailyCarbsG,
+    UserProfile.defaultDailyCarbsG,
+  );
   late final TextEditingController _protein = _ctl(
     widget.initial.dailyProteinG,
+    UserProfile.defaultDailyProteinG,
   );
-  late final TextEditingController _fat = _ctl(widget.initial.dailyFatG);
+  late final TextEditingController _fat = _ctl(
+    widget.initial.dailyFatG,
+    UserProfile.defaultDailyFatG,
+  );
   // 운동 목표는 운동 탭이 견주는 축과 같다 (#1139) — 소모는 하루, 유형별은
   // 한 주다. 주간 운동 횟수·시간은 어느 화면도 쓰지 않아 뺐다.
-  late final TextEditingController _burn = _ctl(widget.initial.dailyBurnKcal);
+  late final TextEditingController _burn = _ctl(
+    widget.initial.dailyBurnKcal,
+    kDefaultExerciseLoadGoals.dailyBurnKcal.round(),
+  );
   late final TextEditingController _cardio = _ctl(
     widget.initial.weeklyCardioMinutes,
+    kDefaultExerciseLoadGoals.weeklyCardioMinutes.round(),
   );
   late final TextEditingController _strength = _ctl(
     widget.initial.weeklyStrengthSets,
+    kDefaultExerciseLoadGoals.weeklyStrengthSets.round(),
   );
   late final TextEditingController _flexibility = _ctl(
     widget.initial.weeklyFlexibilityMinutes,
+    kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round(),
   );
   bool _saving = false;
+
+  // 목표 칸을 가리키는 이름. 어느 칸이 '아직 회원이 세운 적 없는 칸' 인지
+  // 기억하는 열쇠다.
+  static const String _kKcal = 'kcal';
+  static const String _kSodium = 'sodium';
+  static const String _kSugar = 'sugar';
+  static const String _kCarbs = 'carbs';
+  static const String _kProtein = 'protein';
+  static const String _kFat = 'fat';
+  static const String _kBurn = 'burn';
+  static const String _kCardio = 'cardio';
+  static const String _kStrength = 'strength';
+  static const String _kFlexibility = 'flexibility';
+
+  /// 저장된 값이 없어 **권장값으로 채워 둔** 칸.
+  ///
+  /// 칸은 까맣게 차 있지만 회원이 손대기 전까지는 여전히 *세운 적 없는 목표*라,
+  /// 저장할 때 `null` 로 나간다 — 열어 보고 저장만 했다는 이유로 기본값이 진짜
+  /// 목표로 굳지 않는다(PR #900 리뷰의 계약). 회원이 그 칸을 한 번이라도
+  /// 고치면 여기서 빠지고, 그때부터는 적힌 값이 그대로 저장된다.
+  late final Set<String> _prefilled = <String>{
+    if (widget.initial.dailyCalories == null) _kKcal,
+    if (widget.initial.dailySodiumMg == null) _kSodium,
+    if (widget.initial.dailySugarG == null) _kSugar,
+    if (widget.initial.dailyCarbsG == null) _kCarbs,
+    if (widget.initial.dailyProteinG == null) _kProtein,
+    if (widget.initial.dailyFatG == null) _kFat,
+    if (widget.initial.dailyBurnKcal == null) _kBurn,
+    if (widget.initial.weeklyCardioMinutes == null) _kCardio,
+    if (widget.initial.weeklyStrengthSets == null) _kStrength,
+    if (widget.initial.weeklyFlexibilityMinutes == null) _kFlexibility,
+  };
+
+  /// 그 칸은 이제 회원이 정한 값이다.
+  void _markTouched(String key) => _prefilled.remove(key);
+
+  /// 저장할 값. 아직 손대지 않은 권장값 칸은 `null` — 곧 '목표 없음' 이다.
+  int? _valueToSave(String key, TextEditingController c) =>
+      _prefilled.contains(key) ? null : _val(c);
 
   /// 칼로리 칸이 탄단지에서 계산돼 채워졌는가. 그 칸 아래 안내를 켜는 값이라,
   /// 회원이 칼로리를 직접 고치면 다시 꺼진다.
@@ -567,14 +628,18 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
   /// 들어온 것만으로 값이 달라지면 안 된다.
   bool _kcalFromMacros = false;
 
-  /// 저장된 값을 그대로 담는다. **없으면 빈 칸으로 둔다.**
+  /// 저장된 값을 담고, **없으면 권장 기본값을 채운다.**
   ///
-  /// 예전에는 기본값을 채웠다. 그러면 목표를 세운 적 없는 회원이 화면을 열고
-  /// 저장만 해도 기본값이 진짜 목표로 굳는다 — `null` 은 *미설정 또는 목표
-  /// 해제*라는 계약이 화면 한 번 열었다는 이유로 깨진다(PR #900 리뷰).
-  /// 기본값은 이제 [_SheetField.hintText] 로만 비친다.
-  static TextEditingController _ctl(int? value) =>
-      TextEditingController(text: value == null ? '' : '$value');
+  /// 한동안은 빈 칸으로 뒀다. `null` 은 *미설정 또는 목표 해제*라는 계약을
+  /// 지키려던 것인데(PR #900 리뷰), 화면에서는 식단 여섯 칸만 까맣게 차고 운동
+  /// 네 칸은 옅은 회색 자리표시로 남아 — 같은 시트의 위아래가 서로 다른 상태로
+  /// 읽혔다. 회원이 보기에 운동 목표는 "없는 것" 이었다.
+  ///
+  /// 채워 넣는 값은 이 화면이 이미 각주로 `권장` 이라 말하던 그 값이고, 온보딩이
+  /// 처음부터 저장해 두는 값과도 같다. 곧, 비어 보이던 자리에 원래 쓰이던
+  /// 기준선을 그대로 드러낸 것이다.
+  static TextEditingController _ctl(int? value, int fallback) =>
+      TextEditingController(text: '${value ?? fallback}');
 
   /// 탄·단·지 1g 의 열량(kcal). 식품 영양표시가 쓰는 Atwater 계수다.
   static const int _kcalPerCarbG = 4;
@@ -607,16 +672,6 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     );
   }
 
-  /// 세 칸이 이미 권장 배분과 같은가. 같으면 `권장 비율로 채우기` 를 띄우지
-  /// 않는다 — 눌러도 달라질 것이 없는 버튼이다.
-  bool get _macrosMatchSuggestion {
-    final split = _suggestedSplit;
-    if (split == null) return true;
-    return _val(_carbs) == split.carbs &&
-        _val(_protein) == split.protein &&
-        _val(_fat) == split.fat;
-  }
-
   /// 탄단지 → 칼로리. 세 칸이 모두 채워졌을 때만 칼로리를 다시 쓴다.
   ///
   /// 한 칸이라도 비어 있으면 손대지 않는다 — 지우는 도중의 빈 칸을 0g 으로
@@ -634,6 +689,8 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     setState(() {
       _kcal.text = '$kcal';
       _kcalFromMacros = true;
+      // 탄단지를 고쳐서 나온 값이다 — 회원이 정한 칼로리로 친다.
+      _markTouched(_kKcal);
     });
   }
 
@@ -648,17 +705,11 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     _carbs.text = '${split.carbs}';
     _protein.text = '${split.protein}';
     _fat.text = '${split.fat}';
+    _markTouched(_kCarbs);
+    _markTouched(_kProtein);
+    _markTouched(_kFat);
     _syncCaloriesFromMacros();
   }
-
-  /// 네 칸이 이미 권장값과 같은가. 같으면 `권장 비율로 채우기` 를 띄우지
-  /// 않는다 — 눌러도 달라질 것이 없는 버튼이다.
-  bool get _exerciseGoalsMatchSuggestion =>
-      _val(_burn) == kDefaultExerciseLoadGoals.dailyBurnKcal.round() &&
-      _val(_cardio) == kDefaultExerciseLoadGoals.weeklyCardioMinutes.round() &&
-      _val(_strength) == kDefaultExerciseLoadGoals.weeklyStrengthSets.round() &&
-      _val(_flexibility) ==
-          kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round();
 
   /// 권장 운동 목표를 네 칸에 채운다.
   void _applySuggestedExerciseGoals() {
@@ -669,6 +720,14 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           '${kDefaultExerciseLoadGoals.weeklyStrengthSets.round()}';
       _flexibility.text =
           '${kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round()}';
+      for (final String key in <String>[
+        _kBurn,
+        _kCardio,
+        _kStrength,
+        _kFlexibility,
+      ]) {
+        _markTouched(key);
+      }
     });
   }
 
@@ -706,16 +765,18 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           // `GoalUpdate(null)` 로 나가 서버에서 목표 해제가 된다 — 회원이 지운
           // 목표는 지워져야 한다.
           .updateHealthGoals(
-            dailyCalories: GoalUpdate(_val(_kcal)),
-            dailySodiumMg: GoalUpdate(_val(_sodium)),
-            dailySugarG: GoalUpdate(_val(_sugar)),
-            dailyCarbsG: GoalUpdate(_val(_carbs)),
-            dailyProteinG: GoalUpdate(_val(_protein)),
-            dailyFatG: GoalUpdate(_val(_fat)),
-            dailyBurnKcal: GoalUpdate(_val(_burn)),
-            weeklyCardioMinutes: GoalUpdate(_val(_cardio)),
-            weeklyStrengthSets: GoalUpdate(_val(_strength)),
-            weeklyFlexibilityMinutes: GoalUpdate(_val(_flexibility)),
+            dailyCalories: GoalUpdate(_valueToSave(_kKcal, _kcal)),
+            dailySodiumMg: GoalUpdate(_valueToSave(_kSodium, _sodium)),
+            dailySugarG: GoalUpdate(_valueToSave(_kSugar, _sugar)),
+            dailyCarbsG: GoalUpdate(_valueToSave(_kCarbs, _carbs)),
+            dailyProteinG: GoalUpdate(_valueToSave(_kProtein, _protein)),
+            dailyFatG: GoalUpdate(_valueToSave(_kFat, _fat)),
+            dailyBurnKcal: GoalUpdate(_valueToSave(_kBurn, _burn)),
+            weeklyCardioMinutes: GoalUpdate(_valueToSave(_kCardio, _cardio)),
+            weeklyStrengthSets: GoalUpdate(_valueToSave(_kStrength, _strength)),
+            weeklyFlexibilityMinutes: GoalUpdate(
+              _valueToSave(_kFlexibility, _flexibility),
+            ),
           );
       if (!mounted) return;
       ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
@@ -752,7 +813,10 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           hintText: '${UserProfile.defaultDailyCalories}',
           helperText: _kcalFromMacros ? l.myGoalCaloriesFromMacros : null,
           // 회원이 직접 고친 순간부터는 계산된 값이 아니다.
-          onChanged: (_) => setState(() => _kcalFromMacros = false),
+          onChanged: (_) => setState(() {
+            _kcalFromMacros = false;
+            _markTouched(_kKcal);
+          }),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -761,6 +825,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
           hintText: '${UserProfile.defaultDailySodiumMg}',
+          onChanged: (_) => _markTouched(_kSodium),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -769,6 +834,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
           hintText: '${UserProfile.defaultDailySugarG}',
+          onChanged: (_) => _markTouched(_kSugar),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -780,7 +846,10 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           hintText: split == null
               ? '${UserProfile.defaultDailyCarbsG}'
               : '${split.carbs}',
-          onChanged: (_) => _syncCaloriesFromMacros(),
+          onChanged: (_) {
+            _markTouched(_kCarbs);
+            _syncCaloriesFromMacros();
+          },
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -792,7 +861,10 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           hintText: split == null
               ? '${UserProfile.defaultDailyProteinG}'
               : '${split.protein}',
-          onChanged: (_) => _syncCaloriesFromMacros(),
+          onChanged: (_) {
+            _markTouched(_kProtein);
+            _syncCaloriesFromMacros();
+          },
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -804,9 +876,16 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           hintText: split == null
               ? '${UserProfile.defaultDailyFatG}'
               : '${split.fat}',
-          onChanged: (_) => _syncCaloriesFromMacros(),
+          onChanged: (_) {
+            _markTouched(_kFat);
+            _syncCaloriesFromMacros();
+          },
         ),
-        if (split != null && !_macrosMatchSuggestion) ...<Widget>[
+        // 안내 줄과 버튼은 늘 함께 보인다. 칸이 이미 권장값과 같아도 감추지
+        // 않는다 — 칸이 채워진 채로 열리게 된 뒤로는 이 줄이 **그 숫자가
+        // 어디서 왔는지** 말하는 유일한 자리이고, 값을 고쳐 둔 다음 되돌릴
+        // 길도 이 버튼 하나뿐이다.
+        if (split != null) ...<Widget>[
           const SizedBox(height: 10),
           _MacroSuggestionRow(
             buttonKey: const Key('goalApplyMacroSplit'),
@@ -827,6 +906,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
           hintText: '${kDefaultExerciseLoadGoals.dailyBurnKcal.round()}',
+          onChanged: (_) => _markTouched(_kBurn),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -836,6 +916,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
           hintText: '${kDefaultExerciseLoadGoals.weeklyCardioMinutes.round()}',
+          onChanged: (_) => _markTouched(_kCardio),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -845,6 +926,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
           hintText: '${kDefaultExerciseLoadGoals.weeklyStrengthSets.round()}',
+          onChanged: (_) => _markTouched(_kStrength),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -855,19 +937,18 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           inputFormatters: _digitsOnly,
           hintText:
               '${kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round()}',
+          onChanged: (_) => _markTouched(_kFlexibility),
         ),
         // 식단 목표의 `권장 비율로 채우기` 와 같은 자리·같은 모양이다 (#1139).
         // 권장값은 WHO 권고(주 150분 중강도 유산소)를 따르는
         // [kDefaultExerciseLoadGoals] 그대로다.
-        if (!_exerciseGoalsMatchSuggestion) ...<Widget>[
-          const SizedBox(height: 10),
-          _MacroSuggestionRow(
-            buttonKey: const Key('goalApplyExerciseGoals'),
-            note: l.myGoalExerciseSuggestionNote,
-            actionLabel: l.myGoalExerciseApplySuggestion,
-            onApply: _applySuggestedExerciseGoals,
-          ),
-        ],
+        const SizedBox(height: 10),
+        _MacroSuggestionRow(
+          buttonKey: const Key('goalApplyExerciseGoals'),
+          note: l.myGoalExerciseSuggestionNote,
+          actionLabel: l.myGoalExerciseApplySuggestion,
+          onApply: _applySuggestedExerciseGoals,
+        ),
       ]),
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
@@ -889,6 +970,7 @@ class _MacroSuggestionRow extends StatelessWidget {
 
   final String note;
   final String actionLabel;
+
   final VoidCallback onApply;
 
   /// 버튼의 키. 식단·운동 두 곳이 같은 줄을 쓰므로 각자 다른 키를 준다.
@@ -1021,9 +1103,7 @@ class _NotificationSettingsPageState
       // 되돌릴 곳은 **직전 값**이지 최초 조회값이 아니다. 한 번 저장에 성공한 뒤
       // 다음 저장이 실패하면 최초값으로 돌아가 서버와 어긋난다(리뷰).
       setState(() => _local[key] = previous);
-      toast.show(l.myNotificationSaveFailed,
-        kind: AppToastKind.error,
-      );
+      toast.show(l.myNotificationSaveFailed, kind: AppToastKind.error);
     }
   }
 

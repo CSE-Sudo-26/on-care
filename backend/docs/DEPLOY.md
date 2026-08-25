@@ -1,13 +1,14 @@
-# 백엔드 배포 가이드 — AWS App Runner + RDS(pgvector)
+# 백엔드 배포 가이드 — AWS App Runner + Neon(pgvector)
 
-컨테이너 + Postgres(pgvector) 구조라 **App Runner + RDS PostgreSQL** 조합을 권장한다
-(HTTPS 자동, 운영 부담 최소). `main`의 Backend CI가 성공하면 해당 커밋 이미지를 ECR에 올리고,
+컨테이너 + Postgres(pgvector) 구조라 컴퓨트는 **App Runner**(HTTPS 자동, 운영 부담 최소),
+DB 는 **Neon Postgres(pgvector)** 를 쓴다. DB 를 컴퓨트와 분리해 두면 컴퓨트 플랫폼을 바꿔도
+`DATABASE_URL` 을 그대로 옮기면 된다. `main`의 Backend CI가 성공하면 해당 커밋 이미지를 ECR에 올리고,
 불변 digest로 App Runner 소스를 갱신한다(`.github/workflows/backend-deploy.yml`).
 
 ```
 GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:8000, /v1/healthz)
                                                         │
-                                                        └── RDS PostgreSQL 15+ (CREATE EXTENSION vector)
+                                                        └── Neon Postgres (CREATE EXTENSION vector)
 ```
 
 기동 흐름: 컨테이너가 `scripts/start.sh` 로 **마이그레이션 → uvicorn(--proxy-headers)**.
@@ -16,7 +17,7 @@ GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:800
 운영은 `AUTO_CREATE_TABLES=false` 로 두고 Alembic 을 스키마의 유일한 소스로 삼는다.
 
 > **무거운 마이그레이션 주의**: lock 획득 대기 한도는 `MIGRATE_LOCK_TIMEOUT`(기본 120초)다.
-> 대형 RDS 에서 120초를 넘길 수 있는 마이그레이션을 배포하기 전에는, 동시에 뜬 다른 인스턴스가
+> 데이터가 쌓인 뒤 120초를 넘길 수 있는 마이그레이션을 배포하기 전에는, 동시에 뜬 다른 인스턴스가
 > fail-fast·재시작 루프에 빠지지 않도록 이 값을 넉넉히(예: `MIGRATE_LOCK_TIMEOUT=600`) 올려 둔다.
 
 **배포 게이팅**: `.github/workflows/backend-deploy.yml` 은 **"Backend CI" 가 성공**했을 때만
@@ -40,16 +41,20 @@ GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:800
 aws ecr create-repository --repository-name oncare-backend --region ap-northeast-2
 ```
 
-## 2) RDS PostgreSQL (pgvector)
+## 2) Neon Postgres (pgvector)
 
-- 엔진: PostgreSQL **15.2+** (pgvector 지원 버전). 보안그룹은 App Runner VPC 커넥터에서 5432 허용.
-- 생성 후 pgvector 확장 1회:
+- Neon 프로젝트를 만들고 DB 를 생성한 뒤 pgvector 확장을 1회 활성화한다:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-- `DATABASE_URL` 형식: `postgresql+psycopg://<user>:<pass>@<rds-endpoint>:5432/<db>`
+- 접속은 공용 엔드포인트 + TLS 라 App Runner 에 VPC 커넥터·보안그룹 설정이 필요 없다.
+- `DATABASE_URL` 은 Neon 이 준 문자열(`sslmode=require` 등 쿼리 파라미터 포함)을 **그대로** 넣어도 된다.
+  `config.sqlalchemy_database_url` 이 bare `postgresql://` 를 `postgresql+psycopg://` 로 정규화한다.
+- **풀러(`-pooler`) 엔드포인트가 아니라 직접 엔드포인트를 쓴다.** 기동 시 마이그레이션이
+  `pg_try_advisory_lock`(세션 단위 lock, `scripts/migrate.py`)으로 인스턴스를 직렬화하는데,
+  트랜잭션 풀링을 거치면 lock 을 잡은 세션과 alembic 이 쓰는 세션이 달라질 수 있어 직렬화가 깨진다.
 
 ## 3) 환경변수 / Secrets (App Runner)
 
@@ -57,7 +62,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 |---|---|
 | `ENV` | `prod` (fail-fast 하드닝 활성) |
 | `JWT_SECRET` | `openssl rand -hex 32` (기본값이면 기동 거부) |
-| `DATABASE_URL` | 위 RDS 접속 문자열 |
+| `DATABASE_URL` | 위 Neon 접속 문자열(직접 엔드포인트) |
 | `AUTO_CREATE_TABLES` | `false` (Alembic 이 정답) |
 | `CORS_ALLOW_ORIGINS` | GitHub Pages 도메인 (예: `https://ewhasudo.zapto.org`) |
 | `TZ` | `Asia/Seoul` (오늘/어제 라벨 KST 기준) |
@@ -136,13 +141,13 @@ flutter build web --release \
 
 ## 대안 — Railway (예비/대비용, AWS 이전 대상)
 
-> **성격**: 운영 기본값은 여전히 **AWS(App Runner + RDS)** 이며, Railway 이전이
+> **성격**: 운영 기본값은 여전히 **AWS App Runner + Neon** 이며, Railway 이전이
 > 확정된 것은 아니다. 이 절과 관련 파일(`railway.json`·`.env.railway.example` 등)은
 > **AWS 설정이 과하게 어렵거나 비용/운영 부담이 될 때 즉시 갈아탈 수 있게 해두는
 > 예비용**이다. 지금 당장 Railway 를 쓰지 않아도 두어도 무해하며(런타임·CI 에 영향 없음),
 > 필요해지는 순간 반나절 안에 이전할 수 있도록 이식성만 확보해 둔다.
 
-AWS(App Runner + RDS)가 복잡하면 **같은 Docker 이미지를 그대로** Railway 에 올릴 수 있다.
+App Runner 설정이 복잡하면 **같은 Docker 이미지를 그대로** Railway 에 올릴 수 있다.
 코드 변경 없이 플랫폼만 바뀌며, 이 저장소는 그렇게 이식 가능하도록 준비돼 있다:
 
 - **`backend/railway.json`** — Dockerfile 빌더 · 헬스체크(`/v1/healthz`) · 재시작 정책을 코드로 선언.
@@ -156,21 +161,22 @@ AWS(App Runner + RDS)가 복잡하면 **같은 Docker 이미지를 그대로** R
 
 1. Railway 새 프로젝트 → GitHub 레포 연결 → 서비스의 **Root Directory = `backend`** 로 지정
    (그래야 `railway.json`·`Dockerfile` 을 찾는다).
-2. DB 는 **반드시 `pgvector` 템플릿**(또는 pgvector 가 설치된 외부 DB: Neon/Supabase)으로
-   추가한다. Railway **일반 Postgres 이미지에는 pgvector 바이너리가 없어** `CREATE EXTENSION
-   vector` 자체가 실패하므로 0007 마이그레이션(vector 타입)이 동작하지 않는다 — 일반 Postgres 는
-   선택지가 아니다. (`CREATE EXTENSION IF NOT EXISTS vector;` 는 pgvector 가 이미 설치된 DB 에서만 가능.)
+2. DB 는 **기존 Neon 을 그대로 쓴다** — 컴퓨트만 바뀌므로 `DATABASE_URL` 을 옮기면 된다.
+   Railway 안에 DB 를 새로 두려면 **반드시 `pgvector` 템플릿**으로 추가한다. 일반 Postgres
+   이미지에는 **pgvector 바이너리가 없어** `CREATE EXTENSION vector` 자체가 실패하고,
+   0007 마이그레이션(vector 타입)이 동작하지 않는다.
 3. **Variables** 에 `backend/.env.railway.example` 값을 채워 넣는다
-   (`DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `CORS_ALLOW_ORIGINS`, `ENV=prod` 등).
-   `${{Postgres.DATABASE_URL}}` 참조는 **DB 서비스명이 정확히 `Postgres` 일 때만** 연결되므로,
-   서비스명을 `Postgres` 로 두거나 실제 서비스명에 맞춰 참조를 바꾼다(`${{<서비스명>.DATABASE_URL}}`).
+   (`DATABASE_URL`, `JWT_SECRET`, `CORS_ALLOW_ORIGINS`, `ENV=prod` 등). Neon 을 계속 쓰면
+   `DATABASE_URL` 에 Neon 문자열을 그대로 넣고, Railway 안에 DB 를 두면
+   `${{Postgres.DATABASE_URL}}` 로 참조한다 — 이 참조는 **DB 서비스명이 정확히 `Postgres` 일 때만**
+   연결되므로 서비스명을 맞추거나 실제 서비스명으로 바꾼다(`${{<서비스명>.DATABASE_URL}}`).
    `PORT` 는 직접 넣지 않는다(Railway 가 주입).
 4. 배포되면 컨테이너가 `scripts/start.sh` 로 **마이그레이션 → uvicorn** 을 수행하고,
    Railway 가 `/v1/healthz` 로 헬스체크한다. 발급된 도메인을 프론트 `API_BASE_URL` 에 연결
    (아래 "6) 프론트 연결" 과 동일, `/v1` 포함).
 
-> AWS → Railway 이전 시 DB 를 옮기고 싶지 않다면, 애초에 **DB 를 Neon/Supabase(pgvector)** 에
-> 두고 컴퓨트(App Runner ↔ Railway)만 바꾸면 `DATABASE_URL` 한 줄 교체로 끝난다.
+> DB 가 이미 Neon 에 있으므로 컴퓨트(App Runner ↔ Railway)를 바꿔도 데이터 이전은 없고,
+> 새 플랫폼에 `DATABASE_URL` 을 넣어 주면 끝난다.
 
 ## 대안 — 저비용 EC2 (수동)
 

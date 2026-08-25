@@ -114,10 +114,21 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
   /// 없을 때는 스레드가 가장 오래된 메시지부터 보였다. 한 개짜리 데모에서는
   /// 티가 안 났지만 기록이 3일치로 늘자, 채팅을 열면 며칠 전 첫 인사가 뜨고
   /// 최근 대화는 직접 내려야 보였다. 트레이너 앱은 이미 같은 동작을 한다.
-  void _scrollToBottom() {
+  void _scrollToBottom({double? previousMax, int attemptsLeft = 12}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll.hasClients) return;
-      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      final double max = _scroll.position.maxScrollExtent;
+      _scroll.jumpTo(max);
+
+      // ListView는 긴 목록의 아직 만들지 않은 자식 높이를 추정한다. 첫 jump로
+      // 새 자식이 만들어지면 maxScrollExtent가 다음 프레임에 다시 늘 수 있다.
+      // 그 상태에서 멈추면 서버에서 최신 메시지를 받았어도 화면에는 이전 끝이
+      // 남는다. 범위가 한 프레임 동안 안정될 때까지 다시 끝을 맞춘다.
+      final bool stable =
+          previousMax != null && (max - previousMax).abs() < 0.5;
+      if (!stable && attemptsLeft > 1) {
+        _scrollToBottom(previousMax: max, attemptsLeft: attemptsLeft - 1);
+      }
     });
   }
 

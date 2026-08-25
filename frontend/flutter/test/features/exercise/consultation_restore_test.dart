@@ -9,7 +9,7 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 /// `GET /consultations/me` 실응답 한 건.
 const Map<String, Object?> _serverRow = <String, Object?>{
   'id': 'consult-abc123',
-  'member_id': 'user-demo',
+  'member_id': 'user-7d4e9a2c5f18',
   'target_type': 'trainer',
   'gym_id': null,
   'trainer_id': 'trainer-demo',
@@ -34,6 +34,9 @@ class _RestoringRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => <ConsultationRequest>[consultationFromJson(_serverRow)];
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
 
 class _FailingRepository implements ConsultationRepository {
@@ -44,6 +47,9 @@ class _FailingRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => throw StateError('network down');
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
 
 void main() {

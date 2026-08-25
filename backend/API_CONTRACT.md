@@ -13,7 +13,7 @@
 - **JSON 표기**: **snake_case** (Pydantic alias 규약). 프론트의 case_mapper 가 camelCase 로 변환.
 - **인증**: `Authorization: Bearer <token>` (JWT). `auth_interceptor` 가 붙인다. 자세한 것은 아래 "인증" 절.
 - **에러**: `{ "code": "...", "message": "..." }` 형태. 4xx/5xx 는 DioException 으로 처리됨.
-- **사용자 id**: **문자열** (`"user-demo"`). 정수 아님.
+- **사용자 id**: **문자열** (`"user-7d4e9a2c5f18"`). 정수 아님.
 - **목록 페이지네이션**: 계속 자라는 목록은 **한 쪽**만 돌려줍니다. 파라미터 없이 부르면
   기본 50건이라 기존 클라이언트는 그대로 동작합니다. 커서 모양은 한 가지입니다 —
   받은 마지막 항목의 `(정렬키, id)` 를 `(before, before_id)` 로 되돌려 줍니다
@@ -237,12 +237,13 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 |---|---|---|
 | POST | `/consultations` | 입력 `{ trainer_id, exercise_goal, health_purpose_type, preferred_date, preferred_time_slot, message? }` |
 | GET | `/consultations/me` | 내가 보낸 요청 (최신순, 기본 50건·커서) |
+| DELETE | `/consultations/{consultation_id}` | 내가 보낸 대기 중 상담 요청 취소 |
 | GET | `/consultations/{id}` | 단건(남의 것·없는 것 404) |
 
 - 같은 트레이너에게 **대기 중인 요청은 한 건**입니다(`uq_consultation_requests_pending_trainer`,
   중복은 409). 그래서 목록이 자라는 쪽은 처리된 지난 요청입니다 — 상태 필터가 없어
   그대로 함께 쌓이고, 그 때문에 상한이 필요합니다. (#980)
-- `preferred_time_slot` 입력은 `"flexible"` 또는 `"HH:MM"` 정확한 시각만 허용합니다(#1256).
+- `preferred_time_slot` 입력은 `"flexible"`, 기존 단일 `"HH:MM"`, 또는 `"HH:MM-HH:MM"` 시작–종료 범위를 허용합니다.
   과거 `morning`/`afternoon`/`evening` 값은 이미 저장된 행에 남아 있을 수 있어 **응답**에서는
   그대로 내려줍니다 — 컬럼이 `String(20)` 이라 마이그레이션 없이 값 형식만 바뀐 것입니다.
 - 커서는 `(created_at, id)` 로 알림과 같은 모양입니다(`before`·`before_id`).
@@ -326,7 +327,7 @@ refresh 토큰은 **일회용**이다. `POST /auth/refresh` 는 회전할 때 �
 demo_fallback_enabled = allow_demo_fallback and not is_prod
 ```
 
-- **dev / staging** — 데모 사용자(`user-demo`)로 응답한다. 프론트가 `USE_MOCK_API=false` 로
+- **dev / staging** — 데모 사용자(`user-7d4e9a2c5f18`)로 응답한다. 프론트가 `USE_MOCK_API=false` 로
   전환할 때 로그인 없이도 화면이 뜨게 하려는 것이다.
 - **prod** — `ALLOW_DEMO_FALLBACK` 값과 무관하게 **항상 비활성**이고 401 을 낸다.
 
@@ -342,7 +343,7 @@ CORS 와일드카드, 기본·짧은 `DEMO_LOGIN_PASSWORD` 로 켠 데모 시드
 
 ### 사용자 id
 
-**문자열**이다(`user-demo`). 정수가 아니다. 데모 시드도 같은 규약을 따른다.
+**문자열**이다(`user-7d4e9a2c5f18`). 정수가 아니다. 데모 시드도 같은 규약을 따른다.
 
 ## 도메인 핵심 (놓치면 안 되는 차별점)
 

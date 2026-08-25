@@ -88,7 +88,7 @@ void main() {
     expect(today.every((r) => !r.id.startsWith('seed-schedule-w')), isTrue);
   });
 
-  test('한 주에 1:1 PT 와 상담이 여러 요일에 흩어져 있다', () async {
+  test('PT와 상담은 규칙적인 시작 시간에 다양한 길이로 배치된다', () async {
     await seedIfEmpty(db, clock: _dayOfWeek(4));
 
     final rows = await db.select(db.trainerScheduleEntries).get();
@@ -105,16 +105,71 @@ void main() {
       reason: '상담이 하루에만 있으면 상담 흐름을 다른 요일에서 시연할 수 없다',
     );
     expect(training.map((r) => r.date).toSet().length, greaterThanOrEqualTo(5));
-    // 시간대와 길이도 섞여 있어야 시간표가 실제 사용 화면처럼 보인다.
-    expect(rows.map((r) => r.time).toSet().length, greaterThanOrEqualTo(8));
+    final scheduled = rows.where((r) => r.durationMinutes > 0);
+    for (final row in scheduled) {
+      final parts = row.time.split(':');
+      final hour = int.parse(parts.first);
+      final minute = int.parse(parts.last);
+      expect(hour, inInclusiveRange(9, 22), reason: '${row.date} ${row.time}');
+
+      // 하루의 첫 수업만 9:00·9:30 으로 앞당길 수 있다 — 모든 요일이
+      // 나란히 10:00에 시작하지 않도록 하는 예외다(#1319). 그 시간대는
+      // 짝수·홀수 정시 규칙에서 벗어난다.
+      if (hour == 9) {
+        expect(<int>{0, 30}, contains(minute), reason: '${row.date} ${row.time}');
+      } else {
+        expect(minute, 0, reason: '${row.date} ${row.time}');
+        if (row.type == SessionType.personalTraining) {
+          expect(hour.isEven, isTrue, reason: '${row.date} ${row.time}');
+        } else if (row.type == SessionType.consultation) {
+          expect(hour.isOdd, isTrue, reason: '${row.date} ${row.time}');
+        }
+      }
+
+      if (row.type == SessionType.personalTraining) {
+        expect(
+          <int>{30, 45, 50, 60, 90},
+          contains(row.durationMinutes),
+          reason: '${row.date} ${row.time}',
+        );
+      } else if (row.type == SessionType.consultation) {
+        expect(
+          <int>{30, 45, 60},
+          contains(row.durationMinutes),
+          reason: '${row.date} ${row.time}',
+        );
+      }
+    }
+
     expect(
-      rows
-          .map((r) => r.durationMinutes)
-          .where((m) => m > 0)
-          .toSet()
-          .length,
-      greaterThanOrEqualTo(3),
+      training.map((r) => r.durationMinutes).toSet(),
+      containsAll(<int>{30, 45, 50, 60, 90}),
     );
+    expect(
+      consultations.map((r) => r.durationMinutes).toSet(),
+      containsAll(<int>{30, 45, 60}),
+    );
+
+    for (final date in rows.map((r) => r.date).toSet()) {
+      final day = scheduled.where((r) => r.date == date).toList()
+        ..sort((a, b) => a.time.compareTo(b.time));
+      for (var index = 1; index < day.length; index++) {
+        final previous = day[index - 1];
+        final current = day[index];
+        final previousParts = previous.time.split(':').map(int.parse).toList();
+        final currentParts = current.time.split(':').map(int.parse).toList();
+        final previousEnd =
+            previousParts[0] * 60 +
+            previousParts[1] +
+            previous.durationMinutes;
+        final currentStart = currentParts[0] * 60 + currentParts[1];
+        expect(
+          previousEnd,
+          lessThanOrEqualTo(currentStart),
+          reason: '$date ${previous.time}와 ${current.time} 일정이 겹친다',
+        );
+      }
+    }
   });
 
   test('명단에 있는 이름은 고객 id 로, 미등록 상담자는 이름만 남는다', () async {

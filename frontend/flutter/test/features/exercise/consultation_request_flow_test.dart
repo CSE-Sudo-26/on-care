@@ -293,7 +293,9 @@ void main() {
       await tester.tap(find.byKey(const Key('consult-time-flexible')));
       await tester.pump();
       expect(find.text(l.exTimeRequired), findsNothing);
-      expect(find.byKey(const Key('consult-time')), findsNothing);
+      // 시간 선택을 먼저, 시간 협의를 같은 줄에 유지한다. 협의 중에는 필드만
+      // 비활성화하고 레이아웃은 움직이지 않는다.
+      expect(find.byKey(const Key('consult-time')), findsOneWidget);
     },
   );
 

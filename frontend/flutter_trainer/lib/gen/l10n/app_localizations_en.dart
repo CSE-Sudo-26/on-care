@@ -983,10 +983,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultNoPending => 'No pending requests';
 
   @override
-  String get consultShowAll => 'All';
+  String get consultFilterAll => 'All';
 
   @override
-  String get consultShowPending => 'Pending only';
+  String consultFilterPendingCount(int count) {
+    return 'Pending $count';
+  }
 
   @override
   String get consultLoadMore => 'Load earlier requests';
@@ -1019,10 +1021,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultRejected => 'Request declined';
 
   @override
+  String consultScheduleConflict(String name, String time) {
+    return 'Overlaps $name\'s $time session';
+  }
+
+  @override
+  String get consultDecisionNote => 'Reason';
+
+  @override
   String get consultTargetTrainer => 'Direct request';
 
   @override
   String get consultExerciseGoal => 'Training goal';
+
+  @override
+  String get consultHealthPurpose => 'Health management purpose';
 
   @override
   String get consultPreferredTime => 'Preferred time';
@@ -1051,7 +1064,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultRejectAction => 'Decline';
 
   @override
-  String get consultStatusApproved => 'Added as a client';
+  String get consultStatusPending => 'Pending';
+
+  @override
+  String get consultStatusAccepted => 'Approved';
 
   @override
   String get workoutRecords => 'Workout log';
@@ -1170,11 +1186,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get consultStatusRejected => 'Declined';
-
-  @override
-  String consultStatusRejectedWithNote(String note) {
-    return 'Declined · $note';
-  }
 
   @override
   String get dateToday => 'Today';
@@ -1553,6 +1564,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldType => 'Type';
 
   @override
+  String get schedFieldDate => 'Date';
+
+  @override
   String get schedFieldTime => 'Time';
 
   @override
@@ -1586,16 +1600,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedRepeat => 'Repeat';
 
   @override
-  String get schedRepeatNone => 'Does not repeat';
-
-  @override
   String get schedRepeatWeekly => 'Weekly';
 
   @override
   String get schedRepeatDays => 'Repeat on';
-
-  @override
-  String get schedRepeatEnd => 'Ends';
 
   @override
   String get schedRepeatEndByCount => 'After';
@@ -1607,6 +1615,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String schedRepeatCount(int count) {
     return '$count times';
   }
+
+  @override
+  String get schedRepeatCountUnit => 'times';
 
   @override
   String schedRepeatPreview(int count, String first, String last) {
@@ -1706,6 +1717,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String progSetsValue(int sets) {
     return '$sets sets';
+  }
+
+  @override
+  String progRepsValue(int reps) {
+    return '$reps reps';
   }
 
   @override
@@ -2046,6 +2062,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldSets => 'Sets';
 
   @override
+  String get routineFieldReps => 'Reps';
+
+  @override
   String get routineFieldWeight => 'Weight';
 
   @override
@@ -2056,6 +2075,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineUnitSets => 'sets';
+
+  @override
+  String get routineUnitReps => 'reps';
 
   @override
   String get routineUnitKg => 'kg';
@@ -3364,9 +3386,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportsAverageChip(String value) {
-    return 'Avg $value';
+  String reportsAdherenceChip(String value) {
+    return 'Adherence avg $value';
   }
+
+  @override
+  String get reportsBurnByDay => 'Weekly calories burned';
+
+  @override
+  String get reportsBurnEstimateNote =>
+      'Calories burned are estimated from workout type, duration, and intensity.';
 
   @override
   String chartGoalLabel(String value) {

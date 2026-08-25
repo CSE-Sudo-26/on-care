@@ -269,8 +269,8 @@ void main() {
               CoachProgramItem(
                 name: '숄더 프레스',
                 sets: 4,
-                reps: '12회',
-                weight: '10kg',
+                reps: 12,
+                weight: 10,
               ),
             ],
           ),
@@ -293,7 +293,7 @@ void main() {
     );
 
     expect(find.text('18:00 수업 완료'), findsOneWidget);
-    expect(find.text('숄더 프레스 · 10kg · 4세트 · 12회'), findsOneWidget);
+    expect(find.text('숄더 프레스 · 4세트 · 12회 · 10kg'), findsOneWidget);
     expect(find.text('김트레이너 · 오늘의 피드백'), findsOneWidget);
     expect(find.text('오른쪽 어깨 가동 범위를 확인해 주세요.'), findsOneWidget);
   });

@@ -68,6 +68,7 @@ def _exercise(name: str, **overrides) -> dict:
         "date": None,
         "duration": None,
         "sets": 4,
+        "reps": 12,
         "weight": 60.0,
         "intensity": "moderate",
         "memo": "",
@@ -93,6 +94,7 @@ def _two_sessions() -> list[dict]:
                     type="유산소",
                     duration=20,
                     sets=None,
+                    reps=None,
                     weight=None,
                     source="ai",
                 )

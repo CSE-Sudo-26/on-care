@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dar
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
+import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 
 /// Opens the merged 신체·목표·메모 dialog for [clientId].
 ///
@@ -64,7 +65,18 @@ class ClientProfileDialog extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
       key: const ValueKey<String>('client-profile-dialog'),
-      title: Text(l.clientProfileSectionTitle),
+      // 닫기는 다른 가운데 모달과 같은 자리·모양이다 — 오른쪽 위 X 하나로
+      // 충분해, 아래에 따로 `닫기` 글자 버튼을 두지 않는다.
+      title: Row(
+        children: <Widget>[
+          Expanded(child: Text(l.clientProfileSectionTitle)),
+          DialogCloseButton(
+            key: const ValueKey<String>('client-profile-dialog-close'),
+            tooltip: l.actionClose,
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
       content: SizedBox(
         // Same width as the two dialogs this replaces, so the form fields
         // keep the proportions trainers already know.
@@ -89,13 +101,6 @@ class ClientProfileDialog extends StatelessWidget {
           ),
         ),
       ),
-      actions: <Widget>[
-        TextButton(
-          key: const ValueKey<String>('client-profile-dialog-close'),
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.actionClose),
-        ),
-      ],
     );
   }
 }
@@ -579,16 +584,34 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
           decoration: InputDecoration(
             hintText: l.clientTrainerMemoHint,
             border: const OutlineInputBorder(),
+            // 기본 카운터는 버튼과 다른 줄에 떨어져 그려진다 — 아래 Row에서
+            // 버튼과 나란히 직접 그리므로 여기서는 감춘다.
+            counterText: '',
           ),
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton.icon(
-            key: const ValueKey<String>('client-memo-add'),
-            onPressed: _busy ? null : _add,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(l.clientTrainerMemoAdd),
-          ),
+        // 입력 상자와 바로 붙어 있으면 `추가` 가 상자의 일부처럼 보인다 —
+        // 다른 카드 사이 간격과 같은 여백을 준다.
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _draft,
+              builder: (context, value, _) => Text(
+                '${value.text.characters.length}/$_maxLength',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+            FilledButton.icon(
+              key: const ValueKey<String>('client-memo-add'),
+              onPressed: _busy ? null : _add,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(l.clientTrainerMemoAdd),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
         memos.when(
@@ -644,24 +667,34 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
           if (memo.source == TrainerMemoSource.chatInsight)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const Icon(
-                    Icons.auto_awesome_outlined,
-                    size: 14,
-                    color: AppColors.mutedForeground,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    l.clientTrainerMemoFromChat,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.mutedForeground,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.10),
+                  borderRadius: const BorderRadius.all(AppRadius.pill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: AppColors.warning,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      _insightReasonLabel(l, memo.insightKind),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           if (editing)
@@ -726,6 +759,20 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
         ],
       ),
     );
+  }
+
+  /// 채팅 감지 배지에 붙는 이유 문구. 채팅 화면의 감지 배너
+  /// ([_ChatInsightBanner] 상당)와 같은 이유별 문구를 쓴다 — 신체 부위는
+  /// 메모에 저장되지 않으므로 일반 문구로 대신한다.
+  static String _insightReasonLabel(AppLocalizations l, String insightKind) {
+    switch (insightKind) {
+      case 'discomfort':
+        return l.chatInsightDiscomfortTitle(l.chatInsightBodyPartGeneral);
+      case 'negativeFeedback':
+        return l.chatInsightNegativeTitle;
+      default:
+        return l.clientTrainerMemoFromChat;
+    }
   }
 
   static String _dayLabel(DateTime at) {

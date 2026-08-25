@@ -76,6 +76,7 @@ class ExerciseSession {
     this.trainerFeedback = '',
     this.completedAt,
     this.sets,
+    this.reps,
     this.name = '',
     this.weight,
     this.date,
@@ -93,6 +94,10 @@ class ExerciseSession {
 
   /// 근력 기록의 중량(kg). 세트와 짝이라 근력에만 있다. (#1276)
   final double? weight;
+
+  /// 근력 기록의 한 세트당 횟수. 세트·중량과 한 벌이다 — 셋이 다 있어야 회원이
+  /// 지난주에 무엇을 했는지 그대로 되짚는다. (#1310)
+  final int? reps;
 
   /// 이 기록의 실제 날짜. 수정 시트가 원래 날짜로 열리려면 요일만으로는
   /// 모자란다 — 몇 주 전 기록도 같은 요일 라벨을 갖는다. (#1276)
@@ -149,6 +154,7 @@ class ExerciseSession {
         trainerFeedback: json['trainer_feedback'] as String? ?? '',
         completedAt: DateTime.tryParse(json['completed_at'] as String? ?? ''),
         sets: (json['sets'] as num?)?.toInt(),
+        reps: (json['reps'] as num?)?.toInt(),
         name: json['name'] as String? ?? '',
         weight: (json['weight'] as num?)?.toDouble(),
         date: DateTime.tryParse(json['date'] as String? ?? ''),

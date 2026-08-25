@@ -8,7 +8,7 @@ class MockAccountRepository implements AccountRepository {
   MockAccountRepository({UserProfile profile = _demo}) : _profile = profile;
 
   static const UserProfile _demo = UserProfile(
-    id: 'user-demo',
+    id: 'user-7d4e9a2c5f18',
     name: '김민수',
     email: 'minsu@oncare.com',
     phone: '010-1234-5678',
@@ -51,7 +51,16 @@ class MockAccountRepository implements AccountRepository {
     num? weightKg,
     String? conditions,
     String? goals,
+    int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? dailyBurnKcal,
+    int? weeklyCardioMinutes,
+    int? weeklyStrengthSets,
+    int? weeklyFlexibilityMinutes,
   }) async {
     _profile = _replaceProfile(
       birthDate: birthDate,
@@ -59,7 +68,16 @@ class MockAccountRepository implements AccountRepository {
       heightCm: heightCm,
       weightKg: weightKg,
       goals: goals,
+      dailyCalories: dailyCalories,
       dailySodiumMg: dailySodiumMg,
+      dailySugarG: dailySugarG,
+      dailyCarbsG: dailyCarbsG,
+      dailyProteinG: dailyProteinG,
+      dailyFatG: dailyFatG,
+      dailyBurnKcal: dailyBurnKcal,
+      weeklyCardioMinutes: weeklyCardioMinutes,
+      weeklyStrengthSets: weeklyStrengthSets,
+      weeklyFlexibilityMinutes: weeklyFlexibilityMinutes,
     );
     return _profile;
   }
@@ -88,6 +106,11 @@ class MockAccountRepository implements AccountRepository {
     return _profile;
   }
 
+  /// 준 값만 갈아 끼우고 나머지는 그대로 둔다.
+  ///
+  /// **열 목표 칸을 하나도 빠뜨리지 않는다** — 예전에는 운동 유형별 목표
+  /// 넷이 빠져 있어, 내 프로필을 저장하기만 해도 온보딩·MY 에서 정한 운동
+  /// 목표가 조용히 사라졌다.
   UserProfile _replaceProfile({
     String? name,
     String? email,
@@ -97,7 +120,16 @@ class MockAccountRepository implements AccountRepository {
     num? heightCm,
     num? weightKg,
     String? goals,
+    int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? dailyBurnKcal,
+    int? weeklyCardioMinutes,
+    int? weeklyStrengthSets,
+    int? weeklyFlexibilityMinutes,
   }) => UserProfile(
     id: _profile.id,
     name: name ?? _profile.name,
@@ -108,15 +140,20 @@ class MockAccountRepository implements AccountRepository {
     heightCm: heightCm?.toDouble() ?? _profile.heightCm,
     weightKg: weightKg?.toDouble() ?? _profile.weightKg,
     goals: goals ?? _profile.goals,
-    dailyCalories: _profile.dailyCalories,
+    dailyCalories: dailyCalories ?? _profile.dailyCalories,
     dailySodiumMg: dailySodiumMg ?? _profile.dailySodiumMg,
-    dailySugarG: _profile.dailySugarG,
-    dailyCarbsG: _profile.dailyCarbsG,
-    dailyProteinG: _profile.dailyProteinG,
-    dailyFatG: _profile.dailyFatG,
+    dailySugarG: dailySugarG ?? _profile.dailySugarG,
+    dailyCarbsG: dailyCarbsG ?? _profile.dailyCarbsG,
+    dailyProteinG: dailyProteinG ?? _profile.dailyProteinG,
+    dailyFatG: dailyFatG ?? _profile.dailyFatG,
     weeklyWorkoutGoal: _profile.weeklyWorkoutGoal,
     weeklyExerciseMinutesGoal: _profile.weeklyExerciseMinutesGoal,
     weeklyBurnGoal: _profile.weeklyBurnGoal,
+    dailyBurnKcal: dailyBurnKcal ?? _profile.dailyBurnKcal,
+    weeklyCardioMinutes: weeklyCardioMinutes ?? _profile.weeklyCardioMinutes,
+    weeklyStrengthSets: weeklyStrengthSets ?? _profile.weeklyStrengthSets,
+    weeklyFlexibilityMinutes:
+        weeklyFlexibilityMinutes ?? _profile.weeklyFlexibilityMinutes,
   );
 
   @override

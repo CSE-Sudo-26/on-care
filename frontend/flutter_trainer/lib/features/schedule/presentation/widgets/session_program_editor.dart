@@ -273,13 +273,22 @@ class _ProgramDraftFields extends StatelessWidget {
             label: l.progExerciseName,
           ),
           const SizedBox(height: AppSpacing.sm),
-          // 근력은 세트·중량으로, 나머지는 시간으로 묻는다.
+          // 근력은 세트·횟수·중량으로, 나머지는 시간으로 묻는다.
           if (draft.isStrength) ...<Widget>[
             RoutineSetsField(
               keyPrefix: 'program-sets-$index',
               sets: draft.sets,
               onChanged: (int value) {
                 draft.sets = value;
+                onChanged();
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            RoutineRepsField(
+              keyPrefix: 'program-reps-$index',
+              reps: draft.reps,
+              onChanged: (int value) {
+                draft.reps = value;
                 onChanged();
               },
             ),
