@@ -60,16 +60,19 @@ class ClientPeriodSection extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
+                    // 아이콘 크기·간격·글자 크기 모두 회원 앱 `SectionTitle`
+                    // 과 같은 값이다 — 두 화면이 같은 것을 말하는지 제목
+                    // 줄에서 바로 붙어야 한다.
                     Icon(icon, size: 16, color: AppColors.primary),
-                    const SizedBox(width: AppSpacing.xs),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.foreground,
                         ),
                       ),
