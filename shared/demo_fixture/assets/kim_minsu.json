@@ -363,27 +363,6 @@
           "done": true,
           "sets": 3,
           "reps": 3
-        },
-        {
-          "name": "마무리 러닝머신 15분",
-          "type": "cardio",
-          "minutes": 15,
-          "calories": 135,
-          "done": true
-        },
-        {
-          "name": "하체 스트레칭 12분",
-          "type": "stretching",
-          "minutes": 12,
-          "calories": 36,
-          "done": true
-        },
-        {
-          "name": "탁구 20분",
-          "type": "other",
-          "minutes": 20,
-          "calories": 100,
-          "done": true
         }
       ],
       "meals": [
