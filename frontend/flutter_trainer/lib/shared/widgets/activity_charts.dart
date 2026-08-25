@@ -30,6 +30,7 @@ import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
+import 'package:oncare_trainer/design_system/tokens/typography.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/widgets/chart_semantics.dart';
@@ -98,10 +99,23 @@ class ActivitySplit {
     this.strengthSets = 0,
     this.stretchingMinutes = 0,
     this.otherMinutes = 0,
-  });
+    // 인자 이름은 `strengthMinutes` 로 두고, 같은 이름은 아래 getter 가
+    // 가져간다 — 주지 않은 곳에서는 세트에서 되짚어야 하기 때문이다.
+    num? strengthMinutes,
+    // ignore: prefer_initializing_formals
+  }) : _strengthMinutes = strengthMinutes;
 
   final num cardioMinutes;
   final num strengthSets;
+
+  /// 근력에 쓴 **시간**. 화면에는 세트로 적지만, 막대를 유형별로 나눌 때는
+  /// 셋을 같은 단위(분)로 놓아야 몫이 뜻을 갖는다. 주지 않으면 세트에서
+  /// 되짚는다 — 그때도 셋의 비율은 흔들리지 않는다.
+  final num? _strengthMinutes;
+
+  num get strengthMinutes =>
+      _strengthMinutes ?? strengthSets * kStrengthMinutesPerSet;
+
   final num stretchingMinutes;
 
   /// 목표가 없는 나머지 운동. 그래프에는 그리지 않는다.
@@ -111,6 +125,17 @@ class ActivitySplit {
     ExerciseKind.cardio => cardioMinutes,
     ExerciseKind.strength => strengthSets,
     ExerciseKind.stretching => stretchingMinutes,
+  };
+
+  /// 막대를 나누는 몫 — **셋 모두 분**이다.
+  ///
+  /// 막대 **높이**는 소모 칼로리이고 막대 **안**은 이 몫으로 나뉜다. 세트로
+  /// 나누면 근력 한 세트가 유산소 1분과 같은 자리를 차지해, 칼로리 막대인데
+  /// 칼로리와 다른 이야기를 하게 된다. (회원 앱 `_WeekBucket.minutesByKind`)
+  Map<ExerciseKind, num> get minutesByKind => <ExerciseKind, num>{
+    ExerciseKind.cardio: cardioMinutes,
+    ExerciseKind.strength: strengthMinutes,
+    ExerciseKind.stretching: stretchingMinutes,
   };
 }
 
@@ -189,6 +214,10 @@ class BurnDonut extends StatelessWidget {
                             unit:
                                 '/${NumberFormat.decimalPattern(locale).format(goal.round())}'
                                 '${l.unitKcal}',
+                            // 회원 앱 홈 운동 카드가 쓰는 것과 같은 말이다 —
+                            // 두 화면이 같은 값을 다른 이름으로 부르지 않게
+                            // 한 문구를 나눠 쓴다. (회원 앱 #1352)
+                            caption: l.clientTrendCaloriesBurned,
                             startIcon: kBurnStartIcon,
                           ),
                         ),
@@ -230,12 +259,17 @@ class BurnDonut extends StatelessWidget {
                                       split.valueOf(kind),
                                     ),
                                   ),
+                                // 세 유형은 0 이어도 줄로 남는다 — `오늘 무엇을
+                                // 안 했는지` 도 이 카드가 답해야 한다. 반대로
+                                // `기타` 는 기록이 있을 때만 맨 아래 회색 한
+                                // 줄로 붙는다 (회원 앱 #1352).
                                 if (split.otherMinutes > 0)
                                   ActivityValueRow(
                                     label: l.exTypeOther,
                                     value: l.minutesShort(
                                       split.otherMinutes.round(),
                                     ),
+                                    muted: true,
                                   ),
                               ],
                             ),
@@ -282,7 +316,7 @@ class ActivityStreakLine extends StatelessWidget {
             // 둔다. 한 화면에서 같은 그림이 두 가지를 뜻하면 안 된다.
             const Icon(
               Icons.bolt_rounded,
-              size: 16,
+              size: 17,
               color: AppColors.brandOrange,
             ),
             const SizedBox(width: 4),
@@ -292,7 +326,7 @@ class ActivityStreakLine extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.brandOrange,
                 ),
@@ -397,6 +431,9 @@ class BurnGoalRings extends StatelessWidget {
                                     goal:
                                         '/${kindValueText(l, kind, weeklyGoalOf(kind))}',
                                   ),
+                                // 기타는 목표가 없다 — 오늘 카드와 같이 분만
+                                // 적고, 한 주에 기록이 있을 때만 맨 아래 회색
+                                // 한 줄로 붙는다 (회원 앱 #1352).
                                 if (split.otherMinutes > 0)
                                   ActivityValueRow(
                                     color: AppColors.borderStrong,
@@ -404,6 +441,7 @@ class BurnGoalRings extends StatelessWidget {
                                     value: l.minutesShort(
                                       split.otherMinutes.round(),
                                     ),
+                                    muted: true,
                                   ),
                               ],
                             ),
@@ -447,7 +485,7 @@ class ActivityHeadlineLine extends StatelessWidget {
         Text(
           caption,
           style: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
             color: AppColors.mutedForeground,
           ),
@@ -456,7 +494,7 @@ class ActivityHeadlineLine extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: 21,
             fontWeight: FontWeight.w800,
             color: AppColors.foreground,
             letterSpacing: -0.4,
@@ -466,7 +504,7 @@ class ActivityHeadlineLine extends StatelessWidget {
         Text(
           unit,
           style: const TextStyle(
-            fontSize: 11.5,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             color: AppColors.subtleForeground,
           ),
@@ -485,10 +523,16 @@ class ActivityValueRow extends StatelessWidget {
     required this.value,
     this.color,
     this.goal,
+    this.muted = false,
   });
 
   final String label;
   final String value;
+
+  /// 세 유형 아래 덧붙는 `기타` 줄인가. 목표도 색도 없는 값이라 **회색**으로
+  /// 한 단계 물려 적는다 (회원 앱 #1352) — 유형 셋과 같은 진하기로 적으면
+  /// 네 번째 유형처럼 읽힌다.
+  final bool muted;
 
   /// 색 점. 옆에 같은 색 링이 있는 화면에서만 준다 — 오늘 카드는 도넛이
   /// 하나뿐이라 점이 가리킬 데가 없다.
@@ -532,10 +576,12 @@ class ActivityValueRow extends StatelessWidget {
             label,
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.mutedForeground,
+              color: muted
+                  ? AppColors.disabledForeground
+                  : AppColors.mutedForeground,
             ),
           ),
           const SizedBox(width: 12),
@@ -553,10 +599,12 @@ class ActivityValueRow extends StatelessWidget {
             ),
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(
-              fontSize: 13.5,
+            style: TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: AppColors.foreground,
+              color: muted
+                  ? AppColors.disabledForeground
+                  : AppColors.foreground,
               letterSpacing: -0.2,
             ),
           ),
@@ -700,6 +748,17 @@ class BurnBarChart extends StatelessWidget {
                 : '',
             calloutBuilder: (BuildContext context, int i) =>
                 const SizedBox.shrink(),
+            // 눈금선(0·50·100%)과 달 경계 파선을 막대 뒤에 깐다 — 회원 앱
+            // 운동 탭 `전체` 그래프와 같은 자다.
+            background: _ChartGridPainter(
+              count: calories.length,
+              monthBreaks: <int>[
+                for (int i = 1; i < dates.length; i++)
+                  if (dates[i].month != dates[i - 1].month) i,
+              ],
+            ),
+            // 한 칸이 한 주라, 어느 주를 고른 것인지 달 라벨에서도 읽혀야 한다.
+            boldSelectedLabel: true,
             barBuilder: (BuildContext context, int i) => Tooltip(
               key: Key('client-exercise-bar-$i'),
               richMessage: TextSpan(
@@ -722,6 +781,7 @@ class BurnBarChart extends StatelessWidget {
                 value: calories[i].toDouble(),
                 max: max,
                 height: chartHeight,
+                parts: splits[i].minutesByKind,
                 dimmed: selection.selected != null && selection.selected != i,
               ),
             ),
@@ -733,12 +793,17 @@ class BurnBarChart extends StatelessWidget {
 }
 
 /// 막대 한 칸.
+///
+/// 막대 **높이**는 소모 칼로리이고, 막대 **안**은 유형별 시간 몫으로 나뉜다 —
+/// 식단의 칼로리 막대가 탄·단·지로 쌓이는 것과 같은 규칙이다(회원 앱 #1177).
+/// 유형 분해가 없는 칸만 한 색([kBurnColor])으로 채운다.
 class _BurnBarColumn extends StatelessWidget {
   const _BurnBarColumn({
     required this.value,
     required this.max,
     required this.height,
     required this.dimmed,
+    this.parts = const <ExerciseKind, num>{},
   });
 
   final double value;
@@ -746,8 +811,12 @@ class _BurnBarColumn extends StatelessWidget {
   final double height;
   final bool dimmed;
 
-  /// 칸에서 막대가 차지하는 비율. 나머지가 이웃과의 사이가 된다.
-  static const double _fill = 0.56;
+  /// 그 칸의 유형별 시간(분). 비어 있으면 한 색으로 채운다.
+  final Map<ExerciseKind, num> parts;
+
+  /// 칸에서 막대가 차지하는 비율. 나머지가 이웃과의 사이가 된다. 회원 앱
+  /// `전체` 그래프의 12/26 과 같은 몫이다.
+  static const double _fill = 0.46;
 
   @override
   Widget build(BuildContext context) {
@@ -758,7 +827,7 @@ class _BurnBarColumn extends StatelessWidget {
         child: FractionallySizedBox(
           widthFactor: _fill,
           child: Container(
-            height: 3,
+            height: 4,
             decoration: BoxDecoration(
               color: AppColors.borderStrong,
               borderRadius: BorderRadius.circular(2),
@@ -767,6 +836,7 @@ class _BurnBarColumn extends StatelessWidget {
         ),
       );
     }
+    final num total = parts.values.fold<num>(0, (num a, num b) => a + b);
     return Align(
       alignment: Alignment.bottomCenter,
       child: Opacity(
@@ -775,11 +845,31 @@ class _BurnBarColumn extends StatelessWidget {
         // 한 주인지 눈으로 셀 수 있어야 한다.
         child: FractionallySizedBox(
           widthFactor: _fill,
-          child: Container(
-            height: math.max((value / max).clamp(0.0, 1.0) * height, 3),
-            decoration: const BoxDecoration(
-              color: kBurnColor,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+            child: SizedBox(
+              height: math.max((value / max).clamp(0.0, 1.0) * height, 3),
+              child: total <= 0
+                  ? const ColoredBox(color: kBurnColor)
+                  : Column(
+                      // 가로로 늘려야 한다 — 가운데 정렬(기본값)이면 조각마다
+                      // 폭이 0 이 되어 막대가 통째로 사라진다.
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        // 위에서부터 스트레칭·근력·유산소 순으로 쌓는다 —
+                        // 바닥이 늘 유산소라 주끼리 견줄 때 기준이 흔들리지
+                        // 않는다.
+                        for (final ExerciseKind k
+                            in ExerciseKind.values.reversed)
+                          Expanded(
+                            flex: ((parts[k] ?? 0) * 100).round().clamp(
+                              0,
+                              1 << 30,
+                            ),
+                            child: ColoredBox(color: kindColor(k)),
+                          ),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -795,10 +885,17 @@ class _DonutPainter extends CustomPainter {
     required this.ratio,
     required this.center,
     required this.unit,
+    this.caption = '',
     this.startIcon,
   });
 
   final double ratio;
+
+  /// 값 **위**에 얹는 회색 머리 — 이 링이 무엇을 재는지 (회원 앱 #1352). 비면
+  /// 그리지 않는다. 불꽃 기호만으로는 12시의 그림이 소모 칼로리를 뜻하는지 알
+  /// 수 없다.
+  final String caption;
+
   final String center;
   final String unit;
 
@@ -811,41 +908,53 @@ class _DonutPainter extends CustomPainter {
     final double stroke = size.width * 0.13;
     final double r = size.width / 2 - stroke / 2;
     paintRing(canvas, c, r, stroke, ratio, kBurnColor, startIcon: startIcon);
-    // 안쪽 구멍의 지름. 두 줄 다 이 폭 안에 들어간다.
+    // 안쪽 구멍의 지름. 세 줄 다 이 폭 안에 들어간다.
     final double inner = (r - stroke / 2) * 1.75;
-    _text(
-      canvas,
-      c.translate(0, -size.width * 0.09),
-      center,
-      size.width * 0.2,
-      FontWeight.w800,
-      AppColors.foreground,
-      inner,
-    );
-    _text(
-      canvas,
-      c.translate(0, size.width * 0.1),
-      unit,
-      size.width * 0.105,
-      FontWeight.w700,
-      AppColors.subtleForeground,
-      inner,
-    );
+    // 머리 → 값 → 목표 순으로 쌓아 **구멍 한가운데**에 세운다 (회원 앱 #1352).
+    // 예전에는 두 줄을 중심에서 각각 -0.09 · +0.10 만큼 밀어 놓았는데, 그
+    // 자리는 두 줄일 때만 맞는 값이라 머리줄이 붙으면 묶음이 아래로 쏠린다.
+    // 이제는 세 줄의 실제 높이를 재서 묶음째 가운데로 옮긴다.
+    _paintCenteredLines(canvas, c, <TextPainter>[
+      if (caption.isNotEmpty)
+        _layout(
+          caption,
+          size.width * 0.085,
+          FontWeight.w700,
+          AppColors.subtleForeground,
+          inner,
+        ),
+      _layout(
+        center,
+        size.width * 0.2,
+        FontWeight.w800,
+        AppColors.foreground,
+        inner,
+      ),
+      _layout(
+        unit,
+        size.width * 0.105,
+        FontWeight.w700,
+        AppColors.subtleForeground,
+        inner,
+      ),
+    ], gap: size.width * 0.012);
   }
 
-  void _text(
-    Canvas canvas,
-    Offset center,
+  TextPainter _layout(
     String s,
     double size,
     FontWeight w,
     Color color,
     double maxWidth,
   ) {
-    TextPainter layout(double fontSize) => TextPainter(
+    TextPainter at(double fontSize) => TextPainter(
       text: TextSpan(
         text: s,
         style: TextStyle(
+          // 캔버스에 직접 그리는 글자는 테마를 타지 않는다 — 앱 폰트를 손으로
+          // 붙여 준다. 한글 머리줄이 붙으면서 필요해졌다: 기본 폰트로 떨어지면
+          // 웹에서 두부(□)로 나온다 (회원 앱 #1352).
+          fontFamily: AppTypography.fontFamily,
           fontSize: fontSize,
           fontWeight: w,
           color: color,
@@ -854,19 +963,77 @@ class _DonutPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    TextPainter tp = layout(size);
+    final TextPainter tp = at(size);
     // 도넛 **안**에 들어가야 한다. 넘치면 그만큼 글자를 줄인다 — 링 밖으로
     // 삐져나온 글씨는 어느 링의 값인지 알려 주지 못한다. (#1127)
-    if (tp.width > maxWidth) tp = layout(size * (maxWidth / tp.width));
-    tp.paint(
-      canvas,
-      Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
-    );
+    if (tp.width > maxWidth) return at(size * (maxWidth / tp.width));
+    return tp;
+  }
+
+  /// [lines] 를 [center] 기준으로 가로·세로 모두 가운데에 쌓아 그린다.
+  void _paintCenteredLines(
+    Canvas canvas,
+    Offset center,
+    List<TextPainter> lines, {
+    required double gap,
+  }) {
+    if (lines.isEmpty) return;
+    final double total =
+        lines.fold<double>(0, (double a, TextPainter tp) => a + tp.height) +
+        gap * (lines.length - 1);
+    double y = center.dy - total / 2;
+    for (final TextPainter tp in lines) {
+      tp.paint(canvas, Offset(center.dx - tp.width / 2, y));
+      y += tp.height + gap;
+    }
   }
 
   @override
   bool shouldRepaint(covariant _DonutPainter old) =>
-      old.ratio != ratio || old.center != center || old.unit != unit;
+      old.ratio != ratio ||
+      old.center != center ||
+      old.unit != unit ||
+      old.caption != caption;
+}
+
+/// 막대 뒤에 까는 자 — 가로 눈금선 셋과 달이 바뀌는 자리의 세로 파선.
+///
+/// 회원 앱 운동 탭 `전체` 그래프의 `_ChartGridPainter` 와 같은 값·같은 규칙이다.
+/// 데이터가 아니라 데이터를 읽을 기준이라, 목표선보다도 뒤에 깔린다.
+class _ChartGridPainter extends CustomPainter {
+  _ChartGridPainter({required this.count, required this.monthBreaks});
+
+  /// 칸 개수. 달 경계 자리를 재는 데 쓴다.
+  final int count;
+
+  /// 달이 바뀌는 칸의 인덱스.
+  final List<int> monthBreaks;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint line = Paint()
+      ..color = const Color(0xFFEDF1F4)
+      ..strokeWidth = 1;
+    for (final double f in <double>[0, 0.5, 1]) {
+      final double y = size.height * f;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
+    }
+    if (count <= 0) return;
+    final double step = size.width / count;
+    final Paint dash = Paint()
+      ..color = const Color(0xFFD8E1E8)
+      ..strokeWidth = 1;
+    for (final int i in monthBreaks) {
+      final double x = step * i;
+      for (double y = 0; y < size.height; y += 6) {
+        canvas.drawLine(Offset(x, y), Offset(x, y + 3), dash);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChartGridPainter old) =>
+      old.count != count || old.monthBreaks != monthBreaks;
 }
 
 /// 유형별 주간 목표를 크기 순으로 겹친 세 링.

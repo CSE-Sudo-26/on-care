@@ -33,26 +33,17 @@ class LocalTrainerSettingsRepository implements TrainerSettingsRepository {
   final SharedPreferences _prefs;
 
   static const String _kNewMessage = 'trainer.notify.newMessage';
-  static const String _kSession = 'trainer.notify.session';
-  static const String _kLead = 'trainer.notify.leadMinutes';
 
   @override
   Future<TrainerSettings> load() async {
-    final lead = _prefs.getInt(_kLead);
     return TrainerSettings(
       newMessageAlerts: _prefs.getBool(_kNewMessage) ?? true,
-      sessionReminders: _prefs.getBool(_kSession) ?? true,
-      // A value written by an older build (or a hand-edited store) must
-      // not put the picker into a state it cannot render.
-      reminderLeadMinutes: reminderLeadOptions.contains(lead) ? lead! : 30,
     );
   }
 
   @override
   Future<TrainerSettings> save(TrainerSettings settings) async {
     await _prefs.setBool(_kNewMessage, settings.newMessageAlerts);
-    await _prefs.setBool(_kSession, settings.sessionReminders);
-    await _prefs.setInt(_kLead, settings.reminderLeadMinutes);
     return settings;
   }
 }
@@ -92,21 +83,18 @@ class DioTrainerSettingsRepository implements TrainerSettingsRepository {
 
 /// Decodes `TrainerNotificationSettings`.
 TrainerSettings trainerSettingsFromJson(Map<String, dynamic> json) {
-  final lead = (json['reminder_lead_minutes'] as num?)?.toInt();
   return TrainerSettings(
     newMessageAlerts: json['notify_new_message'] as bool? ?? true,
-    sessionReminders: json['notify_session_reminder'] as bool? ?? true,
-    reminderLeadMinutes: reminderLeadOptions.contains(lead) ? lead! : 30,
   );
 }
 
 /// Encodes `TrainerNotificationSettingsUpdate`.
+///
+/// 서버의 수정 스키마는 모든 항목이 선택이라, 앱이 다루지 않는 항목
+/// (`notify_session_reminder`·`reminder_lead_minutes`)은 아예 보내지 않는다 —
+/// 보내지 않은 값은 서버에 그대로 남는다.
 Map<String, Object?> trainerSettingsToJson(TrainerSettings settings) {
-  return <String, Object?>{
-    'notify_new_message': settings.newMessageAlerts,
-    'notify_session_reminder': settings.sessionReminders,
-    'reminder_lead_minutes': settings.reminderLeadMinutes,
-  };
+  return <String, Object?>{'notify_new_message': settings.newMessageAlerts};
 }
 
 /// Provides the settings repository for the current mode.

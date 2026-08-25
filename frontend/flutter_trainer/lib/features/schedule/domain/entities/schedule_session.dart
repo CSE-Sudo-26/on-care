@@ -1,4 +1,3 @@
-import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
@@ -175,28 +174,4 @@ String _hhmm(int minutes) {
   final hour = (wrapped ~/ 60).toString().padLeft(2, '0');
   final minute = (wrapped % 60).toString().padLeft(2, '0');
   return '$hour:$minute';
-}
-
-/// [session] 이 지금부터 [leadMinutes] 안에 시작하는가. (#817)
-///
-/// 이미 지난 시각과 완료·공백 슬롯은 대상이 아니다 — 강조는 "곧 해야 할 일"
-/// 을 가리키는 표시이고, 끝난 수업을 다시 눈에 띄게 만들 이유가 없다.
-/// `HH:mm` 이 아닌 값(빈 시간 등)은 시각을 알 수 없으므로 조용히 false 다.
-bool startsWithin(ScheduleSession session, int leadMinutes, {DateTime? now}) {
-  if (!session.isUpcoming || leadMinutes <= 0) return false;
-  final parts = session.time.split(':');
-  if (parts.length != 2) return false;
-  final hour = int.tryParse(parts[0]);
-  final minute = int.tryParse(parts[1]);
-  if (hour == null || minute == null) return false;
-  final current = now ?? nowKst();
-  final startsAt = DateTime(
-    current.year,
-    current.month,
-    current.day,
-    hour,
-    minute,
-  );
-  if (!startsAt.isAfter(current)) return false;
-  return startsAt.difference(current).inMinutes <= leadMinutes;
 }

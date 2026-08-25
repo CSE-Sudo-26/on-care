@@ -72,16 +72,23 @@ class ClientPeriodToggle extends StatelessWidget {
                       onTap: () => onChanged(period),
                       customBorder: const StadiumBorder(),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                        // 회원 앱 식단·운동 탭 기간 토글과 **같은 크기**다 —
+                        // 같은 자리에 놓인 같은 조작이 화면마다 다르게 보이면
+                        // 안 된다. 글자를 키운 화면에서 여백을 좁히는 규칙까지
+                        // 같다. (회원 앱 #1126)
+                        padding: EdgeInsets.symmetric(
+                          horizontal:
+                              MediaQuery.textScalerOf(context).scale(1) > 1.3
+                              ? 12
+                              : 18,
+                          vertical: 6,
                         ),
                         child: Text(
                           labelOf(l, period),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w700,
                             color: active == period
                                 ? AppColors.primaryForeground
