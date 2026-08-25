@@ -85,6 +85,11 @@ Future<void> _openCoaching(
       trainerProgramTemplateRepositoryProvider.overrideWithValue(repository),
     ],
   );
+  final manual = find.byKey(const ValueKey<String>('ai-manual-create'));
+  await tester.ensureVisible(manual);
+  await tester.pump();
+  await tester.tap(manual);
+  await tester.pumpAndSettle();
 }
 
 /// 편집기는 빈 상태로 시작한다(#1028 후속) — 저장하려면 운동을 하나 넣어야
