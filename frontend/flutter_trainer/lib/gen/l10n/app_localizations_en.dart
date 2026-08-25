@@ -257,6 +257,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashActivityTabDiet => 'Diet';
 
   @override
+  String get dashActivityTabClient => 'Client';
+
+  @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
 
   @override
@@ -351,7 +354,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashAiSummaryTitle => 'AI diagnosis';
+  String get dashAiSummaryTitle => 'Activity feedback';
 
   @override
   String get dashAiNoClients =>

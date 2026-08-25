@@ -385,7 +385,7 @@ class _TodayTasksCardState extends ConsumerState<TodayTasksCard> {
       // 카테고리 여섯은 항목이 없어도 항상 그 자리에 있다 — "오늘 할 일이
       // 하나도 없다"는 빈 화면이 아니라 "전부 완료"로 읽혀야 한다. 화면
       // 안에 들어오면 그대로, 넘치면 카드 자체가 커지는 대신 이 안에서만
-      // 스크롤된다 — 옆 칸(오늘의 일정 + AI 진단)과 상관없이 미션이
+      // 스크롤된다 — 옆 칸(오늘의 일정 + 활동 피드백)과 상관없이 미션이
       // 몇십 건이어도 대시보드 전체가 한없이 길어지지 않는다.
       child: ConstrainedBox(
         constraints: BoxConstraints(

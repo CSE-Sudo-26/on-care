@@ -554,6 +554,12 @@ abstract class AppLocalizations {
   /// **'Diet'**
   String get dashActivityTabDiet;
 
+  /// No description provided for @dashActivityTabClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get dashActivityTabClient;
+
   /// No description provided for @dashLoadFailed.
   ///
   /// In en, this message translates to:
@@ -719,7 +725,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashAiSummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI diagnosis'**
+  /// **'Activity feedback'**
   String get dashAiSummaryTitle;
 
   /// No description provided for @dashAiNoClients.

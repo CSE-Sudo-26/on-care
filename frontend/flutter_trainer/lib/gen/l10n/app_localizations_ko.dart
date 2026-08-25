@@ -246,6 +246,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashActivityTabDiet => '식단';
 
   @override
+  String get dashActivityTabClient => '고객';
+
+  @override
   String get dashLoadFailed => '대시보드를 불러오지 못했어요';
 
   @override
@@ -339,7 +342,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashAiSummaryTitle => 'AI 진단';
+  String get dashAiSummaryTitle => '활동 피드백';
 
   @override
   String get dashAiNoClients =>

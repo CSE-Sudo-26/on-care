@@ -111,6 +111,7 @@
   "dashActivityTabProgram": "Program",
   "dashActivityTabChat": "Messages",
   "dashActivityTabDiet": "Diet",
+  "dashActivityTabClient": "Client",
   "dashLoadFailed": "Couldn't load the dashboard",
   "dashTodayReservations": "Today's bookings",
   "dashUnitCount": "",
@@ -173,7 +174,7 @@
       "count": {"type": "int"}
     }
   },
-  "dashAiSummaryTitle": "AI diagnosis",
+  "dashAiSummaryTitle": "Activity feedback",
   "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
   "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
   "dashAiLoading": "Reviewing diet, workouts, and recent conversations…",
