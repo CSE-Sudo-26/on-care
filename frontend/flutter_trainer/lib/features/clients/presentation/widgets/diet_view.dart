@@ -65,16 +65,14 @@ class _DietViewState extends ConsumerState<DietView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             ClientDietPeriodCard(clientId: client.id, period: period),
-            // 그래프 아래 날짜별 기록. 그래프는 "얼마나" 를 말하지만 "그날
-            // 무엇을" 은 말하지 않았고, 그걸 보려면 회원 앱으로 건너가야
-            // 했다(#1025). 접힌 줄만 늘어놓고 누른 날만 펼치므로 전체(12주)
-            // 에서도 스크롤이 감당한다.
-            const SizedBox(height: AppSpacing.md),
-            _DailyDietRecords(clientId: client.id, period: period),
-            // 기간을 고르면 그 기간의 조언을 함께 읽는다 — 그래프만 바뀌고
-            // 조언이 오늘 이야기로 남으면 화면과 무관한 말이 된다. (#1017)
+            // 그래프를 읽은 흐름에서 곧바로 같은 기간의 해석을 본다. 기록이
+            // 열두 주까지 길어져도 분석을 찾으러 끝까지 내려갈 필요가 없다.
             const SizedBox(height: AppSpacing.md),
             _AiComment(client: client, period: period),
+            // 그래프와 분석 아래 날짜별 기록. 접힌 줄만 늘어놓고 누른 날만
+            // 펼치므로 전체(12주)에서도 스크롤이 감당한다. (#1025, #1284)
+            const SizedBox(height: AppSpacing.md),
+            _DailyDietRecords(clientId: client.id, period: period),
           ],
         ),
       );
@@ -146,12 +144,17 @@ class _TodayDiet extends ConsumerWidget {
             if (meals.isEmpty)
               EmptyHint(message: l.dietEmpty, icon: Icons.restaurant_outlined)
             else ...<Widget>[
+              _AiComment(client: client, period: ClientPeriod.today),
+              const SizedBox(height: AppSpacing.md),
               for (final meal in meals) ...<Widget>[
-                _MealCard(entry: meal),
+                _MealCard(
+                  // 같은 날 같은 끼니 라벨이 두 번 저장될 수 있어(예: 간식
+                  // 두 번), meal 라벨이 아니라 고유한 끼니 id를 키로 쓴다.
+                  key: ValueKey<String>('diet-meal-${meal.id}'),
+                  entry: meal,
+                ),
                 const SizedBox(height: AppSpacing.sm),
               ],
-              const SizedBox(height: AppSpacing.xs),
-              _AiComment(client: client, period: ClientPeriod.today),
             ],
           ],
         ),
@@ -170,7 +173,7 @@ class _TodayDiet extends ConsumerWidget {
 ///  * 가운데: 사진 + 음식 한 줄씩.
 ///  * 아래: `칼로리 / 나트륨 / 당류` 알약 셋. 나트륨이 과다한 끼니만 빨강이다.
 class _MealCard extends StatelessWidget {
-  const _MealCard({required this.entry});
+  const _MealCard({super.key, required this.entry});
 
   final ClientDietEntry entry;
 
