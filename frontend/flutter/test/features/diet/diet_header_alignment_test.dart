@@ -96,7 +96,8 @@ void main() {
       );
     });
 
-    testWidgets('끼니 카드 화살표는 카드 오른쪽 끝에 붙는다', (WidgetTester tester) async {
+    // 아이콘은 `>` 에서 연필로 바뀌었다(#1431) — 붙는 자리는 그대로다.
+    testWidgets('끼니 카드 수정 아이콘은 카드 오른쪽 끝에 붙는다', (WidgetTester tester) async {
       await pumpPage(tester);
 
       final Finder headers = find.byKey(
@@ -106,15 +107,15 @@ void main() {
 
       for (int i = 0; i < headers.evaluate().length; i++) {
         final Finder header = headers.at(i);
-        final Finder chevron = find.descendant(
+        final Finder editIcon = find.descendant(
           of: header,
-          matching: find.byIcon(Icons.chevron_right),
+          matching: find.byIcon(Icons.edit_outlined),
         );
-        expect(chevron, findsOneWidget);
+        expect(editIcon, findsOneWidget);
         expect(
-          tester.getRect(chevron).right,
+          tester.getRect(editIcon).right,
           moreOrLessEquals(tester.getRect(header).right, epsilon: 0.5),
-          reason: '$i 번째 끼니 카드의 화살표가 카드 오른쪽 끝에 붙지 않았다',
+          reason: '$i 번째 끼니 카드의 수정 아이콘이 카드 오른쪽 끝에 붙지 않았다',
         );
       }
     });

@@ -1022,6 +1022,12 @@ abstract class AppLocalizations {
   /// **'Delete Meal'**
   String get dietDeleteMeal;
 
+  /// No description provided for @dietEditMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit meal'**
+  String get dietEditMeal;
+
   /// No description provided for @exTypeCardio.
   ///
   /// In en, this message translates to:
