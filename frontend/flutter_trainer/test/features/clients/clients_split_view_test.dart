@@ -8,6 +8,7 @@ import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 
 import '../../helpers/pump_app.dart';
@@ -221,6 +222,7 @@ void main() {
     expect(find.textContaining('3,428', findRichText: true), findsWidgets);
 
     // …switch to 박성호: same sub-tab, his data (2,400mg).
+    await scrollToCard(tester, '박성호');
     await tester.tap(card('박성호'));
     await settle(tester);
     expect(find.text('오늘 섭취 칼로리'), findsOneWidget);
@@ -342,9 +344,7 @@ void main() {
     expect(rendered.first.client.sodiumOverBudget, isTrue);
   });
 
-  testWidgets('고객 리스트 카드에 더 이상 주간 이행률 바가 없다 (#1024)', (tester) async {
-    // 이 지표는 식단·운동을 나누지 않은 공용 값이라 "주간 이행률"과 "운동
-    // 이행률"이 실제로는 같은 하나였다 — 카드에서 통째로 걷어냈다.
+  testWidgets('고객 카드가 기록된 날의 주간 루틴 이행률을 보여 준다 (#1284)', (tester) async {
     await openWide(tester);
     await scrollToCard(tester, '배준혁');
 
@@ -352,13 +352,47 @@ void main() {
       of: find.text('배준혁'),
       matching: find.byType(ClientCard),
     );
+    final progress = find.descendant(
+      of: clientCard,
+      matching: find.byKey(
+        const ValueKey<String>('client-weekly-adherence-seed-client-9'),
+      ),
+    );
+    expect(progress, findsOneWidget);
+    final renderedClient = tester.widget<ClientCard>(clientCard).client;
+    final expected = recordedCompletionMean(renderedClient)!;
     expect(
       find.descendant(
         of: clientCard,
-        matching: find.byType(LinearProgressIndicator),
+        matching: find.text('${expected.round()}%'),
       ),
-      findsNothing,
+      findsOneWidget,
     );
+    expect(
+      tester.widget<LinearProgressIndicator>(progress).value,
+      closeTo(expected / 100, 0.001),
+    );
+  });
+
+  testWidgets('루틴 기록이 없는 고객은 0%가 아니라 미집계로 표시한다 (#1284)', (tester) async {
+    await openWide(tester);
+    await scrollToCard(tester, '임도현');
+
+    final clientCard = find.ancestor(
+      of: find.text('임도현'),
+      matching: find.byType(ClientCard),
+    );
+    expect(
+      find.descendant(of: clientCard, matching: find.text('미집계')),
+      findsOneWidget,
+    );
+    final progress = find.descendant(
+      of: clientCard,
+      matching: find.byKey(
+        const ValueKey<String>('client-weekly-adherence-seed-client-7'),
+      ),
+    );
+    expect(tester.widget<LinearProgressIndicator>(progress).value, 0);
   });
 
   testWidgets('the panel location is a path that encodes the section', (
