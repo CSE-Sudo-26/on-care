@@ -3515,4 +3515,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get a11ySendMessage => '메시지 보내기';
+
+  @override
+  String get aiManualCreate => '직접 만들기';
+
+  @override
+  String get aiReturnToWizard => 'AI 추천으로 돌아가기';
 }

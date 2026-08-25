@@ -3660,4 +3660,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get a11ySendMessage => 'Send message';
+
+  @override
+  String get aiManualCreate => 'Build manually';
+
+  @override
+  String get aiReturnToWizard => 'Back to AI suggestions';
 }

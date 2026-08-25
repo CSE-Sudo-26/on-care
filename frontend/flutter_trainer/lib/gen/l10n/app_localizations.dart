@@ -6373,6 +6373,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send message'**
   String get a11ySendMessage;
+
+  /// AI 1~3단계 화면에서 AI 추천 대신 빈 템플릿으로 바로 넘어가는 버튼.
+  ///
+  /// In en, this message translates to:
+  /// **'Build manually'**
+  String get aiManualCreate;
+
+  /// 직접 만들기로 넘어간 뒤 다시 AI 마법사 화면으로 돌아가는 링크.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to AI suggestions'**
+  String get aiReturnToWizard;
 }
 
 class _AppLocalizationsDelegate

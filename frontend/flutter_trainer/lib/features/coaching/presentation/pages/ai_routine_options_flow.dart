@@ -26,6 +26,7 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
     this.recommendedExercises = const <RoutineExercise>[],
     this.recommendedReason = '',
     this.onReviewCompleted,
+    this.onManualCreate,
     super.key,
   });
 
@@ -34,6 +35,9 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
   final List<RoutineExercise> recommendedExercises;
   final String recommendedReason;
   final ValueChanged<List<RoutineExercise>>? onReviewCompleted;
+
+  /// AI 단계를 종료하고 빈 프로그램 편집기로 전환한다.
+  final VoidCallback? onManualCreate;
 
   @override
   ConsumerState<AiRoutineOptionsFlow> createState() =>
@@ -310,6 +314,18 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           onStageTap: _goToStage,
         ),
       ),
+      if (widget.onManualCreate != null) ...<Widget>[
+        const SizedBox(height: AppSpacing.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: const ValueKey<String>('ai-manual-create'),
+            onPressed: widget.onManualCreate,
+            icon: const Icon(Icons.edit_note, size: 16),
+            label: Text(l.aiManualCreate),
+          ),
+        ),
+      ],
       const SizedBox(height: AppSpacing.xl),
       if (_stage == 0) ...<Widget>[
         _assistantAnalysis(),

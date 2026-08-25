@@ -78,6 +78,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   ProgramTemplate? _appliedTemplate;
   int _templateRevision = 0;
   int _editorRevision = 0;
+
+  /// AI 1~3단계와 프로그램 편집기 중 어느 쪽을 표시할지 정한다.
+  bool _aiWizardVisible = true;
   bool _sent = false;
   Timer? _sentTimer;
 
@@ -146,6 +149,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _appliedTemplate = null;
       _templateRevision = 0;
       _editorRevision = 0;
+      _aiWizardVisible = true;
       // NOTE: _registeringClientIds is intentionally NOT cleared — writes
       // for other clients keep being tracked while the selection changes.
     });
@@ -656,6 +660,18 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   void _applyTemplate(ProgramTemplate template) => setState(() {
     _appliedTemplate = template;
     _templateRevision++;
+    _aiWizardVisible = false;
+    _registered = false;
+    _registeredAttachedExisting = false;
+    _sent = false;
+  });
+
+  void _startManualProgram(String clientId) => setState(() {
+    _generatedRecommendations.remove(clientId);
+    _appliedTemplate = null;
+    _templateRevision = 0;
+    _editorRevision++;
+    _aiWizardVisible = false;
     _registered = false;
     _registeredAttachedExisting = false;
     _sent = false;
@@ -709,65 +725,90 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         data: (items) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            AiRoutineOptionsFlow(
-              key: ValueKey<String>('routine-options-${client.id}'),
-              client: client,
-              embedded: true,
-              recommendedExercises: items
-                  .map(
-                    (item) => RoutineExercise(
-                      name: item.name,
-                      minutes: item.minutes,
-                      type: _typeEdits[item.id] ?? item.type,
-                    ),
-                  )
-                  .toList(growable: false),
-              recommendedReason: items.isEmpty
-                  ? ''
-                  : items.map((item) => item.reason).join(' · '),
-              onReviewCompleted: (exercises) {
-                setState(() {
-                  _generatedRecommendations[client.id] = <AiRoutineItem>[
-                    for (var index = 0; index < exercises.length; index++)
-                      AiRoutineItem(
-                        id: 'generated-${client.id}-$index',
-                        name: exercises[index].name,
-                        minutes: exercises[index].minutes,
-                        type: exercises[index].type,
-                        reason: l.coachReviewed,
-                        sets: exercises[index].sets,
-                        reps: exercises[index].reps,
-                        weight: exercises[index].weight,
+            Offstage(
+              offstage: !_aiWizardVisible,
+              child: AiRoutineOptionsFlow(
+                key: ValueKey<String>('routine-options-${client.id}'),
+                client: client,
+                embedded: true,
+                recommendedExercises: items
+                    .map(
+                      (item) => RoutineExercise(
+                        name: item.name,
+                        minutes: item.minutes,
+                        type: _typeEdits[item.id] ?? item.type,
                       ),
-                  ];
-                });
-              },
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            ProgramEditorWorkspace(
-              key: ValueKey<String>(
-                'program-editor-${client.id}-$_editorRevision',
+                    )
+                    .toList(growable: false),
+                recommendedReason: items.isEmpty
+                    ? ''
+                    : items.map((item) => item.reason).join(' · '),
+                onReviewCompleted: (exercises) {
+                  setState(() {
+                    _generatedRecommendations[client.id] = <AiRoutineItem>[
+                      for (var index = 0; index < exercises.length; index++)
+                        AiRoutineItem(
+                          id: 'generated-${client.id}-$index',
+                          name: exercises[index].name,
+                          minutes: exercises[index].minutes,
+                          type: exercises[index].type,
+                          reason: l.coachReviewed,
+                          sets: exercises[index].sets,
+                          reps: exercises[index].reps,
+                          weight: exercises[index].weight,
+                        ),
+                    ];
+                    _aiWizardVisible = false;
+                  });
+                },
+                onManualCreate: () => _startManualProgram(client.id),
               ),
-              clientGoal: client.goal,
-              aiSuggestions: _generatedRecommendations[client.id] ?? items,
-              template: _appliedTemplate,
-              templateRevision: _templateRevision,
-              onSend: (draft) => unawaited(_sendProgram(client, draft)),
-              onSave: _saveTemplate,
-              saving: _savingTemplate,
-              sending: _sending || _sent,
-              registerDate: _registerDate,
-              onRegisterDateChanged: (date) => setState(() {
-                _registerDate = date;
-                _registered = false;
-                _registeredAttachedExisting = false;
-              }),
-              registerTime: _registerTime,
-              onRegisterTimeChanged: (time) => setState(() {
-                _registerTime = time;
-                _registered = false;
-                _registeredAttachedExisting = false;
-              }),
+            ),
+            if (!_aiWizardVisible)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  bottom: AppSpacing.sm,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const ValueKey<String>('return-to-ai-flow'),
+                    onPressed: () => setState(() => _aiWizardVisible = true),
+                    icon: const Icon(Icons.auto_awesome, size: 16),
+                    label: Text(l.aiReturnToWizard),
+                  ),
+                ),
+              )
+            else
+              const SizedBox(height: AppSpacing.lg),
+            Offstage(
+              offstage: _aiWizardVisible,
+              child: ProgramEditorWorkspace(
+                key: ValueKey<String>(
+                  'program-editor-${client.id}-$_editorRevision',
+                ),
+                clientGoal: client.goal,
+                aiSuggestions: _generatedRecommendations[client.id] ?? items,
+                template: _appliedTemplate,
+                templateRevision: _templateRevision,
+                onSend: (draft) => unawaited(_sendProgram(client, draft)),
+                onSave: _saveTemplate,
+                saving: _savingTemplate,
+                sending: _sending || _sent,
+                registerDate: _registerDate,
+                onRegisterDateChanged: (date) => setState(() {
+                  _registerDate = date;
+                  _registered = false;
+                  _registeredAttachedExisting = false;
+                }),
+                registerTime: _registerTime,
+                onRegisterTimeChanged: (time) => setState(() {
+                  _registerTime = time;
+                  _registered = false;
+                  _registeredAttachedExisting = false;
+                }),
+              ),
             ),
             if (_sent)
               Padding(
