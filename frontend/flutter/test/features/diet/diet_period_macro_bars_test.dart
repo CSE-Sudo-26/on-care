@@ -13,10 +13,12 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
 
-/// 이번 달 칼로리 막대는 **탄단지로 쌓아** 그린다.
+/// 칼로리 막대는 **한 색**이고, 탄단지는 툴팁이 숫자로 말한다 (#1427).
 ///
-/// 같은 2,000kcal 이라도 밥에서 온 것과 기름에서 온 것은 다른 하루다. 숫자
-/// 하나만으로는 그 차이가 화면에 없었다.
+/// 같은 2,000kcal 이라도 밥에서 온 것과 기름에서 온 것은 다른 하루다. 한때는
+/// 그 차이를 막대의 농담 세 단계로 그렸지만, 막대에서 수치를 읽을 수는 없어
+/// 색만 정확한 척했다. 지금은 막대가 총칼로리 하나를 말하고, 구성은 툴팁과
+/// 카드 머리의 상세가 숫자와 함께 말한다.
 class _MacroRepository extends FakeDietRepository {
   @override
   Future<DietDay> fetchByDate(DateTime date) async => _day;
@@ -137,61 +139,21 @@ void main() {
         .map((ColoredBox b) => b.color)
         .toList();
 
-    /// 구간의 **그려진 사각형**. 색만 확인하면 폭 0 을 그대로 통과시킨다 —
-    /// 실제로 #947 이 그렇게 새어 나갔다.
-    List<Rect> segmentRectsOf(WidgetTester tester, int index) => <Rect>[
-      // `find.byWidget` 은 쓸 수 없다 — 세 구간이 const 라 서른한 칸의 같은
-      // 색 구간이 전부 같은 위젯으로 잡힌다. Element 의 RenderBox 에서 직접
-      // 잰다.
-      for (final Element e
-          in find
-              .descendant(
-                of: find.byKey(Key('diet-period-bar-$index')),
-                matching: find.byType(ColoredBox),
-              )
-              .evaluate())
-        (e.renderObject! as RenderBox).localToGlobal(Offset.zero) &
-            (e.renderObject! as RenderBox).size,
-    ];
-
-    testWidgets('쌓은 구간이 막대 폭을 채운다 (#947)', (WidgetTester tester) async {
+    testWidgets('막대가 칸 폭을 채우고 높이를 갖는다 (#947)', (WidgetTester tester) async {
       await openMonth(tester);
 
+      // 폭 0 으로 그려져 통째로 사라진 적이 있다(#947) — 색만 확인하면 그
+      // 사라짐을 그대로 통과시킨다.
       final Rect bar = tester.getRect(
-        find.byKey(const Key('diet-period-bar-0')),
+        find
+            .descendant(
+              of: find.byKey(const Key('diet-period-bar-0')),
+              matching: find.byType(Container),
+            )
+            .first,
       );
-      final List<Rect> segments = segmentRectsOf(tester, 0);
-      expect(segments, hasLength(3));
-
-      for (final Rect seg in segments) {
-        // Column 의 기본 정렬(center)이면 자식 없는 ColoredBox 가 폭 0 으로
-        // 그려져 막대가 통째로 사라진다.
-        expect(seg.width, greaterThan(0));
-        expect(seg.width, closeTo(bar.width, 0.5));
-      }
-
-      // 세 구간을 합치면 막대 높이가 된다 — 한 조각이 빠지면 여기서 드러난다.
-      final double stacked = segments.fold<double>(
-        0,
-        (double a, Rect r) => a + r.height,
-      );
-      expect(stacked, closeTo(bar.height, 0.5));
+      expect(bar.width, greaterThan(0));
       expect(bar.height, greaterThan(0));
-    });
-
-    testWidgets('구간 높이가 칼로리 기여분을 따른다 (#947)', (WidgetTester tester) async {
-      await openMonth(tester);
-
-      // 탄 200g(800kcal) · 단 100g(400kcal) · 지 40g(360kcal) = 1,560kcal.
-      // 위에서부터 지방 · 단백질 · 탄수화물 순으로 쌓인다.
-      final List<Rect> segments = segmentRectsOf(tester, 0);
-      final double total = segments.fold<double>(
-        0,
-        (double a, Rect r) => a + r.height,
-      );
-      expect(segments[0].height / total, closeTo(360 / 1560, 0.02));
-      expect(segments[1].height / total, closeTo(400 / 1560, 0.02));
-      expect(segments[2].height / total, closeTo(800 / 1560, 0.02));
     });
 
     /// 막대 툴팁의 글자.
@@ -226,42 +188,32 @@ void main() {
     });
 
 
-    testWidgets('막대가 탄단지 3색으로 쌓인다', (WidgetTester tester) async {
+    testWidgets('막대는 회색 한 색이다 (#1427)', (WidgetTester tester) async {
       await openMonth(tester);
 
-      // 위에서부터 지방 · 단백질 · 탄수화물 — 바닥부터 읽으면 라벨 순서와 같다.
-      expect(segmentColorsOf(tester, 0), <Color>[
-        FigmaColors.macroFat,
-        FigmaColors.macroProtein,
-        FigmaColors.macroCarbs,
-      ]);
+      expect(segmentColorsOf(tester, 0), isEmpty, reason: '쌓지 않는다');
+      final Container bar = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(const Key('diet-period-bar-0')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        (bar.decoration! as BoxDecoration).color,
+        FigmaColors.barNeutral.withValues(alpha: 0.85),
+      );
     });
 
-    testWidgets('세 색은 브랜드 색의 농담이다 (#953)', (WidgetTester tester) async {
-      // `오늘` 뷰가 칼로리 링도 탄단지 진행 바도 브랜드 색 하나로 그린다.
-      // 기간 뷰만 다른 색상환을 쓰면 토글로 두 뷰를 오갈 때 색이 튄다.
-      expect(FigmaColors.macroCarbs, FigmaColors.primary);
-
-      // 위로 갈수록 옅어진다 — 한 칼로리를 나눈 것이라 색상보다 농담으로
-      // 가르는 편이 뜻에 맞는다.
-      double lum(Color c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-      expect(
-        lum(FigmaColors.macroProtein),
-        greaterThan(lum(FigmaColors.macroCarbs)),
-      );
-      expect(
-        lum(FigmaColors.macroFat),
-        greaterThan(lum(FigmaColors.macroProtein)),
-      );
-
-      // 목표선 위에 겹쳐 그리므로 반투명이면 선이 비친다.
-      for (final Color macro in <Color>[
-        FigmaColors.macroCarbs,
-        FigmaColors.macroProtein,
-        FigmaColors.macroFat,
-      ]) {
-        expect(macro.a, 1.0, reason: '$macro');
-      }
+    testWidgets('막대 회색은 빈 트랙·초과와 갈린다 (#1427)', (WidgetTester tester) async {
+      // 기록 없는 칸의 그루터기·아직 오지 않은 날의 빈 트랙과 같은 색이면
+      // 기록한 날과 비운 날이 한 그림에서 구분되지 않는다.
+      expect(FigmaColors.barNeutral, isNot(FigmaColors.track));
+      expect(FigmaColors.barNeutral, isNot(FigmaColors.hairline));
+      expect(FigmaColors.barNeutral, isNot(FigmaColors.dangerRed));
+      // 목표선 위에 겹쳐 그리므로 색 자체는 불투명해야 한다.
+      expect(FigmaColors.barNeutral.a, 1.0);
     });
 
     testWidgets('툴팁이 탄단지 수치를 함께 적는다', (WidgetTester tester) async {
@@ -286,7 +238,7 @@ void main() {
       expect(text, contains('40'));
     });
 
-    testWidgets('나트륨으로 바꾸면 쌓지 않는다', (WidgetTester tester) async {
+    testWidgets('나트륨 막대는 지금까지 쓰던 브랜드 색 그대로다', (WidgetTester tester) async {
       await openMonth(tester);
 
       final AppLocalizations l = AppLocalizations.of(
@@ -295,8 +247,20 @@ void main() {
       await tester.tap(find.text(l.dietSodium));
       await tester.pumpAndSettle();
 
-      // 나트륨에는 쌓을 성분이 없다 — 한 색 막대로 돌아간다.
-      expect(segmentColorsOf(tester, 0), isEmpty);
+      // 회색은 칼로리 막대의 규칙이다 — 나트륨·당류까지 회색으로 바꾸지
+      // 않는다(#1427).
+      final Container bar = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(const Key('diet-period-bar-0')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        (bar.decoration! as BoxDecoration).color,
+        FigmaColors.primary.withValues(alpha: 0.85),
+      );
     });
   });
 }
