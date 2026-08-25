@@ -55,6 +55,7 @@ def _slot_out(slot: TrainerReservationSlot) -> TrainerSlotOut:
         id=slot.id,
         trainer_id=slot.trainer_id,
         starts_at=_aware(slot.starts_at),
+        duration_minutes=slot.duration_minutes,
         capacity=slot.capacity,
         remaining=0 if slot.is_closed else slot.remaining,
         is_closed=slot.is_closed,
@@ -92,7 +93,11 @@ def list_trainer_slots(
 
 
 def create_slot(
-    db: Session, trainer_id: str, starts_at: datetime, session_type: str
+    db: Session,
+    trainer_id: str,
+    starts_at: datetime,
+    session_type: str,
+    duration_minutes: int | None = None,
 ) -> TrainerSlotOut:
     if _aware(starts_at) <= datetime.now(timezone.utc):
         raise SlotUnavailable("지난 시간에는 예약 슬롯을 만들 수 없습니다.")
@@ -102,6 +107,8 @@ def create_slot(
         id=f"slot-{uuid.uuid4().hex[:12]}",
         trainer_id=trainer_id,
         starts_at=starts_at,
+        duration_minutes=duration_minutes
+        or _SESSION_DURATION_MINUTES.get(session_type, 60),
         capacity=1,
         remaining=1,
         session_type=session_type,
@@ -165,6 +172,18 @@ def update_slot(
         for schedule in schedules:
             schedule.date = local.date().isoformat()
             schedule.time = local.strftime("%H:%M")
+    if "duration_minutes" in fields:
+        slot.duration_minutes = fields["duration_minutes"]
+        schedules = db.scalars(
+            select(TrainerSchedule)
+            .join(TrainerReservation, TrainerReservation.schedule_id == TrainerSchedule.id)
+            .where(
+                TrainerReservation.slot_id == slot.id,
+                TrainerReservation.status == "booked",
+            )
+        ).all()
+        for schedule in schedules:
+            schedule.duration_minutes = slot.duration_minutes
     if "is_closed" in fields:
         slot.is_closed = fields["is_closed"]
     db.commit()
@@ -309,7 +328,7 @@ def reserve(
         time=local.strftime("%H:%M"),
         client_name=member.name,
         type=slot.session_type,
-        duration_minutes=_SESSION_DURATION_MINUTES.get(slot.session_type, 60),
+        duration_minutes=slot.duration_minutes,
         status="예정",
         note="회원 앱 예약",
         program_json="[]",

@@ -78,7 +78,8 @@ void main() {
         expect(row['exercise_goal'], 'strength');
         // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
         expect(row['health_purpose_type'], 'general');
-        expect(row['preferred_time_slot'], 'evening');
+        // 회원 단계에서 선택한 "시간 협의" 값이 그대로 도착한다(#1256).
+        expect(row['preferred_time_slot'], 'flexible');
         expect(row['status'], 'pending');
 
         await bootSignedOut(tester);

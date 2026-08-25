@@ -1,6 +1,6 @@
 /// 김민수 데모 데이터의 단일 원본을 읽는다.
 ///
-/// 사용자앱(`user-demo`)과 트레이너앱(`seed-client-1`)은 같은 사람을 보여 준다.
+/// 사용자앱(`user-7d4e9a2c5f18`)과 트레이너앱(`seed-client-1`)은 같은 사람을 보여 준다.
 /// 예전에는 두 앱과 백엔드가 각자 알고리즘으로 그의 과거를 만들어서, 같은 날짜를
 /// 나란히 놓으면 숫자가 어긋났다(#757). 이제 셋 다 이 픽스처만 읽는다 — 여기에
 /// 계산은 없고, 픽스처에 적힌 값을 날짜에 붙이는 일만 한다.
@@ -112,6 +112,7 @@ class FixtureExercise {
     required this.calories,
     required this.done,
     this.sets,
+    this.reps,
   });
 
   factory FixtureExercise.fromJson(Map<String, Object?> json) =>
@@ -122,6 +123,7 @@ class FixtureExercise {
         calories: (json['calories']! as num).toInt(),
         done: json['done']! as bool,
         sets: (json['sets'] as num?)?.toInt(),
+        reps: (json['reps'] as num?)?.toInt(),
       );
 
   final String name;
@@ -134,8 +136,12 @@ class FixtureExercise {
 
   /// 근력 항목의 **세트 수**. 이름에 적힌 `4세트` 를 화면이 다시 세거나 분에서
   /// 되짚어 계산하면 세 화면이 저마다 다른 수를 말한다 — 값으로 들고 다닌다.
-  /// 유산소·스트레칭은 분이 곧 값이라 null 이다.
+  /// 유산소·스트레칭·기타는 분이 곧 값이라 null 이다.
   final int? sets;
+
+  /// 근력 항목의 **한 세트당 횟수**. 세트·중량과 한 벌이다(#1310) — 셋이 다
+  /// 있어야 지난주에 무엇을 했는지 그대로 되짚는다.
+  final int? reps;
 
   /// 트레이너 화면이 쓰는 표기. 이행률과 이 목록이 같은 자리에서 나오므로
   /// "67%" 옆에 "3개 중 3개 완료" 가 놓이는 일이 없다(#754).
@@ -245,7 +251,7 @@ class FixtureRoutine {
   final String name;
   final int minutes;
 
-  /// `유산소` | `근력` | `유연성` — 화면이 그대로 쓰는 한국어다.
+  /// `유산소` | `근력` | `스트레칭` — 화면이 그대로 쓰는 한국어다.
   final String type;
 
   final String reason;

@@ -15,7 +15,13 @@ ExerciseGoal = Literal[
 HealthPurposeType = Literal[
     "weight", "chronic", "rehab", "general", "none", "other"
 ]
-PreferredTimeSlot = Literal["morning", "afternoon", "evening", "flexible"]
+#: "flexible" 이거나 "HH:MM" 정확한 시각. 예전 morning/afternoon/evening 시간대
+#: 값이 이미 저장된 행에 남아 있을 수 있어 **응답**은 `str` 로 느슨하게 받고
+#: **입력**만 이 패턴으로 좁힌다(#1256). 컬럼이 `String(20)` 그대로라 마이그레이션은
+#: 필요 없다.
+PREFERRED_TIME_PATTERN = (
+    r"^flexible$|^([01]\d|2[0-3]):[0-5]\d(?:-([01]\d|2[0-3]):[0-5]\d)?$"
+)
 
 
 class ConsultationCreate(BaseModel):
@@ -34,7 +40,7 @@ class ConsultationCreate(BaseModel):
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None = Field(default=None, max_length=500)
     preferred_date: Date
-    preferred_time_slot: PreferredTimeSlot
+    preferred_time_slot: str = Field(pattern=PREFERRED_TIME_PATTERN)
     message: str | None = Field(default=None, max_length=2000)
     #: 식단·운동·신체 정보를 트레이너에게 보여 주는 데 동의했는가. (#1022)
     #:
@@ -75,7 +81,7 @@ class ConsultationCreate(BaseModel):
 
 
 #: 트레이너 인박스가 걸 수 있는 상태 필터. `all` 은 처리 이력까지 함께 본다.
-ConsultationStatusFilter = Literal["pending", "accepted", "rejected", "all"]
+ConsultationStatusFilter = Literal["pending", "accepted", "rejected", "cancelled", "all"]
 
 
 class ConsultationDecision(BaseModel):
@@ -125,11 +131,14 @@ class ConsultationOut(BaseModel):
     #: 목록 카드가 이름을 렌더한다. id 만 주면 앱이 트레이너마다 상세를 다시 조회해야
     #: 하고, 대상이 지워지면 이름을 영영 못 만든다(#327).
     trainer_name: str | None = None
+    trainer_gym_name: str | None = None
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None
     preferred_date: Date
-    preferred_time_slot: PreferredTimeSlot
+    #: 응답은 과거 morning/afternoon/evening 값을 포함해 저장된 그대로 내려준다 —
+    #: 입력 쪽(`ConsultationCreate`)만 새 형식으로 좁혔다.
+    preferred_time_slot: str
     message: str | None
     status: str
     #: 거절 사유. 트레이너가 남긴 문장이 그대로 온다. (#473)

@@ -782,6 +782,30 @@ abstract class AppLocalizations {
   /// **'Analysis failed'**
   String get dietAnalysisFailed;
 
+  /// Label of the date a photo-analysed meal is logged under.
+  ///
+  /// In en, this message translates to:
+  /// **'Record date'**
+  String get dietRecordDate;
+
+  /// Button that opens the date picker on the analysis result sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date'**
+  String get dietRecordDateChange;
+
+  /// Confirmation after moving an analysed meal to another day.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to {date}'**
+  String dietRecordDateMoved(String date);
+
+  /// Error shown when moving an analysed meal to another day fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change the date. Please try again shortly.'**
+  String get dietRecordDateFailed;
+
   /// No description provided for @dietAnalysisDone.
   ///
   /// In en, this message translates to:
@@ -998,12 +1022,6 @@ abstract class AppLocalizations {
   /// **'Delete Meal'**
   String get dietDeleteMeal;
 
-  /// No description provided for @exTypeWalking.
-  ///
-  /// In en, this message translates to:
-  /// **'Walking'**
-  String get exTypeWalking;
-
   /// No description provided for @exTypeCardio.
   ///
   /// In en, this message translates to:
@@ -1016,17 +1034,11 @@ abstract class AppLocalizations {
   /// **'Strength'**
   String get exTypeStrength;
 
-  /// No description provided for @exTypeYoga.
-  ///
-  /// In en, this message translates to:
-  /// **'Yoga'**
-  String get exTypeYoga;
-
-  /// No description provided for @exTypeStretching.
+  /// No description provided for @exTypeFlexibility.
   ///
   /// In en, this message translates to:
   /// **'Stretching'**
-  String get exTypeStretching;
+  String get exTypeFlexibility;
 
   /// No description provided for @exTypeOtherChip.
   ///
@@ -1370,11 +1382,95 @@ abstract class AppLocalizations {
   /// **'Exercise Type'**
   String get exExerciseType;
 
+  /// No description provided for @exExerciseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get exExerciseDate;
+
+  /// No description provided for @exExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise Name'**
+  String get exExerciseName;
+
+  /// No description provided for @exExerciseNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Treadmill'**
+  String get exExerciseNameHint;
+
+  /// No description provided for @exExerciseReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps'**
+  String get exExerciseReps;
+
+  /// No description provided for @exExerciseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get exExerciseWeight;
+
+  /// No description provided for @exUnitMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get exUnitMinutes;
+
+  /// No description provided for @exUnitSets.
+  ///
+  /// In en, this message translates to:
+  /// **'sets'**
+  String get exUnitSets;
+
+  /// No description provided for @exUnitReps.
+  ///
+  /// In en, this message translates to:
+  /// **'reps'**
+  String get exUnitReps;
+
+  /// No description provided for @exUnitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get exUnitKg;
+
+  /// No description provided for @exEnterName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter an exercise name'**
+  String get exEnterName;
+
   /// No description provided for @exExerciseDuration.
   ///
   /// In en, this message translates to:
   /// **'Duration'**
   String get exExerciseDuration;
+
+  /// No description provided for @exExerciseSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get exExerciseSets;
+
+  /// No description provided for @exSetsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{sets} sets'**
+  String exSetsCount(int sets);
+
+  /// No description provided for @exRepsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{reps} reps'**
+  String exRepsCount(int reps);
+
+  /// No description provided for @exEnterSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the number of sets'**
+  String get exEnterSets;
 
   /// No description provided for @exExerciseIntensity.
   ///
@@ -2510,35 +2606,95 @@ abstract class AppLocalizations {
   /// **'Select a date'**
   String get exSelectDate;
 
+  /// No description provided for @exSelectTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time'**
+  String get exSelectTime;
+
   /// No description provided for @exPreferredTime.
   ///
   /// In en, this message translates to:
   /// **'Preferred Time'**
   String get exPreferredTime;
 
-  /// No description provided for @exTimeMorning.
-  ///
-  /// In en, this message translates to:
-  /// **'Morning'**
-  String get exTimeMorning;
-
-  /// No description provided for @exTimeAfternoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Afternoon'**
-  String get exTimeAfternoon;
-
-  /// No description provided for @exTimeEvening.
-  ///
-  /// In en, this message translates to:
-  /// **'Evening'**
-  String get exTimeEvening;
-
   /// No description provided for @exTimeFlexible.
   ///
   /// In en, this message translates to:
   /// **'Discuss Later'**
   String get exTimeFlexible;
+
+  /// No description provided for @exTimeRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get exTimeRangeTitle;
+
+  /// No description provided for @exTimeRangeStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get exTimeRangeStartTime;
+
+  /// No description provided for @exTimeRangeEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get exTimeRangeEndTime;
+
+  /// No description provided for @exTimeRangeStartHourStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Start hour'**
+  String get exTimeRangeStartHourStep;
+
+  /// No description provided for @exTimeRangeStartMinuteStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Start minute'**
+  String get exTimeRangeStartMinuteStep;
+
+  /// No description provided for @exTimeRangeEndHourStep.
+  ///
+  /// In en, this message translates to:
+  /// **'End hour'**
+  String get exTimeRangeEndHourStep;
+
+  /// No description provided for @exTimeRangeEndMinuteStep.
+  ///
+  /// In en, this message translates to:
+  /// **'End minute'**
+  String get exTimeRangeEndMinuteStep;
+
+  /// No description provided for @exSlotAm.
+  ///
+  /// In en, this message translates to:
+  /// **'AM'**
+  String get exSlotAm;
+
+  /// No description provided for @exSlotPm.
+  ///
+  /// In en, this message translates to:
+  /// **'PM'**
+  String get exSlotPm;
+
+  /// No description provided for @exTimeRangeInvalidEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End time is earlier than start time'**
+  String get exTimeRangeInvalidEnd;
+
+  /// No description provided for @exTimeRangePrevStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous step'**
+  String get exTimeRangePrevStep;
+
+  /// No description provided for @exTimeRangeNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get exTimeRangeNextStep;
 
   /// No description provided for @exConsultMessage.
   ///
@@ -2641,6 +2797,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consultation Request Status'**
   String get exConsultStatusSection;
+
+  /// No description provided for @exConsultHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Consultation Requests'**
+  String get exConsultHistoryTitle;
+
+  /// No description provided for @exConsultHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t sent any consultation requests yet.'**
+  String get exConsultHistoryEmpty;
+
+  /// No description provided for @exConsultHistoryInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get exConsultHistoryInProgress;
+
+  /// No description provided for @exConsultHistoryPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Past Requests'**
+  String get exConsultHistoryPast;
 
   /// No description provided for @exConsultRejectedReasonLabel.
   ///
@@ -2906,12 +3086,6 @@ abstract class AppLocalizations {
   /// **'Tell us a little about yourself so we can tailor your care.'**
   String get onboardBasicSubtitle;
 
-  /// No description provided for @onboardBirthHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Date of birth (YYYY-MM-DD)'**
-  String get onboardBirthHint;
-
   /// No description provided for @onboardHeightHint.
   ///
   /// In en, this message translates to:
@@ -2954,11 +3128,173 @@ abstract class AppLocalizations {
   /// **'Health and exercise goals'**
   String get onboardGoalHint;
 
-  /// No description provided for @onboardSodiumGoalHint.
+  /// No description provided for @onboardOptionalTag.
   ///
   /// In en, this message translates to:
-  /// **'Daily sodium goal (mg)'**
-  String get onboardSodiumGoalHint;
+  /// **'(optional)'**
+  String get onboardOptionalTag;
+
+  /// No description provided for @onboardSkipStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this step'**
+  String get onboardSkipStep;
+
+  /// No description provided for @onboardBirthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get onboardBirthLabel;
+
+  /// No description provided for @onboardBirthYearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get onboardBirthYearHint;
+
+  /// No description provided for @onboardBirthMonthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get onboardBirthMonthHint;
+
+  /// No description provided for @onboardBirthDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get onboardBirthDayHint;
+
+  /// One row of the birth-year dropdown in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{year}'**
+  String onboardBirthYearValue(int year);
+
+  /// One row of the birth-month dropdown in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}'**
+  String onboardBirthMonthValue(int month);
+
+  /// One row of the birth-day dropdown in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{day}'**
+  String onboardBirthDayValue(int day);
+
+  /// No description provided for @onboardGenderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get onboardGenderLabel;
+
+  /// Age chip next to the date-of-birth field in onboarding step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'{age} years old'**
+  String onboardAgeSummary(int age);
+
+  /// BMI chip in onboarding step 1: the value and its category.
+  ///
+  /// In en, this message translates to:
+  /// **'BMI {bmi} · {category}'**
+  String onboardBmiSummary(String bmi, String category);
+
+  /// No description provided for @onboardBmiUnderweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Underweight'**
+  String get onboardBmiUnderweight;
+
+  /// No description provided for @onboardBmiNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get onboardBmiNormal;
+
+  /// No description provided for @onboardBmiPreObese.
+  ///
+  /// In en, this message translates to:
+  /// **'Pre-obese'**
+  String get onboardBmiPreObese;
+
+  /// No description provided for @onboardBmiObese1.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity class I'**
+  String get onboardBmiObese1;
+
+  /// No description provided for @onboardBmiObese2.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity class II'**
+  String get onboardBmiObese2;
+
+  /// No description provided for @onboardBmiObese3.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity class III'**
+  String get onboardBmiObese3;
+
+  /// No description provided for @onboardBmiSourceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut-offs: Korean Society for the Study of Obesity guideline (Asia-Pacific)'**
+  String get onboardBmiSourceNote;
+
+  /// No description provided for @onboardDietTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet goals'**
+  String get onboardDietTitle;
+
+  /// No description provided for @onboardDietSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We prefilled suggested goals. Change anything you like.'**
+  String get onboardDietSubtitle;
+
+  /// No description provided for @onboardExerciseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise goals'**
+  String get onboardExerciseTitle;
+
+  /// No description provided for @onboardExerciseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefilled from the World Health Organization guideline. Change anything you like.'**
+  String get onboardExerciseSubtitle;
+
+  /// No description provided for @onboardRecommendedPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested from your age, gender, height and weight'**
+  String get onboardRecommendedPersonal;
+
+  /// No description provided for @onboardRecommendedFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'App defaults. Fill in step 1 to get a suggestion tailored to you'**
+  String get onboardRecommendedFallback;
+
+  /// No description provided for @onboardResetToRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to suggested'**
+  String get onboardResetToRecommended;
+
+  /// No description provided for @onboardDietSourceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources: Dietary Reference Intakes for Koreans 2020 (EER, AMDR) · WHO sodium and free-sugar guidelines'**
+  String get onboardDietSourceNote;
+
+  /// No description provided for @onboardExerciseSourceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: WHO guidelines on physical activity (2020) — 150 min of moderate cardio and 2+ strength days a week'**
+  String get onboardExerciseSourceNote;
 
   /// No description provided for @onboardGenderMale.
   ///
@@ -3227,7 +3563,7 @@ abstract class AppLocalizations {
   /// Section label in the health goals sheet.
   ///
   /// In en, this message translates to:
-  /// **'Daily diet goals'**
+  /// **'Diet goals'**
   String get myGoalsDietSection;
 
   /// Section label in the health goals sheet.
@@ -3509,7 +3845,7 @@ abstract class AppLocalizations {
   /// The member's own note on a completed routine.
   ///
   /// In en, this message translates to:
-  /// **'My note: {note}'**
+  /// **'My feedback: {note}'**
   String coachRoutineMyNote(String note);
 
   /// The trainer's feedback on a completed routine.
@@ -3523,18 +3859,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark routine done'**
   String get coachRoutineCompleteTitle;
-
-  /// Field label in the completion dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Actual minutes'**
-  String get coachRoutineMinutesLabel;
-
-  /// Validation message for the minutes field.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a value between 1 and 600 minutes'**
-  String get coachRoutineMinutesError;
 
   /// Field label in the completion dialog.
   ///
@@ -3563,7 +3887,7 @@ abstract class AppLocalizations {
   /// Field label in the completion dialog.
   ///
   /// In en, this message translates to:
-  /// **'Note (optional)'**
+  /// **'Feedback (optional)'**
   String get coachRoutineNoteLabel;
 
   /// Hint of the note field in the completion dialog.

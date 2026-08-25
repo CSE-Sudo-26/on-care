@@ -19,13 +19,44 @@ Map<String, String> exerciseGoalLabels(AppLocalizations l) => <String, String>{
   'other': l.goalOther,
 };
 
-/// 희망 시간대 코드 → 화면 문구.
-Map<String, String> preferredTimeLabels(AppLocalizations l) => <String, String>{
-  'morning': l.slotMorning,
-  'afternoon': l.slotAfternoon,
-  'evening': l.slotEvening,
-  'flexible': l.slotFlexible,
+Map<String, String> healthPurposeLabels(AppLocalizations l) => <String, String>{
+  'weight': l.goalWeightLoss,
+  'chronic': l.memberHealthConditions,
+  'rehab': l.goalPosture,
+  'general': l.goalHealth,
+  'none': '-',
+  'other': l.goalOther,
 };
+
+/// 희망 시각 코드 → 화면 문구. `flexible` 이거나 `HH:MM` 정확한 시각이다(#1256).
+///
+/// 예전 morning/afternoon/evening 값이 이미 접수된 요청에 남아 있을 수 있어, 그
+/// 값을 포함해 패턴에 맞지 않는 코드는 전부 "시간 협의"로 떨어뜨린다 — 원문
+/// 코드를 그대로 보여주면 트레이너 화면에 `morning` 이 노출된다.
+final RegExp _kPreferredTimePattern = RegExp(
+  r'^([01]\d|2[0-3]):([0-5]\d)(?:-([01]\d|2[0-3]):([0-5]\d))?$',
+);
+
+/// The fixed start time encoded in [code] as `HH:mm`, or `null` for
+/// `flexible` or a legacy morning/afternoon/evening bucket — those carry no
+/// exact time to seed a session with. A range (`HH:mm-HH:mm`) yields its
+/// start.
+String? preferredStartTime(String code) {
+  final RegExpMatch? match = _kPreferredTimePattern.firstMatch(code);
+  if (match == null) return null;
+  return '${match.group(1)}:${match.group(2)}';
+}
+
+// 사용자 앱의 희망 시간 표시가 24시간 형식(`17:00–18:00`)이라 여기도 맞춘다
+// — 같은 데이터를 두 화면이 다른 형식(오전/오후 대 24시간)으로 보여주면
+// 트레이너가 회원과 통화·메시지로 시간을 맞출 때 헷갈린다.
+String preferredTimeLabel(AppLocalizations l, String code) {
+  final RegExpMatch? match = _kPreferredTimePattern.firstMatch(code);
+  if (match == null) return l.slotFlexible;
+  final String start = '${match.group(1)}:${match.group(2)}';
+  if (match.group(3) == null) return start;
+  return '$start–${match.group(3)}:${match.group(4)}';
+}
 
 /// `GET /v1/trainer/consultations` element → [ConsultationRequest].
 ///

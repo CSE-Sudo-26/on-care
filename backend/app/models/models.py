@@ -2,7 +2,7 @@
 ORM 모델 — 프론트 계약(LocalApiInterceptor + drift 스키마)에 맞춤.
 
 핵심 정렬 사항:
-- 사용자 id 는 문자열(예: 'user-demo')
+- 사용자 id 는 문자열(예: 'user-7d4e9a2c5f18')
 - 식단은 나트륨(sodium_mg)·당류(sugar_g)를 1급 지표로 (고혈압·당뇨 특화)
 - drift 테이블(diet_entries, exercise_sessions, schedule_events, notifications)과 1:1 대응
 
@@ -246,7 +246,24 @@ class ExerciseSession(Base):
     #: 운동 유형 — cardio|strength|flexibility|other 네 가지 (#996).
     #: 옛 값(walking·yoga·stretching)은 0053 마이그레이션에서 접었다.
     type: Mapped[str] = mapped_column(String(20))
+    #: 회원이 적은 운동 이름("스쿼트", "러닝머신"). 유형은 집계 축이라 넷뿐이고,
+    #: 실제로 무슨 운동을 했는지는 이 칸에만 남는다(#1276). 이 컬럼이 생기기 전
+    #: 기록은 빈 문자열이다.
+    name: Mapped[str] = mapped_column(String(100), default="", server_default="")
     minutes: Mapped[int] = mapped_column(Integer, default=0)
+    #: 근력 기록의 세트 수. 근력은 시간이 아니라 세트로 읽는 운동이라 회원이
+    #: 적은 수를 그대로 둔다(#1262). 다른 유형은 None 이고, 이 컬럼이 생기기
+    #: 전의 근력 기록도 None 이다 — 그때는 분에서 환산해 읽는다.
+    sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: 근력 기록의 한 세트당 횟수. 세트·중량과 한 벌이라 근력에만 있다(#1310).
+    #: 12세트 60kg 만으로는 한 번에 몇 개를 들었는지가 남지 않아 같은 운동을
+    #: 다시 짤 수 없다. 이 컬럼이 생기기 전 기록은 None 이다.
+    reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: 근력 기록의 중량(kg, 소수점 한 자리). 세트와 짝이라 근력에만 있고, 다른
+    #: 유형은 None 이다(#1276). 칼로리 계산에는 쓰지 않는다 — 같은 무게라도
+    #: 사람마다 소모가 달라, 추정식에 넣으면 근거 없는 정밀도가 된다. 횟수도
+    #: 같은 이유로 계산에 넣지 않는다.
+    weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     calories: Mapped[int] = mapped_column(Integer, default=0)
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
     intensity: Mapped[str] = mapped_column(
@@ -880,8 +897,20 @@ class TrainerRoutine(Base):
     )
     name: Mapped[str] = mapped_column(String(100))
     minutes: Mapped[int] = mapped_column(Integer, default=0)
-    #: 운동 유형 — 유산소|근력|유연성|기타 네 가지 (#996).
+    #: 운동 유형 — 유산소|근력|스트레칭|기타 네 가지 (#996).
     type: Mapped[str] = mapped_column(String(20))
+    #: 이 루틴을 언제 하기로 했나. 트레이너가 달력에서 고른 날이고, 비어 있으면
+    #: "날짜를 정하지 않음"이다 — 이 칸이 생기기 전 배정이 그렇다. (#1276)
+    exercise_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    #: 트레이너가 정한 강도. 예상 칼로리와 회원이 완료할 때의 기본값이 된다.
+    #: 예전에는 배정에 강도를 실을 자리가 없어 늘 'moderate' 로 계산했다. (#1276)
+    intensity: Mapped[str] = mapped_column(
+        String(20), default="moderate", server_default="moderate"
+    )
+    #: 근력 루틴의 세트 수·횟수·중량(kg). 다른 유형은 비어 있다. (#1276, #1310)
+    sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
     #: 검토 상태 — approved(회원에게 노출) | pending(트레이너 검토 대기) |
@@ -1325,6 +1354,9 @@ class TrainerReservationSlot(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    duration_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="60", default=60
+    )
     capacity: Mapped[int] = mapped_column(Integer)
     remaining: Mapped[int] = mapped_column(Integer)
     session_type: Mapped[str] = mapped_column(

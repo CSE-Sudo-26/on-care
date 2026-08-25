@@ -1,108 +1,77 @@
-// 프로그램 탭의 저장·불러오기. (#708)
+// 프로그램 탭의 `저장` — 편집기 구성을 프로그램 템플릿으로 저장한다. (#1028)
 //
-// 저장은 서버가 받은 뒤에만 성공으로 보이고, 실패해도 작성 중인 내용은 남는다.
-// 저장한 프로그램을 다시 열면 편집기가 저장 당시 구성으로 돌아온다.
-import 'dart:async';
-
+// 별도의 "저장한 프로그램" 보관함은 없다 — 저장은 곧장 고객 리스트 아래
+// `프로그램 템플릿` 목록에 쓰고, 버튼은 몇 번을 눌러도 항상 `저장`이다.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 
 import '../../helpers/pump_app.dart';
 
-/// In-memory stand-in for the draft store.
-class _FakeDraftRepository implements TrainerProgramDraftRepository {
-  _FakeDraftRepository({this.failWrites = false});
+/// In-memory stand-in for the template store.
+class _FakeTemplateRepository implements TrainerProgramTemplateRepository {
+  _FakeTemplateRepository({this.failWrites = false});
 
-  final List<Map<String, Object?>> stored = <Map<String, Object?>>[];
+  final List<ProgramTemplate> saved = <ProgramTemplate>[];
   bool failWrites;
   int createCalls = 0;
 
-  /// Blocks writes until completed, so a test can act mid-save.
-  Completer<void>? gate;
+  @override
+  bool get supportsEditing => true;
 
   @override
-  Future<List<TrainerProgramDraftSummary>> list() async => stored
-      .map(
-        (draft) => TrainerProgramDraftSummary(
-          id: draft['id']! as String,
-          name: draft['name']! as String,
-          goal: draft['goal'] as String? ?? '',
-          period: draft['period'] as String? ?? '',
-          sessionCount:
-              ((draft['sessions'] as List<Object?>?) ?? const <Object?>[])
-                  .length,
-          exerciseCount:
-              ((draft['sessions'] as List<Object?>?) ?? const <Object?>[]).fold<
-                int
-              >(
-                0,
-                (count, session) =>
-                    count +
-                    (((session! as Map<Object?, Object?>)['exercises']
-                                as List<Object?>?) ??
-                            const <Object?>[])
-                        .length,
-              ),
-          updatedAt: DateTime.parse(draft['updated_at']! as String),
-        ),
-      )
-      .toList(growable: false);
+  Future<List<ProgramTemplate>> list() async =>
+      List<ProgramTemplate>.of(saved.reversed);
 
   @override
-  Future<TrainerProgramDraft> read(String id) async =>
-      TrainerProgramDraft.fromJson(
-        stored.firstWhere((draft) => draft['id'] == id),
-      );
-
-  @override
-  Future<TrainerProgramDraft> create(Map<String, Object?> payload) async {
+  Future<ProgramTemplate> create({
+    required String name,
+    required String goal,
+    required List<TemplateExercise> exercises,
+  }) async {
     createCalls++;
-    if (gate != null) await gate!.future;
     if (failWrites) throw const NetworkError();
-    final draft = <String, Object?>{
-      ...payload,
-      'id': 'pgm-${stored.length + 1}',
-      'updated_at': DateTime.utc(2026, 8, 14, stored.length).toIso8601String(),
-    };
-    stored.add(draft);
-    return TrainerProgramDraft.fromJson(draft);
+    final template = ProgramTemplate(
+      id: 'tpl-${saved.length + 1}',
+      name: name,
+      goal: goal,
+      exercises: exercises,
+    );
+    saved.add(template);
+    return template;
   }
 
   @override
-  Future<TrainerProgramDraft> update(
-    String id,
-    Map<String, Object?> payload,
-  ) async {
-    if (failWrites) throw const NetworkError();
-    final index = stored.indexWhere((draft) => draft['id'] == id);
-    stored[index] = <String, Object?>{
-      ...stored[index],
-      ...payload,
-      'id': id,
-      'updated_at': DateTime.utc(2026, 8, 15).toIso8601String(),
-    };
-    return TrainerProgramDraft.fromJson(stored[index]);
-  }
+  Future<ProgramTemplate> update(
+    String id, {
+    required String name,
+    required String goal,
+    required List<TemplateExercise> exercises,
+  }) async => throw UnsupportedError('저장 버튼은 항상 새로 만든다 (#1028)');
 
   @override
   Future<void> delete(String id) async {
-    stored.removeWhere((draft) => draft['id'] == id);
+    saved.removeWhere((t) => t.id == id);
   }
 }
 
 Finder get _saveButton =>
     find.byKey(const ValueKey<String>('program-editor-save'));
 
+/// The save button is an icon-only bookmark now — outline before a
+/// successful save, filled after. Reading the icon (not a text label) is
+/// how these tests check that state.
+IconData? _saveButtonIcon(WidgetTester tester) =>
+    (tester.widget<IconButton>(_saveButton).icon as Icon).icon;
+
 Future<void> _openCoaching(
   WidgetTester tester,
-  TrainerProgramDraftRepository repository,
+  TrainerProgramTemplateRepository repository,
 ) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = const Size(1600, 1200);
@@ -113,15 +82,37 @@ Future<void> _openCoaching(
     token: 'demo-trainer-token',
     at: AppRoutes.coaching,
     extraOverrides: <Override>[
-      trainerProgramDraftRepositoryProvider.overrideWithValue(repository),
+      trainerProgramTemplateRepositoryProvider.overrideWithValue(repository),
     ],
   );
+}
+
+/// 편집기는 빈 상태로 시작한다(#1028 후속) — 저장하려면 운동을 하나 넣어야
+/// 한다.
+Future<void> _addExercise(WidgetTester tester, String name) async {
+  await tester.scrollUntilVisible(
+    find.text('운동 추가'),
+    150,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(find.text('운동 추가'));
+  await tester.pump();
+  await tester.tap(find.text('운동 추가'));
+  await tester.pump();
+  await tester.enterText(
+    find.byKey(const ValueKey<String>('custom-exercise-name')),
+    name,
+  );
+  await tester.ensureVisible(find.text('추가'));
+  await tester.pump();
+  await tester.tap(find.text('추가'));
+  await tester.pump();
 }
 
 Future<void> _tapSave(WidgetTester tester) async {
   await tester.scrollUntilVisible(
     _saveButton,
-    -150,
+    150,
     scrollable: find.byType(Scrollable).first,
   );
   await tester.ensureVisible(_saveButton);
@@ -130,139 +121,105 @@ Future<void> _tapSave(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('저장하면 초안이 남고 저장한 프로그램 카드가 나타난다', (tester) async {
-    final repository = _FakeDraftRepository();
+  testWidgets('저장하면 프로그램 템플릿 목록에 곧장 나타난다', (tester) async {
+    final repository = _FakeTemplateRepository();
     await _openCoaching(tester, repository);
+    await _addExercise(tester, '레그프레스 4세트');
 
-    // 아직 저장한 적이 없으면 카드 자체가 없다 — 기존 화면 그대로.
+    await _tapSave(tester);
+    await settle(tester);
+
+    expect(repository.saved, hasLength(1));
+    expect(repository.saved.single.exercises.single.name, '레그프레스 4세트');
+    expect(find.text('프로그램을 저장했어요'), findsOneWidget);
+
+    // 별도의 "저장한 프로그램" 보관함은 없다.
     expect(
       find.byKey(const ValueKey<String>('saved-programs-card')),
       findsNothing,
     );
 
-    await _tapSave(tester);
-    await settle(tester);
-
-    expect(repository.stored, hasLength(1));
-    expect(find.text('프로그램을 저장했어요'), findsOneWidget);
-    // 페이지가 ListView 라 카드는 화면에 들어와야 만들어진다.
+    // 왼쪽 사이드바의 `프로그램 템플릿` 카드에 방금 저장한 이름이 보인다.
     await tester.scrollUntilVisible(
-      find.byKey(const ValueKey<String>('saved-programs-card')),
-      150,
+      find.byKey(const ValueKey<String>('program-template-sidebar')),
+      -150,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
-      find.byKey(const ValueKey<String>('saved-programs-card')),
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('program-template-sidebar')),
+        matching: find.text(repository.saved.single.name),
+      ),
       findsOneWidget,
     );
   });
 
-  testWidgets('저장 중 다시 눌러도 초안이 하나만 만들어진다', (tester) async {
-    final repository = _FakeDraftRepository()..gate = Completer<void>();
+  testWidgets(
+    '북마크는 저장 전 outline, 성공 후 filled — 다시 눌러도 덮어쓰지 않고 새로 만든다',
+    (tester) async {
+      final repository = _FakeTemplateRepository();
+      await _openCoaching(tester, repository);
+      await _addExercise(tester, '스쿼트 3세트');
+
+      expect(_saveButtonIcon(tester), Icons.bookmark_border);
+
+      await _tapSave(tester);
+      await settle(tester);
+
+      expect(repository.saved, hasLength(1));
+      // 저장에 성공한 뒤에는 아이콘이 채워진다.
+      await tester.scrollUntilVisible(
+        _saveButton,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(_saveButtonIcon(tester), Icons.bookmark);
+
+      // 다시 눌러도 새 템플릿이 하나 더 만들어질 뿐, 덮어쓰지 않는다.
+      await _addExercise(tester, '런지 3세트');
+      await _tapSave(tester);
+      await settle(tester);
+      expect(repository.saved, hasLength(2));
+      expect(repository.createCalls, 2);
+      expect(_saveButtonIcon(tester), Icons.bookmark);
+    },
+  );
+
+  testWidgets('운동이 하나도 없으면 저장하지 않는다', (tester) async {
+    final repository = _FakeTemplateRepository();
     await _openCoaching(tester, repository);
 
     await _tapSave(tester);
-    await tester.pump();
-    // 저장이 끝나기 전의 두 번째·세 번째 클릭.
-    await tester.tap(_saveButton, warnIfMissed: false);
-    await tester.tap(_saveButton, warnIfMissed: false);
-    await tester.pump();
-    expect(repository.createCalls, 1);
-
-    repository.gate!.complete();
     await settle(tester);
-    expect(repository.stored, hasLength(1));
+
+    expect(repository.saved, isEmpty);
+    expect(repository.createCalls, 0);
   });
 
-  testWidgets('저장에 실패해도 작성 중인 프로그램이 남고 다시 시도할 수 있다', (tester) async {
-    final repository = _FakeDraftRepository(failWrites: true);
+  testWidgets('저장에 실패해도 작성 중인 내용이 남고 다시 시도할 수 있다', (tester) async {
+    final repository = _FakeTemplateRepository(failWrites: true);
     await _openCoaching(tester, repository);
-
-    // 편집기가 들고 있는 프로그램 이름(기본값)이 저장 실패 뒤에도 남아야 한다.
-    final title = find.text('혈압 관리 · 체중 감량 프로그램');
-    expect(title, findsWidgets);
+    await _addExercise(tester, '벤치프레스 4세트');
 
     await _tapSave(tester);
     await settle(tester);
 
-    expect(find.textContaining('프로그램을 저장하지 못했어요'), findsOneWidget);
-    expect(repository.stored, isEmpty);
-    expect(title, findsWidgets);
-    // 버튼이 잠긴 채로 남지 않는다.
-    expect(tester.widget<ActionButton>(_saveButton).onPressed, isNotNull);
+    expect(find.textContaining('템플릿을 저장하지 못했어요'), findsOneWidget);
+    expect(repository.saved, isEmpty);
+    // 버튼이 잠긴 채로 남지 않고, 실패했으니 아이콘도 채워지지 않는다.
+    await tester.scrollUntilVisible(
+      _saveButton,
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.widget<IconButton>(_saveButton).onPressed, isNotNull);
+    expect(_saveButtonIcon(tester), Icons.bookmark_border);
+    expect(find.text('벤치프레스 4세트'), findsWidgets);
 
     repository.failWrites = false;
     await _tapSave(tester);
     await settle(tester);
-    expect(repository.stored, hasLength(1));
-  });
-
-  testWidgets('저장한 프로그램을 불러오면 편집기가 그 구성으로 돌아온다', (tester) async {
-    final repository = _FakeDraftRepository();
-    repository.stored.add(<String, Object?>{
-      'id': 'pgm-saved',
-      'name': '저장해 둔 하체 프로그램',
-      'goal': '근력 향상',
-      'period': '6주',
-      'memo': '',
-      'sessions': <Map<String, Object?>>[
-        <String, Object?>{
-          'id': 'session-1',
-          'name': '세션 A',
-          'exercises': <Map<String, Object?>>[
-            <String, Object?>{
-              'id': 'exercise-2',
-              'name': '레그프레스',
-              'sets': '4',
-              'reps': '12회',
-              'weight': '60kg',
-              'duration': '',
-              'distance': '',
-              'rest': '90',
-              'rpe': '8',
-              'memo': '',
-              'type': '근력',
-              'source': 'ai',
-            },
-          ],
-        },
-      ],
-      'updated_at': '2026-08-14T09:00:00Z',
-    });
-    await _openCoaching(tester, repository);
-
-    final card = find.byKey(const ValueKey<String>('saved-program-pgm-saved'));
-    await tester.scrollUntilVisible(
-      card,
-      150,
-      scrollable: find.byType(Scrollable).first,
-    );
-    // scrollUntilVisible 은 위젯이 만들어지면 멈춘다 — 화면 안으로 들어오지
-    // 않으면 탭이 엉뚱한 곳을 친다.
-    await tester.ensureVisible(card);
-    await tester.pump();
-    await tester.tap(card);
-    await settle(tester);
-
-    // 편집기 제목이 저장한 이름으로 바뀌고 운동 구성이 살아난다.
-    // 편집기는 목록 위쪽이라 다시 위로 끌어 올려야 트리에 만들어진다.
-    await tester.scrollUntilVisible(
-      find.text('레그프레스'),
-      -150,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('저장해 둔 하체 프로그램'), findsWidgets);
-    expect(find.text('레그프레스'), findsWidgets);
-
-    // 불러온 초안은 기존 배정 흐름에 그대로 쓸 수 있다 — 저장·복원이 배정
-    // 가능 여부(supportsAssignment)를 깨뜨리지 않는다.
-    final assignButton = find.widgetWithText(ActionButton, '고객에게 배정');
-    expect(tester.widget<ActionButton>(assignButton).onPressed, isNotNull);
-
-    // 이제 저장은 기존 초안을 덮어쓴다 — 사본이 늘지 않는다.
-    await _tapSave(tester);
-    await settle(tester);
-    expect(repository.stored, hasLength(1));
-    expect(repository.createCalls, 0);
+    expect(repository.saved, hasLength(1));
+    expect(_saveButtonIcon(tester), Icons.bookmark);
   });
 }

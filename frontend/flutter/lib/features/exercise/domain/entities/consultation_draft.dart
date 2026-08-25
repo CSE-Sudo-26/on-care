@@ -4,11 +4,34 @@
 /// 여기 enum 이 계약이고, 라벨은 화면이 이 enum 으로부터 만든다.
 library;
 
+import 'package:flutter/material.dart' show TimeOfDay;
+
 enum ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 
 enum HealthPurposeType { weight, chronic, rehab, general, none, other }
 
-enum PreferredTimeSlot { morning, afternoon, evening, flexible }
+/// 상담 희망 시각. 오전/오후/저녁 카테고리 대신 정확한 시각 또는 "시간 협의"만
+/// 남긴다(#1256) — 과거 `PreferredTimeSlot{morning,afternoon,evening,flexible}`
+/// enum을 대체한다.
+class PreferredTime {
+  const PreferredTime.flexible() : start = null, end = null;
+  const PreferredTime.at(TimeOfDay time) : start = time, end = time;
+  const PreferredTime.range(this.start, this.end);
+
+  /// null 이면 "시간 협의".
+  final TimeOfDay? start;
+  final TimeOfDay? end;
+  TimeOfDay? get timeOfDay => start;
+
+  bool get isFlexible => start == null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PreferredTime && other.start == start && other.end == end;
+
+  @override
+  int get hashCode => Object.hash(start, end);
+}
 
 /// 백엔드 `ConsultationCreate` 의 Literal 값과 문자 그대로 같아야 한다.
 String exerciseGoalToWire(ExerciseGoal g) => switch (g) {
@@ -43,12 +66,14 @@ HealthPurposeType healthPurposeFromExerciseGoal(ExerciseGoal goal) =>
       ExerciseGoal.other => HealthPurposeType.other,
     };
 
-String preferredTimeSlotToWire(PreferredTimeSlot t) => switch (t) {
-  PreferredTimeSlot.morning => 'morning',
-  PreferredTimeSlot.afternoon => 'afternoon',
-  PreferredTimeSlot.evening => 'evening',
-  PreferredTimeSlot.flexible => 'flexible',
-};
+String preferredTimeSlotToWire(PreferredTime t) {
+  final TimeOfDay? start = t.start;
+  if (start == null) return 'flexible';
+  String hm(TimeOfDay value) => '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}';
+  final TimeOfDay end = t.end ?? start;
+  return start == end ? hm(start) : '${hm(start)}-${hm(end)}';
+}
 
 /// 상담 신청 내용. 대상은 트레이너 한 사람이다 — 헬스장 전체로 보내는 갈래는
 /// 없앴고, 서버도 `trainer_id` 없는 요청을 422 로 거절한다.
@@ -73,7 +98,7 @@ class ConsultationDraft {
   /// `healthPurposeType` 이 other 면 필수 — 서버가 422 로 강제한다.
   final String? healthPurposeDetail;
   final DateTime preferredDate;
-  final PreferredTimeSlot preferredTimeSlot;
+  final PreferredTime preferredTimeSlot;
   final String? message;
 
   /// 식단·운동·신체 정보를 이 트레이너에게 보여 주는 데 동의했는가. (#1022)
@@ -137,9 +162,24 @@ HealthPurposeType healthPurposeFromWire(String? s) => switch (s) {
   _ => HealthPurposeType.other,
 };
 
-PreferredTimeSlot preferredTimeSlotFromWire(String? s) => switch (s) {
-  'morning' => PreferredTimeSlot.morning,
-  'afternoon' => PreferredTimeSlot.afternoon,
-  'evening' => PreferredTimeSlot.evening,
-  _ => PreferredTimeSlot.flexible,
-};
+/// `HH:MM` 이면 그 시각으로, 그 외(과거 `morning`/`afternoon`/`evening`
+/// 값이나 알 수 없는 값 포함)는 전부 "시간 협의"로 떨어뜨린다(#1256).
+final RegExp _kTimePattern = RegExp(
+  r'^([01]\d|2[0-3]):([0-5]\d)(?:-([01]\d|2[0-3]):([0-5]\d))?$',
+);
+
+PreferredTime preferredTimeSlotFromWire(String? s) {
+  final RegExpMatch? match = s == null ? null : _kTimePattern.firstMatch(s);
+  if (match == null) return const PreferredTime.flexible();
+  final start = TimeOfDay(
+    hour: int.parse(match.group(1)!),
+    minute: int.parse(match.group(2)!),
+  );
+  final end = match.group(3) == null
+      ? start
+      : TimeOfDay(
+          hour: int.parse(match.group(3)!),
+          minute: int.parse(match.group(4)!),
+        );
+  return PreferredTime.range(start, end);
+}

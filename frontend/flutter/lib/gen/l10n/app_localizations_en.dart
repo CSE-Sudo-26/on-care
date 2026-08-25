@@ -389,6 +389,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietAnalysisFailed => 'Analysis failed';
 
   @override
+  String get dietRecordDate => 'Record date';
+
+  @override
+  String get dietRecordDateChange => 'Change date';
+
+  @override
+  String dietRecordDateMoved(String date) {
+    return 'Moved to $date';
+  }
+
+  @override
+  String get dietRecordDateFailed =>
+      'Could not change the date. Please try again shortly.';
+
+  @override
   String get dietAnalysisDone => 'Analysis complete!';
 
   @override
@@ -504,19 +519,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietDeleteMeal => 'Delete Meal';
 
   @override
-  String get exTypeWalking => 'Walking';
-
-  @override
   String get exTypeCardio => 'Cardio';
 
   @override
   String get exTypeStrength => 'Strength';
 
   @override
-  String get exTypeYoga => 'Yoga';
-
-  @override
-  String get exTypeStretching => 'Stretching';
+  String get exTypeFlexibility => 'Stretching';
 
   @override
   String get exTypeOtherChip => 'Other';
@@ -717,7 +726,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseType => 'Exercise Type';
 
   @override
+  String get exExerciseDate => 'Date';
+
+  @override
+  String get exExerciseName => 'Exercise Name';
+
+  @override
+  String get exExerciseNameHint => 'e.g. Squat, Treadmill';
+
+  @override
+  String get exExerciseReps => 'Reps';
+
+  @override
+  String get exExerciseWeight => 'Weight';
+
+  @override
+  String get exUnitMinutes => 'min';
+
+  @override
+  String get exUnitSets => 'sets';
+
+  @override
+  String get exUnitReps => 'reps';
+
+  @override
+  String get exUnitKg => 'kg';
+
+  @override
+  String get exEnterName => 'Please enter an exercise name';
+
+  @override
   String get exExerciseDuration => 'Duration';
+
+  @override
+  String get exExerciseSets => 'Sets';
+
+  @override
+  String exSetsCount(int sets) {
+    return '$sets sets';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps reps';
+  }
+
+  @override
+  String get exEnterSets => 'Enter the number of sets';
 
   @override
   String get exExerciseIntensity => 'Intensity';
@@ -1347,19 +1402,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exSelectDate => 'Select a date';
 
   @override
+  String get exSelectTime => 'Select a time';
+
+  @override
   String get exPreferredTime => 'Preferred Time';
 
   @override
-  String get exTimeMorning => 'Morning';
-
-  @override
-  String get exTimeAfternoon => 'Afternoon';
-
-  @override
-  String get exTimeEvening => 'Evening';
-
-  @override
   String get exTimeFlexible => 'Discuss Later';
+
+  @override
+  String get exTimeRangeTitle => 'Select time';
+
+  @override
+  String get exTimeRangeStartTime => 'Start time';
+
+  @override
+  String get exTimeRangeEndTime => 'End time';
+
+  @override
+  String get exTimeRangeStartHourStep => 'Start hour';
+
+  @override
+  String get exTimeRangeStartMinuteStep => 'Start minute';
+
+  @override
+  String get exTimeRangeEndHourStep => 'End hour';
+
+  @override
+  String get exTimeRangeEndMinuteStep => 'End minute';
+
+  @override
+  String get exSlotAm => 'AM';
+
+  @override
+  String get exSlotPm => 'PM';
+
+  @override
+  String get exTimeRangeInvalidEnd => 'End time is earlier than start time';
+
+  @override
+  String get exTimeRangePrevStep => 'Previous step';
+
+  @override
+  String get exTimeRangeNextStep => 'Next step';
 
   @override
   String get exConsultMessage => 'Message';
@@ -1416,6 +1501,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => 'Consultation Request Status';
+
+  @override
+  String get exConsultHistoryTitle => 'My Consultation Requests';
+
+  @override
+  String get exConsultHistoryEmpty =>
+      'You haven\'t sent any consultation requests yet.';
+
+  @override
+  String get exConsultHistoryInProgress => 'In Progress';
+
+  @override
+  String get exConsultHistoryPast => 'Past Requests';
 
   @override
   String get exConsultRejectedReasonLabel => 'Reason for decline';
@@ -1564,9 +1662,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tell us a little about yourself so we can tailor your care.';
 
   @override
-  String get onboardBirthHint => 'Date of birth (YYYY-MM-DD)';
-
-  @override
   String get onboardHeightHint => 'Height (cm)';
 
   @override
@@ -1590,7 +1685,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardGoalHint => 'Health and exercise goals';
 
   @override
-  String get onboardSodiumGoalHint => 'Daily sodium goal (mg)';
+  String get onboardOptionalTag => '(optional)';
+
+  @override
+  String get onboardSkipStep => 'Skip this step';
+
+  @override
+  String get onboardBirthLabel => 'Date of birth';
+
+  @override
+  String get onboardBirthYearHint => 'Year';
+
+  @override
+  String get onboardBirthMonthHint => 'Month';
+
+  @override
+  String get onboardBirthDayHint => 'Day';
+
+  @override
+  String onboardBirthYearValue(int year) {
+    return '$year';
+  }
+
+  @override
+  String onboardBirthMonthValue(int month) {
+    return '$month';
+  }
+
+  @override
+  String onboardBirthDayValue(int day) {
+    return '$day';
+  }
+
+  @override
+  String get onboardGenderLabel => 'Gender';
+
+  @override
+  String onboardAgeSummary(int age) {
+    return '$age years old';
+  }
+
+  @override
+  String onboardBmiSummary(String bmi, String category) {
+    return 'BMI $bmi · $category';
+  }
+
+  @override
+  String get onboardBmiUnderweight => 'Underweight';
+
+  @override
+  String get onboardBmiNormal => 'Normal';
+
+  @override
+  String get onboardBmiPreObese => 'Pre-obese';
+
+  @override
+  String get onboardBmiObese1 => 'Obesity class I';
+
+  @override
+  String get onboardBmiObese2 => 'Obesity class II';
+
+  @override
+  String get onboardBmiObese3 => 'Obesity class III';
+
+  @override
+  String get onboardBmiSourceNote =>
+      'Cut-offs: Korean Society for the Study of Obesity guideline (Asia-Pacific)';
+
+  @override
+  String get onboardDietTitle => 'Diet goals';
+
+  @override
+  String get onboardDietSubtitle =>
+      'We prefilled suggested goals. Change anything you like.';
+
+  @override
+  String get onboardExerciseTitle => 'Exercise goals';
+
+  @override
+  String get onboardExerciseSubtitle =>
+      'Prefilled from the World Health Organization guideline. Change anything you like.';
+
+  @override
+  String get onboardRecommendedPersonal =>
+      'Suggested from your age, gender, height and weight';
+
+  @override
+  String get onboardRecommendedFallback =>
+      'App defaults. Fill in step 1 to get a suggestion tailored to you';
+
+  @override
+  String get onboardResetToRecommended => 'Reset to suggested';
+
+  @override
+  String get onboardDietSourceNote =>
+      'Sources: Dietary Reference Intakes for Koreans 2020 (EER, AMDR) · WHO sodium and free-sugar guidelines';
+
+  @override
+  String get onboardExerciseSourceNote =>
+      'Source: WHO guidelines on physical activity (2020) — 150 min of moderate cardio and 2+ strength days a week';
 
   @override
   String get onboardGenderMale => 'Male';
@@ -1734,7 +1927,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHealthGoalsTitle => 'Health goals';
 
   @override
-  String get myGoalsDietSection => 'Daily diet goals';
+  String get myGoalsDietSection => 'Diet goals';
 
   @override
   String get myGoalsExerciseSection => 'Exercise goals';
@@ -1888,7 +2081,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachRoutineMyNote(String note) {
-    return 'My note: $note';
+    return 'My feedback: $note';
   }
 
   @override
@@ -1898,13 +2091,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachRoutineCompleteTitle => 'Mark routine done';
-
-  @override
-  String get coachRoutineMinutesLabel => 'Actual minutes';
-
-  @override
-  String get coachRoutineMinutesError =>
-      'Enter a value between 1 and 600 minutes';
 
   @override
   String get coachRoutineIntensity => 'Intensity';
@@ -1919,7 +2105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachIntensityHigh => 'High';
 
   @override
-  String get coachRoutineNoteLabel => 'Note (optional)';
+  String get coachRoutineNoteLabel => 'Feedback (optional)';
 
   @override
   String get coachRoutineNoteHint =>

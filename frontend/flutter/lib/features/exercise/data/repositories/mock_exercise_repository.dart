@@ -189,23 +189,38 @@ class MockExerciseRepository implements ExerciseRepository {
     required ExerciseType type,
     required int minutes,
     required int calories,
-    required String dayLabel,
+    required DateTime date,
+    String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
+    int? reps,
+    double? weight,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final session = ExerciseSession(
       id: 'mock-ex-${++_seq}',
-      dayLabel: dayLabel,
+      dayLabel: _dayLabels[date.weekday - 1],
       type: type,
       minutes: minutes,
       calories: calories,
       intensity: intensity,
-      dateLabel: '오늘',
+      dateLabel: _dateLabel(_ymd(date)),
+      sets: _strengthOnly(type, sets),
+      reps: _strengthOnly(type, reps),
+      name: name,
+      weight: _strengthOnly(type, weight),
+      date: date,
     );
     _sessions.add(session);
     _totalCalories += calories;
     return session;
   }
+
+  /// 근력에서만 의미 있는 값(세트·횟수·중량). 다른 유형에서 온 값은 버린다 —
+  /// 서버(`_strength_only`)와 같은 규칙이라야 데모와 실 API 가 같은 기록을
+  /// 남긴다. (#1262, #1276, #1310)
+  T? _strengthOnly<T>(ExerciseType type, T? value) =>
+      type == ExerciseType.strength ? value : null;
 
   @override
   Future<void> deleteSession(String id) async {
@@ -222,22 +237,33 @@ class MockExerciseRepository implements ExerciseRepository {
     required ExerciseType type,
     required int minutes,
     required int calories,
-    required String dayLabel,
+    required DateTime date,
+    String name = '',
     ExerciseIntensity intensity = ExerciseIntensity.moderate,
+    int? sets,
+    int? reps,
+    double? weight,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final int idx = _sessions.indexWhere((ExerciseSession s) => s.id == id);
     final ExerciseSession? old = idx >= 0 ? _sessions[idx] : null;
     final ExerciseSession updated = ExerciseSession(
       id: id,
-      dayLabel: dayLabel,
+      dayLabel: _dayLabels[date.weekday - 1],
       type: type,
       minutes: minutes,
       calories: calories,
       intensity: intensity,
-      dateLabel: old?.dateLabel ?? '오늘',
+      // 날짜를 고쳤으면 라벨도 그 날짜의 것이다 — 옛 라벨을 이어받으면
+      // 3일 전으로 옮긴 기록이 '오늘' 로 남는다.
+      dateLabel: _dateLabel(_ymd(date)),
       timeLabel: old?.timeLabel,
       items: old?.items ?? const <String>[],
+      sets: _strengthOnly(type, sets),
+      reps: _strengthOnly(type, reps),
+      name: name,
+      weight: _strengthOnly(type, weight),
+      date: date,
     );
     if (idx >= 0 && old != null) {
       _totalCalories = _nonNeg(_totalCalories - old.calories + calories);
@@ -309,7 +335,7 @@ class MockExerciseRepository implements ExerciseRepository {
     );
   }
 
-  /// 유형별 시리즈(유산소·근력·유연성·기타) 중 운동 유형에 맞는 버킷.
+  /// 유형별 시리즈(유산소·근력·스트레칭·기타) 중 운동 유형에 맞는 버킷.
   ///
   /// `기타` 는 예전에 유산소에 섞어 넣었는데, 목표가 없는 운동이 유산소 달성률을
   /// 올려 버렸다. 이제 제 버킷을 갖는다.

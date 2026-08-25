@@ -13,11 +13,13 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/connected_gym_card.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_trainer_line.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 class GymTab extends ConsumerWidget {
   const GymTab({required this.selectedSlot, required this.onSlot, super.key});
@@ -29,20 +31,12 @@ class GymTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
-    // 트레이너 소속 헬스장 이름은 제휴 + 카카오를 모두 아는 목록에서 찾아야 한다.
-    // 제휴 목록만 보면 카카오 헬스장 소속 트레이너의 헬스장 이름이 빈칸이 된다(#329).
-    final AsyncValue<List<Gym>> knownGymsAsync = ref.watch(
-      gymFinderResultsProvider,
-    );
     final MemberCoach? assignedCoach = ref
         .watch(memberCoachProvider)
         .valueOrNull;
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
-    final ConsultationRequest? recentRequest = requests.isEmpty
-        ? null
-        : requests.first;
     ConsultationRequest? pendingRequest;
     for (final ConsultationRequest request in requests) {
       if (request.status == ConsultationStatus.pending) {
@@ -50,25 +44,11 @@ class GymTab extends ConsumerWidget {
         break;
       }
     }
-    final ConsultationRequest? displayedRequest =
-        pendingRequest ?? recentRequest;
     final bool showTrainerChat =
         assignedCoach != null && pendingRequest == null;
     final int unreadCoachMessages = showTrainerChat
         ? ref.watch(coachUnreadProvider).valueOrNull ?? 0
         : 0;
-    final GlobalKey recentConsultationKey = GlobalKey();
-
-    void showRecentConsultation() {
-      final BuildContext? targetContext = recentConsultationKey.currentContext;
-      if (targetContext == null) return;
-      Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        alignment: 0.1,
-      );
-    }
 
     // 연결된 헬스장이 없으면 이 탭에서 할 일은 헬스장을 찾는 것뿐이다 —
     // 지도만 든 빈 카드와 `헬스장 찾기` 버튼 대신 찾기 화면을 그대로 보여
@@ -81,44 +61,33 @@ class GymTab extends ConsumerWidget {
     if (myGymAsync.isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20),
-        child: _SectionLoading(height: 180),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: _SectionLoading(height: 180),
+        ),
       );
     }
     if (!myGymAsync.hasError && myGymAsync.valueOrNull == null) {
-      // 상담을 넣어 둔 상태는 그대로 보여 준다 — 헬스장이 아직 없는 회원에게
-      // 지금 진행 중인 일이 바로 그 상담이다.
-      if (displayedRequest == null) return const GymFinderView();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _RecentConsultationSection(
-                  key: recentConsultationKey,
-                  request: displayedRequest,
-                ),
-                if (pendingRequest != null) ...<Widget>[
-                  const SizedBox(height: 14),
-                  _PendingConsultationButton(onTap: showRecentConsultation),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const GymFinderView(),
-        ],
-      );
+      // 상담 요청 내역은 검색창 옆 아이콘이 맡는다. 요청 직후 요약 카드를 여기
+      // 끼우면 검색창이 아래로 밀려 화면 구조가 바뀐다(#1287).
+      return const GymFinderView();
     }
 
-    return Padding(
+    // 이 탭은 높이를 받아 놓인다 (#1274) — 연결된 헬스장 화면은 섹션이 여럿인
+    // 긴 화면이라 제 스크롤을 갖는다. 찾기 화면은 스스로 시트를 굴리므로 이
+    // 스크롤을 타지 않는다.
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _SectionHeader(title: l.exMyGymSection),
+          // 이미 연결된 헬스장이 있어도 다른 헬스장을 둘러볼 수 있어야 한다 —
+          // 마이페이지의 `헬스장 찾기`와 같은 목적지다(#1257).
+          _SectionHeader(
+            title: l.exMyGymSection,
+            actionLabel: l.exFindGym,
+            onAction: () => context.push(AppRoutes.gyms),
+          ),
           const SizedBox(height: 10),
           _MyGymSection(
             gymAsync: myGymAsync,
@@ -126,9 +95,6 @@ class GymTab extends ConsumerWidget {
             selectedSlot: selectedSlot,
             onSlot: onSlot,
             onRetry: () => ref.invalidate(myGymProvider),
-            onPendingConsultationTap: pendingRequest == null
-                ? null
-                : showRecentConsultation,
             onTrainerChatTap: showTrainerChat
                 ? () => openTrainerChatPage(
                     context,
@@ -136,231 +102,6 @@ class GymTab extends ConsumerWidget {
                   )
                 : null,
             unreadCoachMessages: unreadCoachMessages,
-          ),
-          if (displayedRequest != null) ...<Widget>[
-            const SizedBox(height: 28),
-            _RecentConsultationSection(
-              key: recentConsultationKey,
-              request: displayedRequest,
-            ),
-          ],
-          const SizedBox(height: 28),
-          _RecommendedGymSection(
-            // 이미 연결된 헬스장은 빠진 목록이다(#864) — 내 헬스장 카드는 위에
-            // 그대로 있으므로 정보가 사라지지 않는다.
-            gymsAsync: ref.watch(recommendedGymsProvider),
-            onMore: () => context.push(AppRoutes.gyms),
-            onRetry: () => ref.invalidate(nearbyGymsProvider),
-          ),
-          const SizedBox(height: 28),
-          _RecommendedTrainerSection(
-            trainersAsync: ref.watch(recommendedTrainersProvider),
-            gymNames: <String, String>{
-              for (final Gym gym in knownGymsAsync.valueOrNull ?? const <Gym>[])
-                gym.id: gym.name,
-            },
-            onMore: () => context.push(AppRoutes.trainers),
-            onRetry: () => ref.invalidate(recommendedTrainersProvider),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentConsultationSection extends StatelessWidget {
-  const _RecentConsultationSection({required this.request, super.key});
-
-  final ConsultationRequest request;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final String targetName = request.trainerName ?? '';
-    final String targetType = l.exTrainerConsultType;
-    final String status = switch (request.status) {
-      ConsultationStatus.pending => l.exConsultPendingStatus,
-      ConsultationStatus.accepted => l.exConsultAcceptedStatus,
-      ConsultationStatus.rejected => l.exConsultRejectedStatus,
-    };
-    final String date = MaterialLocalizations.of(
-      context,
-    ).formatMediumDate(request.preferredDate);
-    final Widget? outcome = _outcomeNote(context, l);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _SectionHeader(title: l.exConsultStatusSection),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration(),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.person_outline,
-                  size: 21,
-                  color: FigmaColors.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            targetName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: FigmaColors.ink,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: FigmaColors.primaryA(0.10),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            status,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      // 서버가 트레이너 대상 요청에 헬스장 이름을 주지 않아, 예전에는
-                      // 앱을 다시 열면 "트레이너 상담 · " 로 뒤가 비어 보였다.
-                      targetType,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '$date · ${request.preferredTimeSlot}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.foreground,
-                      ),
-                    ),
-                    if (outcome != null) ...<Widget>[
-                      const SizedBox(height: 10),
-                      outcome,
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 처리된 요청에 붙는 결과 안내. 대기 중이면 null. (#473)
-  ///
-  /// 거절은 사유가 본체다 — "거절됨" 배지만 보면 다시 신청해도 되는지, 다른
-  /// 트레이너를 찾아야 하는지 판단할 근거가 없다. 트레이너가 사유를 적지 않았을
-  /// 수도 있으므로 그때는 다음 행동을 안내한다.
-  Widget? _outcomeNote(BuildContext context, AppLocalizations l) {
-    switch (request.status) {
-      case ConsultationStatus.pending:
-        return null;
-      case ConsultationStatus.accepted:
-        return _OutcomeNote(
-          key: const Key('consult-outcome-accepted'),
-          tone: FigmaColors.primary,
-          text: l.exConsultAcceptedGuide,
-        );
-      case ConsultationStatus.rejected:
-        final String? note = request.decisionNote;
-        return _OutcomeNote(
-          key: const Key('consult-outcome-rejected'),
-          tone: FigmaColors.textMuted,
-          label: note == null ? null : l.exConsultRejectedReasonLabel,
-          text: note ?? l.exConsultRejectedNoReason,
-        );
-    }
-  }
-}
-
-/// 상태 카드 하단의 결과 안내 한 덩어리 — 승인 안내 또는 거절 사유.
-class _OutcomeNote extends StatelessWidget {
-  const _OutcomeNote({
-    required this.tone,
-    required this.text,
-    this.label,
-    super.key,
-  });
-
-  final Color tone;
-  final String? label;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: tone.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (label != null) ...<Widget>[
-            Text(
-              label!,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: tone,
-              ),
-            ),
-            const SizedBox(height: 3),
-          ],
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: FigmaColors.textBody,
-            ),
           ),
         ],
       ),
@@ -375,7 +116,6 @@ class _MyGymSection extends StatelessWidget {
     required this.selectedSlot,
     required this.onSlot,
     required this.onRetry,
-    required this.onPendingConsultationTap,
     required this.onTrainerChatTap,
     required this.unreadCoachMessages,
   });
@@ -387,7 +127,6 @@ class _MyGymSection extends StatelessWidget {
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
   final VoidCallback onRetry;
-  final VoidCallback? onPendingConsultationTap;
   final VoidCallback? onTrainerChatTap;
   final int unreadCoachMessages;
 
@@ -401,38 +140,55 @@ class _MyGymSection extends StatelessWidget {
       // 재시도 자리를 남긴다.
       data: (Gym? gym) => gym == null
           ? _SectionError(onRetry: onRetry)
-          : _MyGymCard(
-              gym: gym,
-              trainer: trainer,
-              selectedSlot: selectedSlot,
-              onSlot: onSlot,
-              onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
-              onPendingConsultationTap: onPendingConsultationTap,
-              onTrainerChatTap: onTrainerChatTap,
-              unreadCoachMessages: unreadCoachMessages,
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                ConnectedGymCard(
+                  gym: gym,
+                  trainer: trainer,
+                  onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+                  onTrainerDetail: trainer == null
+                      ? null
+                      : () => context.push(
+                          AppRoutes.trainerDetailPath(trainer!.id),
+                        ),
+                  footer: onTrainerChatTap == null
+                      ? null
+                      : _TrainerChatButton(
+                          unread: unreadCoachMessages,
+                          onTap: onTrainerChatTap!,
+                        ),
+                ),
+                if (trainer != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _ReservationPanel(
+                    key: const Key('my-gym-reservation-panel'),
+                    gym: gym,
+                    trainer: trainer!,
+                    selectedSlot: selectedSlot,
+                    onSlot: onSlot,
+                  ),
+                ],
+              ],
             ),
     );
   }
 }
 
+// TODO(#1313): remove after the shared card rollout is verified.
+// ignore: unused_element
 class _MyGymCard extends StatelessWidget {
   const _MyGymCard({
     required this.gym,
     required this.trainer,
-    required this.selectedSlot,
-    required this.onSlot,
     required this.onGymTap,
-    required this.onPendingConsultationTap,
     required this.onTrainerChatTap,
     required this.unreadCoachMessages,
   });
 
   final Gym gym;
   final Trainer? trainer;
-  final String? selectedSlot;
-  final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
-  final VoidCallback? onPendingConsultationTap;
   final VoidCallback? onTrainerChatTap;
   final int unreadCoachMessages;
 
@@ -441,6 +197,7 @@ class _MyGymCard extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
 
     return Container(
+      key: const Key('my-gym-info-card'),
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: _cardDecoration(),
@@ -531,28 +288,13 @@ class _MyGymCard extends StatelessWidget {
             GymTrainerLine(
               key: const Key('gym-trainer-line-mine'),
               trainer: trainer!,
-              connected: true,
               // 고를 이유가 아니라 이미 함께 하는 사람이다 — 추천 이유는 뺀다.
               showReason: false,
               onDetail: () =>
                   context.push(AppRoutes.trainerDetailPath(trainer!.id)),
             ),
           ],
-          // 담당 트레이너가 없으면 예약 패널을 숨긴다. 없는 사람의 빈 시간을
-          // 고르고 예약 완료 메시지까지 보게 되는 상태를 막는다.
-          if (trainer != null) ...<Widget>[
-            const SizedBox(height: 16),
-            _ReservationPanel(
-              gym: gym,
-              trainer: trainer!,
-              selectedSlot: selectedSlot,
-              onSlot: onSlot,
-            ),
-          ],
-          if (onPendingConsultationTap != null) ...<Widget>[
-            const SizedBox(height: 14),
-            _PendingConsultationButton(onTap: onPendingConsultationTap!),
-          ] else if (onTrainerChatTap != null) ...<Widget>[
+          if (onTrainerChatTap != null) ...<Widget>[
             const SizedBox(height: 14),
             _TrainerChatButton(
               unread: unreadCoachMessages,
@@ -560,34 +302,6 @@ class _MyGymCard extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _PendingConsultationButton extends StatelessWidget {
-  const _PendingConsultationButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: onTap,
-        style: FilledButton.styleFrom(
-          backgroundColor: FigmaColors.primary,
-          minimumSize: const Size(0, 44),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          l.exViewConsultationRequest,
-          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-        ),
       ),
     );
   }
@@ -689,6 +403,7 @@ class _TrainerChatButton extends StatelessWidget {
 /// 이 아니라 "찼음" 으로 읽히게 한다.
 class _ReservationPanel extends ConsumerStatefulWidget {
   const _ReservationPanel({
+    super.key,
     required this.gym,
     required this.trainer,
     required this.selectedSlot,
@@ -714,26 +429,43 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
   /// 취소 요청이 오가는 동안 잡고 있는 예약 id. 예약과 같은 이유로 잠근다.
   String? _cancelling;
 
-  /// 로케일에 맞는 "8월 8일 오후 7:00" 형태. 고정 문자열이 아니라 실제 시각을
-  /// 쓰므로 날이 바뀌어도 어긋나지 않는다.
+  /// 24시간(HH:mm) 표기로 고정한다 — 로케일 기본(오전/오후 12시간제)을 쓰던
+  /// `MaterialLocalizations.formatTimeOfDay` 대신이다. 빈 예약 시간을
+  /// 트레이너 쪽 스케줄·모달과 같은 표기로 보여준다.
+  static String _hhmm(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:'
+      '${t.minute.toString().padLeft(2, '0')}';
+
+  /// "8월 8일 19:00" 형태. 고정 문자열이 아니라 실제 시각을 쓰므로 날이
+  /// 바뀌어도 어긋나지 않는다.
   String _when(BuildContext context, AppLocalizations l, DateTime at) {
     final MaterialLocalizations m = MaterialLocalizations.of(context);
     return l.exSlotWhen(
       m.formatMediumDate(at),
-      m.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+      _hhmm(TimeOfDay.fromDateTime(at)),
     );
+  }
+
+  String _slotWhen(BuildContext context, TrainerSlot slot) {
+    final MaterialLocalizations m = MaterialLocalizations.of(context);
+    final DateTime end = slot.startsAt.add(
+      Duration(minutes: slot.durationMinutes),
+    );
+    final String start = _hhmm(TimeOfDay.fromDateTime(slot.startsAt));
+    final String finish = _hhmm(TimeOfDay.fromDateTime(end));
+    return '${m.formatMediumDate(slot.startsAt)}\n$start–$finish';
   }
 
   Future<void> _reserve(AppLocalizations l, TrainerSlot slot) async {
     if (_reserving != null) return;
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final String label = _when(context, l, slot.startsAt);
     setState(() => _reserving = slot.id);
     try {
       await ref.read(gymRepositoryProvider).reserve(slot.id);
     } catch (_) {
       if (mounted) setState(() => _reserving = null);
-      messenger.showSnackBar(SnackBar(content: Text(l.exReserveFailed)));
+      toast.show(l.exReserveFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -742,10 +474,9 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     // 방금 잡은 예약이 '내 예약'에도 나타나야 취소가 걸린다. (#502)
     ref.invalidate(myReservationsProvider);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(l.exReserveConfirmedSlotGym(label, widget.gym.name)),
-      ),
+    toast.show(
+      l.exReserveConfirmedSlotGym(label, widget.gym.name),
+      kind: AppToastKind.success,
     );
   }
 
@@ -755,7 +486,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
   /// 다른 회원이 잡을 수 있다. (#502)
   Future<void> _cancel(AppLocalizations l, MyReservation reservation) async {
     if (_reserving != null || _cancelling != null) return;
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final String label = _when(context, l, reservation.startsAt);
     final bool? ok = await showDialog<bool>(
       context: context,
@@ -783,7 +514,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
       await ref.read(gymRepositoryProvider).cancelReservation(reservation.id);
     } catch (_) {
       if (mounted) setState(() => _cancelling = null);
-      messenger.showSnackBar(SnackBar(content: Text(l.exCancelFailed)));
+      toast.show(l.exCancelFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -791,7 +522,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     // 좌석이 돌아왔으므로 슬롯도 함께 다시 읽는다.
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     ref.invalidate(myReservationsProvider);
-    messenger.showSnackBar(SnackBar(content: Text(l.exCancelDone(label))));
+    toast.show(l.exCancelDone(label), kind: AppToastKind.success);
   }
 
   @override
@@ -910,28 +641,38 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                       _SlotNotice(message: l.exSlotsAllBooked),
                       const SizedBox(height: 10),
                     ],
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final TrainerSlot slot in slots)
-                          _SlotChip(
-                            key: ValueKey<String>('slot-chip-${slot.id}'),
-                            // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
-                            // 남으므로(#1136) 실제로는 늘 같은 값이다.
-                            type: l.exSlotTypePersonalTraining,
-                            label: _when(context, l, slot.startsAt),
-                            // 한 사람 몫뿐인 자리라 빈 자리에는 덧붙일 수가
-                            // 없다 — 마감된 자리만 그 사실을 적는다(#1072).
-                            sub: slot.booked ? l.exSlotFull : null,
-                            selected: picked?.id == slot.id,
-                            // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
-                            // 선택도 잠근다.
-                            onTap: slot.booked || busy
-                                ? null
-                                : () => widget.onSlot(slot.id),
-                          ),
-                      ],
+                    LayoutBuilder(
+                      builder:
+                          (BuildContext context, BoxConstraints constraints) {
+                            const double gap = 8;
+                            final double itemWidth =
+                                (constraints.maxWidth - gap) / 2;
+                            return Wrap(
+                              spacing: gap,
+                              runSpacing: 8,
+                              children: <Widget>[
+                                for (final TrainerSlot slot in slots)
+                                  SizedBox(
+                                    width: itemWidth,
+                                    child: _SlotChip(
+                                      key: ValueKey<String>(
+                                        'slot-chip-${slot.id}',
+                                      ),
+                                      // 종류를 시각 앞에 둔다. 내 헬스장에는 1:1 PT 자리만
+                                      // 남으므로(#1136) 실제로는 늘 같은 값이다.
+                                      type: l.exSlotTypePersonalTraining,
+                                      label: _slotWhen(context, slot),
+                                      selected: picked?.id == slot.id,
+                                      // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
+                                      // 선택도 잠근다.
+                                      onTap: slot.booked || busy
+                                          ? null
+                                          : () => widget.onSlot(slot.id),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                     ),
                     if (picked != null) ...<Widget>[
                       const SizedBox(height: 10),
@@ -1018,6 +759,9 @@ class _SlotNotice extends StatelessWidget {
   }
 }
 
+// 추천 목록은 미연결 상태의 GymFinderView가 전담한다. 연결 화면에서 다시
+// 노출하지 않되, 카드 구현은 별도 목록 화면 재사용을 위해 남겨 둔다.
+// ignore: unused_element
 class _RecommendedGymSection extends StatelessWidget {
   const _RecommendedGymSection({
     required this.gymsAsync,
@@ -1163,6 +907,7 @@ class _GymRecommendationCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _RecommendedTrainerSection extends StatelessWidget {
   const _RecommendedTrainerSection({
     required this.trainersAsync,
@@ -1420,7 +1165,6 @@ class _SlotChip extends StatelessWidget {
     super.key,
     required this.type,
     required this.label,
-    required this.sub,
     required this.selected,
     required this.onTap,
   });
@@ -1431,8 +1175,6 @@ class _SlotChip extends StatelessWidget {
 
   final String label;
 
-  /// 라벨 아래 한 줄. 마감된 자리에만 붙고, 빈 자리는 시각만 보인다.
-  final String? sub;
   final bool selected;
 
   /// null 이면 마감된 자리다 — 눌리지 않고 흐리게 그려진다.
@@ -1475,27 +1217,13 @@ class _SlotChip extends StatelessWidget {
               ),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: selected
                       ? Colors.white
                       : (disabled ? FigmaColors.textFaint : FigmaColors.ink),
-                ),
-              ),
-              // 마감 문구가 붙는 자리는 **늘 잡아 둔다** (#1136). 문구가 있을
-              // 때만 줄이 생기면 마감된 칩만 키가 커져, 같은 줄의 자리들이
-              // 서로 다른 크기로 보인다.
-              Text(
-                sub ?? '',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.8)
-                      : (disabled
-                            ? FigmaColors.textFaint
-                            : AppColors.mutedForeground),
                 ),
               ),
             ],

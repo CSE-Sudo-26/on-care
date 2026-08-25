@@ -98,8 +98,7 @@ def complete_my_routine(
     db: Annotated[Session, Depends(get_db)],
 ) -> RoutineOut:
     """나에게 배정된 루틴을 회원 운동 기록으로 한 번만 완료한다."""
-    if payload.intensity not in {"light", "moderate", "high"}:
-        raise HTTPException(status_code=400, detail="허용되지 않는 운동 강도입니다.")
+    # intensity 는 AssignedRoutineCompleteRequest 의 Literal 에서 422 로 걸린다.
     # 담당 트레이너가 없는 회원도 AI 자동 추천을 수행한다(#782). 예전에는 여기서
     # 404 로 끊겨, 화면에 보이는 운동을 완료할 수 없었다.
     trainer_id = trainer_service.get_member_trainer_id(db, member.id)
@@ -110,6 +109,9 @@ def complete_my_routine(
             member.id,
             routine_id,
             minutes=payload.minutes,
+            sets=payload.sets,
+            reps=payload.reps,
+            weight=payload.weight,
             intensity=payload.intensity,
             member_note=payload.member_note,
         )

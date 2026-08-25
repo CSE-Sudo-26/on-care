@@ -135,7 +135,7 @@ def record_chat(
 #: 운동 타입/강도의 한국어 라벨. 검색 질의도 답변도 한국어라 저장 코드값(cardio,
 #: light …)을 그대로 넣으면 임베딩이 질의와 겉돈다.
 #: 표준 어휘 네 가지로 적는다 (#996). 옛 값으로 저장된 기록도 같은 라벨로
-#: 적재돼야 질의("유연성 운동 얼마나 했지")가 한 덩이로 걸린다.
+#: 적재돼야 질의("스트레칭 운동 얼마나 했지")가 한 덩이로 걸린다.
 _EXERCISE_TYPE_KR = exercise_types.label_for
 _EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높음"}
 
@@ -301,13 +301,12 @@ def _entry_foods(foods_json: str | None) -> list[dict]:
 
 
 def exercise_session_date(row) -> str:
-    """세션의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다."""
-    from app.services.exercise_service import WEEKDAY_LABELS
+    """세션의 논리 운동일. 규칙은 [exercise_activity.activity_date_of] 하나다.
 
-    try:
-        monday = date.fromisoformat(row.week_start)
-        return (
-            monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))
-        ).isoformat()
-    except (ValueError, IndexError):
-        return row.week_start
+    적재 문구에 날짜를 넣으려면 되돌려야 한다 — "월요일" 만 적으면 몇 주 전
+    기록도 똑같이 보여 코치가 최근 것과 구분하지 못한다.
+    """
+    from app.services import exercise_activity
+
+    day = exercise_activity.activity_date_of(row)
+    return day.isoformat() if day is not None else str(row.week_start)

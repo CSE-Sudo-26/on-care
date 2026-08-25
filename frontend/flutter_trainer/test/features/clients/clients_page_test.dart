@@ -76,19 +76,23 @@ class _RecordingRefreshClientRepository extends DriftClientRepository
 /// 목록은 지연 생성이라 화면 밖 카드가 트리에 아예 없다. 아래쪽에 선 고객을
 /// 단언하려면 먼저 그려지게 해야 한다 — `.last`·`.first` 를 붙인 finder 를
 /// 그대로 넘기면 아직 한 건도 없는 동안 `Bad state: No element` 로 깨진다.
-Future<void> scrollToClient(
-  WidgetTester tester,
-  Finder finder,
-) => tester.scrollUntilVisible(
-  finder,
-  150,
-  scrollable: find
-      .byWidgetPredicate(
-        (widget) =>
-            widget is Scrollable && widget.axisDirection == AxisDirection.down,
-      )
-      .first,
-);
+Future<void> scrollToClient(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    150,
+    scrollable: find
+        .byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        )
+        .first,
+  );
+  // 이행률 바가 붙은 카드는 일부만 보여도 이미 트리에 있다. 가운데를 눌러도
+  // 화면 밖 좌표가 되지 않도록 카드 전체를 실제 viewport 안으로 맞춘다.
+  await tester.ensureVisible(finder.last);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('ClientRepository', () {

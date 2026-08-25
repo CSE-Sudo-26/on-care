@@ -20,7 +20,7 @@
 - `GET /v1/ping` · `GET /v1/healthz` · `GET /v1/version` — 프론트 계약과 정확히 일치
   (`GET /v1/readyz` 는 DB 연결까지 확인하는 readiness 로 별도)
 - 테이블 생성 (프론트 drift 스키마 정렬: diet_entries 에 sodium_mg/sugar_g 포함) — 베이스라인 9테이블(places 포함), 이후 마이그레이션으로 현재 26테이블
-- 사용자 id = 문자열, 데모 유저 'user-demo'(김민수) 시드
+- 사용자 id = 문자열, 데모 유저 'user-7d4e9a2c5f18'(김민수) 시드
 
 ## 실행
 ```bash

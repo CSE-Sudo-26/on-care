@@ -25,6 +25,7 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
 /// 스케줄 tab — 트레이너의 주간 시간표. (#988)
@@ -123,38 +124,20 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void _shiftWeek(int direction) =>
       _selectDay(_selectedDay.add(Duration(days: 7 * direction)));
 
-  String? _editingScheduleId;
-
-  /// New schedules use a sheet; existing schedules are edited in their card.
-  Future<void> _openSessionSheet() async {
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    if (clients.isEmpty) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
-      ),
-      builder: (context) => SessionSheet(
-        clientNames: clients.map((c) => c.name).toList(),
-        date: _selectedYmd,
-        existing: null,
-      ),
-    );
-  }
-
-  /// 프로그램(또는 메모)을 가운데 모달로 연다.
+  /// 정보량에 맞춰 커지되 화면을 다 채우지 않는 가운데 모달(#1250).
   ///
-  /// 예전에는 상세 패널 안에서 그 자리에 펼쳤는데, 패널 폭이 좁아 세트·
-  /// 횟수/시간·중량 칸이 잘렸다. 화면 폭을 그대로 쓰는 바텀시트로
-  /// 바꿨더니 이번엔 세로로 화면 끝까지 꽉 찼다 — 적당한 크기로 가운데
-  /// 띄우고, 운동이 많아 넘치면 그 안에서만 스크롤되게 한다.
-  Future<void> _openProgramEditor(
-    ScheduleSession session, {
-    required bool noteOnly,
-  }) async {
-    await showDialog<void>(
+  /// 일정·프로그램·메모 편집과 새 일정 추가는 예전에 상세 패널 안에서
+  /// 그 자리에 펼치거나(카드 폭이 좁아 세트·횟수/시간·중량 칸이 잘렸다)
+  /// 화면 폭 그대로 쓰는 바텀시트를 썼다(세로로 화면 끝까지 꽉 찼다).
+  /// 최대 높이(화면의 85%)까지는 내용만큼만 커지고, 넘치면 그 안에서만
+  /// 스크롤한다. [scrollable] 을 false 로 두면 바깥 스크롤을 씌우지
+  /// 않는다 — [SessionSheet] 처럼 안에 이미 자기 스크롤이 있는 내용을
+  /// 이중으로 감싸면 높이 제약이 풀려 무한 높이 예외가 난다.
+  Future<void> _openCenteredDialog(
+    WidgetBuilder builder, {
+    bool scrollable = true,
+  }) {
+    return showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
@@ -164,33 +147,77 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             maxWidth: 560,
             maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
           ),
-          child: SingleChildScrollView(
-            child: SessionProgramEditor(
-              key: ValueKey<String>(
-                noteOnly
-                    ? 'note-editor-${session.id}'
-                    : 'program-editor-${session.id}',
+          // 카드 밖으로 걸치면 잘리기 쉽다(모서리를 벗어난 만큼 다른
+          // 요소에 가려지거나 탭이 닿지 않았다) — 카드 안쪽, 오른쪽
+          // 위 구석에 둔다.
+          child: Stack(
+            children: <Widget>[
+              scrollable
+                  ? SingleChildScrollView(child: builder(dialogContext))
+                  : builder(dialogContext),
+              Positioned(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+                child: DialogCloseButton(
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                ),
               ),
-              session: session,
-              noteOnly: noteOnly,
-              onSaved: () => Navigator.of(dialogContext).pop(),
-              onCancel: () => Navigator.of(dialogContext).pop(),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Future<void> _openReservationSlotsSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: AppRadius.card),
+  /// 프로그램(또는 메모)을 가운데 모달로 연다.
+  Future<void> _openProgramEditor(
+    ScheduleSession session, {
+    required bool noteOnly,
+  }) {
+    return _openCenteredDialog(
+      (dialogContext) => SessionProgramEditor(
+        key: ValueKey<String>(
+          noteOnly
+              ? 'note-editor-${session.id}'
+              : 'program-editor-${session.id}',
+        ),
+        session: session,
+        noteOnly: noteOnly,
+        onSaved: () => Navigator.of(dialogContext).pop(),
+        onCancel: () => Navigator.of(dialogContext).pop(),
       ),
-      builder: (context) => ReservationSlotsSheet(selectedDay: _selectedDay),
+    );
+  }
+
+  /// 일정을 가운데 모달로 연다 — [existing] 이 없으면 `새 일정 추가`,
+  /// 있으면 `일정 수정`이다. [SessionSheet] 는 자기 안에 이미
+  /// `SingleChildScrollView` 가 있으므로 바깥 스크롤은 씌우지 않는다.
+  Future<void> _openScheduleDialog({ScheduleSession? existing}) {
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+    if (existing == null && clients.isEmpty) return Future<void>.value();
+    return _openCenteredDialog(scrollable: false, (dialogContext) {
+      return SessionSheet(
+        key: ValueKey<String>(
+          existing == null
+              ? 'new-session-editor'
+              : 'schedule-editor-${existing.id}',
+        ),
+        clientNames: clients.map((c) => c.name).toList(),
+        date: existing?.date ?? _selectedYmd,
+        existing: existing,
+        inline: true,
+        onSaved: () => Navigator.of(dialogContext).pop(),
+        onCancel: () => Navigator.of(dialogContext).pop(),
+      );
+    });
+  }
+
+  /// 예약 슬롯도 새 일정·일정 수정과 같은 가운데 모달로 연다 — 아래에서
+  /// 올라오는 바텀시트만 여기서 유독 다른 모양이었다.
+  Future<void> _openReservationSlotsSheet() {
+    return _openCenteredDialog(
+      scrollable: false,
+      (dialogContext) => ReservationSlotsSheet(selectedDay: _selectedDay),
     );
   }
 
@@ -537,7 +564,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           label: l.schedNewSession,
           icon: Icons.add,
           primary: true,
-          onPressed: () => _openSessionSheet(),
+          onPressed: () => _openScheduleDialog(),
         ),
       ),
     );
@@ -717,8 +744,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final dateText = day == today
         ? l.labelToday
         : l.dateMonthDay(day.month, day.day);
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-
     return ListView(
       key: const Key('week-detail'),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -733,7 +758,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ],
         SessionCard(
           session: session,
-          onEditSchedule: () => setState(() => _editingScheduleId = session.id),
+          onEditSchedule: () => _openScheduleDialog(existing: session),
           onEditProgram: () => _openProgramEditor(session, noteOnly: false),
           onGoToProgram: () => _openProgram(session),
           onEditNote: () => _openProgramEditor(session, noteOnly: true),
@@ -751,17 +776,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           programDateLabel: dateText,
           sendingProgram: _sendingProgramId == session.id,
           onSendProgram: () => _sendProgram(session),
-          inlineEditor: _editingScheduleId == session.id
-              ? SessionSheet(
-                  key: ValueKey<String>('week-session-editor-${session.id}'),
-                  clientNames: clients.map((client) => client.name).toList(),
-                  date: session.date,
-                  existing: session,
-                  inline: true,
-                  onSaved: () => setState(() => _editingScheduleId = null),
-                  onCancel: () => setState(() => _editingScheduleId = null),
-                )
-              : null,
         ),
       ],
     );

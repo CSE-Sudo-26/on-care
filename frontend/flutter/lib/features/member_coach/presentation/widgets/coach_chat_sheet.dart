@@ -9,6 +9,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:printing/printing.dart';
 
 /// 루트 화면 위에 채팅 페이지를 열어 하단 내비게이션과 플로팅 버튼을 가린다.
@@ -113,10 +114,21 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
   /// 없을 때는 스레드가 가장 오래된 메시지부터 보였다. 한 개짜리 데모에서는
   /// 티가 안 났지만 기록이 3일치로 늘자, 채팅을 열면 며칠 전 첫 인사가 뜨고
   /// 최근 대화는 직접 내려야 보였다. 트레이너 앱은 이미 같은 동작을 한다.
-  void _scrollToBottom() {
+  void _scrollToBottom({double? previousMax, int attemptsLeft = 12}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll.hasClients) return;
-      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      final double max = _scroll.position.maxScrollExtent;
+      _scroll.jumpTo(max);
+
+      // ListView는 긴 목록의 아직 만들지 않은 자식 높이를 추정한다. 첫 jump로
+      // 새 자식이 만들어지면 maxScrollExtent가 다음 프레임에 다시 늘 수 있다.
+      // 그 상태에서 멈추면 서버에서 최신 메시지를 받았어도 화면에는 이전 끝이
+      // 남는다. 범위가 한 프레임 동안 안정될 때까지 다시 끝을 맞춘다.
+      final bool stable =
+          previousMax != null && (max - previousMax).abs() < 0.5;
+      if (!stable && attemptsLeft > 1) {
+        _scrollToBottom(previousMax: max, attemptsLeft: attemptsLeft - 1);
+      }
     });
   }
 
@@ -141,15 +153,17 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
     if (_sending) return;
     final text = _input.text.trim();
     if (text.isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
+    // 문구와 같이 await 전에 잡아 둔다.
+    final AppToastHost toast = AppToastHost.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     setState(() => _sending = true);
     try {
       await ref.read(memberCoachRepositoryProvider).sendMessage(text);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatSendFailed)));
+      toast.show(l.coachChatSendFailed,
+        kind: AppToastKind.error,
+      );
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -311,10 +325,13 @@ class _ReceivedBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return _BannerFrame(
-      background: FigmaColors.greenText.withValues(alpha: 0.08),
-      border: FigmaColors.greenText.withValues(alpha: 0.25),
+      // 루틴을 받았다는 **완료** 배너다 — 두 앱이 함께 쓰는 완료 초록으로
+      // 칠한다(#1239). 예전의 어두운 초록은 식단 화면의 계열색이라, 같은
+      // `완료` 가 화면마다 다른 초록으로 보였다.
+      background: FigmaColors.statusGreen.withValues(alpha: 0.08),
+      border: FigmaColors.statusGreen.withValues(alpha: 0.25),
       icon: Icons.check_circle_outline,
-      iconColor: FigmaColors.greenText,
+      iconColor: FigmaColors.statusGreen,
       title: l.coachChatDemoRoutineReceived,
       subtitle: l.coachChatDemoNotified,
     );
@@ -517,7 +534,7 @@ class _Bubble extends ConsumerWidget {
     CoachAttachment attachment,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     try {
       final bytes = await ref
           .read(chatPdfRepositoryProvider)
@@ -538,7 +555,9 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.coachChatPdfOpenFailed)));
+      toast.show(l.coachChatPdfOpenFailed,
+        kind: AppToastKind.error,
+      );
     }
   }
 }

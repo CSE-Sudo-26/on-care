@@ -155,7 +155,7 @@ def _request_consultation(client, token: str, *, trainer_id: str) -> str:
         "health_purpose_type": "general",
         "health_purpose_detail": None,
         "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
-        "preferred_time_slot": "evening",
+        "preferred_time_slot": "19:00",
         "message": "상담 부탁드립니다.",
         "data_sharing_consent": True,
     }
@@ -322,6 +322,58 @@ def test_accept_with_schedule_books_consultation_atomically(client, db_session):
     assert session.time == "19:30"
     assert session.type == "상담"
     assert session.status == "예정"
+
+
+def test_accept_rejects_conflicting_schedule(client, db_session):
+    """승인하려는 시간에 이미 다른 세션이 있으면 아무것도 만들지 않는다.
+
+    링크·헬스장 연결·스케줄이 모두 한 트랜잭션이라, 겹침으로 막히면 담당 편입도
+    함께 없던 일이 되어야 한다 — 스케줄만 빠진 반쪽짜리 담당 고객이 생기면 안 된다.
+    """
+    trainer, trainer_token = _trainer(client, db_session)
+    member_id, member_token = _member(client)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
+    session_date = (date.today() + timedelta(days=2)).isoformat()
+    db_session.add(
+        TrainerSchedule(
+            id=f"decide-test-existing-{uuid4().hex[:10]}",
+            trainer_id=trainer.id,
+            member_id=None,
+            date=session_date,
+            time="19:30",
+            client_name="선점 회원",
+            type="1:1 PT",
+            duration_minutes=60,
+            status="예정",
+            note="",
+            program_json="[]",
+            sort_order=0,
+        )
+    )
+    db_session.commit()
+
+    response = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(trainer_token),
+        json={
+            "date": session_date,
+            "time": "19:30",
+            "type": "상담",
+            "duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert detail["conflicts"][0]["client_name"] == "선점 회원"
+    assert (
+        db_session.query(TrainerClient)
+        .filter(TrainerClient.member_id == member_id)
+        .count()
+        == 0
+    )
 
 
 def test_accept_rejects_partial_schedule(client, db_session):

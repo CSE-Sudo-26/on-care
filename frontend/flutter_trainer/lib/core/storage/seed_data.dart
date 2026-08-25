@@ -14,10 +14,21 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v25']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v29']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v29` 는 어제에 수행한 스트레칭이 한 건 생긴 변경이다(#1361). `_v28` 은
+/// 과거에 PT·기타 운동이 생기고 근력이 세트를 값으로 들게 된 변경이다(#1265) —
+/// 올리지 않으면 오늘 이미 시드된 브라우저가 옛 데이터를 그대로 들고 있다.
+///
+/// `_v27` 은 사용자 앱과 트레이너 웹의 김민수 대화 날짜를 일치시켰다(#1292).
+/// 다른 고객과의 상대적인 최신순은 그대로 유지한다.
+///
+/// `_v26` 은 트레이너의 한 주를 채웠다(#1210) — 시드가 오늘 하루치뿐이어서
+/// 주간 시간표의 다른 요일 열이 전부 비어 있었다. 요일마다 시간대·길이가 다른
+/// PT·상담을 두고, 상태는 시연하는 날에 맞춰 시딩이 정한다.
 ///
 /// The flag is `_v23` (was `_v22`): 운동 기록마다 실제 완료 날짜가 붙었다(#1114) —
 /// 날짜가 없으면 오늘·이번 주·전체를 골라도 목록이 그대로라, 같은 화면의
@@ -48,7 +59,7 @@ part 'seed_clients.dart';
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
 /// 김민수(`seed-client-1`)의 하루는 이 파일이 만들지 않는다. 그는 사용자 앱의
-/// 데모 계정(`user-demo`)과 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 예전에는
+/// 데모 계정(`user-7d4e9a2c5f18`)과 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 예전에는
 /// 두 앱과 백엔드가 각자 알고리즘으로 그의 과거를 만들어서 같은 날짜의 숫자가 서로
 /// 달랐다(#757). 그의 식단·이행률·날짜별 이력은 공유 픽스처에서 오고, 나머지 고객은
 /// 아래 생성기(`_dailyMetrics`)가 그대로 만든다.
@@ -103,7 +114,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v25') == today) return;
+  if (await db.readValue('trainer_seeded_v29') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final DemoFixture demo = fixture ?? DemoFixture.load();
@@ -113,12 +124,13 @@ Future<void> seedIfEmpty(
     todayIndex,
   );
 
-  // A fixed, ancient anchor for seed chat timestamps. Using a constant
-  // (not nowKst()) keeps seed messages ordered before ANY reply
+  // A fixed anchor for seed chat timestamps. The 40-day spread ends on
+  // 2026-01-03, matching the member app's shared Kim Minsu thread. Using
+  // a constant (not nowKst()) keeps seed messages ordered before ANY reply
   // added at runtime — including after a later-day re-seed, where a fresh
   // `now()` base would otherwise sort new seed rows *after* a preserved
   // runtime reply.
-  final chatEpoch = DateTime.utc(2000);
+  final chatEpoch = DateTime(2025, 11, 24);
 
   // First boot, or the date rolled over. Wipe + re-insert + flag all run
   // in ONE transaction: if any insert fails, the whole thing rolls back
@@ -343,7 +355,8 @@ Future<void> seedIfEmpty(
                       client.daysAgo -
                       (lastDayIndex - client.chat[i].dayIndex),
                   minutes: _minutesOfDay(client.chat[i].timeLabel),
-                  seconds: i,
+                  // 공유 스레드는 회원 앱과 DateTime까지 정확히 같아야 한다.
+                  seconds: client.id == 1 ? 0 : i,
                 ),
               ),
             ),
@@ -380,10 +393,18 @@ Future<void> seedIfEmpty(
       if (marker != null) await db.putValue('chat_read_$id', '$marker');
     }
 
-    // ---- Trainer's schedule for today ----
+    // ---- Trainer's schedule for this week ----
     // 스케줄은 고객을 id 로 참조한다(#386). 슬롯 데이터는 이름만 들고 있으므로
     // 시드 고객 목록에서 id 를 유도한다 — 매핑을 따로 손으로 관리하면 이름을
     // 고칠 때 또 어긋난다. 미등록(상담)·공백 슬롯은 이름이 없어 null 로 남는다.
+    // 이번 주 월요일 — 주간 시간표가 항상 월~일을 그리므로 요일 슬롯의 기준도
+    // 같아야 한다. 날짜를 성분으로 옮긴다(Duration 은 서머타임이 있는 지역에서
+    // 하루씩 밀린다).
+    final DateTime monday = DateTime(
+      now.year,
+      now.month,
+      now.day - (now.weekday - 1),
+    );
     final seedClientIdByName = <String, String>{
       for (final _Client c in _clients) c.name: 'seed-client-${c.id}',
     };
@@ -403,11 +424,38 @@ Future<void> seedIfEmpty(
             programJson: Value(jsonEncode(_schedule[i].program)),
             sortOrder: Value(i),
           ),
+        // 오늘을 뺀 요일에 이번 주 나머지 수업을 놓는다 (#1210). 예전에는 시드가
+        // 오늘 하루치뿐이어서 주간 시간표의 다른 요일 열이 전부 비어 보였다.
+        // 오늘 몫은 위 목록이 이미 넣었으므로 같은 요일은 건너뛴다.
+        for (var i = 0; i < _weekSchedule.length; i++)
+          if (_weekSchedule[i].weekday != now.weekday)
+            TrainerScheduleEntriesCompanion.insert(
+              id: 'seed-schedule-w${_weekSchedule[i].weekday}-$i',
+              date: ymd(
+                DateTime(
+                  monday.year,
+                  monday.month,
+                  monday.day + _weekSchedule[i].weekday - 1,
+                ),
+              ),
+              time: _weekSchedule[i].time,
+              clientId: Value(seedClientIdByName[_weekSchedule[i].clientName]),
+              clientName: Value(_weekSchedule[i].clientName),
+              type: Value(_weekSchedule[i].type),
+              durationMinutes: Value(_weekSchedule[i].durationMinutes),
+              // 지난 요일은 끝난 수업, 남은 요일은 예정된 수업이다.
+              status: _weekSchedule[i].weekday < now.weekday
+                  ? ScheduleStatus.done
+                  : ScheduleStatus.upcoming,
+              note: Value(_weekSchedule[i].note),
+              programJson: Value(jsonEncode(_weekSchedule[i].program)),
+              sortOrder: Value(_schedule.length + i),
+            ),
       ]);
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v25', today);
+    await db.putValue('trainer_seeded_v29', today);
   });
 }
 
@@ -703,9 +751,13 @@ class _FixtureClient {
         carbsG: Value(day.carbsG),
         proteinG: Value(day.proteinG),
         fatG: Value(day.fatG),
+        // 리포트의 요일 칸은 **실제로 한** 운동만 적는다(#1288). 배정에는 날짜가
+        // 없어 "그날 배정됐는데 안 했다" 가 성립하지 않으므로 미수행은 싣지
+        // 않는다 — `history` 쪽(운동 기록 탭)이 ✓/✗ 를 그대로 쓰는 것과 다르다.
         exercisesJson: Value(
           jsonEncode(<String>[
-            for (final FixtureExercise e in day.exercises) e.label,
+            for (final FixtureExercise e in day.exercises)
+              if (e.done) e.name,
           ]),
         ),
       );
@@ -801,10 +853,11 @@ const List<List<String>> _routinePool = <List<String>>[
   <String>['플랭크 3세트', '버피 3세트', '마운틴 클라이머 3세트'],
 ];
 
-/// 그날의 운동 목록 — 이행률과 **맞게** ✓/✗ 를 붙인다.
+/// 그날 **실제로 한** 운동 목록. 미수행은 싣지 않는다. (#1288)
 ///
-/// 67% 인 날에 3개 모두 ✓ 인 목록을 붙이면 화면에서 "67%" 옆에 "3개 중 3개
-/// 완료" 가 놓여 서로 다른 말을 한다(#754).
+/// 예전에는 이행률에 맞춰 ✓/✗ 를 매겼다. 실서버에서는 그 목록이 나올 수 없다 —
+/// 배정에 날짜가 없어 "그날 배정됐는데 안 했다" 를 만들 자리가 없고, 요일 칸은
+/// 회원의 운동 기록에서 온다. 데모가 실서버에 없는 화면을 보여 주면 안 된다.
 ///
 /// 오늘만은 고객의 큐레이션된 운동 기록을 그대로 쓴다 — 같은 날을 리포트와
 /// 고객 상세의 운동 기록이 각각 다른 운동으로 보여 주면 안 된다.
@@ -822,20 +875,26 @@ List<String> _exercisesFor(
         best = entry;
       }
     }
-    return best.exercises;
+    return _doneNames(best.exercises);
   }
   return const <String>[];
 }
 
-/// 요일·고객으로 고른 루틴에 이행률만큼 ✓ 를 매긴다.
+/// 운동 기록 표기(`이름 ✓` / `이름 ✗`)에서 **한 것만** 이름으로 추린다.
+///
+/// 운동 기록 탭은 그 표기를 그대로 쓰고 리포트만 추린다. 시드가 두 화면에 같은
+/// 하루를 공급하므로 변환은 이 자리에서 한 번만 한다.
+List<String> _doneNames(List<String> lines) => <String>[
+  for (final String line in lines)
+    if (!line.contains('✗')) line.replaceAll('✓', '').trim(),
+];
+
+/// 요일·고객으로 고른 루틴에서 이행률만큼을 **한 것**으로 남긴다.
 List<String> _routineFor(int clientId, int weekday, int completion) {
   if (completion <= 0) return const <String>[];
   final names = _routinePool[(clientId + weekday) % _routinePool.length];
   final done = (names.length * completion / 100).round().clamp(1, names.length);
-  return <String>[
-    for (var i = 0; i < names.length; i++)
-      '${names[i]} ${i < done ? '✓' : '✗'}',
-  ];
+  return names.take(done).toList(growable: false);
 }
 
 /// 아직 오지 않은 요일을 지운다.
@@ -1038,41 +1097,269 @@ class _Slot {
   final int durationMinutes;
   final String status; // 완료|예정|공백
   final String note;
-  final List<Map<String, Object?>> program; // {name,sets,reps,weight}
+  final List<Map<String, Object?>> program; // {name,type,sets,weight,duration}
 }
+
+/// 오늘이 아닌 요일에 놓이는 데모 세션. (#1210)
+///
+/// 상태를 데이터에 적지 않는다 — 시연하는 요일이 매번 다르므로 `완료` 를 박아
+/// 두면 금요일 수업이 월요일에 열어 본 화면에서 이미 끝난 것으로 보인다. 지난
+/// 요일은 `완료`, 남은 요일은 `예정` 으로 시딩이 정한다.
+///
+/// 메모는 지난 세션·다음 세션 어느 쪽으로 읽어도 어색하지 않은 문구로 둔다.
+/// 프로그램이 빈 세션도 섞는다 — 트레이너가 아직 짜지 않은 수업이 실제로 있고,
+/// 그 상태에서 프로그램을 만드는 흐름이 이 앱의 주된 동작이다.
+class _WeekSlot {
+  const _WeekSlot({
+    required this.weekday,
+    required this.time,
+    required this.clientName,
+    required this.type,
+    required this.durationMinutes,
+    required this.note,
+    this.program = const <Map<String, Object?>>[],
+  });
+
+  /// 1=월 … 7=일 (`DateTime.weekday` 와 같다).
+  final int weekday;
+  final String time;
+
+  /// 시드 고객 이름. 명단에 없는 이름은 미등록 상담자로 남는다(고객 id 없음).
+  final String clientName;
+  final String type;
+  final int durationMinutes;
+  final String note;
+  final List<Map<String, Object?>> program;
+}
+
+/// 트레이너의 한 주 — 10~22시 사이 짝수 정시는 1:1 PT, 그 사이 홀수
+/// 정시는 상담으로 둔다. 실제 운영 화면처럼 PT와 상담 길이는 다양하게 둔다.
+///
+/// 요일마다 그 날의 **첫** 수업만 9:00·9:30 중 하나로 앞당길 수 있다 —
+/// 모든 요일이 10:00에 나란히 시작하면 시간표가 찍어낸 것처럼 보인다.
+/// 9시보다 이르게는 두지 않는다. 그 뒤 수업들은 기존대로 10~22시
+/// 짝수/홀수 정시 규칙을 그대로 따른다.
+///
+/// 오늘 몫은 [_schedule] 이 따로 들고 있어서, 오늘에 해당하는 요일은 시딩이
+/// 건너뛴다. 두 목록이 같은 날에 겹치면 오늘 화면에 없던 수업이 끼어든다.
+const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
+  // 월
+  _WeekSlot(
+    weekday: 1,
+    time: '09:00',
+    clientName: '최우진',
+    type: SessionType.personalTraining,
+    durationMinutes: 30,
+    note: '출근 전 수업. 상체 위주로 짧게 끊어 간다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '랫풀다운', 'type': '근력', 'sets': 4, 'reps': 10, 'weight': 35},
+      <String, Object?>{'name': '숄더프레스', 'type': '근력', 'sets': 3, 'reps': 12, 'weight': 12},
+    ],
+  ),
+  _WeekSlot(
+    weekday: 1,
+    time: '13:00',
+    clientName: '정하윤',
+    type: SessionType.consultation,
+    durationMinutes: 45,
+    note: '식단 기록 습관 점검. 저녁 외식 빈도를 함께 본다.',
+  ),
+  _WeekSlot(
+    weekday: 1,
+    time: '18:00',
+    clientName: '임도현',
+    type: SessionType.personalTraining,
+    durationMinutes: 90,
+    note: '데드리프트 자세 교정 중. 허리 통증 여부를 매 세트 확인한다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '데드리프트', 'type': '근력', 'sets': 4, 'reps': 8, 'weight': 60},
+      <String, Object?>{'name': '백익스텐션', 'type': '근력', 'sets': 3, 'reps': 15},
+    ],
+  ),
+  // 화
+  _WeekSlot(
+    weekday: 2,
+    time: '09:30',
+    clientName: '신유나',
+    type: SessionType.personalTraining,
+    durationMinutes: 45,
+    note: '유산소 비중을 늘리는 주. 심박 130 안쪽으로 유지한다.',
+  ),
+  _WeekSlot(
+    weekday: 2,
+    time: '14:00',
+    clientName: '오세라',
+    type: SessionType.personalTraining,
+    durationMinutes: 50,
+    note: '어깨 가동 범위 회복 단계. 중량보다 자세를 본다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '밴드 외전', 'type': '근력', 'sets': 3, 'reps': 20},
+      <String, Object?>{'name': '인클라인 푸시업', 'type': '근력', 'sets': 3, 'reps': 12},
+    ],
+  ),
+  _WeekSlot(
+    weekday: 2,
+    time: '20:00',
+    clientName: '한지호',
+    type: SessionType.personalTraining,
+    durationMinutes: 90,
+    note: '하체 중량 구간. 무릎 각도 확인하며 스쿼트 깊이를 잡는다.',
+  ),
+  // 수
+  _WeekSlot(
+    weekday: 3,
+    time: '10:00',
+    clientName: '배준혁',
+    type: SessionType.personalTraining,
+    durationMinutes: 60,
+    note: '체지방 감량 목표. 근력과 유산소를 반씩 섞는다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '고블릿 스쿼트', 'type': '근력', 'sets': 4, 'reps': 12, 'weight': 16},
+      <String, Object?>{'name': '로잉머신', 'type': '유산소', 'duration': 15},
+    ],
+  ),
+  _WeekSlot(
+    weekday: 3,
+    time: '15:00',
+    clientName: '문가영',
+    type: SessionType.consultation,
+    durationMinutes: 60,
+    note: '수업 시간대 변경 상담. 오전 이동 가능 여부를 확인한다.',
+  ),
+  _WeekSlot(
+    weekday: 3,
+    time: '20:00',
+    clientName: '백서진',
+    type: SessionType.personalTraining,
+    durationMinutes: 30,
+    note: '야간 수업. 다음 날 근육통을 고려해 볼륨을 낮게 잡는다.',
+  ),
+  // 목
+  _WeekSlot(
+    weekday: 4,
+    time: '09:00',
+    clientName: '강서연',
+    type: SessionType.personalTraining,
+    durationMinutes: 90,
+    note: '전신 순환. 세트 사이 휴식을 45초로 줄여 본다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '케틀벨 스윙', 'type': '근력', 'sets': 4, 'reps': 15, 'weight': 12},
+      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3},
+    ],
+  ),
+  _WeekSlot(
+    weekday: 4,
+    time: '16:00',
+    clientName: '류태경',
+    type: SessionType.personalTraining,
+    durationMinutes: 45,
+    note: '재활 마무리 단계. 통증 없는 범위에서만 중량을 올린다.',
+  ),
+  // 금
+  _WeekSlot(
+    weekday: 5,
+    time: '10:00',
+    clientName: '노은채',
+    type: SessionType.personalTraining,
+    durationMinutes: 50,
+    note: '주 마지막 근력 수업. 상체 볼륨을 채운다.',
+  ),
+  _WeekSlot(
+    weekday: 5,
+    time: '13:00',
+    clientName: '조은비',
+    type: SessionType.consultation,
+    durationMinutes: 30,
+    note: '신규 상담. 운동 경험과 무릎 부상 이력을 듣는다.',
+  ),
+  _WeekSlot(
+    weekday: 5,
+    time: '16:00',
+    clientName: '최우진',
+    type: SessionType.personalTraining,
+    durationMinutes: 30,
+    note: '주 2회 중 두 번째 수업. 월요일에 못 채운 하체를 넣는다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '레그프레스', 'type': '근력', 'sets': 4, 'reps': 12, 'weight': 70},
+      <String, Object?>{'name': '런지', 'type': '근력', 'sets': 3, 'reps': 20, 'weight': 8},
+    ],
+  ),
+  _WeekSlot(
+    weekday: 5,
+    time: '20:00',
+    clientName: '이지수',
+    type: SessionType.personalTraining,
+    durationMinutes: 90,
+    note: '컨디션에 따라 유산소로 대체할 수 있다.',
+  ),
+  // 토
+  _WeekSlot(
+    weekday: 6,
+    time: '09:30',
+    clientName: '정하윤',
+    type: SessionType.personalTraining,
+    durationMinutes: 45,
+    note: '주말 수업. 평일보다 길게 가져가되 마무리 스트레칭을 넉넉히 둔다.',
+    program: <Map<String, Object?>>[
+      <String, Object?>{'name': '체스트프레스', 'type': '근력', 'sets': 4, 'reps': 10, 'weight': 25},
+      <String, Object?>{'name': '시티드로우', 'type': '근력', 'sets': 3, 'reps': 12, 'weight': 30},
+    ],
+  ),
+  // 김민수는 넣지 않는다 — 그의 하루는 공유 픽스처가 정하고(#757), 여기서 수업을
+  // 더하면 회원 앱과 트레이너 웹의 같은 날짜가 다른 이야기를 한다.
+  _WeekSlot(
+    weekday: 6,
+    time: '14:00',
+    clientName: '박성호',
+    type: SessionType.personalTraining,
+    durationMinutes: 60,
+    note: '주말 보강 수업. 평일에 빠진 하체를 채운다.',
+  ),
+  _WeekSlot(
+    weekday: 6,
+    time: '17:00',
+    clientName: '서지훈',
+    type: SessionType.consultation,
+    durationMinutes: 45,
+    note: '주말 상담. 헬스장 이용 시간대와 목표를 맞춰 본다.',
+  ),
+  // 일
+  _WeekSlot(
+    weekday: 7,
+    time: '10:00',
+    clientName: '임도현',
+    type: SessionType.personalTraining,
+    durationMinutes: 50,
+    note: '가벼운 마무리 수업. 다음 주 계획을 함께 정한다.',
+  ),
+];
 
 const List<_Slot> _schedule = <_Slot>[
   _Slot(
     time: '10:00',
     clientName: '김민수',
     type: SessionType.personalTraining,
-    durationMinutes: 60,
+    durationMinutes: 30,
     status: ScheduleStatus.done,
     note: '무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.',
     program: <Map<String, Object?>>[
       <String, Object?>{
         'name': '레그프레스',
+        'type': '근력',
         'sets': 3,
-        'reps': '12회',
-        'weight': '80kg',
+        'weight': 80.0,
       },
       <String, Object?>{
         'name': '레그컬',
+        'type': '근력',
         'sets': 3,
-        'reps': '12회',
-        'weight': '40kg',
+        'weight': 40.0,
       },
-      <String, Object?>{
-        'name': '카프레이즈',
-        'sets': 3,
-        'reps': '20회',
-        'weight': '자체중량',
-      },
+      <String, Object?>{'name': '카프레이즈', 'type': '근력', 'sets': 3},
       <String, Object?>{
         'name': '하체 스트레칭',
-        'sets': 1,
-        'reps': '10분',
-        'weight': '-',
+        'type': '스트레칭',
+        'duration': 10,
       },
     ],
   ),
@@ -1086,23 +1373,18 @@ const List<_Slot> _schedule = <_Slot>[
     program: <Map<String, Object?>>[
       <String, Object?>{
         'name': '데드리프트',
+        'type': '근력',
         'sets': 4,
-        'reps': '8회',
-        'weight': '55kg',
+        'weight': 55.0,
       },
       <String, Object?>{
         'name': '루마니안 데드리프트',
+        'type': '근력',
         'sets': 3,
-        'reps': '10회',
-        'weight': '40kg',
+        'weight': 40.0,
       },
-      <String, Object?>{'name': '플랭크', 'sets': 3, 'reps': '45초', 'weight': '-'},
-      <String, Object?>{
-        'name': '코어 서킷',
-        'sets': 2,
-        'reps': '12회',
-        'weight': '-',
-      },
+      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3},
+      <String, Object?>{'name': '코어 서킷', 'type': '근력', 'sets': 2},
     ],
   ),
   _Slot(
@@ -1115,31 +1397,26 @@ const List<_Slot> _schedule = <_Slot>[
     program: <Map<String, Object?>>[],
   ),
   _Slot(
-    time: '15:00',
+    time: '16:00',
     clientName: '박성호',
     type: SessionType.personalTraining,
-    durationMinutes: 60,
+    durationMinutes: 45,
     status: ScheduleStatus.upcoming,
     note: '',
     program: <Map<String, Object?>>[
       <String, Object?>{
         'name': '벤치프레스',
+        'type': '근력',
         'sets': 4,
-        'reps': '8회',
-        'weight': '65kg',
+        'weight': 65.0,
       },
       <String, Object?>{
         'name': '인클라인 덤벨 프레스',
+        'type': '근력',
         'sets': 3,
-        'reps': '10회',
-        'weight': '26kg',
+        'weight': 26.0,
       },
-      <String, Object?>{
-        'name': '트라이셉스 딥',
-        'sets': 3,
-        'reps': '12회',
-        'weight': '-',
-      },
+      <String, Object?>{'name': '트라이셉스 딥', 'type': '근력', 'sets': 3},
     ],
   ),
   // 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다.
@@ -1148,7 +1425,7 @@ const List<_Slot> _schedule = <_Slot>[
     time: '17:00',
     clientName: '윤가온',
     type: SessionType.consultation,
-    durationMinutes: 30,
+    durationMinutes: 60,
     status: ScheduleStatus.upcoming,
     note: '',
     program: <Map<String, Object?>>[],

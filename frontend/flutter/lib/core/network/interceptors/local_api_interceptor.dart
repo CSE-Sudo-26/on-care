@@ -18,6 +18,8 @@ import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart' show kDietDayMessagesKey;
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_load.dart'
+    show setsFromStrengthMinutes;
 import 'package:oncare/features/schedule/domain/schedule_format.dart';
 
 /// A drift-backed dummy backend. Intercepts dio requests and serves
@@ -257,30 +259,64 @@ class LocalApiInterceptor extends Interceptor {
     final calories = (body['calories'] as num?)?.toInt() ?? existing.calories;
     final intensity = (body['intensity'] as String? ?? existing.intensity)
         .trim();
-    final dayRaw = (body['day_label'] as String? ?? '').trim();
-    final dayLabel = dayRaw.isEmpty ? existing.dayLabel : dayRaw;
+    final name = ((body['name'] as String?) ?? existing.name).trim();
+    // 유형을 근력에서 바꾼 수정이면 세트·횟수·중량이 지워진다 — 남겨 두면
+    // 유산소 기록이 세트를 들고 있게 된다.
+    final sets = _strengthOnly(
+      type,
+      body.containsKey('sets')
+          ? (body['sets'] as num?)?.toInt()
+          : existing.sets,
+    );
+    final reps = _strengthOnly(
+      type,
+      body.containsKey('reps')
+          ? (body['reps'] as num?)?.toInt()
+          : existing.reps,
+    );
+    final weight = _strengthOnly(
+      type,
+      body.containsKey('weight')
+          ? (body['weight'] as num?)?.toDouble()
+          : existing.weight,
+    );
+    // 날짜를 주지 않은 수정은 원래 자리를 그대로 둔다 — 오늘로 끌어오면 지난
+    // 기록을 고치기만 해도 이번 주로 옮겨 간다.
+    final (String weekStart, String dayLabel) = body['date'] is String
+        ? _placement(body['date'])
+        : (existing.weekStart, existing.dayLabel);
     await (_db.update(
       _db.exerciseSessions,
     )..where((t) => t.id.equals(id))).write(
       ExerciseSessionsCompanion(
         type: Value(type),
+        name: Value(name),
         minutes: Value(minutes),
         calories: Value(calories),
         intensity: Value(intensity),
+        weekStart: Value(weekStart),
         dayLabel: Value(dayLabel),
+        sets: Value(sets),
+        reps: Value(reps),
+        weight: Value(weight),
       ),
     );
-    return _ok(options, <String, Object?>{
-      'id': id,
-      'day_label': dayLabel,
-      'type': type,
-      'minutes': minutes,
-      'calories': calories,
-      'intensity': intensity,
-      'date_label': _dateLabelForDayLabel(dayLabel, _mondayOfThisWeekString()),
-      'time_label': _defaultTimeLabel(type),
-      'items': _defaultItems(type),
-    });
+    return _ok(
+      options,
+      _sessionJson(
+        id: id,
+        weekStart: weekStart,
+        dayLabel: dayLabel,
+        type: type,
+        name: name,
+        minutes: minutes,
+        sets: sets,
+        reps: reps,
+        weight: weight,
+        calories: calories,
+        intensity: intensity,
+      ),
+    );
   }
 
   Future<Response<Object?>> _dietUpdate(RequestOptions options) async {
@@ -290,6 +326,19 @@ class LocalApiInterceptor extends Interceptor {
     )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (existing == null) return _notFound(options, '식단 기록을 찾을 수 없습니다.');
     final body = _jsonBody(options);
+    // 기록 날짜(#1241). 실서버와 같은 규칙이다 — 형식이 틀리거나 아직 오지 않은
+    // 날은 받지 않는다. 데모에서만 통과하면 실연동에서 그 화면이 처음 실패한다.
+    final String? date = (body['date'] as String?)?.trim();
+    if (body.containsKey('date')) {
+      final DateTime? parsed = DateTime.tryParse(date ?? '');
+      if (date == null || parsed == null || date.length != 10) {
+        return _badRequest(options, 'date 는 YYYY-MM-DD 형식이어야 합니다.');
+      }
+      final DateTime now = nowKst();
+      if (parsed.isAfter(DateTime(now.year, now.month, now.day))) {
+        return _badRequest(options, 'date 는 오늘보다 뒤일 수 없습니다.');
+      }
+    }
     final mealType = (body['meal_type'] as String?)?.trim();
     final timeLabel = (body['time_label'] as String?)?.trim();
     final Object? foodsValue = body['foods'];
@@ -305,6 +354,7 @@ class LocalApiInterceptor extends Interceptor {
     final Object? sugarGValue = body['sugar_g'];
     await (_db.update(_db.dietEntries)..where((t) => t.id.equals(id))).write(
       DietEntriesCompanion(
+        date: date == null ? const Value.absent() : Value(date),
         mealType: (mealType == null || mealType.isEmpty)
             ? const Value.absent()
             : Value(mealType),
@@ -864,6 +914,11 @@ class LocalApiInterceptor extends Interceptor {
     final perDayCalories = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayCardio = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayStrength = <String, int>{for (final l in _weekdayLabels) l: 0};
+    // 근력은 세트로 읽는다 — 기록에 세트가 있으면 그 값을, 없으면 분에서
+    // 환산한 값을 센다(서버 `sets_of` 와 같은 규칙). (#1262)
+    final perDayStrengthSets = <String, int>{
+      for (final l in _weekdayLabels) l: 0,
+    };
     final perDayStretching = <String, int>{
       for (final l in _weekdayLabels) l: 0,
     };
@@ -898,20 +953,33 @@ class LocalApiInterceptor extends Interceptor {
         (m) => m + r.minutes,
         ifAbsent: () => r.minutes,
       );
-      sessionsJson.add(<String, Object?>{
-        'id': r.id,
-        'day_label': r.dayLabel,
-        'type': r.type,
-        'minutes': r.minutes,
-        'calories': r.calories,
-        'intensity': r.intensity,
-        // Date/time labels are synthesized here so the React-style
-        // session list ("오늘", "어제", "MM월 DD일") works without
-        // a schema migration on the drift `exerciseSessions` table.
-        'date_label': _dateLabelForDayLabel(r.dayLabel, weekStart),
-        'time_label': _defaultTimeLabel(r.type),
-        'items': _defaultItems(r.type),
-      });
+      if (identical(bucket, perDayStrength)) {
+        final int sets =
+            r.sets ?? setsFromStrengthMinutes(r.minutes.toDouble());
+        perDayStrengthSets.update(
+          r.dayLabel,
+          (n) => n + sets,
+          ifAbsent: () => sets,
+        );
+      }
+      // Date/time labels are synthesized in `_sessionJson` so the
+      // React-style session list ("오늘", "어제", "MM월 DD일") works
+      // without a schema migration on the drift `exerciseSessions` table.
+      sessionsJson.add(
+        _sessionJson(
+          id: r.id,
+          weekStart: weekStart,
+          dayLabel: r.dayLabel,
+          type: r.type,
+          name: r.name,
+          minutes: r.minutes,
+          sets: r.sets,
+          reps: r.reps,
+          weight: r.weight,
+          calories: r.calories,
+          intensity: r.intensity,
+        ),
+      );
     }
     // Most recent first so the prototype's grouping (today / yesterday
     // / older) reads top-down.
@@ -946,10 +1014,13 @@ class LocalApiInterceptor extends Interceptor {
       'daily_calories': dailyCalories,
       'cardio_minutes': cardioSeries,
       'strength_minutes': strengthSeries,
-      // 서버와 같은 이름으로 함께 내려준다 — flexibility 가 표준이고
-      // stretching 은 옮겨 가는 동안의 옛 이름이다. (#996)
-      'flexibility_minutes': stretchingSeries,
+      'strength_sets': <num>[
+        for (final l in _weekdayLabels) perDayStrengthSets[l] ?? 0,
+      ],
+      // 서버와 같은 이름으로 함께 내려준다 — stretching 이 표준이고
+      // flexibility 는 옮겨 가는 동안의 옛 이름이다. (#996, #1276)
       'stretching_minutes': stretchingSeries,
+      'flexibility_minutes': stretchingSeries,
       'other_minutes': otherSeries,
       'day_labels': _weekdayLabels,
       'total_minutes': totalMinutes,
@@ -1019,6 +1090,22 @@ class LocalApiInterceptor extends Interceptor {
   /// POST /exercise/sessions — persist a workout into drift so the next
   /// GET /exercise/weeks/current includes it (stats + chart + list). The
   /// `ex-` id prefix (not `seed-`) means seedIfEmpty never wipes it.
+  /// 근력에서만 의미 있는 값(세트·중량). 다른 유형에서 온 값은 버린다 — 서버
+  /// (`_strength_only`)와 같은 규칙이라야 데모와 실 API 가 같은 기록을 남긴다.
+  /// (#1262, #1276)
+  T? _strengthOnly<T>(String type, T? value) =>
+      type.trim() == 'strength' ? value : null;
+
+  /// 요청이 고른 날의 (주 시작 월요일, 요일 라벨). 날짜가 없으면 오늘이다.
+  ///
+  /// 예전에는 요일 라벨만 받고 주차는 늘 이번 주로 박았다 — 지난 날짜를 골라도
+  /// 기록이 이번 주로 들어왔다. (#1276)
+  (String, String) _placement(Object? raw) {
+    final DateTime day = raw is String ? (DateTime.tryParse(raw) ?? nowKst())
+        : nowKst();
+    return (_mondayOf(day), _weekdayLabels[day.weekday - 1]);
+  }
+
   Future<Response<Object?>> _exerciseAddSession(RequestOptions options) async {
     final body = options.data;
     Map<String, Object?> payload;
@@ -1038,9 +1125,11 @@ class LocalApiInterceptor extends Interceptor {
     }
     final calories = (payload['calories'] as num?)?.toInt() ?? 0;
     final intensity = (payload['intensity'] as String?) ?? 'moderate';
-    final dayLabel =
-        (payload['day_label'] as String?) ??
-        _weekdayLabels[nowKst().weekday - 1];
+    final name = ((payload['name'] as String?) ?? '').trim();
+    final sets = _strengthOnly(type, (payload['sets'] as num?)?.toInt());
+    final reps = _strengthOnly(type, (payload['reps'] as num?)?.toInt());
+    final weight = _strengthOnly(type, (payload['weight'] as num?)?.toDouble());
+    final (String weekStart, String dayLabel) = _placement(payload['date']);
 
     final id = 'ex-${DateTime.now().microsecondsSinceEpoch}';
     await _db
@@ -1048,26 +1137,77 @@ class LocalApiInterceptor extends Interceptor {
         .insert(
           ExerciseSessionsCompanion.insert(
             id: id,
-            weekStart: _mondayOfThisWeekString(),
+            weekStart: weekStart,
             dayLabel: dayLabel,
             type: type,
+            name: Value(name),
             minutes: minutes,
             calories: calories,
             intensity: Value(intensity),
+            sets: Value(sets),
+            reps: Value(reps),
+            weight: Value(weight),
           ),
         );
 
-    return _ok(options, <String, Object?>{
-      'id': id,
-      'day_label': dayLabel,
-      'type': type,
-      'minutes': minutes,
-      'calories': calories,
-      'intensity': intensity,
-      'date_label': _dateLabelForDayLabel(dayLabel, _mondayOfThisWeekString()),
-      'time_label': _defaultTimeLabel(type),
-      'items': _defaultItems(type),
-    });
+    return _ok(
+      options,
+      _sessionJson(
+        id: id,
+        weekStart: weekStart,
+        dayLabel: dayLabel,
+        type: type,
+        name: name,
+        minutes: minutes,
+        sets: sets,
+        reps: reps,
+        weight: weight,
+        calories: calories,
+        intensity: intensity,
+      ),
+    );
+  }
+
+  /// 단건 응답 한 벌. 생성과 수정이 같은 모양을 내야 앱이 두 경로에서 같은
+  /// 기록을 읽는다.
+  Map<String, Object?> _sessionJson({
+    required String id,
+    required String weekStart,
+    required String dayLabel,
+    required String type,
+    required String name,
+    required int minutes,
+    required int? sets,
+    required int? reps,
+    required double? weight,
+    required int calories,
+    required String intensity,
+  }) => <String, Object?>{
+    'id': id,
+    'day_label': dayLabel,
+    'date': _dateOfWeekday(weekStart, dayLabel),
+    'type': type,
+    'name': name,
+    'minutes': minutes,
+    'sets': sets,
+    'reps': reps,
+    'weight': weight,
+    'calories': calories,
+    'intensity': intensity,
+    'date_label': _dateLabelForDayLabel(dayLabel, weekStart),
+    'time_label': _defaultTimeLabel(type),
+    'items': name.isEmpty ? _defaultItems(type) : <String>[name],
+  };
+
+  /// (주 시작, 요일 라벨) → `YYYY-MM-DD`. FastAPI `session_date_of` 와 같다.
+  String _dateOfWeekday(String weekStart, String dayLabel) {
+    final DateTime? monday = DateTime.tryParse(weekStart);
+    final int index = _weekdayLabels.indexOf(dayLabel);
+    if (monday == null || index < 0) return weekStart;
+    final DateTime d = DateTime(monday.year, monday.month, monday.day + index);
+    return '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
   }
 
   // ---- Schedule ----
@@ -1474,7 +1614,7 @@ class LocalApiInterceptor extends Interceptor {
   // ---- Profile (내 프로필 / 건강 목표) — AppKeyValues 로 영속 ----
 
   static const Map<String, Object?> _defaultProfile = <String, Object?>{
-    'id': 'user-demo',
+    'id': 'user-7d4e9a2c5f18',
     'name': '김민수',
     'email': 'minsu@oncare.com',
     'phone': '010-1234-5678',
@@ -1603,8 +1743,18 @@ class LocalApiInterceptor extends Interceptor {
       'weight_kg',
       'conditions',
       'goals',
+      // 목표 열 칸은 PUT /users/me/health-goals 가 쓰는 열과 같다 — 온보딩이
+      // 채운 값을 MY 건강 목표가 그대로 이어 고친다.
       'daily_calories',
       'daily_sodium_mg',
+      'daily_sugar_g',
+      'daily_carbs_g',
+      'daily_protein_g',
+      'daily_fat_g',
+      'daily_burn_kcal',
+      'weekly_cardio_minutes',
+      'weekly_strength_sets',
+      'weekly_flexibility_minutes',
     ]) {
       if (body[k] != null) patch[k] = body[k];
     }

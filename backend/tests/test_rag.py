@@ -68,7 +68,7 @@ def test_public_guidelines_seeded_and_retrieved(client, db_session):
     )
     assert n_public and n_public > 0  # 공공 가이드라인이 시드됨
 
-    hits = retrieve(db_session, "나트륨을 줄이려면 어떻게 하나요", user_id="user-demo", domain="diet")
+    hits = retrieve(db_session, "나트륨을 줄이려면 어떻게 하나요", user_id="user-7d4e9a2c5f18", domain="diet")
     assert hits["public"]  # 공공 문서가 검색됨
 
 

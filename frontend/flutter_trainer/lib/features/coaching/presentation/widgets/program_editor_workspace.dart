@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/coaching/domain/exercise_estimate.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -15,35 +19,47 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 ///
 /// Multi-session persistence remains unsupported. A one-session draft can be
 /// handed to the existing flat routine boundary through the supplied actions.
+///
+/// **이 편집기는 회원에게 직접 API 를 부르지 않는다.** 실제 확인창·배정·PT
+/// 등록은 전부 [onSend] 콜백을 통해 호출부(`CoachingPage`)가 한다 — 이
+/// 위젯은 트리거(버튼)와 보낼 값(초안·등록일·등록시각)만 쥐고 있다. 그래서
+/// 이 파일에는 repository 호출이 하나도 없다.
 class ProgramEditorWorkspace extends StatefulWidget {
   const ProgramEditorWorkspace({
     super.key,
     required this.clientGoal,
     required this.aiSuggestions,
-    required this.onAssignFlat,
-    required this.onRegisterFlat,
-    required this.registerOffset,
-    required this.onRegisterOffsetChanged,
+    required this.onSend,
+    required this.registerDate,
+    required this.onRegisterDateChanged,
+    required this.registerTime,
+    required this.onRegisterTimeChanged,
     this.template,
     this.templateRevision = 0,
-    this.assigning = false,
-    this.registering = false,
     this.initialDraft,
     this.onSave,
     this.saving = false,
-    this.editingSaved = false,
+    this.sending = false,
   });
 
   final String clientGoal;
   final List<AiRoutineItem> aiSuggestions;
   final ProgramTemplate? template;
   final int templateRevision;
-  final Future<void> Function(ProgramEditorState draft) onAssignFlat;
-  final Future<void> Function(ProgramEditorState draft) onRegisterFlat;
-  final int registerOffset;
-  final ValueChanged<int> onRegisterOffsetChanged;
-  final bool assigning;
-  final bool registering;
+
+  /// 지금 구성을 실제로 보낸다 — 확인 다이얼로그를 띄우고, 확인되면 배정과
+  /// PT 일정 등록까지 호출부가 순서대로 처리한다. 이 위젯은 트리거만 한다.
+  final ValueChanged<ProgramEditorState> onSend;
+
+  /// PT 스케줄에 등록할 날짜 — `일정 추가` 로 고른다. 기본값(오늘)은
+  /// 호출부가 들고 있다.
+  final DateTime registerDate;
+  final ValueChanged<DateTime> onRegisterDateChanged;
+
+  /// PT 스케줄에 등록할 시각 — 위 날짜와 함께 `일정 추가` 다이얼로그에서
+  /// 고른다. 기본값(오전 10시)도 호출부가 들고 있다.
+  final TimeOfDay registerTime;
+  final ValueChanged<TimeOfDay> onRegisterTimeChanged;
 
   /// A saved draft to open instead of starting from the client's goal.
   ///
@@ -53,15 +69,18 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final ProgramEditorState? initialDraft;
 
   /// Saves the current draft. Null when saving isn't wired up.
-  final Future<void> Function(ProgramEditorState draft)? onSave;
+  ///
+  /// Resolves to whether the save actually succeeded — the header's bookmark
+  /// button uses this (and only this) to flip from outline to filled.
+  final Future<bool> Function(ProgramEditorState draft)? onSave;
 
   /// A save is in flight — the button locks so a second click can't create
   /// a duplicate draft.
   final bool saving;
 
-  /// Whether the editor is working on an already-saved draft (overwrite)
-  /// rather than a new one.
-  final bool editingSaved;
+  /// 전송(배정+PT 등록)이 진행 중이거나 막 끝났다 — `일정 추가` 버튼이
+  /// 잠겨 두 번째 클릭이 두 번째 전송을 만들지 않는다.
+  final bool sending;
 
   @override
   State<ProgramEditorWorkspace> createState() => _ProgramEditorWorkspaceState();
@@ -71,9 +90,25 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   late ProgramEditorState _draft;
   var _initialized = false;
   var _editingProgramInfo = false;
+
+  /// 이번 편집기 세션에서 템플릿 저장을 한 번이라도 성공했는가 — 북마크
+  /// 아이콘을 outline↔filled 로 바꾸는 데만 쓴다. 저장은 누를 때마다 새
+  /// 템플릿을 만드는 동작이라(#1028) "저장 취소"는 없고, 한 번 채워지면
+  /// 이 편집기가 다시 열리기 전까지는 그대로 둔다.
+  var _templateSaved = false;
+  final TextEditingController _programName = TextEditingController();
   String? _addingToSession;
   final TextEditingController _exerciseName = TextEditingController();
   String _newExerciseType = '근력';
+  // [ProgramExerciseDraft] 의 기본값과 맞춘다. 세트·중량은 근력일 때만,
+  // 시간은 그 외 유형일 때만 보인다(#1029, #1276) — 유형이 무엇을 재는
+  // 운동인지가 다르기 때문이다.
+  DateTime _newExerciseDate = _todayDate();
+  int _newExerciseSets = 3;
+  int _newExerciseReps = 10;
+  double _newExerciseWeight = 20;
+  int _newExerciseMinutes = 30;
+  String _newExerciseIntensity = 'moderate';
   var _nextId = 2;
 
   @override
@@ -91,20 +126,152 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
           ) +
           2;
     } else {
+      // AI 루틴을 생성하기 전에는 임의의 추천 내용으로 채우지 않는다 — 프로그램
+      // 정보 박스는 빈 상태로 시작하고, 이후 "템플릿에 반영"(AI 루틴 생성
+      // 플로우) 또는 아래 AI 힌트 배너의 "편집기에 반영"을 눌러야만 채워진다.
       _draft = ProgramEditorState.initial(
         clientGoal: widget.clientGoal,
         programName: l.programEditorDefaultName(widget.clientGoal),
         sessionName: l.programEditorDefaultSession,
       );
-      _appendAiSuggestions(widget.aiSuggestions);
     }
     _initialized = true;
   }
 
   @override
   void dispose() {
+    _programName.dispose();
     _exerciseName.dispose();
     super.dispose();
+  }
+
+  /// 프로그램 이름 편집 UI — 카드 제목 자리에서 직접 뜬다. 깃허브 이슈/PR
+  /// 제목처럼: 평소엔 이름 옆에 연필 아이콘만 있고, 누르면 그 자리가 입력칸
+  /// 으로 바뀐다. 저장/취소 버튼은 옆의 카드 헤더 오른쪽(평소 `저장`/`검토
+  /// 하기` 버튼이 있는 자리)으로 옮겨 보여준다(`_headerActions`) — 입력칸
+  /// 아래에 따로 두면 카드 폭이 좁을 때 버튼이 다음 줄로 밀렸다. 목표·기간·
+  /// 메모까지 담던 예전 `_ProgramInfo` 는 실제 배정·PT 등록 payload 가
+  /// 읽지 않아 뺐고(#1029), 이름만 남았다.
+  Widget _programNameTitle(AppLocalizations l) {
+    const titleStyle = TextStyle(
+      fontSize: 14.5,
+      fontWeight: FontWeight.w800,
+      color: AppColors.foreground,
+    );
+    if (!_editingProgramInfo) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Flexible(
+            child: Text(
+              _draft.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: titleStyle,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          IconButton(
+            key: const ValueKey<String>('program-info-edit'),
+            tooltip: l.actionEdit,
+            onPressed: () => setState(() {
+              _programName.text = _draft.name;
+              _editingProgramInfo = true;
+            }),
+            icon: const Icon(Icons.edit_outlined, size: 15),
+            color: AppColors.subtleForeground,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+          ),
+        ],
+      );
+    }
+
+    return TextField(
+      key: const ValueKey<String>('program-name-inline-field'),
+      controller: _programName,
+      autofocus: true,
+      style: titleStyle,
+      onSubmitted: (_) => _saveProgramName(),
+      decoration: const InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 6,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(AppRadius.sm),
+        ),
+      ),
+    );
+  }
+
+  void _saveProgramName() {
+    final value = _programName.text.trim();
+    setState(() {
+      if (value.isNotEmpty) {
+        _update(_draft.copyWith(name: value));
+      }
+      _editingProgramInfo = false;
+    });
+  }
+
+  /// 카드 헤더 오른쪽 자리 — 평소엔 저장(북마크), 이름을 고치는 동안에는
+  /// 그 자리를 그대로 `취소`/`저장`으로 바꿔 쓴다. `일정 추가`는 여기
+  /// 없다 — 박스 하단으로 옮겼다(`build`).
+  Widget _headerActions(AppLocalizations l) {
+    if (_editingProgramInfo) {
+      return Wrap(
+        spacing: AppSpacing.xs,
+        children: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('program-info-cancel'),
+            onPressed: () => setState(() => _editingProgramInfo = false),
+            child: Text(l.actionCancel),
+          ),
+          ActionButton(
+            key: const ValueKey<String>('program-info-save'),
+            label: l.actionSave,
+            primary: true,
+            onPressed: _saveProgramName,
+          ),
+        ],
+      );
+    }
+    final canSave = widget.onSave != null && _draft.name.trim().isNotEmpty;
+    // `보내기`는 이제 헤더가 아니라 박스 하단(footer)에 있다 — 여기 남는
+    // 것은 저장(북마크) 하나뿐이다.
+    //
+    // 텍스트 버튼이던 `저장`을 북마크 아이콘 하나로 줄였다 — 저장 함수·API
+    // 호출·중복 저장 방지(`widget.saving`)는 그대로, 채워진 아이콘
+    // (`_templateSaved`)만 이 저장이 실제로 성공했음을 보여준다. 저장은
+    // 여전히 누를 때마다 새 템플릿을 만드는 동작이라 "저장 취소"에 대응하는
+    // outline 복귀는 없다.
+    return IconButton(
+      key: const ValueKey<String>('program-editor-save'),
+      tooltip: !canSave
+          ? l.programEditorSaveUnsupported
+          : widget.saving
+          ? l.progSaving
+          : l.programEditorSaveTemplate,
+      onPressed: canSave && !widget.saving ? _handleSaveTemplate : null,
+      icon: Icon(_templateSaved ? Icons.bookmark : Icons.bookmark_border),
+      color: _templateSaved ? AppColors.primary : AppColors.subtleForeground,
+      disabledColor: AppColors.disabledForeground,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+    );
+  }
+
+  /// 기존 저장 함수(`widget.onSave`)를 그대로 부르고, 성공했을 때만 북마크
+  /// 아이콘을 채운다 — 새 저장 로직이 아니라 반환값(성공 여부)을 아이콘
+  /// 상태에 반영하는 얇은 래퍼다.
+  Future<void> _handleSaveTemplate() async {
+    final saved = await widget.onSave!(_draft);
+    if (!mounted || !saved) return;
+    setState(() => _templateSaved = true);
   }
 
   @override
@@ -121,20 +288,105 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     }
     final template = widget.template;
     if (template == null) return;
-    final first = _draft.sessions.first;
+    // `showDialog` 는 다음 프레임(세션 목록이 이미 그려진 뒤)까지 미룬다 —
+    // `didUpdateWidget` 은 build 도중이라 그 자리에서 바로 다이얼로그를 열
+    // 수 없다. `didUpdateWidget` 자체는 동기 함수라 여기서 기다리지 않는다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 프레임이 끝난 뒤에야 불린다 — 그 사이 고객 전환 등으로 이 State 가
+      // 트리에서 빠졌다면 dispose 된 State 에서 context/setState 를 건드리게
+      // 된다.
+      if (!mounted) return;
+      unawaited(_applyTemplateToSession(template));
+    });
+  }
+
+  /// 템플릿을 세션에 덧붙인다(#1029) — 세션이 둘 이상이면 어느 세션에
+  /// 넣을지 먼저 고르게 한다. 하나뿐이면 고를 것이 없으니 곧장 그 세션에
+  /// 붙인다. 기존 운동은 지우지 않고 그 세션의 목록 뒤에 이어 붙인다.
+  Future<void> _applyTemplateToSession(ProgramTemplate template) async {
+    var targetIndex = 0;
+    if (_draft.sessions.length > 1) {
+      final chosen = await _pickTemplateTargetSession(template);
+      if (chosen == null || !mounted) return;
+      targetIndex = chosen;
+    }
+    // 다이얼로그를 기다리는 동안 세션이 지워졌을 수 있다 — 인덱스를 다시
+    // 확인한다.
+    if (targetIndex >= _draft.sessions.length) return;
+    final target = _draft.sessions[targetIndex];
     final additions = <ProgramExerciseDraft>[
       for (final exercise in template.exercises)
         ProgramExerciseDraft(
           id: 'exercise-${_nextId++}',
           name: exercise.name,
-          duration: '${exercise.minutes}',
           type: exercise.type,
+          minutes: exercise.minutes > 0 ? exercise.minutes : 30,
+          sets: exercise.sets > 0 ? exercise.sets : 3,
+          reps: exercise.reps > 0 ? exercise.reps : 10,
+          weight: exercise.weight > 0 ? exercise.weight : 20,
+          // `source` 는 그대로 서버 계약값(`trainer`)으로 남긴다 — 출처
+          // 배지만 이 값을 우선해서 `<템플릿명> 템플릿 추가` 를 보여 준다.
+          templateName: template.name,
         ),
     ];
     _replaceSession(
-      0,
-      first.copyWith(
-        exercises: <ProgramExerciseDraft>[...first.exercises, ...additions],
+      targetIndex,
+      target.copyWith(
+        exercises: <ProgramExerciseDraft>[...target.exercises, ...additions],
+      ),
+    );
+  }
+
+  Future<int?> _pickTemplateTargetSession(ProgramTemplate template) {
+    final l = AppLocalizations.of(context);
+    return showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const ValueKey<String>('template-session-picker'),
+        backgroundColor: AppColors.card,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(
+          l.programTemplateSessionPickerTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        content: SizedBox(
+          width: 320,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                l.programTemplateSessionPickerBody(template.name),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.subtleForeground,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              for (var i = 0; i < _draft.sessions.length; i++) ...<Widget>[
+                if (i > 0) const SizedBox(height: AppSpacing.xs),
+                ActionButton(
+                  key: ValueKey<String>(
+                    'template-session-picker-${_draft.sessions[i].id}',
+                  ),
+                  label: _draft.sessions[i].name,
+                  onPressed: () => Navigator.of(dialogContext).pop(i),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('template-session-picker-cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l.actionCancel),
+          ),
+        ],
       ),
     );
   }
@@ -142,93 +394,27 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    // 세션 수는 더 이상 막는 이유가 아니다 — 서버가 세션 여러 개짜리 프로그램을
-    // 저장·배정·등록한다(#709). 남은 조건은 값이 계약에 맞는지뿐이다.
-    final canAssign = _draft.supportsAssignment;
-    final canSave = widget.onSave != null && _draft.name.trim().isNotEmpty;
     return SectionCard(
       title: _draft.name,
+      titleWidget: _programNameTitle(l),
       dense: true,
-      trailing: Wrap(
-        spacing: AppSpacing.xs,
-        children: <Widget>[
-          Tooltip(
-            message: canSave ? '' : l.programEditorSaveUnsupported,
-            child: ActionButton(
-              key: const ValueKey<String>('program-editor-save'),
-              label: widget.saving
-                  ? l.progSaving
-                  : (widget.editingSaved
-                        ? l.programEditorSaveEdit
-                        : l.actionSave),
-              onPressed: canSave && !widget.saving
-                  ? () => widget.onSave!(_draft)
-                  : null,
-            ),
-          ),
-          Tooltip(
-            message: canAssign ? '' : l.programEditorAssignUnsupported,
-            child: ActionButton(
-              key: const ValueKey<String>('program-editor-assign'),
-              label: l.programEditorAssign,
-              primary: true,
-              onPressed: canAssign && !widget.assigning
-                  ? () => widget.onAssignFlat(_draft)
-                  : null,
-            ),
-          ),
-        ],
-      ),
+      trailing: _headerActions(l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            l.programEditorInfo,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _ProgramInfo(
-            draft: _draft,
-            editing: _editingProgramInfo,
-            onEdit: () => setState(() => _editingProgramInfo = true),
-            onClose: () => setState(() => _editingProgramInfo = false),
-            onChanged: _update,
-          ),
-          if (widget.aiSuggestions.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: const BoxDecoration(
-                color: AppColors.accentSurface,
-                borderRadius: BorderRadius.all(AppRadius.md),
-              ),
-              child: Row(
-                children: <Widget>[
-                  const Icon(
-                    Icons.auto_awesome,
-                    color: AppColors.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      l.programEditorAiHint,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  ActionButton(
-                    label: l.programEditorApply,
-                    onPressed: _applyAiSuggestions,
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
+          // `프로그램 정보`(목표·기간·메모 입력)는 뺐다(#1029) — 실제 배정·
+          // PT 등록 payload(`programAssignToJson`/`_draftProgram`)는 이름과
+          // 세션만 쓰고 이 값들을 읽지 않는다. `goal` 은 여전히 템플릿 저장
+          // (`_saveTemplate`)에 쓰이므로 필드 자체([ProgramEditorState.goal])
+          // 는 남기고, 고객의 목표로 자동 채워진 값을 그대로 쓴다 — 안내
+          // 배너 없이도 AI 흐름의 `템플릿에 반영`이 그 값을 그대로 세션
+          // 1에 병합한다(didUpdateWidget).
+          //
+          // 이름만은 계속 고칠 수 있어야 한다 — 카드 제목([SectionCard.title])
+          // 이자 템플릿 저장 이름이라, 자동 생성된 문구(`OOO님을 위한
+          // 프로그램`) 그대로 저장되는 유일한 경로가 되면 안 된다. 편집
+          // UI는 이제 카드 제목 자리에서 바로 뜬다(`_programNameTitle`,
+          // 깃허브 이슈/PR 제목 수정과 같은 자리 전환 방식).
           Row(
             children: <Widget>[
               Expanded(
@@ -240,10 +426,25 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
                   ),
                 ),
               ),
-              ActionButton(
-                label: l.programEditorAddSession,
-                icon: Icons.add,
+              // 박스형 버튼이던 `세션 추가`를 작은 텍스트 액션으로 줄였다 —
+              // `_addSession` 과 그 결과(빈 세션 append)는 그대로다, 시각
+              // 형태만 낮은 우선순위로 바뀌었다.
+              TextButton.icon(
+                key: const ValueKey<String>('program-editor-add-session'),
                 onPressed: _addSession,
+                icon: const Icon(Icons.add, size: 14),
+                label: Text(l.programEditorAddSession),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ],
           ),
@@ -262,6 +463,12 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               addingExercise: _addingToSession == _draft.sessions[index].id,
               exerciseNameController: _exerciseName,
               exerciseType: _newExerciseType,
+              exerciseDate: _newExerciseDate,
+              exerciseSets: _newExerciseSets,
+              exerciseReps: _newExerciseReps,
+              exerciseWeight: _newExerciseWeight,
+              exerciseMinutes: _newExerciseMinutes,
+              exerciseIntensity: _newExerciseIntensity,
               onNameChanged: (value) => _replaceSession(
                 index,
                 _draft.sessions[index].copyWith(name: value),
@@ -269,6 +476,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               onMoveUp: () => _moveSession(index, -1),
               onMoveDown: () => _moveSession(index, 1),
               onDelete: () => _deleteSession(index),
+              onReset: () => _resetSession(index),
               onStartAdd: () => setState(() {
                 _addingToSession = _draft.sessions[index].id;
                 _exerciseName.clear();
@@ -276,6 +484,18 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               onCancelAdd: _cancelExerciseAdd,
               onExerciseTypeChanged: (type) =>
                   setState(() => _newExerciseType = type),
+              onExerciseDateChanged: (value) =>
+                  setState(() => _newExerciseDate = value),
+              onExerciseSetsChanged: (value) =>
+                  setState(() => _newExerciseSets = value),
+              onExerciseRepsChanged: (value) =>
+                  setState(() => _newExerciseReps = value),
+              onExerciseWeightChanged: (value) =>
+                  setState(() => _newExerciseWeight = value),
+              onExerciseMinutesChanged: (value) =>
+                  setState(() => _newExerciseMinutes = value),
+              onExerciseIntensityChanged: (value) =>
+                  setState(() => _newExerciseIntensity = value),
               onConfirmAdd: () => _addExercise(index),
               onExerciseChanged: (exerciseIndex, exercise) =>
                   _replaceExercise(index, exerciseIndex, exercise),
@@ -286,52 +506,77 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          const SizedBox(height: AppSpacing.sm),
-          Row(
+          // 박스 하단 — PT 등록 날짜·시각은 다이얼로그 뒤에 숨기지 않고
+          // 칩 형태로 바로 보인다. 그 아래 `일정 추가`(예전 `보내기`)가
+          // 확인창을 거쳐 실제로 배정+PT 등록까지 한다. 실제 전송·등록
+          // API 호출은 전부 호출부(`onSend`)가 한다 — 여기는 트리거와
+          // 등록일·시각 값만 쥔다.
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
             children: <Widget>[
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: <Widget>[
-                      for (var offset = 0; offset < 7; offset++) ...<Widget>[
-                        ChoiceChip(
-                          label: Text(_dayLabel(l, offset)),
-                          selected: widget.registerOffset == offset,
-                          onSelected: (_) =>
-                              widget.onRegisterOffsetChanged(offset),
-                          showCheckmark: false,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: AppColors.card,
-                          side: const BorderSide(color: AppColors.borderStrong),
-                          shape: const StadiumBorder(),
-                          labelStyle: TextStyle(
-                            color: widget.registerOffset == offset
-                                ? AppColors.primaryForeground
-                                : AppColors.mutedForeground,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
               ActionButton(
-                key: const ValueKey<String>('program-editor-register'),
-                label: l.coachRegisterOn(_dayLabel(l, widget.registerOffset)),
-                icon: Icons.calendar_today_outlined,
-                onPressed: canAssign && !widget.registering
-                    ? () => widget.onRegisterFlat(_draft)
-                    : null,
+                key: const ValueKey<String>('program-register-date'),
+                label: ymd(widget.registerDate),
+                icon: Icons.calendar_month_outlined,
+                onPressed: () => unawaited(_pickRegisterDate(context)),
+              ),
+              ActionButton(
+                key: const ValueKey<String>('program-register-time'),
+                label: widget.registerTime.format(context),
+                icon: Icons.schedule_outlined,
+                onPressed: () => unawaited(_pickRegisterTime(context)),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Tooltip(
+              message: _draft.supportsAssignment
+                  ? ''
+                  : l.programEditorAssignUnsupported,
+              child: ActionButton(
+                key: const ValueKey<String>('program-editor-send'),
+                label: l.programEditorAddSchedule,
+                primary: true,
+                onPressed: _draft.supportsAssignment && !widget.sending
+                    ? () => widget.onSend(_draft)
+                    : null,
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// 등록할 날짜를 고른다 — 기본값은 오늘, 과거 날짜는 고를 수 없다.
+  Future<void> _pickRegisterDate(BuildContext context) async {
+    final today = _todayDate();
+    final picked = await showDatePicker(
+      context: context,
+      // 자정을 넘긴 채로 다이얼로그가 열려 있으면 `registerDate`(연 상태)가
+      // `today`(지금 다시 계산한 값)보다 이전일 수 있다 — `showDatePicker`
+      // 는 initialDate가 firstDate보다 빠르면 assertion으로 죽는다.
+      initialDate: widget.registerDate.isBefore(today)
+          ? today
+          : widget.registerDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    widget.onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
+  }
+
+  /// 등록할 시각을 고른다.
+  Future<void> _pickRegisterTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: widget.registerTime,
+    );
+    if (picked == null) return;
+    widget.onRegisterTimeChanged(picked);
   }
 
   void _update(ProgramEditorState next) => setState(() => _draft = next);
@@ -375,6 +620,14 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     _update(_draft.copyWith(sessions: sessions));
   }
 
+  /// 이 세션의 운동만 비운다(#1029) — 세션 자체와 다른 세션은 그대로 둔다.
+  void _resetSession(int index) {
+    _replaceSession(
+      index,
+      _draft.sessions[index].copyWith(exercises: const <ProgramExerciseDraft>[]),
+    );
+  }
+
   void _addExercise(int sessionIndex) {
     final name = _exerciseName.text.trim();
     if (name.isEmpty) return;
@@ -388,6 +641,14 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             id: 'exercise-${_nextId++}',
             name: name,
             type: _newExerciseType,
+            date: _newExerciseDate,
+            // 근력은 세트·횟수·중량으로, 그 외 유형은 시간으로 잰다 — 쓰지
+            // 않는 쪽도 값을 들고 있어야 유형을 오갈 때 각자의 값이 남는다.
+            sets: _newExerciseSets,
+            reps: _newExerciseReps,
+            weight: _newExerciseWeight,
+            minutes: _newExerciseMinutes,
+            intensity: _newExerciseIntensity,
           ),
         ],
       ),
@@ -400,6 +661,12 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       _addingToSession = null;
       _exerciseName.clear();
       _newExerciseType = '근력';
+      _newExerciseDate = _todayDate();
+      _newExerciseSets = 3;
+      _newExerciseReps = 10;
+      _newExerciseWeight = 20;
+      _newExerciseMinutes = 30;
+      _newExerciseIntensity = 'moderate';
     });
   }
 
@@ -429,8 +696,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     _replaceSession(sessionIndex, session.copyWith(exercises: exercises));
   }
 
-  void _applyAiSuggestions() => _appendAiSuggestions(widget.aiSuggestions);
-
   void _appendAiSuggestions(List<AiRoutineItem> suggestions) {
     final first = _draft.sessions.first;
     final existingNames = first.exercises.map((item) => item.name).toSet();
@@ -440,10 +705,17 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
           ProgramExerciseDraft(
             id: 'exercise-${_nextId++}',
             name: item.name,
-            duration: '${item.minutes}',
+            minutes: item.minutes > 0 ? item.minutes : 30,
             memo: item.reason,
             type: item.type,
             source: 'ai',
+            // 2단계에서 직접 채운 세트·횟수·중량이 있으면 그대로 옮긴다 —
+            // 없으면 [ProgramExerciseDraft] 기본값을 그대로 둔다. 셋 중
+            // 하나라도 흘리면 트레이너가 방금 적은 값을 편집기에서 다시
+            // 물어야 한다 (#1310).
+            sets: item.sets > 0 ? item.sets : 3,
+            reps: item.reps > 0 ? item.reps : 10,
+            weight: item.weight > 0 ? item.weight : 20,
           ),
     ];
     if (additions.isEmpty) return;
@@ -461,157 +733,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   }
 }
 
-String _dayLabel(AppLocalizations l, int offset) {
-  if (offset == 0) return l.labelToday;
-  if (offset == 1) return l.labelTomorrow;
-  final date = nowKst().add(Duration(days: offset));
-  return '${date.month}/${date.day}';
-}
-
-class _ProgramInfo extends StatelessWidget {
-  const _ProgramInfo({
-    required this.draft,
-    required this.editing,
-    required this.onEdit,
-    required this.onClose,
-    required this.onChanged,
-  });
-
-  final ProgramEditorState draft;
-  final bool editing;
-  final VoidCallback onEdit;
-  final VoidCallback onClose;
-  final ValueChanged<ProgramEditorState> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    if (!editing) {
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: const BoxDecoration(
-          color: AppColors.inputBackground,
-          borderRadius: BorderRadius.all(AppRadius.md),
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Wrap(
-                spacing: AppSpacing.xs,
-                runSpacing: AppSpacing.xs,
-                children: <Widget>[
-                  _InfoChip(label: l.programEditorGoal, value: draft.goal),
-                  _InfoChip(label: l.programEditorPeriod, value: draft.period),
-                  _InfoChip(label: l.programEditorMemo, value: draft.memo),
-                ],
-              ),
-            ),
-            IconButton(
-              key: const ValueKey<String>('program-info-edit'),
-              tooltip: l.actionEdit,
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, size: 17),
-              color: AppColors.primary,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: <Widget>[
-              _DraftField(
-                fieldId: 'program-name',
-                label: l.programEditorName,
-                value: draft.name,
-                width: 220,
-                onChanged: (value) => onChanged(draft.copyWith(name: value)),
-              ),
-              _DraftField(
-                fieldId: 'program-goal',
-                label: l.programEditorGoal,
-                value: draft.goal,
-                width: 180,
-                onChanged: (value) => onChanged(draft.copyWith(goal: value)),
-              ),
-              _DraftField(
-                fieldId: 'program-period',
-                label: l.programEditorPeriod,
-                value: draft.period,
-                width: 150,
-                onChanged: (value) => onChanged(draft.copyWith(period: value)),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _DraftField(
-            fieldId: 'program-memo',
-            label: l.programEditorMemo,
-            value: draft.memo,
-            width: double.infinity,
-            onChanged: (value) => onChanged(draft.copyWith(memo: value)),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ActionButton(
-              label: l.actionClose,
-              icon: Icons.check,
-              onPressed: onClose,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasValue = value.trim().isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: hasValue ? AppColors.accentSurface : AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Text(
-        hasValue ? '$label · $value' : '+ $label',
-        style: TextStyle(
-          color: hasValue ? AppColors.primary : AppColors.mutedForeground,
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _SessionEditor extends StatefulWidget {
   const _SessionEditor({
     super.key,
@@ -622,13 +743,26 @@ class _SessionEditor extends StatefulWidget {
     required this.addingExercise,
     required this.exerciseNameController,
     required this.exerciseType,
+    required this.exerciseDate,
+    required this.exerciseSets,
+    required this.exerciseReps,
+    required this.exerciseWeight,
+    required this.exerciseMinutes,
+    required this.exerciseIntensity,
     required this.onNameChanged,
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onDelete,
+    required this.onReset,
     required this.onStartAdd,
     required this.onCancelAdd,
     required this.onExerciseTypeChanged,
+    required this.onExerciseDateChanged,
+    required this.onExerciseSetsChanged,
+    required this.onExerciseRepsChanged,
+    required this.onExerciseWeightChanged,
+    required this.onExerciseMinutesChanged,
+    required this.onExerciseIntensityChanged,
     required this.onConfirmAdd,
     required this.onExerciseChanged,
     required this.onMoveExercise,
@@ -642,13 +776,28 @@ class _SessionEditor extends StatefulWidget {
   final bool addingExercise;
   final TextEditingController exerciseNameController;
   final String exerciseType;
+  final DateTime exerciseDate;
+  final int exerciseSets;
+  final int exerciseReps;
+  final double exerciseWeight;
+  final int exerciseMinutes;
+  final String exerciseIntensity;
   final ValueChanged<String> onNameChanged;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onDelete;
+
+  /// 이 세션의 운동만 비운다 — 세션 자체는 남는다(#1029).
+  final VoidCallback onReset;
   final VoidCallback onStartAdd;
   final VoidCallback onCancelAdd;
   final ValueChanged<String> onExerciseTypeChanged;
+  final ValueChanged<DateTime> onExerciseDateChanged;
+  final ValueChanged<int> onExerciseSetsChanged;
+  final ValueChanged<int> onExerciseRepsChanged;
+  final ValueChanged<double> onExerciseWeightChanged;
+  final ValueChanged<int> onExerciseMinutesChanged;
+  final ValueChanged<String> onExerciseIntensityChanged;
   final VoidCallback onConfirmAdd;
   final void Function(int, ProgramExerciseDraft) onExerciseChanged;
   final void Function(int, int) onMoveExercise;
@@ -689,7 +838,20 @@ class _SessionEditorState extends State<_SessionEditor> {
                   icon: const Icon(Icons.check, size: 17),
                   color: AppColors.primary,
                 )
-              else
+              else ...<Widget>[
+                // 더보기 메뉴 안에 묻으면 잘 안 보인다 — 초기화만 따로 아이콘
+                // 버튼으로 더보기 왼쪽에 둔다.
+                IconButton(
+                  key: ValueKey<String>('session-reset-${widget.session.id}'),
+                  tooltip: l.programEditorSessionReset,
+                  onPressed: widget.session.exercises.isEmpty
+                      ? null
+                      : () => unawaited(_confirmReset()),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  color: AppColors.subtleForeground,
+                  disabledColor: AppColors.disabledForeground,
+                  visualDensity: VisualDensity.compact,
+                ),
                 PopupMenuButton<String>(
                   key: ValueKey<String>('session-actions-${widget.session.id}'),
                   tooltip: l.actionEdit,
@@ -730,6 +892,7 @@ class _SessionEditorState extends State<_SessionEditor> {
                     ),
                   ],
                 ),
+              ],
             ],
           ),
           if (widget.session.exercises.isEmpty)
@@ -762,62 +925,145 @@ class _SessionEditorState extends State<_SessionEditor> {
             const SizedBox(height: AppSpacing.sm),
           ],
           if (widget.addingExercise)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: TextField(
-                        key: const ValueKey<String>('custom-exercise-name'),
-                        controller: widget.exerciseNameController,
-                        autofocus: true,
-                        onSubmitted: (_) => widget.onConfirmAdd(),
-                        decoration: InputDecoration(
-                          hintText: l.programEditorExerciseSearch,
-                          prefixIcon: const Icon(Icons.search, size: 18),
+            // 새로 추가 중인 한 줄도 이미 있는 운동 카드와 같은 틀(카드 배경·
+            // 테두리·반경)을 쓴다 — 그래야 목록에 자연스럽게 이어 붙는 한 줄로
+            // 보이고, 입력 글자 크기도 [_DraftField] 와 맞춘다.
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: const BorderRadius.all(AppRadius.md),
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: TextField(
+                          key: const ValueKey<String>('custom-exercise-name'),
+                          controller: widget.exerciseNameController,
+                          autofocus: true,
+                          onSubmitted: (_) => widget.onConfirmAdd(),
+                          style: const TextStyle(
+                            color: AppColors.foreground,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: l.programEditorExerciseSearch,
+                            hintStyle: const TextStyle(
+                              color: AppColors.subtleForeground,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              size: 17,
+                              color: AppColors.subtleForeground,
+                            ),
+                            isDense: true,
+                            filled: true,
+                            fillColor: AppColors.card,
+                            contentPadding: const EdgeInsets.fromLTRB(
+                              AppSpacing.sm,
+                              AppSpacing.sm,
+                              AppSpacing.sm,
+                              7,
+                            ),
+                            border: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.borderStrong),
+                            ),
+                            enabledBorder: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(AppRadius.sm),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 1.25,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    ActionButton(
-                      label: l.actionCancel,
-                      onPressed: widget.onCancelAdd,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    ActionButton(
-                      label: l.programEditorAdd,
-                      primary: true,
-                      onPressed: widget.onConfirmAdd,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
-                    for (final type in kRoutineTypes)
-                      ChoiceChip(
-                        key: ValueKey<String>('custom-exercise-category-$type'),
-                        label: Text(type),
-                        selected: widget.exerciseType == type,
-                        onSelected: (_) => widget.onExerciseTypeChanged(type),
-                        showCheckmark: false,
-                        selectedColor: AppColors.primary,
-                        backgroundColor: AppColors.card,
-                        side: const BorderSide(color: AppColors.borderStrong),
-                        shape: const StadiumBorder(),
-                        labelStyle: TextStyle(
-                          color: widget.exerciseType == type
-                              ? AppColors.primaryForeground
-                              : AppColors.mutedForeground,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      const SizedBox(width: AppSpacing.sm),
+                      ActionButton(
+                        label: l.actionCancel,
+                        onPressed: widget.onCancelAdd,
                       ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: AppSpacing.xs),
+                      ActionButton(
+                        label: l.programEditorAdd,
+                        primary: true,
+                        onPressed: widget.onConfirmAdd,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // 회원 앱의 운동 추가 시트와 같은 순서·같은 위젯이다
+                  // (#1276) — 날짜 → 종류 → 시간(또는 세트·중량) → 강도 →
+                  // 예상 칼로리. 이름은 위쪽 입력줄에서 이미 받는다.
+                  RoutineDateField(
+                    keyPrefix: 'custom-exercise-date',
+                    date: widget.exerciseDate,
+                    onChanged: widget.onExerciseDateChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // 유형을 먼저 골라야 아래 입력칸이 세트·횟수·중량인지
+                  // 시간인지 정해진다.
+                  RoutineCategoryChips(
+                    keyPrefix: 'custom-exercise-category',
+                    value: widget.exerciseType,
+                    onChanged: widget.onExerciseTypeChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (widget.exerciseType == '근력') ...<Widget>[
+                    RoutineSetsField(
+                      keyPrefix: 'custom-exercise-sets',
+                      sets: widget.exerciseSets,
+                      onChanged: widget.onExerciseSetsChanged,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    RoutineRepsField(
+                      keyPrefix: 'custom-exercise-reps',
+                      reps: widget.exerciseReps,
+                      onChanged: widget.onExerciseRepsChanged,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    RoutineWeightField(
+                      keyPrefix: 'custom-exercise-weight',
+                      weight: widget.exerciseWeight,
+                      onChanged: widget.onExerciseWeightChanged,
+                    ),
+                  ] else
+                    RoutineMinutesField(
+                      keyPrefix: 'custom-exercise-duration',
+                      minutes: widget.exerciseMinutes,
+                      onChanged: widget.onExerciseMinutesChanged,
+                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutineIntensityChips(
+                    keyPrefix: 'custom-exercise-intensity',
+                    value: widget.exerciseIntensity,
+                    onChanged: widget.onExerciseIntensityChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutineCaloriesLine(
+                    calories: estimateRoutineCalories(
+                      type: widget.exerciseType,
+                      minutes: widget.exerciseType == '근력'
+                          ? minutesFromSets(widget.exerciseSets)
+                          : widget.exerciseMinutes,
+                      intensity: widget.exerciseIntensity,
+                    ),
+                  ),
+                ],
+              ),
             )
           else
             ActionButton(
@@ -875,6 +1121,48 @@ class _SessionEditorState extends State<_SessionEditor> {
         return;
     }
   }
+
+  /// 운동이 있을 때만 묻는다 — 초기화 아이콘 자체가 그때만 활성화되니, 이
+  /// 액션이 불릴 때는 지울 것이 있다는 뜻이다.
+  Future<void> _confirmReset() async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const ValueKey<String>('session-reset-confirm'),
+        backgroundColor: AppColors.card,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(
+          l.programEditorSessionResetTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          l.programEditorSessionResetBody(widget.session.name),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+            height: 1.4,
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('session-reset-cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('session-reset-submit'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.programEditorSessionReset),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) widget.onReset();
+  }
 }
 
 class _ExerciseEditor extends StatefulWidget {
@@ -930,7 +1218,11 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
               ),
               const SizedBox(width: AppSpacing.xs),
               Expanded(child: _ExerciseSummary(exercise: exercise)),
-              if (exercise.source == 'trainer') ...<Widget>[
+              // 템플릿에서 끌어온 운동은 `<템플릿명> 템플릿 추가` 로, 그 외
+              // 직접 추가는 `트레이너 추가` 로 — `source` 는 그대로 서버
+              // 계약값(`trainer`)이라 [templateName] 이 있을 때만 우선한다
+              // (#1029).
+              if (exercise.templateName != null || exercise.source == 'trainer') ...<Widget>[
                 const SizedBox(width: AppSpacing.xs),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -942,7 +1234,9 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                     borderRadius: BorderRadius.all(AppRadius.pill),
                   ),
                   child: Text(
-                    l.coachTrainerAdded,
+                    exercise.templateName != null
+                        ? l.coachTemplateAdded(exercise.templateName!)
+                        : l.coachTrainerAdded,
                     style: const TextStyle(
                       color: AppColors.mutedForeground,
                       fontSize: 10.5,
@@ -1018,54 +1312,59 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
               builder: (context, constraints) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: <Widget>[
-                      _metric(
-                        '${exercise.id}-sets',
-                        l.programEditorSets,
-                        exercise.sets,
-                        (v) => exercise.copyWith(sets: v),
-                      ),
-                      _metric(
-                        '${exercise.id}-reps',
-                        l.programEditorReps,
-                        exercise.reps,
-                        (v) => exercise.copyWith(reps: v),
-                      ),
-                      _metric(
-                        '${exercise.id}-weight',
-                        l.programEditorWeight,
-                        exercise.weight,
-                        (v) => exercise.copyWith(weight: v),
-                      ),
-                      _metric(
-                        '${exercise.id}-duration',
-                        l.programEditorDuration,
-                        exercise.duration,
-                        (v) => exercise.copyWith(duration: v),
-                      ),
-                      _metric(
-                        '${exercise.id}-distance',
-                        l.programEditorDistance,
-                        exercise.distance,
-                        (v) => exercise.copyWith(distance: v),
-                      ),
-                      _metric(
-                        '${exercise.id}-rest',
-                        l.programEditorRest,
-                        exercise.rest,
-                        (v) => exercise.copyWith(rest: v),
-                      ),
-                      _metric(
-                        '${exercise.id}-rpe',
-                        'RPE',
-                        exercise.rpe,
-                        (v) => exercise.copyWith(rpe: v),
-                      ),
-                    ],
+                  // 회원 앱의 운동 추가 시트와 같은 칸이다 (#1276) — 날짜 →
+                  // 종류 → 시간(또는 세트·횟수·중량) → 강도 → 예상 칼로리.
+                  RoutineDateField(
+                    keyPrefix: '${exercise.id}-date',
+                    date: exercise.date ?? _todayDate(),
+                    onChanged: (value) =>
+                        widget.onChanged(exercise.copyWith(date: value)),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutineCategoryChips(
+                    keyPrefix: '${exercise.id}-type',
+                    value: exercise.type,
+                    onChanged: (value) =>
+                        widget.onChanged(exercise.copyWith(type: value)),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (exercise.isStrength) ...<Widget>[
+                    RoutineSetsField(
+                      keyPrefix: '${exercise.id}-sets',
+                      sets: exercise.sets,
+                      onChanged: (value) =>
+                          widget.onChanged(exercise.copyWith(sets: value)),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    RoutineRepsField(
+                      keyPrefix: '${exercise.id}-reps',
+                      reps: exercise.reps,
+                      onChanged: (value) =>
+                          widget.onChanged(exercise.copyWith(reps: value)),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    RoutineWeightField(
+                      keyPrefix: '${exercise.id}-weight',
+                      weight: exercise.weight,
+                      onChanged: (value) =>
+                          widget.onChanged(exercise.copyWith(weight: value)),
+                    ),
+                  ] else
+                    RoutineMinutesField(
+                      keyPrefix: '${exercise.id}-duration',
+                      minutes: exercise.minutes,
+                      onChanged: (value) =>
+                          widget.onChanged(exercise.copyWith(minutes: value)),
+                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutineIntensityChips(
+                    keyPrefix: '${exercise.id}-intensity',
+                    value: exercise.intensity,
+                    onChanged: (value) =>
+                        widget.onChanged(exercise.copyWith(intensity: value)),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutineCaloriesLine(calories: exercise.calories),
                   const SizedBox(height: AppSpacing.xs),
                   _DraftField(
                     fieldId: '${exercise.id}-memo',
@@ -1083,19 +1382,6 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
       ),
     );
   }
-
-  Widget _metric(
-    String fieldId,
-    String label,
-    String value,
-    ProgramExerciseDraft Function(String) update,
-  ) => _DraftField(
-    fieldId: fieldId,
-    label: label,
-    value: value,
-    width: 82,
-    onChanged: (next) => widget.onChanged(update(next)),
-  );
 
   void _handleExerciseAction(String action) {
     switch (action) {
@@ -1147,7 +1433,7 @@ class _ExerciseSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final korean = Localizations.localeOf(context).languageCode == 'ko';
-    final metrics = _exerciseMetrics(exercise, korean: korean);
+    final metrics = programExerciseMetrics(exercise, korean: korean);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1187,39 +1473,35 @@ class _ExerciseSummary extends StatelessWidget {
   }
 }
 
-List<String> _exerciseMetrics(
+/// 운동 한 줄의 지표 요약 — 근력은 세트·횟수·중량, 그 외 유형은 시간. 유형마다
+/// 재는 단위가 다르다는 규칙은 회원 앱·서버와도 같다 (#1276).
+List<String> programExerciseMetrics(
   ProgramExerciseDraft exercise, {
   required bool korean,
 }) {
   final metrics = <String>[];
-  if (exercise.sets.isNotEmpty && exercise.reps.isNotEmpty) {
+  if (exercise.isStrength) {
     metrics.add(
-      korean
-          ? '${exercise.sets}세트 × ${exercise.reps}회'
-          : '${exercise.sets} sets × ${exercise.reps} reps',
+      korean ? '${exercise.sets}세트' : '${exercise.sets} sets',
     );
-  } else if (exercise.sets.isNotEmpty) {
-    metrics.add(korean ? '${exercise.sets}세트' : '${exercise.sets} sets');
-  } else if (exercise.reps.isNotEmpty) {
-    metrics.add(korean ? '${exercise.reps}회' : '${exercise.reps} reps');
-  }
-  if (exercise.weight.isNotEmpty) {
-    metrics.add('${exercise.weight}kg');
-  }
-  if (exercise.duration.isNotEmpty) {
-    metrics.add(korean ? '${exercise.duration}분' : '${exercise.duration} min');
-  }
-  if (exercise.distance.isNotEmpty) {
-    metrics.add('${exercise.distance}m');
-  }
-  if (exercise.rest.isNotEmpty) {
-    metrics.add(korean ? '휴식 ${exercise.rest}초' : 'Rest ${exercise.rest} sec');
-  }
-  if (exercise.rpe.isNotEmpty) {
-    metrics.add('RPE ${exercise.rpe}');
+    if (exercise.reps > 0) {
+      metrics.add(
+        korean ? '${exercise.reps}회' : '${exercise.reps} reps',
+      );
+    }
+    if (exercise.weight > 0) {
+      final double w = exercise.weight;
+      metrics.add('${w == w.roundToDouble() ? w.round() : w}kg');
+    }
+  } else {
+    metrics.add(
+      korean ? '${exercise.minutes}분' : '${exercise.minutes} min',
+    );
   }
   return metrics;
 }
+
+
 
 class _DraftField extends StatelessWidget {
   const _DraftField({
@@ -1286,4 +1568,10 @@ class _DraftField extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 자정으로 자른 오늘 — 새 운동 행의 기본 날짜.
+DateTime _todayDate() {
+  final DateTime now = nowKst();
+  return DateTime(now.year, now.month, now.day);
 }

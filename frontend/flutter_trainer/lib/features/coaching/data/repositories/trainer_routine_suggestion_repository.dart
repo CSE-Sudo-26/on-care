@@ -33,6 +33,9 @@ abstract interface class TrainerRoutineSuggestionRepository {
     String? name,
     int? minutes,
     String? type,
+    int? sets,
+    int? reps,
+    double? weight,
     String? reason,
   });
 
@@ -88,9 +91,22 @@ class MockTrainerRoutineSuggestionRepository
       id: 'demo-suggestion-thoracic',
       name: '흉추 회전 스트레칭',
       minutes: 10,
-      type: '유연성',
+      type: '스트레칭',
       reason: '등 위쪽을 돌려 어깨 부담을 줄이는 스트레칭이에요. 통증이 있으면 멈추세요.',
       evidence: <String>['최근 PT 피드백 반영'],
+    ),
+    // 근력 후보를 하나 둔다 — 세트·횟수·중량을 묻는 자리가 데모에서도 보여야
+    // 그 칸이 실제로 동작하는지 시연에서 확인할 수 있다. (#1321)
+    RoutineSuggestion(
+      id: 'demo-suggestion-hip-bridge',
+      name: '힙 브리지',
+      minutes: 12,
+      type: '근력',
+      sets: 3,
+      reps: 15,
+      weight: 0,
+      reason: '누워서 엉덩이를 들어 올리는 하체 근력 운동이에요. 허리가 아프면 범위를 줄이세요.',
+      evidence: <String>['최근 근력운동 비중 높음'],
     ),
   ];
 
@@ -107,6 +123,9 @@ class MockTrainerRoutineSuggestionRepository
     String? name,
     int? minutes,
     String? type,
+    int? sets,
+    int? reps,
+    double? weight,
     String? reason,
   }) async => _review(suggestionId);
 

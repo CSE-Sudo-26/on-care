@@ -21,10 +21,17 @@ class SectionCard extends StatelessWidget {
     this.trailing,
     this.dense = false,
     this.padding,
+    this.titleWidget,
+    this.expandChild = false,
   });
 
   /// Card heading.
   final String title;
+
+  /// Replaces the default [title] text (e.g. an inline-editable name).
+  /// When set, [title] is skipped and the scale-down fitting it normally
+  /// gets is left to the caller.
+  final Widget? titleWidget;
 
   /// Optional leading icon next to the heading.
   final IconData? icon;
@@ -40,6 +47,12 @@ class SectionCard extends StatelessWidget {
 
   /// Overrides the body padding entirely.
   final EdgeInsets? padding;
+
+  /// When true, [child] fills the remaining height instead of sizing to
+  /// its own content, so the card's own box stays a fixed size and only
+  /// [child] scrolls inside it (the card needs a bounded height from its
+  /// parent — e.g. via `Expanded` — for this to have any effect).
+  final bool expandChild;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +72,7 @@ class SectionCard extends StatelessWidget {
         padding: pad,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: expandChild ? MainAxisSize.max : MainAxisSize.min,
           children: <Widget>[
             Row(
               children: <Widget>[
@@ -68,27 +81,29 @@ class SectionCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                 ],
                 Expanded(
-                  // 카드 제목도 줄임표 대신 축소다 — 옆의 버튼 줄이 길어지면
-                  // 제목이 먼저 잘렸다. (#1004)
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.foreground,
+                  child:
+                      titleWidget ??
+                      // 카드 제목도 줄임표 대신 축소다 — 옆의 버튼 줄이
+                      // 길어지면 제목이 먼저 잘렸다. (#1004)
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.foreground,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ),
                 ?trailing,
               ],
             ),
             SizedBox(height: dense ? AppSpacing.sm : AppSpacing.md),
-            child,
+            expandChild ? Expanded(child: child) : child,
           ],
         ),
       ),

@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routi
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_suggestion.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_edit_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// The AI personal-exercise review area of the program tab (#790).
@@ -53,6 +54,29 @@ class _RoutineSuggestionReviewCardState
   /// 누른 상태다.
   final Set<String> _busy = <String>{};
 
+  /// 검토 없이 곧바로 나가던 승인 앞에 **최종 검토**를 세운다 (#1028).
+  ///
+  /// 여기서 승인은 곧 전송이다 — 서버가 이 제안을 배정으로 바꾸고 회원 알림도
+  /// 그 시점에 나간다. 그런데 예전에는 목록의 `고객에게 추천` 한 번이 곧바로
+  /// mutation 이었다: 옆 카드를 누르려다 손이 미끄러지면 회원에게 이미 가 있다.
+  ///
+  /// 그렇다고 이 제안을 프로그램 편집기의 최종 검토로 보내지는 **않았다**.
+  /// 개인운동 제안은 기간 프로그램과 다른 물건이고(PT 사이를 메우는 짧은 운동),
+  /// 서버가 승인/거절 수명주기를 따로 들고 있다(`approve`/`dismiss`, 이미 처리된
+  /// 제안은 409). 프로그램 초안으로 옮겨 담으면 그 수명주기를 잃고 두 개념이
+  /// 섞인다. 그래서 **이 제안만의 최종 검토**를 둔다 — 나갈 값(이름·시간·유형·
+  /// 메모)을 그대로 보여 주고 확인을 받은 뒤에만 mutation 이 일어난다.
+  Future<void> _confirmThenApprove(RoutineSuggestion suggestion) async {
+    if (_busy.contains(suggestion.id)) return;
+    final confirmed = await showRoutineSuggestionConfirmDialog(
+      context,
+      suggestion: suggestion,
+      clientName: widget.clientName,
+    );
+    if (confirmed != true || !mounted) return;
+    await _approve(suggestion);
+  }
+
   Future<void> _approve(
     RoutineSuggestion suggestion, {
     RoutineSuggestionEdit? edit,
@@ -67,6 +91,12 @@ class _RoutineSuggestionReviewCardState
             name: edit?.name,
             minutes: edit?.minutes,
             type: edit?.type,
+            // 근력이면 수정 창이 채운 세 값이 함께 간다. 그대로 승인(edit 이
+            // null)이면 아무것도 보내지 않고, 서버가 제안 행에 이미 들고 있는
+            // 값을 그대로 배정으로 옮긴다. (#1321)
+            sets: edit?.sets,
+            reps: edit?.reps,
+            weight: edit?.weight,
             reason: edit?.reason,
           ),
       l.suggestionApproved(edit?.name ?? suggestion.name, widget.clientName),
@@ -199,7 +229,7 @@ class _RoutineSuggestionReviewCardState
                 key: ValueKey<String>('routine-suggestion-${suggestion.id}'),
                 suggestion: suggestion,
                 busy: _busy.contains(suggestion.id),
-                onApprove: () => _approve(suggestion),
+                onApprove: () => _confirmThenApprove(suggestion),
                 onEdit: () => _editThenApprove(suggestion),
                 onDismiss: () => _dismiss(suggestion),
               ),
@@ -292,7 +322,9 @@ class _SuggestionCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                l.minutesShort(suggestion.minutes),
+                // 근력은 시간이 아니라 세트·횟수·중량으로 적는다 — 최종 검토
+                // dialog·수정 창과 같은 함수를 쓴다. (#1321)
+                routineSuggestionAmountLabel(l, suggestion),
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
@@ -372,24 +404,15 @@ class _SuggestionCard extends StatelessWidget {
             spacing: AppSpacing.sm,
             overflowSpacing: AppSpacing.xs,
             children: <Widget>[
-              // 테두리 있는 버튼이다. 예전에는 흐린 글자만 있는 `TextButton`
-              // 이라 카드 안의 설명 문구와 구별되지 않아, 누를 수 있는 것인지
-              // 알 수 없었다(#939).
-              OutlinedButton(
+              // 다른 카드들과 같은 공용 버튼([ActionButton]) 이다 — 이
+              // 카드만 기본 Material 버튼을 쓰면 높이·글꼴·테두리가 조금씩
+              // 달라 눈에 띈다.
+              ActionButton(
                 key: ValueKey<String>(
                   'routine-suggestion-dismiss-${suggestion.id}',
                 ),
+                label: l.suggestionDismiss,
                 onPressed: busy ? null : onDismiss,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  // 윤곽선을 브랜드 남색으로 지정한다. 테마에 버튼 스타일이
-                  // 없어 기본값(`colorScheme.outline`)을 쓰면 이 버튼만 검은
-                  // 윤곽선으로 나온다.
-                  side: BorderSide(
-                    color: AppColors.primary.withValues(alpha: 0.45),
-                  ),
-                ),
-                child: Text(l.suggestionDismiss),
               ),
               // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
               // 않아야 "무엇이 도는 중인지" 가 읽힌다.
@@ -404,12 +427,13 @@ class _SuggestionCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                   ],
-                  FilledButton(
+                  ActionButton(
                     key: ValueKey<String>(
                       'routine-suggestion-approve-${suggestion.id}',
                     ),
+                    label: l.suggestionApprove,
+                    primary: true,
                     onPressed: busy ? null : onApprove,
-                    child: Text(l.suggestionApprove),
                   ),
                 ],
               ),

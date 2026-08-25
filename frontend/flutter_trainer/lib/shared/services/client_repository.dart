@@ -374,6 +374,12 @@ class DriftClientRepository implements ClientRepository {
     final List<int> stretching = List<int>.filled(7, 0);
     final List<int> other = List<int>.filled(7, 0);
     final List<int> sets = List<int>.filled(7, 0);
+    // 유형별 칼로리는 픽스처가 운동마다 들고 있는 값을 그대로 모은다 — 분에서
+    // 환산하지 않는다. 유형마다 분당 소모가 달라서다(#1289).
+    final List<int> cardioCal = List<int>.filled(7, 0);
+    final List<int> strengthCal = List<int>.filled(7, 0);
+    final List<int> stretchingCal = List<int>.filled(7, 0);
+    final List<int> otherCal = List<int>.filled(7, 0);
     for (final FixtureDay day in days) {
       final int i = DateTime.parse(day.date).weekday - 1;
       for (final FixtureExercise e in day.doneExercises) {
@@ -382,13 +388,17 @@ class DriftClientRepository implements ClientRepository {
         switch (e.type) {
           case 'strength':
             strength[i] += e.minutes;
+            strengthCal[i] += e.calories;
             sets[i] += e.sets ?? setsFromStrengthMinutes(e.minutes);
           case 'flexibility' || 'stretching' || 'yoga':
             stretching[i] += e.minutes;
+            stretchingCal[i] += e.calories;
           case 'cardio' || 'walking':
             cardio[i] += e.minutes;
+            cardioCal[i] += e.calories;
           default:
             other[i] += e.minutes;
+            otherCal[i] += e.calories;
         }
       }
     }
@@ -400,7 +410,12 @@ class DriftClientRepository implements ClientRepository {
       strengthMinutes: strength,
       stretchingMinutes: stretching,
       otherMinutes: other,
+      cardioCalories: cardioCal,
+      strengthCalories: strengthCal,
+      stretchingCalories: stretchingCal,
+      otherCalories: otherCal,
       strengthSets: sets,
+      weeklyGoalCalories: kWeeklyBurnKcal.round(),
       totalMinutes: minutes.fold(0, (int a, int b) => a + b),
       totalCalories: calories.fold(0, (int a, int b) => a + b),
     );
@@ -429,8 +444,15 @@ class DriftClientRepository implements ClientRepository {
       cardioMinutes: <int>[for (final s in splits) s[0]],
       strengthMinutes: <int>[for (final s in splits) s[1]],
       stretchingMinutes: <int>[for (final s in splits) s[2]],
+      // 데모의 칼로리는 분에 일정 배수를 곱한 값이라(위 `* 6`), 유형별 몫도 분
+      // 비중과 같다. 실서버는 유형마다 분당 소모가 달라 `sessions` 에서 따로
+      // 세지만(#1289), 여기서는 그 환산이 곧 같은 결과다.
+      cardioCalories: <int>[for (final s in splits) s[0] * 6],
+      strengthCalories: <int>[for (final s in splits) s[1] * 6],
+      stretchingCalories: <int>[for (final s in splits) s[2] * 6],
       totalMinutes: minutes.fold(0, (sum, value) => sum + value),
       totalCalories: calories.fold(0, (sum, value) => sum + value),
+      weeklyGoalCalories: kWeeklyBurnKcal.round(),
     );
   }
 
@@ -633,6 +655,7 @@ class DriftClientRepository implements ClientRepository {
     final ClientDateRange range = clientRangeNow(period, exercise: true);
     final Map<String, ClientExerciseDay> byDate = <String, ClientExerciseDay>{};
     int weeklyGoalMinutes = 0;
+    int weeklyGoalCalories = 0;
     // 주를 한꺼번에 읽는다 — 위 provider 와 같은 이유다 (#1170).
     final List<DateTime> mondays = clientRangeWeekStarts(range);
     final List<ClientExerciseWeek> weeks = await Future.wait(
@@ -645,6 +668,7 @@ class DriftClientRepository implements ClientRepository {
       final DateTime monday = mondays[w];
       final ClientExerciseWeek week = weeks[w];
       weeklyGoalMinutes = week.weeklyGoalMinutes;
+      weeklyGoalCalories = week.weeklyGoalCalories;
       for (var d = 0; d < 7; d++) {
         final DateTime date = DateTime(
           monday.year,
@@ -660,11 +684,16 @@ class DriftClientRepository implements ClientRepository {
           strengthMinutes: at(week.strengthMinutes),
           stretchingMinutes: at(week.stretchingMinutes),
           otherMinutes: at(week.otherMinutes),
+          cardioCalories: at(week.cardioCalories),
+          strengthCalories: at(week.strengthCalories),
+          stretchingCalories: at(week.stretchingCalories),
+          otherCalories: at(week.otherCalories),
         );
       }
     }
     return ClientExercisePeriod(
       weeklyGoalMinutes: weeklyGoalMinutes,
+      weeklyGoalCalories: weeklyGoalCalories,
       range: range,
       days: <ClientExerciseDay>[
         for (final DateTime date in clientRangeDates(range))
@@ -673,12 +702,12 @@ class DriftClientRepository implements ClientRepository {
     );
   }
 
-  /// 그날 가장 오래 한 유형의 이름. 같으면 유산소 → 근력 → 유연성 순이다.
+  /// 그날 가장 오래 한 유형의 이름. 같으면 유산소 → 근력 → 스트레칭 순이다.
   String _mainTypeLabel(ClientExerciseDay day) {
     final Map<String, int> byType = <String, int>{
       '유산소': day.cardioMinutes,
       '근력': day.strengthMinutes,
-      '유연성': day.stretchingMinutes,
+      '스트레칭': day.stretchingMinutes,
       '기타': day.otherMinutes,
     };
     String best = '유산소';
@@ -784,6 +813,7 @@ class DriftClientRepository implements ClientRepository {
   }
 
   ClientDietEntry _toDietEntry(ClientDietEntryRow row) => ClientDietEntry(
+    id: row.id,
     meal: row.meal,
     items: row.items,
     calories: row.calories,
@@ -1093,6 +1123,7 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
           <String, ClientExerciseDay>{};
       // 목표는 주마다 같다 — 마지막으로 읽은 주의 값을 쓴다. (#1015)
       int weeklyGoalMinutes = 0;
+      int weeklyGoalCalories = 0;
       // 주를 **한꺼번에** 읽는다 (#1170). `전체` 가 서른다섯 주라, 하나씩
       // 기다리면 왕복이 그만큼 줄줄이 이어져 그래프가 늦게 선다.
       final List<DateTime> mondays = clientRangeWeekStarts(range);
@@ -1106,6 +1137,7 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
         final DateTime monday = mondays[w];
         final ClientExerciseWeek week = weeks[w];
         weeklyGoalMinutes = week.weeklyGoalMinutes;
+        weeklyGoalCalories = week.weeklyGoalCalories;
         for (var d = 0; d < 7; d++) {
           final DateTime date = DateTime(
             monday.year,
@@ -1124,6 +1156,10 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
             strengthMinutes: at(week.strengthMinutes),
             stretchingMinutes: at(week.stretchingMinutes),
             otherMinutes: at(week.otherMinutes),
+            cardioCalories: at(week.cardioCalories),
+            strengthCalories: at(week.strengthCalories),
+            stretchingCalories: at(week.stretchingCalories),
+            otherCalories: at(week.otherCalories),
             // 서버가 세트를 주면 그 값, 아니면 분에서 환산한다.
             strengthSets: d < week.strengthSets.length
                 ? week.strengthSets[d]
@@ -1133,6 +1169,7 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
       }
       return ClientExercisePeriod(
         weeklyGoalMinutes: weeklyGoalMinutes,
+        weeklyGoalCalories: weeklyGoalCalories,
         range: range,
         days: <ClientExerciseDay>[
           for (final DateTime date in clientRangeDates(range))

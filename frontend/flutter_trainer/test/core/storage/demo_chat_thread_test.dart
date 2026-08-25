@@ -1,6 +1,6 @@
 /// 트레이너 앱 데모의 김민수 대화 — 회원 앱과 **같은 대화**여야 한다. (#543)
 ///
-/// 김민수는 회원 앱 데모 사용자(user-demo)와 같은 사람이라, 같은 스레드를 두
+/// 김민수는 회원 앱 데모 사용자(user-7d4e9a2c5f18)와 같은 사람이라, 같은 스레드를 두
 /// 앱이 각자의 시점에서 보여 준다. 전에는 회원 앱 쪽이 다른 메시지 한 개만
 /// 갖고 있어 같은 사람의 대화가 앱마다 달랐다. 여기서 본문과 순서를 통째로
 /// 고정해, 한쪽만 고치면 깨지게 한다.
@@ -49,6 +49,27 @@ const List<(ChatSender, String)> kDemoThread = <(ChatSender, String)>[
   ),
 ];
 
+final List<DateTime> kDemoCreatedAt = <DateTime>[
+  DateTime(2026, 1, 1, 10, 2),
+  DateTime(2026, 1, 1, 10, 15),
+  DateTime(2026, 1, 1, 10, 21),
+  DateTime(2026, 1, 1, 10, 24),
+  DateTime(2026, 1, 1, 10, 26),
+  DateTime(2026, 1, 1, 10, 29),
+  DateTime(2026, 1, 1, 10, 34),
+  DateTime(2026, 1, 2, 9, 30),
+  DateTime(2026, 1, 2, 12, 40),
+  DateTime(2026, 1, 2, 12, 52),
+  DateTime(2026, 1, 2, 19, 5),
+  DateTime(2026, 1, 2, 19, 20),
+  DateTime(2026, 1, 2, 19, 22),
+  DateTime(2026, 1, 3, 18, 10),
+  DateTime(2026, 1, 3, 18, 13),
+  DateTime(2026, 1, 3, 18, 14),
+  DateTime(2026, 1, 3, 18, 16),
+  DateTime(2026, 1, 3, 18, 18),
+];
+
 void main() {
   late AppDatabase db;
 
@@ -75,6 +96,12 @@ void main() {
           r.body,
         ),
     ], kDemoThread);
+  });
+
+  test('김민수 시드는 회원 앱과 공유하는 실제 날짜·시각 데이터를 쓴다', () async {
+    final rows = await minsuThread();
+
+    expect(<DateTime>[for (final row in rows) row.createdAt], kDemoCreatedAt);
   });
 
   test('고객 목록 미리보기는 스레드의 마지막 메시지와 같다', () async {

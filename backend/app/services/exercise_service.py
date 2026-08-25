@@ -3,7 +3,7 @@
 
 핵심 규칙(프론트와 동일):
 - 요일 라벨: 월~일 (월=index 0)
-- 타입 버킷: 유산소 / 근력 / 유연성 / 기타 네 가지(app.services.exercise_types).
+- 타입 버킷: 유산소 / 근력 / 스트레칭 / 기타 네 가지(app.services.exercise_types).
   옛 값(walking·yoga·stretching)은 읽는 자리에서 접어 준다.
 - date_label: 오늘/어제/MM월 DD일/N요일 (요일 라벨 → 날짜 환산)
 - time_label, items: 타입별 기본값 합성 (drift 스키마에 없는 표시용 데이터)
@@ -29,12 +29,39 @@ WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
 _KCAL_PER_MIN = {
     exercise_types.CARDIO: 9.0,
     exercise_types.STRENGTH: 6.0,
-    exercise_types.FLEXIBILITY: 3.0,
+    exercise_types.STRETCHING: 3.0,
     exercise_types.OTHER: 5.0,
 }
 
 #: 강도 배수 — 회원 앱 `_intensityFactor` 와 같다.
 _INTENSITY_FACTOR = {"light": 0.85, "moderate": 1.0, "high": 1.2}
+
+#: 근력 1세트가 차지하는 벽시계 시간(세트 + 휴식). 회원 앱
+#: `kStrengthMinutesPerSetWithRest` 와 같은 값이다 — 세트를 모르는 옛 기록을
+#: 세트로 되짚을 때만 쓴다. (#1262)
+STRENGTH_MINUTES_PER_SET = 3.0
+
+
+def sets_of(row) -> int:
+    """근력 기록의 세트 수. 적혀 있으면 그 값, 없으면 분에서 환산한 값."""
+    recorded = getattr(row, "sets", None)
+    if recorded:
+        return int(recorded)
+    return round(row.minutes / STRENGTH_MINUTES_PER_SET)
+
+
+def session_date_of(row) -> date | None:
+    """기록의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다. (#1276)
+
+    요일만으로는 몇 주 전 기록과 이번 주 기록이 구분되지 않는다 — 앱이 수정
+    시트를 열 때 원래 날짜를 되살리려면 여기서 되돌려야 한다. 값이 깨졌으면
+    None 이다: 지어낸 날짜보다 빈 칸이 낫다.
+    """
+    try:
+        monday = date.fromisoformat(row.week_start)
+        return monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))
+    except (AttributeError, TypeError, ValueError):
+        return None
 
 
 def monday_of_this_week_str() -> str:
@@ -98,7 +125,7 @@ def _default_time_label(t: str) -> str:
     return {
         exercise_types.CARDIO: "07:30",
         exercise_types.STRENGTH: "18:00",
-        exercise_types.FLEXIBILITY: "20:00",
+        exercise_types.STRETCHING: "20:00",
     }.get(exercise_types.normalize(t), "15:00")
 
 
@@ -106,7 +133,7 @@ def _default_items(t: str) -> list[str]:
     return {
         exercise_types.CARDIO: ["러닝머신 30분"],
         exercise_types.STRENGTH: ["스쿼트 3세트", "데드리프트 3세트"],
-        exercise_types.FLEXIBILITY: ["전신 스트레칭 20분"],
+        exercise_types.STRETCHING: ["전신 스트레칭 20분"],
     }.get(exercise_types.normalize(t), [])
 
 
@@ -150,8 +177,9 @@ def build_current_week(rows: list) -> dict:
     per_day_cal = {l: 0 for l in WEEKDAY_LABELS}
     per_cardio = {l: 0 for l in WEEKDAY_LABELS}
     per_strength = {l: 0 for l in WEEKDAY_LABELS}
-    per_flex = {l: 0 for l in WEEKDAY_LABELS}
+    per_stretch = {l: 0 for l in WEEKDAY_LABELS}
     per_other = {l: 0 for l in WEEKDAY_LABELS}
+    per_sets = {l: 0 for l in WEEKDAY_LABELS}
     total_minutes = 0
     total_calories = 0
     sessions = []
@@ -164,14 +192,23 @@ def build_current_week(rows: list) -> dict:
         bucket_map = {
             exercise_types.CARDIO: per_cardio,
             exercise_types.STRENGTH: per_strength,
-            exercise_types.FLEXIBILITY: per_flex,
+            exercise_types.STRETCHING: per_stretch,
             exercise_types.OTHER: per_other,
         }
-        target = bucket_map[_bucket(r.type)]
+        bucket = _bucket(r.type)
+        target = bucket_map[bucket]
         target[r.day_label] = target.get(r.day_label, 0) + r.minutes
+        if bucket == exercise_types.STRENGTH:
+            per_sets[r.day_label] = per_sets.get(r.day_label, 0) + sets_of(r)
         sessions.append({
             "id": r.id, "day_label": r.day_label, "type": r.type,
-            "minutes": r.minutes, "calories": r.calories,
+            "date": session_date_of(r),
+            "name": getattr(r, "name", "") or "",
+            "minutes": r.minutes,
+            "sets": getattr(r, "sets", None),
+            "reps": getattr(r, "reps", None),
+            "weight": getattr(r, "weight", None),
+            "calories": r.calories,
             "intensity": getattr(r, "intensity", "moderate") or "moderate",
             "source": getattr(r, "source", "member") or "member",
             "assigned_routine_id": getattr(r, "assigned_routine_id", None),
@@ -181,9 +218,12 @@ def build_current_week(rows: list) -> dict:
             "completed_at": getattr(r, "completed_at", None),
             "date_label": _date_label_for_day(r.day_label),
             "time_label": _default_time_label(r.type),
+            # 회원이 적은 이름이 있으면 그게 이 기록의 내용이다. 없을 때만
+            # 유형별 기본 문구로 채운다 — 이름 칸이 생기기 전 기록들이다. (#1276)
             "items": (
                 [getattr(r, "assigned_routine_name", "")]
                 if getattr(r, "assigned_routine_name", "")
+                else [r.name] if getattr(r, "name", "")
                 else _default_items(r.type)
             ),
         })
@@ -206,11 +246,12 @@ def build_current_week(rows: list) -> dict:
         "daily_calories": [per_day_cal[l] for l in WEEKDAY_LABELS],
         "cardio_minutes": [per_cardio[l] for l in WEEKDAY_LABELS],
         "strength_minutes": [per_strength[l] for l in WEEKDAY_LABELS],
-        "flexibility_minutes": [per_flex[l] for l in WEEKDAY_LABELS],
+        "strength_sets": [per_sets[l] for l in WEEKDAY_LABELS],
+        "stretching_minutes": [per_stretch[l] for l in WEEKDAY_LABELS],
         "other_minutes": [per_other[l] for l in WEEKDAY_LABELS],
         # 옛 이름. 아직 이 필드를 읽는 클라이언트가 있어 같은 값을 함께 내려준다.
-        # 두 앱이 flexibility_minutes 로 옮긴 뒤에 지운다. (#996)
-        "stretching_minutes": [per_flex[l] for l in WEEKDAY_LABELS],
+        # 두 앱이 stretching_minutes 로 옮긴 뒤에 지운다. (#1276)
+        "flexibility_minutes": [per_stretch[l] for l in WEEKDAY_LABELS],
         "day_labels": WEEKDAY_LABELS,
         "total_minutes": total_minutes,
         "total_calories": total_calories,
@@ -240,11 +281,11 @@ class ExerciseDayTotals:
 
     @property
     def main_type(self) -> str:
-        """그날 가장 오래 한 유형. 같으면 유산소 → 근력 → 유연성 → 기타 순."""
+        """그날 가장 오래 한 유형. 같으면 유산소 → 근력 → 스트레칭 → 기타 순."""
         order = [
             exercise_types.CARDIO,
             exercise_types.STRENGTH,
-            exercise_types.FLEXIBILITY,
+            exercise_types.STRETCHING,
             exercise_types.OTHER,
         ]
         return max(order, key=lambda t: (self.by_type.get(t, 0), -order.index(t)))

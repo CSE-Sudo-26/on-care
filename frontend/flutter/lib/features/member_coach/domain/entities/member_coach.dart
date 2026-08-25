@@ -176,9 +176,14 @@ class CoachProgramItem {
   });
 
   final String name;
+
+  /// 근력 항목의 세트 수·한 세트당 횟수·중량(kg). 트레이너가 적지 않았으면
+  /// 0 이다 — 서버가 숫자로 내려주므로 화면도 숫자로 읽는다. 예전에는 `"12회"`
+  /// 같은 문자열이라, 서버가 숫자로 바뀐 뒤 이 카드에서 값이 통째로 사라졌다.
+  /// (#1276, #1310)
   final int sets;
-  final String reps;
-  final String weight;
+  final int reps;
+  final double weight;
 }
 
 /// Chat message viewpoint for the member: their own message vs the coach's.

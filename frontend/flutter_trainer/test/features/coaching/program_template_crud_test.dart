@@ -132,8 +132,6 @@ void main() {
       final repository = _FakeTemplateRepository();
       await _pumpDialog(tester, repository, template: _starter);
 
-      expect(find.text('기본 구성이에요. 고치면 내 템플릿으로 저장돼요'), findsOneWidget);
-
       await tester.enterText(
         find.byKey(const ValueKey<String>('template-name')),
         '내가 고친 혈압 블록',
@@ -160,6 +158,21 @@ void main() {
 
       expect(repository.created, isEmpty);
       expect(repository.updated.single, (id: 'tpl-1', name: '고친 이름'));
+    });
+
+    testWidgets('시작 구성과 내 템플릿의 편집 창은 똑같이 생겼다', (tester) async {
+      // 저장하면 새로 만들어지는지/그 행을 고치는지는 데이터 계층의 차이일
+      // 뿐, 편집 창 자체(제목·안내 문구·버튼 문구)는 똑같아야 한다.
+      await _pumpDialog(tester, _FakeTemplateRepository(), template: _starter);
+      expect(find.text('템플릿 편집'), findsOneWidget);
+      expect(find.text('새 템플릿'), findsNothing);
+      expect(find.text('기본 구성이에요. 고치면 내 템플릿으로 저장돼요'), findsNothing);
+      expect(find.text('내 템플릿으로 저장'), findsNothing);
+      expect(find.text('저장'), findsOneWidget);
+
+      await _pumpDialog(tester, _FakeTemplateRepository(), template: _mine);
+      expect(find.text('템플릿 편집'), findsOneWidget);
+      expect(find.text('저장'), findsOneWidget);
     });
 
     testWidgets('이름이 비면 저장하지 않고 이유를 말한다', (tester) async {
@@ -208,19 +221,51 @@ void main() {
   });
 
   group('데모', () {
-    test('읽기 전용이다 — 저장할 백엔드가 없다', () async {
-      const demo = MockTrainerProgramTemplateRepository();
+    test('세션 동안은 저장·수정·삭제가 된다 (#1028)', () async {
+      final demo = MockTrainerProgramTemplateRepository();
 
-      expect(demo.supportsEditing, isFalse);
+      // 저장한 것이 없으면 시작 구성.
+      expect(demo.supportsEditing, isTrue);
       expect(await demo.list(), MockTrainerProgramTemplateRepository.starters);
-      expect(
-        () => demo.create(
-          name: 'x',
-          goal: '',
-          exercises: const <TemplateExercise>[],
-        ),
-        throwsA(isA<ValidationError>()),
+
+      final created = await demo.create(
+        name: '내 첫 템플릿',
+        goal: '체중 감량',
+        exercises: const <TemplateExercise>[
+          TemplateExercise(name: '스쿼트', minutes: 15, type: '근력'),
+        ],
       );
+      // 저장한 것이 생겨도 시작 구성은 그대로 함께 보인다.
+      expect(await demo.list(), <ProgramTemplate>[
+        created,
+        ...MockTrainerProgramTemplateRepository.starters,
+      ]);
+
+      final updated = await demo.update(
+        created.id,
+        name: '고친 이름',
+        goal: created.goal,
+        exercises: created.exercises,
+      );
+      expect((await demo.list()).first.name, updated.name);
+
+      await demo.delete(updated.id);
+      // 마지막 하나를 지우면 다시 시작 구성으로 돌아간다.
+      expect(await demo.list(), MockTrainerProgramTemplateRepository.starters);
+    });
+
+    test('앱을 새로 시작하면(새 인스턴스) 저장한 것이 남지 않는다', () async {
+      final first = MockTrainerProgramTemplateRepository();
+      await first.create(
+        name: '이번 세션 템플릿',
+        goal: '',
+        exercises: const <TemplateExercise>[
+          TemplateExercise(name: '걷기', minutes: 20, type: '유산소'),
+        ],
+      );
+
+      final second = MockTrainerProgramTemplateRepository();
+      expect(await second.list(), MockTrainerProgramTemplateRepository.starters);
     });
   });
 }

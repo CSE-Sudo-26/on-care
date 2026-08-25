@@ -75,52 +75,66 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 108),
-              children: <Widget>[
-                // 벨 배지는 서버 미읽음을 본다. 이 build 에는 ref 가 없어 여기서만
-                // 지역적으로 얻는다 — 헤더 전체를 다시 그리지 않는다.
-                Consumer(
-                  builder: (BuildContext context, WidgetRef ref, Widget? _) =>
-                      FigmaTabHeader(
-                        title: l.pageExerciseTitle,
-                        trailingAction: const TrainerChatHeaderButton(),
-                        onBell: () => context.push(AppRoutes.notification),
-                        bellHasUnread:
-                            (ref
-                                    .watch(notificationUnreadProvider)
-                                    .valueOrNull ??
-                                0) >
-                            0,
-                        onCalendar: () => showScheduleCalendarSheet(context),
-                      ),
-                ),
-                _SubTabs(
-                  active: _subTab,
-                  onChanged: (int i) => setState(() => _subTab = i),
-                ),
-                const SizedBox(height: 16),
-                if (_subTab == 0)
-                  const _RecordTab()
-                else
-                  GymTab(
-                    selectedSlot: ref.watch(
-                      exerciseSelectedReservationSlotProvider,
+            // 헬스장 탭은 **높이를 받아야 한다**. 헬스장 찾기 화면의 결과
+            // 시트가 제 자리 안에서 굴러야 지도가 따라 움직이지 않는데,
+            // 페이지 전체가 하나의 `ListView` 이면 그 자리가 열려 있어 바깥
+            // 페이지가 대신 구른다 (#1274). 그래서 헬스장 탭에서만 머리와 탭
+            // 줄을 고정하고 남는 높이를 탭에 넘긴다 — 운동 기록 탭은 여러
+            // 섹션을 이어 붙인 긴 화면이라 예전처럼 통째로 구른다.
+            child: _subTab == 0
+                ? ListView(
+                    padding: const EdgeInsets.only(bottom: 108),
+                    children: <Widget>[
+                      _header(context, l),
+                      _subTabs(),
+                      const SizedBox(height: 16),
+                      const _RecordTab(),
+                    ],
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 108),
+                    child: Column(
+                      children: <Widget>[
+                        _header(context, l),
+                        _subTabs(),
+                        const SizedBox(height: 16),
+                        Expanded(child: _gymTab()),
+                      ],
                     ),
-                    onSlot: (String s) {
-                      final StateController<String?> notifier = ref.read(
-                        exerciseSelectedReservationSlotProvider.notifier,
-                      );
-                      notifier.state = notifier.state == s ? null : s;
-                    },
                   ),
-              ],
-            ),
           ),
         ),
       ),
     );
   }
+
+  /// 페이지 머리. 벨 배지는 서버 미읽음을 본다 — 이 build 에는 ref 가 없어
+  /// 여기서만 지역적으로 얻는다. 헤더 전체를 다시 그리지 않는다.
+  Widget _header(BuildContext context, AppLocalizations l) => Consumer(
+    builder: (BuildContext context, WidgetRef ref, Widget? _) => FigmaTabHeader(
+      title: l.pageExerciseTitle,
+      trailingAction: const TrainerChatHeaderButton(),
+      onBell: () => context.push(AppRoutes.notification),
+      bellHasUnread:
+          (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
+      onCalendar: () => showScheduleCalendarSheet(context),
+    ),
+  );
+
+  Widget _subTabs() => _SubTabs(
+    active: _subTab,
+    onChanged: (int i) => setState(() => _subTab = i),
+  );
+
+  Widget _gymTab() => GymTab(
+    selectedSlot: ref.watch(exerciseSelectedReservationSlotProvider),
+    onSlot: (String s) {
+      final StateController<String?> notifier = ref.read(
+        exerciseSelectedReservationSlotProvider.notifier,
+      );
+      notifier.state = notifier.state == s ? null : s;
+    },
+  );
 }
 
 class _SubTabs extends StatelessWidget {
@@ -638,7 +652,7 @@ class _ExerciseDayDetail extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${s.minutes}${l.unitMinutes} · '
+                            '${_exerciseAmountLabel(l, s)} · '
                             '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
                             style: const TextStyle(
                               fontSize: 12.5,
@@ -708,13 +722,30 @@ class _ExerciseDayDetail extends StatelessWidget {
   }
 }
 
+/// 기록 한 줄이 말하는 **양**. 근력은 세트·횟수로, 나머지는 분으로 읽는다 —
+/// 홈 운동 카드·운동 현황 링·주간 목표가 이미 근력을 세트로 세므로, 목록만
+/// 분으로 적으면 같은 기록이 화면마다 다른 수로 보인다. (#1262, #1310)
+String _exerciseAmountLabel(AppLocalizations l, ExerciseSession s) {
+  if (s.type != ExerciseType.strength) {
+    return '${s.minutes}${l.unitMinutes}';
+  }
+  final int sets = s.sets ?? setsFromStrengthMinutes(s.minutes.toDouble());
+  final int? reps = s.reps;
+  // 횟수는 적었을 때만 붙인다 — 이 칸이 생기기 전 기록에 아무도 적지 않은
+  // 수가 뜨면 안 된다.
+  if (reps == null || reps <= 0) return l.exSetsCount(sets);
+  return '${l.exSetsCount(sets)} · ${l.exRepsCount(reps)}';
+}
+
 /// 운동 유형 → 화면 라벨. 유형별 분해 카드와 같은 문구를 쓴다.
 String _exerciseTypeLabel(AppLocalizations l, ExerciseType type) =>
     switch (type) {
       ExerciseType.cardio || ExerciseType.walking => l.exTypeCardio,
       ExerciseType.strength => l.exTypeStrength,
-      ExerciseType.stretching || ExerciseType.yoga => l.exTypeStretching,
-      ExerciseType.other => l.exTypeCardio,
+      ExerciseType.stretching || ExerciseType.yoga => l.exTypeFlexibility,
+      // 기타는 기타라고 적는다 — 유산소로 적으면 하지 않은 운동을 한 것처럼
+      // 읽힌다.
+      ExerciseType.other => l.exTypeOtherChip,
     };
 
 /// 정말로 기록이 없는 날 — 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 낀다.
@@ -885,13 +916,20 @@ class _CompletedPtSessionCard extends StatelessWidget {
   final String coachName;
 
   String _programLabel(CoachProgramItem item, AppLocalizations l) {
+    // 세트 → 횟수 → 중량. 입력 화면이 묻는 순서 그대로다 (#1310) — 트레이너가
+    // 적은 순서와 회원이 읽는 순서가 다르면 같은 한 줄이 두 앱에서 달라 보인다.
     final String details = <String>[
-      if (item.weight.isNotEmpty) item.weight,
       if (item.sets > 0) l.exProgramSets(item.sets),
-      if (item.reps.isNotEmpty) item.reps,
+      if (item.reps > 0) l.exRepsCount(item.reps),
+      if (item.weight > 0) '${_trimZero(item.weight)}${l.exUnitKg}',
     ].join(' · ');
     return details.isEmpty ? item.name : '${item.name} · $details';
   }
+
+  /// 20.0 → `20`, 62.5 → `62.5`. 정수 무게에 소수점이 붙으면 원판 단위가
+  /// 아닌 값을 적은 것처럼 읽힌다.
+  static String _trimZero(double value) =>
+      value == value.roundToDouble() ? '${value.round()}' : '$value';
 
   @override
   Widget build(BuildContext context) {

@@ -952,10 +952,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultNoPending => '대기 중인 요청이 없어요';
 
   @override
-  String get consultShowAll => '전체 보기';
+  String get consultFilterAll => '전체';
 
   @override
-  String get consultShowPending => '대기 중만';
+  String consultFilterPendingCount(int count) {
+    return '대기 $count';
+  }
 
   @override
   String get consultLoadMore => '지난 요청 더 보기';
@@ -987,10 +989,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejected => '상담 요청을 거절했어요';
 
   @override
+  String consultScheduleConflict(String name, String time) {
+    return '$name님 $time 일정과 겹쳐요';
+  }
+
+  @override
+  String get consultDecisionNote => '거절 사유';
+
+  @override
   String get consultTargetTrainer => '트레이너 지정';
 
   @override
   String get consultExerciseGoal => '운동 목표';
+
+  @override
+  String get consultHealthPurpose => '건강관리 목적';
 
   @override
   String get consultPreferredTime => '희망 일시';
@@ -1017,7 +1030,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectAction => '거절하기';
 
   @override
-  String get consultStatusApproved => '담당 고객으로 등록됨';
+  String get consultStatusPending => '대기중';
+
+  @override
+  String get consultStatusAccepted => '승인됨';
 
   @override
   String get workoutRecords => '운동 기록';
@@ -1135,11 +1151,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get consultStatusRejected => '거절됨';
-
-  @override
-  String consultStatusRejectedWithNote(String note) {
-    return '거절됨 · $note';
-  }
 
   @override
   String get dateToday => '오늘';
@@ -1314,6 +1325,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsWeeklyCompletion => '주간 이행률';
 
   @override
+  String get clientWeeklyRoutineAdherence => '주간 루틴 이행률';
+
+  @override
+  String get clientRoutineAdherenceUnmeasured => '미집계';
+
+  @override
   String get reportsCompletionByDay => '주간 운동 이행률';
 
   @override
@@ -1480,7 +1497,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldType => '유형';
 
   @override
+  String get schedFieldDate => '날짜';
+
+  @override
   String get schedFieldTime => '시간';
+
+  @override
+  String get schedHourSuffix => '시간';
 
   @override
   String get schedMinuteSuffix => '분';
@@ -1498,19 +1521,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEndBeforeStart => '종료 시간은 시작 시간보다 늦어야 해요';
 
   @override
-  String get schedRepeat => '반복';
+  String get schedTimeRangeTitle => '시간 선택';
 
   @override
-  String get schedRepeatNone => '반복 없음';
+  String get schedTimeRangeConfirm => '확인';
+
+  @override
+  String get schedTimeRangeInvalid => '올바른 시간을 입력하세요 (HH:mm)';
+
+  @override
+  String get schedRepeat => '반복';
 
   @override
   String get schedRepeatWeekly => '매주';
 
   @override
   String get schedRepeatDays => '반복 요일';
-
-  @override
-  String get schedRepeatEnd => '종료';
 
   @override
   String get schedRepeatEndByCount => '횟수';
@@ -1522,6 +1548,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String schedRepeatCount(int count) {
     return '$count회';
   }
+
+  @override
+  String get schedRepeatCountUnit => '회';
 
   @override
   String schedRepeatPreview(int count, String first, String last) {
@@ -1618,8 +1647,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get progOptional => '선택';
 
   @override
-  String progSetsByReps(int sets, String reps) {
-    return '$sets세트 × $reps';
+  String progSetsValue(int sets) {
+    return '$sets세트';
+  }
+
+  @override
+  String progRepsValue(int reps) {
+    return '$reps회';
   }
 
   @override
@@ -1918,7 +1952,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineTypeStretching => '스트레칭';
 
   @override
-  String get routineTypeFlexibility => '유연성';
+  String get routineTypeFlexibility => '스트레칭';
 
   @override
   String get routineTypeOther => '기타';
@@ -1934,6 +1968,48 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFieldIntensity => '운동 강도';
+
+  @override
+  String get routineFieldDate => '날짜';
+
+  @override
+  String get routineFieldExerciseName => '운동 이름';
+
+  @override
+  String get routineFieldExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get routineFieldSets => '세트 수';
+
+  @override
+  String get routineFieldReps => '횟수';
+
+  @override
+  String get routineFieldWeight => '중량';
+
+  @override
+  String get routineFieldCalories => '예상 소모 칼로리';
+
+  @override
+  String get routineUnitMinutes => '분';
+
+  @override
+  String get routineUnitSets => '세트';
+
+  @override
+  String get routineUnitReps => '회';
+
+  @override
+  String get routineUnitKg => 'kg';
+
+  @override
+  String routineKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
 
   @override
   String get intensityLight => '가벼움';
@@ -1981,6 +2057,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTrainerAdded => '트레이너 추가';
 
   @override
+  String coachTemplateAdded(String name) {
+    return '$name 템플릿 추가';
+  }
+
+  @override
   String get coachClientNotified => '고객 앱에 알림이 전송됐어요';
 
   @override
@@ -1989,9 +2070,17 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String coachRegisteredAttachedExisting(String date) {
+    return '$date에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요';
+  }
+
+  @override
   String coachRegisterOn(String date) {
     return '$date PT 스케줄에 등록';
   }
+
+  @override
+  String get coachRegisterAction => 'PT 스케줄에 등록';
 
   @override
   String get labelTomorrow => '내일';
@@ -2139,7 +2228,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiEditBlurb => '기존 AI 추천과 같은 방식으로 운동명·시간·구성을 수정할 수 있어요.';
 
   @override
-  String get aiAddExerciseManually => '운동 직접 등록';
+  String get aiAddExerciseManually => '직접 작성하기';
 
   @override
   String get aiExerciseNameExample => '예: 레그프레스 3세트';
@@ -2173,13 +2262,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiGoToChatHint => '아래 버튼에서 고객 채팅으로 이동해 바로 안내할 수 있어요.';
 
   @override
+  String get aiApplyToTemplate => '템플릿에 반영';
+
+  @override
+  String get aiAppliedToTemplate =>
+      'AI 루틴이 프로그램 정보에 반영됐어요. 아래에서 확인하고 필요하면 수정한 뒤 보내기로 전달하세요.';
+
+  @override
   String get aiStepConditions => '조건 설정';
 
   @override
-  String get aiStepReview => '후보 검토';
+  String get aiStepReview => '프로그램 선택';
 
   @override
-  String get aiStepDone => '추천 완료';
+  String get aiStepDone => '최종 검토';
 
   @override
   String get aiStepperLabel => '맞춤 루틴 생성 진행 단계';
@@ -2210,6 +2306,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiConditionsEditToggle => '추천 조건 수정';
+
+  @override
+  String get aiPromptTitle => 'AI에게 원하는 프로그램을 말해 주세요';
+
+  @override
+  String get aiPromptLabel => '요청 내용 (자연어)';
+
+  @override
+  String get aiPromptHint => '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘';
+
+  @override
+  String get aiPromptBlurb =>
+      '적어 둔 요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객에게 보낼 메모는 다음 단계에서 따로 적어요.';
 
   @override
   String get aiGenerateGoalBased => '목표 기반 루틴 생성';
@@ -2256,13 +2365,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get goalOther => '기타';
 
   @override
-  String get slotMorning => '오전';
+  String get slotAm => '오전';
 
   @override
-  String get slotAfternoon => '오후';
-
-  @override
-  String get slotEvening => '저녁';
+  String get slotPm => '오후';
 
   @override
   String get slotFlexible => '조율 가능';
@@ -2619,6 +2725,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashTodoCompletionSubtitle => '이행률 저조 · 최근 기록 확인';
 
   @override
+  String get dashTodoCarriedOverDemoSubtitle => '어제 남긴 식단 피드백';
+
+  @override
   String get dashTodoProgramSubtitle => '최근 등록한 프로그램 없음';
 
   @override
@@ -2871,6 +2980,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get suggestionApprove => '고객에게 추천';
 
   @override
+  String get suggestionConfirmTitle => '최종 검토 · 고객에게 추천';
+
+  @override
+  String suggestionConfirmBody(String client) {
+    return '아래 내용 그대로 $client님에게 추천돼요. 추천하면 고객 앱에 바로 보여요.';
+  }
+
+  @override
   String get suggestionDismiss => '추천 안 함';
 
   @override
@@ -2931,7 +3048,34 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAssignUnsupported => '운동 이름과 세트 수를 확인해 주세요';
 
   @override
-  String get programEditorAssign => '고객에게 배정';
+  String get programAssignConfirmTitle => '일정에 추가할까요?';
+
+  @override
+  String programAssignConfirmBody(String name, String date, String time) {
+    return '$date $time에 $name님의 PT 스케줄에 이 프로그램이 추가돼요.';
+  }
+
+  @override
+  String get programEditorSaveTemplate => '템플릿 저장';
+
+  @override
+  String get programEditorAddSchedule => '일정 추가';
+
+  @override
+  String get programReviewTitle => '전송 확인';
+
+  @override
+  String programReviewBlurb(String name) {
+    return '아래 구성 그대로 $name님에게 전송돼요. 확인한 뒤 전송해 주세요.';
+  }
+
+  @override
+  String get programReviewBack => '편집기로 돌아가 수정';
+
+  @override
+  String programReviewSessionSummary(int count) {
+    return '운동 $count개';
+  }
 
   @override
   String get programEditorInfo => '프로그램 정보';
@@ -2961,6 +3105,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAddSession => '세션 추가';
 
   @override
+  String get programTemplateSessionPickerTitle => '어느 세션에 추가할까요?';
+
+  @override
+  String programTemplateSessionPickerBody(String name) {
+    return '\'$name\' 템플릿을 추가할 세션을 골라 주세요.';
+  }
+
+  @override
   String programEditorSessionName(String letter) {
     return '세션 $letter';
   }
@@ -2970,6 +3122,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorSessionDown => '세션 아래로 이동';
+
+  @override
+  String get programEditorSessionReset => '세션 초기화';
+
+  @override
+  String get programEditorSessionResetTitle => '세션을 초기화할까요?';
+
+  @override
+  String programEditorSessionResetBody(String name) {
+    return '\'$name\' 세션의 운동이 모두 지워져요. 세션 자체와 다른 세션은 그대로 남아요.';
+  }
 
   @override
   String get programEditorSessionEmpty => '운동을 추가해 세션을 구성하세요.';
@@ -3090,9 +3253,15 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reportsAverageChip(String value) {
-    return '평균 $value';
+  String reportsAdherenceChip(String value) {
+    return '이행률 평균 $value';
   }
+
+  @override
+  String get reportsBurnByDay => '주간 소모 칼로리';
+
+  @override
+  String get reportsBurnEstimateNote => '소모 칼로리는 운동 유형·시간·강도로 낸 추정치예요.';
 
   @override
   String chartGoalLabel(String value) {

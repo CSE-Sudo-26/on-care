@@ -31,6 +31,10 @@ abstract class AccountRepository {
 
   /// POST /users/me/onboarding — first-run setup. All fields optional
   /// (partial save allowed); the backend marks the profile onboarded.
+  ///
+  /// 목표 열 칸은 [updateHealthGoals] 와 **같은 열**이다 — 온보딩이 채운
+  /// 값을 MY 건강 목표가 그대로 이어 고친다. 여기서는 `GoalUpdate` 를 쓰지
+  /// 않는다: 첫 저장이라 '해제할 목표' 가 없고, 비운 칸은 보내지 않는다.
   Future<UserProfile> submitOnboarding({
     String? birthDate,
     String? gender,
@@ -38,7 +42,16 @@ abstract class AccountRepository {
     num? weightKg,
     String? conditions,
     String? goals,
+    int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? dailyBurnKcal,
+    int? weeklyCardioMinutes,
+    int? weeklyStrengthSets,
+    int? weeklyFlexibilityMinutes,
   });
 
   /// PUT /users/me — update basic profile (name/email/phone/birth).

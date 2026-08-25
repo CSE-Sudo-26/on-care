@@ -64,15 +64,14 @@ def _exercise(name: str, **overrides) -> dict:
     base = {
         "id": f"exercise-{uuid4().hex[:6]}",
         "name": name,
-        "sets": "4",
-        "reps": "12회",
-        "weight": "60kg",
-        "duration": "15",
-        "distance": "",
-        "rest": "90",
-        "rpe": "8",
-        "memo": "",
         "type": "근력",
+        "date": None,
+        "duration": None,
+        "sets": 4,
+        "reps": 12,
+        "weight": 60.0,
+        "intensity": "moderate",
+        "memo": "",
         "source": "trainer",
     }
     base.update(overrides)
@@ -90,7 +89,15 @@ def _two_sessions() -> list[dict]:
             "id": "session-2",
             "name": "세션 B · 유산소",
             "exercises": [
-                _exercise("인터벌 러닝", type="유산소", duration="20", source="ai")
+                _exercise(
+                    "인터벌 러닝",
+                    type="유산소",
+                    duration=20,
+                    sets=None,
+                    reps=None,
+                    weight=None,
+                    source="ai",
+                )
             ],
         },
     ]
@@ -187,9 +194,10 @@ def test_assigning_a_multi_session_program_creates_one_routine_per_session(
     assert {r["program_name"] for r in routines} == {name}
     # 세션별 운동 구성이 그대로 실린다 — 예전에는 이름만 reason 에 이어 붙었다.
     assert [e["name"] for e in routines[0]["exercises"]] == ["레그프레스", "스쿼트"]
-    assert routines[0]["exercises"][0]["weight"] == "60kg"
-    # 분·유형·출처는 세션 단위로 요약된다.
-    assert routines[0]["minutes"] == 30
+    assert routines[0]["exercises"][0]["weight"] == 60.0
+    # 분·유형·출처는 세션 단위로 요약된다. 근력은 시간을 적지 않으므로 세트에서
+    # 환산한다 — 4세트 × 2개 × 세트당 3분 (#1276).
+    assert routines[0]["minutes"] == 24
     assert routines[0]["source"] == "trainer"
     assert routines[1]["source"] == "ai"
     assert routines[1]["type"] == "유산소"
@@ -313,16 +321,15 @@ def test_a_multi_session_program_can_be_registered_on_the_schedule(
     program = [
         {
             "name": "레그프레스",
+            "type": "근력",
             "sets": 4,
-            "reps": "12회",
-            "weight": "60kg",
+            "weight": 60.0,
             "session": "세션 A · 하체",
         },
         {
             "name": "인터벌 러닝",
-            "sets": 1,
-            "reps": "20분",
-            "weight": "-",
+            "type": "유산소",
+            "duration": 20,
             "session": "세션 B · 유산소",
         },
     ]
@@ -355,7 +362,7 @@ def test_a_multi_session_program_can_be_registered_on_the_schedule(
             "세션 A · 하체",
             "세션 B · 유산소",
         ]
-        assert stored["program"][0]["weight"] == "60kg"
+        assert stored["program"][0]["weight"] == 60.0
     finally:
         client.delete(
             f"/v1/trainer/schedule/{session_id}", headers=_headers(trainer_token)
@@ -377,7 +384,7 @@ def test_a_schedule_row_without_session_keys_still_reads(client, trainer_token):
             "member_id": MEMBER_ID,
             "type": "1:1 PT",
             "duration_minutes": 60,
-            "program": [{"name": "레그프레스", "sets": 4, "reps": "12회"}],
+            "program": [{"name": "레그프레스", "type": "근력", "sets": 4}],
         },
     )
     assert registered.status_code == 201, registered.text

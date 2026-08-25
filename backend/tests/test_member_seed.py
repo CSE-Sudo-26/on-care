@@ -12,7 +12,7 @@ from sqlalchemy import func, select
 from app.core import clock
 
 
-_MEMBER_ID = "user-demo"
+_MEMBER_ID = "user-7d4e9a2c5f18"
 
 
 def _this_monday_iso() -> str:
@@ -79,6 +79,31 @@ def test_exercise_seed_is_idempotent(client, db_session):
     _seed_from_fixture(db_session, _MEMBER_ID)
     _seed_from_fixture(db_session, _MEMBER_ID)
     assert _count() == before
+
+
+def test_fixture_sessions_record_the_day_they_happened(client, db_session):
+    """시드한 운동에 그날의 `completed_at` 이 함께 적힌다. (#1264)
+
+    없으면 재시드마다 모든 행의 `created_at` 이 지금이 되어, 35주 전 운동도
+    최근 활동으로 읽힌다. 논리 운동일과 어긋나지 않는지도 함께 본다.
+    """
+    from app.models.models import ExerciseSession
+    from app.services import exercise_activity
+
+    rows = db_session.scalars(
+        select(ExerciseSession).where(
+            ExerciseSession.user_id == _MEMBER_ID,
+            ExerciseSession.id.like("seed-fix-ex-%"),
+        )
+    ).all()
+    assert rows, "픽스처 운동 시드가 없다"
+
+    for row in rows:
+        assert row.completed_at is not None, row.id
+        day = exercise_activity.activity_date_of(row)
+        assert day is not None
+        # 적힌 시각의 KST 날짜가 곧 그 기록의 운동일이다.
+        assert clock.to_seoul(row.completed_at).date() == day, row.id
 
 
 def test_no_personal_doc_points_at_a_deleted_seed_row(client, db_session):

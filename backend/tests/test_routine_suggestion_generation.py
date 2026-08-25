@@ -19,7 +19,7 @@ from app.services import routine_suggestion_service as suggestions
 
 MEMBER = "user-jisu"
 #: 혈압 관리가 필요한 시드 회원 — 근거 표시가 데이터에서 나오는지 본다.
-BP_MEMBER = "user-demo"
+BP_MEMBER = "user-7d4e9a2c5f18"
 TRAINER = "trainer-demo"
 
 
@@ -156,7 +156,7 @@ def test_prepared_candidates_stay_in_the_recovery_range(client, fresh):
 
     assert rows
     for row in rows:
-        assert row["type"] in {"유연성", "유산소"}
+        assert row["type"] in {"스트레칭", "유산소"}
         # PT 사이를 메우는 짧은 단위다 — 프로그램이 아니다.
         assert 0 < row["minutes"] <= 30
 
@@ -231,7 +231,7 @@ def test_strength_heavy_records_get_a_recovery_stretch():
         suggestions._Signals(strength_heavy=True, has_records=True)
     )
 
-    assert [c.type for c in candidates] == ["유연성"]
+    assert [c.type for c in candidates] == ["스트레칭"]
     assert suggestions.EV_STRENGTH_HEAVY in candidates[0].evidence
 
 
@@ -267,5 +267,5 @@ def test_records_without_a_clear_signal_get_the_lightest_option():
     )
 
     assert len(candidates) == 1
-    assert candidates[0].type == "유연성"
+    assert candidates[0].type == "스트레칭"
     assert candidates[0].minutes <= 10

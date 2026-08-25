@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
@@ -8,7 +9,7 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 /// `GET /consultations/me` 실응답 한 건.
 const Map<String, Object?> _serverRow = <String, Object?>{
   'id': 'consult-abc123',
-  'member_id': 'user-demo',
+  'member_id': 'user-7d4e9a2c5f18',
   'target_type': 'trainer',
   'gym_id': null,
   'trainer_id': 'trainer-demo',
@@ -18,7 +19,7 @@ const Map<String, Object?> _serverRow = <String, Object?>{
   'health_purpose_type': 'chronic',
   'health_purpose_detail': null,
   'preferred_date': '2026-08-20',
-  'preferred_time_slot': 'afternoon',
+  'preferred_time_slot': '14:30',
   'message': '문의합니다',
   'status': 'pending',
   'created_at': '2026-08-07T10:00:00Z',
@@ -33,6 +34,9 @@ class _RestoringRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => <ConsultationRequest>[consultationFromJson(_serverRow)];
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
 
 class _FailingRepository implements ConsultationRepository {
@@ -43,6 +47,9 @@ class _FailingRepository implements ConsultationRepository {
   Future<List<ConsultationRequest>> fetchMine({
     int limit = consultationPageSize,
   }) async => throw StateError('network down');
+
+  @override
+  Future<void> cancel(String consultationId) async {}
 }
 
 void main() {
@@ -53,7 +60,10 @@ void main() {
     // 라벨이 아니라 계약 enum 이어야 화면이 현지화 문구를 만들 수 있다.
     expect(r.exerciseGoal, ExerciseGoal.weightLoss);
     expect(r.healthPurposeType, HealthPurposeType.chronic);
-    expect(r.preferredTimeSlot, PreferredTimeSlot.afternoon);
+    expect(
+      r.preferredTimeSlot,
+      const PreferredTime.at(TimeOfDay(hour: 14, minute: 30)),
+    );
     expect(r.status, ConsultationStatus.pending);
     expect(r.preferredDate, DateTime(2026, 8, 20));
   });
@@ -66,7 +76,15 @@ void main() {
     });
     // 서버가 값을 추가해도 앱이 죽지 않아야 한다.
     expect(r.exerciseGoal, ExerciseGoal.other);
-    expect(r.preferredTimeSlot, PreferredTimeSlot.flexible);
+    expect(r.preferredTimeSlot, const PreferredTime.flexible());
+  });
+
+  test('과거 morning/afternoon/evening 값도 시간 협의로 복원된다 (#1256)', () {
+    final r = consultationFromJson(<String, Object?>{
+      ..._serverRow,
+      'preferred_time_slot': 'morning',
+    });
+    expect(r.preferredTimeSlot, const PreferredTime.flexible());
   });
 
   test('기동 시 서버 상태를 불러와 hasPending 이 살아난다', () async {

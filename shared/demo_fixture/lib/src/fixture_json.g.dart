@@ -11,7 +11,7 @@ const String kimMinsuFixtureJson = r'''
   "readme": "김민수 데모 데이터의 단일 원본. 사용자앱·트레이너웹·백엔드가 이 파일만 읽는다. 날짜는 상대값이다 — weeks[].weeksAgo 는 이번 주 월요일에서 몇 주 거슬러 올라가는지, days[].weekday 는 월(0)~일(6). recent[].offset 은 오늘로부터의 일수이고 주 격자 위를 덮는다. 이행률은 exercises[].done 개수에서 계산한다 — 퍼센트를 따로 적지 않는다.",
   "member": {
     "name": "김민수",
-    "userAppSeedId": "user-demo",
+    "userAppSeedId": "user-7d4e9a2c5f18",
     "trainerClientId": "seed-client-1"
   },
   "historyWeeks": 35,
@@ -342,7 +342,8 @@ const String kimMinsuFixtureJson = r'''
           "minutes": 12,
           "calories": 72,
           "done": true,
-          "sets": 4
+          "sets": 4,
+          "reps": 10
         },
         {
           "name": "덤벨 숄더프레스 10kg · 4세트",
@@ -350,7 +351,8 @@ const String kimMinsuFixtureJson = r'''
           "minutes": 10,
           "calories": 60,
           "done": true,
-          "sets": 4
+          "sets": 4,
+          "reps": 12
         },
         {
           "name": "랫풀다운 45kg · 4세트",
@@ -358,7 +360,8 @@ const String kimMinsuFixtureJson = r'''
           "minutes": 12,
           "calories": 72,
           "done": true,
-          "sets": 4
+          "sets": 4,
+          "reps": 12
         },
         {
           "name": "플랭크 60초 · 3세트",
@@ -366,21 +369,8 @@ const String kimMinsuFixtureJson = r'''
           "minutes": 6,
           "calories": 36,
           "done": true,
-          "sets": 3
-        },
-        {
-          "name": "마무리 러닝머신 15분",
-          "type": "cardio",
-          "minutes": 15,
-          "calories": 135,
-          "done": true
-        },
-        {
-          "name": "하체 스트레칭 12분",
-          "type": "flexibility",
-          "minutes": 12,
-          "calories": 36,
-          "done": true
+          "sets": 3,
+          "reps": 3
         }
       ],
       "meals": [
@@ -408,7 +398,7 @@ const String kimMinsuFixtureJson = r'''
       "offset": 1,
       "label": "AI 루틴 · 자율 운동",
       "pt": false,
-      "clientFeedback": "스트레칭은 시간이 없어서 못 했어요",
+      "clientFeedback": "하체 스트레칭은 시간이 없어서 못 했어요",
       "trainerNote": "",
       "dayMessage": "약속이 있어 칼로리와 당류가 목표를 넘은 하루예요. 오늘은 가볍게 시작해 보세요.",
       "exercises": [
@@ -424,11 +414,20 @@ const String kimMinsuFixtureJson = r'''
           "type": "strength",
           "minutes": 10,
           "calories": 60,
+          "done": true,
+          "sets": 3,
+          "reps": 15
+        },
+        {
+          "name": "어깨 관절 보호 스트레칭 8분",
+          "type": "stretching",
+          "minutes": 8,
+          "calories": 24,
           "done": true
         },
         {
           "name": "하체 스트레칭 15분",
-          "type": "flexibility",
+          "type": "stretching",
           "minutes": 15,
           "calories": 45,
           "done": false
@@ -477,11 +476,13 @@ const String kimMinsuFixtureJson = r'''
           "type": "strength",
           "minutes": 10,
           "calories": 60,
-          "done": true
+          "done": true,
+          "sets": 3,
+          "reps": 15
         },
         {
           "name": "하체 스트레칭 15분",
-          "type": "flexibility",
+          "type": "stretching",
           "minutes": 15,
           "calories": 45,
           "done": true
@@ -531,11 +532,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -567,7 +570,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -622,11 +625,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -661,7 +666,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -696,11 +701,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -735,7 +742,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -776,11 +783,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -812,7 +821,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -867,11 +876,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -906,7 +917,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -941,11 +952,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -977,7 +990,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -1021,11 +1034,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -1060,7 +1075,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -1115,11 +1130,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -1154,7 +1171,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -1192,11 +1209,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -1231,7 +1250,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -1272,11 +1291,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -1308,7 +1329,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -1363,11 +1384,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -1402,7 +1425,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -1437,14 +1460,23 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
+            },
+            {
+              "name": "북한산 등산 90분",
+              "type": "other",
+              "minutes": 90,
+              "calories": 450,
+              "done": true
             }
           ],
           "meals": [
@@ -1476,7 +1508,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -1517,11 +1549,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -1553,7 +1587,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -1608,11 +1642,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -1647,7 +1683,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -1682,11 +1718,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -1721,7 +1759,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -1762,11 +1800,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -1798,7 +1838,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -1818,9 +1858,53 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
-          "pt": false,
-          "exercises": [],
+          "label": "PT 세션 · 트레이너 지도",
+          "pt": true,
+          "clientFeedback": "레그프레스 무게가 붙었어요. 마지막 세트가 힘들었어요.",
+          "trainerNote": "하체 근력 향상 확인. 다음 세션 레그프레스 5kg 증량.",
+          "exercises": [
+            {
+              "name": "레그프레스 70kg · 4세트",
+              "type": "strength",
+              "minutes": 12,
+              "calories": 72,
+              "done": true,
+              "sets": 4,
+              "reps": 12
+            },
+            {
+              "name": "레그컬 35kg · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 12
+            },
+            {
+              "name": "카프레이즈 자체중량 · 3세트",
+              "type": "strength",
+              "minutes": 6,
+              "calories": 36,
+              "done": true,
+              "sets": 3,
+              "reps": 20
+            },
+            {
+              "name": "마무리 러닝머신 15분",
+              "type": "cardio",
+              "minutes": 15,
+              "calories": 135,
+              "done": true
+            },
+            {
+              "name": "하체 스트레칭 10분",
+              "type": "stretching",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
           "meals": [
             {
               "meal": "breakfast-egg-strawberry"
@@ -1850,11 +1934,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -1886,7 +1972,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -1921,11 +2007,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -1957,7 +2045,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -2001,11 +2089,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -2062,11 +2152,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -2103,11 +2195,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -2142,7 +2236,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -2183,11 +2277,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -2219,7 +2315,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -2274,11 +2370,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -2313,7 +2411,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -2348,11 +2446,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -2387,7 +2487,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -2428,11 +2528,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -2464,7 +2566,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -2519,11 +2621,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -2558,7 +2662,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -2593,11 +2697,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -2629,9 +2735,16 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
+              "done": true
+            },
+            {
+              "name": "탁구 40분",
+              "type": "other",
+              "minutes": 40,
+              "calories": 200,
               "done": true
             }
           ],
@@ -2673,11 +2786,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -2712,7 +2827,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -2767,11 +2882,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -2806,7 +2923,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -2844,11 +2961,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -2883,7 +3002,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -2924,11 +3043,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -2960,7 +3081,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -3015,11 +3136,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -3054,7 +3177,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -3089,11 +3212,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -3128,7 +3253,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -3169,11 +3294,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -3205,7 +3332,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -3228,9 +3355,53 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
-          "pt": false,
-          "exercises": [],
+          "label": "PT 세션 · 트레이너 지도",
+          "pt": true,
+          "clientFeedback": "데드리프트 자세를 잡아주셔서 허리가 편했어요.",
+          "trainerNote": "데드리프트 힙힌지 안정적. 중량 55kg 유지 후 다음 달 60kg.",
+          "exercises": [
+            {
+              "name": "데드리프트 55kg · 4세트",
+              "type": "strength",
+              "minutes": 12,
+              "calories": 72,
+              "done": true,
+              "sets": 4,
+              "reps": 8
+            },
+            {
+              "name": "루마니안 데드리프트 40kg · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 10
+            },
+            {
+              "name": "플랭크 45초 · 3세트",
+              "type": "strength",
+              "minutes": 6,
+              "calories": 36,
+              "done": true,
+              "sets": 3,
+              "reps": 3
+            },
+            {
+              "name": "마무리 러닝머신 12분",
+              "type": "cardio",
+              "minutes": 12,
+              "calories": 108,
+              "done": true
+            },
+            {
+              "name": "허리 스트레칭 10분",
+              "type": "stretching",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
           "meals": [
             {
               "meal": "breakfast-greek-yogurt-nuts"
@@ -3260,11 +3431,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -3299,7 +3472,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -3334,11 +3507,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -3373,7 +3548,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -3414,11 +3589,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -3450,7 +3627,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -3502,11 +3679,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -3538,7 +3717,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -3573,11 +3752,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -3609,7 +3790,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -3653,11 +3834,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -3714,11 +3897,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -3755,11 +3940,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -3794,7 +3981,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -3835,11 +4022,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -3871,7 +4060,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -3926,11 +4115,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -3965,7 +4156,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4000,13 +4191,22 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
+              "done": true
+            },
+            {
+              "name": "자전거 라이딩 60분",
+              "type": "other",
+              "minutes": 60,
+              "calories": 300,
               "done": true
             }
           ],
@@ -4039,7 +4239,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4080,11 +4280,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4116,7 +4318,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4171,11 +4373,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4210,7 +4414,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4245,11 +4449,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -4281,7 +4487,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4325,11 +4531,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4364,7 +4572,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -4419,11 +4627,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -4458,7 +4668,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -4496,11 +4706,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -4535,7 +4747,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4576,11 +4788,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4612,7 +4826,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4635,9 +4849,53 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
-          "pt": false,
-          "exercises": [],
+          "label": "PT 세션 · 트레이너 지도",
+          "pt": true,
+          "clientFeedback": "어깨가 아직 조금 불편해서 무게를 낮췄어요.",
+          "trainerNote": "오른쪽 어깨 가동범위 제한. 숄더프레스 중량 낮추고 밴드 보강 병행.",
+          "exercises": [
+            {
+              "name": "숄더프레스 10kg · 4세트",
+              "type": "strength",
+              "minutes": 12,
+              "calories": 72,
+              "done": true,
+              "sets": 4,
+              "reps": 12
+            },
+            {
+              "name": "밴드 외전 · 3세트",
+              "type": "strength",
+              "minutes": 6,
+              "calories": 36,
+              "done": true,
+              "sets": 3,
+              "reps": 20
+            },
+            {
+              "name": "인클라인 푸시업 · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 12
+            },
+            {
+              "name": "마무리 러닝머신 10분",
+              "type": "cardio",
+              "minutes": 10,
+              "calories": 90,
+              "done": true
+            },
+            {
+              "name": "어깨 관절 보호 스트레칭 12분",
+              "type": "stretching",
+              "minutes": 12,
+              "calories": 36,
+              "done": true
+            }
+          ],
           "meals": [
             {
               "meal": "breakfast-egg-strawberry"
@@ -4667,11 +4925,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4706,7 +4966,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4741,11 +5001,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -4780,7 +5042,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4821,11 +5083,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4857,7 +5121,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -4912,11 +5176,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -4951,7 +5217,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -4986,11 +5252,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -5025,7 +5293,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -5066,11 +5334,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -5102,7 +5372,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -5154,11 +5424,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -5190,7 +5462,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -5225,11 +5497,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -5261,7 +5535,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -5305,11 +5579,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -5366,11 +5642,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -5407,11 +5685,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -5446,7 +5726,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -5487,11 +5767,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -5523,7 +5805,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -5578,11 +5860,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -5617,7 +5901,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -5652,11 +5936,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -5691,7 +5977,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -5732,11 +6018,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -5768,7 +6056,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -5823,11 +6111,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -5862,7 +6152,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -5897,11 +6187,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -5933,7 +6225,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -5977,11 +6269,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -6016,7 +6310,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -6039,9 +6333,53 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
-          "pt": false,
-          "exercises": [],
+          "label": "PT 세션 · 트레이너 지도",
+          "pt": true,
+          "clientFeedback": "벤치프레스가 처음이라 어색했지만 재밌었어요 💪",
+          "trainerNote": "상체 근력 기초 확인. 벤치프레스 35kg 로 시작해 자세 우선.",
+          "exercises": [
+            {
+              "name": "벤치프레스 35kg · 4세트",
+              "type": "strength",
+              "minutes": 12,
+              "calories": 72,
+              "done": true,
+              "sets": 4,
+              "reps": 10
+            },
+            {
+              "name": "체스트프레스 25kg · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 12
+            },
+            {
+              "name": "랫풀다운 30kg · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 12
+            },
+            {
+              "name": "마무리 러닝머신 15분",
+              "type": "cardio",
+              "minutes": 15,
+              "calories": 135,
+              "done": true
+            },
+            {
+              "name": "상체 스트레칭 10분",
+              "type": "stretching",
+              "minutes": 10,
+              "calories": 30,
+              "done": true
+            }
+          ],
           "meals": [
             {
               "meal": "breakfast-greek-yogurt-nuts"
@@ -6071,11 +6409,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -6110,7 +6450,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -6148,11 +6488,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -6187,7 +6529,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -6228,11 +6570,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -6264,7 +6608,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -6319,11 +6663,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -6358,7 +6704,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -6393,11 +6739,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -6432,7 +6780,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -6473,11 +6821,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -6509,7 +6859,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -6564,11 +6914,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -6603,7 +6955,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -6638,11 +6990,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -6677,7 +7031,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -6718,11 +7072,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -6754,7 +7110,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -6806,11 +7162,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -6842,7 +7200,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -6877,11 +7235,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -6913,7 +7273,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -6957,11 +7317,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -7018,11 +7380,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -7059,11 +7423,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -7098,7 +7464,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -7139,11 +7505,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -7175,7 +7543,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -7230,11 +7598,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -7269,7 +7639,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7304,11 +7674,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -7343,7 +7715,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7384,11 +7756,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -7420,7 +7794,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7443,9 +7817,53 @@ const String kimMinsuFixtureJson = r'''
         },
         {
           "weekday": 2,
-          "label": "AI 루틴 · 자율 운동",
-          "pt": false,
-          "exercises": [],
+          "label": "PT 세션 · 트레이너 지도",
+          "pt": true,
+          "clientFeedback": "첫 PT 라 긴장했는데 생각보다 할 만했어요.",
+          "trainerNote": "첫 세션. 체력 수준 점검 위주로 가볍게 진행.",
+          "exercises": [
+            {
+              "name": "고블릿 스쿼트 12kg · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 12
+            },
+            {
+              "name": "케틀벨 스윙 12kg · 3세트",
+              "type": "strength",
+              "minutes": 9,
+              "calories": 54,
+              "done": true,
+              "sets": 3,
+              "reps": 15
+            },
+            {
+              "name": "코어 서킷 · 2세트",
+              "type": "strength",
+              "minutes": 6,
+              "calories": 36,
+              "done": true,
+              "sets": 2,
+              "reps": 12
+            },
+            {
+              "name": "마무리 러닝머신 10분",
+              "type": "cardio",
+              "minutes": 10,
+              "calories": 90,
+              "done": true
+            },
+            {
+              "name": "전신 스트레칭 12분",
+              "type": "stretching",
+              "minutes": 12,
+              "calories": 36,
+              "done": true
+            }
+          ],
           "meals": [
             {
               "meal": "breakfast-oatmeal-banana"
@@ -7475,11 +7893,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -7514,7 +7934,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7549,11 +7969,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -7585,7 +8007,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7629,11 +8051,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -7668,7 +8092,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -7723,11 +8147,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -7762,7 +8188,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -7800,11 +8226,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -7839,7 +8267,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7880,11 +8308,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -7916,7 +8346,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -7971,11 +8401,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -8010,7 +8442,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -8045,11 +8477,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -8084,7 +8518,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -8125,11 +8559,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -8161,7 +8597,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -8216,11 +8652,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -8255,7 +8693,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -8290,11 +8728,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -8329,7 +8769,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -8370,11 +8810,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": true
@@ -8406,7 +8848,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -8458,11 +8900,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": true
+              "done": true,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -8494,7 +8938,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "어깨 관절 보호 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -8529,11 +8973,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": true
+              "done": true,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": true
@@ -8565,7 +9011,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": true
@@ -8609,11 +9055,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 10,
               "calories": 60,
-              "done": true
+              "done": true,
+              "sets": 3,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -8670,11 +9118,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 20,
               "calories": 120,
-              "done": false
+              "done": false,
+              "sets": 5,
+              "reps": 15
             },
             {
               "name": "하체 스트레칭 5분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 5,
               "calories": 15,
               "done": false
@@ -8711,11 +9161,13 @@ const String kimMinsuFixtureJson = r'''
               "type": "strength",
               "minutes": 30,
               "calories": 180,
-              "done": false
+              "done": false,
+              "sets": 8,
+              "reps": 12
             },
             {
               "name": "하체 스트레칭 15분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 15,
               "calories": 45,
               "done": false
@@ -8750,7 +9202,7 @@ const String kimMinsuFixtureJson = r'''
             },
             {
               "name": "하체 스트레칭 10분",
-              "type": "flexibility",
+              "type": "stretching",
               "minutes": 10,
               "calories": 30,
               "done": false
@@ -8773,7 +9225,7 @@ const String kimMinsuFixtureJson = r'''
   ],
   "routines": [
     {
-      "id": "seed-routine-user-demo-0",
+      "id": "seed-routine-user-7d4e9a2c5f18-0",
       "name": "저강도 유산소 (걷기)",
       "minutes": 30,
       "type": "유산소",
@@ -8781,15 +9233,15 @@ const String kimMinsuFixtureJson = r'''
       "source": "ai"
     },
     {
-      "id": "seed-routine-user-demo-1",
+      "id": "seed-routine-user-7d4e9a2c5f18-1",
       "name": "하체 스트레칭",
       "minutes": 15,
-      "type": "유연성",
+      "type": "스트레칭",
       "reason": "혈액순환 개선",
       "source": "trainer"
     },
     {
-      "id": "seed-routine-user-demo-2",
+      "id": "seed-routine-user-7d4e9a2c5f18-2",
       "name": "코어 강화",
       "minutes": 10,
       "type": "근력",
@@ -8797,10 +9249,10 @@ const String kimMinsuFixtureJson = r'''
       "source": "ai"
     },
     {
-      "id": "seed-routine-user-demo-3",
+      "id": "seed-routine-user-7d4e9a2c5f18-3",
       "name": "어깨 관절 보호 스트레칭",
       "minutes": 8,
-      "type": "유연성",
+      "type": "스트레칭",
       "reason": "PT 피드백 반영 · 오른쪽 어깨 보호",
       "source": "trainer"
     }

@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show weekdayCount;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
@@ -509,6 +510,32 @@ void main() {
     expect(currentWeek, findsNothing);
   });
 
+  testWidgets('`이번 주` 버튼 여부와 무관하게 날짜·화살표 묶음은 중앙이다 (#1295)', (
+    WidgetTester tester,
+  ) async {
+    await openReports(tester);
+
+    final Finder nav = find.byType(ReportWeekNav);
+    double arrowGroupCenter() =>
+        (tester.getCenter(prevWeek).dx + tester.getCenter(nextWeek).dx) / 2;
+
+    final double currentNavCenter = tester.getCenter(nav).dx;
+    expect(arrowGroupCenter(), closeTo(currentNavCenter, 0.5));
+    final double currentPrevX = tester.getCenter(prevWeek).dx;
+    final double currentNextX = tester.getCenter(nextWeek).dx;
+
+    await tester.tap(prevWeek);
+    await settle(tester);
+
+    expect(
+      find.byKey(const ValueKey<String>('reports-go-this-week')),
+      findsOneWidget,
+    );
+    expect(arrowGroupCenter(), closeTo(tester.getCenter(nav).dx, 0.5));
+    expect(tester.getCenter(prevWeek).dx, closeTo(currentPrevX, 0.5));
+    expect(tester.getCenter(nextWeek).dx, closeTo(currentNextX, 0.5));
+  });
+
   testWidgets('헤더 검색 바가 다른 탭과 같은 인라인 모양이다 (#1177)', (tester) async {
     await openReports(tester);
 
@@ -902,6 +929,9 @@ void main() {
     // 이번 주 요일 자리에 놓이므로(#746) 월요일에는 오늘 하루만 남고, 기록이
     // 빠진 날이 아예 없어 이 테스트가 요일에 따라 깨졌다(#826).
     const weekCompletion = <int>[80, 0, 90, 70, 0, 60, 0];
+    // 막대는 이행률이 아니라 그날 소모 칼로리다(#1289). 두 계열을 따로 두어야
+    // 칩(이행률)과 막대(칼로리)가 서로 다른 값을 말하는 것을 확인할 수 있다.
+    const burn = <int>[320, 0, 410, 260, 0, 180, 0];
     await openReports(
       tester,
       extraOverrides: <Override>[
@@ -914,6 +944,26 @@ void main() {
             ),
           ]),
         ),
+        clientExercisePeriodProvider.overrideWith((ref, key) async {
+          final ClientDateRange range = clientRangeFor(
+            key.period,
+            key.day,
+            exercise: true,
+          );
+          final List<DateTime> dates = clientRangeDates(range);
+          return ClientExercisePeriod(
+            range: range,
+            weeklyGoalCalories: 2100,
+            days: <ClientExerciseDay>[
+              for (int i = 0; i < dates.length; i++)
+                ClientExerciseDay(
+                  date: dates[i],
+                  calories: i < burn.length ? burn[i] : 0,
+                  cardioCalories: i < burn.length ? burn[i] : 0,
+                ),
+            ],
+          );
+        }),
       ],
     );
 
@@ -925,12 +975,12 @@ void main() {
     // 값이 있는 막대를 세면 나오므로 따로 적지 않는다.
     expect(find.text('최근 4주 평균'), findsOneWidget);
 
-    // 기록이 없는 날은 0% 가 아니라 기록이 없다고 말한다. 막대·꺾은선·값이 한
-    // 그림이라 글자는 캔버스에 그려진다 — 무엇을 비워 둘지는 그래프가 받는
+    // 기록이 없는 날은 0kcal 가 아니라 기록이 없다고 말한다. 막대·꺾은선·값이
+    // 한 그림이라 글자는 캔버스에 그려진다 — 무엇을 비워 둘지는 그래프가 받는
     // `missing` 이 정한다(#1177).
-    expect(find.text('0%'), findsNothing);
+    expect(find.text('0kcal'), findsNothing);
     final chart = tester.widget<BarLineChart>(
-      find.byKey(const ValueKey<String>('reports-completion-chart')),
+      find.byKey(const ValueKey<String>('reports-burn-chart')),
     );
     // 규칙으로 확인한다 — 요일 번호를 못 박으면 월요일에 도는 CI 에서는
     // 지나간 날이 하루뿐이라 기대값이 통째로 어긋난다.
@@ -939,16 +989,22 @@ void main() {
     for (var i = 0; i < elapsed; i++) {
       expect(
         chart.values[i],
-        weekCompletion[i] == 0 ? isNull : weekCompletion[i],
-        reason: '지난 날의 0 은 기록 없음이고, 그 밖은 그날 이행률이다',
+        burn[i] == 0 ? isNull : burn[i].toDouble(),
+        reason: '지난 날의 0 은 기록 없음이고, 그 밖은 그날 소모 칼로리다',
       );
     }
     expect(chart.emptyLabel, '기록 없음');
+    // 눈금 끝은 하루 목표(2100/7 = 300)와 그 주 최댓값 중 큰 쪽이다 — 목표를
+    // 넘긴 날의 막대가 잘리면 넘겼다는 사실이 사라진다.
+    expect(chart.ceiling, 410);
     // 카드 제목 줄이 평균과 며칠을 나눈 값인지 함께 말한다.
     expect(find.text('기록 $logged일'), findsOneWidget);
 
-    // 운동과 식단이 카드로 나뉜다.
-    expect(find.text('주간 운동 이행률'), findsOneWidget);
+    // 운동과 식단이 카드로 나뉜다. 운동 카드 제목은 막대가 말하는 값을 따라
+    // 소모 칼로리다(#1289) — 이행률은 제목 줄의 칩으로 남는다.
+    expect(find.text('주간 소모 칼로리'), findsOneWidget);
+    // 칩만 이 문구를 그대로 쓴다 — 요약 문장은 앞에 `· 운동` 이 붙는다.
+    expect(find.text('이행률 평균 75%'), findsOneWidget);
     expect(find.text('주간 식단 추이'), findsOneWidget);
     // 식단 카드 제목 옆에 지표 하나의 수치(`나트륨 초과 n일`)를 붙이지 않는다 —
     // 카드가 식단 전체를 말하는 자리다(#1177).

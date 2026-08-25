@@ -385,6 +385,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAnalysisFailed => '분석 실패';
 
   @override
+  String get dietRecordDate => '기록 날짜';
+
+  @override
+  String get dietRecordDateChange => '날짜 변경';
+
+  @override
+  String dietRecordDateMoved(String date) {
+    return '$date 식단으로 옮겼어요';
+  }
+
+  @override
+  String get dietRecordDateFailed => '날짜를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
   String get dietAnalysisDone => '분석 완료!';
 
   @override
@@ -495,19 +509,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietDeleteMeal => '식단 삭제';
 
   @override
-  String get exTypeWalking => '걷기';
-
-  @override
   String get exTypeCardio => '유산소';
 
   @override
   String get exTypeStrength => '근력';
 
   @override
-  String get exTypeYoga => '요가';
-
-  @override
-  String get exTypeStretching => '스트레칭';
+  String get exTypeFlexibility => '스트레칭';
 
   @override
   String get exTypeOtherChip => '기타';
@@ -701,7 +709,53 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exExerciseType => '운동 종류';
 
   @override
+  String get exExerciseDate => '날짜';
+
+  @override
+  String get exExerciseName => '운동 이름';
+
+  @override
+  String get exExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get exExerciseReps => '횟수';
+
+  @override
+  String get exExerciseWeight => '중량';
+
+  @override
+  String get exUnitMinutes => '분';
+
+  @override
+  String get exUnitSets => '세트';
+
+  @override
+  String get exUnitReps => '회';
+
+  @override
+  String get exUnitKg => 'kg';
+
+  @override
+  String get exEnterName => '운동 이름을 입력해주세요';
+
+  @override
   String get exExerciseDuration => '운동 시간';
+
+  @override
+  String get exExerciseSets => '세트 수';
+
+  @override
+  String exSetsCount(int sets) {
+    return '$sets세트';
+  }
+
+  @override
+  String exRepsCount(int reps) {
+    return '$reps회';
+  }
+
+  @override
+  String get exEnterSets => '세트 수를 입력해주세요';
 
   @override
   String get exExerciseIntensity => '운동 강도';
@@ -1318,19 +1372,49 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSelectDate => '날짜를 선택해주세요';
 
   @override
+  String get exSelectTime => '시간을 선택해주세요';
+
+  @override
   String get exPreferredTime => '희망 시간대';
 
   @override
-  String get exTimeMorning => '오전';
-
-  @override
-  String get exTimeAfternoon => '오후';
-
-  @override
-  String get exTimeEvening => '저녁';
-
-  @override
   String get exTimeFlexible => '시간 협의';
+
+  @override
+  String get exTimeRangeTitle => '시간 선택';
+
+  @override
+  String get exTimeRangeStartTime => '시작 시간';
+
+  @override
+  String get exTimeRangeEndTime => '종료 시간';
+
+  @override
+  String get exTimeRangeStartHourStep => '시작 시';
+
+  @override
+  String get exTimeRangeStartMinuteStep => '시작 분';
+
+  @override
+  String get exTimeRangeEndHourStep => '종료 시';
+
+  @override
+  String get exTimeRangeEndMinuteStep => '종료 분';
+
+  @override
+  String get exSlotAm => '오전';
+
+  @override
+  String get exSlotPm => '오후';
+
+  @override
+  String get exTimeRangeInvalidEnd => '종료 시간이 시작 시간보다 빠릅니다';
+
+  @override
+  String get exTimeRangePrevStep => '이전 단계';
+
+  @override
+  String get exTimeRangeNextStep => '다음 단계';
 
   @override
   String get exConsultMessage => '문의 내용';
@@ -1382,6 +1466,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => '상담 요청 현황';
+
+  @override
+  String get exConsultHistoryTitle => '내 상담 요청';
+
+  @override
+  String get exConsultHistoryEmpty => '아직 보낸 상담 요청이 없어요.';
+
+  @override
+  String get exConsultHistoryInProgress => '진행 중';
+
+  @override
+  String get exConsultHistoryPast => '지난 요청';
 
   @override
   String get exConsultRejectedReasonLabel => '거절 사유';
@@ -1521,9 +1617,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardBasicSubtitle => '맞춤 건강 관리를 위해 기본 정보를 알려주세요.';
 
   @override
-  String get onboardBirthHint => '생년월일 (YYYY-MM-DD)';
-
-  @override
   String get onboardHeightHint => '키 (cm)';
 
   @override
@@ -1545,7 +1638,102 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardGoalHint => '건강·운동 목표';
 
   @override
-  String get onboardSodiumGoalHint => '하루 나트륨 목표 (mg)';
+  String get onboardOptionalTag => '(선택)';
+
+  @override
+  String get onboardSkipStep => '이 단계 건너뛰기';
+
+  @override
+  String get onboardBirthLabel => '생년월일';
+
+  @override
+  String get onboardBirthYearHint => '년';
+
+  @override
+  String get onboardBirthMonthHint => '월';
+
+  @override
+  String get onboardBirthDayHint => '일';
+
+  @override
+  String onboardBirthYearValue(int year) {
+    return '$year년';
+  }
+
+  @override
+  String onboardBirthMonthValue(int month) {
+    return '$month월';
+  }
+
+  @override
+  String onboardBirthDayValue(int day) {
+    return '$day일';
+  }
+
+  @override
+  String get onboardGenderLabel => '성별';
+
+  @override
+  String onboardAgeSummary(int age) {
+    return '만 $age세';
+  }
+
+  @override
+  String onboardBmiSummary(String bmi, String category) {
+    return 'BMI $bmi · $category';
+  }
+
+  @override
+  String get onboardBmiUnderweight => '저체중';
+
+  @override
+  String get onboardBmiNormal => '정상';
+
+  @override
+  String get onboardBmiPreObese => '비만 전단계';
+
+  @override
+  String get onboardBmiObese1 => '1단계 비만';
+
+  @override
+  String get onboardBmiObese2 => '2단계 비만';
+
+  @override
+  String get onboardBmiObese3 => '3단계 비만';
+
+  @override
+  String get onboardBmiSourceNote => '기준: 대한비만학회 비만 진료지침(아시아·태평양 기준)';
+
+  @override
+  String get onboardDietTitle => '식단 목표';
+
+  @override
+  String get onboardDietSubtitle => '권장값을 미리 채워 뒀어요. 원하는 값으로 바꿔도 괜찮아요.';
+
+  @override
+  String get onboardExerciseTitle => '운동 목표';
+
+  @override
+  String get onboardExerciseSubtitle =>
+      '세계보건기구 권고를 기준으로 채워 뒀어요. 원하는 값으로 바꿔도 괜찮아요.';
+
+  @override
+  String get onboardRecommendedPersonal => '나이·성별·키·체중으로 계산한 권장값이에요';
+
+  @override
+  String get onboardRecommendedFallback =>
+      '기본 권장값이에요. 1단계에서 생년월일·성별·키·체중을 채우면 더 정확해져요';
+
+  @override
+  String get onboardResetToRecommended => '권장값으로 되돌리기';
+
+  @override
+  String get onboardDietSourceNote =>
+      '출처: 2020 한국인 영양소 섭취기준(에너지필요추정량·에너지적정비율) · WHO 나트륨·자유당 섭취 권고';
+
+  @override
+  String get onboardExerciseSourceNote =>
+      '출처: WHO 신체활동 지침(2020) — 주 150분 중강도 유산소, 주 2회 이상 근력';
 
   @override
   String get onboardGenderMale => '남성';
@@ -1685,7 +1873,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myHealthGoalsTitle => '건강 목표';
 
   @override
-  String get myGoalsDietSection => '식단 일일 목표';
+  String get myGoalsDietSection => '식단 목표';
 
   @override
   String get myGoalsExerciseSection => '운동 목표';
@@ -1836,7 +2024,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String coachRoutineMyNote(String note) {
-    return '내 메모: $note';
+    return '내 피드백: $note';
   }
 
   @override
@@ -1846,12 +2034,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachRoutineCompleteTitle => '루틴 수행 완료';
-
-  @override
-  String get coachRoutineMinutesLabel => '실제 수행 시간(분)';
-
-  @override
-  String get coachRoutineMinutesError => '1~600분 사이로 입력해 주세요';
 
   @override
   String get coachRoutineIntensity => '수행 강도';
@@ -1866,7 +2048,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachIntensityHigh => '높음';
 
   @override
-  String get coachRoutineNoteLabel => '메모(선택)';
+  String get coachRoutineNoteLabel => '피드백(선택)';
 
   @override
   String get coachRoutineNoteHint => '힘들었던 점이나 몸 상태를 남겨 보세요';

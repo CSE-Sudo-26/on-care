@@ -416,6 +416,20 @@ void main() {
       );
       expect(find.text('AI 전체 분석'), findsOneWidget);
       expect(find.text('AI 기간 분석'), findsNothing);
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('exercise-ai-analysis')),
+            )
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey<String>('exercise-daily-records')),
+              )
+              .dy,
+        ),
+      );
       final Finder todayRow = find.byKey(
         ValueKey<String>('client-day-tile-${ymd(todayKst())}'),
       );
@@ -476,7 +490,9 @@ void main() {
       expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
 
       final Finder cancel = find.byKey(
-        const ValueKey<String>('workout-cancel-routine-seed-routine-user-demo-0'),
+        const ValueKey<String>(
+          'workout-cancel-routine-seed-routine-user-7d4e9a2c5f18-0',
+        ),
       );
       expect(cancel, findsOneWidget);
 
@@ -522,7 +538,9 @@ void main() {
 
       await tester.tap(
         find.byKey(
-          const ValueKey<String>('workout-cancel-routine-seed-routine-user-demo-0'),
+          const ValueKey<String>(
+            'workout-cancel-routine-seed-routine-user-7d4e9a2c5f18-0',
+          ),
         ),
       );
       await settle(tester);
@@ -564,9 +582,7 @@ void main() {
       );
     });
 
-    testWidgets('날짜를 모르는 기록은 어느 기간에서도 사라지지 않는다 (#1114)', (
-      tester,
-    ) async {
+    testWidgets('날짜를 모르는 기록은 어느 기간에서도 사라지지 않는다 (#1114)', (tester) async {
       _useTallSurface(tester);
       await pumpTrainerApp(
         tester,

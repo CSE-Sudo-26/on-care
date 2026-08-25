@@ -5,6 +5,9 @@ class TemplateExercise {
     required this.name,
     required this.minutes,
     required this.type,
+    this.sets = 0,
+    this.reps = 0,
+    this.weight = 0,
   });
 
   /// Exercise name.
@@ -13,9 +16,16 @@ class TemplateExercise {
   /// Duration in minutes.
   final int minutes;
 
-  /// 서버 `RoutineType` 계약값(걷기·유산소·근력·요가·스트레칭·기타). 화면
-  /// 문구는 `routineTypeLabel` 이 붙인다 — 번역하면 서버가 422 를 돌려준다.
+  /// 서버 `RoutineType` 계약값(유산소·근력·스트레칭·기타). 화면 문구는
+  /// `routineTypeLabel` 이 붙인다 — 번역하면 서버가 422 를 돌려준다.
   final String type;
+
+  /// 근력 운동에서만 쓴다(#1029, #1276, #1310) — `ProgramItem`/
+  /// `ProgramExerciseDraft` 와 같은 계약(세트 수·한 세트당 횟수·중량 kg).
+  /// 비근력 운동은 0 이고 [minutes] 만 쓴다.
+  final int sets;
+  final int reps;
+  final double weight;
 
   /// `ProgramTemplateExercise` 한 줄.
   factory TemplateExercise.fromJson(Map<String, Object?> json) =>
@@ -23,6 +33,9 @@ class TemplateExercise {
         name: json['name'] as String? ?? '',
         minutes: (json['minutes'] as num?)?.toInt() ?? 0,
         type: json['type'] as String? ?? '근력',
+        sets: (json['sets'] as num?)?.toInt() ?? 0,
+        reps: (json['reps'] as num?)?.toInt() ?? 0,
+        weight: (json['weight'] as num?)?.toDouble() ?? 0,
       );
 
   /// 저장 요청에 실리는 형태.
@@ -30,6 +43,9 @@ class TemplateExercise {
     'name': name,
     'minutes': minutes,
     'type': type,
+    'sets': sets,
+    'reps': reps,
+    'weight': weight,
   };
 }
 

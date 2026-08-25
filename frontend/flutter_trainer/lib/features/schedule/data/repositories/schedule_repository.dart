@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/dio_schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurrence.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -310,18 +311,7 @@ class DriftScheduleRepository implements ScheduleRepository {
     )..where((t) => t.id.equals(id))).write(
       TrainerScheduleEntriesCompanion(
         programJson: Value(
-          jsonEncode(<Map<String, Object>>[
-            for (final item in program)
-              <String, Object>{
-                'name': item.name,
-                'sets': item.sets,
-                'reps': item.reps,
-                'weight': item.weight,
-                'session': item.session,
-                'type': item.type,
-                'duration': item.duration,
-              },
-          ]),
+          jsonEncode(programToJson(program)),
         ),
         note: Value(note),
       ),
@@ -361,18 +351,7 @@ class DriftScheduleRepository implements ScheduleRepository {
         }
       }
 
-      final encodedProgram = jsonEncode(<Map<String, Object?>>[
-        for (final item in program)
-          <String, Object?>{
-            'name': item.name,
-            'sets': item.sets,
-            'reps': item.reps,
-            'weight': item.weight,
-            'session': item.session,
-            'type': item.type,
-            'duration': item.duration,
-          },
-      ]);
+      final encodedProgram = jsonEncode(programToJson(program));
       if (existing != null) {
         await (_db.update(
           table,
@@ -491,7 +470,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       // 상담 등 미등록 고객은 기록 없이 완료만 처리한다.
       if (client == null) return;
       final program = (jsonDecode(session.programJson) as List<Object?>)
-          .map((e) => e! as Map<String, Object?>)
+          .map((e) => programItemFromJson(e! as Map<String, Object?>))
           .toList();
       final now = nowKst();
       // Label with the SESSION's calendar day — completing a session
@@ -513,11 +492,10 @@ class DriftScheduleRepository implements ScheduleRepository {
               completedAt: Value(day),
               label: 'PT 세션 · 트레이너 지도',
               completionRate: 100,
+              // 근력은 세트·중량으로, 나머지는 시간으로 읽는다 — 서버의
+              // `_program_item_label` 과 같은 규칙이다 (#1276).
               exercisesJson: jsonEncode(<String>[
-                for (final m in program)
-                  (m['sets'] as int? ?? 1) > 1
-                      ? '${m['name']} ${m['sets']}세트'
-                      : '${m['name']} ${m['reps']}',
+                for (final m in program) _programItemLabel(m),
               ]),
               trainerNote: Value(note),
               // Seed rows use ascending sortOrder from 0; a negative,
@@ -645,19 +623,7 @@ class DriftScheduleRepository implements ScheduleRepository {
   ScheduleSession _toEntity(TrainerScheduleRow row) {
     final program = (jsonDecode(row.programJson) as List<Object?>)
         .map((e) => e! as Map<String, Object?>)
-        .map(
-          (m) => ProgramItem(
-            name: m['name']! as String,
-            sets: m['sets']! as int,
-            reps: m['reps']! as String,
-            weight: m['weight']! as String,
-            // 세션 키가 없던 데모 데이터도 그대로 읽힌다(#709).
-            session: m['session'] as String? ?? '',
-            // 이 키들이 없던 데모 데이터도 기본값으로 읽힌다(#1233).
-            type: m['type'] as String? ?? '근력',
-            duration: m['duration'] as String? ?? '',
-          ),
-        )
+        .map(programItemFromJson)
         .toList();
     return ScheduleSession(
       id: row.id,
@@ -677,6 +643,25 @@ class DriftScheduleRepository implements ScheduleRepository {
       noShowAt: row.noShowAt,
     );
   }
+}
+
+/// 이력 목록에 적히는 한 줄. 근력은 세트·중량, 나머지는 시간으로 읽는다.
+///
+/// 서버 `_program_item_label` 과 같은 규칙이다(#1276) — 유형마다 재는 단위가
+/// 달라서, 근력을 "30분"으로 적으면 다음 무게를 정할 근거가 사라지고 유산소를
+/// "3세트"로 적으면 뜻이 없다.
+String _programItemLabel(ProgramItem item) {
+  final List<String> parts = <String>[];
+  if (item.type == '근력') {
+    if (item.sets != null) parts.add('${item.sets}세트');
+    final double? weight = item.weight;
+    if (weight != null && weight > 0) {
+      parts.add('${weight == weight.roundToDouble() ? weight.round() : weight}kg');
+    }
+  } else if (item.duration != null) {
+    parts.add('${item.duration}분');
+  }
+  return <String>[item.name, ...parts].join(' ');
 }
 
 /// Provides the [ScheduleRepository]: the real Dio-backed source against

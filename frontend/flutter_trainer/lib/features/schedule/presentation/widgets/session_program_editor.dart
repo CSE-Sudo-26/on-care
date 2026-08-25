@@ -4,6 +4,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/models/program_draft.dart';
@@ -56,8 +57,7 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
   }
 
   void _addItem() {
-    final AppLocalizations l = AppLocalizations.of(context);
-    setState(() => _items.add(ProgramDraft.empty(l)));
+    setState(() => _items.add(ProgramDraft.empty()));
   }
 
   void _removeItem(int index) {
@@ -70,34 +70,15 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
     final AppLocalizations l = AppLocalizations.of(context);
     final program = <ProgramItem>[];
     for (final item in widget.noteOnly ? const <ProgramDraft>[] : _items) {
-      final name = item.name.text.trim();
-      final sets = int.tryParse(item.sets.text.trim());
-      final durationText = item.duration.text.trim();
-      final duration = durationText.isEmpty ? 0 : int.tryParse(durationText);
-      if (name.isEmpty ||
-          sets == null ||
-          sets < 1 ||
-          sets > 100 ||
-          duration == null ||
-          duration < 0 ||
-          duration > 600) {
+      // 숫자 칸은 스테퍼가 이미 범위 안으로 묶어 둔다 — 여기서 막을 것은
+      // 비워 둔 이름뿐이다.
+      if (item.name.text.trim().isEmpty) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.progInvalid)));
         return;
       }
-      program.add(
-        ProgramItem(
-          name: name,
-          sets: sets,
-          reps: item.reps.text.trim().isEmpty ? '-' : item.reps.text.trim(),
-          weight: item.weight.text.trim().isEmpty
-              ? '-'
-              : item.weight.text.trim(),
-          type: item.type,
-          duration: durationText,
-        ),
-      );
+      program.add(item.toItem());
     }
 
     setState(() => _saving = true);
@@ -151,12 +132,15 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                 index: index,
                 draft: _items[index],
                 onRemove: () => _removeItem(index),
-                onTypeChanged: (type) =>
-                    setState(() => _items[index].type = type),
+                onChanged: () => setState(() {}),
               ),
               const SizedBox(height: AppSpacing.sm),
             ],
             OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                side: const BorderSide(color: AppColors.accent),
+              ),
               onPressed: _saving ? null : _addItem,
               icon: const Icon(Icons.add, size: 16),
               label: Text(l.progAddExercise),
@@ -223,13 +207,16 @@ class _ProgramDraftFields extends StatelessWidget {
     required this.index,
     required this.draft,
     required this.onRemove,
-    required this.onTypeChanged,
+    required this.onChanged,
   });
 
   final int index;
   final ProgramDraft draft;
   final VoidCallback onRemove;
-  final ValueChanged<String> onTypeChanged;
+
+  /// 어느 칸이든 바뀌면 부른다 — 편집기가 setState 해서 유형 전환·칼로리
+  /// 미리보기가 함께 다시 그려진다.
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -242,17 +229,21 @@ class _ProgramDraftFields extends StatelessWidget {
         border: Border.all(color: AppColors.borderStrong),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // 회원 앱의 운동 추가 시트와 같은 순서다 (#1276) — 날짜 → 종류 →
+          // 이름 → 시간(또는 세트·중량) → 강도 → 예상 칼로리.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: TextField(
-                  key: ValueKey<String>('program-name-$index'),
-                  controller: draft.name,
-                  decoration: InputDecoration(
-                    labelText: l.progExerciseName,
-                    isDense: true,
-                  ),
+                child: RoutineDateField(
+                  keyPrefix: 'program-date-$index',
+                  date: draft.date,
+                  onChanged: (DateTime value) {
+                    draft.date = value;
+                    onChanged();
+                  },
                 ),
               ),
               IconButton(
@@ -267,92 +258,69 @@ class _ProgramDraftFields extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              // "횟수/시간"("Reps/time")이 세 라벨 중 가장 길다 — 셋을
-              // 똑같이 나누면 그 라벨만 잘린다. 라벨 글씨를 살짝 줄이고
-              // 그 칸에 몫을 더 준다.
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  key: ValueKey<String>('program-sets-$index'),
-                  controller: draft.sets,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: l.progSets,
-                    labelStyle: const TextStyle(fontSize: 12),
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                flex: 4,
-                child: TextField(
-                  key: ValueKey<String>('program-reps-$index'),
-                  controller: draft.reps,
-                  decoration: InputDecoration(
-                    labelText: l.progReps,
-                    labelStyle: const TextStyle(fontSize: 12),
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  key: ValueKey<String>('program-weight-$index'),
-                  controller: draft.weight,
-                  decoration: InputDecoration(
-                    labelText: l.progWeight,
-                    hintText: l.progOptional,
-                    labelStyle: const TextStyle(fontSize: 12),
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ],
+          RoutineCategoryChips(
+            keyPrefix: 'program-type-$index',
+            value: normaliseRoutineType(draft.type),
+            onChanged: (String value) {
+              draft.type = value;
+              onChanged();
+            },
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey<String>('program-type-$index'),
-                  initialValue: normaliseRoutineType(draft.type),
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: l.progType,
-                    isDense: true,
-                  ),
-                  items: <DropdownMenuItem<String>>[
-                    for (final type in kRoutineTypes)
-                      DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(routineTypeLabel(l, type)),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) onTypeChanged(value);
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  key: ValueKey<String>('program-duration-$index'),
-                  controller: draft.duration,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: l.progDuration,
-                    hintText: l.progOptional,
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ],
+          RoutineNameField(
+            keyPrefix: 'program-name-$index',
+            controller: draft.name,
+            label: l.progExerciseName,
           ),
+          const SizedBox(height: AppSpacing.sm),
+          // 근력은 세트·횟수·중량으로, 나머지는 시간으로 묻는다.
+          if (draft.isStrength) ...<Widget>[
+            RoutineSetsField(
+              keyPrefix: 'program-sets-$index',
+              sets: draft.sets,
+              onChanged: (int value) {
+                draft.sets = value;
+                onChanged();
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            RoutineRepsField(
+              keyPrefix: 'program-reps-$index',
+              reps: draft.reps,
+              onChanged: (int value) {
+                draft.reps = value;
+                onChanged();
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            RoutineWeightField(
+              keyPrefix: 'program-weight-$index',
+              weight: draft.weight,
+              onChanged: (double value) {
+                draft.weight = value;
+                onChanged();
+              },
+            ),
+          ] else
+            RoutineMinutesField(
+              keyPrefix: 'program-duration-$index',
+              minutes: draft.minutes,
+              onChanged: (int value) {
+                draft.minutes = value;
+                onChanged();
+              },
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          RoutineIntensityChips(
+            keyPrefix: 'program-intensity-$index',
+            value: draft.intensity,
+            onChanged: (String value) {
+              draft.intensity = value;
+              onChanged();
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          RoutineCaloriesLine(calories: draft.calories),
         ],
       ),
     );

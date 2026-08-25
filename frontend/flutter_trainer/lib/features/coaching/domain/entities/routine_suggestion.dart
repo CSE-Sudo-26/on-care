@@ -13,6 +13,9 @@ class RoutineSuggestion {
     required this.minutes,
     required this.type,
     required this.reason,
+    this.sets,
+    this.reps,
+    this.weight,
     this.evidence = const <String>[],
   });
 
@@ -32,6 +35,15 @@ class RoutineSuggestion {
   /// 추천 카드에 이 글이 뜬다.
   final String reason;
 
+  /// 근력 제안의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 null 이다.
+  ///
+  /// 승인하면 이 행이 그대로 배정이 된다 — 여기 값이 없으면 회원이 그 운동을
+  /// 완료할 때 서버가 남길 세트가 없고, 그래프가 분에서 세트를 되짚어 아무도
+  /// 적은 적 없는 수를 그린다. (#1321)
+  final int? sets;
+  final int? reps;
+  final double? weight;
+
   /// 이 제안이 무엇을 보고 만들어졌나(`최근 PT 피드백 반영` 등). 트레이너의
   /// 판단 재료이고 회원에게는 가지 않는다. 서버가 만든 문구이므로 번역하지 않고
   /// 그대로 보여 준다.
@@ -42,6 +54,9 @@ class RoutineSuggestion {
     String? name,
     int? minutes,
     String? type,
+    int? sets,
+    int? reps,
+    double? weight,
     String? reason,
   }) {
     return RoutineSuggestion(
@@ -49,6 +64,9 @@ class RoutineSuggestion {
       name: name ?? this.name,
       minutes: minutes ?? this.minutes,
       type: type ?? this.type,
+      sets: sets ?? this.sets,
+      reps: reps ?? this.reps,
+      weight: weight ?? this.weight,
       reason: reason ?? this.reason,
       evidence: evidence,
     );

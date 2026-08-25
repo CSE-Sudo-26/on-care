@@ -8,6 +8,7 @@ DB 가 필요하므로 로컬에서는 skip 되고 CI(Postgres) 에서 실행된
 """
 from __future__ import annotations
 
+import json
 from uuid import uuid4
 
 import pytest
@@ -129,6 +130,69 @@ def test_a_saved_template_keeps_its_exercises_in_order(client, db_session):
         "코어 서킷",
     ]
     assert created["exercises"][0]["type"] == "유산소"
+
+
+def test_a_strength_template_keeps_sets_reps_and_weight(client, db_session):
+    """근력 블록은 세트·횟수·중량을 그대로 되돌려준다. (#1310)
+
+    중량은 예전에 계약에 자리가 없어 앱이 보낸 값이 조용히 버려졌다.
+    """
+    _, token = _trainer(client, db_session)
+
+    response = client.post(
+        "/v1/trainer/program-templates",
+        json={
+            "name": "하체 근력 A",
+            "exercises": [
+                {
+                    "name": "스쿼트",
+                    "minutes": 30,
+                    "type": "근력",
+                    "sets": 4,
+                    "reps": 12,
+                    "weight": 62.5,
+                }
+            ],
+        },
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 201, response.text
+    item = response.json()["exercises"][0]
+    assert (item["sets"], item["reps"], item["weight"]) == (4, 12, 62.5)
+
+
+def test_a_template_saved_with_legacy_text_reads_as_numbers(client, db_session):
+    """`"10회"`·`"20kg"` 로 저장된 옛 블록도 열린다 — 숫자만 되짚는다. (#1310)"""
+    trainer, token = _trainer(client, db_session)
+    db_session.add(
+        TrainerProgramTemplate(
+            id=f"tpl-{uuid4().hex[:8]}",
+            trainer_id=trainer.id,
+            name="옛 블록",
+            goal="",
+            exercises_json=json.dumps(
+                [
+                    {
+                        "name": "데드리프트",
+                        "minutes": 30,
+                        "type": "근력",
+                        "sets": 3,
+                        "reps": "10회",
+                        "weight": "20kg",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/v1/trainer/program-templates", headers=_auth(token))
+
+    assert response.status_code == 200, response.text
+    item = response.json()[0]["exercises"][0]
+    assert (item["sets"], item["reps"], item["weight"]) == (3, 10, 20.0)
 
 
 def test_editing_replaces_the_exercise_list_wholesale(client, db_session):

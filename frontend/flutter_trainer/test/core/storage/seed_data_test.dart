@@ -65,7 +65,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v25'), _todayString());
+      expect(await db.readValue('trainer_seeded_v29'), _todayString());
     });
 
     test(
@@ -270,16 +270,29 @@ void main() {
       expect(history, isEmpty, reason: '운동 기록 빈 상태 렌더링 경로');
     });
 
-    test('schedule seeds onto today (never empty on a later day)', () async {
+    test('schedule seeds onto this week, with today filled (#1210)', () async {
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule, isNotEmpty);
       expect(
-        schedule.every((s) => s.date == _todayString()),
+        schedule.any((s) => s.date == _todayString()),
         isTrue,
-        reason: 'all schedule rows must slide onto today',
+        reason: '오늘 열이 비면 스케줄 탭 첫 화면이 빈다',
       );
+      // 주간 시간표는 월~일만 그린다 — 그 밖의 날짜에 놓인 행은 어디에도 보이지
+      // 않는다.
+      final DateTime now = nowKst();
+      final DateTime monday = DateTime(
+        now.year,
+        now.month,
+        now.day - (now.weekday - 1),
+      );
+      final Set<String> week = <String>{
+        for (int i = 0; i < 7; i++)
+          ymd(DateTime(monday.year, monday.month, monday.day + i)),
+      };
+      expect(schedule.every((s) => week.contains(s.date)), isTrue);
       // Program JSON is well-formed for a PT session.
       final pt = schedule.firstWhere((s) => s.clientName == '김민수');
       expect(jsonDecode(pt.programJson), isA<List<Object?>>());
@@ -401,13 +414,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v25', '2020-01-01');
+      await db.putValue('trainer_seeded_v29', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
-      expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v25'), _todayString());
+      expect(schedule.any((s) => s.date == _todayString()), isTrue);
+      expect(await db.readValue('trainer_seeded_v29'), _todayString());
     });
 
     test(
@@ -577,7 +590,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v25'), today);
+        expect(await db.readValue('trainer_seeded_v29'), today);
       },
     );
 
@@ -686,7 +699,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v25', '2020-01-01');
+      await db.putValue('trainer_seeded_v29', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

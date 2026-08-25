@@ -100,7 +100,7 @@ def test_demo_trainer_client_links_seeded(client, db_session):
     # 명단 크기는 _MEMBERS 에서 읽는다 — 로스터가 늘 때마다 테스트를 고치지 않도록.
     assert len(links) == len(_MEMBERS)
     member_ids = {l.member_id for l in links}
-    assert {"user-demo", "user-jisu", "user-sungho"} <= member_ids
+    assert {"user-7d4e9a2c5f18", "user-jisu", "user-sungho"} <= member_ids
 
 
 # ---- 리뷰 반영: prod 데모 시드 안전장치(순수, DB 불필요) ----
@@ -176,7 +176,7 @@ def test_trainer_seed_is_idempotent(client, db_session):
 def test_every_demo_member_can_log_in(client):
     """데모 회원 3명 모두 DEMO_LOGIN_PASSWORD 로 로그인된다.
 
-    김민수(user-demo)는 데모 사용자 시드가 seed_trainer 보다 먼저 돌며 빈 해시로
+    김민수(user-7d4e9a2c5f18)는 데모 사용자 시드가 seed_trainer 보다 먼저 돌며 빈 해시로
     만들던 탓에 로그인이 막혀 있었다. 하필 트레이너의 1번 고객이라 시연·통합
     검증에서 가장 먼저 고르는 계정이다(#571).
     """
@@ -202,7 +202,7 @@ def test_seed_backfills_an_empty_demo_password(client, db_session):
     from app.db.seed_trainer import seed_trainer_domain
     from app.models.models import User
 
-    minsu = db_session.scalar(select(User).where(User.id == "user-demo"))
+    minsu = db_session.scalar(select(User).where(User.id == "user-7d4e9a2c5f18"))
     assert minsu is not None
     minsu.hashed_password = ""  # 회귀 상황 재현
     db_session.commit()
@@ -302,14 +302,14 @@ def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-# 고정 수치 검증은 test_diet 가 건드리지 않는 회원(user-jisu)으로 한다 — user-demo 는
+# 고정 수치 검증은 test_diet 가 건드리지 않는 회원(user-jisu)으로 한다 — user-7d4e9a2c5f18 는
 # 데모 폴백 대상이라 다른 테스트가 오늘 식단을 추가해 합계가 흔들린다(리뷰 PR 250-#2).
 def test_trainer_clients_roster_aggregates_real_diet(client):
     token = _trainer_token(client)
     r = client.get("/v1/trainer/clients", headers=_auth(token))
     assert r.status_code == 200, r.text
     clients = {c["id"]: c for c in r.json()}
-    assert {"user-demo", "user-jisu", "user-sungho"} <= set(clients)
+    assert {"user-7d4e9a2c5f18", "user-jisu", "user-sungho"} <= set(clients)
 
     jisu = clients["user-jisu"]
     # 오늘 3끼 합(회원 실데이터 집계): 280+750+650=1680, 200+980+620=1800, 당류 38
@@ -342,6 +342,11 @@ def test_trainer_client_diet_maps_member_meals(client):
     assert meals[0]["carbs_g"] == 40
     assert meals[0]["protein_g"] == 15
     assert meals[0]["fat_g"] == 6
+    # 같은 끼니 라벨(예: 간식 두 번)이 하루에 또 저장돼도 화면 목록의 키가
+    # 겹치지 않도록, meal 라벨이 아니라 고유한 DietEntry.id 를 함께 준다.
+    ids = [m["id"] for m in meals]
+    assert all(ids)
+    assert len(set(ids)) == len(ids)
 
 
 def test_trainer_client_diet_survives_unexpected_food_shapes(client, db_session):

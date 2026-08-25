@@ -190,6 +190,23 @@
   "dietOpenSettingsFailed": "Couldn't open Settings. Turn on camera and photo access under Settings > Oncare.",
   "dietAnalyzing": "Analyzing…",
   "dietAnalysisFailed": "Analysis failed",
+  "dietRecordDate": "Record date",
+  "@dietRecordDate": {
+    "description": "Label of the date a photo-analysed meal is logged under."
+  },
+  "dietRecordDateChange": "Change date",
+  "@dietRecordDateChange": {
+    "description": "Button that opens the date picker on the analysis result sheet."
+  },
+  "dietRecordDateMoved": "Moved to {date}",
+  "@dietRecordDateMoved": {
+    "description": "Confirmation after moving an analysed meal to another day.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "dietRecordDateFailed": "Could not change the date. Please try again shortly.",
+  "@dietRecordDateFailed": {
+    "description": "Error shown when moving an analysed meal to another day fails."
+  },
   "dietAnalysisDone": "Analysis complete!",
   "dietAiNutritionResult": "AI Nutrition Result",
   "dietAnalyzingBody": "Analyzing the food in your photo",
@@ -226,11 +243,9 @@
   "dietSodiumHint": "Recommended under 2,000mg/day",
   "dietSugarHint": "Recommended under 50g/day",
   "dietDeleteMeal": "Delete Meal",
-  "exTypeWalking": "Walking",
   "exTypeCardio": "Cardio",
   "exTypeStrength": "Strength",
-  "exTypeYoga": "Yoga",
-  "exTypeStretching": "Stretching",
+  "exTypeFlexibility": "Stretching",
   "exTypeOtherChip": "Other",
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
@@ -352,7 +367,35 @@
   "exEditExercise": "Edit Exercise Record",
   "exSave": "Save",
   "exExerciseType": "Exercise Type",
+  "exExerciseDate": "Date",
+  "exExerciseName": "Exercise Name",
+  "exExerciseNameHint": "e.g. Squat, Treadmill",
+  "exExerciseReps": "Reps",
+  "exExerciseWeight": "Weight",
+  "exUnitMinutes": "min",
+  "exUnitSets": "sets",
+  "exUnitReps": "reps",
+  "exUnitKg": "kg",
+  "exEnterName": "Please enter an exercise name",
   "exExerciseDuration": "Duration",
+  "exExerciseSets": "Sets",
+  "exSetsCount": "{sets} sets",
+  "@exSetsCount": {
+    "placeholders": {
+      "sets": {
+        "type": "int"
+      }
+    }
+  },
+  "exRepsCount": "{reps} reps",
+  "@exRepsCount": {
+    "placeholders": {
+      "reps": {
+        "type": "int"
+      }
+    }
+  },
+  "exEnterSets": "Enter the number of sets",
   "exExerciseIntensity": "Intensity",
   "exEstimatedCalories": "Estimated Calories",
   "exEnterDuration": "Please enter a duration",
@@ -680,11 +723,21 @@
   "exOtherGoalHint": "Please describe your specific exercise goal in the message.",
   "exPreferredDate": "Preferred Date",
   "exSelectDate": "Select a date",
+  "exSelectTime": "Select a time",
   "exPreferredTime": "Preferred Time",
-  "exTimeMorning": "Morning",
-  "exTimeAfternoon": "Afternoon",
-  "exTimeEvening": "Evening",
   "exTimeFlexible": "Discuss Later",
+  "exTimeRangeTitle": "Select time",
+  "exTimeRangeStartTime": "Start time",
+  "exTimeRangeEndTime": "End time",
+  "exTimeRangeStartHourStep": "Start hour",
+  "exTimeRangeStartMinuteStep": "Start minute",
+  "exTimeRangeEndHourStep": "End hour",
+  "exTimeRangeEndMinuteStep": "End minute",
+  "exSlotAm": "AM",
+  "exSlotPm": "PM",
+  "exTimeRangeInvalidEnd": "End time is earlier than start time",
+  "exTimeRangePrevStep": "Previous step",
+  "exTimeRangeNextStep": "Next step",
   "exConsultMessage": "Message",
   "exConsultMessageHint": "Share your exercise experience or anything helpful for the consultation.",
   "exSendConsultRequest": "Send Consultation Request",
@@ -702,6 +755,10 @@
   "exConsultRejectedStatus": "Rejected",
   "exReturnExercise": "Return to Exercise",
   "exConsultStatusSection": "Consultation Request Status",
+  "exConsultHistoryTitle": "My Consultation Requests",
+  "exConsultHistoryEmpty": "You haven't sent any consultation requests yet.",
+  "exConsultHistoryInProgress": "In Progress",
+  "exConsultHistoryPast": "Past Requests",
   "exConsultRejectedReasonLabel": "Reason for decline",
   "exConsultRejectedNoReason": "No reason was given. Try requesting a consultation with another trainer.",
   "exConsultAcceptedGuide": "You're connected with your trainer. You can start chatting now.",
@@ -763,7 +820,6 @@
   "onboardSaveFailed": "Could not save. Please try again in a moment",
   "onboardBasicTitle": "Basic information",
   "onboardBasicSubtitle": "Tell us a little about yourself so we can tailor your care.",
-  "onboardBirthHint": "Date of birth (YYYY-MM-DD)",
   "onboardHeightHint": "Height (cm)",
   "onboardWeightHint": "Weight (kg)",
   "onboardHealthTitle": "Health conditions",
@@ -771,7 +827,59 @@
   "onboardGoalTitle": "Health goals",
   "onboardGoalSubtitle": "Tell us what you want to achieve. You can change this later.",
   "onboardGoalHint": "Health and exercise goals",
-  "onboardSodiumGoalHint": "Daily sodium goal (mg)",
+  "onboardOptionalTag": "(optional)",
+  "onboardSkipStep": "Skip this step",
+  "onboardBirthLabel": "Date of birth",
+  "onboardBirthYearHint": "Year",
+  "onboardBirthMonthHint": "Month",
+  "onboardBirthDayHint": "Day",
+  "onboardBirthYearValue": "{year}",
+  "@onboardBirthYearValue": {
+    "description": "One row of the birth-year dropdown in onboarding step 1.",
+    "placeholders": { "year": { "type": "int" } }
+  },
+  "onboardBirthMonthValue": "{month}",
+  "@onboardBirthMonthValue": {
+    "description": "One row of the birth-month dropdown in onboarding step 1.",
+    "placeholders": { "month": { "type": "int" } }
+  },
+  "onboardBirthDayValue": "{day}",
+  "@onboardBirthDayValue": {
+    "description": "One row of the birth-day dropdown in onboarding step 1.",
+    "placeholders": { "day": { "type": "int" } }
+  },
+  "onboardGenderLabel": "Gender",
+  "onboardAgeSummary": "{age} years old",
+  "@onboardAgeSummary": {
+    "description": "Age chip next to the date-of-birth field in onboarding step 1.",
+    "placeholders": {
+      "age": { "type": "int" }
+    }
+  },
+  "onboardBmiSummary": "BMI {bmi} · {category}",
+  "@onboardBmiSummary": {
+    "description": "BMI chip in onboarding step 1: the value and its category.",
+    "placeholders": {
+      "bmi": { "type": "String" },
+      "category": { "type": "String" }
+    }
+  },
+  "onboardBmiUnderweight": "Underweight",
+  "onboardBmiNormal": "Normal",
+  "onboardBmiPreObese": "Pre-obese",
+  "onboardBmiObese1": "Obesity class I",
+  "onboardBmiObese2": "Obesity class II",
+  "onboardBmiObese3": "Obesity class III",
+  "onboardBmiSourceNote": "Cut-offs: Korean Society for the Study of Obesity guideline (Asia-Pacific)",
+  "onboardDietTitle": "Diet goals",
+  "onboardDietSubtitle": "We prefilled suggested goals. Change anything you like.",
+  "onboardExerciseTitle": "Exercise goals",
+  "onboardExerciseSubtitle": "Prefilled from the World Health Organization guideline. Change anything you like.",
+  "onboardRecommendedPersonal": "Suggested from your age, gender, height and weight",
+  "onboardRecommendedFallback": "App defaults. Fill in step 1 to get a suggestion tailored to you",
+  "onboardResetToRecommended": "Reset to suggested",
+  "onboardDietSourceNote": "Sources: Dietary Reference Intakes for Koreans 2020 (EER, AMDR) · WHO sodium and free-sugar guidelines",
+  "onboardExerciseSourceNote": "Source: WHO guidelines on physical activity (2020) — 150 min of moderate cardio and 2+ strength days a week",
   "onboardGenderMale": "Male",
   "onboardGenderFemale": "Female",
   "onboardGenderOther": "Other",
@@ -937,7 +1045,7 @@
   "@myHealthGoalsTitle": {
     "description": "Title of the health goals sheet."
   },
-  "myGoalsDietSection": "Daily diet goals",
+  "myGoalsDietSection": "Diet goals",
   "@myGoalsDietSection": {
     "description": "Section label in the health goals sheet."
   },
@@ -1099,7 +1207,7 @@
   "@coachRoutineDone": {
     "description": "Marks a routine as completed."
   },
-  "coachRoutineMyNote": "My note: {note}",
+  "coachRoutineMyNote": "My feedback: {note}",
   "@coachRoutineMyNote": {
     "description": "The member's own note on a completed routine.",
     "placeholders": {
@@ -1121,14 +1229,6 @@
   "@coachRoutineCompleteTitle": {
     "description": "Title of the completion dialog."
   },
-  "coachRoutineMinutesLabel": "Actual minutes",
-  "@coachRoutineMinutesLabel": {
-    "description": "Field label in the completion dialog."
-  },
-  "coachRoutineMinutesError": "Enter a value between 1 and 600 minutes",
-  "@coachRoutineMinutesError": {
-    "description": "Validation message for the minutes field."
-  },
   "coachRoutineIntensity": "Intensity",
   "@coachRoutineIntensity": {
     "description": "Field label in the completion dialog."
@@ -1145,7 +1245,7 @@
   "@coachIntensityHigh": {
     "description": "Intensity option."
   },
-  "coachRoutineNoteLabel": "Note (optional)",
+  "coachRoutineNoteLabel": "Feedback (optional)",
   "@coachRoutineNoteLabel": {
     "description": "Field label in the completion dialog."
   },

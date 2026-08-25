@@ -1,4 +1,4 @@
-"""운동 유형 어휘 — 유산소 / 근력 / 유연성 / 기타 네 가지. (#996)
+"""운동 유형 어휘 — 유산소 / 근력 / 스트레칭 / 기타 네 가지. (#996, #1276)
 
 예전에는 회원 기록이 `cardio|strength|yoga|walking`, 트레이너 루틴이
 `걷기|유산소|근력|요가|스트레칭|기타` 로 서로 다른 어휘를 썼다. 같은 운동을 두
@@ -16,37 +16,40 @@ from __future__ import annotations
 #: 표준 영문 코드 — 회원 앱 기록(`exercise_sessions.type`)이 쓴다.
 CARDIO = "cardio"
 STRENGTH = "strength"
-FLEXIBILITY = "flexibility"
+#: 스트레칭. 한때 `flexibility`(유연성) 였다 — 회원과 트레이너가 실제로 쓰는
+#: 말이 "스트레칭" 이라, 두 앱의 입력 폼을 하나로 맞추면서 저장값까지 그 말로
+#: 옮겼다(#1276). 옛 값은 아래 표가 흡수한다.
+STRETCHING = "stretching"
 OTHER = "other"
 
-CANONICAL_TYPES: tuple[str, ...] = (CARDIO, STRENGTH, FLEXIBILITY, OTHER)
+CANONICAL_TYPES: tuple[str, ...] = (CARDIO, STRENGTH, STRETCHING, OTHER)
 
 #: 표준 한글 라벨 — 트레이너 루틴(`trainer_routines.type`)이 쓴다.
-KOREAN_LABELS: tuple[str, ...] = ("유산소", "근력", "유연성", "기타")
+KOREAN_LABELS: tuple[str, ...] = ("유산소", "근력", "스트레칭", "기타")
 
 _TO_CODE = {
     # 표준
     CARDIO: CARDIO,
     STRENGTH: STRENGTH,
-    FLEXIBILITY: FLEXIBILITY,
+    STRETCHING: STRETCHING,
     OTHER: OTHER,
     "유산소": CARDIO,
     "근력": STRENGTH,
-    "유연성": FLEXIBILITY,
+    "스트레칭": STRETCHING,
     "기타": OTHER,
-    # 옛 값 — 걷기는 유산소로, 요가·스트레칭은 유연성으로 접는다.
+    # 옛 값 — 걷기는 유산소로, 요가·유연성은 스트레칭으로 접는다.
     "walking": CARDIO,
     "걷기": CARDIO,
-    "yoga": FLEXIBILITY,
-    "요가": FLEXIBILITY,
-    "stretching": FLEXIBILITY,
-    "스트레칭": FLEXIBILITY,
+    "yoga": STRETCHING,
+    "요가": STRETCHING,
+    "flexibility": STRETCHING,
+    "유연성": STRETCHING,
 }
 
 _CODE_TO_KO = {
     CARDIO: "유산소",
     STRENGTH: "근력",
-    FLEXIBILITY: "유연성",
+    STRETCHING: "스트레칭",
     OTHER: "기타",
 }
 
@@ -66,11 +69,11 @@ def normalize_ko(value: str | None) -> str:
 #: 옛 어휘 → 표준 한글 라벨. 표준 값과 모르는 값은 여기 없다.
 _LEGACY_KO = {
     "걷기": "유산소",
-    "요가": "유연성",
-    "스트레칭": "유연성",
+    "요가": "스트레칭",
+    "유연성": "스트레칭",
     "walking": "유산소",
-    "yoga": "유연성",
-    "stretching": "유연성",
+    "yoga": "스트레칭",
+    "flexibility": "스트레칭",
 }
 
 

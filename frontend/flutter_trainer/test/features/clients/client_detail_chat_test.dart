@@ -97,7 +97,7 @@ class _StaticLiveChatRepository implements ChatRepository {
           id: 'live-1',
           sender: ChatSender.client,
           body: '실제 고객 답장',
-          timeLabel: '09:00',
+          timeLabel: '금 09:00',
           createdAt: DateTime.utc(2026, 7, 31, 9),
         ),
       ]);
@@ -410,7 +410,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatView(
-                clientId: 'user-demo',
+                clientId: 'user-7d4e9a2c5f18',
                 clientAvatar: '김',
                 clientName: '김민수',
               ),
@@ -432,6 +432,8 @@ void main() {
       final time = find.byKey(
         const ValueKey<String>('trainer-message-time-live-1'),
       );
+      expect(tester.widget<Text>(time).data, '09:00');
+      expect(find.text('금 09:00'), findsNothing);
       expect(
         tester.getTopLeft(time).dx,
         greaterThan(tester.getTopRight(bubble).dx),

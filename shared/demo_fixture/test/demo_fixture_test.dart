@@ -98,6 +98,113 @@ void main() {
     expect(days.where((FixtureDay d) => !d.hasRecord), isNotEmpty);
   });
 
+  test('과거에도 PT 사례가 흩어져 있다 (#1265)', () {
+    // 데모는 오늘 하루만 보는 것이 아니다. 지난주·전체로 넘겼을 때 PT 를 받은
+    // 날과 그때 무엇을 몇 세트 했는지가 없으면 과거가 통째로 비어 보인다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10), // 월
+      DateTime(2026, 8, 13), // 목
+      DateTime(2026, 8, 16), // 일
+      DateTime(2026, 12, 31), // 연말
+      DateTime(2028, 2, 29), // 윤년
+    ]) {
+      final List<FixtureDay> days = fixture.daysFor(now);
+      final List<FixtureDay> pastPt = days
+          .where((FixtureDay d) => d.isPt && d != days.last)
+          .toList();
+      expect(pastPt.length, greaterThanOrEqualTo(5), reason: '$now');
+      for (final FixtureDay day in pastPt) {
+        expect(day.clientFeedback, isNotEmpty, reason: day.date);
+        expect(day.trainerNote, isNotEmpty, reason: day.date);
+        expect(
+          day.exercises.any(
+            (FixtureExercise e) => e.type == 'strength' && e.sets != null,
+          ),
+          isTrue,
+          reason: '${day.date}: 세트를 적은 근력이 없다',
+        );
+      }
+    }
+  });
+
+  test('오늘은 PT 날이고 근력만 담는다 (#1352)', () {
+    // 월요일에 열어도 이번 주 화면이 비지 않아야 한다 — 그날 하나로 PT·피드백·
+    // 메모가 모두 읽힌다. 다만 종목은 **근력뿐**이다: 사용자앱의 `오늘 완료한
+    // PT` 카드가 근력 종목을 줄로 세우므로, 여기에 다른 유형을 얹으면 카드에는
+    // 없는데 `운동 현황 · 오늘` 에만 있는 운동 시간이 생긴다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10),
+      DateTime(2026, 8, 16),
+      DateTime(2027, 1, 1),
+    ]) {
+      final FixtureDay day = fixture.daysFor(now).last;
+      expect(
+        day.exercises.map((FixtureExercise e) => e.type).toSet(),
+        <String>{'strength'},
+        reason: '$now',
+      );
+      expect(day.isPt, isTrue, reason: '$now');
+    }
+  });
+
+  test('어제는 수행한 스트레칭을 하나 갖는다 (#1361)', () {
+    // 오늘 PT 가 근력뿐이라(#1352), 어제까지 스트레칭이 하나도 없으면 이번 주
+    // 운동 현황에서 스트레칭 링만 늘 0 으로 남는다. 세 링이 함께 도는 화면을
+    // 시연 어느 날에 열어도 볼 수 있어야 한다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10),
+      DateTime(2026, 8, 16),
+      DateTime(2027, 1, 1),
+    ]) {
+      final List<FixtureDay> days = fixture.daysFor(now);
+      final FixtureDay yesterday = days[days.length - 2];
+      expect(
+        yesterday.doneExercises.any(
+          (FixtureExercise e) => e.type == 'stretching',
+        ),
+        isTrue,
+        reason: '$now',
+      );
+      // 못 한 항목도 남아 있어야 이행률이 100% 가 아닌 날을 보여 줄 수 있다.
+      expect(
+        yesterday.exercises.any((FixtureExercise e) => !e.done),
+        isTrue,
+        reason: '$now',
+      );
+    }
+  });
+
+  test('픽스처 전체는 네 유형을 모두 담는다 (#1265)', () {
+    // 유형별 분해 화면의 네 칸(특히 `기타`)이 실제로 그려지는지 시연에서 볼 수
+    // 있어야 한다. 오늘 하루가 아니라 **기간 전체**가 그것을 책임진다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10),
+      DateTime(2027, 1, 1),
+    ]) {
+      expect(
+        fixture
+            .daysFor(now)
+            .expand((FixtureDay d) => d.exercises)
+            .map((FixtureExercise e) => e.type)
+            .toSet(),
+        <String>{'cardio', 'strength', 'stretching', 'other'},
+        reason: '$now',
+      );
+    }
+  });
+
+  test('근력은 세트를 값으로 들고 다닌다 (#1262 · #1265)', () {
+    for (final FixtureDay day in fixture.daysFor(DateTime(2026, 8, 16))) {
+      for (final FixtureExercise e in day.exercises) {
+        if (e.type == 'strength') {
+          expect(e.sets, isNotNull, reason: '${day.date}: ${e.name}');
+        } else {
+          expect(e.sets, isNull, reason: '${day.date}: ${e.name}');
+        }
+      }
+    }
+  });
+
   test('주가 바뀌어도 하루가 사라지지 않는다', () {
     // 서머타임이 있는 지역에서 `Duration(days:)` 로 날짜를 옮기면 하루가 밀린다.
     // 픽스처는 날짜 연산만 쓰므로 어느 날에 열어도 연속이어야 한다.

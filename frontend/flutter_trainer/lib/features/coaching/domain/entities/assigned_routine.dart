@@ -10,6 +10,11 @@ class AssignedRoutine {
     required this.reason,
     required this.source,
     this.completed = false,
+    this.date,
+    this.intensity = 'moderate',
+    this.sets,
+    this.reps,
+    this.weight,
   });
 
   /// Server id (empty before assignment).
@@ -21,8 +26,22 @@ class AssignedRoutine {
   /// Total minutes.
   final int minutes;
 
-  /// One of 유산소 | 근력 | 스트레칭.
+  /// One of 유산소 | 근력 | 스트레칭 | 기타.
   final String type;
+
+  /// 언제 하라고 보내는 배정인가. 날짜를 정하지 않았으면 null. (#1276)
+  final DateTime? date;
+
+  /// 운동 강도 계약값('light'|'moderate'|'high'). 예상 칼로리의 근거이고,
+  /// 회원이 완료할 때의 기본값이 된다 — 예전에는 배정에 강도를 실을 자리가
+  /// 없어 늘 '보통'으로 계산됐다. (#1276)
+  final String intensity;
+
+  /// 근력 루틴의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 null 이다.
+  /// (#1276, #1310)
+  final int? sets;
+  final int? reps;
+  final double? weight;
 
   /// Why this routine — surfaced to the member.
   final String reason;

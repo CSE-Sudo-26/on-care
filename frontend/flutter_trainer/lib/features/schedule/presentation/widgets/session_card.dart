@@ -42,7 +42,6 @@ class SessionCard extends ConsumerWidget {
     required this.programDateLabel,
     required this.sendingProgram,
     required this.onSendProgram,
-    required this.inlineEditor,
   });
 
   final ScheduleSession session;
@@ -64,7 +63,6 @@ class SessionCard extends ConsumerWidget {
   final VoidCallback? onCancel;
   final VoidCallback? onNoShow;
   final String programDateLabel;
-  final Widget? inlineEditor;
 
   /// 이 세션의 프로그램 전송이 진행 중인가. (#822)
   final bool sendingProgram;
@@ -237,68 +235,62 @@ class SessionCard extends ConsumerWidget {
               children: <Widget>[
                 const Divider(height: 1, color: AppColors.borderStrong),
                 const SizedBox(height: AppSpacing.md),
-                if (inlineEditor != null)
-                  inlineEditor!
-                else ...<Widget>[
-                  if (!noteOnly)
-                    if (s.program.isNotEmpty)
-                      for (var i = 0; i < s.program.length; i++) ...<Widget>[
-                        SessionProgramRow(index: i + 1, item: s.program[i]),
-                        const SizedBox(height: AppSpacing.sm),
-                      ]
-                    else if (s.isUpcoming) ...<Widget>[
-                      // 예정 session without a plan yet.
-                      SessionNoPlanBox(onGoToProgram: onGoToProgram),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                  if (s.note.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AppSpacing.xs),
-                    SessionNoteBox(note: s.note),
-                    const SizedBox(height: AppSpacing.md),
-                  ] else if (noteOnly) ...<Widget>[
-                    SessionNoNoteBox(onAdd: onEditNote),
+                if (!noteOnly)
+                  if (s.program.isNotEmpty)
+                    for (var i = 0; i < s.program.length; i++) ...<Widget>[
+                      SessionProgramRow(index: i + 1, item: s.program[i]),
+                      const SizedBox(height: AppSpacing.sm),
+                    ]
+                  else if (s.isUpcoming) ...<Widget>[
+                    // 예정 session without a plan yet.
+                    SessionNoPlanBox(onGoToProgram: onGoToProgram),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  // 취소는 삭제와 달리 기록이라, 그 기록을 볼 수 있어야
-                  // 만든 의미가 있다(#871).
-                  if (s.isCancelled || s.isNoShow) ...<Widget>[
-                    SessionEndedBox(session: s),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  SessionManageRow(
-                    onEditSchedule: onEditSchedule,
-                    onEditProgram: onEditProgram,
-                    onEditNote: onEditNote,
-                    hasNote: s.note.trim().isNotEmpty,
-                    hasProgram: !noteOnly,
-                    // 상담이면서 아직 메모가 없으면 `메모 추가` 는 위
-                    // `SessionNoNoteBox` 안으로 옮겨 갔다(#1012).
-                    showEditNote: !(noteOnly && s.note.trim().isEmpty),
-                    // 프로그램이 비어 있으면 `SessionNoPlanBox` 가 코칭 탭
-                    // 바로가기를 대신 보여 준다(#1236). 이미 회원에게 보낸
-                    // 프로그램은 더 손댈 수 없어야 하므로도 세우지 않는다
-                    // (#1247).
-                    showEditProgram: s.program.isNotEmpty && !s.programSent,
-                    onDelete: onDelete,
-                    onCancel: onCancel,
-                    onNoShow: onNoShow,
-                    onChat: onChat,
-                    onComplete: onComplete,
+                if (s.note.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xs),
+                  SessionNoteBox(note: s.note),
+                  const SizedBox(height: AppSpacing.md),
+                ] else if (noteOnly) ...<Widget>[
+                  SessionNoNoteBox(onAdd: onEditNote),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                // 취소는 삭제와 달리 기록이라, 그 기록을 볼 수 있어야
+                // 만든 의미가 있다(#871).
+                if (s.isCancelled || s.isNoShow) ...<Widget>[
+                  SessionEndedBox(session: s),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                SessionManageRow(
+                  onEditSchedule: onEditSchedule,
+                  onEditProgram: onEditProgram,
+                  onEditNote: onEditNote,
+                  hasNote: s.note.trim().isNotEmpty,
+                  hasProgram: !noteOnly,
+                  // 상담이면서 아직 메모가 없으면 `메모 추가` 는 위
+                  // `SessionNoNoteBox` 안으로 옮겨 갔다(#1012).
+                  showEditNote: !(noteOnly && s.note.trim().isEmpty),
+                  // 프로그램이 비어 있으면 `SessionNoPlanBox` 가 코칭 탭
+                  // 바로가기를 대신 보여 준다(#1236). 이미 회원에게 보낸
+                  // 프로그램은 더 손댈 수 없어야 하므로도 세우지 않는다
+                  // (#1247).
+                  showEditProgram: s.program.isNotEmpty && !s.programSent,
+                  onDelete: onDelete,
+                  onCancel: onCancel,
+                  onNoShow: onNoShow,
+                  onChat: onChat,
+                  onComplete: onComplete,
+                ),
+                if (!noteOnly && s.isDone && s.program.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppSpacing.md),
+                  _SendButton(
+                    clientName: s.clientName,
+                    dateLabel: programDateLabel,
+                    sent: s.programSent,
+                    sending: sendingProgram,
+                    onSend: (s.programSent || sendingProgram)
+                        ? null
+                        : onSendProgram,
                   ),
-                  if (!noteOnly &&
-                      s.isDone &&
-                      s.program.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AppSpacing.md),
-                    _SendButton(
-                      clientName: s.clientName,
-                      dateLabel: programDateLabel,
-                      sent: s.programSent,
-                      sending: sendingProgram,
-                      onSend: (s.programSent || sendingProgram)
-                          ? null
-                          : onSendProgram,
-                    ),
-                  ],
                 ],
               ],
             ),

@@ -2,44 +2,53 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// One exercise in a PT session's program (e.g. 레그프레스 3세트 × 12회 · 80kg).
+/// PT 세션 프로그램의 운동 한 항목 (예: 레그프레스 3세트 · 80kg).
+///
+/// 회원 앱의 운동 추가 시트와 같은 칸을 받는다(#1276) — 날짜·종류·이름·
+/// 시간(또는 세트·횟수·중량)·강도. 예전에는 그 값들이 전부 문자열이라
+/// 같은 운동이 화면마다 다른 모양으로 저장됐고, 회원 기록과 나란히 집계할 수가
+/// 없었다.
 class ProgramItem {
   /// Creates a program item.
   const ProgramItem({
     required this.name,
-    required this.sets,
-    required this.reps,
-    required this.weight,
-    this.session = '',
     this.type = '근력',
-    this.duration = '',
+    this.date,
+    this.duration,
+    this.sets,
+    this.reps,
+    this.weight,
+    this.intensity = 'moderate',
+    this.session = '',
   });
 
   /// Exercise name.
   final String name;
 
-  /// Set count.
-  final int sets;
+  /// 운동 유형 계약값('유산소'|'근력'|'스트레칭'|'기타') — 코칭 탭 루틴 배정과
+  /// 같은 어휘다(#1233). 이 값이 없는 예전 행은 '근력'으로 읽힌다.
+  final String type;
 
-  /// Reps label (e.g. "12회", "10분", "45초").
-  final String reps;
+  /// 이 운동을 하는 날. 아직 정하지 않았으면 null.
+  final DateTime? date;
 
-  /// Weight label (e.g. "80kg", "자체중량", "-" for none).
-  final String weight;
+  /// 유산소·스트레칭·기타의 운동 시간(분). 근력은 세트로 재므로 null 이다.
+  /// PT 완료 자동 기록은 이 값이 없으면 세션 슬롯 전체 길이로 되돌아간다(#1233).
+  final int? duration;
+
+  /// 근력의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 null 이다.
+  final int? sets;
+  final int? reps;
+  final double? weight;
+
+  /// 운동 강도 계약값('light'|'moderate'|'high').
+  final String intensity;
 
   /// Which session of a multi-session program this item belongs to (#709).
   ///
   /// Empty for a single-session program and for rows written before sessions
   /// existed — the schedule then reads as the flat list it always was.
   final String session;
-
-  /// 운동 유형 계약값('유산소'|'근력'|'유연성'|'기타') — 코칭 탭 루틴 배정과
-  /// 같은 어휘다(#1233). 이 값이 없는 예전 행은 '근력'으로 읽힌다.
-  final String type;
-
-  /// 이 운동에 쓴 분. 빈 문자열은 미입력 — PT 완료 자동 기록은 이 값이 없으면
-  /// 세션 슬롯 전체 길이로 되돌아간다(#1233).
-  final String duration;
 }
 
 /// One slot on the trainer's daily timeline (스케줄 탭). Decoded from

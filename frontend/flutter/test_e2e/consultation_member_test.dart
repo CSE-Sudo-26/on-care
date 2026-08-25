@@ -32,7 +32,6 @@ import 'support/e2e_harness.dart';
 /// 건강관리 목적은 더는 따로 고르지 않는다(#1112) — 운동 목표에서 자동
 /// 매핑된다. `strength` 는 `general` 로 매핑된다.
 const int _goalStrength = 1; // ExerciseGoal.strength
-const int _timeEvening = 2; // PreferredTimeSlot.evening
 
 const String _acceptMessage = 'E2E 승인 시나리오 문의입니다.';
 const String _rejectMessage = 'E2E 거절 시나리오 문의입니다.';
@@ -53,12 +52,7 @@ Future<void> _requestAs(
   await bootSignedOut(tester);
   await loginAsMember(tester, email: email);
   await openConsultationForm(tester, trainerId);
-  await submitConsultation(
-    tester,
-    goalIndex: _goalStrength,
-    timeIndex: _timeEvening,
-    message: message,
-  );
+  await submitConsultation(tester, goalIndex: _goalStrength, message: message);
 }
 
 void main() {
@@ -110,7 +104,7 @@ void main() {
         expect(saved['exercise_goal'], 'strength');
         // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
         expect(saved['health_purpose_type'], 'general');
-        expect(saved['preferred_time_slot'], 'evening');
+        expect(saved['preferred_time_slot'], 'flexible');
         expect(saved['message'], _acceptMessage);
         E2eState.merge(<String, Object?>{'acceptConsultationId': saved['id']});
 
@@ -143,10 +137,12 @@ void main() {
         await bootSignedOut(tester);
         await loginAsMember(tester, email: email);
         await openGymTab(tester);
+        // 승인 결과 요약은 운동 탭 본문에서 제거됐다(#1287). 승인이 만든 실제
+        // 연결 상태와 담당 트레이너 진입점으로 화면 반영을 검증한다.
         await pumpUntil(
           tester,
-          find.byKey(const Key('consult-outcome-accepted')),
-          step: '승인 안내',
+          find.byKey(const Key('my-gym-info-card')),
+          step: '연결된 내 헬스장',
         );
         await pumpUntil(
           tester,
@@ -172,6 +168,15 @@ void main() {
         await bootSignedOut(tester);
         await loginAsMember(tester, email: email);
         await openGymTab(tester);
+        // 미연결 상태의 상담 내역은 헬스장 검색 옆 아이콘이 유일한 진입점이다
+        // (#1287). 본문에 제거된 결과 카드를 직접 기다리지 않는다.
+        await pumpUntil(
+          tester,
+          find.byKey(const Key('consult-history-shortcut')),
+          step: '상담 내역 진입점',
+        );
+        await tester.tap(find.byKey(const Key('consult-history-shortcut')));
+        await tester.pumpAndSettle();
         await pumpUntil(
           tester,
           find.byKey(const Key('consult-outcome-rejected')),

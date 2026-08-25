@@ -78,6 +78,10 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
       // 기간 토글이 목록을 지배한다는 이 화면의 규칙과도 어긋난다.
       if (_period == ClientPeriod.today) _PendingRoutines(clientId: client.id),
       const SizedBox(height: AppSpacing.md),
+      // 현황을 본 다음 같은 기간의 AI 해석을 읽고, 바로 아래에서 날짜별
+      // 근거를 확인한다. 긴 기록 끝에 분석을 두지 않는다. (#1284)
+      _ExerciseAiComment(clientId: client.id, period: _period),
+      const SizedBox(height: AppSpacing.md),
       // 기록은 이 목록 하나다. 예전에는 날짜별 목록 아래에 `운동 기록` 카드
       // 목록이 또 있어, 이번 주·전체에서 같은 날의 같은 운동이 두 벌로
       // 나왔다(#1025). 미션 카드는 버리지 않고 이 목록의 펼친 자리로 들어왔다.
@@ -91,8 +95,6 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
       ),
       const SizedBox(height: AppSpacing.sm),
       _DailyExerciseRecords(clientId: client.id, period: _period),
-      const SizedBox(height: AppSpacing.md),
-      _ExerciseAiComment(clientId: client.id, period: _period),
     ];
     if (embedded) {
       return Column(
@@ -111,11 +113,15 @@ class _WorkoutViewState extends ConsumerState<WorkoutView> {
 ///
 /// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
 /// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
-Color _rateColor(int rate) {
-  // 100% 초록은 회원 앱이 쓰는 어두운 초록과 같은 토큰이다 — 같은 성취를 두
-  // 앱이 다른 초록으로 칠하면 나란히 놓고 이야기할 때 서로 다른 것처럼
-  // 보인다(#1025).
-  if (rate >= 100) return AppColors.statusNormal;
+///
+/// 화면 밖에서도 읽을 수 있게 열어 둔다 — 이 세 단계가 곧 `완료` 의 정의라,
+/// 색이 흔들리면 테스트가 먼저 걸린다(#1239).
+Color workoutRateColor(int rate) {
+  // 100% 는 두 앱이 함께 쓰는 **완료 초록**이다(#1239). 예전에는 어두운 초록
+  // (`#22A882`)이었는데, 그 색은 회원 앱에서 식단 화면의 계열색으로 남아 있어
+  // 같은 `완료` 를 두 앱이 다른 초록으로 칠하고 있었다 — 트레이너 앱 안에서도
+  // 일정·할 일 완료와 이 배지의 초록이 갈렸다.
+  if (rate >= 100) return AppColors.success;
   if (rate > 0) return AppColors.brandOrange;
   // 미시작은 `borderStrong`(#DEE8F1) 이었다. 4px 띠일 때는 옅어도 보였지만,
   // 색 띠를 걷어낸 지금은 이 색이 배지의 글자색이라 판에 거의 묻힌다.
@@ -342,7 +348,7 @@ class _MissionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color = _rateColor(rate);
+    final Color color = workoutRateColor(rate);
     final IconData icon = rate >= 100
         ? Icons.emoji_events_outlined
         : rate > 0
@@ -370,7 +376,7 @@ class _MissionBadge extends StatelessWidget {
 
 /// 운동 유형/분류 칩 — 글씨를 키우고 칩으로 올려 시선이 먼저 닿게 한다
 /// (#1025). 기록 하나가 실제로 들고 오는 분류는 이 값(세션 종류) 뿐이다 —
-/// 개별 운동 항목에는 유산소/근력/유연성 같은 세부 유형이 실려 오지 않는다
+/// 개별 운동 항목에는 유산소/근력/스트레칭 같은 세부 유형이 실려 오지 않는다
 /// (#996 스키마는 확정됐지만, 기록에 세부 종목 필드가 내려오는지는 별도
 /// 확인이 필요하다).
 class _RecordTypeChip extends StatelessWidget {

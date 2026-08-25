@@ -9,6 +9,7 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/app_toast.dart';
 
 /// 로그인 화면 — 이메일/비밀번호 로그인 + 우측 상단 "데모로 시작" 바로가기.
 class SignInPage extends ConsumerStatefulWidget {
@@ -39,11 +40,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Future<void> _login() async {
     if (_loading) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l.authMissingCredentials)));
+      toast.show(l.authMissingCredentials,
+        kind: AppToastKind.error,
+      );
       return;
     }
     setState(() => _loading = true);
@@ -56,16 +59,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.authSignInFailed)),
-      );
+      toast.show(l.authSignInFailed, kind: AppToastKind.error);
     }
   }
 
   Future<void> _social(String provider) async {
     final AppLocalizations l = AppLocalizations.of(context);
     if (_loading) return;
-    final messenger = ScaffoldMessenger.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
     setState(() => _loading = true);
     try {
       // 실기기 SDK(kakao/google) 연동 전까지는 데모 토큰을 보낸다. 실서버
@@ -77,8 +78,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.authSocialSignInFailed)),
+      toast.show(l.authSocialSignInFailed,
+        kind: AppToastKind.error,
       );
     }
   }

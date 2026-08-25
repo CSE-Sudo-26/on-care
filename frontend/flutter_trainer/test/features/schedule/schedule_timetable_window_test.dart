@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 
 import '../../helpers/pump_app.dart';
@@ -19,10 +20,15 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final DateTime today = nowKst();
+    final DateTime monday = today.subtract(Duration(days: today.weekday - 1));
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.schedule,
+      // 월요일의 07:00 주간 시드는 그날 일정과 중복되지 않도록 생략된다.
+      // 어느 요일에 실행해도 기본 07:30 창 자체를 검증하게 고정한다.
+      seedClock: monday,
     );
   }
 
@@ -75,9 +81,21 @@ void main() {
 
     await tester.tap(find.text('새 일정'));
     await settle(tester);
-    await tester.tap(find.text('10시').first);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('session-time-range-field')),
+    );
     await settle(tester);
-    await tester.tap(find.text('06시').last);
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('session-time-range-start-input')),
+      '06:00',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('session-time-range-end-input')),
+      '07:00',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('session-time-range-confirm')),
+    );
     await settle(tester);
     await tester.tap(find.text('추가하기'));
     await settle(tester);

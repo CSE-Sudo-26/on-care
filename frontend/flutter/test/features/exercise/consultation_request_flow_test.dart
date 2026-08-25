@@ -49,7 +49,7 @@ ConsultationRequest _request({String trainerId = 'trainer-consult'}) {
     healthPurposeType: HealthPurposeType.chronic,
     healthPurposeDetail: null,
     preferredDate: DateTime(2026, 7, 28),
-    preferredTimeSlot: PreferredTimeSlot.afternoon,
+    preferredTimeSlot: const PreferredTime.at(TimeOfDay(hour: 14, minute: 0)),
     message: null,
     status: ConsultationStatus.pending,
     createdAt: DateTime(2026, 7, 26),
@@ -269,7 +269,37 @@ void main() {
     },
   );
 
-  testWidgets('valid submission completes, stores pending, and shows status', (
+  testWidgets(
+    'time is required unless "시간 협의" is picked, and no enum text leaks (#1256)',
+    (WidgetTester tester) async {
+      await pumpRoute(
+        tester,
+        AppRoutes.consultationRequestPath(
+          gymId: _gym.id,
+          trainerId: _trainer.id,
+        ),
+      );
+      final AppLocalizations l = _localizations(tester);
+
+      await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
+      await tester.tap(find.text(l.exSendConsultRequest));
+      await tester.pump();
+      await _revealInForm(tester, find.text(l.exTimeRequired), -100);
+      expect(find.text(l.exTimeRequired), findsOneWidget);
+      // 정확한 시각 대신 코드 원문(`PreferredTimeSlot.flexible` 같은)이 화면에
+      // 새어 나오면 안 된다.
+      expect(find.textContaining('PreferredTimeSlot'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('consult-time-flexible')));
+      await tester.pump();
+      expect(find.text(l.exTimeRequired), findsNothing);
+      // 시간 선택을 먼저, 시간 협의를 같은 줄에 유지한다. 협의 중에는 필드만
+      // 비활성화하고 레이아웃은 움직이지 않는다.
+      expect(find.byKey(const Key('consult-time')), findsOneWidget);
+    },
+  );
+
+  testWidgets('valid submission stores pending and history shows status', (
     WidgetTester tester,
   ) async {
     await pumpRoute(
@@ -311,8 +341,14 @@ void main() {
         )
         .first;
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
-    await _revealInForm(tester, find.text(l.exTimeAfternoon), 180);
-    await tester.tap(find.text(l.exTimeAfternoon));
+    // "시간 협의"를 고른다 — 정확한 시각 입력(키보드 다이얼로그)은 별도
+    // 위젯 테스트에서 다룬다(#1256).
+    await _revealInForm(
+      tester,
+      find.byKey(const Key('consult-time-flexible')),
+      180,
+    );
+    await tester.tap(find.byKey(const Key('consult-time-flexible')));
 
     await _revealInForm(tester, find.text(l.exSendConsultRequest), 220);
     await tester.tap(find.text(l.exSendConsultRequest));
@@ -327,7 +363,14 @@ void main() {
 
     await tester.tap(find.text(l.exReturnExercise));
     await tester.pumpAndSettle();
-    expect(find.text(l.exConsultStatusSection), findsOneWidget);
+    // 운동 탭 본문에는 상담 요약을 다시 만들지 않는다(#1287). 내역 화면이
+    // 요청 상태를 확인하는 한 곳이다.
+    expect(find.text(l.exConsultStatusSection), findsNothing);
+    expect(find.text(l.exConsultPendingStatus), findsNothing);
+
+    router.go(AppRoutes.consultationHistory);
+    await tester.pumpAndSettle();
+    expect(find.text(l.exConsultHistoryTitle), findsOneWidget);
     expect(find.text(l.exConsultPendingStatus), findsOneWidget);
 
     router.go(AppRoutes.gymDetailPath(_gym.id));

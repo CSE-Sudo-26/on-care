@@ -299,9 +299,10 @@ class _Row extends StatelessWidget {
         child: Row(
           children: <Widget>[
             SizedBox(
-              width: 42,
+              width: 92,
               child: Text(
-                session.time,
+                timeRangeLabel(l, session),
+                maxLines: 1,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,

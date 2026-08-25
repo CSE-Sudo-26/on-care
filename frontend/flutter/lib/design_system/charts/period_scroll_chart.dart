@@ -58,13 +58,19 @@ class PeriodChartSelection extends ChangeNotifier {
   }
 }
 
+/// 축 라벨 한 칸의 폭. 가장 긴 날짜(`12/31`)가 글자 배율을 올려도 들어가도록
+/// 넉넉히 잡는다 — 넘치면 잘리지는 않지만 옆 라벨과 가까워진다. 라벨끼리는
+/// [PeriodScrollChart.labelBuilder] 가 빈 문자열로 띄워 두는 간격만큼 떨어져
+/// 있어서(30칸 화면에서 열네 칸), 이 폭이 서로 겹칠 일은 없다.
+const double _axisLabelWidth = 52;
+
 /// `전체` 기간 그래프의 뼈대 — 가로 스크롤 + 날짜 선택. (#1018)
 ///
 /// 예전에는 한 달치를 한 화면에 욱여넣어 막대가 실처럼 얇았고, 그 앞의 기록은
 /// 볼 방법이 아예 없었다. 아이폰 건강 앱의 1개월 그래프처럼 **한 화면에 30일**을
 /// 두고 옆으로 밀어 과거를 본다.
 ///
-/// 막대를 그리는 일은 하지 않는다. 식단은 탄단지를, 운동은 유산소·근력·유연성을
+/// 막대를 그리는 일은 하지 않는다. 식단은 탄단지를, 운동은 유산소·근력·스트레칭을
 /// 쌓아 그리는데 그 색이 각 화면이 말하려는 내용이라, 뼈대가 단색으로 통일해
 /// 버리면 그림이 뜻을 잃는다. 그래서 칸 하나를 [barBuilder] 가 그리고 여기서는
 /// 자리와 선택만 맡는다.
@@ -192,6 +198,7 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
       builder: (BuildContext context, BoxConstraints constraints) {
         final double viewport = constraints.maxWidth;
         final double slot = viewport / widget.daysPerScreen;
+        final double contentWidth = math.max(slot * widget.count, viewport);
         final bool changed = slot != _slot || viewport != _viewport;
         _slot = slot;
         _viewport = viewport;
@@ -212,7 +219,7 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
               ? const NeverScrollableScrollPhysics()
               : const BouncingScrollPhysics(),
           child: SizedBox(
-            width: math.max(slot * widget.count, viewport),
+            width: contentWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -281,17 +288,37 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                   ),
                 ),
                 const SizedBox(height: 6),
+                // 라벨은 칸보다 넓다 — 한 화면에 30칸이면 칸은 10px 남짓인데
+                // `12/31` 은 그 두 배가 넘는다. 칸 안에 앉히면 글자가 칸
+                // 경계에서 잘려 `666`, `77` 처럼 읽혔다(#1240). 칸 가운데를
+                // 기준으로 라벨에 제 폭을 주어 얹는다 — 어느 칸이 몇 일인지
+                // 적는 것이 이 줄의 유일한 일이라, 자리를 칸에 맞추는 것보다
+                // 글자가 온전한 것이 먼저다.
                 SizedBox(
                   height: 14,
-                  child: Row(
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: <Widget>[
                       for (int i = 0; i < widget.count; i++)
-                        SizedBox(
-                          width: slot,
-                          child: Center(
+                        if (widget.labelBuilder(i).isNotEmpty)
+                          Positioned(
+                            // 양 끝 라벨은 그래프 폭 안으로 당긴다 — 밖으로
+                            // 나간 만큼은 스크롤 뷰가 잘라 버린다.
+                            left: (slot * i + slot / 2 - _axisLabelWidth / 2)
+                                .clamp(
+                                  0.0,
+                                  math.max(contentWidth - _axisLabelWidth, 0.0),
+                                ),
+                            width: _axisLabelWidth,
                             child: Text(
                               widget.labelBuilder(i),
                               maxLines: 1,
+                              // 줄바꿈도 줄임표도 두지 않는다. 글자가 제 폭을
+                              // 넘기면 칸 가운데를 기준으로 좌우로 넘쳐 나가고,
+                              // 그래야 날짜가 온전히 읽힌다.
+                              softWrap: false,
+                              overflow: TextOverflow.visible,
+                              textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -299,7 +326,6 @@ class _PeriodScrollChartState extends State<PeriodScrollChart> {
                               ),
                             ),
                           ),
-                        ),
                     ],
                   ),
                 ),
