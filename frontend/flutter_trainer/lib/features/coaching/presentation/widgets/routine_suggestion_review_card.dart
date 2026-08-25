@@ -212,9 +212,11 @@ class _RoutineSuggestionReviewCardState
           children: <Widget>[
             Text(
               l.suggestionReviewIntro(widget.clientName),
+              // 카드 안의 근거 문구(`suggestion.reason`)와 같은 굵기다 — 이
+              // 줄만 진하면 안내문이 판단거리처럼 강조돼 보였다.
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 color: AppColors.subtleForeground,
                 height: 1.4,
               ),
@@ -348,11 +350,14 @@ class _SuggestionCard extends StatelessWidget {
                       TextSpan(
                         // 근력은 시간이 아니라 세트·횟수·중량으로 적는다 — 최종
                         // 검토 dialog·수정 창과 같은 함수를 쓴다. (#1321)
+                        //
+                        // 종류(`routineTypeLabel`)와 같은 크기·색이다 — 강조색을
+                        // 쓰면 이 값만 판단거리처럼 튀어 보였다.
                         text: routineSuggestionAmountLabel(l, suggestion),
                         style: const TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.accent,
+                          color: AppColors.subtleForeground,
                         ),
                       ),
                     ],
