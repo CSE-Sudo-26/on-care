@@ -461,7 +461,9 @@ void main() {
       expect(find.text('100%'), findsWidgets);
       expect(find.text('트레이너 메모'), findsOneWidget); // 오늘 것만 메모가 있다
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
-      expect(find.text('고객 피드백'), findsWidgets);
+      // 제목이 무엇에 대한 피드백인지까지 말한다(#1453) — PT·프로그램은
+      // 세션 전체, 배정 개인 운동은 그 운동 하나.
+      expect(find.textContaining('고객 피드백'), findsWidgets);
 
       // 거른 항목은 지난 날에 있다. 이 목록은 고른 기간만 다루므로(식단과
       // 같은 규칙, #1025) 기간을 넓힌 뒤 그 날을 펼친다.
