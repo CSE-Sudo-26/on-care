@@ -509,6 +509,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietDeleteMeal => '식단 삭제';
 
   @override
+  String get dietEditMeal => '식사 수정';
+
+  @override
   String get exTypeCardio => '유산소';
 
   @override

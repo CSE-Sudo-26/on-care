@@ -243,6 +243,7 @@
   "dietSodiumHint": "Recommended under 2,000mg/day",
   "dietSugarHint": "Recommended under 50g/day",
   "dietDeleteMeal": "Delete Meal",
+  "dietEditMeal": "Edit meal",
   "exTypeCardio": "Cardio",
   "exTypeStrength": "Strength",
   "exTypeFlexibility": "Stretching",
