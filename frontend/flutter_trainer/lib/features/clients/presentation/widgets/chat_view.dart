@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
@@ -16,6 +18,7 @@ import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -84,12 +87,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
     if (_sending) return;
     final text = _input.text;
     if (text.trim().isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같은 이유로 await 전에 잡아 둔다 — 뒤에서 context 를 다시
-    // 만지면 async gap 을 건너 쓰게 된다.
     final AppLocalizations l = AppLocalizations.of(context);
     if (text.trim().length > _maxMessageLength) {
-      messenger.showSnackBar(SnackBar(content: Text(l.chatTooLong)));
+      showAppToast(context, l.chatTooLong);
       return;
     }
     setState(() => _sending = true);
@@ -99,10 +99,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
           .sendTrainerMessage(clientId: widget.clientId, text: text);
     } catch (_) {
       // Guard the failure path too: a slow send that fails after the
-      // user left would otherwise touch a disposed messenger.
+      // user left would otherwise touch a disposed context.
       if (!mounted) return;
       // Keep the draft in the input and tell the user it didn't go out.
-      messenger.showSnackBar(SnackBar(content: Text(l.chatSendFailed)));
+      showAppToast(context, l.chatSendFailed, kind: AppToastKind.error);
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -134,7 +134,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
   /// 데모에는 사진을 받을 백엔드가 없어 진입점 자체를 그리지 않는다.
   Future<void> _sendImage() async {
     if (_sending) return;
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -149,7 +148,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
     // 사진까지 다시 골라야 한다.
     final caption = _input.text.trim();
     if (caption.length > _maxMessageLength) {
-      messenger.showSnackBar(SnackBar(content: Text(l.chatTooLong)));
+      if (!mounted) return;
+      showAppToast(context, l.chatTooLong);
       return;
     }
     final bytes = await picked.readAsBytes();
@@ -168,12 +168,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
       if (!mounted) return;
       // 용량·형식 거절은 서버가 이유를 문장으로 준다. 그 문장이 트레이너가
       // 다음에 할 일(줄여서 다시 보낼지)을 정한다.
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(l, error.message, l.chatImageSendFailed),
-          ),
-        ),
+      showAppToast(
+        context,
+        serverDetailOr(l, error.message, l.chatImageSendFailed),
+        kind: AppToastKind.error,
       );
       return;
     } finally {
@@ -242,7 +240,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
         }
       }
       out
-        ..add(_Bubble(message: m, avatar: widget.clientAvatar))
+        ..add(
+          _Bubble(
+            message: m,
+            avatar: widget.clientAvatar,
+            clientId: widget.clientId,
+          ),
+        )
         ..add(const SizedBox(height: AppSpacing.md));
       final insight = _insightDetector.detect(m);
       if (insight != null) {
@@ -289,19 +293,19 @@ class _ChatViewState extends ConsumerState<ChatView> {
           );
       ref.invalidate(trainerMemosProvider(widget.clientId));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).chatInsightMemoSaved),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).chatInsightMemoSaved,
+        kind: AppToastKind.success,
       );
     } on Object {
       // The button stays in its unsaved state so the trainer can try again —
       // the list is only invalidated on a write that actually landed.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).chatInsightMemoSaveFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).chatInsightMemoSaveFailed,
+        kind: AppToastKind.error,
       );
     } finally {
       _savingInsights.remove(insight.id);
@@ -654,7 +658,11 @@ class _DateDivider extends StatelessWidget {
 }
 
 class _Bubble extends ConsumerWidget {
-  const _Bubble({required this.message, required this.avatar});
+  const _Bubble({
+    required this.message,
+    required this.avatar,
+    required this.clientId,
+  });
 
   /// 말풍선이 차지할 수 있는 대화 폭의 최대 비율.
   ///
@@ -670,56 +678,71 @@ class _Bubble extends ConsumerWidget {
 
   final ClientChatMessage message;
   final String avatar;
+  final String clientId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fromTrainer = message.fromTrainer;
-    final bubble = Container(
-      key: ValueKey<String>('trainer-message-bubble-${message.id}'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: fromTrainer ? AppColors.accent : AppColors.card,
-        border: fromTrainer ? null : Border.all(color: AppColors.borderStrong),
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
-          bottomRight: Radius.circular(fromTrainer ? 4 : 16),
+    final Widget bubble;
+    if (message.reportWeekStart case final weekStart?) {
+      // 데모/드리프트는 PDF를 저장하지 못한다(#1378) — 그냥 텍스트 말풍선
+      // 대신, 리포트를 보냈다는 걸 알아볼 수 있는 카드로 구분해 그린다.
+      // 눌러도 파일을 열 수는 없으니, 대신 그 리포트 화면으로 보낸다.
+      bubble = _ReportSentCard(
+        key: ValueKey<String>('trainer-message-bubble-${message.id}'),
+        weekStart: weekStart,
+        onOpen: () => context.go(AppRoutes.reportFor(clientId)),
+      );
+    } else {
+      bubble = Container(
+        key: ValueKey<String>('trainer-message-bubble-${message.id}'),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            message.body,
-            style: TextStyle(
-              fontSize: 13.5,
-              height: 1.4,
-              fontWeight: FontWeight.w500,
-              color: fromTrainer
-                  ? AppColors.accentForeground
-                  : AppColors.foreground,
-            ),
+        decoration: BoxDecoration(
+          color: fromTrainer ? AppColors.accent : AppColors.card,
+          border: fromTrainer
+              ? null
+              : Border.all(color: AppColors.borderStrong),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
+            bottomRight: Radius.circular(fromTrainer ? 4 : 16),
           ),
-          if (message.attachment case final attachment?) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
-            // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
-            // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
-            if (attachment.isImage)
-              ChatImageAttachment(attachment: attachment)
-            else
-              _ChatPdfCard(
-                attachment: attachment,
-                onOpen: () => _openPdf(context, ref, attachment),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              message.body,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+                color: fromTrainer
+                    ? AppColors.accentForeground
+                    : AppColors.foreground,
               ),
+            ),
+            if (message.attachment case final attachment?) ...<Widget>[
+              const SizedBox(height: AppSpacing.sm),
+              // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
+              // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
+              // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
+              if (attachment.isImage)
+                ChatImageAttachment(attachment: attachment)
+              else
+                _ChatPdfCard(
+                  attachment: attachment,
+                  onOpen: () => _openPdf(context, ref, attachment),
+                ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    }
     final time = Text(
       _clockOnly(message.timeLabel),
       key: ValueKey<String>('trainer-message-time-${message.id}'),
@@ -770,7 +793,6 @@ class _Bubble extends ConsumerWidget {
     ChatAttachment attachment,
   ) async {
     final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final bytes = await ref
           .read(trainerChatPdfRepositoryProvider)
@@ -791,8 +813,66 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.chatPdfOpenFailed)));
+      if (!context.mounted) return;
+      showAppToast(context, l.chatPdfOpenFailed, kind: AppToastKind.error);
     }
+  }
+}
+
+/// 리포트 PDF 전송 안내. (#1378) 일반 텍스트 말풍선과 헷갈리지 않도록
+/// 더 진한 남색으로 구분하고, 누르면 그 고객의 리포트 화면으로 이동한다.
+class _ReportSentCard extends StatelessWidget {
+  const _ReportSentCard({
+    required this.weekStart,
+    required this.onOpen,
+    super.key,
+  });
+
+  final DateTime weekStart;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final range = l.dateRange(
+      l.dateMonthDay(weekStart.month, weekStart.day),
+      l.dateMonthDay(weekEnd.month, weekEnd.day),
+    );
+    return Material(
+      color: AppColors.secondary,
+      borderRadius: const BorderRadius.all(AppRadius.sm),
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: const BorderRadius.all(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.description_outlined, color: Colors.white),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Text(
+                  l.chatReportSentNotice(range),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Colors.white,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

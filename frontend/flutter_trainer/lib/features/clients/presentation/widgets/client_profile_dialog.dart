@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dar
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 
 /// Opens the merged 신체·목표·메모 dialog for [clientId].
@@ -239,20 +240,16 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
     } on AppError catch (error) {
       if (!mounted) return;
       final l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(l, error.message, l.memberHealthSaveFailed),
-          ),
-        ),
+      showAppToast(
+        context,
+        serverDetailOr(l, error.message, l.memberHealthSaveFailed),
+        kind: AppToastKind.error,
       );
       setState(() => _saving = false);
     } catch (_) {
       if (!mounted) return;
       final l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.memberHealthSaveFailed)));
+      showAppToast(context, l.memberHealthSaveFailed, kind: AppToastKind.error);
       setState(() => _saving = false);
     }
   }
@@ -497,9 +494,7 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message, kind: AppToastKind.error);
   }
 
   Future<void> _add() async {

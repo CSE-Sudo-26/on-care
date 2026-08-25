@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/dialog_close_button.dart';
 import 'package:oncare_trainer/shared/widgets/hour_clock_dial.dart';
@@ -23,7 +24,14 @@ Future<(TimeOfDay, TimeOfDay)?> showSessionTimeRangeDialog({
     context: context,
     builder: (dialogContext) => Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(AppSpacing.lg),
+      // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+      // 대화상자 위로 겹쳐 뜰 수 있다.
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppToastStyle.dialogTopClearance,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 420,

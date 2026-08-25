@@ -766,6 +766,64 @@ def test_delete_completed_session_removes_member_exercise_log(client, db_session
     assert db_session.get(models.ExerciseSession, f"sched-ex-{sid}") is None
 
 
+def test_reopen_completed_session_clears_derived_logs_and_moves_to_upcoming(
+    client, db_session, make_pt_session
+):
+    """완료 세션을 미래 날짜의 예정으로 되돌리면 파생 기록도 함께 지워진다.
+
+    지우지 않으면 되돌린 뒤에도 "이미 했던 운동"으로 남아 회원 운동기록·
+    트레이너 이력이 실제로 하지 않은 PT 를 계속 잡는다.
+    """
+    from datetime import timedelta
+
+    from app.models import models
+
+    token = _tok(client)
+    sid = make_pt_session(token, time="20:40")
+    done = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    assert done.status_code == 200, done.text
+    db_session.expire_all()
+    assert db_session.get(models.ExerciseSession, f"sched-ex-{sid}") is not None
+    assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is not None
+
+    future = (clock.today() + timedelta(days=7)).isoformat()
+    reopened = client.post(
+        f"/v1/trainer/schedule/{sid}/reopen",
+        json={"date": future},
+        headers=_h(token),
+    )
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["status"] == "예정"
+    assert reopened.json()["date"] == future
+
+    db_session.expire_all()
+    assert db_session.get(models.ExerciseSession, f"sched-ex-{sid}") is None
+    assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is None
+
+
+def test_reopen_rejects_past_dates_and_non_completed_sessions(client, make_pt_session):
+    token = _tok(client)
+    sid = make_pt_session(token, time="20:45")
+
+    # 아직 완료 전인 세션은 되돌릴 것이 없다.
+    still_upcoming = client.post(
+        f"/v1/trainer/schedule/{sid}/reopen",
+        json={"date": _today()},
+        headers=_h(token),
+    )
+    assert still_upcoming.status_code == 409, still_upcoming.text
+
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+
+    # 오늘·과거로는 "되돌리기"가 아니라 그냥 완료 취소가 된다 — 막는다.
+    not_future = client.post(
+        f"/v1/trainer/schedule/{sid}/reopen",
+        json={"date": _today()},
+        headers=_h(token),
+    )
+    assert not_future.status_code == 409, not_future.text
+
+
 def test_member_cannot_edit_or_delete_derived_log(client, make_pt_session):
     """파생 기록의 근거는 트레이너에게 있다 — 회원이 고치면 리포트가 딛고 선 값이 흔들린다."""
     token = _tok(client)

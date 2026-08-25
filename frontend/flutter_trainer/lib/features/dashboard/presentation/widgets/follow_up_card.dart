@@ -13,6 +13,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/follow_up_task.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/follow_up_task_repository.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 오늘 처리해야 할 후속 관리 — 트레이너가 직접 남긴 업무 큐. (#869)
@@ -61,9 +62,7 @@ class _FollowUpCardState extends ConsumerState<FollowUpCard> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message, kind: AppToastKind.error);
   }
 
   @override

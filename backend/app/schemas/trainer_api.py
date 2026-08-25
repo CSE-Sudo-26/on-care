@@ -994,6 +994,7 @@ class ScheduleProgramRegisterOut(BaseModel):
 
 class ScheduleUpdateRequest(PartialUpdate):
     """부분 수정 — 제공된 필드만 반영."""
+    date: str | None = Field(default=None)
     time: str | None = Field(default=None, max_length=10)
     client_name: str | None = Field(default=None, max_length=100)
     member_id: str | None = Field(default=None, max_length=64)
@@ -1001,6 +1002,11 @@ class ScheduleUpdateRequest(PartialUpdate):
     duration_minutes: int | None = Field(default=None, ge=0, le=600)
     note: str | None = Field(default=None, max_length=500)
     program: list[ProgramItem] | None = Field(default=None, max_length=30)
+
+    @field_validator("date")
+    @classmethod
+    def _v_date(cls, v: str | None) -> str | None:
+        return _validate_ymd(v) if v is not None else v
 
     @field_validator("time")
     @classmethod
@@ -1014,6 +1020,21 @@ class ScheduleUpdateRequest(PartialUpdate):
 
 class ScheduleCompleteRequest(BaseModel):
     note: str = Field(default="", max_length=500)
+
+
+class ScheduleReopenRequest(BaseModel):
+    """완료 세션을 예정으로 되돌리며 옮길 날짜. (#1396)
+
+    과거 날짜로는 되돌리지 않는다 — "완료를 취소"하는 자리가 아니라, 반복
+    등록의 시작 회차처럼 이미 끝난 세션을 다가올 약속으로 다시 잡는
+    자리이기 때문이다.
+    """
+    date: str
+
+    @field_validator("date")
+    @classmethod
+    def _v_date(cls, v: str) -> str:
+        return _validate_ymd(v)
 
 
 class ScheduleCancelRequest(BaseModel):

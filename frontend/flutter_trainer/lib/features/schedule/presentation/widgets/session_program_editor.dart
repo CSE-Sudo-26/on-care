@@ -9,6 +9,7 @@ import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/models/program_draft.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// 세션 하나의 프로그램을 그 자리에서 고치는 편집기.
 ///
@@ -73,9 +74,7 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
       // 숫자 칸은 스테퍼가 이미 범위 안으로 묶어 둔다 — 여기서 막을 것은
       // 비워 둔 이름뿐이다.
       if (item.name.text.trim().isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.progInvalid)));
+        showAppToast(context, l.progInvalid);
         return;
       }
       program.add(item.toItem());
@@ -94,9 +93,7 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.progSaveFailed)));
+      showAppToast(context, l.progSaveFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;

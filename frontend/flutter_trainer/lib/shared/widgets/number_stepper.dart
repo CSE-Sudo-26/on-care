@@ -124,16 +124,27 @@ class _NumberStepperState extends State<NumberStepper> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        _RoundButton(
-          key: _key('minus'),
-          icon: Icons.remove,
-          onTap: widget.value > widget.min ? () => _bump(-widget.step) : null,
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+    // 하나의 테두리 상자 안에 −/필드/+ 를 담는다 — 옆의 다른 필드(테두리
+    // 있는 사각 박스)와 같은 모양 언어를 쓰기 위해서다. 예전에는 −/+ 가 각자
+    // 원형 버튼이라 같은 줄의 다른 필드보다 눈에 튀고 폭도 더 썼다.
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Row(
+        children: <Widget>[
+          _StepButton(
+            key: _key('minus'),
+            icon: Icons.remove,
+            onTap: widget.value > widget.min
+                ? () => _bump(-widget.step)
+                : null,
+          ),
+          const _VerticalDivider(),
+          Expanded(
             child: TextField(
               key: _key('field'),
               controller: _controller,
@@ -156,6 +167,7 @@ class _NumberStepperState extends State<NumberStepper> {
               ),
               decoration: InputDecoration(
                 isDense: true,
+                isCollapsed: true,
                 suffixText: widget.suffix,
                 suffixStyle: const TextStyle(
                   fontSize: 12,
@@ -163,37 +175,40 @@ class _NumberStepperState extends State<NumberStepper> {
                   color: AppColors.subtleForeground,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
                   vertical: AppSpacing.sm,
                 ),
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(AppRadius.md),
-                  borderSide: BorderSide(color: AppColors.borderStrong),
-                ),
-                enabledBorder: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(AppRadius.md),
-                  borderSide: BorderSide(color: AppColors.borderStrong),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(AppRadius.md),
-                  borderSide: BorderSide(color: AppColors.accent),
-                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
               ),
             ),
           ),
-        ),
-        _RoundButton(
-          key: _key('plus'),
-          icon: Icons.add,
-          onTap: widget.value < widget.max ? () => _bump(widget.step) : null,
-        ),
-      ],
+          const _VerticalDivider(),
+          _StepButton(
+            key: _key('plus'),
+            icon: Icons.add,
+            onTap: widget.value < widget.max ? () => _bump(widget.step) : null,
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon, required this.onTap, super.key});
+class _VerticalDivider extends StatelessWidget {
+  const _VerticalDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 24,
+      child: VerticalDivider(width: 1, thickness: 1, color: AppColors.borderStrong),
+    );
+  }
+}
+
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.onTap, super.key});
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -201,26 +216,15 @@ class _RoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool on = onTap != null;
-    return Material(
-      color: on ? AppColors.accentSurface : AppColors.card,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: on ? AppColors.accent : AppColors.borderStrong,
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: on ? AppColors.accent : AppColors.subtleForeground,
-          ),
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        width: 40,
+        height: double.infinity,
+        child: Icon(
+          icon,
+          size: 18,
+          color: on ? AppColors.accent : AppColors.disabledForeground,
         ),
       ),
     );
