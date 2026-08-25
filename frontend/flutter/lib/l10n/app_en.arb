@@ -759,7 +759,6 @@
   "exConsultHistoryTitle": "My Consultation Requests",
   "exConsultHistoryEmpty": "You haven't sent any consultation requests yet.",
   "exConsultHistoryInProgress": "In Progress",
-  "exConsultHistoryPast": "Past Requests",
   "exConsultRejectedReasonLabel": "Reason for decline",
   "exConsultRejectedNoReason": "No reason was given. Try requesting a consultation with another trainer.",
   "exConsultAcceptedGuide": "You're connected with your trainer. You can start chatting now.",
