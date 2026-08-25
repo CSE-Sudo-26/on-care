@@ -14,6 +14,7 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
@@ -559,6 +560,14 @@ class _MyPageState extends ConsumerState<MyPage> {
       backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: AppRadius.card),
+      ),
+      // 상단 토스트가 이 시트 위로 겹쳐 뜰 수 있다 — 화면 꼭대기까지
+      // 올라오지 않게 남길 최소 높이를 [AppToastStyle.dialogTopClearance]
+      // 로 잡는다.
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height -
+            AppToastStyle.dialogTopClearance,
       ),
       builder: (context) => const _PasswordSheet(),
     );

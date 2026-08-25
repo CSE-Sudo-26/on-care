@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/design_system/tokens/typography.dart';
 
 /// Builds the trainer app's [ThemeData] from the design tokens. Light
@@ -68,6 +69,15 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        // 기본 24 대신 위쪽만 [AppToastStyle.dialogTopClearance] 만큼 띄운다
+        // — 상단 토스트(#1378)가 루트 오버레이라 대화상자 위에 그려지므로,
+        // 대화상자가 화면 꼭대기까지 올라오면 제목·닫기 버튼이 가려진다.
+        insetPadding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppToastStyle.dialogTopClearance,
+          AppSpacing.xl,
+          AppSpacing.xl,
         ),
       ),
       snackBarTheme: const SnackBarThemeData(

@@ -34,6 +34,15 @@ class AppToastStyle {
   /// 토스트가 상태바 아래에서 떨어지는 거리.
   static const double topGap = AppSpacing.md;
 
+  /// 대화상자·시트가 화면 위쪽에 남겨야 하는 최소 여백. (#1378)
+  ///
+  /// 토스트는 루트 오버레이라 열려 있는 대화상자 **위**에 그려진다 — 대화상자가
+  /// 화면 꼭대기까지 올라오면 제목·닫기 버튼이 토스트에 가려질 수 있다.
+  /// 값은 토스트의 최대 크기(세 줄 문구 기준 세로 패딩 24 + 줄높이 3줄
+  /// ≈81)에 [topGap] 을 더하고 여유를 얹은 것이다 — 토스트 쪽을 화면
+  /// 어딘가로 옮기는 대신, 대화상자가 이 높이 안으로는 올라오지 않게 한다.
+  static const double dialogTopClearance = 100;
+
   static const Duration enterDuration = Duration(milliseconds: 220);
 
   static const Duration exitDuration = Duration(milliseconds: 180);

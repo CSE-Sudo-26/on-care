@@ -9,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -141,7 +142,14 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(AppSpacing.lg),
+        // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+        // 대화상자 위로 겹쳐 뜰 수 있다.
+        insetPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppToastStyle.dialogTopClearance,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: 560,
