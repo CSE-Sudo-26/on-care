@@ -1209,10 +1209,23 @@
       }
     }
   },
-  "aiAnalysedData": "Reviewed the workout goal, recent routine, and today's nutrition",
+  "aiAnalysedData": "Reviewed the workout goal, recent activity, and today's nutrition",
   "aiGoal": "Goal",
   "aiTodaySodium": "Sodium today",
   "aiOverTarget": " · over target",
+  "aiRecentCompletion": "Recent completion",
+  "aiNoCompletionData": "No activity logged this week",
+  "aiCompletionLow": " · needs attention",
+  "aiDietSignal": "Diet warning",
+  "aiSodiumOverDaysSuffix": " · over target on {days} of the last 7 days",
+  "@aiSodiumOverDaysSuffix": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "aiSugarAlsoOver": " · sugar also over",
   "aiBasisRuleBased": " · rule-based",
   "aiChatEvidenceTitle": "Recent conversation used",
   "aiEditOption": "Edit {option}",
@@ -1268,7 +1281,7 @@
       }
     }
   },
-  "aiRecentRoutine": "Recent routine",
+  "aiRecentRoutine": "Recent activity",
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
   "aiGenerateConditions": "Conditions",
@@ -1345,6 +1358,14 @@
       },
       "rate": {
         "type": "int"
+      }
+    }
+  },
+  "aiBasisTrainerRequest": "Request: \"{request}\"",
+  "@aiBasisTrainerRequest": {
+    "placeholders": {
+      "request": {
+        "type": "String"
       }
     }
   },

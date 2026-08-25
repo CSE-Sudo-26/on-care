@@ -1215,7 +1215,7 @@ void main() {
         // 클릭해야 나타나던 배너는 없다 — 흐름 자체가 항상 프로그램 정보
         // 박스 위에 있다.
         expect(
-          find.text('운동 목표와 최근 루틴, 오늘의 식단 정보를 확인했어요'),
+          find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'),
           findsOneWidget,
         );
         expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);

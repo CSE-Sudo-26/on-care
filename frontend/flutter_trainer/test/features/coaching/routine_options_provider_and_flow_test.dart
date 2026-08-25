@@ -545,7 +545,7 @@ void main() {
     // 조건 설정 단계에는 자연어 요청 칸이 있고(#1028), 예시 문구는 입력 전
     // 참고용이라 흐린 placeholder 로 남는다.
     expect(
-      find.text('운동 목표와 최근 루틴, 오늘의 식단 정보를 확인했어요'),
+      find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'),
       findsOneWidget,
     );
     // 분석 제목과 생성 버튼의 AI 아이콘은 유지하되 요청 제목 아이콘만 뺀다.
@@ -603,9 +603,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // A/B + the existing recommendation are shown together. The layout
-    // adapts — side by side when the column is wide enough, a scrolling
-    // rail when it isn't — so this asserts the three options themselves
-    // rather than which of the two containers rendered them.
+    // adapts — side by side when the column is wide enough, stacked
+    // vertically when it isn't — so this asserts the three options
+    // themselves rather than which of the two layouts rendered them.
     expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
     expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
     expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);

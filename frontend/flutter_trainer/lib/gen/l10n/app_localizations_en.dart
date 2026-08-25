@@ -2293,7 +2293,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiAnalysedData =>
-      'Reviewed the workout goal, recent routine, and today\'s nutrition';
+      'Reviewed the workout goal, recent activity, and today\'s nutrition';
 
   @override
   String get aiGoal => 'Goal';
@@ -2303,6 +2303,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiOverTarget => ' · over target';
+
+  @override
+  String get aiRecentCompletion => 'Recent completion';
+
+  @override
+  String get aiNoCompletionData => 'No activity logged this week';
+
+  @override
+  String get aiCompletionLow => ' · needs attention';
+
+  @override
+  String get aiDietSignal => 'Diet warning';
+
+  @override
+  String aiSodiumOverDaysSuffix(int days) {
+    return ' · over target on $days of the last 7 days';
+  }
+
+  @override
+  String get aiSugarAlsoOver => ' · sugar also over';
 
   @override
   String get aiBasisRuleBased => ' · rule-based';
@@ -2380,7 +2400,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aiRecentRoutine => 'Recent routine';
+  String get aiRecentRoutine => 'Recent activity';
 
   @override
   String get aiTrainerNoteEditable => 'Trainer\'s note · editable';
@@ -2555,6 +2575,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String aiBasisGoalCompletion(String goal, int rate) {
     return '$goal · based on $rate% completion';
+  }
+
+  @override
+  String aiBasisTrainerRequest(String request) {
+    return 'Request: \"$request\"';
   }
 
   @override

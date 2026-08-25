@@ -2199,7 +2199,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiAnalysedData => '운동 목표와 최근 루틴, 오늘의 식단 정보를 확인했어요';
+  String get aiAnalysedData => '운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요';
 
   @override
   String get aiGoal => '목표';
@@ -2209,6 +2209,26 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiOverTarget => ' · 목표 초과';
+
+  @override
+  String get aiRecentCompletion => '최근 완료율';
+
+  @override
+  String get aiNoCompletionData => '이번 주 기록 없음';
+
+  @override
+  String get aiCompletionLow => ' · 관리 필요';
+
+  @override
+  String get aiDietSignal => '식단 주의';
+
+  @override
+  String aiSodiumOverDaysSuffix(int days) {
+    return ' · 최근 7일 중 $days일 초과';
+  }
+
+  @override
+  String get aiSugarAlsoOver => ' · 당류도 초과';
 
   @override
   String get aiBasisRuleBased => ' · 규칙 기반 생성';
@@ -2283,7 +2303,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiRecentRoutine => '최근 루틴';
+  String get aiRecentRoutine => '최근 운동';
 
   @override
   String get aiTrainerNoteEditable => '트레이너 메모 · 수정 가능';
@@ -2447,6 +2467,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String aiBasisGoalCompletion(String goal, int rate) {
     return '$goal · 완료율 $rate% 기준';
+  }
+
+  @override
+  String aiBasisTrainerRequest(String request) {
+    return '요청: \"$request\"';
   }
 
   @override
