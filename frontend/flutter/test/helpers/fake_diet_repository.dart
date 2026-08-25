@@ -164,6 +164,11 @@ class FakeDietRepository implements DietRepository {
     const int cals = 615;
     const int sodium = 1200;
     const double sugar = 9;
+    // 서버는 탄·단·지도 함께 준다 — 대역이 그 셋을 비우면 결과 화면이 무엇을
+    // 그리는지 확인할 수 없다(#1432).
+    const double carbs = 92.5;
+    const double protein = 21;
+    const double fat = 14;
     const String coach = '비빔밥은 채소가 풍부해 좋아요. 나트륨이 다소 높으니 장을 줄여보세요.';
 
     final String id = 'mock-diet-${++_seq}';
@@ -175,6 +180,9 @@ class FakeDietRepository implements DietRepository {
         totalCalories: cals,
         sodiumMg: sodium,
         sugarG: sugar,
+        carbsG: carbs,
+        proteinG: protein,
+        fatG: fat,
         aiComment: coach,
         foods: foods
             .map(
@@ -194,6 +202,9 @@ class FakeDietRepository implements DietRepository {
       totalCalories: cals,
       totalSodiumMg: sodium,
       totalSugarG: sugar,
+      totalCarbsG: carbs,
+      totalProteinG: protein,
+      totalFatG: fat,
       coachComment: coach,
     );
     if (idempotencyKey != null) _analyzed[idempotencyKey] = result;
