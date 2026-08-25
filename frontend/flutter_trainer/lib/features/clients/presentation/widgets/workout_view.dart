@@ -15,6 +15,7 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/client_ai_a
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_day_record_tile.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_section.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -781,6 +782,29 @@ class _PendingRoutines extends ConsumerWidget {
   }
 }
 
+/// 배정 한 줄이 말하는 **양**. 근력은 세트·횟수·중량, 나머지는 시간이다.
+///
+/// 프로그램 탭 AI 개인 운동 제안 카드의 [routineSuggestionAmountLabel] 과 같은
+/// 규칙이다 — 다만 이 목록은 [RoutineSuggestion] 이 아니라 이미 배정된
+/// [AssignedRoutine] 을 다룬다.
+///
+/// 중량은 적었을 때만 붙인다 — 맨몸 운동에 `0kg` 이 붙으면 트레이너가 적지
+/// 않은 값을 적은 것처럼 읽힌다.
+String _pendingRoutineAmountLabel(AppLocalizations l, AssignedRoutine routine) {
+  if (routine.type != '근력') return l.minutesShort(routine.minutes);
+  final List<String> parts = <String>[
+    if (routine.sets != null) l.progSetsValue(routine.sets!),
+    if (routine.reps != null) l.progRepsValue(routine.reps!),
+    if (routine.weight != null && routine.weight! > 0)
+      '${_trimZero(routine.weight!)}${l.routineUnitKg}',
+  ];
+  return parts.isEmpty ? l.minutesShort(routine.minutes) : parts.join(' · ');
+}
+
+/// 20.0 → `20`, 62.5 → `62.5`.
+String _trimZero(double value) =>
+    value == value.roundToDouble() ? '${value.round()}' : '$value';
+
 /// 물릴 수 있는 개인 운동 한 줄 — 이름·시간과 취소.
 class _PendingRoutineRow extends ConsumerStatefulWidget {
   const _PendingRoutineRow({required this.clientId, required this.routine});
@@ -864,13 +888,55 @@ class _PendingRoutineRowState extends ConsumerState<_PendingRoutineRow> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  l.coachRoutineSummary(routine.name, routine.minutes),
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.foreground,
+                // 이름 - 종류 - 시간/세트/횟수 를 한 줄에 둔다 — 프로그램 탭
+                // AI 개인 운동 제안 카드와 같은 구성이다.
+                Text.rich(
+                  TextSpan(
+                    children: <InlineSpan>[
+                      TextSpan(
+                        text: routine.name,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: ' · ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                      TextSpan(
+                        text: routineTypeLabel(l, routine.type),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: ' · ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                      TextSpan(
+                        text: _pendingRoutineAmountLabel(l, routine),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (routine.reason.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 2),
@@ -895,13 +961,12 @@ class _PendingRoutineRowState extends ConsumerState<_PendingRoutineRow> {
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                 )
-              : Text(
-                  l.coachTrainer,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
+              : IconLabel(
+                  icon: Icons.badge_outlined,
+                  label: l.coachTrainer,
+                  color: AppColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
                 ),
           const SizedBox(width: AppSpacing.xs),
           if (_busy)
