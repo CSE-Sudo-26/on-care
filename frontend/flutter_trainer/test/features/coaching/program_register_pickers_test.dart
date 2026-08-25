@@ -19,7 +19,8 @@ void main() {
   }
 
   /// 워크스페이스만 띄운다 — 등록 날짜·시각은 이 위젯이 쥔다.
-  Future<({DateTime date, TimeOfDay time}) Function()> pumpWorkspace(
+  Future<({DateTime date, TimeOfDay start, TimeOfDay end}) Function()>
+  pumpWorkspace(
     WidgetTester tester, {
     Size size = const Size(1400, 1000),
   }) async {
@@ -29,7 +30,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     DateTime date = today();
-    TimeOfDay time = const TimeOfDay(hour: 10, minute: 0);
+    TimeOfDay start = const TimeOfDay(hour: 10, minute: 0);
+    TimeOfDay end = const TimeOfDay(hour: 11, minute: 0);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -43,9 +45,13 @@ void main() {
                 clientGoal: '체지방 감량',
                 aiSuggestions: const <AiRoutineItem>[],
                 registerDate: date,
-                registerTime: time,
+                registerStartTime: start,
+                registerEndTime: end,
                 onRegisterDateChanged: (value) => setState(() => date = value),
-                onRegisterTimeChanged: (value) => setState(() => time = value),
+                onRegisterTimeRangeChanged: (value) => setState(() {
+                  start = value.start;
+                  end = value.end;
+                }),
                 onSend: (_) {},
               ),
             ),
@@ -54,7 +60,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    return () => (date: date, time: time);
+    return () => (date: date, start: start, end: end);
   }
 
   Future<void> tapChip(WidgetTester tester, String key) async {
@@ -70,11 +76,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('기본값은 오늘·오전 10시이고 칩에 그대로 보인다', (tester) async {
+  testWidgets('기본값은 오늘·오전 10시–11시이고 칩에 그대로 보인다', (tester) async {
     final read = await pumpWorkspace(tester);
 
     expect(read().date, today());
-    expect(read().time, const TimeOfDay(hour: 10, minute: 0));
+    expect(read().start, const TimeOfDay(hour: 10, minute: 0));
+    expect(read().end, const TimeOfDay(hour: 11, minute: 0));
     expect(
       find.descendant(
         of: find.byKey(const ValueKey<String>('program-register-date')),
@@ -110,45 +117,43 @@ void main() {
     expect(dialog.initialDate, today());
   });
 
-  testWidgets('시각 선택은 스케줄 탭과 같은 시계 선택기다', (tester) async {
+  testWidgets('시각 선택은 스케줄 탭과 같은 범위 선택기다', (tester) async {
     final read = await pumpWorkspace(tester);
     await tapChip(tester, 'program-register-time');
 
     // Material 기본 시간 선택기가 아니라 스케줄 탭의 시계다.
     expect(find.byType(TimePickerDialog), findsNothing);
     expect(
-      find.byKey(const ValueKey<String>('session-time-input')),
+      find.byKey(const ValueKey<String>('session-time-range-start-input')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey<String>('session-time-confirm')),
+      find.byKey(const ValueKey<String>('session-time-range-confirm')),
       findsOneWidget,
     );
 
-    // 오후 → 2시 → 30분 순으로 고르고 확인한다.
-    await tester.tap(
-      find.byKey(const ValueKey<String>('session-time-period-pm')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey<String>('clock-value-2')));
+    // 시작을 9시 30분으로 고르고 확인한다.
+    await tester.tap(find.byKey(const ValueKey<String>('clock-value-9')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey<String>('clock-value-30')));
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(const ValueKey<String>('session-time-confirm')),
+      find.byKey(const ValueKey<String>('session-time-range-confirm')),
     );
     await tester.pumpAndSettle();
 
-    expect(read().time, const TimeOfDay(hour: 14, minute: 30));
+    expect(read().start, const TimeOfDay(hour: 9, minute: 30));
+    expect(read().end, const TimeOfDay(hour: 11, minute: 0));
   });
 
   testWidgets('시각 선택을 닫으면 값이 그대로다', (tester) async {
     final read = await pumpWorkspace(tester);
     await tapChip(tester, 'program-register-time');
 
-    await tester.tap(find.byKey(const ValueKey<String>('session-time-cancel')));
+    await tester.tap(find.text('취소').last);
     await tester.pumpAndSettle();
 
-    expect(read().time, const TimeOfDay(hour: 10, minute: 0));
+    expect(read().start, const TimeOfDay(hour: 10, minute: 0));
+    expect(read().end, const TimeOfDay(hour: 11, minute: 0));
   });
 }

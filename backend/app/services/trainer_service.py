@@ -2972,6 +2972,7 @@ def register_program(
     *,
     date: str,
     time: str,
+    duration_minutes: int,
     client_name: str,
     program: list[ProgramItem],
 ) -> tuple[ScheduleSessionOut, bool] | None:
@@ -3014,7 +3015,7 @@ def register_program(
             client_name=client_name,
             member_id=member_id,
             type_="1:1 PT",
-            duration_minutes=60,
+            duration_minutes=duration_minutes,
             note="",
             program=program,
         )
