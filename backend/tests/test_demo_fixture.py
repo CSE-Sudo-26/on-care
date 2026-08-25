@@ -140,13 +140,19 @@ def test_every_exercise_type_shows_up_in_more_than_one_week():
         assert len(weeks) >= 2, f"{kind}: {len(weeks)}주에만 보인다"
 
 
-def test_today_alone_carries_the_whole_story():
-    """월요일에 열어도 이번 주 화면이 비지 않는다 — 오늘 하루가 다 담고 있다."""
+def test_today_is_a_pt_day_of_strength_only():
+    """월요일에 열어도 이번 주 화면이 비지 않는다 — 오늘 하루가 PT 를 담고 있다.
+
+    다만 종목은 **근력뿐**이다. 사용자앱의 `오늘 완료한 PT` 카드가 근력 종목을
+    줄로 세우므로, 오늘에 다른 유형을 얹으면 카드에는 없는데 `운동 현황 · 오늘`
+    에만 있는 운동 시간이 생긴다. 네 유형은 기간 전체가 책임진다
+    (`test_every_exercise_type_shows_up_in_more_than_one_week`).
+    """
     for today in _ANY_DAY:
         day = load_fixture().days_for(today)[-1]
         assert day.day == today
         kinds = {exercise_types.normalize(e.type) for e in day.exercises}
-        assert kinds == set(exercise_types.CANONICAL_TYPES), f"{today}: {kinds}"
+        assert kinds == {exercise_types.STRENGTH}, f"{today}: {kinds}"
         assert day.is_pt, f"{today}: 오늘이 PT 날이 아니다"
         assert day.client_feedback and day.trainer_note
         assert any(
