@@ -1097,7 +1097,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientsNew.
   ///
   /// In en, this message translates to:
-  /// **'New client'**
+  /// **'Register new client'**
   String get clientsNew;
 
   /// No description provided for @clientsTitle.
@@ -1313,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.'**
+  /// **'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.'**
   String get clientInviteIntroImmediate;
 
   /// No description provided for @clientInviteMemberIdLabel.
@@ -1343,7 +1343,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteConnectAction.
   ///
   /// In en, this message translates to:
-  /// **'Connect'**
+  /// **'Register client'**
   String get clientInviteConnectAction;
 
   /// No description provided for @clientInviteSent.
@@ -1355,7 +1355,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteConnected.
   ///
   /// In en, this message translates to:
-  /// **'Connected with {name}'**
+  /// **'Registered {name} as a client'**
   String clientInviteConnected(String name);
 
   /// No description provided for @clientInviteNotFound.
@@ -1423,6 +1423,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t withdraw the request. Please try again'**
   String get clientInviteCancelFailed;
+
+  /// No description provided for @clientInviteConfirmPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Is this the right client?'**
+  String get clientInviteConfirmPrompt;
+
+  /// No description provided for @clientInviteGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get clientInviteGoalLabel;
 
   /// No description provided for @coachTemplateNew.
   ///

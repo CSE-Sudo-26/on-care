@@ -561,7 +561,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get clientsNew => '신규 고객';
+  String get clientsNew => '신규 고객 등록';
 
   @override
   String get clientsTitle => '고객 관리';
@@ -679,7 +679,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteIntroImmediate =>
-      '회원 ID로 회원을 확인한 뒤 바로 연결해요. 성별·나이·신체 정보는 입력할 필요 없어요 — 연결되면 회원이 등록해 둔 값을 그대로 가져와요.';
+      '회원 ID로 고객을 확인한 뒤 바로 등록해요. 성별·나이·운동 목표는 데모 회원 정보에서 가져와요.';
 
   @override
   String get clientInviteMemberIdLabel => '회원 ID';
@@ -694,7 +694,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientInviteSendAction => '담당 요청 보내기';
 
   @override
-  String get clientInviteConnectAction => '연결하기';
+  String get clientInviteConnectAction => '고객 등록';
 
   @override
   String clientInviteSent(String name) {
@@ -703,7 +703,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String clientInviteConnected(String name) {
-    return '$name님과 연결됐어요';
+    return '$name님을 고객으로 등록했어요';
   }
 
   @override
@@ -738,6 +738,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteCancelFailed => '요청을 거두지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientInviteConfirmPrompt => '이 고객이 맞나요?';
+
+  @override
+  String get clientInviteGoalLabel => '운동 목표';
 
   @override
   String get coachTemplateNew => '새 템플릿';

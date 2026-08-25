@@ -72,11 +72,13 @@ class DemoClientInviteRepository implements ClientInviteRepository {
   Future<MemberLookup> lookup(String memberId) async {
     final String normalized = memberId.trim().toLowerCase();
     if (normalized.isEmpty) throw const NotFoundError();
+    final DateTime now = nowKst();
 
     if (normalized == demoAlreadyLinkedMemberId) {
-      final row = await (_db.select(
-        _db.trainerClients,
-      )..where((t) => t.id.equals(demoAlreadyLinkedClientId))).getSingleOrNull();
+      final row =
+          await (_db.select(_db.trainerClients)
+                ..where((t) => t.id.equals(demoAlreadyLinkedClientId)))
+              .getSingleOrNull();
       if (row != null) return _linkedLookup(normalized, row.name);
     }
 
@@ -96,6 +98,11 @@ class DemoClientInviteRepository implements ClientInviteRepository {
       hasTrainer: false,
       coachedByMe: false,
       invitePending: false,
+      // 회원이 이미 자기 앱에 등록해 둔 값 — 트레이너가 등록 전에 "이 사람이
+      // 맞는지" 확인할 수 있게 데모에서만 함께 실어 준다.
+      gender: prospect.gender,
+      age: prospect.ageOn(now),
+      goal: prospect.goal,
     );
   }
 
@@ -169,7 +176,9 @@ class DioClientInviteRepository implements ClientInviteRepository {
   final Dio _dio;
 
   @override
-  bool get supportsInvites => true;
+  // Production request/accept/reject remains a follow-up. For now the
+  // client-registration entry point is exposed only by the demo source.
+  bool get supportsInvites => false;
 
   @override
   bool get connectsImmediately => false;

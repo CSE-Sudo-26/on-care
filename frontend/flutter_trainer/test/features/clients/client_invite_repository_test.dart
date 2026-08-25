@@ -276,7 +276,7 @@ void main() {
       expect(repo.connectsImmediately, isTrue);
     });
 
-    test('real-API mode resolves the Dio source and shows the entry', () {
+    test('real-API mode resolves the Dio source but hides the entry', () {
       final container = ProviderContainer(
         overrides: <Override>[
           appConfigProvider.overrideWithValue(_realConfig),
@@ -285,7 +285,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(clientInvitesEnabledProvider), isTrue);
+      expect(container.read(clientInvitesEnabledProvider), isFalse);
       final repo = container.read(clientInviteRepositoryProvider);
       expect(repo, isA<DioClientInviteRepository>());
       // 실 API 는 회원의 수락을 기다리는 요청만 보낸다 — 즉시 연결하지 않는다.
@@ -310,6 +310,20 @@ void main() {
 
       expect(found.name, '이수아');
       expect(found.canInvite, isTrue);
+      // 등록 전 확인 화면이 쓰는 신체 정보·운동 목표 — 회원이 이미 등록해
+      // 둔 값이지 지금 지어낸 값이 아니다.
+      expect(found.gender, 'female');
+      expect(found.age, isNotNull);
+      expect(found.goal, '체지방 감량');
+    });
+
+    test('두 데모 회원은 서로 다른 신체정보·운동목표를 갖는다', () async {
+      final soo = await demo.lookup('user-8f2a41c9d6e3');
+      final jun = await demo.lookup('user-1c7b93f04a58');
+
+      expect(jun.name, '박준서');
+      expect(soo.gender, isNot(jun.gender));
+      expect(soo.goal, isNot(jun.goal));
     });
 
     test('an already-linked member id reports coachedByMe', () async {
@@ -330,22 +344,25 @@ void main() {
       expect(demo.lookup('user-no-such-member'), throwsA(isA<NotFoundError>()));
     });
 
-    test('invite connects immediately with the prospect\'s real profile', () async {
-      final found = await demo.lookup('user-1c7b93f04a58');
-      final invite = await demo.invite(found.memberId);
+    test(
+      'invite connects immediately with the prospect\'s real profile',
+      () async {
+        final found = await demo.lookup('user-1c7b93f04a58');
+        final invite = await demo.invite(found.memberId);
 
-      expect(invite.status, ClientInviteStatus.accepted);
+        expect(invite.status, ClientInviteStatus.accepted);
 
-      final clients = await demo.lookup('user-1c7b93f04a58');
-      // 두 번째 조회는 이미 연결된 상태를 본다 — 중복 연결이 막힌다.
-      expect(clients.coachedByMe, isTrue);
+        final clients = await demo.lookup('user-1c7b93f04a58');
+        // 두 번째 조회는 이미 연결된 상태를 본다 — 중복 연결이 막힌다.
+        expect(clients.coachedByMe, isTrue);
 
-      final row = await (db.select(
-        db.trainerClients,
-      )..where((t) => t.id.equals(found.memberId))).getSingle();
-      // 트레이너가 지금 입력한 값이 아니라 회원이 이미 등록해 둔 실제 값이다.
-      expect(row.gender, 'male');
-      expect(row.age, isNotNull);
-    });
+        final row = await (db.select(
+          db.trainerClients,
+        )..where((t) => t.id.equals(found.memberId))).getSingle();
+        // 트레이너가 지금 입력한 값이 아니라 회원이 이미 등록해 둔 실제 값이다.
+        expect(row.gender, 'male');
+        expect(row.age, isNotNull);
+      },
+    );
   });
 }
