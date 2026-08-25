@@ -102,11 +102,12 @@ class ConsultationHistoryPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                         ],
-                        const SizedBox(height: 12),
                       ],
+                      // `지난 요청` 소제목은 두지 않는다(#1429). 완료·취소는
+                      // 카드가 상태로 말하고 있어, 소제목은 같은 목록을 한 겹
+                      // 더 나누기만 했다. 진행 중 묶음과 같은 간격으로 이어
+                      // 붙어 카드 흐름이 끊기지 않는다.
                       if (past.isNotEmpty) ...<Widget>[
-                        _SectionLabel(text: l.exConsultHistoryPast),
-                        const SizedBox(height: 10),
                         for (final ConsultationRequest r in past) ...<Widget>[
                           ConsultationRequestCard(
                             key: ValueKey<String>('consult-history-${r.id}'),

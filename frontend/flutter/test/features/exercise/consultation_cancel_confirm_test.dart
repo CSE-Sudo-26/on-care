@@ -1,8 +1,10 @@
-/// 상담 요청 취소 확인창의 색 계약 (#1429).
+/// 내 상담 요청 화면의 소제목과 취소 확인창의 색 계약 (#1429).
 ///
 /// 카드의 `취소` 는 파괴적 색인데 확인창의 확정 `취소` 만 기본 색이면, 되돌릴
 /// 수 없는 쪽과 요청을 그대로 두는 쪽이 같은 색으로 보인다. 확정 버튼은 카드와
 /// 같은 파괴적 토큰을, `유지` 는 중립 색을 쓴다.
+///
+/// `지난 요청` 소제목은 두지 않는다 — 완료·취소는 카드가 상태로 말한다.
 library;
 
 import 'package:flutter/material.dart';
@@ -15,6 +17,7 @@ import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/consultation_history_page.dart';
+import 'package:oncare/features/exercise/presentation/widgets/consultation_request_card.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../support/consultation_test_support.dart';
@@ -113,6 +116,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.state.single.status, ConsultationStatus.pending);
+  });
+
+  testWidgets('지난 요청 소제목은 표시되지 않는다', (WidgetTester tester) async {
+    await pumpHistory(tester);
+
+    // 요청 하나를 취소해 `지난 요청` 쪽으로 옮긴다.
+    await openConfirm(tester);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(TextButton, '취소'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.state.single.status, isNot(ConsultationStatus.pending));
+    expect(find.text('지난 요청'), findsNothing);
+    expect(find.byType(ConsultationRequestCard), findsOneWidget);
   });
 
   testWidgets('확정하면 요청이 취소 상태가 된다', (WidgetTester tester) async {
