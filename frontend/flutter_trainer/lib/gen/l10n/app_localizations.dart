@@ -2276,6 +2276,12 @@ abstract class AppLocalizations {
   /// **'Report sent to {name}'**
   String reportsSent(String name);
 
+  /// No description provided for @reportsGoToChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to chat'**
+  String get reportsGoToChat;
+
   /// No description provided for @reportsScheduleWarning.
   ///
   /// In en, this message translates to:

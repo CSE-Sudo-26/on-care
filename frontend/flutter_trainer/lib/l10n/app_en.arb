@@ -649,6 +649,7 @@
   "reportsWeekly": "Weekly report",
   "reportsSendFailed": "Couldn't send the report. Please try again",
   "reportsSent": "Report sent to {name}",
+  "reportsGoToChat": "Go to chat",
   "@reportsSent": {
     "placeholders": {
       "name": {

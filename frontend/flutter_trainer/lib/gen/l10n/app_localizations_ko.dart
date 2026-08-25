@@ -1208,6 +1208,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get reportsGoToChat => '채팅으로 이동하기';
+
+  @override
   String get reportsScheduleWarning => '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요';
 
   @override

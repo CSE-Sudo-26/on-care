@@ -1251,6 +1251,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reportsGoToChat => 'Go to chat';
+
+  @override
   String get reportsScheduleWarning =>
       'This week\'s schedule didn\'t load, so session counts may be missing';
 

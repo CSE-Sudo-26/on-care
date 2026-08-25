@@ -11,6 +11,7 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_sender.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -51,6 +52,18 @@ abstract interface class ReportRepository {
   Future<void> send({
     required String clientId,
     required DateTime weekStart,
+    required String message,
+  });
+
+  /// Sends the report as a PDF attachment, with [message] as the chat
+  /// body. (#1378) The header 공유 메뉴의 기본 전송이 부르는 자리다 — 회원
+  /// 채팅에서 PDF를 열람하는 길(#778, #921)이 이미 있어, 굳이 글만 보낼
+  /// 이유가 없다.
+  Future<void> sendPdf({
+    required String clientId,
+    required DateTime weekStart,
+    required Uint8List bytes,
+    required String fileName,
     required String message,
   });
 
@@ -183,6 +196,19 @@ class LocalReportRepository implements ReportRepository {
   }
 
   @override
+  Future<void> sendPdf({
+    required String clientId,
+    required DateTime weekStart,
+    required Uint8List bytes,
+    required String fileName,
+    required String message,
+  }) {
+    // 데모/드리프트에는 첨부 저장소가 없다 — 회원이 실제로 읽는 것은 이
+    // 메시지 본문이니, 로컬 채팅에는 그대로 텍스트로 전달한다.
+    return _chat.sendTrainerMessage(clientId: clientId, text: message);
+  }
+
+  @override
   Future<ReportFeedbackDraft> feedbackDraft({
     required TrainerClient client,
     required DateTime weekStart,
@@ -222,9 +248,13 @@ class LocalReportRepository implements ReportRepository {
 /// the server records it on the same thread the member app reads.
 class DioReportRepository implements ReportRepository {
   /// Creates the API-backed source.
-  const DioReportRepository(this._dio);
+  DioReportRepository(this._dio) : _pdfSender = ReportPdfSender(_dio);
 
   final Dio _dio;
+
+  /// PDF 전송의 multipart 요청·재시도 idempotency key를 만드는 쪽 — 저장소가
+  /// 살아 있는 동안(=앱 세션 동안) 같은 인스턴스를 재사용해 키가 유지된다.
+  final ReportPdfSender _pdfSender;
 
   @override
   Stream<WeeklyReport> watch({
@@ -293,6 +323,27 @@ class DioReportRepository implements ReportRepository {
           'week_start': ymd(weekStart),
           'message': message,
         },
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
+  Future<void> sendPdf({
+    required String clientId,
+    required DateTime weekStart,
+    required Uint8List bytes,
+    required String fileName,
+    required String message,
+  }) async {
+    try {
+      await _pdfSender.send(
+        clientId: clientId,
+        weekStart: weekStart,
+        bytes: bytes,
+        fileName: fileName,
+        message: message,
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);

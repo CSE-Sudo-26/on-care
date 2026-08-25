@@ -61,6 +61,15 @@ class _SummaryFailsRepository implements ReportRepository {
   }) async {}
 
   @override
+  Future<void> sendPdf({
+    required String clientId,
+    required DateTime weekStart,
+    required Uint8List bytes,
+    required String fileName,
+    required String message,
+  }) async {}
+
+  @override
   Future<ReportFeedbackDraft> feedbackDraft({
     required TrainerClient client,
     required DateTime weekStart,
@@ -128,6 +137,15 @@ class _ReportFailsOncePerKeyRepository implements ReportRepository {
   Future<void> send({
     required String clientId,
     required DateTime weekStart,
+    required String message,
+  }) async {}
+
+  @override
+  Future<void> sendPdf({
+    required String clientId,
+    required DateTime weekStart,
+    required Uint8List bytes,
+    required String fileName,
     required String message,
   }) async {}
 
@@ -771,7 +789,22 @@ void main() {
   testWidgets('전송 delivers the report into the client chat thread', (
     tester,
   ) async {
-    final container = await openReports(tester);
+    // 전송 기본 흐름이 PDF를 만들어 보낸다(#1378) — 실 `ReportPdfGenerator`는
+    // dart:ui 래스터를 거쳐 fake pump 로는 settle 되지 않으니, 다른
+    // PDF 관련 테스트처럼 즉시 끝나는 가짜로 바꾼다. 이 테스트가 보는 것은
+    // "채팅에 도착하는가"이지 PDF 렌더링 자체가 아니다.
+    final container = await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportPdfGeneratorProvider.overrideWithValue(
+          _QueuedPdfGenerator(<Future<Uint8List>>[
+            Future<Uint8List>.value(
+              Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+            ),
+          ]),
+        ),
+      ],
+    );
     await openShareMenu(tester);
 
     await tester.tap(find.text('김민수님에게 전송'));
@@ -807,6 +840,16 @@ void main() {
       extraOverrides: <Override>[
         chatRepositoryProvider.overrideWith(
           (ref) => _FailingChatRepository(ref.watch(appDatabaseProvider)),
+        ),
+        // PDF 생성 자체는 성공해야 이 테스트가 노리는 실패(채팅 전송)만
+        // 남는다 — 실 생성기는 fake pump 로 settle 되지 않는다(위 테스트와
+        // 같은 이유).
+        reportPdfGeneratorProvider.overrideWithValue(
+          _QueuedPdfGenerator(<Future<Uint8List>>[
+            Future<Uint8List>.value(
+              Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+            ),
+          ]),
         ),
       ],
     );
@@ -1303,6 +1346,15 @@ class _DraftStore implements ReportRepository {
   Future<void> send({
     required String clientId,
     required DateTime weekStart,
+    required String message,
+  }) async {}
+
+  @override
+  Future<void> sendPdf({
+    required String clientId,
+    required DateTime weekStart,
+    required Uint8List bytes,
+    required String fileName,
     required String message,
   }) async {}
 
