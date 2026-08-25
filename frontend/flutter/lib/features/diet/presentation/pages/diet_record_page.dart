@@ -1594,10 +1594,19 @@ class _MealCard extends StatelessWidget {
                     // 두면 어느 쪽이 무엇인지 되레 흐려진다(#761). 넘치지 않게
                     // 줄여 적던 처리(#743)도 함께 사라진다 — 적지 않으니 줄일
                     // 것도 없다.
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 16,
-                      color: FigmaColors.textFaint,
+                    // `>` 는 '한 단계 더 들어가는 상세'로 읽힌다. 이 카드가
+                    // 여는 것은 상세가 아니라 같은 끼니의 **수정** 화면이라
+                    // 연필로 바꾼다(#1431). 아이콘 자체는 탭을 먹지 않는다 —
+                    // 카드 전체가 `InkWell` 이므로 아이콘을 눌러도 같은 수정
+                    // 화면으로 간다.
+                    Tooltip(
+                      message: l.dietEditMeal,
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: FigmaColors.textFaint,
+                        semanticLabel: l.dietEditMeal,
+                      ),
                     ),
                   ],
                 ),
