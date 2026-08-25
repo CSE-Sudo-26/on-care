@@ -464,49 +464,52 @@ void main() {
       );
     });
 
-    testWidgets(
-      '신규 고객 등록 — 회원 ID로 아직 연결되지 않은 회원을 찾아 연결한다',
-      (tester) async {
-        await pumpTrainerApp(
-          tester,
-          token: 'demo-trainer-token',
-          at: AppRoutes.clients,
-        );
+    testWidgets('신규 고객 등록 — 회원 ID로 아직 연결되지 않은 회원을 찾아 연결한다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
 
-        await tester.tap(find.text('신규 고객'));
-        await settle(tester);
+      await tester.tap(find.text('신규 고객 등록'));
+      await settle(tester);
 
-        await tester.enterText(
-          find.byKey(const ValueKey<String>('client-connect-member-id')),
-          'USER-8F2A41C9D6E3', // 대소문자는 같은 회원 ID다
-        );
-        await tester.tap(find.text('찾기'));
-        await settle(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'USER-8F2A41C9D6E3', // 대소문자는 같은 회원 ID다
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
+      await settle(tester);
 
-        // 확인 카드는 이름만 보여준다 — 성별·나이는 트레이너가 여기서
-        // 입력하지 않는다.
-        expect(find.text('이수아'), findsOneWidget);
-        expect(find.text('연결하기'), findsOneWidget);
+      // 확인 카드는 회원이 이미 등록해 둔 값을 보여준다 — 트레이너가
+      // 여기서 성별·나이를 입력하는 것이 아니다.
+      expect(find.text('이수아'), findsOneWidget);
+      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
+      expect(find.text('고객 등록'), findsOneWidget);
 
-        await tester.tap(find.text('연결하기'));
-        await settle(tester);
+      await tester.ensureVisible(find.text('고객 등록'));
+      await tester.tap(find.text('고객 등록'));
+      await settle(tester);
 
-        // 연결 성공 후 고객 리스트가 (재시작 없이) 즉시 반영된다 — 실제
-        // repository/drift 스트림 결과이지, 화면에 끼워 넣은 값이 아니다.
-        await scrollToClient(tester, find.text('이수아'));
-        expect(find.text('이수아'), findsWidgets);
-        final card = find.ancestor(
-          of: find.text('이수아').last,
-          matching: find.byType(ClientCard),
-        );
-        // 연결된 프로필은 데모 명부가 가진 실제 성별·나이를 그대로 쓴다 —
-        // 회원 id 해시로 지어낸 값이 아니다(#960 과 같은 폴백을 타지 않는다).
-        expect(
-          find.descendant(of: card, matching: find.textContaining('여성')),
-          findsOneWidget,
-        );
-      },
-    );
+      // 연결 성공 후 고객 리스트가 (재시작 없이) 즉시 반영된다 — 실제
+      // repository/drift 스트림 결과이지, 화면에 끼워 넣은 값이 아니다.
+      final card = find.byKey(
+        const ValueKey<String>('client-user-8f2a41c9d6e3'),
+      );
+      await scrollToClient(tester, card);
+      expect(
+        find.descendant(of: card, matching: find.text('이수아')),
+        findsOneWidget,
+      );
+      // 연결된 프로필은 데모 명부가 가진 실제 성별·나이를 그대로 쓴다 —
+      // 회원 id 해시로 지어낸 값이 아니다(#960 과 같은 폴백을 타지 않는다).
+      expect(
+        find.descendant(of: card, matching: find.textContaining('여성')),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('이미 연결된 회원 ID를 입력하면 중복 안내가 뜬다', (tester) async {
       await pumpTrainerApp(
@@ -515,7 +518,7 @@ void main() {
         at: AppRoutes.clients,
       );
 
-      await tester.tap(find.text('신규 고객'));
+      await tester.tap(find.text('신규 고객 등록'));
       await settle(tester);
 
       // 이미 담당 중인 김민수(seed-client-1)의 회원 ID다 — 회원 앱 MY 탭이
@@ -524,13 +527,15 @@ void main() {
         find.byKey(const ValueKey<String>('client-connect-member-id')),
         'user-7d4e9a2c5f18',
       );
-      await tester.tap(find.text('찾기'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
       await settle(tester);
 
       expect(find.text('김민수'), findsWidgets);
       expect(find.text('이미 담당하고 있는 회원이에요'), findsOneWidget);
       // 이유만 보여 주고 끝내지 않는다 — 연결 버튼 자체가 없다.
-      expect(find.text('연결하기'), findsNothing);
+      expect(find.text('고객 등록'), findsNothing);
     });
 
     testWidgets('존재하지 않는 회원 ID는 찾을 수 없음으로 안내한다', (tester) async {
@@ -540,18 +545,20 @@ void main() {
         at: AppRoutes.clients,
       );
 
-      await tester.tap(find.text('신규 고객'));
+      await tester.tap(find.text('신규 고객 등록'));
       await settle(tester);
 
       await tester.enterText(
         find.byKey(const ValueKey<String>('client-connect-member-id')),
         'user-no-such-member',
       );
-      await tester.tap(find.text('찾기'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
       await settle(tester);
 
       expect(find.text('그 회원 ID를 쓰는 회원을 찾지 못했어요'), findsOneWidget);
-      expect(find.text('연결하기'), findsNothing);
+      expect(find.text('고객 등록'), findsNothing);
     });
 
     testWidgets('the detail header chip toggles 활성/휴면', (tester) async {
@@ -595,7 +602,7 @@ void main() {
         const ValueKey<String>('client-seed-client-3'),
       );
       await scrollToClient(tester, clientCard);
-      expect(find.text('신규 고객'), findsNothing);
+      expect(find.text('신규 고객 등록'), findsNothing);
 
       await tester.tap(clientCard.last);
       await settle(tester);

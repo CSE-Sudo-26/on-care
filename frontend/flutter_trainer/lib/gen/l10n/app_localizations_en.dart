@@ -579,7 +579,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get clientsNew => 'New client';
+  String get clientsNew => 'Register new client';
 
   @override
   String get clientsTitle => 'Member management';
@@ -700,7 +700,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteIntroImmediate =>
-      'Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.';
+      'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.';
 
   @override
   String get clientInviteMemberIdLabel => 'Member ID';
@@ -715,7 +715,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientInviteSendAction => 'Send request';
 
   @override
-  String get clientInviteConnectAction => 'Connect';
+  String get clientInviteConnectAction => 'Register client';
 
   @override
   String clientInviteSent(String name) {
@@ -724,7 +724,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String clientInviteConnected(String name) {
-    return 'Connected with $name';
+    return 'Registered $name as a client';
   }
 
   @override
@@ -763,6 +763,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clientInviteCancelFailed =>
       'Couldn\'t withdraw the request. Please try again';
+
+  @override
+  String get clientInviteConfirmPrompt => 'Is this the right client?';
+
+  @override
+  String get clientInviteGoalLabel => 'Goal';
 
   @override
   String get coachTemplateNew => 'New template';
