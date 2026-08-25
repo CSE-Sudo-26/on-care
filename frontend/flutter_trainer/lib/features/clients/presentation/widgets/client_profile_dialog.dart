@@ -537,8 +537,15 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text(l.actionCancel),
           ),
+          // 되돌릴 수 없는 쪽은 파괴적 색으로 말한다 — 취소와 같은 계열이면
+          // 두 동작의 위험도 차이가 보이지 않는다(#1448).
           FilledButton(
+            key: const ValueKey<String>('client-memo-delete-confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.destructive,
+              foregroundColor: AppColors.destructiveForeground,
+            ),
             child: Text(l.actionDelete),
           ),
         ],
@@ -584,29 +591,34 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
             counterText: '',
           ),
         ),
+        // 글자 수는 입력 상자 **바로 아래 오른쪽**에 붙인다(#1448). `추가` 와
+        // 한 줄에 나눠 두면 왼쪽 끝의 보조 정보가 입력 상자와 따로 놀았다.
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _draft,
+            builder: (context, value, _) => Text(
+              key: const ValueKey<String>('client-memo-counter'),
+              '${value.text.characters.length}/$_maxLength',
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+          ),
+        ),
         // 입력 상자와 바로 붙어 있으면 `추가` 가 상자의 일부처럼 보인다 —
         // 다른 카드 사이 간격과 같은 여백을 준다.
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _draft,
-              builder: (context, value, _) => Text(
-                '${value.text.characters.length}/$_maxLength',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-            ),
-            FilledButton.icon(
-              key: const ValueKey<String>('client-memo-add'),
-              onPressed: _busy ? null : _add,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(l.clientTrainerMemoAdd),
-            ),
-          ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            key: const ValueKey<String>('client-memo-add'),
+            onPressed: _busy ? null : _add,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: Text(l.clientTrainerMemoAdd),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         memos.when(
@@ -728,25 +740,41 @@ class _MemoSectionState extends ConsumerState<_MemoSection> {
                   child: Text(l.actionSave),
                 ),
               ] else ...<Widget>[
+                // 메모 본문보다 덜 도드라져야 한다 — 글자 버튼 둘이 본문만큼
+                // 눈에 들어왔다. 아이콘으로 줄이고 삭제만 붉게 둔다(#1448).
                 // 편집 중에는 다른 메모의 `수정` 을 잠근다. 편집 상태와
                 // 입력 컨트롤러가 하나씩뿐이라, 열려 있는 편집을 두고 다른
                 // 메모를 열면 쓰던 글이 확인도 없이 사라진다.
-                TextButton(
+                IconButton(
                   key: ValueKey<String>('client-memo-edit-open-${memo.id}'),
+                  tooltip: l.actionEdit,
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  color: AppColors.mutedForeground,
                   onPressed: _busy || _editingId != null
                       ? null
                       : () => setState(() {
                           _editingId = memo.id;
                           _edit.text = memo.body;
                         }),
-                  child: Text(l.actionEdit),
+                  icon: Semantics(
+                    label: l.actionEdit,
+                    child: const Icon(Icons.edit_outlined),
+                  ),
                 ),
-                TextButton(
+                IconButton(
                   key: ValueKey<String>('client-memo-delete-${memo.id}'),
+                  tooltip: l.actionDelete,
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  color: AppColors.destructive,
                   onPressed: _busy || _editingId != null
                       ? null
                       : () => _delete(memo),
-                  child: Text(l.actionDelete),
+                  icon: Semantics(
+                    label: l.actionDelete,
+                    child: const Icon(Icons.delete_outline),
+                  ),
                 ),
               ],
             ],
