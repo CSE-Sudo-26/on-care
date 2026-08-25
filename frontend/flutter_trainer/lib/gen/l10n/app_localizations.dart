@@ -3272,30 +3272,6 @@ abstract class AppLocalizations {
   /// **'A sidebar badge appears when a client messages you'**
   String get myNotifNewMessageHint;
 
-  /// No description provided for @myNotifSessionReminder.
-  ///
-  /// In en, this message translates to:
-  /// **'Session reminders'**
-  String get myNotifSessionReminder;
-
-  /// No description provided for @myNotifSessionReminderHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming sessions are highlighted on the dashboard'**
-  String get myNotifSessionReminderHint;
-
-  /// No description provided for @myReminderLead.
-  ///
-  /// In en, this message translates to:
-  /// **'Remind me'**
-  String get myReminderLead;
-
-  /// No description provided for @myMinutesBefore.
-  ///
-  /// In en, this message translates to:
-  /// **'{minutes} min before'**
-  String myMinutesBefore(int minutes);
-
   /// No description provided for @myAccount.
   ///
   /// In en, this message translates to:

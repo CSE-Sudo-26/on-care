@@ -2,40 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/features/my/data/trainer_settings_repository.dart';
 
-/// How long before a session the trainer wants reminding.
-///
-/// Mirrors the server's `REMINDER_LEAD_OPTIONS` — the backend owns the
-/// contract and rejects anything else, so the picker must not offer more.
-const List<int> reminderLeadOptions = <int>[10, 30, 60];
-
 /// The trainer's notification preferences.
 class TrainerSettings {
   /// Creates a settings snapshot.
-  const TrainerSettings({
-    this.newMessageAlerts = true,
-    this.sessionReminders = true,
-    this.reminderLeadMinutes = 30,
-  });
+  const TrainerSettings({this.newMessageAlerts = true});
 
   /// Notify when a client sends a message.
   final bool newMessageAlerts;
 
-  /// Notify before a booked session starts.
-  final bool sessionReminders;
-
-  /// Lead time for [sessionReminders], in minutes.
-  final int reminderLeadMinutes;
-
   /// Returns a copy with the given fields replaced.
-  TrainerSettings copyWith({
-    bool? newMessageAlerts,
-    bool? sessionReminders,
-    int? reminderLeadMinutes,
-  }) {
+  TrainerSettings copyWith({bool? newMessageAlerts}) {
     return TrainerSettings(
       newMessageAlerts: newMessageAlerts ?? this.newMessageAlerts,
-      sessionReminders: sessionReminders ?? this.sessionReminders,
-      reminderLeadMinutes: reminderLeadMinutes ?? this.reminderLeadMinutes,
     );
   }
 }
@@ -70,16 +48,6 @@ class TrainerSettingsController extends StateNotifier<TrainerSettings> {
   /// Toggles new-message notifications.
   Future<void> setNewMessageAlerts(bool value) =>
       _apply(state.copyWith(newMessageAlerts: value));
-
-  /// Toggles pre-session reminders.
-  Future<void> setSessionReminders(bool value) =>
-      _apply(state.copyWith(sessionReminders: value));
-
-  /// Sets the reminder lead time; ignores values the server would refuse.
-  Future<void> setReminderLead(int minutes) {
-    if (!reminderLeadOptions.contains(minutes)) return Future<void>.value();
-    return _apply(state.copyWith(reminderLeadMinutes: minutes));
-  }
 
   Future<void> _apply(TrainerSettings next) async {
     final previous = state;
