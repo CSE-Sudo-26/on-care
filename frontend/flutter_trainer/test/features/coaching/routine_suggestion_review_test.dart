@@ -274,6 +274,12 @@ void main() {
     (tester) async {
       await openProgramTab(tester);
 
+      final manual = find.byKey(const ValueKey<String>('ai-manual-create'));
+      await tester.ensureVisible(manual);
+      await tester.pump();
+      await tester.tap(manual);
+      await tester.pumpAndSettle();
+
       final review = tester.getTopLeft(
         find.byKey(const ValueKey<String>('routine-suggestion-review-card')),
       );
