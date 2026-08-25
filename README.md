@@ -11,31 +11,10 @@
 
 <br/><br/>
 
-<!-- <img src="docs/assets/oncare-banner.svg" alt="On-Care" width="100%" />
-
-<h1>On-Care</h1>
-
-**Trainer-Linked Diet &amp; Exercise Coaching Platform**
-
-*HealthMate AI: 불규칙한 생활 속 2030 고혈압·당뇨 위험군을 위한 트레이너 연계 식단·운동 코칭 플랫폼*
-
-<br/> -->
-
 [![소개 페이지](https://img.shields.io/badge/INTRO_PAGE-소개_페이지-6B7280?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ewhasudo.zapto.org/)
 [![사용자 앱](https://img.shields.io/badge/APP-사용자-3eafdf?style=for-the-badge&logo=flutter&logoColor=white)](https://ewhasudo.zapto.org/frontend/#/dashboard)
 [![트레이너 웹](https://img.shields.io/badge/WEB-트레이너-2E7DAB?style=for-the-badge&logo=safari&logoColor=white)](https://ewhasudo.zapto.org/trainer/)
 [![데모 영상](https://img.shields.io/badge/YOUTUBE-데모_영상-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/C4ivM_dlAww?si=8iOWmOpSxcpQmlU3)
-
-[프론트엔드 배포 구조 및 운영 절차](docs/frontend_deployment.md)
-
-<br/>
-
-![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-0175C2?style=flat-square&logo=dart&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 
 <br/>
 
@@ -103,7 +82,7 @@
 | 📷 **간편 식단 기록** | 음식 사진을 찍으면 AI(VLM)가 음식과 양을 추정하고, 식약처 공공 DB의 영양성분 참고값을 조회해 나트륨·칼로리·당 추정치를 제공합니다. 완벽한 자동 계산이 아니라 기록 부담을 없애는 것이 목적이며, **최종 값은 회원·트레이너가 확인·보정**해 신뢰도를 높입니다. |
 | 🏋️ **운동 기록 자동 연동** | 트레이너가 세션에서 입력한 프로그램·수행이 회원 기록에 자동 반영되어, 회원이 일일이 적지 않아도 데이터가 쌓입니다. |
 | 📊 **자동 요약 리포트** | 식단·운동·활동을 회원별·날짜별로 묶어 트레이너에게 전달합니다. *"이 회원, 이번 주 나트륨 과다 · 유산소 부족"* 을 한눈에 파악합니다. |
-| 🔗 **데이터 기반 매칭** | 회원의 목표와 조건(위치·시간·성향)에 맞춰 트레이너·헬스장을 추천하고 앱 안에서 연결합니다. |
+| 🔗 **데이터 기반 매칭** | 회원의 목표와 조건(지역·시간·성향)에 맞춰 트레이너·헬스장을 추천하고 앱 안에서 연결합니다. |
 | 🎯 **목표·미션 관리** | 만성질환 위험군에 맞춘 나트륨·활동량 목표와 일일 미션. 많이 먹은 날은 활동량을, 적게 먹은 날은 식단을 조정하는 **식단↔운동 연동 코칭**을 제공합니다. |
 
 ---
@@ -134,8 +113,19 @@
 | **Backend** | FastAPI · SQLAlchemy · Alembic · JWT · Docker |
 | **Database** | PostgreSQL · pgvector |
 | **AI** | Vision(VLM) 식단 인식 · 식약처 공공 영양성분 DB 매칭 · RAG 코치 |
-| **Infra** | AWS · GitHub Actions (CI/CD) |
-| **External API** | 카카오맵 · 공공데이터포털 · Firebase Cloud Messaging |
+| **Infra** | 백엔드 AWS ECR + App Runner · 프론트 GitHub Pages(커스텀 도메인) · GitHub Actions (CI/CD) |
+| **External API** | 카카오 (지도 JS SDK · 로컬 장소 검색 · 소셜 로그인) · 공공데이터포털 (식약처 영양성분) |
+
+---
+
+## Docs
+
+| 문서 | 내용 |
+| --- | --- |
+| [로컬 풀스택 실행](docs/local_fullstack.md) | 백엔드·회원 앱·트레이너 웹을 한 대에서 띄우는 절차 |
+| [API 계약](backend/API_CONTRACT.md) | 엔드포인트·요청/응답 스키마 |
+| [프론트엔드 배포](docs/frontend_deployment.md) | GitHub Pages 배포 구조와 운영 절차 |
+| [백엔드 배포](backend/docs/DEPLOY.md) | 컨테이너 이미지·마이그레이션·환경변수 |
 
 ---
 
