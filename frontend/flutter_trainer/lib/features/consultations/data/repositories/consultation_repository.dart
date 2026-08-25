@@ -122,9 +122,8 @@ class DemoConsultationRepository implements ConsultationRepository {
   /// Creates the demo source.
   DemoConsultationRepository({
     List<ConsultationRequest>? requests,
-    ScheduleRepository Function()? scheduleRepository,
-  }) : _scheduleRepository = scheduleRepository,
-       _requests =
+    this.scheduleRepository,
+  }) : _requests =
            requests ??
            <ConsultationRequest>[
              ConsultationRequest(
@@ -143,7 +142,7 @@ class DemoConsultationRepository implements ConsultationRepository {
            ];
 
   List<ConsultationRequest> _requests;
-  final ScheduleRepository Function()? _scheduleRepository;
+  final ScheduleRepository Function()? scheduleRepository;
 
   @override
   bool get supportsInbox => true;
@@ -190,8 +189,9 @@ class DemoConsultationRepository implements ConsultationRepository {
       throw const ValidationError();
     }
     final request = _requests[index];
-    if (schedule != null && _scheduleRepository != null) {
-      final repository = _scheduleRepository();
+    final repositoryFactory = scheduleRepository;
+    if (schedule != null && repositoryFactory != null) {
+      final repository = repositoryFactory();
       final sessions = await repository.watchDate(schedule.date).first;
       final start = _minutes(schedule.time);
       final end = start + schedule.durationMinutes;
@@ -219,7 +219,7 @@ class DemoConsultationRepository implements ConsultationRepository {
     _decide(id, 'accepted');
     return ConsultationAcceptResult(
       clientConnected: true,
-      scheduleCreated: schedule != null && _scheduleRepository != null,
+      scheduleCreated: schedule != null && scheduleRepository != null,
     );
   }
 
