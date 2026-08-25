@@ -1207,7 +1207,7 @@
   "@coachRoutineDone": {
     "description": "Marks a routine as completed."
   },
-  "coachRoutineMyNote": "My note: {note}",
+  "coachRoutineMyNote": "My feedback: {note}",
   "@coachRoutineMyNote": {
     "description": "The member's own note on a completed routine.",
     "placeholders": {
@@ -1229,14 +1229,6 @@
   "@coachRoutineCompleteTitle": {
     "description": "Title of the completion dialog."
   },
-  "coachRoutineMinutesLabel": "Actual minutes",
-  "@coachRoutineMinutesLabel": {
-    "description": "Field label in the completion dialog."
-  },
-  "coachRoutineMinutesError": "Enter a value between 1 and 600 minutes",
-  "@coachRoutineMinutesError": {
-    "description": "Validation message for the minutes field."
-  },
   "coachRoutineIntensity": "Intensity",
   "@coachRoutineIntensity": {
     "description": "Field label in the completion dialog."
@@ -1253,7 +1245,7 @@
   "@coachIntensityHigh": {
     "description": "Intensity option."
   },
-  "coachRoutineNoteLabel": "Note (optional)",
+  "coachRoutineNoteLabel": "Feedback (optional)",
   "@coachRoutineNoteLabel": {
     "description": "Field label in the completion dialog."
   },
