@@ -1784,13 +1784,12 @@ class _SendHistoryCard extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                             )
-                          : Text(
-                              l.coachTrainer,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
+                          : IconLabel(
+                              icon: Icons.badge_outlined,
+                              label: l.coachTrainer,
+                              color: AppColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
                             ),
                       // 보낸 뒤 물리는 자리. 여기 목록이 배정된 개인운동을
                       // 보여 주는 유일한 곳인데 취소가 없어서, 잘못 보냈을 때
