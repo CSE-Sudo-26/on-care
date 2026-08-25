@@ -6068,6 +6068,12 @@ abstract class AppLocalizations {
   /// **'Next week\'s coaching'**
   String get reportsAiNextWeek;
 
+  /// No description provided for @reportsAiMoreWatchpoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more — see the full report.'**
+  String reportsAiMoreWatchpoints(int count);
+
   /// No description provided for @reportsActionSodium.
   ///
   /// In en, this message translates to:

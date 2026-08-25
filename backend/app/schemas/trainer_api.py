@@ -1175,6 +1175,16 @@ class WeeklyReportOut(BaseModel):
     carbs_week: list[float] = Field(default_factory=list)
     protein_week: list[float] = Field(default_factory=list)
     fat_week: list[float] = Field(default_factory=list)
+    #: 그 회원의 하루 목표. 건강 프로필에 적혀 있으면 그 값, 없으면 null 이다
+    #: (#1430). 주의사항 판정이 고정 상수보다 이 값을 먼저 쓴다 — 같은 1,900kcal
+    #: 이 어떤 회원에게는 부족이고 어떤 회원에게는 초과다. 근거 문장도 어느
+    #: 기준을 썼는지 이 값으로 적는다.
+    calorie_target: int | None = None
+    sodium_target: int | None = None
+    sugar_target: float | None = None
+    carbs_target: float | None = None
+    protein_target: float | None = None
+    fat_target: float | None = None
     #: 월→일 7칸. 이행률과 함께 그날의 운동 내역을 담는다(#754).
     days: list[WeeklyReportDayOut] = Field(default_factory=list)
     message: str                 # 회원에게 전송될 본문(미리보기와 동일)

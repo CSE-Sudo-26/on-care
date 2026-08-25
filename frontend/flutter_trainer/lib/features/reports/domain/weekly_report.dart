@@ -33,6 +33,12 @@ class WeeklyReport {
     this.carbsWeek = const <double>[],
     this.proteinWeek = const <double>[],
     this.fatWeek = const <double>[],
+    this.calorieTarget,
+    this.sodiumTarget,
+    this.sugarTarget,
+    this.carbsTarget,
+    this.proteinTarget,
+    this.fatTarget,
     this.days = const <ReportDay>[],
   });
 
@@ -84,6 +90,17 @@ class WeeklyReport {
   final List<double> carbsWeek;
   final List<double> proteinWeek;
   final List<double> fatWeek;
+
+  /// 그 회원이 적어 둔 하루 목표. 없으면 null 이고, 판정 쪽이 공통 상수로
+  /// 되돌아간다(#1430) — 같은 1,900kcal 이 어떤 회원에게는 부족이고 어떤
+  /// 회원에게는 초과다. null 과 상수를 구분해 둬야 근거 문장이 어느 기준을
+  /// 썼는지 말할 수 있다.
+  final int? calorieTarget;
+  final int? sodiumTarget;
+  final double? sugarTarget;
+  final double? carbsTarget;
+  final double? proteinTarget;
+  final double? fatTarget;
 
   /// 요일별 상세(월→일). 이행률과 그날 배정된 운동을 함께 담는다 — 67% 가
   /// 어디서 나온 값인지 화면에서 보이게 하는 자료다(#754).
