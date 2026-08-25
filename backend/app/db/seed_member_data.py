@@ -1013,6 +1013,11 @@ def _seed_exercise(db: Session, member_id: str) -> None:
             minutes=minutes,
             calories=calories,
             intensity="moderate",
+            # 그 요일의 시각을 함께 적는다 — 세 날짜 필드가 같은 날을 가리켜야
+            # 시드 시각(`created_at`)이 최근 활동 판단에 새지 않는다. (#1264)
+            completed_at=exercise_activity.noon(
+                today - timedelta(days=today.weekday() - idx)
+            ),
         ))
         added = True
     if added:

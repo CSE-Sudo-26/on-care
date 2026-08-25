@@ -43,6 +43,7 @@ from app.schemas.trainer_api import (
 from app.services import (
     auto_routine_service,
     diet_photo_service,
+    exercise_activity,
     exercise_service,
     exercise_types,
     notification_service,
@@ -553,7 +554,12 @@ def build_client_history(
         )))
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
-        day = clock.to_seoul(completed_at).date().isoformat()
+        # 이력이 붙는 날짜는 회원 화면과 같은 논리 운동일이다 — 완료 시각만
+        # 보면 지난 주 수행을 오늘 고친 기록이 오늘로 올라온다. (#1264)
+        day = (
+            exercise_activity.activity_date_of(r)
+            or clock.to_seoul(completed_at).date()
+        ).isoformat()
         dated.append(
             (
                 day,
@@ -1531,7 +1537,12 @@ def update_assigned_routine_feedback(
 def _assigned_history_out(row: ExerciseSession) -> RoutineHistoryOut:
     """배정 루틴 수행을 조회·수정 응답에서 공유하는 이력 계약으로 변환한다."""
     completed_at = row.completed_at or row.created_at
-    day = clock.to_seoul(completed_at).date().isoformat()
+    # 라벨의 날짜는 [build_client_history] 와 같은 규칙을 쓴다(#1264). 두 곳이
+    # 갈리면 같은 기록이 목록과 상세에서 다른 날로 보인다.
+    day = (
+        exercise_activity.activity_date_of(row)
+        or clock.to_seoul(completed_at).date()
+    ).isoformat()
     return RoutineHistoryOut(
         id=row.id,
         date_label=history_date_label(day),
@@ -3190,6 +3201,14 @@ def _derived_exercise_id(session_id: str) -> str:
     return f"sched-ex-{session_id}"
 
 
+def _schedule_day(day: str) -> date:
+    """슬롯의 날짜. 값이 깨졌으면 오늘로 둔다(주차·요일 계산과 같은 폴백)."""
+    try:
+        return date.fromisoformat(day)
+    except (TypeError, ValueError):
+        return clock.today()
+
+
 def _add_member_exercise_log(
     db: Session, s: TrainerSchedule
 ) -> ExerciseSession | None:
@@ -3222,13 +3241,18 @@ def _add_member_exercise_log(
     # 항목마다 강도가 다르면 세션 하나로 접을 값이 없다 — 그럴 때만 기본값이다.
     marked = {i.intensity for i in items}
     intensity = marked.pop() if len(marked) == 1 else _PT_INTENSITY
+    # 주차·요일·완료 시각 셋 다 완료 시점이 아니라 **세션 날짜** 기준이다.
+    # 지난 주 세션을 오늘 완료 처리해도 그 주의 집계로 들어가야 하는데,
+    # `completed_at` 만 비워 두면 그 값을 읽는 자리에서는 오늘 한 운동이 된다.
+    # 날짜 하나를 먼저 정하고 셋을 거기서 뽑는 이유는 값이 깨졌을 때다 — 따로
+    # 계산하면 주차는 이번 주, 요일은 오늘 요일로 각각 흘러 서로 다른 날을
+    # 가리킨다. (#1264)
+    session_day = _schedule_day(s.date)
     row = ExerciseSession(
         id=_derived_exercise_id(s.id),
         user_id=s.member_id,
-        # 주차·요일은 완료 시점이 아니라 **세션 날짜** 기준이다. 지난 주 세션을
-        # 오늘 완료 처리해도 그 주의 집계로 들어가야 한다.
-        week_start=exercise_service.monday_of_str(s.date),
-        day_label=exercise_service.weekday_label_of(s.date),
+        week_start=exercise_service.monday_of_str(session_day.isoformat()),
+        day_label=exercise_service.weekday_label_of(session_day.isoformat()),
         type=ex_type,
         name=", ".join(i.name for i in items),
         minutes=minutes,
@@ -3244,6 +3268,7 @@ def _add_member_exercise_log(
         calories=exercise_service.estimate_calories(ex_type, minutes, intensity),
         intensity=intensity,
         source="trainer_pt",
+        completed_at=exercise_activity.noon(session_day),
     )
     db.add(row)
     return row

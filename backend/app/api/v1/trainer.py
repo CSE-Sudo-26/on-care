@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import date as _date
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import PurePath
 from typing import Annotated, Literal
 
@@ -81,6 +81,7 @@ from app.schemas.trainer_api import (
 )
 from app.services import (
     diet_service,
+    exercise_activity,
     exercise_service,
     period_window,
     chat_image_storage,
@@ -560,16 +561,13 @@ def _week_starts_between(start: str, end: str) -> list[str]:
     """[start, end] 를 덮는 모든 주의 월요일.
 
     구간의 첫날이 주 가운데면 그 주 월요일부터 담는다 — 월요일이 구간 밖이어도
-    그 주의 기록은 구간 안에 있을 수 있다.
+    그 주의 기록은 구간 안에 있을 수 있다. 계산은 논리 운동일 모듈 하나에
+    맡긴다(#1264): 조회 구간을 넓히는 규칙이 갈리면 AI 와 이 화면이 서로 다른
+    주를 읽는다.
     """
-    first = _date.fromisoformat(monday_of_str(start))
-    last = _date.fromisoformat(end)
-    out: list[str] = []
-    cursor = first
-    while cursor <= last:
-        out.append(cursor.isoformat())
-        cursor += timedelta(days=7)
-    return out
+    return exercise_activity.week_starts_covering(
+        _date.fromisoformat(start), _date.fromisoformat(end)
+    )
 
 
 @router.get(
