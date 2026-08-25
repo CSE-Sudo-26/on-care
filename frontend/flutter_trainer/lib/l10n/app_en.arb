@@ -1802,6 +1802,8 @@
   "@reportsWeeksAgo": {"placeholders": {"count": {"type": "int"}}},
   "reportsAiTitle": "AI coaching assistant · Report summary",
   "reportsAiNextWeek": "Next week's coaching",
+  "reportsAiMoreWatchpoints": "{count} more — see the full report.",
+  "@reportsAiMoreWatchpoints": {"placeholders": {"count": {"type": "int"}}},
   "reportsActionSodium": "Ask them to leave half the broth and the pickled sides.",
   "reportsActionSugar": "Some days went over the {target}g sugar target. Start with drinks and snacks.",
   "@reportsActionSugar": {"placeholders": {"target": {"type": "String"}}},
