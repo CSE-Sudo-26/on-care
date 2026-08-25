@@ -72,9 +72,9 @@ class DashboardPage extends ConsumerWidget {
         data: (summary) => LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= AppLayout.twoColumnBreakpoint;
-            // 왼쪽: 오늘의 일정 + (그 아래) AI 진단. 오른쪽: 오늘 할 일 +
-            // (그 아래) 할 일 진행률 — AI 진단이 그래프와 나란한 줄에 오도록
-            // 왼쪽 칸에 둔다.
+            // 왼쪽: 오늘의 일정 + (그 아래) 활동 피드백. 오른쪽: 오늘 할 일 +
+            // (그 아래) 할 일 진행률 — 활동 피드백이 그래프와 나란한 줄에
+            // 오도록 왼쪽 칸에 둔다.
             final leftColumn = Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
@@ -215,7 +215,8 @@ class _TaskProgressCard extends ConsumerWidget {
         // 실제 기록이 먼저다. 데모 이력은 그 기록이 시작되기 전의 지난
         // 날들만 채운다(#1203).
         snapshots: <DailyTaskSnapshot?>[
-          for (final d in dates) store.read(ymd(d)) ?? demoHistory.snapshotFor(d),
+          for (final d in dates)
+            store.read(ymd(d)) ?? demoHistory.snapshotFor(d),
         ],
         dates: dates,
         labels: weekdayLabels(l),
