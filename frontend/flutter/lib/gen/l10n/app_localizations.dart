@@ -3845,7 +3845,7 @@ abstract class AppLocalizations {
   /// The member's own note on a completed routine.
   ///
   /// In en, this message translates to:
-  /// **'My note: {note}'**
+  /// **'My feedback: {note}'**
   String coachRoutineMyNote(String note);
 
   /// The trainer's feedback on a completed routine.
@@ -3859,18 +3859,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark routine done'**
   String get coachRoutineCompleteTitle;
-
-  /// Field label in the completion dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Actual minutes'**
-  String get coachRoutineMinutesLabel;
-
-  /// Validation message for the minutes field.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a value between 1 and 600 minutes'**
-  String get coachRoutineMinutesError;
 
   /// Field label in the completion dialog.
   ///
@@ -3899,7 +3887,7 @@ abstract class AppLocalizations {
   /// Field label in the completion dialog.
   ///
   /// In en, this message translates to:
-  /// **'Note (optional)'**
+  /// **'Feedback (optional)'**
   String get coachRoutineNoteLabel;
 
   /// Hint of the note field in the completion dialog.

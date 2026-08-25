@@ -88,6 +88,7 @@ void main() {
   group('clientDietEntryFromJson / routineHistoryEntryFromJson', () {
     test('maps a diet entry', () {
       final d = clientDietEntryFromJson(<String, Object?>{
+        'id': 'diet-abc123',
         'meal': '점심',
         'items': '김치찌개, 공기밥',
         'calories': 720,
@@ -96,6 +97,9 @@ void main() {
         'protein_g': 25.5,
         'fat_g': 15,
       });
+      // 같은 끼니 라벨이 하루에 두 번 저장될 수 있어(#1285 리뷰), 목록 위젯
+      // 키로는 meal 라벨이 아니라 이 id 를 쓴다.
+      expect(d.id, 'diet-abc123');
       expect(d.meal, '점심');
       expect(d.items, '김치찌개, 공기밥');
       expect(d.sodiumMg, 1400);

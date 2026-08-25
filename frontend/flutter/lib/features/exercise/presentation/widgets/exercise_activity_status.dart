@@ -53,19 +53,6 @@ Color kindColor(ExerciseLoadKind kind) => switch (kind) {
   ExerciseLoadKind.flexibility => const Color(0xFFA8E4F7), // 가장 연함
 };
 
-/// 유형별 **글자** 색 (#1352). 링·막대가 쓰는 [kindColor] 를 글자에 그대로 쓰면
-/// 가장 연한 단계(스트레칭)가 흰 배경에서 대비 1.4 라 사실상 보이지 않는다 —
-/// 그 램프는 색 위에 얹은 흰 글자를 기준으로 벌려 둔 값이다.
-///
-/// 그래서 **같은 색상(hue 194~198°)·같은 채도**를 유지한 채 명도만 내려 흰 배경
-/// 대비를 7.0 : 4.9 : 3.4 로 다시 벌린 세 단계를 쓴다. 진하기 순서(유산소 →
-/// 근력 → 스트레칭)가 [kindColor] 와 같으므로, 옆의 막대와 같은 이야기로 읽힌다.
-Color kindTextColor(ExerciseLoadKind kind) => switch (kind) {
-  ExerciseLoadKind.cardio => const Color(0xFF19607E),
-  ExerciseLoadKind.strength => const Color(0xFF18799F),
-  ExerciseLoadKind.flexibility => const Color(0xFF1296C0),
-};
-
 String kindLabel(AppLocalizations l, ExerciseLoadKind kind) => switch (kind) {
   ExerciseLoadKind.cardio => l.exTypeCardio,
   ExerciseLoadKind.strength => l.exTypeStrength,
@@ -1145,10 +1132,7 @@ class _BurnBar extends StatelessWidget {
                     for (final ExerciseLoadKind k
                         in ExerciseLoadKind.values.reversed)
                       Expanded(
-                        flex: ((parts[k] ?? 0) * 100).round().clamp(
-                          0,
-                          1 << 30,
-                        ),
+                        flex: ((parts[k] ?? 0) * 100).round().clamp(0, 1 << 30),
                         child: ColoredBox(color: kindColor(k)),
                       ),
                   ],
@@ -1188,12 +1172,11 @@ class _WeekBucket {
   final double otherMinutes;
 
   /// 막대를 나누는 몫 — 셋 모두 분이다.
-  Map<ExerciseLoadKind, double> get minutesByKind =>
-      <ExerciseLoadKind, double>{
-        ExerciseLoadKind.cardio: cardioMinutes,
-        ExerciseLoadKind.strength: strengthMinutes,
-        ExerciseLoadKind.flexibility: flexibilityMinutes,
-      };
+  Map<ExerciseLoadKind, double> get minutesByKind => <ExerciseLoadKind, double>{
+    ExerciseLoadKind.cardio: cardioMinutes,
+    ExerciseLoadKind.strength: strengthMinutes,
+    ExerciseLoadKind.flexibility: flexibilityMinutes,
+  };
 
   double valueOf(ExerciseLoadKind kind) => switch (kind) {
     ExerciseLoadKind.cardio => cardioMinutes,
@@ -1368,18 +1351,18 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
                           for (final ExerciseLoadKind k
                               in ExerciseLoadKind.values)
                             _AllPeriodDetailLine(
-                              text:
-                                  '${kindLabel(l, k)} '
-                                  '${kindValueText(l, k, picked.valueOf(k))}',
-                              color: kindTextColor(k),
+                              label: kindLabel(l, k),
+                              value: kindValueText(l, k, picked.valueOf(k)),
+                              color: kindColor(k),
                             ),
                           // `기타` 는 유형이 아니다 — 셋의 파랑 램프에 끼워
                           // 넣지 않고 회색으로 둔다.
                           if (picked.otherMinutes > 0)
                             _AllPeriodDetailLine(
-                              text:
-                                  '${l.exTypeOtherChip} '
-                                  '${l.unitMinutesValue(picked.otherMinutes.round())}',
+                              label: l.exTypeOtherChip,
+                              value: l.unitMinutesValue(
+                                picked.otherMinutes.round(),
+                              ),
                             ),
                         ],
                       ),
@@ -1446,28 +1429,49 @@ double _allPeriodHeaderHeight(BuildContext context) =>
     44 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
 
 /// 고른 주의 유형별 내역 한 줄 — `유산소 195분`. 색 네모 없이 글자만 쓴다
-/// (#1129) — 색은 바로 옆 막대가 이미 말하고 있다. 대신 **글자 자체**를 유형
-/// 색으로 칠해, 네모 없이도 어느 줄이 어느 유형인지 색으로 읽힌다 (#1352).
+/// (#1129) — 색은 바로 옆 막대가 이미 말하고 있다.
+///
+/// 색은 **유형 이름에만** 주고, 그 색은 옆 막대·링과 **같은 [kindColor]** 다
+/// (#1364). 글자와 막대가 한눈에 짝지어져야 어느 줄이 어느 막대인지 읽힌다.
+/// 값(`195분`, `12세트`)은 검정이다 — 색이 가리키는 것은 유형이지 수가 아니다.
 class _AllPeriodDetailLine extends StatelessWidget {
-  const _AllPeriodDetailLine({required this.text, this.color});
+  const _AllPeriodDetailLine({
+    required this.label,
+    required this.value,
+    this.color,
+  });
 
-  final String text;
+  /// 유형 이름. 이 조각만 [color] 로 칠한다.
+  final String label;
 
-  /// 유형 글자 색([kindTextColor]). null 이면 회색 — 유형이 아닌 `기타` 줄이다.
+  /// 그 유형의 값. 언제나 검정이다.
+  final String value;
+
+  /// 유형 색([kindColor]). null 이면 회색 — 유형이 아닌 `기타` 줄이다.
   final Color? color;
 
   @override
   Widget build(BuildContext context) => FittedBox(
     fit: BoxFit.scaleDown,
     alignment: Alignment.centerRight,
-    child: Text(
-      text,
+    child: Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: label,
+            style: TextStyle(color: color ?? FigmaColors.textBody),
+          ),
+          TextSpan(
+            text: ' $value',
+            style: const TextStyle(color: FigmaColors.ink),
+          ),
+        ],
+      ),
       maxLines: 1,
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 11.5,
         fontWeight: FontWeight.w700,
         height: 1.25,
-        color: color ?? FigmaColors.textBody,
       ),
     ),
   );
