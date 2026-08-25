@@ -554,6 +554,12 @@ abstract class AppLocalizations {
   /// **'Diet'**
   String get dashActivityTabDiet;
 
+  /// No description provided for @dashActivityTabClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get dashActivityTabClient;
+
   /// No description provided for @dashLoadFailed.
   ///
   /// In en, this message translates to:
@@ -719,7 +725,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashAiSummaryTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI diagnosis'**
+  /// **'Activity feedback'**
   String get dashAiSummaryTitle;
 
   /// No description provided for @dashAiNoClients.
@@ -1091,7 +1097,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientsNew.
   ///
   /// In en, this message translates to:
-  /// **'New client'**
+  /// **'Register new client'**
   String get clientsNew;
 
   /// No description provided for @clientsTitle.
@@ -1307,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.'**
+  /// **'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.'**
   String get clientInviteIntroImmediate;
 
   /// No description provided for @clientInviteMemberIdLabel.
@@ -1337,7 +1343,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteConnectAction.
   ///
   /// In en, this message translates to:
-  /// **'Connect'**
+  /// **'Register client'**
   String get clientInviteConnectAction;
 
   /// No description provided for @clientInviteSent.
@@ -1349,7 +1355,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteConnected.
   ///
   /// In en, this message translates to:
-  /// **'Connected with {name}'**
+  /// **'Registered {name} as a client'**
   String clientInviteConnected(String name);
 
   /// No description provided for @clientInviteNotFound.
@@ -1417,6 +1423,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t withdraw the request. Please try again'**
   String get clientInviteCancelFailed;
+
+  /// No description provided for @clientInviteConfirmPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Is this the right client?'**
+  String get clientInviteConfirmPrompt;
+
+  /// No description provided for @clientInviteGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get clientInviteGoalLabel;
 
   /// No description provided for @coachTemplateNew.
   ///
@@ -2534,6 +2552,18 @@ abstract class AppLocalizations {
   /// **'Not logged'**
   String get chartNoRecord;
 
+  /// No description provided for @chartNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get chartNotYet;
+
+  /// No description provided for @chartOverGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} {unit} over goal'**
+  String chartOverGoal(String amount, String unit);
+
   /// No description provided for @reportsSendStateSent.
   ///
   /// In en, this message translates to:
@@ -3259,30 +3289,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A sidebar badge appears when a client messages you'**
   String get myNotifNewMessageHint;
-
-  /// No description provided for @myNotifSessionReminder.
-  ///
-  /// In en, this message translates to:
-  /// **'Session reminders'**
-  String get myNotifSessionReminder;
-
-  /// No description provided for @myNotifSessionReminderHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming sessions are highlighted on the dashboard'**
-  String get myNotifSessionReminderHint;
-
-  /// No description provided for @myReminderLead.
-  ///
-  /// In en, this message translates to:
-  /// **'Remind me'**
-  String get myReminderLead;
-
-  /// No description provided for @myMinutesBefore.
-  ///
-  /// In en, this message translates to:
-  /// **'{minutes} min before'**
-  String myMinutesBefore(int minutes);
 
   /// No description provided for @myAccount.
   ///

@@ -209,46 +209,77 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: TextField(
-                        key: const ValueKey<String>(
-                          'client-connect-member-id',
-                        ),
-                        controller: _memberId,
-                        autocorrect: false,
-                        onChanged: (_) {
-                          if (_found != null) {
-                            setState(() => _found = null);
-                          }
-                        },
-                        onSubmitted: (_) => _lookup(),
-                        decoration: InputDecoration(
-                          labelText: l.clientInviteMemberIdLabel,
-                          errorText: _error,
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
+                Text(
+                  l.clientInviteMemberIdLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                TextField(
+                  key: const ValueKey<String>('client-connect-member-id'),
+                  controller: _memberId,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textInputAction: TextInputAction.search,
+                  cursorHeight: 15,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.2,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.mutedForeground,
+                  ),
+                  onChanged: (_) {
+                    if (_found != null) {
+                      setState(() => _found = null);
+                    }
+                  },
+                  onSubmitted: (_) => _lookup(),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: l.clientInviteMemberIdRequired,
+                    errorText: _error,
+                    contentPadding: const EdgeInsets.only(
+                      left: AppSpacing.md,
+                      top: 10,
+                      bottom: 10,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xs),
-                      child: ActionButton(
-                        label: l.clientInviteLookupAction,
-                        icon: Icons.search,
-                        onPressed: _busy ? null : _lookup,
-                      ),
+                    suffixIconConstraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 40,
                     ),
-                  ],
+                    suffixIcon: IconButton(
+                      key: const ValueKey<String>('client-connect-lookup'),
+                      tooltip: l.clientInviteLookupAction,
+                      onPressed: _busy ? null : _lookup,
+                      iconSize: 18,
+                      visualDensity: VisualDensity.compact,
+                      color: AppColors.primary,
+                      icon: const Icon(Icons.search_rounded),
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 if (_found case final MemberLookup found) ...<Widget>[
                   const SizedBox(height: AppSpacing.lg),
                   _FoundMemberCard(found: found),
                   if (found.canInvite) ...<Widget>[
-                    if (!connectsImmediately) ...<Widget>[
-                      const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.md),
+                    // 바로 등록하지 않고 한 번 더 확인시킨다 — 회원 ID 한 글자가
+                    // 틀리면 다른 사람과 연결되므로, 이름·정보를 눈으로 보고
+                    // 누르게 한다.
+                    Text(
+                      l.clientInviteConfirmPrompt,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (!connectsImmediately)
                       TextField(
                         key: const ValueKey<String>('client-invite-message'),
                         controller: _message,
@@ -259,16 +290,38 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
                           border: const OutlineInputBorder(),
                         ),
                       ),
-                    ],
                     const SizedBox(height: AppSpacing.sm),
-                    ActionButton(
-                      label: connectsImmediately
-                          ? l.clientInviteConnectAction
-                          : l.clientInviteSendAction,
-                      icon: connectsImmediately ? Icons.link : Icons.send,
-                      primary: true,
-                      onPressed: _busy ? null : _send,
-                    ),
+                    if (connectsImmediately)
+                      SizedBox(
+                        height: 44,
+                        child: FilledButton.icon(
+                          key: const ValueKey<String>(
+                            'client-connect-register',
+                          ),
+                          onPressed: _busy ? null : _send,
+                          icon: const Icon(
+                            Icons.person_add_alt_1_rounded,
+                            size: 18,
+                          ),
+                          label: Text(l.clientInviteConnectAction),
+                          style: FilledButton.styleFrom(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(AppRadius.md),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ActionButton(
+                        label: l.clientInviteSendAction,
+                        icon: Icons.send,
+                        primary: true,
+                        onPressed: _busy ? null : _send,
+                      ),
                   ],
                 ],
                 if (!connectsImmediately) ...<Widget>[
@@ -315,7 +368,11 @@ class _CloseButton extends StatelessWidget {
           child: const SizedBox(
             width: 32,
             height: 32,
-            child: Icon(Icons.close, size: 18, color: AppColors.mutedForeground),
+            child: Icon(
+              Icons.close,
+              size: 18,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ),
       ),
@@ -367,8 +424,11 @@ class _PendingInvitesList extends ConsumerWidget {
 }
 
 /// 찾은 회원 한 명. 연결할 수 없는 상태면 그 이유가 이름 아래에 남는다.
-/// 이름 이외의 인적 사항(이메일 등)은 보여주지 않는다 — 연결 확인 단계는
-/// 최소 식별 정보만으로 충분하다.
+///
+/// 실 API 는 이름 이외의 인적 사항(이메일 등)을 주지 않는다 — 담당이 성립하기
+/// 전에는 최소 식별 정보만으로 충분하다. 데모는 [MemberLookup.gender]·
+/// [MemberLookup.age]·[MemberLookup.goal] 을 함께 주므로, 있으면 여기서
+/// 보여준다 — "이 고객이 맞나요?" 확인이 이름 하나로는 부족하다.
 class _FoundMemberCard extends StatelessWidget {
   const _FoundMemberCard({required this.found});
 
@@ -383,6 +443,18 @@ class _FoundMemberCard extends StatelessWidget {
       MemberLookup(invitePending: true) => l.clientInvitePendingHint,
       _ => null,
     };
+    final bool korean = Localizations.localeOf(context).languageCode == 'ko';
+    String? demographics;
+    if (found.gender case final String gender when found.age != null) {
+      final String genderLabel = switch (gender) {
+        'female' => korean ? '여성' : 'Female',
+        'male' => korean ? '남성' : 'Male',
+        _ => korean ? '기타' : 'Other',
+      };
+      demographics = korean
+          ? '$genderLabel · ${found.age}세'
+          : '$genderLabel · Age ${found.age}';
+    }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -401,6 +473,29 @@ class _FoundMemberCard extends StatelessWidget {
               color: AppColors.foreground,
             ),
           ),
+          if (demographics != null) ...<Widget>[
+            const SizedBox(height: 2),
+            Text(
+              demographics,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.subtleForeground,
+              ),
+            ),
+          ],
+          if (found.goal case final String goal
+              when goal.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 2),
+            Text(
+              '${l.clientInviteGoalLabel} · $goal',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.subtleForeground,
+              ),
+            ),
+          ],
           if (blocked != null) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),
             Text(

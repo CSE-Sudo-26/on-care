@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_connect_dialog.dart';
@@ -66,12 +67,18 @@ MemberLookup _lookup({
   bool hasTrainer = false,
   bool coachedByMe = false,
   bool invitePending = false,
+  String? gender,
+  int? age,
+  String? goal,
 }) => MemberLookup(
   memberId: 'user-a3f9c81e4b2d',
   name: '김민수',
   hasTrainer: hasTrainer,
   coachedByMe: coachedByMe,
   invitePending: invitePending,
+  gender: gender,
+  age: age,
+  goal: goal,
 );
 
 Future<void> _pumpDialog(
@@ -101,6 +108,31 @@ void main() {
     expect(find.text('담당 요청 보내기'), findsNothing);
   });
 
+  testWidgets('회원 ID 입력은 고객 탭의 compact 타이포그래피를 사용한다', (tester) async {
+    await _pumpDialog(tester, _FakeInviteRepository(found: _lookup()));
+
+    final fieldFinder = find.byKey(
+      const ValueKey<String>('client-connect-member-id'),
+    );
+    final field = tester.widget<TextField>(fieldFinder);
+    expect(field.style?.fontSize, 12.5);
+    expect(field.style?.fontWeight, FontWeight.w500);
+    expect(field.style?.color, AppColors.mutedForeground);
+    expect(field.decoration?.isDense, isTrue);
+    expect(
+      field.decoration?.contentPadding,
+      const EdgeInsets.only(left: 12, top: 10, bottom: 10),
+    );
+    final lookupFinder = find.byKey(
+      const ValueKey<String>('client-connect-lookup'),
+    );
+    expect(tester.widget<IconButton>(lookupFinder).tooltip, '찾기');
+    expect(
+      tester.getRect(fieldFinder).contains(tester.getRect(lookupFinder).center),
+      isTrue,
+    );
+  });
+
   testWidgets('찾은 회원을 확인한 뒤에야 요청을 보낸다', (tester) async {
     final repository = _FakeInviteRepository(found: _lookup());
     await _pumpDialog(tester, repository);
@@ -109,7 +141,9 @@ void main() {
       find.byKey(const ValueKey<String>('client-connect-member-id')),
       'user-a3f9c81e4b2d',
     );
-    await tester.tap(find.text('찾기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-connect-lookup')),
+    );
     await tester.pumpAndSettle();
 
     // 이름이 먼저 보인다 — 눈으로 확인하고 누르라는 뜻이다. 이메일 등 다른
@@ -136,7 +170,9 @@ void main() {
       find.byKey(const ValueKey<String>('client-connect-member-id')),
       'user-no-such-member',
     );
-    await tester.tap(find.text('찾기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-connect-lookup')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('그 회원 ID를 쓰는 회원을 찾지 못했어요'), findsOneWidget);
@@ -153,7 +189,9 @@ void main() {
       find.byKey(const ValueKey<String>('client-connect-member-id')),
       'user-a3f9c81e4b2d',
     );
-    await tester.tap(find.text('찾기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-connect-lookup')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('이미 다른 트레이너가 담당 중인 회원이에요'), findsOneWidget);
@@ -170,7 +208,9 @@ void main() {
       find.byKey(const ValueKey<String>('client-connect-member-id')),
       'user-a3f9c81e4b2d',
     );
-    await tester.tap(find.text('찾기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-connect-lookup')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('담당 요청 보내기'));
     await tester.pumpAndSettle();
@@ -215,7 +255,9 @@ void main() {
       find.byKey(const ValueKey<String>('client-connect-member-id')),
       'user-a3f9c81e4b2d',
     );
-    await tester.tap(find.text('찾기'));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-connect-lookup')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('김민수'), findsOneWidget);
@@ -241,7 +283,7 @@ void main() {
   });
 
   group('connectsImmediately (데모)', () {
-    testWidgets('메시지 칸과 대기 목록 없이 바로 연결하고, 연결됨을 알린다', (tester) async {
+    testWidgets('메시지 칸·대기 목록 없이 바로 등록하고 성공을 안내한다', (tester) async {
       final repository = _FakeInviteRepository(
         found: _lookup(),
         connectsImmediately: true,
@@ -252,26 +294,104 @@ void main() {
         find.byKey(const ValueKey<String>('client-connect-member-id')),
         'user-a3f9c81e4b2d',
       );
-      await tester.tap(find.text('찾기'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('김민수'), findsOneWidget);
-      // 메시지 칸은 없다 — 데모에는 받을 상대가 없다.
       expect(
         find.byKey(const ValueKey<String>('client-invite-message')),
         findsNothing,
       );
-      // 대기 목록 섹션도 없다 — 기다릴 답이 없다.
       expect(find.text('답을 기다리는 요청'), findsNothing);
 
-      await tester.tap(find.text('연결하기'));
-      // pumpAndSettle 이 아니라 한 프레임만 — 스낵바는 몇 초 뒤 스스로
-      // 사라지는 타이머를 갖고 있어, 끝까지 settle 하면 뜬 순간을 지나쳐
-      // 이미 닫힌 뒤를 보게 된다.
+      final registerButton = find.byKey(
+        const ValueKey<String>('client-connect-register'),
+      );
+      expect(
+        find.descendant(of: registerButton, matching: find.text('고객 등록')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: registerButton,
+          matching: find.byIcon(Icons.person_add_alt_1_rounded),
+        ),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(registerButton);
+      await tester.tap(registerButton);
       await tester.pump();
 
       expect(repository.sent, hasLength(1));
-      expect(find.text('김민수님과 연결됐어요'), findsOneWidget);
+      expect(find.text('김민수님을 고객으로 등록했어요'), findsOneWidget);
+    });
+
+    testWidgets('조회된 회원의 성별·나이·운동 목표가 확인 화면에 함께 뜬다', (tester) async {
+      final repository = _FakeInviteRepository(
+        found: _lookup(gender: 'female', age: 29, goal: '체지방 감량'),
+        connectsImmediately: true,
+      );
+      await _pumpDialog(tester, repository);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-a3f9c81e4b2d',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
+      expect(find.textContaining('여성'), findsOneWidget);
+      expect(find.textContaining('29세'), findsOneWidget);
+      expect(find.textContaining('체지방 감량'), findsOneWidget);
+    });
+
+    testWidgets('데모용 회원 ID를 다이얼로그에 노출하지 않는다', (tester) async {
+      final repository = _FakeInviteRepository(connectsImmediately: true);
+      await _pumpDialog(tester, repository);
+
+      expect(find.text('데모용 회원 ID'), findsNothing);
+      expect(find.text('user-8f2a41c9d6e3'), findsNothing);
+      expect(find.text('user-1c7b93f04a58'), findsNothing);
+    });
+
+    testWidgets('닫았다 다시 열면 입력값·조회 결과가 남지 않는다', (tester) async {
+      final repository = _FakeInviteRepository(
+        found: _lookup(),
+        connectsImmediately: true,
+      );
+      await _pumpDialog(tester, repository);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-a3f9c81e4b2d',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('김민수'), findsOneWidget);
+
+      // 닫는다 — 실제 화면은 여기서 다이얼로그 라우트가 pop 되며 State 가
+      // 사라진다. 트리 모양이 달라지는 위젯을 한 번 끼워 넣어 같은 자리를
+      // 재사용하지 못하게 한다.
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      // 다시 연다 — showDialog 가 매번 그렇듯 완전히 새 인스턴스다.
+      await _pumpDialog(tester, repository);
+
+      expect(
+        find
+            .byKey(const ValueKey<String>('client-connect-member-id'))
+            .evaluate()
+            .map((e) => (e.widget as TextField).controller!.text),
+        <String>[''],
+      );
+      expect(find.text('김민수'), findsNothing);
     });
   });
 }

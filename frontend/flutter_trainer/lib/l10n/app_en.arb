@@ -111,6 +111,7 @@
   "dashActivityTabProgram": "Program",
   "dashActivityTabChat": "Messages",
   "dashActivityTabDiet": "Diet",
+  "dashActivityTabClient": "Client",
   "dashLoadFailed": "Couldn't load the dashboard",
   "dashTodayReservations": "Today's bookings",
   "dashUnitCount": "",
@@ -173,7 +174,7 @@
       "count": {"type": "int"}
     }
   },
-  "dashAiSummaryTitle": "AI diagnosis",
+  "dashAiSummaryTitle": "Activity feedback",
   "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
   "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
   "dashAiLoading": "Reviewing diet, workouts, and recent conversations…",
@@ -285,7 +286,7 @@
       }
     }
   },
-  "clientsNew": "New client",
+  "clientsNew": "Register new client",
   "clientsTitle": "Member management",
   "clientsManagementAttention": "Needs attention",
   "clientsFiltersClearAll": "Clear all",
@@ -343,15 +344,15 @@
   "@memberHealthRange": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}},
   "clientInviteTitle": "Add a new client",
   "clientInviteIntro": "Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.",
-  "clientInviteIntroImmediate": "Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.",
+  "clientInviteIntroImmediate": "Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.",
   "clientInviteMemberIdLabel": "Member ID",
   "clientInviteLookupAction": "Find",
   "clientInviteMessageLabel": "Message (optional)",
   "clientInviteSendAction": "Send request",
-  "clientInviteConnectAction": "Connect",
+  "clientInviteConnectAction": "Register client",
   "clientInviteSent": "Sent a coaching request to {name}",
   "@clientInviteSent": {"placeholders": {"name": {"type": "String"}}},
-  "clientInviteConnected": "Connected with {name}",
+  "clientInviteConnected": "Registered {name} as a client",
   "@clientInviteConnected": {"placeholders": {"name": {"type": "String"}}},
   "clientInviteNotFound": "No member uses that member ID",
   "clientInviteFailed": "Couldn't send the request. Please try again",
@@ -364,6 +365,8 @@
   "clientInviteCancelAction": "Withdraw",
   "clientInviteCancelled": "Request withdrawn",
   "clientInviteCancelFailed": "Couldn't withdraw the request. Please try again",
+  "clientInviteConfirmPrompt": "Is this the right client?",
+  "clientInviteGoalLabel": "Goal",
   "coachTemplateNew": "New template",
   "coachTemplateEdit": "Edit template",
   "coachTemplateSaveAsMine": "Save as my template",
@@ -740,6 +743,14 @@
   "workoutDoneOfTotal": "{done} of {total} done",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "Not logged",
+  "chartNotYet": "Not yet",
+  "chartOverGoal": "{amount} {unit} over goal",
+  "@chartOverGoal": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  },
   "reportsSendStateSent": "Sent",
   "reportsSendStateSending": "Sending…",
   "reportsShare": "Share",
@@ -946,17 +957,6 @@
   "myNotifications": "Notifications",
   "myNotifNewMessage": "New message alerts",
   "myNotifNewMessageHint": "A sidebar badge appears when a client messages you",
-  "myNotifSessionReminder": "Session reminders",
-  "myNotifSessionReminderHint": "Upcoming sessions are highlighted on the dashboard",
-  "myReminderLead": "Remind me",
-  "myMinutesBefore": "{minutes} min before",
-  "@myMinutesBefore": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
   "myAccount": "Account",
   "myChangePassword": "Change password",
   "myChangePasswordHint": "We'll confirm your current password first",

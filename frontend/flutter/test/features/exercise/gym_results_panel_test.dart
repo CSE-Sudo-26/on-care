@@ -102,14 +102,17 @@ void main() {
   testWidgets('화살표로 반반 ↔ 목록만 두 자리를 오간다 (#1370)', (tester) async {
     await _pumpFinder(tester);
 
-    // 처음은 반반 — 지도가 위에 띠로 눕는다.
-    final double half = tester.getSize(find.byKey(const Key('gym-map-slot'))).height;
-    expect(half, greaterThan(0));
+    // 처음은 반반 — 지도가 위에 **가로로 긴 띠**로 눕는다. 높이는 고정값이라
+    // 큰 화면에서도 머리줄·탭 줄을 밀어내지 않는다 (#1382).
+    final double half = tester
+        .getSize(find.byKey(const Key('gym-map-slot')))
+        .height;
+    expect(half, 200);
 
     await tester.tap(find.byKey(const ValueKey<String>('gym-list-toggle')));
     await tester.pumpAndSettle();
-    // 목록만 — 지도 자리가 사라진다.
-    expect(tester.getSize(find.byKey(const Key('gym-map-slot'))).height, 0);
+    // 목록만 — 지도 자리가 통째로 사라진다 (#1382).
+    expect(find.byKey(const Key('gym-map-slot')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey<String>('gym-list-toggle')));
     await tester.pumpAndSettle();
