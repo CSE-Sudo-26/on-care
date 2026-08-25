@@ -308,24 +308,57 @@ class _SuggestionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: Text(
-                  suggestion.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.foreground,
+                // 이름 - 종류 - 시간/분/회 를 한 줄에 둔다. 이름/종류/설명처럼
+                // 줄을 나누면 셋을 훑는 데 시선이 세 번 움직였다.
+                child: Text.rich(
+                  TextSpan(
+                    children: <InlineSpan>[
+                      TextSpan(
+                        text: suggestion.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: ' · ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                      TextSpan(
+                        text: routineTypeLabel(l, suggestion.type),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: ' · ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.subtleForeground,
+                        ),
+                      ),
+                      TextSpan(
+                        // 근력은 시간이 아니라 세트·횟수·중량으로 적는다 — 최종
+                        // 검토 dialog·수정 창과 같은 함수를 쓴다. (#1321)
+                        text: routineSuggestionAmountLabel(l, suggestion),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                // 근력은 시간이 아니라 세트·횟수·중량으로 적는다 — 최종 검토
-                // dialog·수정 창과 같은 함수를 쓴다. (#1321)
-                routineSuggestionAmountLabel(l, suggestion),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.accent,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               // `수정` 은 판단이 아니라 **보조 동작**이다(#939). 아래 줄에 같은
@@ -352,15 +385,6 @@ class _SuggestionCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            routineTypeLabel(l, suggestion.type),
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.subtleForeground,
-            ),
           ),
           if (suggestion.reason.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
@@ -389,27 +413,29 @@ class _SuggestionCard extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           // 아래 줄에는 **결정 둘만** 남는다 — 이 제안을 고객에게 줄 것인가.
-          //
-          // 라벨은 로케일을 크게 탄다. 한국어 `추천 안 함`·`고객에게 추천` 은 한
+          // 둘 다 오른쪽에 붙여 카드 하나의 결정처럼 읽히게 한다. 라벨은
+          // 로케일을 크게 탄다. 한국어 `추천 안 함`·`고객에게 추천` 은 한
           // 줄에 들어가지만 영어 `Don't recommend`·`Recommend to client` 는 배율
           // 1.3 에서 카드를 크게 넘겼다(#849). `Row` + `Spacer` 대신
-          // `OverflowBar` 를 쓰면 넓을 때는 좌우 배치를 그대로 두고, 좁아지면
+          // `OverflowBar` 를 쓰면 넓을 때는 오른쪽 배치를 그대로 두고, 좁아지면
           // 세로로 흘려 준다.
           OverflowBar(
-            alignment: MainAxisAlignment.spaceBetween,
+            alignment: MainAxisAlignment.end,
             overflowAlignment: OverflowBarAlignment.end,
             spacing: AppSpacing.sm,
             overflowSpacing: AppSpacing.xs,
             children: <Widget>[
               // 다른 카드들과 같은 공용 버튼([ActionButton]) 이다 — 이
               // 카드만 기본 Material 버튼을 쓰면 높이·글꼴·테두리가 조금씩
-              // 달라 눈에 띈다.
+              // 달라 눈에 띈다. 카드 한 장에 여러 제안이 쌓이는 자리라 `dense`
+              // 로 줄인다.
               ActionButton(
                 key: ValueKey<String>(
                   'routine-suggestion-dismiss-${suggestion.id}',
                 ),
                 label: l.suggestionDismiss,
                 tone: AppColors.subtleForeground,
+                dense: true,
                 onPressed: busy ? null : onDismiss,
               ),
               // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
@@ -431,6 +457,7 @@ class _SuggestionCard extends StatelessWidget {
                     ),
                     label: l.suggestionApprove,
                     primary: true,
+                    dense: true,
                     onPressed: busy ? null : onApprove,
                   ),
                 ],
