@@ -40,6 +40,7 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
@@ -177,7 +178,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// 스낵바 안내는 그대로다.
   Future<bool> _saveTemplate(ProgramEditorState draft) async {
     if (_savingTemplate) return false;
-    final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     final exercises = <TemplateExercise>[
       for (final session in draft.sessions)
@@ -198,9 +198,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             ),
     ];
     if (exercises.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.coachTemplateExerciseRequired)),
-      );
+      showAppToast(context, l.coachTemplateExerciseRequired);
       return false;
     }
     setState(() => _savingTemplate = true);
@@ -215,19 +213,17 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       ref.invalidate(programTemplatesProvider);
       if (!mounted) return false;
       setState(() => _savingTemplate = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.programDraftSaved)));
+      showAppToast(context, l.programDraftSaved, kind: AppToastKind.success);
       return true;
     } on Object catch (error) {
       if (!mounted) return false;
       setState(() => _savingTemplate = false);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            error is AppError
-                ? serverDetailOr(l, error.message, l.coachTemplateSaveFailed)
-                : l.coachTemplateSaveFailed,
-          ),
-        ),
+      showAppToast(
+        context,
+        error is AppError
+            ? serverDetailOr(l, error.message, l.coachTemplateSaveFailed)
+            : l.coachTemplateSaveFailed,
+        kind: AppToastKind.error,
       );
       return false;
     }
@@ -252,7 +248,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _sendRequestFor = sentFor;
     }
     setState(() => _sending = true);
-    final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     try {
       // 세션이 몇 개든 프로그램 배정 한 번으로 보낸다 — 세션당 루틴 한 건이
@@ -266,7 +261,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     } catch (_) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
+      showAppToast(context, l.coachSendFailed, kind: AppToastKind.error);
       return;
     }
     // 배정은 여기서 이미 끝났다 — 3열 `전송 이력`(`assignedRoutinesProvider`)
@@ -316,7 +311,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     final time =
         '${_registerTime.hour.toString().padLeft(2, '0')}:'
         '${_registerTime.minute.toString().padLeft(2, '0')}';
-    final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     setState(() => _registeringClientIds.add(registeredFor));
     bool attachedToExisting;
@@ -334,7 +328,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       if (!mounted) return;
       setState(() => _registeringClientIds.remove(registeredFor));
       if (_isStillSelected(registeredFor)) {
-        messenger.showSnackBar(SnackBar(content: Text(l.coachScheduleFailed)));
+        showAppToast(context, l.coachScheduleFailed, kind: AppToastKind.error);
       }
       return;
     }
@@ -1464,7 +1458,6 @@ class _TemplateCard extends ConsumerWidget {
     ProgramTemplate template,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1488,9 +1481,8 @@ class _TemplateCard extends ConsumerWidget {
           .delete(template.id);
       ref.invalidate(programTemplatesProvider);
     } on AppError {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.coachTemplateDeleteFailed)),
-      );
+      if (!context.mounted) return;
+      showAppToast(context, l.coachTemplateDeleteFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1921,19 +1913,21 @@ class _CancelRoutineButtonState extends ConsumerState<_CancelRoutineButton> {
     );
     if (ok != true || !mounted) return;
 
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
       await ref
           .read(trainerRoutineRepositoryProvider)
           .deleteRoutine(widget.clientId, widget.routine.id);
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
+      if (!mounted) return;
+      showAppToast(context, l.routineDeleted, kind: AppToastKind.success);
     } on StateError {
       // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 목록만 다시 읽고
       // 그 줄을 화면에서 걷어낸다.
-      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
+      if (!mounted) return;
+      showAppToast(context, l.routineAlreadyGone);
     } on Object {
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
+      if (!mounted) return;
+      showAppToast(context, l.routineDeleteFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
       ref.invalidate(assignedRoutinesProvider(widget.clientId));

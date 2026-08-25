@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/clients/data/repositories/client_invite_
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// 회원 ID로 기존 회원을 찾아 연결하는 신규 고객 등록 창. (#919)
 ///
@@ -97,7 +98,6 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
     final found = _found;
     if (_busy || found == null) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final repository = ref.read(clientInviteRepositoryProvider);
     setState(() {
@@ -109,14 +109,12 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
       ref.invalidate(pendingClientInvitesProvider);
       if (!mounted) return;
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            repository.connectsImmediately
-                ? l.clientInviteConnected(found.name)
-                : l.clientInviteSent(found.name),
-          ),
-        ),
+      showAppToast(
+        context,
+        repository.connectsImmediately
+            ? l.clientInviteConnected(found.name)
+            : l.clientInviteSent(found.name),
+        kind: AppToastKind.success,
       );
     } on AppError catch (error) {
       if (!mounted) return;
@@ -131,21 +129,18 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
   Future<void> _cancel(ClientInvite invite) async {
     if (_busy) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
       await ref.read(clientInviteRepositoryProvider).cancel(invite.id);
       ref.invalidate(pendingClientInvitesProvider);
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.clientInviteCancelled)));
+      showAppToast(context, l.clientInviteCancelled, kind: AppToastKind.success);
     } on AppError catch (error) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(l, error.message, l.clientInviteCancelFailed),
-          ),
-        ),
+      showAppToast(
+        context,
+        serverDetailOr(l, error.message, l.clientInviteCancelFailed),
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _busy = false);

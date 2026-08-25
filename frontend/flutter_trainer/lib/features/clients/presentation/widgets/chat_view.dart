@@ -18,6 +18,7 @@ import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -86,12 +87,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
     if (_sending) return;
     final text = _input.text;
     if (text.trim().isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같은 이유로 await 전에 잡아 둔다 — 뒤에서 context 를 다시
-    // 만지면 async gap 을 건너 쓰게 된다.
     final AppLocalizations l = AppLocalizations.of(context);
     if (text.trim().length > _maxMessageLength) {
-      messenger.showSnackBar(SnackBar(content: Text(l.chatTooLong)));
+      showAppToast(context, l.chatTooLong);
       return;
     }
     setState(() => _sending = true);
@@ -101,10 +99,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
           .sendTrainerMessage(clientId: widget.clientId, text: text);
     } catch (_) {
       // Guard the failure path too: a slow send that fails after the
-      // user left would otherwise touch a disposed messenger.
+      // user left would otherwise touch a disposed context.
       if (!mounted) return;
       // Keep the draft in the input and tell the user it didn't go out.
-      messenger.showSnackBar(SnackBar(content: Text(l.chatSendFailed)));
+      showAppToast(context, l.chatSendFailed, kind: AppToastKind.error);
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -136,7 +134,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
   /// 데모에는 사진을 받을 백엔드가 없어 진입점 자체를 그리지 않는다.
   Future<void> _sendImage() async {
     if (_sending) return;
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -151,7 +148,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
     // 사진까지 다시 골라야 한다.
     final caption = _input.text.trim();
     if (caption.length > _maxMessageLength) {
-      messenger.showSnackBar(SnackBar(content: Text(l.chatTooLong)));
+      if (!mounted) return;
+      showAppToast(context, l.chatTooLong);
       return;
     }
     final bytes = await picked.readAsBytes();
@@ -170,12 +168,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
       if (!mounted) return;
       // 용량·형식 거절은 서버가 이유를 문장으로 준다. 그 문장이 트레이너가
       // 다음에 할 일(줄여서 다시 보낼지)을 정한다.
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(l, error.message, l.chatImageSendFailed),
-          ),
-        ),
+      showAppToast(
+        context,
+        serverDetailOr(l, error.message, l.chatImageSendFailed),
+        kind: AppToastKind.error,
       );
       return;
     } finally {
@@ -297,19 +293,19 @@ class _ChatViewState extends ConsumerState<ChatView> {
           );
       ref.invalidate(trainerMemosProvider(widget.clientId));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).chatInsightMemoSaved),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).chatInsightMemoSaved,
+        kind: AppToastKind.success,
       );
     } on Object {
       // The button stays in its unsaved state so the trainer can try again —
       // the list is only invalidated on a write that actually landed.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).chatInsightMemoSaveFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).chatInsightMemoSaveFailed,
+        kind: AppToastKind.error,
       );
     } finally {
       _savingInsights.remove(insight.id);
@@ -795,7 +791,6 @@ class _Bubble extends ConsumerWidget {
     ChatAttachment attachment,
   ) async {
     final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final bytes = await ref
           .read(trainerChatPdfRepositoryProvider)
@@ -816,7 +811,8 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.chatPdfOpenFailed)));
+      if (!context.mounted) return;
+      showAppToast(context, l.chatPdfOpenFailed, kind: AppToastKind.error);
     }
   }
 }

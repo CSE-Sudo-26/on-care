@@ -133,7 +133,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Future<void> _saveFeedback(WeeklyReport report, String body) async {
     if (_savingFeedback) return;
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _savingFeedback = true);
     try {
       await ref
@@ -150,12 +149,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         )),
       );
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.reportsFeedbackSaved)));
+      showAppToast(context, l.reportsFeedbackSaved, kind: AppToastKind.success);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.reportsFeedbackSaveFailed)),
-      );
+      showAppToast(context, l.reportsFeedbackSaveFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _savingFeedback = false);
     }
@@ -284,8 +281,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final AppLocalizations l = AppLocalizations.of(context);
     final id = report.client.id;
     if (_sending != null || _sent.contains(id)) return;
-    // messenger 와 마찬가지로 l 도 위에서 await 전에 잡아 뒀다.
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = id);
     try {
       final bytes = await _generateReportPdf(l, report, message);
@@ -301,7 +296,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = null);
-      messenger.showSnackBar(SnackBar(content: Text(l.reportsSendFailed)));
+      showAppToast(context, l.reportsSendFailed, kind: AppToastKind.error);
       return;
     }
     if (!mounted) return;
@@ -324,9 +319,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   Future<void> _openPdfExport(WeeklyReport report) async {
     if (_generatingPdf) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // await 를 넘어 `context` 를 다시 읽지 않도록 messenger 와 함께 미리 잡아
-    // 둔다. PDF 문구도 화면과 같은 로케일이어야 한다 (#964).
+    // PDF 문구도 화면과 같은 로케일이어야 한다 (#964).
     final AppLocalizations l = AppLocalizations.of(context);
     final feedback = _messageFor(l, report, _savedDraftOf(report));
     setState(() => _generatingPdf = true);
@@ -339,9 +332,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       );
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l.reportsPdfGenerationFailed)),
-        );
+        showAppToast(context, l.reportsPdfGenerationFailed, kind: AppToastKind.error);
       }
     } finally {
       if (mounted) setState(() => _generatingPdf = false);
