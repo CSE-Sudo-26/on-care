@@ -164,6 +164,7 @@
   "dietSodiumHint": "하루 권장 2,000mg 이하",
   "dietSugarHint": "하루 권장 50g 이하",
   "dietDeleteMeal": "식단 삭제",
+  "dietEditMeal": "식사 수정",
   "exTypeCardio": "유산소",
   "exTypeStrength": "근력",
   "exTypeFlexibility": "스트레칭",

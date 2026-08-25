@@ -519,6 +519,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietDeleteMeal => 'Delete Meal';
 
   @override
+  String get dietEditMeal => 'Edit meal';
+
+  @override
   String get exTypeCardio => 'Cardio';
 
   @override
