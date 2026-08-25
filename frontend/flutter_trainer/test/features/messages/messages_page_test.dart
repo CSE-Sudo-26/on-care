@@ -116,10 +116,13 @@ void main() {
         find.byKey(const ValueKey<String>('messages-unread-seed-client-3')),
         findsNothing,
       );
-      expect(
-        find.byKey(const ValueKey<String>('messages-unread-seed-client-8')),
-        findsOneWidget,
+      final unreadBadge = find.byKey(
+        const ValueKey<String>('messages-unread-seed-client-8'),
       );
+      expect(unreadBadge, findsOneWidget);
+      // 세로로 긴 알약처럼 깨졌던 적이 있다 (#1380) — 정원인지 폭·높이로 잡는다.
+      final Size badgeSize = tester.getSize(unreadBadge);
+      expect(badgeSize.width, badgeSize.height);
       // 목록은 어느 대화를 열까를 정하는 자리다 — 이름 · 시각 · 마지막
       // 말 · 안읽음뿐이고, 목표도 상태도 없다.
       expect(

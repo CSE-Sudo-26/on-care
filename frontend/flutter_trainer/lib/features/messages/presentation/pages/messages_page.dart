@@ -382,29 +382,34 @@ class _ConversationTile extends StatelessWidget {
                             ),
                           ),
                           if (unread > 0)
-                            Container(
-                              key: ValueKey<String>(
-                                'messages-unread-${client.id}',
-                              ),
-                              margin: const EdgeInsets.only(
+                            Padding(
+                              padding: const EdgeInsets.only(
                                 left: AppSpacing.xs,
                               ),
-                              constraints: const BoxConstraints(minWidth: 20),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.all(AppRadius.pill),
-                              ),
-                              child: Text(
-                                '$unread',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
+                              // 원 자체(정확히 20x20)와 앞 여백을 한 Container에
+                              // 같이 두면 margin까지 포함해 측정돼 타원처럼
+                              // 잡히기 쉽다 — 여백은 Padding으로 밖에 둔다.
+                              child: Container(
+                                key: ValueKey<String>(
+                                  'messages-unread-${client.id}',
+                                ),
+                                width: 20,
+                                height: 20,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    // 3 characters ("99+") only fit at a
+                                    // smaller size inside a fixed circle.
+                                    fontSize: unread > 99 ? 8.5 : 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ),
                             ),
