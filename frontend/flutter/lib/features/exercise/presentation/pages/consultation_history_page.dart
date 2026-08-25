@@ -79,8 +79,15 @@ class ConsultationHistoryPage extends ConsumerWidget {
                                       onPressed: () => Navigator.pop(dialogContext, false),
                                       child: const Text('유지'),
                                     ),
+                                    // 되돌릴 수 없는 쪽이다 — 카드의 취소
+                                    // 버튼과 같은 파괴적 색 토큰을 쓴다.
+                                    // 유지와 취소가 같은 색이면 두 동작의
+                                    // 위험도 차이가 보이지 않는다(#1429).
                                     TextButton(
                                       onPressed: () => Navigator.pop(dialogContext, true),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: AppColors.destructive,
+                                      ),
                                       child: Text(l.actionCancel),
                                     ),
                                   ],
@@ -95,11 +102,12 @@ class ConsultationHistoryPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                         ],
-                        const SizedBox(height: 12),
                       ],
+                      // `지난 요청` 소제목은 두지 않는다(#1429). 완료·취소는
+                      // 카드가 상태로 말하고 있어, 소제목은 같은 목록을 한 겹
+                      // 더 나누기만 했다. 진행 중 묶음과 같은 간격으로 이어
+                      // 붙어 카드 흐름이 끊기지 않는다.
                       if (past.isNotEmpty) ...<Widget>[
-                        _SectionLabel(text: l.exConsultHistoryPast),
-                        const SizedBox(height: 10),
                         for (final ConsultationRequest r in past) ...<Widget>[
                           ConsultationRequestCard(
                             key: ValueKey<String>('consult-history-${r.id}'),

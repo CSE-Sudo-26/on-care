@@ -1480,9 +1480,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exConsultHistoryInProgress => '진행 중';
 
   @override
-  String get exConsultHistoryPast => '지난 요청';
-
-  @override
   String get exConsultRejectedReasonLabel => '거절 사유';
 
   @override

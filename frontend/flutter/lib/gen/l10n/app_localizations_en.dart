@@ -1516,9 +1516,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exConsultHistoryInProgress => 'In Progress';
 
   @override
-  String get exConsultHistoryPast => 'Past Requests';
-
-  @override
   String get exConsultRejectedReasonLabel => 'Reason for decline';
 
   @override
