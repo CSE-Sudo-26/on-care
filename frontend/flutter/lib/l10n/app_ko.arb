@@ -525,7 +525,6 @@
   "exConsultHistoryTitle": "내 상담 요청",
   "exConsultHistoryEmpty": "아직 보낸 상담 요청이 없어요.",
   "exConsultHistoryInProgress": "진행 중",
-  "exConsultHistoryPast": "지난 요청",
   "exConsultRejectedReasonLabel": "거절 사유",
   "exConsultRejectedNoReason": "사유를 남기지 않았어요. 다른 트레이너에게 상담을 요청해 보세요.",
   "exConsultAcceptedGuide": "담당 트레이너와 연결되었어요. 이제 채팅으로 상담할 수 있어요.",

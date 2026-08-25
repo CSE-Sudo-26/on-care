@@ -2822,12 +2822,6 @@ abstract class AppLocalizations {
   /// **'In Progress'**
   String get exConsultHistoryInProgress;
 
-  /// No description provided for @exConsultHistoryPast.
-  ///
-  /// In en, this message translates to:
-  /// **'Past Requests'**
-  String get exConsultHistoryPast;
-
   /// No description provided for @exConsultRejectedReasonLabel.
   ///
   /// In en, this message translates to:
