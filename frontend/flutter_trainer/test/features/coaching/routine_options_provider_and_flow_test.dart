@@ -561,6 +561,17 @@ void main() {
     );
     final initialPrompt = tester.widget<TextField>(promptField);
     expect(initialPrompt.decoration?.hintStyle?.color, AppColors.mutedForeground);
+    expect(initialPrompt.decoration?.fillColor, AppColors.card);
+    expect(
+      (initialPrompt.decoration?.enabledBorder! as OutlineInputBorder)
+          .borderSide
+          .color,
+      AppColors.borderStrong,
+    );
+    expect(
+      initialPrompt.decoration?.counterStyle?.color,
+      AppColors.subtleForeground,
+    );
     // 서버 상한(`trainer_note`, 500자)을 화면에서 먼저 막는다.
     expect(initialPrompt.maxLength, 500);
     expect(

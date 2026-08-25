@@ -404,6 +404,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   Widget _promptField() {
     final AppLocalizations l = AppLocalizations.of(context);
     return _surfaceCard(
+      key: const ValueKey<String>('ai-prompt-card'),
+      subtleBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -428,7 +430,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               maxLines: 5,
               maxLength: _promptMaxLength,
               style: _inputTextStyle,
-              decoration: _inputDecoration(hintText: l.aiPromptHint),
+              decoration: _inputDecoration(
+                hintText: l.aiPromptHint,
+                outlined: true,
+              ),
             ),
           ),
         ],
@@ -1071,8 +1076,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
-  Widget _surfaceCard({required Widget child, bool accent = false}) {
+  Widget _surfaceCard({
+    Key? key,
+    required Widget child,
+    bool accent = false,
+    bool subtleBorder = false,
+  }) {
     return Container(
+      key: key,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: accent ? AppColors.accentSurface : AppColors.card,
@@ -1080,6 +1091,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         border: Border.all(
           color: accent
               ? AppColors.accent.withValues(alpha: 0.28)
+              : subtleBorder
+              ? AppColors.border
               : AppColors.borderStrong,
         ),
         boxShadow: kCardShadow,
@@ -1112,7 +1125,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   /// Filled, borderless input styling. Deliberately no `labelText` —
   /// see [LabeledField] for why the caption goes above the box.
-  InputDecoration _inputDecoration({required String hintText}) {
+  InputDecoration _inputDecoration({
+    required String hintText,
+    bool outlined = false,
+  }) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(
@@ -1121,11 +1137,31 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       ),
       isDense: true,
       filled: true,
-      fillColor: AppColors.inputBackground,
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(AppRadius.md),
-        borderSide: BorderSide.none,
-      ),
+      fillColor: outlined ? AppColors.card : AppColors.inputBackground,
+      counterStyle: outlined
+          ? const TextStyle(fontSize: 11.5, color: AppColors.subtleForeground)
+          : null,
+      border: outlined
+          ? const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.borderStrong),
+            )
+          : const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide.none,
+            ),
+      enabledBorder: outlined
+          ? const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.borderStrong),
+            )
+          : null,
+      focusedBorder: outlined
+          ? const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.25),
+            )
+          : null,
     );
   }
 
