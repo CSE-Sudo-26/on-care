@@ -1676,6 +1676,12 @@ abstract class AppLocalizations {
   /// **'Sugar'**
   String get metricSugar;
 
+  /// No description provided for @clientDietMacrosMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'No carbs/protein/fat recorded'**
+  String get clientDietMacrosMissing;
+
   /// No description provided for @metricCarbs.
   ///
   /// In en, this message translates to:

@@ -900,6 +900,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricSugar => 'Sugar';
 
   @override
+  String get clientDietMacrosMissing => 'No carbs/protein/fat recorded';
+
+  @override
   String get metricCarbs => 'Carbs';
 
   @override
