@@ -678,6 +678,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memberHealthGoals => 'Member goals';
 
   @override
+  String get memberHealthDietGoal => 'Nutrition goals';
+
+  @override
+  String get memberHealthExerciseGoal => 'Exercise goals';
+
+  @override
+  String get memberHealthGoalCalories => 'Daily calories (kcal)';
+
+  @override
+  String get memberHealthGoalSodium => 'Daily sodium (mg)';
+
+  @override
+  String get memberHealthGoalSugar => 'Daily sugar (g)';
+
+  @override
+  String get memberHealthGoalCarbs => 'Daily carbs (g)';
+
+  @override
+  String get memberHealthGoalProtein => 'Daily protein (g)';
+
+  @override
+  String get memberHealthGoalFat => 'Daily fat (g)';
+
+  @override
+  String get memberHealthGoalBurnDaily => 'Daily burn (kcal)';
+
+  @override
+  String get memberHealthGoalCardioWeekly => 'Weekly cardio (min)';
+
+  @override
+  String get memberHealthGoalStrengthWeekly => 'Weekly strength (sets)';
+
+  @override
+  String get memberHealthGoalFlexibilityWeekly => 'Weekly stretching (min)';
+
+  @override
   String get memberHealthWeeklyGoal => 'Weekly exercise goal';
 
   @override

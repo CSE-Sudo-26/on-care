@@ -654,6 +654,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthGoals => '고객 목표';
 
   @override
+  String get memberHealthDietGoal => '식단 목표';
+
+  @override
+  String get memberHealthExerciseGoal => '운동 목표';
+
+  @override
+  String get memberHealthGoalCalories => '일일 칼로리 제한 (kcal)';
+
+  @override
+  String get memberHealthGoalSodium => '일일 나트륨 제한 (mg)';
+
+  @override
+  String get memberHealthGoalSugar => '일일 당류 제한 (g)';
+
+  @override
+  String get memberHealthGoalCarbs => '일일 탄수화물 제한 (g)';
+
+  @override
+  String get memberHealthGoalProtein => '일일 단백질 제한 (g)';
+
+  @override
+  String get memberHealthGoalFat => '일일 지방 제한 (g)';
+
+  @override
+  String get memberHealthGoalBurnDaily => '일일 소모 칼로리 (kcal)';
+
+  @override
+  String get memberHealthGoalCardioWeekly => '주간 유산소 (분)';
+
+  @override
+  String get memberHealthGoalStrengthWeekly => '주간 근력 (세트)';
+
+  @override
+  String get memberHealthGoalFlexibilityWeekly => '주간 스트레칭 (분)';
+
+  @override
   String get memberHealthWeeklyGoal => '주간 운동 목표';
 
   @override
