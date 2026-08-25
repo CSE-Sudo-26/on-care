@@ -54,6 +54,8 @@ def _exercise(**overrides) -> dict:
         "reps": 12,
         "weight": 60.0,
         "intensity": "moderate",
+        # 단계 칸(#934) — 적지 않으면 본운동이라 왕복 비교에도 함께 온다.
+        "phase": "main",
         "memo": "무릎 각도 확인",
         "source": "trainer",
     }

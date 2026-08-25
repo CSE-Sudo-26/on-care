@@ -71,6 +71,9 @@ def _exercise(name: str, **overrides) -> dict:
         "reps": 12,
         "weight": 60.0,
         "intensity": "moderate",
+        # 준비운동·본운동·마무리(#934). 적지 않으면 본운동이라, 왕복 비교에도
+        # 이 값이 함께 온다.
+        "phase": "main",
         "memo": "",
         "source": "trainer",
     }
