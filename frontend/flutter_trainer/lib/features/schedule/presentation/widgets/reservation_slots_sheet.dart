@@ -107,97 +107,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     }
   }
 
-  Future<void> _edit(ReservationSlot slot) async {
-    final AppLocalizations l = AppLocalizations.of(context);
-    var time = TimeOfDay.fromDateTime(slot.startsAt);
-    var endTime = TimeOfDay.fromDateTime(
-      slot.startsAt.add(Duration(minutes: slot.durationMinutes)),
-    );
-    var type = slot.sessionType;
-    // 이미 예약이 걸린 자리는 종류를 고칠 수 없다 — 서버가 409 로 막는
-    // 동작을 아예 내놓지 않는다(#871 과 같은 규약).
-    final typeLocked = slot.booked;
-    final changed = await showDialog<(TimeOfDay, TimeOfDay, String)?>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(l.slotEditTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('${l.schedFieldStart} – ${l.schedFieldEnd}'),
-                trailing: Text('${_hhmm(time)} – ${_hhmm(endTime)}'),
-                onTap: () async {
-                  final picked = await showScheduleTimeRangePicker(
-                    context: context,
-                    start: time,
-                    end: endTime,
-                  );
-                  if (picked != null) {
-                    setDialogState(() {
-                      time = picked.start;
-                      endTime = picked.end;
-                    });
-                  }
-                },
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.slotSessionType),
-                trailing: typeLocked
-                    ? Text(sessionTypeLabel(l, type))
-                    : DropdownButton<String>(
-                        value: type,
-                        underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<String>>[
-                          for (final t in SessionType.all)
-                            DropdownMenuItem<String>(
-                              value: t,
-                              child: Text(sessionTypeLabel(l, t)),
-                            ),
-                        ],
-                        onChanged: (v) =>
-                            setDialogState(() => type = v ?? type),
-                      ),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l.actionCancel),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, (time, endTime, type)),
-              child: Text(l.actionSave),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (changed == null || !mounted) return;
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(reservationSlotRepositoryProvider)
-          .update(
-            slot.id,
-            startsAt: _startsAt(changed.$1),
-            durationMinutes: _duration(changed.$1, changed.$2),
-            sessionType: changed.$3 == slot.sessionType ? null : changed.$3,
-          );
-      ref.invalidate(reservationSlotsProvider);
-      _showMessage(l.slotUpdated, kind: AppToastKind.success);
-    } catch (error) {
-      _showMessage(_errorMessage(l, error), kind: AppToastKind.error);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
   Future<void> _close(ReservationSlot slot) async {
     final AppLocalizations l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -448,11 +357,15 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                           const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         final slot = daySlots[index];
+                        // 닫혔거나 이미 예약된 자리는 "골라 쓸 수 없는 자리"라
+                        // 같은 회색으로 눌러 둔다 — 비어 있는 자리(흰 카드)와
+                        // 구분된다.
+                        final taken = slot.isClosed || slot.booked;
                         return Container(
                           key: ValueKey<String>('slot-row-${slot.id}'),
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
-                            color: slot.isClosed
+                            color: taken
                                 ? AppColors.inputBackground
                                 : AppColors.card,
                             border: Border.all(color: AppColors.borderStrong),
@@ -460,9 +373,30 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                           ),
                           child: Row(
                             children: <Widget>[
+                              // 종류 → 시간 순서다 — 새 일정 모달과 위 열기
+                              // 폼(종류 → 날짜 → 시간)이 같은 순서로 읽힌다.
                               Container(
-                                width: 132,
-                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: 3,
+                                ),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.accentSurface,
+                                  borderRadius: BorderRadius.all(
+                                    AppRadius.pill,
+                                  ),
+                                ),
+                                child: Text(
+                                  sessionTypeLabel(l, slot.sessionType),
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.accent,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
                                 child: Text(
                                   '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt))} – '
                                   '${_hhmm(TimeOfDay.fromDateTime(slot.startsAt.add(Duration(minutes: slot.durationMinutes))))}',
@@ -471,53 +405,37 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: AppSpacing.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(
-                                      sessionTypeLabel(l, slot.sessionType),
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    Text(
-                                      // 한 사람 몫뿐인 자리라 인원수를 셀
-                                      // 것이 없다 — 상태만 적는다(#1072).
-                                      slot.isClosed
-                                          ? l.slotClosedSummary
-                                          : (slot.booked
-                                                ? l.slotBookedSummary
-                                                : l.slotOpenSummary),
-                                      style: TextStyle(
-                                        color: slot.isClosed
-                                            ? AppColors.subtleForeground
-                                            : AppColors.foreground,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (!slot.isClosed) ...<Widget>[
-                                IconButton(
-                                  tooltip: l.actionEdit,
-                                  onPressed: _saving ? null : () => _edit(slot),
-                                  icon: const Icon(Icons.edit_outlined),
-                                ),
+                              if (slot.isClosed)
+                                Text(
+                                  l.slotClosedSummary,
+                                  style: const TextStyle(
+                                    color: AppColors.subtleForeground,
+                                  ),
+                                )
+                              else if (slot.booked)
+                                // 예약자 이름을 보여 준다(#1394) — 예전
+                                // 수정·닫기 아이콘 자리다. 이름이 아직 없으면
+                                // (오래된 데이터 등) 상태 문구로 대신한다.
+                                Text(
+                                  slot.bookedByName ?? l.slotBookedSummary,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.foreground,
+                                  ),
+                                )
+                              else
+                                // 아직 아무도 잡지 않은 자리만 지울 수 있다 —
+                                // 수정 대신 삭제다(#1394).
                                 IconButton(
                                   tooltip: l.slotCloseAction,
                                   onPressed: _saving
                                       ? null
                                       : () => _close(slot),
                                   icon: const Icon(
-                                    Icons.lock_outline,
+                                    Icons.delete_outline,
                                     color: AppColors.destructive,
                                   ),
                                 ),
-                              ],
                             ],
                           ),
                         );

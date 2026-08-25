@@ -50,7 +50,9 @@ def _aware(value: datetime) -> datetime:
 _SESSION_DURATION_MINUTES = {"1:1 PT": 60, "상담": 30}
 
 
-def _slot_out(slot: TrainerReservationSlot) -> TrainerSlotOut:
+def _slot_out(
+    slot: TrainerReservationSlot, *, booked_by_name: str | None = None
+) -> TrainerSlotOut:
     return TrainerSlotOut(
         id=slot.id,
         trainer_id=slot.trainer_id,
@@ -60,7 +62,27 @@ def _slot_out(slot: TrainerReservationSlot) -> TrainerSlotOut:
         remaining=0 if slot.is_closed else slot.remaining,
         is_closed=slot.is_closed,
         session_type=slot.session_type,
+        booked_by_name=booked_by_name,
     )
+
+
+def _booked_names(db: Session, slot_ids: list[str]) -> dict[str, str]:
+    """예약 슬롯 id → 그 자리를 잡은 회원 이름.
+
+    트레이너용 슬롯 목록에서만 쓴다(#1394) — 회원용 목록은 남의 이름을 알 이유가
+    없다. 취소된 예약(`status != "booked"`)은 자리를 비워 준 것이라 빼고 본다.
+    """
+    if not slot_ids:
+        return {}
+    rows = db.execute(
+        select(TrainerReservation.slot_id, User.name)
+        .join(User, User.id == TrainerReservation.member_id)
+        .where(
+            TrainerReservation.slot_id.in_(slot_ids),
+            TrainerReservation.status == "booked",
+        )
+    ).all()
+    return {slot_id: name for slot_id, name in rows}
 
 
 def list_member_slots(
@@ -89,7 +111,10 @@ def list_trainer_slots(
             TrainerReservationSlot.starts_at > datetime.now(timezone.utc)
         )
     rows = db.scalars(query.order_by(TrainerReservationSlot.starts_at)).all()
-    return [_slot_out(row) for row in rows]
+    booked_names = _booked_names(db, [row.id for row in rows])
+    return [
+        _slot_out(row, booked_by_name=booked_names.get(row.id)) for row in rows
+    ]
 
 
 def create_slot(

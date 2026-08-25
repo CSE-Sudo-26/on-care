@@ -18,6 +18,10 @@ class TrainerSlotOut(BaseModel):
     remaining: int
     is_closed: bool = False
     session_type: SessionType = "1:1 PT"
+    #: 이 자리를 잡은 회원 이름. 트레이너용 목록(`GET /trainer/reservation-slots`)
+    #: 에서만 채운다 — 회원용 목록(`GET /trainers/{id}/slots`)은 다른 회원의
+    #: 이름을 알 이유가 없어 항상 null이다.
+    booked_by_name: str | None = None
 
 
 class TrainerSlotCreate(BaseModel):
