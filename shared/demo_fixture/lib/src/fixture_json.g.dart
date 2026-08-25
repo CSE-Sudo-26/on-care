@@ -371,27 +371,6 @@ const String kimMinsuFixtureJson = r'''
           "done": true,
           "sets": 3,
           "reps": 3
-        },
-        {
-          "name": "마무리 러닝머신 15분",
-          "type": "cardio",
-          "minutes": 15,
-          "calories": 135,
-          "done": true
-        },
-        {
-          "name": "하체 스트레칭 12분",
-          "type": "stretching",
-          "minutes": 12,
-          "calories": 36,
-          "done": true
-        },
-        {
-          "name": "탁구 20분",
-          "type": "other",
-          "minutes": 20,
-          "calories": 100,
-          "done": true
         }
       ],
       "meals": [
@@ -419,7 +398,7 @@ const String kimMinsuFixtureJson = r'''
       "offset": 1,
       "label": "AI 루틴 · 자율 운동",
       "pt": false,
-      "clientFeedback": "스트레칭은 시간이 없어서 못 했어요",
+      "clientFeedback": "하체 스트레칭은 시간이 없어서 못 했어요",
       "trainerNote": "",
       "dayMessage": "약속이 있어 칼로리와 당류가 목표를 넘은 하루예요. 오늘은 가볍게 시작해 보세요.",
       "exercises": [
@@ -438,6 +417,13 @@ const String kimMinsuFixtureJson = r'''
           "done": true,
           "sets": 3,
           "reps": 15
+        },
+        {
+          "name": "어깨 관절 보호 스트레칭 8분",
+          "type": "stretching",
+          "minutes": 8,
+          "calories": 24,
+          "done": true
         },
         {
           "name": "하체 스트레칭 15분",

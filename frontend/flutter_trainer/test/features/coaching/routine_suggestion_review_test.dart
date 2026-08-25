@@ -46,6 +46,9 @@ class _FakeSuggestionRepository implements TrainerRoutineSuggestionRepository {
     String? name,
     int? minutes,
     String? type,
+    int? sets,
+    int? reps,
+    double? weight,
     String? reason,
   }) async {
     approvals.add(suggestionId);
@@ -53,6 +56,9 @@ class _FakeSuggestionRepository implements TrainerRoutineSuggestionRepository {
       'name': name,
       'minutes': minutes,
       'type': type,
+      'sets': sets,
+      'reps': reps,
+      'weight': weight,
       'reason': reason,
     });
     await Future<void>.delayed(delay);
@@ -94,6 +100,19 @@ const RoutineSuggestion _walking = RoutineSuggestion(
   type: '유산소',
   reason: '대화할 수 있는 속도로 걸어 보세요',
   evidence: <String>['혈압 관리 목표'],
+);
+
+/// 근력 제안 — 시간이 아니라 세트·횟수·중량으로 재는 것 (#1321).
+const RoutineSuggestion _bridge = RoutineSuggestion(
+  id: 's-bridge',
+  name: '힙 브리지',
+  minutes: 12,
+  type: '근력',
+  sets: 3,
+  reps: 15,
+  weight: 0,
+  reason: '허리가 아프면 범위를 줄이세요',
+  evidence: <String>['최근 근력운동 비중 높음'],
 );
 
 void main() {
@@ -328,6 +347,93 @@ void main() {
     expect(edit['reason'], '오른쪽 어깨에 통증이 생기면 중단하세요');
     expect(edit['type'], '스트레칭');
     expect(edit['minutes'], _shoulder.minutes);
+  });
+
+  testWidgets('근력 제안은 시간 대신 세트·횟수·중량을 묻는다 (#1321)', (tester) async {
+    final repo = await openProgramTab(
+      tester,
+      byMember: <String, List<RoutineSuggestion>>{
+        firstClient: <RoutineSuggestion>[_bridge],
+      },
+    );
+
+    await tester.ensureVisible(editButton(_bridge));
+    await tester.pump();
+    await tester.tap(editButton(_bridge));
+    await tester.pumpAndSettle();
+
+    expect(find.text('세트 수'), findsOneWidget);
+    expect(find.text('횟수'), findsOneWidget);
+    expect(find.text('중량'), findsOneWidget);
+    expect(find.text('운동 시간'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('suggestion-edit-submit')),
+    );
+    await tester.pumpAndSettle();
+
+    final edit = repo.approvalEdits.single;
+    expect(edit['type'], '근력');
+    expect(edit['sets'], _bridge.sets);
+    expect(edit['reps'], _bridge.reps);
+    expect(edit['weight'], _bridge.weight);
+  });
+
+  testWidgets('유형을 근력이 아닌 것으로 바꾸면 세 값을 싣지 않는다 (#1321)', (tester) async {
+    final repo = await openProgramTab(
+      tester,
+      byMember: <String, List<RoutineSuggestion>>{
+        firstClient: <RoutineSuggestion>[_bridge],
+      },
+    );
+
+    await tester.ensureVisible(editButton(_bridge));
+    await tester.pump();
+    await tester.tap(editButton(_bridge));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('suggestion-edit-type-유산소')),
+    );
+    await tester.pumpAndSettle();
+
+    // 유산소는 시간으로 잰다 — 칸이 바뀐다.
+    expect(find.text('운동 시간'), findsOneWidget);
+    expect(find.text('세트 수'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('suggestion-edit-submit')),
+    );
+    await tester.pumpAndSettle();
+
+    final edit = repo.approvalEdits.single;
+    expect(edit['type'], '유산소');
+    expect(edit['sets'], isNull);
+    expect(edit['reps'], isNull);
+    expect(edit['weight'], isNull);
+  });
+
+  testWidgets('검토 카드와 최종 검토가 근력을 세트·횟수로 적는다 (#1321)', (tester) async {
+    await openProgramTab(
+      tester,
+      byMember: <String, List<RoutineSuggestion>>{
+        firstClient: <RoutineSuggestion>[_bridge],
+      },
+    );
+
+    // 목록 카드부터 세트·횟수로 읽힌다 — 근력을 시간으로 말하는 자리가 없다.
+    expect(find.textContaining('3세트'), findsOneWidget);
+    expect(find.textContaining('12분'), findsNothing);
+
+    await tester.ensureVisible(approveButton(_bridge));
+    await tester.pump();
+    await tester.tap(approveButton(_bridge));
+    await tester.pumpAndSettle();
+
+    // 수정 창이 물은 것과 같은 칸으로 적혀야 확인한 내용과 나갈 값이 같다.
+    // 카드와 dialog 가 함께 떠 있으므로 둘이 같은 문구를 말한다.
+    expect(find.textContaining('3세트'), findsNWidgets(2));
+    expect(find.textContaining('15회'), findsNWidgets(2));
+    expect(find.textContaining('12분'), findsNothing);
   });
 
   testWidgets('cancelling the edit does not recommend anything', (

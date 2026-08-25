@@ -12,6 +12,9 @@ RoutineSuggestion routineSuggestionFromJson(Map<String, Object?> json) {
     name: _str(json['name']),
     minutes: json['minutes'] is num ? (json['minutes']! as num).toInt() : 0,
     type: _str(json['type']),
+    sets: (json['sets'] as num?)?.toInt(),
+    reps: (json['reps'] as num?)?.toInt(),
+    weight: (json['weight'] as num?)?.toDouble(),
     reason: _str(json['reason']),
     evidence: _strings(json['evidence']),
   );
@@ -26,15 +29,25 @@ Map<String, Object?> routineSuggestionApproveToJson({
   String? name,
   int? minutes,
   String? type,
+  int? sets,
+  int? reps,
+  double? weight,
   String? reason,
 }) {
   final trimmedName = name?.trim();
+  // 세트·횟수·중량은 **근력으로 승인할 때만** 싣는다. 서버도 다른 유형에서는
+  // 버리지만, 보내지 않는 편이 화면이 무엇을 정했는지와 payload 가 어긋날
+  // 자리를 아예 없앤다. (#1321)
+  final bool strength = type == '근력';
   return <String, Object?>{
     // 빈 이름은 서버가 400 으로 거른다. 보내지 않는 것이 곧 '이름은 그대로'다.
     if (trimmedName != null && trimmedName.isNotEmpty)
       'name': _truncate(trimmedName, 100),
     if (minutes != null) 'minutes': minutes.clamp(0, 600),
     if (type != null && kRoutineTypes.contains(type)) 'type': type,
+    if (strength && sets != null) 'sets': sets.clamp(1, 99),
+    if (strength && reps != null) 'reps': reps.clamp(1, 999),
+    if (strength && weight != null) 'weight': weight.clamp(0, 1000),
     if (reason != null) 'reason': _truncate(reason.trim(), 200),
   };
 }

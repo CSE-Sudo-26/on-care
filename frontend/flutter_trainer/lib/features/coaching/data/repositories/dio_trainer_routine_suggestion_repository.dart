@@ -39,6 +39,9 @@ class DioTrainerRoutineSuggestionRepository
     String? name,
     int? minutes,
     String? type,
+    int? sets,
+    int? reps,
+    double? weight,
     String? reason,
   }) async {
     await _review(
@@ -48,6 +51,9 @@ class DioTrainerRoutineSuggestionRepository
         name: name,
         minutes: minutes,
         type: type,
+        sets: sets,
+        reps: reps,
+        weight: weight,
         reason: reason,
       ),
     );

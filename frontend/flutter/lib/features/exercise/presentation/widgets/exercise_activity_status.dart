@@ -10,6 +10,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/figma/section_title.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/motion.dart';
+import 'package:oncare/design_system/tokens/typography.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -313,12 +314,17 @@ class ExerciseDayLoadCard extends StatelessWidget {
                                         load.valueOf(k),
                                       ),
                                     ),
+                                  // 세 유형은 0 이어도 줄로 남는다 — `오늘 무엇을
+                                  // 안 했는지` 도 이 카드가 답해야 한다. 반대로
+                                  // `기타` 는 **한 날에만** 맨 아래 회색 한 줄로
+                                  // 붙는다 (#1352).
                                   if (load.otherMinutes > 0)
                                     _KindTextRow(
                                       label: l.exTypeOtherChip,
                                       value: l.unitMinutesValue(
                                         load.otherMinutes.round(),
                                       ),
+                                      muted: true,
                                     ),
                                 ],
                               ),
@@ -395,10 +401,16 @@ class _KindTextRow extends StatelessWidget {
     required this.value,
     this.color,
     this.goal,
+    this.muted = false,
   });
 
   final String label;
   final String value;
+
+  /// 세 유형 아래 덧붙는 `기타` 줄인가. 목표도 색도 없는 값이라 **회색**으로
+  /// 한 단계 물려 적는다 (#1352) — 유형 셋과 같은 진하기로 적으면 네 번째
+  /// 유형처럼 읽힌다.
+  final bool muted;
 
   /// 색 점. 옆에 같은 색의 링이 있는 화면(이번 주)에서만 준다 — 오늘 카드는
   /// 도넛이 하나뿐이라 점이 가리킬 데가 없다.
@@ -439,10 +451,10 @@ class _KindTextRow extends StatelessWidget {
             label,
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: FigmaColors.textBody,
+              color: muted ? FigmaColors.textMuted : FigmaColors.textBody,
             ),
           ),
           const SizedBox(width: 12),
@@ -460,10 +472,10 @@ class _KindTextRow extends StatelessWidget {
             ),
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: FigmaColors.ink,
+              color: muted ? FigmaColors.textMuted : FigmaColors.ink,
               letterSpacing: -0.2,
             ),
           ),
@@ -598,6 +610,9 @@ class _BurnDonut extends StatelessWidget {
                 ratio: ratio,
                 t: t,
                 color: kBurnColor,
+                // 홈 운동 카드가 쓰는 것과 같은 말이다 — 두 화면이 같은 값을
+                // 다른 이름으로 부르지 않게 한 문구를 나눠 쓴다.
+                caption: l.homeExerciseBurned,
                 center: NumberFormat.decimalPattern(
                   locale,
                 ).format(calories.round()),
@@ -623,12 +638,18 @@ class _DonutPainter extends CustomPainter {
     required this.color,
     required this.center,
     required this.unit,
+    this.caption = '',
     this.startIcon,
   });
 
   final double ratio;
   final double t;
   final Color color;
+
+  /// 값 **위**에 얹는 회색 머리 — 이 링이 무엇을 재는지 (#1352). 비면 그리지
+  /// 않는다. 불꽃 기호만으로는 12시의 그림이 소모 칼로리를 뜻하는지 알 수 없다.
+  final String caption;
+
   final String center;
   final String unit;
 
@@ -679,26 +700,36 @@ class _DonutPainter extends CustomPainter {
       _paintCapShadow(canvas, c, r, stroke, capAngle);
       canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * filled, false, arc);
     }
-    // 안쪽 구멍의 지름. 두 줄 다 이 폭 안에 들어간다.
+    // 안쪽 구멍의 지름. 세 줄 다 이 폭 안에 들어간다.
     final double inner = (r - stroke / 2) * 1.75;
-    _text(
-      canvas,
-      c.translate(0, -size.width * 0.09),
-      center,
-      size.width * 0.2,
-      FontWeight.w800,
-      FigmaColors.ink,
-      maxWidth: inner,
-    );
-    _text(
-      canvas,
-      c.translate(0, size.width * 0.1),
-      unit,
-      size.width * 0.105,
-      FontWeight.w700,
-      FigmaColors.textMuted,
-      maxWidth: inner,
-    );
+    // 머리 → 값 → 목표 순으로 쌓아 **구멍 한가운데**에 세운다 (#1352).
+    // 예전에는 두 줄을 중심에서 각각 -0.09 · +0.10 만큼 밀어 놓았는데, 그
+    // 자리는 두 줄일 때만 맞는 값이라 머리줄이 붙으면서 묶음이 아래로 쏠렸다.
+    // 이제는 세 줄의 실제 높이를 재서 묶음째 가운데로 옮긴다.
+    _paintCenteredLines(canvas, c, <TextPainter>[
+      if (caption.isNotEmpty)
+        _layout(
+          caption,
+          size.width * 0.085,
+          FontWeight.w700,
+          FigmaColors.textMuted,
+          maxWidth: inner,
+        ),
+      _layout(
+        center,
+        size.width * 0.2,
+        FontWeight.w800,
+        FigmaColors.ink,
+        maxWidth: inner,
+      ),
+      _layout(
+        unit,
+        size.width * 0.105,
+        FontWeight.w700,
+        FigmaColors.textMuted,
+        maxWidth: inner,
+      ),
+    ], gap: size.width * 0.012);
     // 끝에 얇은 `>` 를 얹는다 — 그림자가 누른 자리 위에서 끝이 정확히 어디인지
     // 가리킨다.
     if (filled > 0) {
@@ -723,19 +754,21 @@ class _DonutPainter extends CustomPainter {
     }
   }
 
-  void _text(
-    Canvas canvas,
-    Offset center,
+  TextPainter _layout(
     String s,
     double size,
     FontWeight w,
     Color color, {
     double? maxWidth,
   }) {
-    TextPainter layout(double fontSize) => TextPainter(
+    TextPainter at(double fontSize) => TextPainter(
       text: TextSpan(
         text: s,
         style: TextStyle(
+          // 캔버스에 직접 그리는 글자는 테마를 타지 않는다 — 앱 폰트를 손으로
+          // 붙여 준다. 한글 머리줄이 붙으면서 필요해졌다: 기본 폰트로 떨어지면
+          // 웹에서 두부(□)로 나온다 (#1352).
+          fontFamily: AppTypography.fontFamily,
           fontSize: fontSize,
           fontWeight: w,
           color: color,
@@ -744,16 +777,31 @@ class _DonutPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    TextPainter tp = layout(size);
+    final TextPainter tp = at(size);
     // 도넛 **안**에 들어가야 한다. 넘치면 그만큼 글자를 줄인다 — 링 밖으로
     // 삐져나온 글씨는 어느 링의 값인지 알려 주지 못한다. (#1127)
     if (maxWidth != null && tp.width > maxWidth) {
-      tp = layout(size * (maxWidth / tp.width));
+      return at(size * (maxWidth / tp.width));
     }
-    tp.paint(
-      canvas,
-      Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
-    );
+    return tp;
+  }
+
+  /// [lines] 를 [center] 기준으로 가로·세로 모두 가운데에 쌓아 그린다.
+  void _paintCenteredLines(
+    Canvas canvas,
+    Offset center,
+    List<TextPainter> lines, {
+    required double gap,
+  }) {
+    if (lines.isEmpty) return;
+    final double total =
+        lines.fold<double>(0, (double a, TextPainter tp) => a + tp.height) +
+        gap * (lines.length - 1);
+    double y = center.dy - total / 2;
+    for (final TextPainter tp in lines) {
+      tp.paint(canvas, Offset(center.dx - tp.width / 2, y));
+      y += tp.height + gap;
+    }
   }
 
   @override
@@ -761,7 +809,8 @@ class _DonutPainter extends CustomPainter {
       old.t != t ||
       old.ratio != ratio ||
       old.center != center ||
-      old.unit != unit;
+      old.unit != unit ||
+      old.caption != caption;
 }
 
 // ── 이번 주 ────────────────────────────────────────────────────────────
@@ -852,7 +901,9 @@ class ExerciseWeekLoadCard extends StatelessWidget {
                                   goal:
                                       '/${kindValueText(l, k, g.weeklyGoalOf(k))}',
                                 ),
-                              // 기타는 목표가 없다 — 오늘 카드와 같이 분만 적는다.
+                              // 기타는 목표가 없다 — 오늘 카드와 같이 분만
+                              // 적고, 한 주에 기록이 있을 때만 맨 아래 회색
+                              // 한 줄로 붙는다 (#1352).
                               if (_otherSum(loads) > 0)
                                 _KindTextRow(
                                   color: const Color(0xFFCBD6DE),
@@ -860,6 +911,7 @@ class ExerciseWeekLoadCard extends StatelessWidget {
                                   value: l.unitMinutesValue(
                                     _otherSum(loads).round(),
                                   ),
+                                  muted: true,
                                 ),
                             ],
                           ),
@@ -1080,10 +1132,7 @@ class _BurnBar extends StatelessWidget {
                     for (final ExerciseLoadKind k
                         in ExerciseLoadKind.values.reversed)
                       Expanded(
-                        flex: ((parts[k] ?? 0) * 100).round().clamp(
-                          0,
-                          1 << 30,
-                        ),
+                        flex: ((parts[k] ?? 0) * 100).round().clamp(0, 1 << 30),
                         child: ColoredBox(color: kindColor(k)),
                       ),
                   ],
@@ -1123,12 +1172,11 @@ class _WeekBucket {
   final double otherMinutes;
 
   /// 막대를 나누는 몫 — 셋 모두 분이다.
-  Map<ExerciseLoadKind, double> get minutesByKind =>
-      <ExerciseLoadKind, double>{
-        ExerciseLoadKind.cardio: cardioMinutes,
-        ExerciseLoadKind.strength: strengthMinutes,
-        ExerciseLoadKind.flexibility: flexibilityMinutes,
-      };
+  Map<ExerciseLoadKind, double> get minutesByKind => <ExerciseLoadKind, double>{
+    ExerciseLoadKind.cardio: cardioMinutes,
+    ExerciseLoadKind.strength: strengthMinutes,
+    ExerciseLoadKind.flexibility: flexibilityMinutes,
+  };
 
   double valueOf(ExerciseLoadKind kind) => switch (kind) {
     ExerciseLoadKind.cardio => cardioMinutes,
@@ -1303,15 +1351,18 @@ class _AllPeriodBodyState extends State<_AllPeriodBody> {
                           for (final ExerciseLoadKind k
                               in ExerciseLoadKind.values)
                             _AllPeriodDetailLine(
-                              text:
-                                  '${kindLabel(l, k)} '
-                                  '${kindValueText(l, k, picked.valueOf(k))}',
+                              label: kindLabel(l, k),
+                              value: kindValueText(l, k, picked.valueOf(k)),
+                              color: kindColor(k),
                             ),
+                          // `기타` 는 유형이 아니다 — 셋의 파랑 램프에 끼워
+                          // 넣지 않고 회색으로 둔다.
                           if (picked.otherMinutes > 0)
                             _AllPeriodDetailLine(
-                              text:
-                                  '${l.exTypeOtherChip} '
-                                  '${l.unitMinutesValue(picked.otherMinutes.round())}',
+                              label: l.exTypeOtherChip,
+                              value: l.unitMinutesValue(
+                                picked.otherMinutes.round(),
+                              ),
                             ),
                         ],
                       ),
@@ -1379,23 +1430,48 @@ double _allPeriodHeaderHeight(BuildContext context) =>
 
 /// 고른 주의 유형별 내역 한 줄 — `유산소 195분`. 색 네모 없이 글자만 쓴다
 /// (#1129) — 색은 바로 옆 막대가 이미 말하고 있다.
+///
+/// 색은 **유형 이름에만** 주고, 그 색은 옆 막대·링과 **같은 [kindColor]** 다
+/// (#1364). 글자와 막대가 한눈에 짝지어져야 어느 줄이 어느 막대인지 읽힌다.
+/// 값(`195분`, `12세트`)은 검정이다 — 색이 가리키는 것은 유형이지 수가 아니다.
 class _AllPeriodDetailLine extends StatelessWidget {
-  const _AllPeriodDetailLine({required this.text});
+  const _AllPeriodDetailLine({
+    required this.label,
+    required this.value,
+    this.color,
+  });
 
-  final String text;
+  /// 유형 이름. 이 조각만 [color] 로 칠한다.
+  final String label;
+
+  /// 그 유형의 값. 언제나 검정이다.
+  final String value;
+
+  /// 유형 색([kindColor]). null 이면 회색 — 유형이 아닌 `기타` 줄이다.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => FittedBox(
     fit: BoxFit.scaleDown,
     alignment: Alignment.centerRight,
-    child: Text(
-      text,
+    child: Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: label,
+            style: TextStyle(color: color ?? FigmaColors.textBody),
+          ),
+          TextSpan(
+            text: ' $value',
+            style: const TextStyle(color: FigmaColors.ink),
+          ),
+        ],
+      ),
       maxLines: 1,
       style: const TextStyle(
         fontSize: 11.5,
         fontWeight: FontWeight.w700,
         height: 1.25,
-        color: FigmaColors.textBody,
       ),
     ),
   );
