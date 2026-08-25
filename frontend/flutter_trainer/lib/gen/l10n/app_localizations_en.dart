@@ -3178,18 +3178,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Check each exercise\'s name and set count.';
 
   @override
-  String get programEditorAssign => 'Assign to client';
+  String get programAssignConfirmTitle => 'Add to the schedule?';
 
   @override
-  String get programAssignConfirmTitle => 'Assign to this client?';
-
-  @override
-  String programAssignConfirmBody(String name, String date) {
-    return 'This program will be assigned to $name, and also scheduled on their PT calendar for $date.';
+  String programAssignConfirmBody(String name, String date, String time) {
+    return 'This program will be added to $name\'s PT schedule on $date at $time.';
   }
 
   @override
-  String get programEditorReview => 'Confirm & send';
+  String get programEditorSaveTemplate => 'Save as template';
+
+  @override
+  String get programEditorAddSchedule => 'Add to schedule';
 
   @override
   String get programReviewTitle => 'Confirm & send';

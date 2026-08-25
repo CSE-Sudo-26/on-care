@@ -3042,18 +3042,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAssignUnsupported => '운동 이름과 세트 수를 확인해 주세요';
 
   @override
-  String get programEditorAssign => '고객에게 배정';
+  String get programAssignConfirmTitle => '일정에 추가할까요?';
 
   @override
-  String get programAssignConfirmTitle => '고객에게 배정할까요?';
-
-  @override
-  String programAssignConfirmBody(String name, String date) {
-    return '이 프로그램이 $name님에게 배정되고, $date PT 스케줄에도 함께 등록돼요.';
+  String programAssignConfirmBody(String name, String date, String time) {
+    return '$date $time에 $name님의 PT 스케줄에 이 프로그램이 추가돼요.';
   }
 
   @override
-  String get programEditorReview => '전송 확인';
+  String get programEditorSaveTemplate => '템플릿 저장';
+
+  @override
+  String get programEditorAddSchedule => '일정 추가';
 
   @override
   String get programReviewTitle => '전송 확인';
