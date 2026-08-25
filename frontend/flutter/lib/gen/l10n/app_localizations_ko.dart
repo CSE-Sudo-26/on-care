@@ -2088,7 +2088,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachRoutineCompleteTitle => '루틴 수행 완료';
+  String get coachRoutineCompleteTitle => '개인운동 수행 완료';
 
   @override
   String get coachRoutineIntensity => '수행 강도';
