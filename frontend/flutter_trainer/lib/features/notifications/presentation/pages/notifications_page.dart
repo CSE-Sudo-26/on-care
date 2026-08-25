@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/notifications/data/repositories/notifica
 import 'package:oncare_trainer/features/notifications/domain/entities/trainer_notification.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -60,13 +61,12 @@ class NotificationsPage extends ConsumerWidget {
   }
 
   Future<void> _readAll(BuildContext context, WidgetRef ref) async {
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
     final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref.read(trainerNotificationRepositoryProvider).markAllRead();
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.notifReadAllFailed)));
+      if (!context.mounted) return;
+      showAppToast(context, l.notifReadAllFailed, kind: AppToastKind.error);
       return;
     }
     ref

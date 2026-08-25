@@ -2351,7 +2351,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachChatDemoRoutineReceived.
   ///
   /// In en, this message translates to:
-  /// **'You received a routine based on AI analysis'**
+  /// **'You received a personalized workout recommendation'**
   String get coachChatDemoRoutineReceived;
 
   /// No description provided for @coachChatDemoNotified.

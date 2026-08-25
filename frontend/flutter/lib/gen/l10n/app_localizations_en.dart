@@ -1266,7 +1266,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachChatDemoRoutineReceived =>
-      'You received a routine based on AI analysis';
+      'You received a personalized workout recommendation';
 
   @override
   String get coachChatDemoNotified => 'It was also delivered as a notification';

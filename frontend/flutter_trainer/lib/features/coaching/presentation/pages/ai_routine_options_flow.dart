@@ -11,7 +11,9 @@ import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routi
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 
 /// Conversation-style AI routine builder.
@@ -53,7 +55,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   final TextEditingController _prompt = TextEditingController();
   final TextEditingController _trainerMemo = TextEditingController();
   final TextEditingController _newExerciseName = TextEditingController();
-  final ScrollController _optionScroll = ScrollController();
 
   /// 이 화면의 맨 위(진행 단계 표시줄) 를 가리킨다 — [_scrollToTop] 이 이
   /// 위젯을 뷰포트 위쪽으로 끌어올릴 때 기준으로 쓴다.
@@ -95,7 +96,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     _prompt.dispose();
     _trainerMemo.dispose();
     _newExerciseName.dispose();
-    _optionScroll.dispose();
     super.dispose();
   }
 
@@ -140,7 +140,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   Future<void> _generate() async {
     if (_generating) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _generating = true);
     try {
       final options = await ref
@@ -178,14 +177,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       final AppLocalizations l = AppLocalizations.of(context);
       // 한도 초과는 고장이 아니라 잠시 뒤 되는 상태다. 다른 오류와 같은 문구를
       // 쓰면 트레이너가 기능이 깨진 것으로 읽는다(#582).
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            e is RateLimitedError
-                ? l.aiGenerateRateLimited
-                : l.aiGenerateFailed,
-          ),
-        ),
+      showAppToast(
+        context,
+        e is RateLimitedError ? l.aiGenerateRateLimited : l.aiGenerateFailed,
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _generating = false);
@@ -204,9 +199,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     final name = _newExerciseName.text.trim();
     if (name.isEmpty) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.aiExerciseNameRequired)));
+      showAppToast(context, l.aiExerciseNameRequired);
       return;
     }
     final isStrength = _newExerciseType == '근력';
@@ -234,9 +227,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   void _completeReview() {
     if (_edited.isEmpty) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
+      showAppToast(context, l.aiKeepOneExercise);
       return;
     }
     setState(() {
@@ -291,15 +282,11 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   void _applyToTemplate() {
     final AppLocalizations l = AppLocalizations.of(context);
     if (_edited.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
+      showAppToast(context, l.aiKeepOneExercise);
       return;
     }
     widget.onReviewCompleted?.call(List<RoutineExercise>.unmodifiable(_edited));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l.aiAppliedToTemplate)));
+    showAppToast(context, l.aiAppliedToTemplate, kind: AppToastKind.success);
   }
 
   @override
@@ -400,6 +387,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   Widget _assistantAnalysis() {
     final AppLocalizations l = AppLocalizations.of(context);
     final client = widget.client;
+    // 주의 배지·주간 리포트와 같은 정의([recordedCompletionMean]) — 이 박스만
+    // 다른 계산으로 "완료율"을 말하면 트레이너가 같은 값을 두 번 다르게 읽는다.
+    final completionMean = recordedCompletionMean(client);
     return _surfaceCard(
       accent: true,
       child: Column(
@@ -408,15 +398,32 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           _AssistantLabel(text: l.aiAnalysedData),
           const SizedBox(height: AppSpacing.md),
           _analysisRow(l.aiGoal, client.goal),
+          _analysisRow(l.aiRecentRoutine, client.lastRoutine),
+          _analysisRow(
+            l.aiRecentCompletion,
+            completionMean == null
+                ? l.aiNoCompletionData
+                : '${completionMean.round()}%'
+                      '${completionMean < lowCompletionThreshold ? l.aiCompletionLow : ''}',
+            warn:
+                completionMean != null &&
+                completionMean < lowCompletionThreshold,
+          ),
           // 목표를 넘겼을 때만 꼬리표를 붙인다. 넘기지 않았다고 "적정" 이라
           // 말하면, 목표에 한참 못 미친 값까지 적정이 된다(#1070).
+          //
+          // 오늘 나트륨 하나만으로는 "오늘 우연히 튄 값"인지 "평소 패턴"인지
+          // 구분이 안 된다 — 최근 7일 초과일수([sodiumOverDays])와 당류
+          // 초과 여부([sugarOverBudget])를 같은 줄에 더해 식단 신호를 한
+          // 번에 보여준다.
           _analysisRow(
-            l.aiTodaySodium,
+            l.aiDietSignal,
             '${client.sodiumMg}mg'
-            '${client.sodiumOverBudget ? l.aiOverTarget : ''}',
-            warn: client.sodiumOverBudget,
+            '${client.sodiumOverBudget ? l.aiOverTarget : ''}'
+            '${client.sodiumOverDays > 0 ? l.aiSodiumOverDaysSuffix(client.sodiumOverDays) : ''}'
+            '${client.sugarOverBudget ? l.aiSugarAlsoOver : ''}',
+            warn: client.sodiumOverBudget || client.sugarOverBudget,
           ),
-          _analysisRow(l.aiRecentRoutine, client.lastRoutine),
         ],
       ),
     );
@@ -431,10 +438,22 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   Widget _promptField() {
     final AppLocalizations l = AppLocalizations.of(context);
     return _surfaceCard(
+      key: const ValueKey<String>('ai-prompt-card'),
+      subtleBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _AssistantLabel(text: l.aiPromptTitle),
+          Text(l.aiPromptTitle, style: _sectionTitleStyle),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l.aiPromptBlurb,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.mutedForeground,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           LabeledField(
             label: l.aiPromptLabel,
@@ -445,14 +464,27 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               maxLines: 5,
               maxLength: _promptMaxLength,
               style: _inputTextStyle,
-              decoration: _inputDecoration(hintText: l.aiPromptHint),
-            ),
-          ),
-          Text(
-            l.aiPromptBlurb,
-            style: const TextStyle(
-              fontSize: 10.5,
-              color: AppColors.mutedForeground,
+              buildCounter:
+                  (
+                    BuildContext context, {
+                    required int currentLength,
+                    required bool isFocused,
+                    required int? maxLength,
+                  }) => Transform.translate(
+                    offset: const Offset(AppSpacing.md, 0),
+                    child: Text(
+                      '$currentLength/$maxLength',
+                      key: const ValueKey<String>('ai-prompt-counter'),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.subtleForeground,
+                      ),
+                    ),
+                  ),
+              decoration: _inputDecoration(
+                hintText: l.aiPromptHint,
+                outlined: true,
+              ),
             ),
           ),
         ],
@@ -545,6 +577,22 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             color: AppColors.mutedForeground,
           ),
         ),
+        // 1단계에서 트레이너가 직접 적은 요청이 있으면 그대로 덧붙인다 —
+        // 이 화면이 "무엇을 근거로" 만들어졌는지 트레이너 자신의 조건까지
+        // 보여준다. 새 상태가 아니라 이미 있는 [_prompt] 를 그대로 읽는다.
+        if (_prompt.text.trim().isNotEmpty) ...<Widget>[
+          const SizedBox(height: 2),
+          Text(
+            l.aiBasisTrainerRequest(_prompt.text.trim()),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontStyle: FontStyle.italic,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ],
         // Only when the AI actually generated these plans. The rule-based
         // fallback ignores chat entirely, so showing "참고한 최근 대화" next to a
         // rule plan would claim an input that was never used — the trainer
@@ -561,11 +609,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             // comparison you have to scroll through isn't one. The console
             // splits the workspace into two columns, so the editor column
             // is narrower than the full-width page this flow was built
-            // for — a fixed 286px rail always clipped the third card.
+            // for.
             const double minCardWidth = 220;
+            final choices = _choicesOf(l);
             final needed =
-                _choicesOf(l).length * minCardWidth +
-                (_choicesOf(l).length - 1) * AppSpacing.md;
+                choices.length * minCardWidth +
+                (choices.length - 1) * AppSpacing.md;
             if (constraints.maxWidth >= needed) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -573,9 +622,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      for (final choice in _choicesOf(l)) ...<Widget>[
+                      for (final choice in choices) ...<Widget>[
                         Expanded(child: _optionCard(choice)),
-                        if (choice != _choicesOf(l).last)
+                        if (choice != choices.last)
                           const SizedBox(width: AppSpacing.md),
                       ],
                     ],
@@ -583,30 +632,20 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 ),
               );
             }
-            // Too narrow for three — fall back to the scrolling rail so
-            // the cards stay readable instead of shrinking to nothing.
-            return Scrollbar(
-              controller: _optionScroll,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                key: const ValueKey<String>(
-                  'routine-options-horizontal-scroll',
-                ),
-                controller: _optionScroll,
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      for (final choice in _choicesOf(l)) ...<Widget>[
-                        SizedBox(width: 286, child: _optionCard(choice)),
-                        if (choice != _choicesOf(l).last)
-                          const SizedBox(width: AppSpacing.md),
-                      ],
-                    ],
-                  ),
-                ),
+            // 폭이 부족하면 가로 스크롤 대신 세로로 쌓는다 — 옆으로 밀어야
+            // 보이는 후보는 "비교"가 아니다. 각 카드는 폭 전체를 쓰고,
+            // 내용만큼 세로로 자연스럽게 늘어난다(카드 내부 재스크롤 없음).
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final choice in choices) ...<Widget>[
+                    _optionCard(choice),
+                    if (choice != choices.last)
+                      const SizedBox(height: AppSpacing.md),
+                  ],
+                ],
               ),
             );
           },
@@ -690,10 +729,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   ),
                 ),
               const SizedBox(height: AppSpacing.sm),
+              // 카드가 세로로 늘어날 수 있게 된 만큼, 이유를 3줄로 잘라내지
+              // 않고 전부 보여준다 — 잘린 추천 이유는 비교에 쓸 수 없다.
               Text(
                 choice.reason,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 11,
                   height: 1.35,
@@ -1095,8 +1134,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
-  Widget _surfaceCard({required Widget child, bool accent = false}) {
+  Widget _surfaceCard({
+    Key? key,
+    required Widget child,
+    bool accent = false,
+    bool subtleBorder = false,
+  }) {
     return Container(
+      key: key,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: accent ? AppColors.accentSurface : AppColors.card,
@@ -1104,6 +1149,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         border: Border.all(
           color: accent
               ? AppColors.accent.withValues(alpha: 0.28)
+              : subtleBorder
+              ? AppColors.border
               : AppColors.borderStrong,
         ),
         boxShadow: kCardShadow,
@@ -1136,7 +1183,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   /// Filled, borderless input styling. Deliberately no `labelText` —
   /// see [LabeledField] for why the caption goes above the box.
-  InputDecoration _inputDecoration({required String hintText}) {
+  InputDecoration _inputDecoration({
+    required String hintText,
+    bool outlined = false,
+  }) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(
@@ -1145,11 +1195,28 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       ),
       isDense: true,
       filled: true,
-      fillColor: AppColors.inputBackground,
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(AppRadius.md),
-        borderSide: BorderSide.none,
-      ),
+      fillColor: outlined ? AppColors.card : AppColors.inputBackground,
+      border: outlined
+          ? const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.borderStrong),
+            )
+          : const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide.none,
+            ),
+      enabledBorder: outlined
+          ? const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.borderStrong),
+            )
+          : null,
+      focusedBorder: outlined
+          ? const OutlineInputBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.25),
+            )
+          : null,
     );
   }
 
@@ -1193,7 +1260,6 @@ String _strengthSummary(RoutineExercise exercise, {required bool korean}) {
   final String weight = w == w.roundToDouble() ? '${w.round()}' : '$w';
   return '$base · ${weight}kg';
 }
-
 
 class _RoutineChoice {
   const _RoutineChoice({

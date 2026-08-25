@@ -865,6 +865,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
 
   @override
+  String chatReportSentNotice(Object range) {
+    return '$range 주간 리포트를 보냈어요';
+  }
+
+  @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';
 
   @override
@@ -877,7 +882,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String chatDemoRoutineSent(String name) {
-    return 'AI 분석 기반 루틴이 $name님에게 전송됐어요';
+    return '개인 추천운동이 $name님에게 전송됐어요';
   }
 
   @override
@@ -1208,6 +1213,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get reportsGoToChat => '채팅으로 이동하기';
+
+  @override
   String get reportsScheduleWarning => '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요';
 
   @override
@@ -1511,6 +1519,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldDate => '날짜';
 
   @override
+  String get schedFieldStartDate => '시작 날짜';
+
+  @override
   String get schedFieldTime => '시간';
 
   @override
@@ -1530,6 +1541,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedEndBeforeStart => '종료 시간은 시작 시간보다 늦어야 해요';
+
+  @override
+  String get schedReopenTitle => '예정으로 바꿀까요?';
+
+  @override
+  String get schedReopenBody =>
+      '완료된 세션을 앞으로 옮기면 예정 상태로 되돌아가고, 그 완료가 남긴 운동 기록은 사라져요.';
+
+  @override
+  String get schedReopenConfirm => '예정으로 바꾸기';
+
+  @override
+  String get schedReopenPastBlocked => '완료된 세션은 미래 날짜로만 옮길 수 있어요';
 
   @override
   String get schedTimeRangeTitle => '시간 선택';
@@ -2113,7 +2137,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachHistoryEmpty => '아직 보낸 프로그램이 없어요';
 
   @override
-  String get coachHomework => '숙제';
+  String get coachHomework => '개인';
+
+  @override
+  String get coachPersonalTraining => 'PT';
 
   @override
   String coachRoutineSummary(String name, int minutes) {
@@ -2124,8 +2151,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTrainer => '트레이너';
 
   @override
-  String coachSessionExercises(String type, int count) {
-    return '$type · 운동 $count개';
+  String coachSessionProgramSummary(String name, int count) {
+    return '$name 외 $count개';
   }
 
   @override
@@ -2199,7 +2226,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiAnalysedData => '고객 데이터를 분석했어요';
+  String get aiAnalysedData => '운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요';
 
   @override
   String get aiGoal => '목표';
@@ -2209,6 +2236,26 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiOverTarget => ' · 목표 초과';
+
+  @override
+  String get aiRecentCompletion => '최근 완료율';
+
+  @override
+  String get aiNoCompletionData => '이번 주 기록 없음';
+
+  @override
+  String get aiCompletionLow => ' · 관리 필요';
+
+  @override
+  String get aiDietSignal => '식단 주의';
+
+  @override
+  String aiSodiumOverDaysSuffix(int days) {
+    return ' · 최근 7일 중 $days일 초과';
+  }
+
+  @override
+  String get aiSugarAlsoOver => ' · 당류도 초과';
 
   @override
   String get aiBasisRuleBased => ' · 규칙 기반 생성';
@@ -2225,7 +2272,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiEditBlurb => '기존 AI 추천과 같은 방식으로 운동명·시간·구성을 수정할 수 있어요.';
 
   @override
-  String get aiAddExerciseManually => '직접 작성하기';
+  String get aiAddExerciseManually => '운동 직접 추가하기';
 
   @override
   String get aiExerciseNameExample => '예: 레그프레스 3세트';
@@ -2283,7 +2330,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aiRecentRoutine => '최근 루틴';
+  String get aiRecentRoutine => '최근 운동';
 
   @override
   String get aiTrainerNoteEditable => '트레이너 메모 · 수정 가능';
@@ -2308,14 +2355,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiPromptTitle => 'AI에게 원하는 프로그램을 말해 주세요';
 
   @override
-  String get aiPromptLabel => '요청 내용 (자연어)';
+  String get aiPromptLabel => '요청 내용';
 
   @override
   String get aiPromptHint => '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘';
 
   @override
   String get aiPromptBlurb =>
-      '적어 둔 요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객에게 보낼 메모는 다음 단계에서 따로 적어요.';
+      '요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객용 메모는 다음 단계에서 작성해요.';
 
   @override
   String get aiGenerateGoalBased => '목표 기반 루틴 생성';
@@ -2447,6 +2494,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String aiBasisGoalCompletion(String goal, int rate) {
     return '$goal · 완료율 $rate% 기준';
+  }
+
+  @override
+  String aiBasisTrainerRequest(String request) {
+    return '요청: \"$request\"';
   }
 
   @override

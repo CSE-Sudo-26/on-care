@@ -1670,6 +1670,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the PDF. Please try again'**
   String get chatPdfOpenFailed;
 
+  /// No description provided for @chatReportSentNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent the {range} weekly report'**
+  String chatReportSentNotice(Object range);
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:
@@ -1691,7 +1697,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatDemoRoutineSent.
   ///
   /// In en, this message translates to:
-  /// **'An AI-built routine was sent to {name}'**
+  /// **'A personalized workout recommendation was sent to {name}'**
   String chatDemoRoutineSent(String name);
 
   /// No description provided for @chatDemoNotified.
@@ -2276,6 +2282,12 @@ abstract class AppLocalizations {
   /// **'Report sent to {name}'**
   String reportsSent(String name);
 
+  /// No description provided for @reportsGoToChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to chat'**
+  String get reportsGoToChat;
+
   /// No description provided for @reportsScheduleWarning.
   ///
   /// In en, this message translates to:
@@ -2786,6 +2798,12 @@ abstract class AppLocalizations {
   /// **'Date'**
   String get schedFieldDate;
 
+  /// No description provided for @schedFieldStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get schedFieldStartDate;
+
   /// No description provided for @schedFieldTime.
   ///
   /// In en, this message translates to:
@@ -2827,6 +2845,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End time must be after the start time'**
   String get schedEndBeforeStart;
+
+  /// No description provided for @schedReopenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch back to upcoming?'**
+  String get schedReopenTitle;
+
+  /// No description provided for @schedReopenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving a completed session forward switches it back to upcoming, and the workout log it created will be removed.'**
+  String get schedReopenBody;
+
+  /// No description provided for @schedReopenConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to upcoming'**
+  String get schedReopenConfirm;
+
+  /// No description provided for @schedReopenPastBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'A completed session can only move to a future date'**
+  String get schedReopenPastBlocked;
 
   /// No description provided for @schedTimeRangeTitle.
   ///
@@ -3899,8 +3941,14 @@ abstract class AppLocalizations {
   /// No description provided for @coachHomework.
   ///
   /// In en, this message translates to:
-  /// **'Homework'**
+  /// **'Personal'**
   String get coachHomework;
+
+  /// No description provided for @coachPersonalTraining.
+  ///
+  /// In en, this message translates to:
+  /// **'PT'**
+  String get coachPersonalTraining;
 
   /// No description provided for @coachRoutineSummary.
   ///
@@ -3914,11 +3962,11 @@ abstract class AppLocalizations {
   /// **'Trainer'**
   String get coachTrainer;
 
-  /// No description provided for @coachSessionExercises.
+  /// No description provided for @coachSessionProgramSummary.
   ///
   /// In en, this message translates to:
-  /// **'{type} · {count} exercises'**
-  String coachSessionExercises(String type, int count);
+  /// **'{name} + {count} more'**
+  String coachSessionProgramSummary(String name, int count);
 
   /// No description provided for @aiReasonSodium.
   ///
@@ -4043,7 +4091,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAnalysedData.
   ///
   /// In en, this message translates to:
-  /// **'Analysed this client\'s data'**
+  /// **'Reviewed the workout goal, recent activity, and today\'s nutrition'**
   String get aiAnalysedData;
 
   /// No description provided for @aiGoal.
@@ -4063,6 +4111,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **' · over target'**
   String get aiOverTarget;
+
+  /// No description provided for @aiRecentCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent completion'**
+  String get aiRecentCompletion;
+
+  /// No description provided for @aiNoCompletionData.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity logged this week'**
+  String get aiNoCompletionData;
+
+  /// No description provided for @aiCompletionLow.
+  ///
+  /// In en, this message translates to:
+  /// **' · needs attention'**
+  String get aiCompletionLow;
+
+  /// No description provided for @aiDietSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet warning'**
+  String get aiDietSignal;
+
+  /// No description provided for @aiSodiumOverDaysSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **' · over target on {days} of the last 7 days'**
+  String aiSodiumOverDaysSuffix(int days);
+
+  /// No description provided for @aiSugarAlsoOver.
+  ///
+  /// In en, this message translates to:
+  /// **' · sugar also over'**
+  String get aiSugarAlsoOver;
 
   /// No description provided for @aiBasisRuleBased.
   ///
@@ -4091,7 +4175,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAddExerciseManually.
   ///
   /// In en, this message translates to:
-  /// **'Write it yourself'**
+  /// **'Add exercise manually'**
   String get aiAddExerciseManually;
 
   /// No description provided for @aiExerciseNameExample.
@@ -4193,7 +4277,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiRecentRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Recent routine'**
+  /// **'Recent activity'**
   String get aiRecentRoutine;
 
   /// No description provided for @aiTrainerNoteEditable.
@@ -4241,7 +4325,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiPromptLabel.
   ///
   /// In en, this message translates to:
-  /// **'Your request (plain language)'**
+  /// **'Your request'**
   String get aiPromptLabel;
 
   /// No description provided for @aiPromptHint.
@@ -4253,7 +4337,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiPromptBlurb.
   ///
   /// In en, this message translates to:
-  /// **'Your request goes to the AI together with the member\'s data (up to 500 characters). The note the member receives is written separately in the next step.'**
+  /// **'Your request goes to the AI with the member\'s data (up to 500 characters). Write the member note in the next step.'**
   String get aiPromptBlurb;
 
   /// No description provided for @aiGenerateGoalBased.
@@ -4507,6 +4591,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{goal} · based on {rate}% completion'**
   String aiBasisGoalCompletion(String goal, int rate);
+
+  /// No description provided for @aiBasisTrainerRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request: \"{request}\"'**
+  String aiBasisTrainerRequest(String request);
 
   /// No description provided for @aiTotalAndIntensity.
   ///

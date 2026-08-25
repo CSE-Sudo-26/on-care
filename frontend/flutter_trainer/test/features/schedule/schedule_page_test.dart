@@ -27,6 +27,7 @@ class _FailingChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async => throw Exception('chat write failed');
 }
 

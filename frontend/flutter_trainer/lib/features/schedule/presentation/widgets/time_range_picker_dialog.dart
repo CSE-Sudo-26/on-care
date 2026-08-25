@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 
 typedef TimeRangeValue = ({TimeOfDay start, TimeOfDay end});
 
@@ -124,7 +125,14 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
     final endMinutes = _end.hour * 60 + _end.minute;
     final startMinutes = _start.hour * 60 + _start.minute;
     return Dialog(
-      insetPadding: const EdgeInsets.all(AppSpacing.lg),
+      // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+      // 대화상자 위로 겹쳐 뜰 수 있다.
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppToastStyle.dialogTopClearance,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(AppRadius.lg),
       ),
