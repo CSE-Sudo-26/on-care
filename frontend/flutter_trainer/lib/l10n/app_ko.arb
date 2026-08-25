@@ -271,6 +271,7 @@
   "chatSendFailed": "메시지 전송에 실패했어요. 다시 시도해 주세요",
   "chatLoadFailed": "대화를 불러오지 못했어요",
   "chatPdfOpenFailed": "PDF를 열지 못했어요. 다시 시도해 주세요",
+  "chatReportSentNotice": "{range} 주간 리포트를 보냈어요",
   "chatDemoAnalyzed": "AI가 {name}님의 식단·운동 데이터를 분석했어요",
   "chatDemoReportSent": "트레이너님께 요약 리포트가 전송됐어요",
   "chatDemoRoutineSent": "AI 분석 기반 루틴이 {name}님에게 전송됐어요",

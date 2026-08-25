@@ -53,6 +53,7 @@ class _FailingChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async => throw Exception('chat write failed');
 }
 
@@ -65,9 +66,14 @@ class _SlowChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    return super.sendTrainerMessage(clientId: clientId, text: text);
+    return super.sendTrainerMessage(
+      clientId: clientId,
+      text: text,
+      reportWeekStart: reportWeekStart,
+    );
   }
 }
 
@@ -316,6 +322,7 @@ class _FakeRealChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     if (failSend) throw Exception('note failed');
   }

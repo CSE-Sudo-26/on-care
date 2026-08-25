@@ -217,7 +217,17 @@ class _AppToastState extends State<_AppToast>
                   GestureDetector(
                     key: const ValueKey<String>('app-toast-action'),
                     onTap: _runAction,
-                    child: Text(action.label, style: AppToastStyle.actionTextStyle),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(action.label, style: AppToastStyle.actionTextStyle),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 16,
+                          color: AppToastStyle.actionText,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],

@@ -203,9 +203,13 @@ class LocalReportRepository implements ReportRepository {
     required String fileName,
     required String message,
   }) {
-    // 데모/드리프트에는 첨부 저장소가 없다 — 회원이 실제로 읽는 것은 이
-    // 메시지 본문이니, 로컬 채팅에는 그대로 텍스트로 전달한다.
-    return _chat.sendTrainerMessage(clientId: clientId, text: message);
+    // 데모/드리프트에는 첨부 저장소가 없다 — 대신 reportWeekStart를 실어
+    // 보내, 채팅 화면이 이 메시지를 리포트 전송 안내로 구분해 그리게 한다.
+    return _chat.sendTrainerMessage(
+      clientId: clientId,
+      text: message,
+      reportWeekStart: weekStart,
+    );
   }
 
   @override

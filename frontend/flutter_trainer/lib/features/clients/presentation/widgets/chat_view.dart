@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
@@ -242,7 +244,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
         }
       }
       out
-        ..add(_Bubble(message: m, avatar: widget.clientAvatar))
+        ..add(
+          _Bubble(
+            message: m,
+            avatar: widget.clientAvatar,
+            clientId: widget.clientId,
+          ),
+        )
         ..add(const SizedBox(height: AppSpacing.md));
       final insight = _insightDetector.detect(m);
       if (insight != null) {
@@ -652,7 +660,11 @@ class _DateDivider extends StatelessWidget {
 }
 
 class _Bubble extends ConsumerWidget {
-  const _Bubble({required this.message, required this.avatar});
+  const _Bubble({
+    required this.message,
+    required this.avatar,
+    required this.clientId,
+  });
 
   /// 말풍선이 차지할 수 있는 대화 폭의 최대 비율.
   ///
@@ -668,56 +680,71 @@ class _Bubble extends ConsumerWidget {
 
   final ClientChatMessage message;
   final String avatar;
+  final String clientId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fromTrainer = message.fromTrainer;
-    final bubble = Container(
-      key: ValueKey<String>('trainer-message-bubble-${message.id}'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: fromTrainer ? AppColors.accent : AppColors.card,
-        border: fromTrainer ? null : Border.all(color: AppColors.borderStrong),
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
-          bottomRight: Radius.circular(fromTrainer ? 4 : 16),
+    final Widget bubble;
+    if (message.reportWeekStart case final weekStart?) {
+      // 데모/드리프트는 PDF를 저장하지 못한다(#1378) — 그냥 텍스트 말풍선
+      // 대신, 리포트를 보냈다는 걸 알아볼 수 있는 카드로 구분해 그린다.
+      // 눌러도 파일을 열 수는 없으니, 대신 그 리포트 화면으로 보낸다.
+      bubble = _ReportSentCard(
+        key: ValueKey<String>('trainer-message-bubble-${message.id}'),
+        weekStart: weekStart,
+        onOpen: () => context.go(AppRoutes.reportFor(clientId)),
+      );
+    } else {
+      bubble = Container(
+        key: ValueKey<String>('trainer-message-bubble-${message.id}'),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            message.body,
-            style: TextStyle(
-              fontSize: 13.5,
-              height: 1.4,
-              fontWeight: FontWeight.w500,
-              color: fromTrainer
-                  ? AppColors.accentForeground
-                  : AppColors.foreground,
-            ),
+        decoration: BoxDecoration(
+          color: fromTrainer ? AppColors.accent : AppColors.card,
+          border: fromTrainer
+              ? null
+              : Border.all(color: AppColors.borderStrong),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
+            bottomRight: Radius.circular(fromTrainer ? 4 : 16),
           ),
-          if (message.attachment case final attachment?) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
-            // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
-            // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
-            if (attachment.isImage)
-              ChatImageAttachment(attachment: attachment)
-            else
-              _ChatPdfCard(
-                attachment: attachment,
-                onOpen: () => _openPdf(context, ref, attachment),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              message.body,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+                color: fromTrainer
+                    ? AppColors.accentForeground
+                    : AppColors.foreground,
               ),
+            ),
+            if (message.attachment case final attachment?) ...<Widget>[
+              const SizedBox(height: AppSpacing.sm),
+              // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
+              // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
+              // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
+              if (attachment.isImage)
+                ChatImageAttachment(attachment: attachment)
+              else
+                _ChatPdfCard(
+                  attachment: attachment,
+                  onOpen: () => _openPdf(context, ref, attachment),
+                ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    }
     final time = Text(
       _clockOnly(message.timeLabel),
       key: ValueKey<String>('trainer-message-time-${message.id}'),
@@ -791,6 +818,63 @@ class _Bubble extends ConsumerWidget {
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l.chatPdfOpenFailed)));
     }
+  }
+}
+
+/// 리포트 PDF 전송 안내. (#1378) 일반 텍스트 말풍선과 헷갈리지 않도록
+/// 더 진한 남색으로 구분하고, 누르면 그 고객의 리포트 화면으로 이동한다.
+class _ReportSentCard extends StatelessWidget {
+  const _ReportSentCard({
+    required this.weekStart,
+    required this.onOpen,
+    super.key,
+  });
+
+  final DateTime weekStart;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final range = l.dateRange(
+      l.dateMonthDay(weekStart.month, weekStart.day),
+      l.dateMonthDay(weekEnd.month, weekEnd.day),
+    );
+    return Material(
+      color: AppColors.secondary,
+      borderRadius: const BorderRadius.all(AppRadius.sm),
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: const BorderRadius.all(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.description_outlined, color: Colors.white),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Text(
+                  l.chatReportSentNotice(range),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Colors.white,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
