@@ -130,11 +130,7 @@ class MetricTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (lo, hi) = metricTrendScale(
-      values: values,
-      ticks: ticks,
-      goal: goal,
-    );
+    final (lo, hi) = metricTrendScale(values: values, ticks: ticks, goal: goal);
     // 눈금·요일 라벨은 낱개로 읽어 봐야 `월` `화` 뿐이라 그래프가 무슨 값을
     // 말하는지 알 수 없다. 한 덩어리로 묶고 요약 한 문장만 읽힌다.
     return Semantics(
@@ -342,7 +338,10 @@ class MetricTrendPainter extends CustomPainter {
             ..strokeWidth = 2,
         );
       }
-      _dot(canvas, pts[i], sc, r: i == lastIdx ? 5.0 : 4.2);
+      // 큰 점은 **계열의 마지막 칸**(일요일)에만 준다 — 회원 앱과 같은
+      // 규칙이다. `lastIdx`(오늘)에 주면 수요일에 보는 이번 주에서 수요일
+      // 점이 커져, 지난 주 그래프와 강조가 서로 다른 뜻을 갖는다.
+      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
       _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc);
     }
   }

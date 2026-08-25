@@ -2534,6 +2534,18 @@ abstract class AppLocalizations {
   /// **'Not logged'**
   String get chartNoRecord;
 
+  /// No description provided for @chartNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get chartNotYet;
+
+  /// No description provided for @chartOverGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} {unit} over goal'**
+  String chartOverGoal(String amount, String unit);
+
   /// No description provided for @reportsSendStateSent.
   ///
   /// In en, this message translates to:

@@ -740,6 +740,14 @@
   "workoutDoneOfTotal": "{done} of {total} done",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "Not logged",
+  "chartNotYet": "Not yet",
+  "chartOverGoal": "{amount} {unit} over goal",
+  "@chartOverGoal": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  },
   "reportsSendStateSent": "Sent",
   "reportsSendStateSending": "Sending…",
   "reportsShare": "Share",
