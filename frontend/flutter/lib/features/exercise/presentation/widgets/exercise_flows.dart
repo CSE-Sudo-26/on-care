@@ -98,11 +98,13 @@ Widget _handle() => Container(
 
 /// A compact "운동 추가" sheet: pick a type + duration/intensity, then save.
 /// Pass [session] to open in edit mode (pre-filled → PUT); omit it to add.
-Future<void> showExerciseAddSheet(
+/// **기록이 저장되면 true.** 하단 `+` 로 연 흐름이 저장 성공에만 운동 탭으로
+/// 옮겨 가려면 취소와 저장을 구분해야 한다(#1434).
+Future<bool> showExerciseAddSheet(
   BuildContext context, {
   ExerciseSession? session,
-}) {
-  return showModalBottomSheet<void>(
+}) async {
+  final bool? saved = await showModalBottomSheet<bool>(
     context: context,
     // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다(#791).
     useRootNavigator: true,
@@ -111,6 +113,7 @@ Future<void> showExerciseAddSheet(
     barrierColor: FigmaColors.sheetScrim,
     builder: (BuildContext ctx) => _ExerciseAddSheet(session: session),
   );
+  return saved ?? false;
 }
 
 class _ExerciseAddSheet extends ConsumerStatefulWidget {
@@ -261,7 +264,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       // Sheet dismissed mid-save → don't pop the page below.
       if (!mounted) return;
       ref.invalidate(exerciseWeekProvider);
-      navigator.pop();
+      navigator.pop(true);
       toast.show(widget.isEdit ? l.exUpdated : l.exLogged,
         kind: AppToastKind.success,
       );
