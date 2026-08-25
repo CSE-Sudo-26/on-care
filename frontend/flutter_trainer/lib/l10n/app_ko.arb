@@ -444,7 +444,7 @@
   "reportsPickClient": "고객 선택",
   "reportsClientWeekly": "{name}님 주간 리포트",
   "reportsWeeklyCompletion": "주간 이행률",
-  "clientWeeklyRoutineAdherence": "주간 루틴 이행률",
+  "clientWeeklyRoutineAdherence": "주간 이행률",
   "clientRoutineAdherenceUnmeasured": "미집계",
   "reportsCompletionAvg": "운동 이행률",
   "reportsCompletionByDay": "주간 운동 이행률",
