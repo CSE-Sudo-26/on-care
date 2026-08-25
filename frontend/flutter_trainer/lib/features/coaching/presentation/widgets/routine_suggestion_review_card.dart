@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/routine_suggest
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_edit_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// The AI personal-exercise review area of the program tab (#790).
@@ -132,7 +133,6 @@ class _RoutineSuggestionReviewCardState
     String success,
   ) async {
     if (_busy.contains(suggestion.id)) return;
-    final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
     final reviewedFor = widget.clientId;
     setState(() => _busy.add(suggestion.id));
@@ -140,27 +140,23 @@ class _RoutineSuggestionReviewCardState
       await action();
       ref.invalidate(routineSuggestionsProvider(reviewedFor));
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(success)));
+      showAppToast(context, success, kind: AppToastKind.success);
     } on RoutineSuggestionAlreadyReviewed {
       // 두 번 눌렀거나 다른 창에서 이미 처리했다. 실패로 말하면 트레이너는 자기
       // 판단이 반영되지 않았다고 읽는다 — 실제로는 반영돼 있다.
       ref.invalidate(routineSuggestionsProvider(reviewedFor));
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.suggestionAlreadyReviewed)),
-      );
+      showAppToast(context, l.suggestionAlreadyReviewed);
     } on AppError catch (error) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(l, error.message, l.suggestionActionFailed),
-          ),
-        ),
+      showAppToast(
+        context,
+        serverDetailOr(l, error.message, l.suggestionActionFailed),
+        kind: AppToastKind.error,
       );
     } on Object {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l.suggestionActionFailed)));
+      showAppToast(context, l.suggestionActionFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _busy.remove(suggestion.id));
     }

@@ -53,6 +53,7 @@ class _FailingChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async => throw Exception('chat write failed');
 }
 
@@ -65,9 +66,14 @@ class _SlowChatRepository extends DriftChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    return super.sendTrainerMessage(clientId: clientId, text: text);
+    return super.sendTrainerMessage(
+      clientId: clientId,
+      text: text,
+      reportWeekStart: reportWeekStart,
+    );
   }
 }
 
@@ -316,6 +322,7 @@ class _FakeRealChatRepository implements ChatRepository {
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
+    DateTime? reportWeekStart,
   }) async {
     if (failSend) throw Exception('note failed');
   }
@@ -447,6 +454,19 @@ Future<void> _applyRecommendedRoutine(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _openManualProgram(WidgetTester tester) async {
+  final manual = find.byKey(const ValueKey<String>('ai-manual-create'));
+  for (var i = 0; i < 30 && manual.evaluate().isEmpty; i++) {
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pump();
+  }
+  await tester.ensureVisible(manual);
+  await tester.pump();
+  await tester.tap(manual);
+  await tester.pumpAndSettle();
+  expect(find.byType(ProgramEditorWorkspace), findsOneWidget);
+}
+
 /// 편집기 하단의 `보내기` 버튼을 찾아 화면에 보이게 한다.
 ///
 /// 비활성 상태면(운동이 없으면) 먼저 AI 추천을 반영해 채운다 — 편집기가
@@ -455,6 +475,9 @@ Future<void> _applyRecommendedRoutine(WidgetTester tester) async {
 /// 운동이 되살아난다.
 Future<Finder> _ensureSendButtonReady(WidgetTester tester) async {
   final send = find.byKey(const ValueKey<String>('program-editor-send'));
+  if (send.evaluate().isEmpty) {
+    await _applyRecommendedRoutine(tester);
+  }
   await tester.scrollUntilVisible(
     send,
     150,
@@ -463,6 +486,11 @@ Future<Finder> _ensureSendButtonReady(WidgetTester tester) async {
   await tester.ensureVisible(send);
   await tester.pump();
   if (tester.widget<ActionButton>(send).onPressed == null) {
+    final returnToAi = find.byKey(const ValueKey<String>('return-to-ai-flow'));
+    if (returnToAi.evaluate().isNotEmpty) {
+      await tester.tap(returnToAi);
+      await tester.pumpAndSettle();
+    }
     await _applyRecommendedRoutine(tester);
     // `일정 추가`/`보내기` 는 이제 박스 하단에 있다 — 화면 아래쪽에 뜨는
     // 스낵바(`템플릿에 반영` 등, 4초짜리)와 같은 자리라, 스낵바가 사라지기
@@ -1229,6 +1257,106 @@ void main() {
       },
     );
 
+    testWidgets('AI 1·2·3단계에서 직접 만들기를 누르면 빈 편집기로 전환된다', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      Future<void> expectBlankManualEditor() async {
+        await _openManualProgram(tester);
+        expect(find.byType(AiRoutineOptionsFlow), findsNothing);
+        expect(find.byType(ProgramEditorWorkspace), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ProgramEditorWorkspace),
+            matching: find.text('저강도 걷기'),
+          ),
+          findsNothing,
+        );
+        expect(
+          tester
+              .widget<ActionButton>(
+                find.byKey(const ValueKey<String>('program-editor-send')),
+              )
+              .onPressed,
+          isNull,
+        );
+        expect(
+          find.byKey(const ValueKey<String>('program-client-seed-client-1')),
+          findsOneWidget,
+        );
+      }
+
+      Future<void> returnToAi() async {
+        final back = find.byKey(
+          const ValueKey<String>('return-to-ai-flow'),
+        );
+        expect(
+          find.descendant(of: back, matching: find.byIcon(Icons.chevron_left)),
+          findsOneWidget,
+        );
+        await tester.tap(back);
+        await tester.pumpAndSettle();
+        expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
+        expect(find.byType(ProgramEditorWorkspace), findsNothing);
+      }
+
+      // 1단계: 조건 설정.
+      expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
+      expect(find.byType(ProgramEditorWorkspace), findsNothing);
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('ai-manual-create')),
+            )
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey<String>('routine-stage-0')),
+              )
+              .dy,
+        ),
+      );
+      await expectBlankManualEditor();
+
+      // 2단계: 후보 선택·편집.
+      await returnToAi();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+        findsOneWidget,
+      );
+      await expectBlankManualEditor();
+
+      // 3단계: 최종 검토.
+      await returnToAi();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('apply-routine-to-template')),
+        findsOneWidget,
+      );
+      await expectBlankManualEditor();
+
+      // 직접 작성 중에도 AI 흐름으로 돌아가 이전 단계부터 재요청할 수 있다.
+      await returnToAi();
+      await tester.tap(find.byKey(const ValueKey<String>('routine-stage-0')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets(
       '템플릿에 반영을 눌러야 검토한 후보가 프로그램 정보에 반영된다 (#1028 후속)',
       (tester) async {
@@ -1269,6 +1397,8 @@ void main() {
           find.byKey(const ValueKey<String>('apply-routine-to-template')),
         );
         await tester.pumpAndSettle();
+
+        expect(find.byType(AiRoutineOptionsFlow), findsNothing);
 
         // 편집기 안으로 범위를 좁힌다 — 같은 이름의 운동이 오른쪽 `AI 개인운동
         // 제안` 영역(#790)에도 뜰 수 있고, 이 테스트가 확인하는 것은 검토한
@@ -1324,6 +1454,7 @@ void main() {
 
     testWidgets('adding and deleting a custom exercise', (tester) async {
       await openTab(tester);
+      await _openManualProgram(tester);
 
       await tester.scrollUntilVisible(
         find.text('운동 추가'),
@@ -1361,6 +1492,7 @@ void main() {
       '다른 탭에 갔다 돌아와도 작성 중인 프로그램이 그대로 남는다 (#1028 후속)',
       (tester) async {
         await openTab(tester);
+        await _openManualProgram(tester);
 
         // 안내 배너 없이도 편집기는 빈 상태로 시작한다 — 직접 운동을 하나
         // 추가해 "작성 중"인 상태를 만든다.
@@ -1404,6 +1536,7 @@ void main() {
 
     testWidgets('send reset also closes the add-exercise form', (tester) async {
       await openTab(tester);
+      await _openManualProgram(tester);
 
       // Open the add form, then send with it still open.
       await tester.scrollUntilVisible(
@@ -1799,20 +1932,20 @@ void main() {
       // AI 흐름 전체를 다시 밟게 두면(느려서) 아래 5초 지연과 우연히 겹칠 수
       // 있으므로, 이 타이밍 테스트에서는 직접 운동 하나를 빠르게 넣어 둔다.
       Future<void> quicklyFillEditor() async {
+        if (find.byType(ProgramEditorWorkspace).evaluate().isEmpty) {
+          await _openManualProgram(tester);
+        }
         final scrollable = find.byType(Scrollable).first;
         final add = find.text('운동 추가');
         await tester.scrollUntilVisible(add, 150, scrollable: scrollable);
         await tester.pump();
         await tester.tap(add);
         await tester.pump();
-        await tester.enterText(
-          find.byKey(const ValueKey<String>('custom-exercise-name')),
-          '등록 테스트 운동',
+        final nameField = find.byKey(
+          const ValueKey<String>('custom-exercise-name'),
         );
-        final confirm = find.text('추가');
-        await tester.scrollUntilVisible(confirm, 150, scrollable: scrollable);
-        await tester.pump();
-        await tester.tap(confirm);
+        await tester.enterText(nameField, '등록 테스트 운동');
+        tester.widget<TextField>(nameField).onSubmitted!('등록 테스트 운동');
         await tester.pump();
       }
 
@@ -1833,7 +1966,7 @@ void main() {
         await tester.ensureVisible(find.text(name));
         await tester.pump();
         await tester.tap(find.text(name));
-        await tester.pump(const Duration(milliseconds: 30));
+        await settle(tester);
       }
 
       // Start 김민수 and 이지수 independently, then return to 김민수 while
@@ -1881,7 +2014,8 @@ void main() {
       await tester.ensureVisible(find.text('이지수'));
       await tester.pump();
       await tester.tap(find.text('이지수'));
-      await tester.pump(const Duration(milliseconds: 30));
+      await settle(tester);
+      await _openManualProgram(tester);
 
       // Make a fresh edit on 이지수 while 김민수's send is still in flight.
       await tester.scrollUntilVisible(
@@ -1893,13 +2027,11 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('운동 추가'));
       await tester.pump();
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('custom-exercise-name')),
-        '레그프레스 5세트',
+      final nameField = find.byKey(
+        const ValueKey<String>('custom-exercise-name'),
       );
-      await tester.ensureVisible(find.text('추가'));
-      await tester.pump();
-      await tester.tap(find.text('추가'));
+      await tester.enterText(nameField, '레그프레스 5세트');
+      tester.widget<TextField>(nameField).onSubmitted!('레그프레스 5세트');
       await tester.pump();
       await settle(tester); // let 김민수's send + reset window elapse
 

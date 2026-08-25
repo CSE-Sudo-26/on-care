@@ -8,12 +8,14 @@ import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -179,7 +181,14 @@ class ConsultationsPage extends ConsumerWidget {
       key: const ValueKey<String>('consultations-dialog'),
       backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(AppSpacing.xl),
+      // 위쪽만 [AppToastStyle.dialogTopClearance] — 상단 토스트가 이
+      // 대화상자 위로 겹쳐 뜰 수 있다.
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppToastStyle.dialogTopClearance,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(AppRadius.card),
       ),
@@ -225,13 +234,12 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       _busy = true;
       _conflict = null;
     });
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
     final AppLocalizations l = AppLocalizations.of(context);
     final String failureText = l.consultActionFailed;
     try {
       await action();
-      messenger.showSnackBar(SnackBar(content: Text(success)));
+      if (!mounted) return;
+      showAppToast(context, success, kind: AppToastKind.success);
     } on AppError catch (e) {
       // A failed decision usually means the request moved on without us —
       // another trainer at the same gym accepted it first. Refresh before
@@ -239,10 +247,13 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // can keep pressing 승인 on something already decided (review).
       ref.invalidate(consultationsProvider);
       ref.invalidate(consultationPendingCountProvider);
+      if (!mounted) return;
       // 409 carries the server's reason (이미 처리됨 / 다른 트레이너가 담당 중)
       // — that sentence is the whole point, so it is shown verbatim.
-      messenger.showSnackBar(
-        SnackBar(content: Text(serverDetailOr(l, e.message, failureText))),
+      showAppToast(
+        context,
+        serverDetailOr(l, e.message, failureText),
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -265,7 +276,6 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       _conflict = null;
     });
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final request = widget.request;
     final String? startTime = preferredStartTime(request.preferredTimeCode);
     try {
@@ -281,8 +291,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 durationMinutes: _defaultConsultationDurationMinutes,
               ),
       );
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.consultApproved(request.memberName))),
+      if (!mounted) return;
+      showAppToast(
+        context,
+        l.consultApproved(request.memberName),
+        kind: AppToastKind.success,
       );
     } on ConsultationScheduleConflictError catch (e) {
       if (mounted) {
@@ -293,10 +306,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     } on AppError catch (e) {
       ref.invalidate(consultationsProvider);
       ref.invalidate(consultationPendingCountProvider);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(serverDetailOr(l, e.message, l.consultActionFailed)),
-        ),
+      if (!mounted) return;
+      showAppToast(
+        context,
+        serverDetailOr(l, e.message, l.consultActionFailed),
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _busy = false);

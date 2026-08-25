@@ -36,3 +36,37 @@ jobs:
           echo "PR #${{ github.event.pull_request.number }}"
           echo "base: ${{ github.event.pull_request.base.ref }}"
           echo "이 검사는 브랜치 보호의 최신화 요구를 걸기 위한 앵커다(#807)."
+
+      - name: Check out the PR head with full history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Reject AI co-author trailers
+        # 2026-08-25: 커밋 하나에 붙은 `Co-Authored-By: Claude …` 때문에 GitHub
+        # 기여자 그래프에 봇 계정이 잡혔고, 지우려고 main 이력을 재작성해야 했다.
+        # 게다가 옛 SHA 위에 쌓인 브랜치가 그대로 병합되면서 지운 커밋이 되살아났다.
+        # 사람이 매번 확인하는 대신 여기서 막는다 — base..head 를 보므로 새 커밋뿐
+        # 아니라 '옛 이력을 다시 끌고 들어오는 병합'도 함께 걸린다.
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin "$BASE_REF"
+          base=$(git merge-base FETCH_HEAD HEAD)
+
+          offenders=""
+          for sha in $(git log --format='%H' "$base..HEAD"); do
+            if git log -1 --format='%B' "$sha" \
+              | grep -qiE '^[[:space:]]*(co-authored-by:[[:space:]]*claude|co-authored-by:.*@anthropic\.com|(generated|created) with[[:space:]]+.*claude)'; then
+              offenders="$offenders$(git log -1 --format='  %h %an: %s' "$sha")"$'\n'
+            fi
+          done
+
+          if [ -n "$offenders" ]; then
+            echo "::error::AI 저작 표기가 남은 커밋이 있습니다. 아래 커밋의 메시지를 고치거나, 최신 $BASE_REF 위로 리베이스한 뒤 다시 푸시하세요."
+            printf '%s' "$offenders"
+            exit 1
+          fi
+          echo "AI 저작 표기 없음 ($base..HEAD)."

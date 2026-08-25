@@ -60,21 +60,6 @@ void main() {
 
       final settings = await repo.load();
       expect(settings.newMessageAlerts, isTrue);
-      expect(settings.sessionReminders, isTrue);
-      expect(settings.reminderLeadMinutes, 30);
-    });
-
-    test('a stored lead time outside the options falls back', () async {
-      // An older build (or a hand-edited store) must not put the picker
-      // into a state it cannot render.
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'trainer.notify.leadMinutes': 45,
-      });
-      final repo = LocalTrainerSettingsRepository(
-        await SharedPreferences.getInstance(),
-      );
-
-      expect((await repo.load()).reminderLeadMinutes, 30);
     });
 
     test('save round-trips through the store', () async {
@@ -83,16 +68,9 @@ void main() {
         await SharedPreferences.getInstance(),
       );
 
-      await repo.save(
-        const TrainerSettings(
-          newMessageAlerts: false,
-          reminderLeadMinutes: 60,
-        ),
-      );
+      await repo.save(const TrainerSettings(newMessageAlerts: false));
 
-      final reloaded = await repo.load();
-      expect(reloaded.newMessageAlerts, isFalse);
-      expect(reloaded.reminderLeadMinutes, 60);
+      expect((await repo.load()).newMessageAlerts, isFalse);
     });
   });
 
@@ -105,7 +83,7 @@ void main() {
       repo = DioTrainerSettingsRepository(dio);
     });
 
-    test('load decodes the server payload', () async {
+    test('load decodes the server payload, ignoring dropped keys', () async {
       when(
         () => dio.get<Map<String, dynamic>>('/trainer/me/settings'),
       ).thenAnswer(
@@ -116,9 +94,9 @@ void main() {
         }),
       );
 
-      final settings = await repo.load();
-      expect(settings.newMessageAlerts, isFalse);
-      expect(settings.reminderLeadMinutes, 10);
+      // 대시보드 임박 강조를 걷어내며 앱이 더 이상 다루지 않는 항목이다.
+      // 서버는 아직 내려주지만, 읽지 않는다고 디코딩이 깨져서는 안 된다.
+      expect((await repo.load()).newMessageAlerts, isFalse);
     });
 
     test('save returns the SERVER view, not the requested one', () async {
@@ -128,20 +106,16 @@ void main() {
           data: any(named: 'data'),
         ),
       ).thenAnswer(
-        (_) async => _ok(<String, dynamic>{
-          'notify_new_message': true,
-          'notify_session_reminder': true,
-          'reminder_lead_minutes': 30,
-        }),
+        (_) async => _ok(<String, dynamic>{'notify_new_message': true}),
       );
 
       final result = await repo.save(
-        const TrainerSettings(reminderLeadMinutes: 60),
+        const TrainerSettings(newMessageAlerts: false),
       );
 
       // The server owns the contract; echoing our own request back would
       // leave a rejected value on screen as if it had stuck.
-      expect(result.reminderLeadMinutes, 30);
+      expect(result.newMessageAlerts, isTrue);
       final body =
           verify(
                 () => dio.put<Map<String, dynamic>>(
@@ -150,7 +124,11 @@ void main() {
                 ),
               ).captured.single
               as Map<String, dynamic>;
-      expect(body['reminder_lead_minutes'], 60);
+      expect(body['notify_new_message'], isFalse);
+      // 앱이 다루지 않는 항목은 아예 보내지 않는다 — 서버에 남은 값을
+      // 우리 기본값으로 덮어쓰지 않기 위해서다.
+      expect(body.containsKey('notify_session_reminder'), isFalse);
+      expect(body.containsKey('reminder_lead_minutes'), isFalse);
     });
 
     test('an HTTP failure surfaces as a typed AppError', () async {
@@ -201,24 +179,12 @@ void main() {
       addTearDown(controller.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      await controller.setSessionReminders(false);
+      await controller.setNewMessageAlerts(false);
 
       // Keeping the flipped value would make the screen claim something
       // the server never accepted.
-      expect(controller.state.sessionReminders, isTrue);
-      expect(controller.lastError, isNotNull);
-    });
-
-    test('a lead time the server would refuse is not sent', () async {
-      final repo = _RecordingRepository(const TrainerSettings());
-      final controller = TrainerSettingsController(repo);
-      addTearDown(controller.dispose);
-      await Future<void>.delayed(Duration.zero);
-
-      await controller.setReminderLead(45);
-
-      expect(repo.saved, isEmpty);
-      expect(controller.state.reminderLeadMinutes, 30);
+      expect(controller.state.newMessageAlerts, isTrue);
+      expect(controller.lastError, isTrue);
     });
   });
 }

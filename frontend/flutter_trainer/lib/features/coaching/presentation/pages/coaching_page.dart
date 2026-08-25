@@ -40,6 +40,7 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
@@ -78,6 +79,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   ProgramTemplate? _appliedTemplate;
   int _templateRevision = 0;
   int _editorRevision = 0;
+
+  /// AI 1~3단계와 프로그램 편집기 중 어느 쪽을 표시할지 정한다.
+  bool _aiWizardVisible = true;
   bool _sent = false;
   Timer? _sentTimer;
 
@@ -146,6 +150,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _appliedTemplate = null;
       _templateRevision = 0;
       _editorRevision = 0;
+      _aiWizardVisible = true;
       // NOTE: _registeringClientIds is intentionally NOT cleared — writes
       // for other clients keep being tracked while the selection changes.
     });
@@ -173,7 +178,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// 스낵바 안내는 그대로다.
   Future<bool> _saveTemplate(ProgramEditorState draft) async {
     if (_savingTemplate) return false;
-    final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     final exercises = <TemplateExercise>[
       for (final session in draft.sessions)
@@ -194,9 +198,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             ),
     ];
     if (exercises.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.coachTemplateExerciseRequired)),
-      );
+      showAppToast(context, l.coachTemplateExerciseRequired);
       return false;
     }
     setState(() => _savingTemplate = true);
@@ -211,19 +213,17 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       ref.invalidate(programTemplatesProvider);
       if (!mounted) return false;
       setState(() => _savingTemplate = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.programDraftSaved)));
+      showAppToast(context, l.programDraftSaved, kind: AppToastKind.success);
       return true;
     } on Object catch (error) {
       if (!mounted) return false;
       setState(() => _savingTemplate = false);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            error is AppError
-                ? serverDetailOr(l, error.message, l.coachTemplateSaveFailed)
-                : l.coachTemplateSaveFailed,
-          ),
-        ),
+      showAppToast(
+        context,
+        error is AppError
+            ? serverDetailOr(l, error.message, l.coachTemplateSaveFailed)
+            : l.coachTemplateSaveFailed,
+        kind: AppToastKind.error,
       );
       return false;
     }
@@ -248,7 +248,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _sendRequestFor = sentFor;
     }
     setState(() => _sending = true);
-    final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     try {
       // 세션이 몇 개든 프로그램 배정 한 번으로 보낸다 — 세션당 루틴 한 건이
@@ -262,7 +261,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     } catch (_) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
+      showAppToast(context, l.coachSendFailed, kind: AppToastKind.error);
       return;
     }
     // 배정은 여기서 이미 끝났다 — 3열 `전송 이력`(`assignedRoutinesProvider`)
@@ -312,7 +311,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     final time =
         '${_registerTime.hour.toString().padLeft(2, '0')}:'
         '${_registerTime.minute.toString().padLeft(2, '0')}';
-    final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     setState(() => _registeringClientIds.add(registeredFor));
     bool attachedToExisting;
@@ -330,7 +328,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       if (!mounted) return;
       setState(() => _registeringClientIds.remove(registeredFor));
       if (_isStillSelected(registeredFor)) {
-        messenger.showSnackBar(SnackBar(content: Text(l.coachScheduleFailed)));
+        showAppToast(context, l.coachScheduleFailed, kind: AppToastKind.error);
       }
       return;
     }
@@ -656,6 +654,18 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   void _applyTemplate(ProgramTemplate template) => setState(() {
     _appliedTemplate = template;
     _templateRevision++;
+    _aiWizardVisible = false;
+    _registered = false;
+    _registeredAttachedExisting = false;
+    _sent = false;
+  });
+
+  void _startManualProgram(String clientId) => setState(() {
+    _generatedRecommendations.remove(clientId);
+    _appliedTemplate = null;
+    _templateRevision = 0;
+    _editorRevision++;
+    _aiWizardVisible = false;
     _registered = false;
     _registeredAttachedExisting = false;
     _sent = false;
@@ -709,65 +719,98 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         data: (items) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            AiRoutineOptionsFlow(
-              key: ValueKey<String>('routine-options-${client.id}'),
-              client: client,
-              embedded: true,
-              recommendedExercises: items
-                  .map(
-                    (item) => RoutineExercise(
-                      name: item.name,
-                      minutes: item.minutes,
-                      type: _typeEdits[item.id] ?? item.type,
-                    ),
-                  )
-                  .toList(growable: false),
-              recommendedReason: items.isEmpty
-                  ? ''
-                  : items.map((item) => item.reason).join(' · '),
-              onReviewCompleted: (exercises) {
-                setState(() {
-                  _generatedRecommendations[client.id] = <AiRoutineItem>[
-                    for (var index = 0; index < exercises.length; index++)
-                      AiRoutineItem(
-                        id: 'generated-${client.id}-$index',
-                        name: exercises[index].name,
-                        minutes: exercises[index].minutes,
-                        type: exercises[index].type,
-                        reason: l.coachReviewed,
-                        sets: exercises[index].sets,
-                        reps: exercises[index].reps,
-                        weight: exercises[index].weight,
+            Offstage(
+              offstage: !_aiWizardVisible,
+              child: AiRoutineOptionsFlow(
+                key: ValueKey<String>('routine-options-${client.id}'),
+                client: client,
+                embedded: true,
+                recommendedExercises: items
+                    .map(
+                      (item) => RoutineExercise(
+                        name: item.name,
+                        minutes: item.minutes,
+                        type: _typeEdits[item.id] ?? item.type,
                       ),
-                  ];
-                });
-              },
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            ProgramEditorWorkspace(
-              key: ValueKey<String>(
-                'program-editor-${client.id}-$_editorRevision',
+                    )
+                    .toList(growable: false),
+                recommendedReason: items.isEmpty
+                    ? ''
+                    : items.map((item) => item.reason).join(' · '),
+                onReviewCompleted: (exercises) {
+                  setState(() {
+                    _generatedRecommendations[client.id] = <AiRoutineItem>[
+                      for (var index = 0; index < exercises.length; index++)
+                        AiRoutineItem(
+                          id: 'generated-${client.id}-$index',
+                          name: exercises[index].name,
+                          minutes: exercises[index].minutes,
+                          type: exercises[index].type,
+                          reason: l.coachReviewed,
+                          sets: exercises[index].sets,
+                          reps: exercises[index].reps,
+                          weight: exercises[index].weight,
+                        ),
+                    ];
+                    _aiWizardVisible = false;
+                  });
+                },
+                onManualCreate: () => _startManualProgram(client.id),
               ),
-              clientGoal: client.goal,
-              aiSuggestions: _generatedRecommendations[client.id] ?? items,
-              template: _appliedTemplate,
-              templateRevision: _templateRevision,
-              onSend: (draft) => unawaited(_sendProgram(client, draft)),
-              onSave: _saveTemplate,
-              saving: _savingTemplate,
-              sending: _sending || _sent,
-              registerDate: _registerDate,
-              onRegisterDateChanged: (date) => setState(() {
-                _registerDate = date;
-                _registered = false;
-                _registeredAttachedExisting = false;
-              }),
-              registerTime: _registerTime,
-              onRegisterTimeChanged: (time) => setState(() {
-                _registerTime = time;
-                _registered = false;
-                _registeredAttachedExisting = false;
-              }),
+            ),
+            if (!_aiWizardVisible)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const ValueKey<String>('return-to-ai-flow'),
+                    onPressed: () => setState(() => _aiWizardVisible = true),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.chevron_left, size: 18),
+                    label: Text(l.aiReturnToWizard),
+                  ),
+                ),
+              )
+            else
+              const SizedBox(height: AppSpacing.lg),
+            Offstage(
+              offstage: _aiWizardVisible,
+              child: ProgramEditorWorkspace(
+                key: ValueKey<String>(
+                  'program-editor-${client.id}-$_editorRevision',
+                ),
+                clientGoal: client.goal,
+                aiSuggestions: _generatedRecommendations[client.id] ?? items,
+                template: _appliedTemplate,
+                templateRevision: _templateRevision,
+                onSend: (draft) => unawaited(_sendProgram(client, draft)),
+                onSave: _saveTemplate,
+                saving: _savingTemplate,
+                sending: _sending || _sent,
+                registerDate: _registerDate,
+                onRegisterDateChanged: (date) => setState(() {
+                  _registerDate = date;
+                  _registered = false;
+                  _registeredAttachedExisting = false;
+                }),
+                registerTime: _registerTime,
+                onRegisterTimeChanged: (time) => setState(() {
+                  _registerTime = time;
+                  _registered = false;
+                  _registeredAttachedExisting = false;
+                }),
+              ),
             ),
             if (_sent)
               Padding(
@@ -1415,7 +1458,6 @@ class _TemplateCard extends ConsumerWidget {
     ProgramTemplate template,
   ) async {
     final AppLocalizations l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1439,9 +1481,8 @@ class _TemplateCard extends ConsumerWidget {
           .delete(template.id);
       ref.invalidate(programTemplatesProvider);
     } on AppError {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.coachTemplateDeleteFailed)),
-      );
+      if (!context.mounted) return;
+      showAppToast(context, l.coachTemplateDeleteFailed, kind: AppToastKind.error);
     }
   }
 
@@ -1890,19 +1931,21 @@ class _CancelRoutineButtonState extends ConsumerState<_CancelRoutineButton> {
     );
     if (ok != true || !mounted) return;
 
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
       await ref
           .read(trainerRoutineRepositoryProvider)
           .deleteRoutine(widget.clientId, widget.routine.id);
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
+      if (!mounted) return;
+      showAppToast(context, l.routineDeleted, kind: AppToastKind.success);
     } on StateError {
       // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 목록만 다시 읽고
       // 그 줄을 화면에서 걷어낸다.
-      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
+      if (!mounted) return;
+      showAppToast(context, l.routineAlreadyGone);
     } on Object {
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
+      if (!mounted) return;
+      showAppToast(context, l.routineDeleteFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
       ref.invalidate(assignedRoutinesProvider(widget.clientId));

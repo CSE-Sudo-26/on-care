@@ -246,6 +246,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashActivityTabDiet => '식단';
 
   @override
+  String get dashActivityTabClient => '고객';
+
+  @override
   String get dashLoadFailed => '대시보드를 불러오지 못했어요';
 
   @override
@@ -339,7 +342,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dashAiSummaryTitle => 'AI 진단';
+  String get dashAiSummaryTitle => '활동 피드백';
 
   @override
   String get dashAiNoClients =>
@@ -558,7 +561,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get clientsNew => '신규 고객';
+  String get clientsNew => '신규 고객 등록';
 
   @override
   String get clientsTitle => '고객 관리';
@@ -676,7 +679,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteIntroImmediate =>
-      '회원 ID로 회원을 확인한 뒤 바로 연결해요. 성별·나이·신체 정보는 입력할 필요 없어요 — 연결되면 회원이 등록해 둔 값을 그대로 가져와요.';
+      '회원 ID로 고객을 확인한 뒤 바로 등록해요. 성별·나이·운동 목표는 데모 회원 정보에서 가져와요.';
 
   @override
   String get clientInviteMemberIdLabel => '회원 ID';
@@ -691,7 +694,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientInviteSendAction => '담당 요청 보내기';
 
   @override
-  String get clientInviteConnectAction => '연결하기';
+  String get clientInviteConnectAction => '고객 등록';
 
   @override
   String clientInviteSent(String name) {
@@ -700,7 +703,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String clientInviteConnected(String name) {
-    return '$name님과 연결됐어요';
+    return '$name님을 고객으로 등록했어요';
   }
 
   @override
@@ -735,6 +738,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteCancelFailed => '요청을 거두지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientInviteConfirmPrompt => '이 고객이 맞나요?';
+
+  @override
+  String get clientInviteGoalLabel => '운동 목표';
 
   @override
   String get coachTemplateNew => '새 템플릿';
@@ -854,6 +863,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String chatReportSentNotice(Object range) {
+    return '$range 주간 리포트를 보냈어요';
+  }
 
   @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';
@@ -1199,6 +1213,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get reportsGoToChat => '채팅으로 이동하기';
+
+  @override
   String get reportsScheduleWarning => '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요';
 
   @override
@@ -1355,6 +1372,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chartNoRecord => '기록 없음';
+
+  @override
+  String get chartNotYet => '아직 오지 않은 날';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '목표 초과 +$amount $unit';
+  }
 
   @override
   String get reportsSendStateSent => '전송됨';
@@ -1763,20 +1788,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myNotifNewMessageHint => '고객이 메시지를 보내면 사이드바 뱃지로 알려드려요';
-
-  @override
-  String get myNotifSessionReminder => '수업 시작 전 알림';
-
-  @override
-  String get myNotifSessionReminderHint => '예정된 세션이 다가오면 대시보드에서 강조해요';
-
-  @override
-  String get myReminderLead => '알림 시점';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes분 전';
-  }
 
   @override
   String get myAccount => '계정';
@@ -3543,4 +3554,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get a11ySendMessage => '메시지 보내기';
+
+  @override
+  String get aiManualCreate => '직접 만들기';
+
+  @override
+  String get aiReturnToWizard => 'AI 추천으로 돌아가기';
 }

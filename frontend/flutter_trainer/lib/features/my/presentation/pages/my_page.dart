@@ -14,6 +14,7 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
@@ -22,6 +23,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
@@ -130,9 +132,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     final careerYears = int.tryParse(careerMatch?.group(1) ?? '');
     if (careerYears == null || careerYears < 0 || careerYears > 80) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.myCareerInvalid)));
+      showAppToast(context, l.myCareerInvalid);
       return;
     }
 
@@ -184,9 +184,7 @@ class _MyPageState extends ConsumerState<MyPage> {
       if (restored != null) _applyRestoredProfile(restored);
       setState(() => _saving = false);
       final message = _saveFailureMessage(error, profileSaved: profileSaved);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      showAppToast(context, message, kind: AppToastKind.error);
       return;
     }
 
@@ -243,8 +241,6 @@ class _MyPageState extends ConsumerState<MyPage> {
   /// 계정 탈퇴. 이름 확인을 받은 뒤에만 나가고, 성공하면 로그아웃과 같은 경로로
   /// 로그인 화면에 도달한다(라우터의 인증 게이트). (#505)
   Future<void> _deleteAccount() async {
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
     final AppLocalizations l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -256,8 +252,10 @@ class _MyPageState extends ConsumerState<MyPage> {
       await ref.read(trainerAccountRepositoryProvider).deleteAccount();
     } on AppError catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(serverDetailOr(l, e.message, l.myDeleteFailed))),
+      showAppToast(
+        context,
+        serverDetailOr(l, e.message, l.myDeleteFailed),
+        kind: AppToastKind.error,
       );
       return;
     }
@@ -401,16 +399,15 @@ class _MyPageState extends ConsumerState<MyPage> {
   /// so a failed write has to be visible — otherwise the screen shows a
   /// value the server never accepted.
   Future<void> _applySetting(Future<void> Function() change) async {
-    final messenger = ScaffoldMessenger.of(context);
     await change();
     if (!mounted) return;
     final controller = ref.read(trainerSettingsProvider.notifier);
     if (controller.lastError) {
       controller.clearError();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).mySettingsSaveFailed),
-        ),
+      showAppToast(
+        context,
+        AppLocalizations.of(context).mySettingsSaveFailed,
+        kind: AppToastKind.error,
       );
     }
   }
@@ -437,44 +434,6 @@ class _MyPageState extends ConsumerState<MyPage> {
                 onChanged: (v) =>
                     _applySetting(() => controller.setNewMessageAlerts(v)),
               ),
-              const Divider(height: 1, color: AppColors.borderStrong),
-              _SwitchRow(
-                label: l.myNotifSessionReminder,
-                hint: l.myNotifSessionReminderHint,
-                value: settings.sessionReminders,
-                onChanged: (v) =>
-                    _applySetting(() => controller.setSessionReminders(v)),
-              ),
-              if (settings.sessionReminders) ...<Widget>[
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        l.myReminderLead,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                    ),
-                    SegmentedSwitch(
-                      labels: <String>[
-                        for (final m in reminderLeadOptions)
-                          l.myMinutesBefore(m),
-                      ],
-                      selected: reminderLeadOptions.indexOf(
-                        settings.reminderLeadMinutes,
-                      ),
-                      onChanged: (i) => _applySetting(
-                        () =>
-                            controller.setReminderLead(reminderLeadOptions[i]),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -598,13 +557,19 @@ class _MyPageState extends ConsumerState<MyPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: AppRadius.card),
       ),
+      // 상단 토스트가 이 시트 위로 겹쳐 뜰 수 있다 — 화면 꼭대기까지
+      // 올라오지 않게 남길 최소 높이를 [AppToastStyle.dialogTopClearance]
+      // 로 잡는다.
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height -
+            AppToastStyle.dialogTopClearance,
+      ),
       builder: (context) => const _PasswordSheet(),
     );
     if (changed == true && mounted) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.myPasswordChanged)));
+      showAppToast(context, l.myPasswordChanged, kind: AppToastKind.success);
     }
   }
 }

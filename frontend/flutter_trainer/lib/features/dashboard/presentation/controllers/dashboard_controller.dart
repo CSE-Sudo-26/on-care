@@ -96,7 +96,7 @@ final dashboardChurnRiskProvider = Provider.autoDispose<List<ChurnRiskClient>>((
   );
 }, name: 'dashboardChurnRisk');
 
-/// "AI 진단" 카드의 트레이너 활동 피드백 bullets.
+/// "활동 피드백" 카드의 트레이너 활동 피드백 bullets.
 final dashboardActivityFeedbackProvider =
     Provider.autoDispose<List<ActivityFeedbackItem>>((ref) {
       final inputs = ref.watch(_churnInputsProvider);

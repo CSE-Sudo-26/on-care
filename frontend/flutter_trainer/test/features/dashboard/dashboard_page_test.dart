@@ -267,12 +267,12 @@ void main() {
     expect(currentLocation(tester), contains('/diet'));
   });
 
-  testWidgets('AI 진단 spells out the three activity-feedback signals', (
+  testWidgets('활동 피드백 spells out the three activity-feedback signals', (
     tester,
   ) async {
     await openDashboard(tester);
 
-    expect(find.text('AI 진단'), findsOneWidget);
+    expect(find.text('활동 피드백'), findsOneWidget);
     expect(find.text('이행률 저조·이탈 위험 감지'), findsOneWidget);
     expect(find.text('7일 이상 활동 저조'), findsOneWidget);
     expect(find.text('식단 피드백 미완료'), findsOneWidget);
@@ -284,7 +284,7 @@ void main() {
     (kind: 'inactiveSevenDays', route: '/messages'),
     (kind: 'dietFeedbackPending', route: '/diet'),
   ]) {
-    testWidgets('AI 진단의 ${scenario.kind} 버튼이 그 활동에 맞는 화면으로 이동한다', (
+    testWidgets('활동 피드백의 ${scenario.kind} 버튼이 그 활동에 맞는 화면으로 이동한다', (
       tester,
     ) async {
       await openDashboard(tester);
@@ -320,7 +320,7 @@ void main() {
       find.byKey(const ValueKey<String>('dashboard-action-row')),
     );
     expect(actionRow.children.whereType<Expanded>(), hasLength(2));
-    expect(find.text('AI 진단'), findsOneWidget);
+    expect(find.text('활동 피드백'), findsOneWidget);
   });
 
   testWidgets('오늘 할 일은 각 미션에 맞는 고객만 보여준다', (tester) async {

@@ -3,6 +3,11 @@
 /// 요청을 보낼지 판단할 만큼만 담는다 — 이름, 이미 담당이 있는지, 내가 보낸
 /// 요청이 기다리고 있는지. 담당이 **누구인지**는 서버도 알려 주지 않는다.
 /// 담당이 아닌 트레이너가 알 이유가 없는 값이다. (#919)
+///
+/// [gender]·[age]·[goal] 은 실 API 에는 없다(`MemberLookupOut` 이 문서로 남긴
+/// 대로 — 담당이 성립하기 전에는 신체 정보를 보여줄 이유가 없다). 데모만
+/// 채운다 — 답할 회원 백엔드가 없어 연결이 그 자리에서 끝나는 대신, 트레이너가
+/// 등록 전에 "이 사람이 맞는지" 확인할 수 있어야 한다.
 class MemberLookup {
   const MemberLookup({
     required this.memberId,
@@ -10,6 +15,9 @@ class MemberLookup {
     required this.hasTrainer,
     required this.coachedByMe,
     required this.invitePending,
+    this.gender,
+    this.age,
+    this.goal,
   });
 
   final String memberId;
@@ -24,6 +32,15 @@ class MemberLookup {
   /// 내가 보낸 요청이 대기 중인가.
   final bool invitePending;
 
+  /// `male`/`female`/`other` — 데모에서만 채워지는, 회원이 이미 등록해 둔 값.
+  final String? gender;
+
+  /// 데모에서만 채워지는 만 나이.
+  final int? age;
+
+  /// 데모에서만 채워지는 운동 목표.
+  final String? goal;
+
   /// 지금 이 회원에게 요청을 보낼 수 있는가.
   bool get canInvite => !hasTrainer && !invitePending;
 
@@ -33,6 +50,9 @@ class MemberLookup {
     hasTrainer: json['has_trainer'] as bool? ?? false,
     coachedByMe: json['coached_by_me'] as bool? ?? false,
     invitePending: json['invite_pending'] as bool? ?? false,
+    gender: json['gender'] as String?,
+    age: (json['age'] as num?)?.toInt(),
+    goal: json['goal'] as String?,
   );
 }
 

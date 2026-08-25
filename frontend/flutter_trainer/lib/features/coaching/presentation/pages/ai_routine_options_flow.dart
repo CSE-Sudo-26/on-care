@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_fo
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 
 /// Conversation-style AI routine builder.
@@ -27,6 +28,7 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
     this.recommendedExercises = const <RoutineExercise>[],
     this.recommendedReason = '',
     this.onReviewCompleted,
+    this.onManualCreate,
     super.key,
   });
 
@@ -35,6 +37,9 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
   final List<RoutineExercise> recommendedExercises;
   final String recommendedReason;
   final ValueChanged<List<RoutineExercise>>? onReviewCompleted;
+
+  /// AI 단계를 종료하고 빈 프로그램 편집기로 전환한다.
+  final VoidCallback? onManualCreate;
 
   @override
   ConsumerState<AiRoutineOptionsFlow> createState() =>
@@ -135,7 +140,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   Future<void> _generate() async {
     if (_generating) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _generating = true);
     try {
       final options = await ref
@@ -173,14 +177,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       final AppLocalizations l = AppLocalizations.of(context);
       // 한도 초과는 고장이 아니라 잠시 뒤 되는 상태다. 다른 오류와 같은 문구를
       // 쓰면 트레이너가 기능이 깨진 것으로 읽는다(#582).
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            e is RateLimitedError
-                ? l.aiGenerateRateLimited
-                : l.aiGenerateFailed,
-          ),
-        ),
+      showAppToast(
+        context,
+        e is RateLimitedError ? l.aiGenerateRateLimited : l.aiGenerateFailed,
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _generating = false);
@@ -199,9 +199,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     final name = _newExerciseName.text.trim();
     if (name.isEmpty) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.aiExerciseNameRequired)));
+      showAppToast(context, l.aiExerciseNameRequired);
       return;
     }
     final isStrength = _newExerciseType == '근력';
@@ -229,9 +227,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   void _completeReview() {
     if (_edited.isEmpty) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
+      showAppToast(context, l.aiKeepOneExercise);
       return;
     }
     setState(() {
@@ -286,21 +282,40 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   void _applyToTemplate() {
     final AppLocalizations l = AppLocalizations.of(context);
     if (_edited.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
+      showAppToast(context, l.aiKeepOneExercise);
       return;
     }
     widget.onReviewCompleted?.call(List<RoutineExercise>.unmodifiable(_edited));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l.aiAppliedToTemplate)));
+    showAppToast(context, l.aiAppliedToTemplate, kind: AppToastKind.success);
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final content = <Widget>[
+      if (widget.onManualCreate != null) ...<Widget>[
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: const ValueKey<String>('ai-manual-create'),
+            onPressed: widget.onManualCreate,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.edit_note_outlined, size: 14),
+            label: Text(l.aiManualCreate),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+      ],
       KeyedSubtree(
         key: _topKey,
         child: _ProgressStepper(
@@ -309,7 +324,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           onStageTap: _goToStage,
         ),
       ),
-      const SizedBox(height: AppSpacing.xl),
+      const SizedBox(height: AppSpacing.lg),
       if (_stage == 0) ...<Widget>[
         _assistantAnalysis(),
         const SizedBox(height: AppSpacing.lg),

@@ -18,6 +18,7 @@ class ClientChatMessage {
     required this.timeLabel,
     required this.createdAt,
     this.attachment,
+    this.reportWeekStart,
   });
 
   /// Row id (`seed-chat-…` for seeds, `chat-…` for runtime replies).
@@ -35,6 +36,11 @@ class ClientChatMessage {
   /// Ordering key.
   final DateTime createdAt;
   final ChatAttachment? attachment;
+
+  /// null이면 그냥 채팅, 값이 있으면 리포트 PDF 전송 안내다 — 그 주의
+  /// 월요일. (#1378) 데모/드리프트는 첨부를 저장하지 못해 [attachment] 대신
+  /// 이 값으로 안내 말풍선을 구분한다.
+  final DateTime? reportWeekStart;
 
   /// Whether this message was sent by the trainer.
   bool get fromTrainer => sender == ChatSender.trainer;

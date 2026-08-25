@@ -257,6 +257,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashActivityTabDiet => 'Diet';
 
   @override
+  String get dashActivityTabClient => 'Client';
+
+  @override
   String get dashLoadFailed => 'Couldn\'t load the dashboard';
 
   @override
@@ -351,7 +354,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashAiSummaryTitle => 'AI diagnosis';
+  String get dashAiSummaryTitle => 'Activity feedback';
 
   @override
   String get dashAiNoClients =>
@@ -579,7 +582,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get clientsNew => 'New client';
+  String get clientsNew => 'Register new client';
 
   @override
   String get clientsTitle => 'Member management';
@@ -700,7 +703,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteIntroImmediate =>
-      'Find a member by their member ID and connect right away. No need to enter gender, age, or body stats — once connected, they come from what the member already registered.';
+      'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.';
 
   @override
   String get clientInviteMemberIdLabel => 'Member ID';
@@ -715,7 +718,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientInviteSendAction => 'Send request';
 
   @override
-  String get clientInviteConnectAction => 'Connect';
+  String get clientInviteConnectAction => 'Register client';
 
   @override
   String clientInviteSent(String name) {
@@ -724,7 +727,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String clientInviteConnected(String name) {
-    return 'Connected with $name';
+    return 'Registered $name as a client';
   }
 
   @override
@@ -763,6 +766,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clientInviteCancelFailed =>
       'Couldn\'t withdraw the request. Please try again';
+
+  @override
+  String get clientInviteConfirmPrompt => 'Is this the right client?';
+
+  @override
+  String get clientInviteGoalLabel => 'Goal';
 
   @override
   String get coachTemplateNew => 'New template';
@@ -887,6 +896,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
+
+  @override
+  String chatReportSentNotice(Object range) {
+    return 'Sent the $range weekly report';
+  }
 
   @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
@@ -1242,6 +1256,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reportsGoToChat => 'Go to chat';
+
+  @override
   String get reportsScheduleWarning =>
       'This week\'s schedule didn\'t load, so session counts may be missing';
 
@@ -1424,6 +1441,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartNoRecord => 'Not logged';
+
+  @override
+  String get chartNotYet => 'Not yet';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '$amount $unit over goal';
+  }
 
   @override
   String get reportsSendStateSent => 'Sent';
@@ -1843,21 +1868,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get myNotifNewMessageHint =>
       'A sidebar badge appears when a client messages you';
-
-  @override
-  String get myNotifSessionReminder => 'Session reminders';
-
-  @override
-  String get myNotifSessionReminderHint =>
-      'Upcoming sessions are highlighted on the dashboard';
-
-  @override
-  String get myReminderLead => 'Remind me';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes min before';
-  }
 
   @override
   String get myAccount => 'Account';
@@ -3689,4 +3699,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get a11ySendMessage => 'Send message';
+
+  @override
+  String get aiManualCreate => 'Build manually';
+
+  @override
+  String get aiReturnToWizard => 'Back to AI suggestions';
 }
