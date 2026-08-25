@@ -1,7 +1,8 @@
-/// 헬스장 찾기 화면의 지도와 결과 시트. (#865 → #1135 → #1274)
+/// 헬스장 찾기 화면의 지도와 결과 목록. (#865 → #1135 → #1274 → #1362 → #1370)
 ///
-/// 지도는 **자리에 고정**되고 그 위로 목록 시트가 오르내린다. 목록을 밀어도
-/// 지도는 움직이지 않는다 — 예전에 지도까지 함께 밀려 올라가던 것이 이
+/// 지도는 위에 **가로로 길게 고정**되고, 자리는 둘뿐이다 — 반반 / 목록만.
+/// 오가는 길은 머리줄의 화살표 하나이고, 목록은 제 자리 안에서 구른다. 목록을
+/// 굴려도 지도는 움직이지 않는다 — 예전에 지도까지 함께 밀려 올라가던 것이 이
 /// 화면에서 가장 다루기 나빴던 부분이다.
 library;
 
@@ -70,21 +71,49 @@ void main() {
     // 결과 개수와 정렬 줄, 그리고 카드가 함께 읽힌다.
     expect(find.textContaining('개'), findsWidgets);
     expect(find.text('주변 헬스장'), findsOneWidget);
-    // 처음 자리는 반반이다 — 지도와 목록이 함께 읽힌다 (#1274).
-    expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+    // 처음 자리는 반반이다 — 지도와 목록이 함께 읽힌다 (#1274, #1370).
+    expect(
+      tester.getSize(find.byKey(const Key('gym-map-slot'))).height,
+      greaterThan(0),
+    );
   });
 
-  testWidgets('목록을 밀어도 지도는 제자리다 (#1135)', (tester) async {
+  testWidgets('목록은 제 자리에서 구르고 지도는 그대로다 (#1135, #1370)', (tester) async {
     await _pumpFinder(tester);
     final double before = _mapTop(tester);
+    final Finder list = find.byKey(const Key('gym-result-list'));
+    final double listTop = tester.getTopLeft(list).dy;
 
-    await tester.drag(
-      find.byKey(const Key('gym-result-sheet')),
-      const Offset(0, -260),
-    );
+    // 목록을 민다. 카드가 넘어가야 하고(스크롤 위치가 움직인다), 지도와 목록
+    // 자리는 그대로여야 한다.
+    await tester.drag(list, const Offset(0, -200));
     await tester.pumpAndSettle();
 
+    final ScrollPosition position = tester
+        .state<ScrollableState>(
+          find.descendant(of: list, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    expect(position.pixels, greaterThan(0), reason: '목록이 구르지 않았다');
     expect(_mapTop(tester), before, reason: '목록을 밀었더니 지도까지 따라 올라갔다');
+    expect(tester.getTopLeft(list).dy, listTop, reason: '목록 자리가 함께 움직였다');
+  });
+
+  testWidgets('화살표로 반반 ↔ 목록만 두 자리를 오간다 (#1370)', (tester) async {
+    await _pumpFinder(tester);
+
+    // 처음은 반반 — 지도가 위에 띠로 눕는다.
+    final double half = tester.getSize(find.byKey(const Key('gym-map-slot'))).height;
+    expect(half, greaterThan(0));
+
+    await tester.tap(find.byKey(const ValueKey<String>('gym-list-toggle')));
+    await tester.pumpAndSettle();
+    // 목록만 — 지도 자리가 사라진다.
+    expect(tester.getSize(find.byKey(const Key('gym-map-slot'))).height, 0);
+
+    await tester.tap(find.byKey(const ValueKey<String>('gym-list-toggle')));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byKey(const Key('gym-map-slot'))).height, half);
   });
 
   testWidgets('시트는 화면 가로를 다 쓰고 지도와 겹치지 않는다 (#1362)', (tester) async {
@@ -99,11 +128,10 @@ void main() {
     Rect map() => tester.getRect(find.byType(KakaoMapView).first);
     expect(map().bottom, lessThanOrEqualTo(tester.getTopLeft(sheet).dy + 0.5));
 
-    // 시트를 끌어 올린 뒤에도 겹치지 않는다 — 지도는 시트가 남긴 자리만큼만
-    // 차지한다.
-    await tester.drag(sheet, const Offset(0, -260));
+    // 목록만 보는 자리로 옮긴 뒤에도 겹치지 않는다.
+    await tester.tap(find.byKey(const ValueKey<String>('gym-list-toggle')));
     await tester.pumpAndSettle();
-    expect(map().bottom, lessThanOrEqualTo(tester.getTopLeft(sheet).dy + 0.5));
+    expect(find.byType(KakaoMapView), findsNothing);
   });
 
   testWidgets('검색 결과가 없으면 빈 문구가 그 자리에 뜬다', (tester) async {
