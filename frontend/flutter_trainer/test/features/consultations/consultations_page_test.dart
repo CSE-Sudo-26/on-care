@@ -153,8 +153,9 @@ void main() {
     expect(find.text('상담 요청'), findsWidgets);
     expect(find.text('김민수'), findsOneWidget);
     expect(find.text('체중 감량'), findsOneWidget);
-    expect(find.text('건강관리 목적'), findsOneWidget);
-    expect(find.text('건강상태·주의사항 · 허리 통증을 고려해 주세요.'), findsOneWidget);
+    // 건강관리 목적은 회원이 따로 고르지 않는 파생값이라 카드에 보이지
+    // 않는다 — 운동 목표 하나로 충분하다.
+    expect(find.text('건강관리 목적'), findsNothing);
     // 문의 내용도 다른 항목처럼 라벨을 달아 무엇을 보여주는 값인지 밝힌다.
     expect(find.text(_ko.consultMessage), findsOneWidget);
     expect(find.text('상담 부탁드립니다.'), findsOneWidget);
