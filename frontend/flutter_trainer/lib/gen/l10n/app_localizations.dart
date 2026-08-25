@@ -5564,29 +5564,29 @@ abstract class AppLocalizations {
   /// **'Check each exercise\'s name and set count.'**
   String get programEditorAssignUnsupported;
 
-  /// No description provided for @programEditorAssign.
-  ///
-  /// In en, this message translates to:
-  /// **'Assign to client'**
-  String get programEditorAssign;
-
   /// No description provided for @programAssignConfirmTitle.
   ///
   /// In en, this message translates to:
-  /// **'Assign to this client?'**
+  /// **'Add to the schedule?'**
   String get programAssignConfirmTitle;
 
   /// No description provided for @programAssignConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'This program will be assigned to {name}, and also scheduled on their PT calendar for {date}.'**
-  String programAssignConfirmBody(String name, String date);
+  /// **'This program will be added to {name}\'s PT schedule on {date} at {time}.'**
+  String programAssignConfirmBody(String name, String date, String time);
 
-  /// No description provided for @programEditorReview.
+  /// No description provided for @programEditorSaveTemplate.
   ///
   /// In en, this message translates to:
-  /// **'Confirm & send'**
-  String get programEditorReview;
+  /// **'Save as template'**
+  String get programEditorSaveTemplate;
+
+  /// No description provided for @programEditorAddSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to schedule'**
+  String get programEditorAddSchedule;
 
   /// No description provided for @programReviewTitle.
   ///
