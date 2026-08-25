@@ -92,7 +92,12 @@ class ConsultationsPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          // 이 칩 아래로 바로 본문(목록 또는 빈/에러 안내)이 온다 — 그
+          // 안내들은 자기 위에도 여백을 두므로, 여기서는 칩과 아래를
+          // 구분할 만큼만 둔다. 예전 `AppSpacing.lg` 는 칩이 헤더에 있어
+          // 부제 자리와 떨어져 있을 때 맞춘 값이라, 지금 자리에서는 아래
+          // 여백과 겹쳐 필요 이상으로 벌어져 보였다.
+          const SizedBox(height: AppSpacing.sm),
           if (!modal) ...<Widget>[
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -111,7 +116,7 @@ class ConsultationsPage extends ConsumerWidget {
           ],
           inbox.requests.when(
             loading: () => const Padding(
-              padding: EdgeInsets.only(top: AppSpacing.xxl),
+              padding: EdgeInsets.only(top: AppSpacing.lg),
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (error, _) => _InboxMessage(
@@ -339,17 +344,14 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    // 건강관리 목적은 회원이 따로 고르지 않는다 — 운동
+                    // 목표 하나에서 서버 호환용으로 파생된 값이라, 여기서
+                    // 또 보여주면 같은 정보를 두 번 말하는 셈이다. `기타`
+                    // 목표에서는 그 상세가 문의 내용과 완전히 같은 문구라
+                    // 아래 인용구와 겹치기까지 한다.
                     _Field(
                       label: l.consultExerciseGoal,
                       value: label(exerciseGoalLabels(l), request.goalCode),
-                    ),
-                    _Field(
-                      label: l.consultHealthPurpose,
-                      value: <String>[
-                        label(healthPurposeLabels(l), request.purposeCode),
-                        if (request.purposeDetail != null)
-                          request.purposeDetail!,
-                      ].join(' · '),
                     ),
                     _Field(
                       label: l.consultPreferredTime,
@@ -619,8 +621,11 @@ class _InboxMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 필터 칩 바로 아래 오는 자리라 예전(부제+헤더 뒤)만큼 넓은 위쪽
+    // 여백은 필요 없다 — `AppSpacing.xxl` 은 그 자리를 기준으로 잡은
+    // 값이라 지금은 칩과 겹쳐 과하게 벌어져 보였다.
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xxl),
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
       child: Column(
         children: <Widget>[
           Icon(icon, size: 40, color: AppColors.disabledForeground),
