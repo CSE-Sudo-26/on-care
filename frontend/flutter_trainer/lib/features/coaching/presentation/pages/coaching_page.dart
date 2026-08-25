@@ -114,32 +114,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// template (#1028).
   bool _savingTemplate = false;
 
-  /// 최종 검토 중인 구성 — 이것이 곧 **전송 게이트**다 (#1028).
-  ///
-  /// null 이면 편집 중이라는 뜻이고, 그때는 [_assignReviewedDraft] 도
-  /// [_registerReviewedDraft] 도 아무 일도 하지 않는다. 두 함수가 인자로 초안을
-  /// 받지 않고 이 값만 읽는 것이 핵심이다 — 어떤 위젯도 "임의의 초안"을 전송
-  /// 경로에 밀어 넣을 수 없고, 트레이너가 최종 검토에서 실제로 보고 있는 그
-  /// 스냅샷만 나간다. 화면에 그려진 내용과 payload 가 같은 객체다.
-  ProgramEditorState? _reviewDraft;
-
-  /// 최종 검토를 연다. **전송이 아니다** — 편집기가 넘긴 스냅샷을 붙잡아 둘 뿐.
-  void _openFinalReview(ProgramEditorState draft) {
-    setState(() {
-      _reviewDraft = draft;
-      _sent = false;
-      _registered = false;
-      _registeredAttachedExisting = false;
-    });
-  }
-
-  /// 편집기로 돌아간다. 검토하던 구성이 그대로 다시 열린다 — 편집기는 검토 중
-  /// 접혀 있을 뿐 트리에 남아 있어(아래 [Offstage]) 편집 내용을 잃지 않는다.
-  void _closeFinalReview() {
-    if (_reviewDraft == null) return;
-    setState(() => _reviewDraft = null);
-  }
-
   @override
   void dispose() {
     _sentTimer?.cancel();
@@ -172,9 +146,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _appliedTemplate = null;
       _templateRevision = 0;
       _editorRevision = 0;
-      // 다른 회원의 최종 검토를 물려받지 않는다 — 검토는 늘 지금 고른
-      // 회원의 구성이어야 한다 (#1028).
-      _reviewDraft = null;
       // NOTE: _registeringClientIds is intentionally NOT cleared — writes
       // for other clients keep being tracked while the selection changes.
     });
@@ -196,8 +167,12 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   ///
   /// 누를 때마다 새 템플릿을 만든다 — "수정 저장" 같은 덮어쓰기 개념을 따로
   /// 두지 않아, 버튼은 항상 `저장`으로 남는다.
-  Future<void> _saveTemplate(ProgramEditorState draft) async {
-    if (_savingTemplate) return;
+  ///
+  /// 반환값(성공 여부)은 호출부(편집기의 북마크 버튼)가 저장 전/후 아이콘
+  /// 상태(outline↔filled)를 구분하는 데만 쓴다 — 저장 자체의 동작·API 호출·
+  /// 스낵바 안내는 그대로다.
+  Future<bool> _saveTemplate(ProgramEditorState draft) async {
+    if (_savingTemplate) return false;
     final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     final exercises = <TemplateExercise>[
@@ -222,7 +197,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       messenger.showSnackBar(
         SnackBar(content: Text(l.coachTemplateExerciseRequired)),
       );
-      return;
+      return false;
     }
     setState(() => _savingTemplate = true);
     try {
@@ -234,11 +209,12 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             exercises: exercises,
           );
       ref.invalidate(programTemplatesProvider);
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _savingTemplate = false);
       messenger.showSnackBar(SnackBar(content: Text(l.programDraftSaved)));
+      return true;
     } on Object catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _savingTemplate = false);
       messenger.showSnackBar(
         SnackBar(
@@ -249,18 +225,23 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           ),
         ),
       );
+      return false;
     }
   }
 
-  /// 최종 검토 중인 구성을 회원에게 배정한다 (#1028).
-  ///
-  /// 초안을 인자로 받지 않는다 — [_reviewDraft] 가 비어 있으면(= 최종 검토
-  /// 밖이면) 호출 자체가 아무 일도 하지 않는다. 편집기·제안 카드 등 다른
-  /// 화면에서 이 경로로 들어올 방법이 없다.
-  Future<void> _assignReviewedDraft(TrainerClient client) async {
-    final draft = _reviewDraft;
-    if (draft == null) return;
+  /// 편집기의 `보내기` 가 부른다 — 확인창을 띄우고, 확인되면 배정한다
+  /// (#1028). 초안은 편집기가 그 자리에서 쥐고 있던 값을 그대로 인자로
+  /// 받는다 — 예전에는 "최종 검토" 화면이 스냅샷을 붙잡아 두는 역할을
+  /// 했지만, 이제 그 화면이 없어 호출 시점의 값을 곧장 쓴다.
+  Future<void> _sendProgram(TrainerClient client, ProgramEditorState draft) async {
     if (_sent || _sending || !draft.supportsAssignment) return;
+    final confirmed = await showProgramAssignConfirmDialog(
+      context,
+      clientName: client.name,
+      registerDate: _registerDate,
+      registerTime: _registerTime,
+    );
+    if (confirmed != true || !mounted || !_isStillSelected(client.id)) return;
     final sentFor = client.id;
     if (_sendRequestId == null || _sendRequestFor != sentFor) {
       _sendRequestId = newClientRequestId();
@@ -301,26 +282,26 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       if (!mounted) return;
       setState(() {
         _sent = false;
-        // 보낸 뒤에는 검토를 닫고 편집기를 새로 세운다 — 이미 나간 구성이
-        // 검토 화면에 그대로 남아 있으면 한 번 더 보낼 수 있는 것처럼 읽힌다.
-        _reviewDraft = null;
+        // 보낸 뒤에는 편집기를 새로 세운다 — 이미 나간 구성이 그대로
+        // 남아 있으면 한 번 더 보낼 수 있는 것처럼 읽힌다.
         _editorRevision++;
       });
     });
-    // `고객에게 배정` 버튼 하나가 배정과 PT 등록을 함께 한다(#1029) —
+    // `보내기` 하나가 배정과 PT 등록을 함께 한다(#1029) —
     // `assignProgram`/`registerProgram` 은 여전히 서로 다른 API 라 억지로
     // 합치지 않고 순서대로 부른다. 배정이 이미 됐으니 등록이 실패해도
-    // 배정 자체를 취소하지 않는다 — [_registerReviewedDraft] 는 자기
-    // 몫의 실패만 그 자리에서 따로 알린다(`coachScheduleFailed`), 방금
-    // 보인 배정 성공을 덮어쓰지 않는다.
-    await _registerReviewedDraft(client);
+    // 배정 자체를 취소하지 않는다 — [_registerProgram] 은 자기 몫의
+    // 실패만 그 자리에서 따로 알린다(`coachScheduleFailed`), 방금 보인
+    // 배정 성공을 덮어쓰지 않는다.
+    await _registerProgram(client, draft);
   }
 
-  /// [_assignReviewedDraft] 가 배정 성공 뒤에만 부른다(#1029) — 이 앱에
-  /// PT 등록 버튼은 따로 없다.
-  Future<void> _registerReviewedDraft(TrainerClient client) async {
-    final draft = _reviewDraft;
-    if (draft == null) return;
+  /// [_sendProgram] 이 배정 성공 뒤에만 부른다(#1029) — 이 앱에 PT 등록
+  /// 버튼은 따로 없다.
+  Future<void> _registerProgram(
+    TrainerClient client,
+    ProgramEditorState draft,
+  ) async {
     if (!draft.supportsAssignment ||
         _registered ||
         _registeringClientIds.contains(client.id)) {
@@ -471,31 +452,67 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         children: <Widget>[
                           SizedBox(
                             width: 260,
-                            // 고객 목록(5줄 고정)에 템플릿 카드가 더해지면
-                            // 짧은 창에서는 열이 화면보다 길어진다. 이 열
-                            // 안에서만 스크롤하게 두어 오른쪽과 따로 움직인다.
-                            child: SingleChildScrollView(
-                              key: const ValueKey<String>(
-                                'coaching-sidebar-scroll',
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  _MemberProgramList(
-                                    clients: clients,
-                                    selectedId: selected.id,
-                                    onSelect: _selectClient,
+                            // 고객 목록(5줄 고정)은 그 자리·높이 그대로 두고,
+                            // 템플릿 카드가 늘어나는 만큼만 그 아래 남는
+                            // 공간 안에서 따로 스크롤한다 — 예전처럼 열
+                            // 전체를 한 스크롤로 묶으면 템플릿을 보려고
+                            // 내릴 때 고객 목록까지 함께 밀려 올라갔다.
+                            //
+                            // 다만 이 열에 실제로 주어진 높이가 고객 목록
+                            // 하나만으로도 빠듯할 만큼 짧으면(작은 창) 그대로
+                            // 나누지 않는다 — 템플릿 카드는 헤더 한 줄 만큼의
+                            // 최소 높이도 없이는 그릴 수 없어 RenderFlex
+                            // 오버플로우가 난다. 그런 창에서는 예전처럼 열
+                            // 전체를 한 스크롤로 묶어 오버플로우 대신
+                            // 스크롤로 흡수한다.
+                            child: LayoutBuilder(
+                              builder: (context, sidebarConstraints) {
+                                final canSplit =
+                                    sidebarConstraints.maxHeight >=
+                                    _sidebarSplitMinHeight(context);
+                                final list = _MemberProgramList(
+                                  clients: clients,
+                                  selectedId: selected.id,
+                                  onSelect: _selectClient,
+                                );
+                                final template = _TemplateCard(
+                                  key: const ValueKey<String>(
+                                    'program-template-sidebar',
                                   ),
-                                  const SizedBox(height: AppSpacing.lg),
-                                  _TemplateCard(
+                                  onApply: _applyTemplate,
+                                  fixedBox: canSplit,
+                                );
+                                if (!canSplit) {
+                                  return SingleChildScrollView(
                                     key: const ValueKey<String>(
-                                      'program-template-sidebar',
+                                      'coaching-sidebar-scroll',
                                     ),
-                                    onApply: _applyTemplate,
-                                  ),
-                                ],
-                              ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        list,
+                                        const SizedBox(height: AppSpacing.lg),
+                                        template,
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    list,
+                                    const SizedBox(height: AppSpacing.lg),
+                                    // 남는 세로 공간은 전부 템플릿 카드가
+                                    // 갖는다 — 카드 박스 자체가 이 높이로
+                                    // 고정되고, 카드 내부가 그 안에서만
+                                    // 스크롤한다.
+                                    Expanded(child: template),
+                                  ],
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: AppSpacing.lg),
@@ -642,9 +659,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     _registered = false;
     _registeredAttachedExisting = false;
     _sent = false;
-    // 템플릿을 얹으면 구성이 달라진다 — 이미 검토하던 스냅샷은 더 이상 지금
-    // 구성이 아니므로 편집기로 돌려보내 다시 검토하게 한다 (#1028).
-    _reviewDraft = null;
   });
 
   /// AI 가 준비한 개인운동 제안. (#790)
@@ -672,10 +686,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   ///
   /// `AI에게 맞춤 루틴 요청하기` 는 더 이상 클릭해야 나타나지 않는다 —
   /// `프로그램 정보` 박스([ProgramEditorWorkspace]) 바로 위에 항상 붙인다.
-  /// 3단계 최종 검토의 `템플릿에 반영` 이 그 결과를 [ProgramEditorWorkspace]
+  /// AI 요청 흐름의 `템플릿에 반영` 이 그 결과를 [ProgramEditorWorkspace]
   /// 의 `aiSuggestions` 로 넘기면 편집기가 세션 1에 병합할 뿐, 이 흐름도
-  /// 편집기도 여기서 회원에게 직접 전송하지 않는다 — 실제 전송은
-  /// [ProgramFinalReviewCard] 하나뿐이다.
+  /// 편집기도 여기서 회원에게 직접 API 를 부르지 않는다 — 실제 전송은
+  /// 편집기의 `보내기` 가 [_sendProgram] 을 통해 호출부에서만 한다.
   List<Widget> _editorChildren(TrainerClient client) {
     final AppLocalizations l = AppLocalizations.of(context);
     final routineAsync = ref.watch(
@@ -695,88 +709,66 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         data: (items) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            // 최종 검토 중에는 편집기와 함께 접어 둔다 — 상태(단계·입력값)는
-            // 잃지 않되(Offstage) 검토 화면과 동시에 조작하지 못하게 한다.
-            Offstage(
-              offstage: _reviewDraft != null,
-              child: AiRoutineOptionsFlow(
-                key: ValueKey<String>('routine-options-${client.id}'),
-                client: client,
-                embedded: true,
-                recommendedExercises: items
-                    .map(
-                      (item) => RoutineExercise(
-                        name: item.name,
-                        minutes: item.minutes,
-                        type: _typeEdits[item.id] ?? item.type,
+            AiRoutineOptionsFlow(
+              key: ValueKey<String>('routine-options-${client.id}'),
+              client: client,
+              embedded: true,
+              recommendedExercises: items
+                  .map(
+                    (item) => RoutineExercise(
+                      name: item.name,
+                      minutes: item.minutes,
+                      type: _typeEdits[item.id] ?? item.type,
+                    ),
+                  )
+                  .toList(growable: false),
+              recommendedReason: items.isEmpty
+                  ? ''
+                  : items.map((item) => item.reason).join(' · '),
+              onReviewCompleted: (exercises) {
+                setState(() {
+                  _generatedRecommendations[client.id] = <AiRoutineItem>[
+                    for (var index = 0; index < exercises.length; index++)
+                      AiRoutineItem(
+                        id: 'generated-${client.id}-$index',
+                        name: exercises[index].name,
+                        minutes: exercises[index].minutes,
+                        type: exercises[index].type,
+                        reason: l.coachReviewed,
+                        sets: exercises[index].sets,
+                        reps: exercises[index].reps,
+                        weight: exercises[index].weight,
                       ),
-                    )
-                    .toList(growable: false),
-                recommendedReason: items.isEmpty
-                    ? ''
-                    : items.map((item) => item.reason).join(' · '),
-                onReviewCompleted: (exercises) {
-                  setState(() {
-                    _generatedRecommendations[client.id] = <AiRoutineItem>[
-                      for (var index = 0; index < exercises.length; index++)
-                        AiRoutineItem(
-                          id: 'generated-${client.id}-$index',
-                          name: exercises[index].name,
-                          minutes: exercises[index].minutes,
-                          type: exercises[index].type,
-                          reason: l.coachReviewed,
-                          sets: exercises[index].sets,
-                          reps: exercises[index].reps,
-                          weight: exercises[index].weight,
-                        ),
-                    ];
-                  });
-                },
-              ),
+                  ];
+                });
+              },
             ),
             const SizedBox(height: AppSpacing.lg),
-            // 최종 검토 중에는 편집기를 접어 둔다 — **트리에서 빼지
-            // 않는 이유**는 편집 상태가 편집기 State 에 있기 때문이다.
-            // 빼면 돌아왔을 때 트레이너가 쓴 내용이 사라진다. 접힌
-            // 동안에는 hit test 도 되지 않아 저장·검토 버튼이 눌리지
-            // 않는다. 애초에 이 편집기에는 전송 버튼이 없다 (#1028).
-            Offstage(
-              offstage: _reviewDraft != null,
-              child: ProgramEditorWorkspace(
-                key: ValueKey<String>(
-                  'program-editor-${client.id}-$_editorRevision',
-                ),
-                clientGoal: client.goal,
-                aiSuggestions: _generatedRecommendations[client.id] ?? items,
-                template: _appliedTemplate,
-                templateRevision: _templateRevision,
-                onReview: _openFinalReview,
-                onSave: _saveTemplate,
-                saving: _savingTemplate,
+            ProgramEditorWorkspace(
+              key: ValueKey<String>(
+                'program-editor-${client.id}-$_editorRevision',
               ),
+              clientGoal: client.goal,
+              aiSuggestions: _generatedRecommendations[client.id] ?? items,
+              template: _appliedTemplate,
+              templateRevision: _templateRevision,
+              onSend: (draft) => unawaited(_sendProgram(client, draft)),
+              onSave: _saveTemplate,
+              saving: _savingTemplate,
+              sending: _sending || _sent,
+              registerDate: _registerDate,
+              onRegisterDateChanged: (date) => setState(() {
+                _registerDate = date;
+                _registered = false;
+                _registeredAttachedExisting = false;
+              }),
+              registerTime: _registerTime,
+              onRegisterTimeChanged: (time) => setState(() {
+                _registerTime = time;
+                _registered = false;
+                _registeredAttachedExisting = false;
+              }),
             ),
-            // 프로그램 편집기 경로에서 회원에게 실제로 보낼 수 있는
-            // 유일한 화면.
-            if (_reviewDraft != null)
-              ProgramFinalReviewCard(
-                draft: _reviewDraft!,
-                clientName: client.name,
-                registerDate: _registerDate,
-                onRegisterDateChanged: (date) => setState(() {
-                  _registerDate = date;
-                  _registered = false;
-                  _registeredAttachedExisting = false;
-                }),
-                registerTime: _registerTime,
-                onRegisterTimeChanged: (time) => setState(() {
-                  _registerTime = time;
-                  _registered = false;
-                  _registeredAttachedExisting = false;
-                }),
-                onBack: _closeFinalReview,
-                onAssign: () => _assignReviewedDraft(client),
-                assigning: _sending || _sent,
-              ),
             if (_sent)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -867,6 +859,25 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       ),
     );
   }
+}
+
+/// 1열이 "고객 목록 고정 + 템플릿 카드만 스크롤"로 나뉘려면 필요한 최소
+/// 높이 — 고객 목록 5줄([_MemberProgramList], 글자 배율 반영) + 그 아래
+/// 간격 + 템플릿 카드가 최소한 헤더 한 줄을 그릴 수 있는 높이를 더한
+/// 값이다. 실제 주어진 높이가 이보다 작으면 나누지 않는다(호출부 참고).
+double _sidebarSplitMinHeight(BuildContext context) {
+  final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+  final extraScale = (scale - 1).clamp(0.0, 2.0);
+  final rowHeight = 64 + 56 * extraScale;
+  // 두 카드 모두 dense 패딩(AppSpacing.md 상하) + 헤더 아래 간격
+  // (AppSpacing.sm)을 쓴다. 헤더 줄 높이는 카드마다 다르다 — 고객 목록
+  // 헤더는 아이콘 16 + 글자뿐이지만, 템플릿 카드 헤더는 편집 가능할 때
+  // `template-new` IconButton(28×28, `_TemplateCard` 참고)을 달아 그
+  // 28px 가 기준이 된다. 더 큰 쪽으로 어림해야 경계에서 카드가 헤더
+  // 한 줄도 못 그리는 채로 `canSplit`이 켜지지 않는다.
+  const listChrome = AppSpacing.md * 2 + 22 + AppSpacing.sm;
+  const templateChrome = AppSpacing.md * 2 + 28 + AppSpacing.sm;
+  return rowHeight * 5 + listChrome + AppSpacing.lg + templateChrome;
 }
 
 class _MemberProgramList extends StatefulWidget {
@@ -1375,9 +1386,20 @@ String _dateChipLabel(AppLocalizations l, DateTime date) {
 
 /// One selectable register-day chip.
 class _TemplateCard extends ConsumerWidget {
-  const _TemplateCard({super.key, required this.onApply});
+  const _TemplateCard({
+    super.key,
+    required this.onApply,
+    this.fixedBox = false,
+  });
 
   final ValueChanged<ProgramTemplate> onApply;
+
+  /// 넓은 화면 사이드바(`Expanded`로 높이가 이미 정해진 자리)에서만 켠다 —
+  /// 카드 박스를 그 높이로 고정하고 목록만 안에서 스크롤한다. 좁은 화면의
+  /// `_libraryChildren`는 페이지 자체가 스크롤하는 `ListView` 안이라 높이가
+  /// 정해져 있지 않다(unbounded) — 여기서 켜면 `Expanded`/내부 스크롤이
+  /// 레이아웃 예외를 던진다.
+  final bool fixedBox;
 
   /// 만들기·편집 다이얼로그. 시작 구성을 열면 저장이 '새로 만들기' 가 된다.
   Future<void> _edit(BuildContext context, {ProgramTemplate? template}) {
@@ -1436,6 +1458,11 @@ class _TemplateCard extends ConsumerWidget {
         title: l.coachTemplates,
         icon: Icons.dashboard_customize_outlined,
         dense: true,
+        // 정상 경로와 같은 규칙이다 — `fixedBox`(넓은 사이드바)일 때는
+        // 오류 상태도 부모가 준 고정 높이를 그대로 받아야 한다. 여기서
+        // 빠뜨리면 오류가 난 그 순간에만 카드가 제 높이를 못 지켜
+        // RenderFlex 오버플로우가 난다(코드리뷰).
+        expandChild: fixedBox,
         child: Text(
           l.coachTemplateLoadFailed,
           style: const TextStyle(
@@ -1445,10 +1472,95 @@ class _TemplateCard extends ConsumerWidget {
         ),
       );
     }
+    // 넓은 사이드바(`fixedBox`)에서만 카드 박스를 고정 높이로 만들고, 그
+    // 안에서 목록만 스크롤한다. 좁은 화면(페이지 자체가 스크롤하는
+    // `ListView` 안, 높이 unbounded)에서는 예전처럼 자연스러운 높이로
+    // 그린다 — 거기서 고정 높이를 쓰면 `Expanded`가 레이아웃 예외를 던진다.
+    final body = LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 680 ? 3 : 1;
+        final width =
+            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+        return Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: <Widget>[
+            for (final template in templates)
+              SizedBox(
+                width: width,
+                child: Material(
+                  color: AppColors.inputBackground,
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  child: InkWell(
+                    onTap: () => onApply(template),
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  template.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.foreground,
+                                  ),
+                                ),
+                              ),
+                              if (canEdit)
+                                _TemplateMenu(
+                                  template: template,
+                                  onEdit: () =>
+                                      _edit(context, template: template),
+                                  onDelete: template.isStarter
+                                      ? null
+                                      : () => _delete(context, ref, template),
+                                )
+                              else
+                                const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 17,
+                                  color: AppColors.primary,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            l.coachTemplateSummaryWithGoal(
+                              template.goal,
+                              template.exercises.length,
+                              template.totalMinutes,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              height: 1.35,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.subtleForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
     return SectionCard(
       title: l.coachTemplates,
       icon: Icons.dashboard_customize_outlined,
       dense: true,
+      expandChild: fixedBox,
       // 아이콘만 쓴다(#1028) — 이 카드는 260px 고정 폭 사이드바에 있어,
       // 영어·큰 글자 배율에서 "새 템플릿" 글자가 제목과 함께 넘친다.
       trailing: canEdit
@@ -1462,86 +1574,12 @@ class _TemplateCard extends ConsumerWidget {
               constraints: const BoxConstraints.tightFor(width: 28, height: 28),
             )
           : null,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 680 ? 3 : 1;
-          final width =
-              (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
-          return Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: <Widget>[
-              for (final template in templates)
-                SizedBox(
-                  width: width,
-                  child: Material(
-                    color: AppColors.inputBackground,
-                    borderRadius: const BorderRadius.all(AppRadius.md),
-                    child: InkWell(
-                      onTap: () => onApply(template),
-                      borderRadius: const BorderRadius.all(AppRadius.md),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: Text(
-                                    template.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.foreground,
-                                    ),
-                                  ),
-                                ),
-                                if (canEdit)
-                                  _TemplateMenu(
-                                    template: template,
-                                    onEdit: () =>
-                                        _edit(context, template: template),
-                                    onDelete: template.isStarter
-                                        ? null
-                                        : () => _delete(context, ref, template),
-                                  )
-                                else
-                                  const Icon(
-                                    Icons.add_circle_outline,
-                                    size: 17,
-                                    color: AppColors.primary,
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              l.coachTemplateSummaryWithGoal(
-                                template.goal,
-                                template.exercises.length,
-                                template.totalMinutes,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                height: 1.35,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.subtleForeground,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+      child: fixedBox
+          ? SingleChildScrollView(
+              key: const ValueKey<String>('coaching-template-scroll'),
+              child: body,
+            )
+          : body,
     );
   }
 }
@@ -1577,7 +1615,7 @@ class _TemplateMenu extends StatelessWidget {
       tooltip: '',
       padding: EdgeInsets.zero,
       iconSize: 17,
-      icon: const Icon(Icons.more_horiz, color: AppColors.subtleForeground),
+      icon: const Icon(Icons.more_vert, color: AppColors.subtleForeground),
       color: AppColors.card,
       elevation: 4,
       shape: const RoundedRectangleBorder(

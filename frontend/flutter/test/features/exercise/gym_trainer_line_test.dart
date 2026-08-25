@@ -180,17 +180,18 @@ void main() {
     });
   });
 
-  group('지도·목록 드래그 시트 (#1186 · #1274)', () {
+  group('지도·목록 두 자리 (#1186 · #1274 · #1370)', () {
     final Finder sheet = find.byKey(const Key('gym-result-sheet'));
+    final Finder mapSlot = find.byKey(const Key('gym-map-slot'));
     final Finder toggle = find.byKey(const ValueKey<String>('gym-list-toggle'));
 
-    /// 지도의 윗변. 시트를 어디로 옮기든 이 값은 그대로여야 한다.
+    /// 지도의 윗변. 자리를 어떻게 바꾸든 이 값은 그대로여야 한다.
     double mapTop(WidgetTester tester) =>
         tester.getTopLeft(find.byType(KakaoMapView).first).dy;
 
-    /// 시트의 윗변 — 지금 시트가 어디에 붙어 있는지를 이 값으로 읽는다.
-    /// 작을수록 시트가 높이 올라와 목록이 많이 보인다.
-    double sheetTop(WidgetTester tester) => tester.getTopLeft(sheet).dy;
+    IconData? arrow(WidgetTester tester) => tester
+        .widget<Icon>(find.descendant(of: toggle, matching: find.byType(Icon)))
+        .icon;
 
     testWidgets('처음에는 지도와 목록이 함께 보인다', (WidgetTester tester) async {
       await pumpGymTab(tester, hasMyGym: false);
@@ -199,78 +200,48 @@ void main() {
       expect(find.text(_gym.name), findsWidgets);
       expect(find.text('1개 결과'), findsOneWidget);
       expect(find.byType(KakaoMapView), findsOneWidget);
+      // 지도는 위에 가로로 길게 눕고, 목록이 그 아래를 잇는다.
+      expect(tester.getSize(mapSlot).height, greaterThan(0));
+      expect(tester.getTopLeft(sheet).dy, tester.getBottomLeft(mapSlot).dy);
+      expect(arrow(tester), Icons.keyboard_arrow_up_rounded);
     });
 
-    testWidgets('위로 끌면 목록만, 아래로 끌면 지도만 남는다', (WidgetTester tester) async {
+    testWidgets('화살표로 목록만 보고 다시 지도를 부른다', (WidgetTester tester) async {
       await pumpGymTab(tester, hasMyGym: false);
-      final double middle = sheetTop(tester);
+      final double sheetTop = tester.getTopLeft(sheet).dy;
 
-      await tester.drag(sheet, const Offset(0, -400));
-      await tester.pumpAndSettle();
-      final double top = sheetTop(tester);
-      expect(top, lessThan(middle), reason: '위로 끌었는데 시트가 올라오지 않았다');
-
-      await tester.drag(sheet, const Offset(0, 700));
-      await tester.pumpAndSettle();
-      final double bottom = sheetTop(tester);
-      expect(bottom, greaterThan(middle), reason: '아래로 끌었는데 시트가 내려가지 않았다');
-      // 지도만 남은 자리에서도 다시 올릴 머리줄은 보인다.
-      expect(find.text('주변 헬스장'), findsOneWidget);
-      expect(toggle, findsOneWidget);
-    });
-
-    testWidgets('짧게 끌고 손을 떼면 가장 가까운 단계에 붙는다', (WidgetTester tester) async {
-      await pumpGymTab(tester, hasMyGym: false);
-      final double middle = sheetTop(tester);
-
-      // 어정쩡한 거리만 끌고 놓는다 — 그 자리에 멈추면 안 된다.
-      await tester.drag(sheet, const Offset(0, -40));
-      await tester.pumpAndSettle();
-
-      expect(sheetTop(tester), middle);
-    });
-
-    testWidgets('시트를 옮겨도 지도는 제자리다', (WidgetTester tester) async {
-      await pumpGymTab(tester, hasMyGym: false);
-      final double before = mapTop(tester);
-
-      await tester.drag(sheet, const Offset(0, -400));
-      await tester.pumpAndSettle();
-      expect(mapTop(tester), before);
-
-      await tester.drag(sheet, const Offset(0, 700));
-      await tester.pumpAndSettle();
-      expect(mapTop(tester), before);
-    });
-
-    testWidgets('화살표와 드래그가 같은 자리를 가리킨다', (WidgetTester tester) async {
-      await pumpGymTab(tester, hasMyGym: false);
-
-      // 손으로 맨 아래까지 내린다 — 화살표는 이제 위를 가리켜야 한다.
-      await tester.drag(sheet, const Offset(0, 700));
-      await tester.pumpAndSettle();
-      final double bottom = sheetTop(tester);
-      expect(
-        tester
-            .widget<Icon>(
-              find.descendant(of: toggle, matching: find.byType(Icon)),
-            )
-            .icon,
-        Icons.keyboard_arrow_up_rounded,
-      );
-
-      // 그 화살표를 누르면 반반 자리로 돌아온다.
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(sheetTop(tester), lessThan(bottom));
-      expect(
-        tester
-            .widget<Icon>(
-              find.descendant(of: toggle, matching: find.byType(Icon)),
-            )
-            .icon,
-        Icons.keyboard_arrow_down_rounded,
-      );
+      // 목록만 — 지도 자리가 통째로 사라지고 목록이 그 자리를 받는다 (#1382).
+      expect(mapSlot, findsNothing);
+      expect(find.byType(KakaoMapView), findsNothing);
+      expect(tester.getTopLeft(sheet).dy, lessThan(sheetTop));
+      // 다시 부를 머리줄은 남아 있고, 화살표가 방향을 뒤집는다.
+      expect(find.text('주변 헬스장'), findsOneWidget);
+      expect(arrow(tester), Icons.keyboard_arrow_down_rounded);
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byType(KakaoMapView), findsOneWidget);
+      expect(tester.getTopLeft(sheet).dy, sheetTop);
+    });
+
+    testWidgets('끌어서는 자리가 바뀌지 않는다 (#1370)', (WidgetTester tester) async {
+      await pumpGymTab(tester, hasMyGym: false);
+      final double sheetTop = tester.getTopLeft(sheet).dy;
+      final double before = mapTop(tester);
+
+      // 자리를 바꾸는 길은 화살표뿐이다 — 끄는 손짓은 목록 스크롤의 것이라,
+      // 시트가 그 손짓을 가져가면 목록이 넘어가지 않는다.
+      await tester.drag(sheet, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(sheet).dy, sheetTop);
+      expect(mapTop(tester), before);
+
+      await tester.drag(sheet, const Offset(0, 700));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(sheet).dy, sheetTop);
+      expect(mapTop(tester), before);
     });
   });
 }

@@ -24,9 +24,9 @@ void main() {
     ),
   ];
 
-  ProgramEditorState? reviewed;
+  ProgramEditorState? sent;
 
-  setUp(() => reviewed = null);
+  setUp(() => sent = null);
 
   Widget buildApp(List<AiRoutineItem> aiSuggestions) => MaterialApp(
     locale: const Locale('ko'),
@@ -37,7 +37,11 @@ void main() {
         child: ProgramEditorWorkspace(
           clientGoal: '체중 감량',
           aiSuggestions: aiSuggestions,
-          onReview: (draft) => reviewed = draft,
+          onSend: (draft) => sent = draft,
+          registerDate: DateTime(2026),
+          onRegisterDateChanged: (_) {},
+          registerTime: const TimeOfDay(hour: 10, minute: 0),
+          onRegisterTimeChanged: (_) {},
         ),
       ),
     ),
@@ -96,41 +100,119 @@ void main() {
     expect(editable.focusNode.hasFocus, isTrue);
   });
 
-  testWidgets('편집기에는 전송 버튼이 없다 — 배정·PT 등록은 최종 검토에만 있다 (#1028)', (
-    tester,
-  ) async {
-    await pumpEditor(tester);
+  testWidgets(
+    '이 편집기는 API를 직접 부르지 않는다 — 전송은 onSend 콜백으로 호출부가 한다',
+    (tester) async {
+      await pumpEditor(tester);
 
-    // 예전 버튼 키가 이 위젯 안에 남아 있으면, 편집 중 아무 때나 회원에게
-    // 보낼 수 있는 자리가 다시 생긴 것이다.
-    expect(
-      find.byKey(const ValueKey<String>('program-editor-assign')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('program-editor-register')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('program-editor-review')),
-      findsOneWidget,
-    );
-  });
+      // 예전 검토 화면 전용 버튼 키가 이 위젯 안에 남아 있으면, 편집기가
+      // 직접 배정·등록을 흉내 내고 있다는 뜻이다 — 그 화면은 없어졌다.
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-assign')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-register')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-editor-send')),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('최종 검토는 지금 구성의 스냅샷을 그대로 넘긴다 (#1028)', (tester) async {
+  testWidgets('보내기는 지금 구성의 스냅샷을 그대로 onSend 로 넘긴다', (tester) async {
     await pumpEditor(tester);
     await mergeSuggestions(tester);
 
-    expect(reviewed, isNull, reason: '검토 버튼을 누르기 전에는 넘어가는 것이 없다');
+    expect(sent, isNull, reason: '보내기를 누르기 전에는 넘어가는 것이 없다');
 
     await tester.ensureVisible(
-      find.byKey(const ValueKey<String>('program-editor-review')),
+      find.byKey(const ValueKey<String>('program-editor-send')),
     );
-    await tester.tap(find.byKey(const ValueKey<String>('program-editor-review')));
+    await tester.tap(find.byKey(const ValueKey<String>('program-editor-send')));
     await tester.pump();
 
-    expect(reviewed, isNotNull);
-    expect(reviewed!.sessions.single.exercises.single.name, '스쿼트');
+    expect(sent, isNotNull);
+    expect(sent!.sessions.single.exercises.single.name, '스쿼트');
+  });
+
+  group('일정 추가', () {
+    testWidgets('날짜·시각 칩은 다이얼로그 없이 박스 하단에 바로 보인다', (tester) async {
+      await pumpEditor(tester);
+
+      final dateChip = find.byKey(
+        const ValueKey<String>('program-register-date'),
+      );
+      final timeChip = find.byKey(
+        const ValueKey<String>('program-register-time'),
+      );
+      await tester.ensureVisible(dateChip);
+      await tester.pump();
+
+      // 기본값은 위에서 넘긴 registerDate/registerTime 그대로 — 칩을
+      // 열지 않아도(클릭하지 않아도) 바로 보인다.
+      expect(
+        find
+            .descendant(of: dateChip, matching: find.text('2026-01-01'))
+            .evaluate()
+            .isNotEmpty,
+        isTrue,
+      );
+      expect(
+        find
+            .descendant(
+              of: timeChip,
+              matching: find.text(
+                const TimeOfDay(hour: 10, minute: 0).format(tester.element(timeChip)),
+              ),
+            )
+            .evaluate()
+            .isNotEmpty,
+        isTrue,
+      );
+    });
+
+    testWidgets('날짜·시각 칩은 호출부의 onRegisterDateChanged/onRegisterTimeChanged 로 값을 넘긴다', (
+      tester,
+    ) async {
+      DateTime? changedDate;
+      TimeOfDay? changedTime;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProgramEditorWorkspace(
+                clientGoal: '체중 감량',
+                aiSuggestions: const <AiRoutineItem>[],
+                onSend: (_) {},
+                registerDate: DateTime(2026),
+                onRegisterDateChanged: (date) => changedDate = date,
+                registerTime: const TimeOfDay(hour: 10, minute: 0),
+                onRegisterTimeChanged: (time) => changedTime = time,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // `showDatePicker`/`showTimePicker` 의 실제 다이얼 UI 는 좌표 의존이라
+      // 픽셀 위치에 취약하다 — 위젯을 직접 잡아 콜백을 불러 값을 확정한다
+      // (검토 화면 시절과 같은 방식).
+      final workspace = tester.widget<ProgramEditorWorkspace>(
+        find.byType(ProgramEditorWorkspace),
+      );
+      workspace.onRegisterDateChanged(DateTime(2026, 1, 2));
+      workspace.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
+
+      expect(changedDate, DateTime(2026, 1, 2));
+      expect(changedTime, const TimeOfDay(hour: 14, minute: 30));
+    });
   });
 
   group('운동 지표 요약 (programExerciseMetrics)', () {
@@ -247,21 +329,21 @@ void main() {
       expect(find.text('런지'), findsOneWidget);
 
       await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.tap(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.pump();
 
       // 데이터 모델은 AI 제안과 같은 ProgramExerciseDraft 다 — 세트·중량
       // 기본값이 그대로 채워져 있다.
-      final added = reviewed!.sessions.single.exercises.single;
+      final added = sent!.sessions.single.exercises.single;
       expect(added.name, '런지');
       expect(added.sets, 3);
       expect(added.weight, 20);
       expect(added.source, 'trainer');
-      expect(reviewed!.supportsAssignment, isTrue);
+      expect(sent!.supportsAssignment, isTrue);
     });
 
     testWidgets('근력이면 세트·중량을 바로 정해서 추가할 수 있다 (기본 유형)', (tester) async {
@@ -286,14 +368,14 @@ void main() {
       await confirmAdd(tester);
 
       await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.tap(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.pump();
 
-      final added = reviewed!.sessions.single.exercises.single;
+      final added = sent!.sessions.single.exercises.single;
       expect(added.name, '레그컬');
       expect(added.sets, 5);
       expect(added.weight, 62.5);
@@ -335,14 +417,14 @@ void main() {
       await confirmAdd(tester);
 
       await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.tap(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.pump();
 
-      final added = reviewed!.sessions.single.exercises.single;
+      final added = sent!.sessions.single.exercises.single;
       expect(added.name, '조깅');
       expect(added.minutes, 90);
       // 근력이 아니므로 세트·중량은 기본값 그대로다.
@@ -414,14 +496,14 @@ void main() {
       await tester.pump();
 
       await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.tap(
-        find.byKey(const ValueKey<String>('program-editor-review')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
       );
       await tester.pump();
 
-      final squat = reviewed!.sessions.single.exercises.firstWhere(
+      final squat = sent!.sessions.single.exercises.firstWhere(
         (exercise) => exercise.name == '스쿼트',
       );
       expect(squat.minutes, 80);
