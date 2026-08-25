@@ -56,6 +56,29 @@ bool isProspectClient(
   return true;
 }
 
+/// 프로그램·리포트 탭 왼쪽 고객 목록의 **이름 타이포**. (#1423)
+///
+/// 두 탭은 같은 구조(왼쪽 고객 목록 → 오른쪽 작업 영역)에 카드 제목과 아이콘
+/// 까지 같은데, 이름 글씨만 프로그램 13.5·리포트 15 로 갈려 있었다. 탭을
+/// 오갈 때마다 같은 목록이 다른 밀도로 보였다. 기준을 여기 한 벌만 두어
+/// 한쪽만 다시 달라지지 않게 한다.
+///
+/// 고른 고객은 굵기로만 도드라진다 — 글씨 크기가 함께 바뀌면 고를 때마다
+/// 행 높이가 흔들린다.
+TextStyle clientListNameStyle({required bool selected}) => TextStyle(
+  fontSize: clientListNameFontSize,
+  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+  color: AppColors.foreground,
+);
+
+/// 고객 목록 이름 글씨 크기. 프로그램 탭 열은 세 열 중 가장 좁아 15 는 긴
+/// 이름에서 잘리기 쉬웠고, 13.5 는 리포트 탭에서 목표 줄과 위계가 붙었다.
+const double clientListNameFontSize = 14;
+
+/// 이름 아래 목표 한 줄의 글씨 크기. 이름보다 한 단계 작다 — 두 탭이 같은
+/// 위계를 쓰도록 [ClientGoalLabel] 의 기본값 대신 이 값을 함께 준다.
+const double clientListGoalFontSize = 11;
+
 /// 고객 목록 행에 붙는 목표 한 줄. (#898)
 ///
 /// 트레이너가 고객을 고르는 기준은 이름이 아니라 **무엇을 목표로 하는
