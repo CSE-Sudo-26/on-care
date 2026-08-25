@@ -93,6 +93,8 @@ class DioAccountRepository implements AccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
+    String? conditions,
+    String? goals,
     GoalUpdate? dailyCalories,
     GoalUpdate? dailySodiumMg,
     GoalUpdate? dailySugarG,
@@ -112,6 +114,9 @@ class DioAccountRepository implements AccountRepository {
       // 키를 **넣되 값이 null** 이면 서버가 목표를 해제한다. `?value` 로
       // 통째로 빼면 해제가 '손대지 않음'이 되어 지운 목표가 되살아난다.
       data: <String, Object?>{
+        // 문자열 둘은 비워서 저장할 수 있다 — 빈 문자열이 '적지 않음' 이다.
+        'conditions': ?conditions,
+        'goals': ?goals,
         if (dailyCalories != null) 'daily_calories': dailyCalories.value,
         if (dailySodiumMg != null) 'daily_sodium_mg': dailySodiumMg.value,
         if (dailySugarG != null) 'daily_sugar_g': dailySugarG.value,
