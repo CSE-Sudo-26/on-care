@@ -19,6 +19,7 @@ class ActionButton extends StatelessWidget {
     this.icon,
     this.primary = false,
     this.tone,
+    this.dense = false,
   });
 
   /// Button text.
@@ -35,6 +36,10 @@ class ActionButton extends StatelessWidget {
 
   /// Overrides the accent colour (e.g. destructive actions).
   final Color? tone;
+
+  /// Smaller variant for tight rows (e.g. per-card decisions) — same shape,
+  /// less height/padding/font.
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -53,8 +58,10 @@ class ActionButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: const BorderRadius.all(AppRadius.md),
         child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          height: dense ? 28 : 36,
+          padding: EdgeInsets.symmetric(
+            horizontal: dense ? AppSpacing.sm : AppSpacing.md,
+          ),
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(AppRadius.md),
             border: primary
@@ -69,13 +76,13 @@ class ActionButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               if (icon != null) ...<Widget>[
-                Icon(icon, size: 15, color: fg),
+                Icon(icon, size: dense ? 13 : 15, color: fg),
                 const SizedBox(width: AppSpacing.xs),
               ],
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: dense ? 12 : 13.5,
                   fontWeight: FontWeight.w700,
                   color: fg,
                 ),
