@@ -203,10 +203,21 @@ class _AppToastState extends State<_AppToast>
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
+              // 동작 버튼이 없는 토스트는 **내용 너비**로 선다(#1466). `max`
+              // 로 두면 "추천하지 않아요" 한 줄짜리 안내도 최대 너비(560)를
+              // 거의 채워, 짧은 말이 크게 보인다. 동작 버튼이 있는 토스트는
+              // 지금처럼 자리를 다 쓴다 — 메시지 길이에 따라 버튼이 좌우로
+              // 흔들리면 누를 자리가 매번 달라진다.
+              mainAxisSize: widget.action == null
+                  ? MainAxisSize.min
+                  : MainAxisSize.max,
               children: <Widget>[
                 Icon(_icon(widget.kind), size: 20, color: _iconColor(widget.kind)),
                 const SizedBox(width: AppSpacing.md),
-                Expanded(
+                // 긴 메시지는 최대 너비 안에서 줄바꿈한다 — `Flexible` 이라
+                // 짧은 메시지에서는 제 너비만 차지하고, 길면 남은 자리까지
+                // 쓰고 접힌다.
+                Flexible(
                   child: Text(
                     widget.message,
                     style: AppToastStyle.contentTextStyle,
