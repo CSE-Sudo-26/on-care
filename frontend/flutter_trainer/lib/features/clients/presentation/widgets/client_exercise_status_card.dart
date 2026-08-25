@@ -86,7 +86,7 @@ class ClientExerciseStatusCard extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, thickness: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
-            _WorkoutDetail(clientId: clientId),
+            _WorkoutDetail(clientId: clientId, period: period),
           ],
         ],
       ),
@@ -109,24 +109,63 @@ class ClientExerciseStatusCard extends ConsumerWidget {
 /// 무관하게 전체를 보여준다. 대신 접힌 기본 상태에서는 가장 최근 기록 하나만
 /// 보이고, 아래 캐럿을 누르면 전체 이력으로 펼쳐진다.
 class _WorkoutDetail extends ConsumerStatefulWidget {
-  const _WorkoutDetail({required this.clientId});
+  const _WorkoutDetail({required this.clientId, required this.period});
 
   final String clientId;
+
+  /// 지금 보고 있는 기간. 펼쳤을 때 얼마나 보여 줄지가 이 값에 달렸다 —
+  /// `이번 주` 는 한 주치를 그대로 늘어놓고, `전체` 는 정해진 높이 안에서
+  /// 스크롤한다.
+  final ClientPeriod period;
 
   @override
   ConsumerState<_WorkoutDetail> createState() => _WorkoutDetailState();
 }
 
 class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
-  /// 한 번 `더보기` 를 누를 때마다 늘어나는 기록 수 — **한 주**다 (#1172).
-  ///
-  /// 예전에는 한 번 누르면 이력 전체(석 달치가 넘는다)가 한꺼번에 펼쳐져,
-  /// 프로그램 탭의 좁은 오른쪽 칸이 통째로 목록이 됐다. 지난 한 주를 보고 다음
-  /// 주를 짜는 것이 이 화면의 일이라, 한 주씩 내려가는 편이 그 일과 맞는다.
-  static const int _pageSize = 7;
+  /// `이번 주` 에서 펼쳤을 때 늘어놓는 최대 기록 수 — **한 주**다 (#1172).
+  static const int _weekLimit = 7;
 
-  /// 지금 보이는 기록 수. 접힌 기본값은 **가장 최근 하나**다.
-  int _shown = 1;
+  /// `전체` 상세 영역의 최대 높이 (#1426).
+  ///
+  /// 기록 수만큼 열이 길어지면 프로그램 탭의 좁은 칸이 통째로 목록이 되어,
+  /// 프로그램 작성 화면과 나란히 볼 수 없다. 넘치는 만큼은 이 영역 **안에서**
+  /// 스크롤한다. 기록이 적으면 그만큼만 차지한다 — 늘 이 높이를 차지하면 빈
+  /// 칸이 남는다.
+  static const double _allMaxHeight = 260;
+
+  /// 펼쳤는가. 접힌 기본 상태는 가장 최근 기록 하나다.
+  ///
+  /// 예전에는 누를 때마다 일곱씩 늘어나는 수(`_shown`)였다. 그래서 한 번 펼친
+  /// 뒤에는 `더보기` 와 `접기` 가 나란히 서고, 계속 눌러 열을 늘릴 수 있었다.
+  /// 펼침은 한 번이면 되고, 그 자리에 버튼도 하나면 된다(#1426).
+  bool _expanded = false;
+
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void didUpdateWidget(_WorkoutDetail old) {
+    super.didUpdateWidget(old);
+    // 기간이나 고객이 바뀌면 접힌 상태로 돌아간다 — 앞 고객의 스크롤 위치가
+    // 다음 고객 목록에 남아 있으면 어디를 보고 있는지 알 수 없다.
+    if (old.clientId != widget.clientId || old.period != widget.period) {
+      _expanded = false;
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      _expanded = !_expanded;
+      if (!_expanded && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +173,9 @@ class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
     final AsyncValue<List<RoutineHistoryEntry>> async = ref.watch(
       clientHistoryProvider(widget.clientId),
     );
+    // `전체` 만 안쪽 스크롤을 쓴다. `이번 주` 는 최대 일곱 줄이라 카드 높이를
+    // 넘기지 않고, 넘기지 않는 목록에 스크롤을 달면 바깥 스크롤과 겹친다.
+    final bool scrollsInside = widget.period == ClientPeriod.month;
     return Column(
       key: const ValueKey<String>('client-exercise-detail'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -163,35 +205,58 @@ class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
             }
             // 이력은 이미 최신순이다(`clientHistoryProvider`) — 접힌 상태의
             // 첫 항목이 곧 가장 최근 기록이다.
-            final int shownCount = _shown.clamp(1, entries.length);
+            final int limit = !_expanded
+                ? 1
+                : scrollsInside
+                ? entries.length
+                : math.min(_weekLimit, entries.length);
             final List<RoutineHistoryEntry> shown = entries
-                .take(shownCount)
+                .take(limit)
                 .toList(growable: false);
-            // 두 버튼은 함께 설 수 있다 — 한 주를 펼친 상태에서는 더 내려갈
-            // 수도, 처음으로 접을 수도 있어야 한다.
-            final bool canExpand = shownCount < entries.length;
-            final bool canCollapse = shownCount > 1;
-            return Column(
+            final Widget list = Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 for (final RoutineHistoryEntry entry in shown)
                   _DetailEntry(entry: entry),
-                if (canExpand || canCollapse)
-                  _ExpandToggle(
-                    // 첫 `더보기` 는 한 주를 통째로 연다(1 → 7). 그 뒤로는 누를
-                    // 때마다 한 주씩 더 내려간다.
-                    onExpand: canExpand
-                        ? () => setState(() {
-                            _shown = _shown <= 1
-                                ? _pageSize
-                                : _shown + _pageSize;
-                          })
-                        : null,
-                    onCollapse: canCollapse
-                        ? () => setState(() => _shown = 1)
-                        : null,
-                  ),
+              ],
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (_expanded && scrollsInside)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: _allMaxHeight,
+                    ),
+                    child: Scrollbar(
+                      controller: _scroll,
+                      thumbVisibility: true,
+                      child: ListView(
+                        key: const ValueKey<String>(
+                          'client-exercise-detail-scroll',
+                        ),
+                        controller: _scroll,
+                        // 바깥 세로 스크롤이 이 목록을 자기 것으로 삼지 않게
+                        // 한다 — `primary` 로 두면 두 스크롤이 같은 손짓을
+                        // 두고 다툰다.
+                        primary: false,
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        children: <Widget>[
+                          for (final RoutineHistoryEntry entry in shown)
+                            _DetailEntry(entry: entry),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  list,
+                // 펼침 버튼은 늘 한 자리에 하나다 — 접혔으면 `더보기`,
+                // 펼쳤으면 `접기`(#1426).
+                if (entries.length > 1)
+                  _ExpandToggle(expanded: _expanded, onTap: _toggle),
               ],
             );
           },
@@ -201,19 +266,18 @@ class _WorkoutDetailState extends ConsumerState<_WorkoutDetail> {
   }
 }
 
-/// 상세 내역을 한 주씩 펼치고, 처음으로 접는 줄. (#1172)
+/// 상세 내역을 펼치고 접는 줄. (#1172, #1426)
 ///
-/// 두 버튼이 함께 설 수 있다 — 한 주를 펼친 상태에서는 더 내려갈 수도, 처음으로
-/// 접을 수도 있다. 화살표 방향이 곧 무엇을 하는 버튼인지라, 옆에 적힌 글자를 안
-/// 읽어도 알 수 있다.
+/// 한 자리에 버튼 하나다 — 접혀 있으면 `더보기`, 펼쳐져 있으면 `접기`. 둘이
+/// 나란히 서던 때에는 무엇이 지금 상태인지 버튼만 봐서는 알 수 없었다.
+/// 화살표 방향이 곧 무엇을 하는 버튼인지라, 옆에 적힌 글자를 안 읽어도 안다.
 class _ExpandToggle extends StatelessWidget {
-  const _ExpandToggle({this.onExpand, this.onCollapse});
+  const _ExpandToggle({required this.expanded, required this.onTap});
 
-  /// 한 주 더 펼친다. 더 볼 것이 없으면 null 이고 버튼도 그리지 않는다.
-  final VoidCallback? onExpand;
+  /// 지금 펼쳐져 있는가.
+  final bool expanded;
 
-  /// 접힌 기본 상태(가장 최근 하나)로 돌아간다. 이미 접혀 있으면 null 이다.
-  final VoidCallback? onCollapse;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -224,26 +288,18 @@ class _ExpandToggle extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (onExpand case final VoidCallback tap)
-            _ToggleButton(
-              buttonKey: const ValueKey<String>(
-                'client-exercise-detail-toggle',
-              ),
-              label: l.workoutRecordsShowMore,
-              icon: Icons.expand_more,
-              onTap: tap,
+          _ToggleButton(
+            buttonKey: ValueKey<String>(
+              expanded
+                  ? 'client-exercise-detail-collapse'
+                  : 'client-exercise-detail-toggle',
             ),
-          if (onExpand != null && onCollapse != null)
-            const SizedBox(width: AppSpacing.sm),
-          if (onCollapse case final VoidCallback tap)
-            _ToggleButton(
-              buttonKey: const ValueKey<String>(
-                'client-exercise-detail-collapse',
-              ),
-              label: l.workoutRecordsShowLess,
-              icon: Icons.expand_less,
-              onTap: tap,
-            ),
+            label: expanded
+                ? l.workoutRecordsShowLess
+                : l.workoutRecordsShowMore,
+            icon: expanded ? Icons.expand_less : Icons.expand_more,
+            onTap: onTap,
+          ),
         ],
       ),
     );
