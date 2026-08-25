@@ -337,48 +337,56 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
               const SizedBox(height: AppSpacing.lg),
               // 고객·유형은 같은 층위의 선택이라 한 줄에 묶는다 — 세로로
               // 나란한 두 드롭다운이 각자 한 줄을 다 쓸 이유가 없다(#1090).
+              //
+              // 값 길이에 맞춰 폭을 잡는다(`IntrinsicWidth`) — 예전에는 둘 다
+              // `Expanded` 로 줄 절반씩을 강제로 채워, "김민수" 같은 짧은
+              // 값에도 상자가 크게 남았다.
               Row(
                 children: <Widget>[
-                  Expanded(
-                    child: _pillField(
-                      label: l.schedFieldClient,
-                      child: DropdownButton<String>(
-                        value: _client,
-                        isExpanded: true,
-                        underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<String>>[
-                          for (final name in _clientOptions)
-                            DropdownMenuItem<String>(
-                              value: name,
-                              child: Text(name, style: _fieldValueStyle),
-                            ),
-                        ],
-                        onChanged: (v) =>
-                            setState(() => _client = v ?? _client),
+                  IntrinsicWidth(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 96),
+                      child: _pillField(
+                        label: l.schedFieldClient,
+                        child: DropdownButton<String>(
+                          value: _client,
+                          underline: const SizedBox.shrink(),
+                          items: <DropdownMenuItem<String>>[
+                            for (final name in _clientOptions)
+                              DropdownMenuItem<String>(
+                                value: name,
+                                child: Text(name, style: _fieldValueStyle),
+                              ),
+                          ],
+                          onChanged: (v) =>
+                              setState(() => _client = v ?? _client),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _pillField(
-                      label: l.schedFieldType,
-                      child: DropdownButton<String>(
-                        value: _type,
-                        isExpanded: true,
-                        underline: const SizedBox.shrink(),
-                        items: <DropdownMenuItem<String>>[
-                          for (final t in _typeOptions)
-                            // 값은 계약값 그대로, 보이는 문구만 로케일에서
-                            // 가져온다.
-                            DropdownMenuItem<String>(
-                              value: t,
-                              child: Text(
-                                sessionTypeLabel(l, t),
-                                style: _fieldValueStyle,
+                  IntrinsicWidth(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 96),
+                      child: _pillField(
+                        label: l.schedFieldType,
+                        child: DropdownButton<String>(
+                          value: _type,
+                          underline: const SizedBox.shrink(),
+                          items: <DropdownMenuItem<String>>[
+                            for (final t in _typeOptions)
+                              // 값은 계약값 그대로, 보이는 문구만 로케일에서
+                              // 가져온다.
+                              DropdownMenuItem<String>(
+                                value: t,
+                                child: Text(
+                                  sessionTypeLabel(l, t),
+                                  style: _fieldValueStyle,
+                                ),
                               ),
-                            ),
-                        ],
-                        onChanged: (v) => setState(() => _type = v ?? _type),
+                          ],
+                          onChanged: (v) => setState(() => _type = v ?? _type),
+                        ),
                       ),
                     ),
                   ),
@@ -535,6 +543,13 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                         height: 44,
                         child: OutlinedButton(
                           onPressed: _saving ? null : widget.onCancel,
+                          // 기본 M3 모양은 옆 저장 버튼(`AppRadius.lg`)보다
+                          // 더 둥글어 같은 줄에서 모서리가 어긋났다.
+                          style: OutlinedButton.styleFrom(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(AppRadius.lg),
+                            ),
+                          ),
                           child: Text(l.actionCancel),
                         ),
                       ),
@@ -731,9 +746,10 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     );
   }
 
-  /// 테두리 없는 필 모양 토글 — 채움색으로만 선택 상태를 말한다. 다른 화면의
-  /// 칩(메시지 필터 등)과 같은 언어다. Material 기본 `ChoiceChip`/`FilterChip`
-  /// 은 옅은 회색 대신 짙은 윤곽선을 그려 이 앱 다른 곳과 튀었다.
+  /// 테두리 있는 필 모양 토글 — 프로그램 수정 모달의 운동 유형·강도 칩과
+  /// 같은 언어다(선택: `accentSurface` 채움 + `accent` 테두리, 비선택:
+  /// `card` 채움 + `borderStrong` 테두리). 예전에는 테두리 없이 채움색만
+  /// 달라, 이 모달만 다른 선택 표현을 썼다.
   Widget _segment({
     Key? key,
     required String label,
@@ -743,12 +759,18 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
   }) {
     return Material(
       key: key,
-      color: selected ? AppColors.accentSurface : AppColors.inputBackground,
+      color: selected ? AppColors.accentSurface : AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.pill),
       child: InkWell(
         onTap: onTap,
         borderRadius: const BorderRadius.all(AppRadius.pill),
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            border: Border.all(
+              color: selected ? AppColors.accent : AppColors.borderStrong,
+            ),
+          ),
           padding: EdgeInsets.symmetric(
             horizontal: dense ? AppSpacing.xxs : AppSpacing.md,
             vertical: AppSpacing.sm,
@@ -759,7 +781,9 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
             style: TextStyle(
               fontSize: dense ? 12 : 13,
               fontWeight: FontWeight.w700,
-              color: selected ? AppColors.primary : AppColors.mutedForeground,
+              color: selected
+                  ? AppColors.accent
+                  : AppColors.subtleForeground,
             ),
           ),
         ),
