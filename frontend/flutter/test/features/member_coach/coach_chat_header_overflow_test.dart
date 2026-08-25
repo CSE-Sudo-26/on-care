@@ -143,7 +143,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.send));
       await tester.pumpAndSettle();
 
-      final banner = find.textContaining('루틴을 받았어요').last;
+      final banner = find.textContaining('추천운동을 받았어요').last;
       final sent = find.text('확인했습니다');
       expect(banner, findsOneWidget);
       expect(
