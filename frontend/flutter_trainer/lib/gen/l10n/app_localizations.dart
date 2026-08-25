@@ -2804,6 +2804,12 @@ abstract class AppLocalizations {
   /// **'Start date'**
   String get schedFieldStartDate;
 
+  /// No description provided for @schedFieldDateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Start - end date'**
+  String get schedFieldDateRange;
+
   /// No description provided for @schedFieldTime.
   ///
   /// In en, this message translates to:
@@ -2906,30 +2912,6 @@ abstract class AppLocalizations {
   /// **'Repeat on'**
   String get schedRepeatDays;
 
-  /// No description provided for @schedRepeatEndByCount.
-  ///
-  /// In en, this message translates to:
-  /// **'After'**
-  String get schedRepeatEndByCount;
-
-  /// No description provided for @schedRepeatEndByDate.
-  ///
-  /// In en, this message translates to:
-  /// **'On date'**
-  String get schedRepeatEndByDate;
-
-  /// No description provided for @schedRepeatCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} times'**
-  String schedRepeatCount(int count);
-
-  /// No description provided for @schedRepeatCountUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'times'**
-  String get schedRepeatCountUnit;
-
   /// No description provided for @schedRepeatPreview.
   ///
   /// In en, this message translates to:
@@ -2941,6 +2923,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick at least one weekday.'**
   String get schedRepeatNeedsDays;
+
+  /// No description provided for @schedRepeatNeedsEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an end date for the repeat.'**
+  String get schedRepeatNeedsEndDate;
 
   /// No description provided for @schedRepeatConflictTitle.
   ///

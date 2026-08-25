@@ -867,7 +867,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('새 일정'));
       await settle(tester);
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await settle(tester);
 
       await revealInPanel(tester, find.text('아직 계획된 프로그램이 없어요'));
@@ -934,7 +934,7 @@ void main() {
 
       await enterTimeRange(tester, start: '10:15', end: '11:15');
 
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await settle(tester);
 
       // 시간표 블록이 시작·끝을 함께 말한다.
@@ -949,7 +949,7 @@ void main() {
 
       await enterTimeRange(tester, start: '10:00', end: '11:30');
 
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await settle(tester);
 
       expect(find.text('10:00\u201311:30'), findsWidgets);
@@ -1002,9 +1002,9 @@ void main() {
       );
 
       await enterTimeRange(tester, start: '16:30', end: '17:30');
-      await tester.ensureVisible(find.text('저장하기'));
+      await tester.ensureVisible(find.text('저장'));
       await tester.pump();
-      await tester.tap(find.text('저장하기'));
+      await tester.tap(find.text('저장'));
       await settle(tester);
 
       // 시각은 시간표 블록과 상세 카드 두 곳에 있다 — 카드 쪽을 잰다.
@@ -1301,7 +1301,7 @@ void main() {
       await goTo(tester, AppRoutes.scheduleAt(date: ymd(tomorrow)));
       await tester.tap(find.text('새 일정'));
       await settle(tester);
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await settle(tester);
 
       // 갓 만든 예정 세션을 상세 패널에 연다.
@@ -1356,7 +1356,7 @@ void main() {
       // 그 날에 일정을 만들면 빈 안내가 사라진다.
       await tester.tap(find.text('새 일정'));
       await settle(tester);
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await settle(tester);
       expect(find.text('10:00\u201311:00'), findsWidgets);
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsNothing);
@@ -1512,9 +1512,9 @@ void main() {
 
       // Save without changing anything — the sheet must have prefilled
       // the session's own values, not snapped to defaults.
-      await tester.ensureVisible(find.text('저장하기'));
+      await tester.ensureVisible(find.text('저장'));
       await tester.pump();
-      await tester.tap(find.text('저장하기'));
+      await tester.tap(find.text('저장'));
       await settle(tester);
 
       // Read the row outside fake-async — a drift stream's .first would
@@ -1577,7 +1577,7 @@ void main() {
 
       await tester.tap(find.text('새 일정'));
       await settle(tester);
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await settle(tester);
 
       expect(find.text('일정 저장에 실패했어요. 다시 시도해 주세요'), findsOneWidget);

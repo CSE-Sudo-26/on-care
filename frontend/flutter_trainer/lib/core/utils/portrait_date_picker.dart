@@ -40,3 +40,28 @@ Future<DateTime?> showPortraitDatePicker({
     },
   );
 }
+
+/// [showDateRangePicker] 를 같은 방식으로 세로 배치로 띄운다 — 반복 일정의
+/// 시작·종료 날짜를 한 번의 달력에서 고른다.
+Future<DateTimeRange?> showPortraitDateRangePicker({
+  required BuildContext context,
+  required DateTimeRange initialDateRange,
+  required DateTime firstDate,
+  required DateTime lastDate,
+}) {
+  return showDateRangePicker(
+    context: context,
+    initialDateRange: initialDateRange,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    builder: (context, child) {
+      final Widget themed = child!;
+      final MediaQueryData query = MediaQuery.of(context);
+      if (query.size.width <= query.size.height) return themed;
+      return MediaQuery(
+        data: query.copyWith(size: Size(query.size.height, query.size.width)),
+        child: themed,
+      );
+    },
+  );
+}
