@@ -64,6 +64,10 @@ class GymListPage extends ConsumerWidget {
 /// 그래서 이 위젯은 **높이를 스스로 정한다**. 바깥이 높이를 주면 그대로 쓰고,
 /// 열린 높이(스크롤 뷰 안)에 놓이면 화면에서 한 몫을 떼어 쓴다 — 시트가 구를
 /// 자리를 스스로 갖지 못하면 바깥 페이지가 대신 굴러 지도가 따라 움직인다.
+///
+/// 가로는 지도·시트가 **화면을 그대로 쓴다** (#1362). 여백은 검색줄과 시트 안
+/// 내용이 각자 갖는다 — 창을 지도 폭에 맞춰 들여쓰면 폰에서 목록 카드가 그만큼
+/// 좁아진다.
 class GymFinderView extends ConsumerStatefulWidget {
   const GymFinderView({super.key});
 
@@ -122,12 +126,17 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
             height: outer.hasBoundedHeight
                 ? outer.maxHeight
                 : math.max(MediaQuery.sizeOf(context).height * 0.72, 460),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Row(
+            // 좌우 여백은 **검색줄에만** 준다 (#1362). 지도·시트 묶음은
+            // 화면 가로를 그대로 쓴다 — `주변 헬스장` 은 화면 아래에 붙는
+            // 창이라 지도 폭에 맞춰 안으로 들여쓸 이유가 없고, 폰에서는 그
+            // 여백만큼 목록 카드가 좁아진다. 시트 안 내용은 제 여백을 따로
+            // 가진다.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
                     children: <Widget>[
                       Expanded(
                         child: _SearchField(
@@ -152,27 +161,27 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  // 지도는 자리에 고정되고 그 위로 목록 시트가 오르내린다
-                  // (#1274). 시트가 화면 몫을 다 쓰므로 남는 높이를 그대로
-                  // 넘긴다.
-                  Expanded(
-                    child: _GymMapAndSheet(
-                      gyms: visible,
-                      header: l.exNearbyGyms,
-                      controls: gymsAsync.hasValue
-                          ? _ResultControls(
-                              countLabel: l.exResultCount(visible.length),
-                              sort: _sort,
-                              onSort: (_GymSort value) =>
-                                  setState(() => _sort = value),
-                            )
-                          : null,
-                      resultSliver: _resultSliver(context, gymsAsync, visible),
-                    ),
+                ),
+                const SizedBox(height: 14),
+                // 지도는 자리에 고정되고 그 위로 목록 시트가 오르내린다
+                // (#1274). 시트가 화면 몫을 다 쓰므로 남는 높이를 그대로
+                // 넘긴다.
+                Expanded(
+                  child: _GymMapAndSheet(
+                    gyms: visible,
+                    header: l.exNearbyGyms,
+                    controls: gymsAsync.hasValue
+                        ? _ResultControls(
+                            countLabel: l.exResultCount(visible.length),
+                            sort: _sort,
+                            onSort: (_GymSort value) =>
+                                setState(() => _sort = value),
+                          )
+                        : null,
+                    resultSliver: _resultSliver(context, gymsAsync, visible),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -235,8 +244,10 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
 /// 단계에 붙고, 뗄 때의 속도도 반영돼 짧게 튕겨도 다음 단계로 넘어간다 —
 /// [DraggableScrollableSheet] 의 스냅이 그 둘을 함께 해 준다.
 ///
-/// 지도는 [Positioned.fill] 로 바닥에 깔려 **한 번도 움직이지 않는다.** 시트만
-/// 그 위를 오르내리므로, 목록을 아무리 밀어도 지도가 따라가지 않는다.
+/// 지도는 **윗변이 자리에 못 박힌 채** 시트가 남긴 만큼만 차지한다. 시트가
+/// 오르내려도 지도가 따라 움직이지 않고, 둘이 겹치는 자리가 없다 — 겹쳐 두면
+/// 웹에서 시트 위의 터치가 아래 지도(플랫폼 뷰, DOM 요소)로 새어 나가 폰에서
+/// 시트를 끌 수도 목록을 밀 수도 없었다 (#1362).
 ///
 /// 머리줄·정렬 줄·카드가 **한 스크롤 뷰**에 얹혀 있다. 그래야 목록이 맨 위에
 /// 닿은 채로 계속 내리면 시트가 이어서 내려가고, 머리줄을 잡고 끌어도 시트가
@@ -316,10 +327,22 @@ class _GymMapAndSheetState extends State<_GymMapAndSheet> {
             ? 0.2
             : (_GymMapAndSheet.kCollapsedExtent / height).clamp(0.12, 0.45);
         final bool collapsed = _size <= minSize + 0.01;
+        // 지도는 **시트가 덮지 않는 자리에만** 놓는다 (#1362). 웹에서 카카오
+        // 지도는 플랫폼 뷰(DOM 요소)라, 그 위를 덮은 Flutter 시트에서 시작한
+        // 터치가 아래 지도로 새어 나간다 — 폰에서 시트를 끌면 시트 대신 지도가
+        // 끌리고, 목록을 밀면 목록 대신 지도가 움직였다. 겹치는 자리를 아예
+        // 없애면 그 새는 길이 사라진다. 지도의 **윗변은 그대로** 있으므로 시트가
+        // 오르내려도 지도는 제자리다 (#1135).
+        final double mapHeight = (height * (1 - _size)).clamp(0.0, height);
         return Stack(
           children: <Widget>[
-            // 지도는 바닥에 깔린 채 자리에 고정된다 — 시트만 그 위를 오간다.
-            Positioned.fill(child: _GymMap(gyms: widget.gyms)),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: mapHeight,
+              child: _GymMap(gyms: widget.gyms),
+            ),
             DraggableScrollableSheet(
               controller: _sheet,
               initialChildSize: _GymMapAndSheet.kMidSize.clamp(minSize, 1),
@@ -327,44 +350,49 @@ class _GymMapAndSheetState extends State<_GymMapAndSheet> {
               snap: true,
               snapSizes: <double>[_GymMapAndSheet.kMidSize.clamp(minSize, 1)],
               builder:
-                  (BuildContext context, ScrollController scrollController) =>
-                      _SheetSurface(
-                        // 시트의 **겉면**이 이 키를 갖는다. 시트 위젯 자체는
-                        // 스택 전체를 덮고 있어, 그 자리를 재면 시트가 어디에
-                        // 붙어 있는지가 아니라 스택의 윗변이 나온다.
-                        key: const Key('gym-result-sheet'),
-                        child: CustomScrollView(
-                          // 시트 안에서 실제로 구르는 목록. 이 키로 가리킨다 —
-                          // `Scrollable` 이 시트에 둘(시트 자신과 이 목록)이라
-                          // "찾기 화면 안의 유일한 스크롤" 로는 집을 수 없다.
-                          key: const Key('gym-result-list'),
-                          controller: scrollController,
-                          slivers: <Widget>[
-                            SliverToBoxAdapter(
-                              child: _SheetHead(
-                                title: widget.header,
-                                collapsed: collapsed,
-                                onToggle: () => _sheet.animateTo(
-                                  _nextStop(minSize),
-                                  duration: const Duration(milliseconds: 220),
-                                  curve: Curves.easeOutCubic,
-                                ),
-                              ),
+                  (
+                    BuildContext context,
+                    ScrollController scrollController,
+                  ) => _SheetSurface(
+                    // 시트의 **겉면**이 이 키를 갖는다. 시트 위젯 자체는
+                    // 스택 전체를 덮고 있어, 그 자리를 재면 시트가 어디에
+                    // 붙어 있는지가 아니라 스택의 윗변이 나온다.
+                    key: const Key('gym-result-sheet'),
+                    child: CustomScrollView(
+                      // 시트 안에서 실제로 구르는 목록. 이 키로 가리킨다 —
+                      // `Scrollable` 이 시트에 둘(시트 자신과 이 목록)이라
+                      // "찾기 화면 안의 유일한 스크롤" 로는 집을 수 없다.
+                      key: const Key('gym-result-list'),
+                      controller: scrollController,
+                      slivers: <Widget>[
+                        SliverToBoxAdapter(
+                          child: _SheetHead(
+                            title: widget.header,
+                            collapsed: collapsed,
+                            onToggle: () => _sheet.animateTo(
+                              _nextStop(minSize),
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
                             ),
-                            if (widget.controls != null)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: widget.controls,
-                                ),
-                              ),
-                            widget.resultSliver,
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 20),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                        if (widget.controls != null)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                              child: widget.controls,
+                            ),
+                          ),
+                        // 시트는 화면 가로를 다 쓰고, 여백은 그 안에서
+                        // 준다 (#1362).
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          sliver: widget.resultSliver,
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                      ],
+                    ),
+                  ),
             ),
           ],
         );
@@ -432,7 +460,14 @@ class _SheetHead extends StatelessWidget {
             ),
           ),
         ),
-        _NearbyHeader(title: title, collapsed: collapsed, onToggle: onToggle),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _NearbyHeader(
+            title: title,
+            collapsed: collapsed,
+            onToggle: onToggle,
+          ),
+        ),
       ],
     );
   }
@@ -827,23 +862,21 @@ class _GymMap extends StatelessWidget {
         .where((Gym g) => g.hasCoordinates)
         .toList(growable: false);
 
-    // 높이를 스스로 정하지 않는다 — 지도는 시트 뒤를 가득 채운 채 자리에
-    // 고정되고, 얼마나 보일지는 시트가 어디에 있느냐가 정한다 (#1274).
+    // 높이를 스스로 정하지 않는다 — 시트가 어디에 있느냐가 지도의 높이를
+    // 정한다 (#1274, #1362). 화면 가로를 그대로 쓰므로 모서리는 둥글리지
+    // 않는다 — 아래로 이어지는 시트만 제 위쪽 모서리를 갖는다.
     return SizedBox.expand(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: KakaoMapView(
-          // 지도 중심은 언제나 검색 중심([kGymFinderArea])이다. 첫 결과 좌표를
-          // 쓰면 검색어·정렬·응답 순서에 따라 중심이 흔들려, 지도 중심과 장소
-          // 검색 중심이 같아야 한다는 요건이 깨진다.
-          centerLat: kGymFinderArea.lat,
-          centerLng: kGymFinderArea.lng,
-          markers: <KakaoMapMarker>[
-            for (final Gym g in located)
-              KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),
-          ],
-          fallback: _GymMiniMap(pinCount: located.isEmpty ? 3 : located.length),
-        ),
+      child: KakaoMapView(
+        // 지도 중심은 언제나 검색 중심([kGymFinderArea])이다. 첫 결과 좌표를
+        // 쓰면 검색어·정렬·응답 순서에 따라 중심이 흔들려, 지도 중심과 장소
+        // 검색 중심이 같아야 한다는 요건이 깨진다.
+        centerLat: kGymFinderArea.lat,
+        centerLng: kGymFinderArea.lng,
+        markers: <KakaoMapMarker>[
+          for (final Gym g in located)
+            KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),
+        ],
+        fallback: _GymMiniMap(pinCount: located.isEmpty ? 3 : located.length),
       ),
     );
   }
@@ -867,15 +900,12 @@ class _GymMiniMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 150,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE9F0F4),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: FigmaColors.hairline),
-        ),
+    // 실지도와 **같은 자리**를 차지한다 (#1362) — 화면 가로를 채우고 높이는
+    // 부모(시트가 남긴 자리)를 따른다. 둘의 생김새가 다르면 폴백으로 떨어질
+    // 때 화면 구조가 바뀐다.
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: Color(0xFFE9F0F4)),
+      child: SizedBox.expand(
         child: Stack(
           children: <Widget>[
             Positioned.fill(child: CustomPaint(painter: _MapRoadsPainter())),
