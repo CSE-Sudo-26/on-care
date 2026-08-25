@@ -8,6 +8,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_profile_dialog.dart';
@@ -335,8 +336,10 @@ void main() {
       'client-memo-edit-open-memo-2',
       'client-memo-delete-memo-2',
     ]) {
+      // 글자 버튼에서 작은 아이콘 버튼으로 바뀌었다(#1448) — 잠그는 규칙은
+      // 그대로다.
       expect(
-        tester.widget<TextButton>(find.byKey(ValueKey<String>(key))).onPressed,
+        tester.widget<IconButton>(find.byKey(ValueKey<String>(key))).onPressed,
         isNull,
         reason: '$key 이 편집 중에도 눌린다',
       );
@@ -349,13 +352,105 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<TextButton>(
+          .widget<IconButton>(
             find.byKey(const ValueKey<String>('client-memo-edit-open-memo-2')),
           )
           .onPressed,
       isNotNull,
     );
     expect(find.text('아직 저장하지 않은 글'), findsOneWidget);
+  });
+
+  testWidgets('글자 수는 입력 상자 바로 아래 오른쪽에 붙는다 (#1448)', (tester) async {
+    final repository = _FakeMemoRepository();
+    await _pumpDialog(tester, repository);
+
+    final Finder input = find.byKey(
+      const ValueKey<String>('client-memo-input'),
+    );
+    final Finder counter = find.byKey(
+      const ValueKey<String>('client-memo-counter'),
+    );
+    expect(counter, findsOneWidget);
+    // 입력 상자 아래, 그리고 상자 오른쪽 끝에 맞춘다.
+    expect(
+      tester.getTopLeft(counter).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(input).dy - 24),
+    );
+    expect(
+      tester.getBottomRight(counter).dx,
+      moreOrLessEquals(tester.getBottomRight(input).dx, epsilon: 1),
+    );
+    // `추가` 버튼보다 위에 있다 — 한 줄에 나눠 놓지 않는다.
+    expect(
+      tester.getTopLeft(counter).dy,
+      lessThan(
+        tester
+            .getTopLeft(find.byKey(const ValueKey<String>('client-memo-add')))
+            .dy,
+      ),
+    );
+
+    // 입력하면 그 자리에서 갱신된다.
+    expect(find.text('0/2000'), findsOneWidget);
+    await tester.enterText(input, '무릎통증');
+    await tester.pump();
+    expect(find.text('4/2000'), findsOneWidget);
+  });
+
+  testWidgets('메모 수정·삭제는 작은 아이콘이고 삭제만 붉다 (#1448)', (tester) async {
+    final repository = _FakeMemoRepository();
+    await repository.create('m1', body: '무릎이 아파요');
+    await _pumpDialog(tester, repository);
+
+    final IconButton edit = tester.widget<IconButton>(
+      find.byKey(const ValueKey<String>('client-memo-edit-open-memo-1')),
+    );
+    final IconButton remove = tester.widget<IconButton>(
+      find.byKey(const ValueKey<String>('client-memo-delete-memo-1')),
+    );
+
+    expect(edit.tooltip, isNotNull);
+    expect(remove.tooltip, isNotNull);
+    expect(remove.color, AppColors.destructive);
+    expect(edit.color, isNot(AppColors.destructive));
+    // 본문보다 작다 — 글자 버튼일 때는 본문만큼 눈에 들어왔다.
+    expect(edit.iconSize, lessThanOrEqualTo(18));
+  });
+
+  testWidgets('삭제 확인창의 확정 버튼이 붉다 (#1448)', (tester) async {
+    final repository = _FakeMemoRepository();
+    await repository.create('m1', body: '무릎이 아파요');
+    await _pumpDialog(tester, repository);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-memo-delete-memo-1')),
+    );
+    await tester.pumpAndSettle();
+
+    final FilledButton confirm = tester.widget<FilledButton>(
+      find.byKey(const ValueKey<String>('client-memo-delete-confirm')),
+    );
+    expect(
+      confirm.style?.backgroundColor?.resolve(<WidgetState>{}),
+      AppColors.destructive,
+    );
+
+    // 취소하면 메모가 남는다 — 확인 전에는 아무것도 지우지 않는다.
+    await tester.tap(find.widgetWithText(TextButton, '취소'));
+    await tester.pumpAndSettle();
+    expect(find.text('무릎이 아파요'), findsOneWidget);
+
+    // 확정하면 지워진다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-memo-delete-memo-1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-memo-delete-confirm')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('무릎이 아파요'), findsNothing);
   });
 
   testWidgets('좁은 화면·큰 글씨에서도 창이 넘치지 않는다', (tester) async {
