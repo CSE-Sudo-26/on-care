@@ -749,7 +749,7 @@
   },
   "reportsCompletionAvg": "Workout completion",
   "reportsWeeklyCompletion": "Weekly completion",
-  "clientWeeklyRoutineAdherence": "Weekly routine adherence",
+  "clientWeeklyRoutineAdherence": "Weekly adherence",
   "clientRoutineAdherenceUnmeasured": "Not measured",
   "reportsCompletionByDay": "Weekly workout completion",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
