@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/nav_metrics.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/dashboard/presentation/widgets/dashboard_content.dart';
+import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -91,6 +93,12 @@ class _MainShellState extends ConsumerState<MainShell>
       case 0:
         ref.invalidate(dashboardSummaryProvider);
         ref.invalidate(coachSessionsProvider);
+        break;
+      case 1:
+        // 방금 저장한 끼니가 보이도록 그날 자료를 다시 읽는다 — 저장 전 캐시가
+        // 남아 있으면 옮겨 온 탭이 빈 화면을 보여 준다(#1434).
+        ref.invalidate(dietTodayProvider);
+        ref.invalidate(dietByDateProvider(nowKst()));
         break;
       case 2:
         ref.invalidate(exerciseWeekProvider);
@@ -228,7 +236,10 @@ class _MainShellState extends ConsumerState<MainShell>
                   right: 0,
                   child: Center(
                     child: _NavAddButton(
-                      onTap: () => _showRecordAddSheet(context),
+                      onTap: () => _showRecordAddSheet(
+                        context,
+                        onSaved: _goToRecordBranch,
+                      ),
                     ),
                   ),
                 ),
@@ -238,6 +249,21 @@ class _MainShellState extends ConsumerState<MainShell>
         ),
       ),
     );
+  }
+
+  /// 방금 저장한 기록의 탭으로 옮긴다. (#1434)
+  ///
+  /// 이미 그 탭이면 아무것도 하지 않는다 — 다시 `goBranch` 하면 그 탭에서
+  /// 추가한 사용자의 스크롤·선택 상태가 초기화된다.
+  void _goToRecordBranch(int index) {
+    if (!mounted) return;
+    if (navigationShell.currentIndex == index) {
+      // 그 자리에서 적었어도 방금 저장한 것이 보여야 한다 — 화면 상태는 두고
+      // 데이터만 새로 읽는다.
+      _refreshBranch(index);
+      return;
+    }
+    _onTap(index);
   }
 
   void _onTap(int index) {
@@ -342,7 +368,14 @@ class _NavAddButton extends StatelessWidget {
 
 /// "새 기록 추가" chooser opened by the bottom-nav + button. Routes to the diet
 /// or exercise add flow. Mirrors the Figma add sheet.
-Future<void> _showRecordAddSheet(BuildContext context) {
+///
+/// 저장에 성공하면 [onSaved] 를 그 기록의 탭 index 로 부른다 — 홈이나 MY 에서
+/// 적고 나면 방금 저장한 것을 보러 사용자가 탭을 다시 찾아가야 했다(#1434).
+/// 취소·권한 거부·분석 실패에서는 부르지 않는다.
+Future<void> _showRecordAddSheet(
+  BuildContext context, {
+  required ValueChanged<int> onSaved,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다(#791).
@@ -351,17 +384,21 @@ Future<void> _showRecordAddSheet(BuildContext context) {
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
     builder: (BuildContext ctx) => _RecordAddSheet(
-      onDiet: () {
+      onDiet: () async {
         Navigator.of(ctx).pop();
-        showDietAddSheet(context);
+        if (await showDietAddSheet(context)) onSaved(_dietBranch);
       },
-      onExercise: () {
+      onExercise: () async {
         Navigator.of(ctx).pop();
-        showExerciseAddSheet(context);
+        if (await showExerciseAddSheet(context)) onSaved(_exerciseBranch);
       },
     ),
   );
 }
+
+/// 하단 탭의 브랜치 index. 저장한 기록을 보러 갈 곳이라 이름을 준다.
+const int _dietBranch = 1;
+const int _exerciseBranch = 2;
 
 class _RecordAddSheet extends StatelessWidget {
   const _RecordAddSheet({required this.onDiet, required this.onExercise});
