@@ -76,6 +76,15 @@ class FigmaColors {
   static const Color bannerStart = Color(0xFFEDF7FC);
   static const Color bannerEnd = Color(0xFFD6EEF8);
   static const Color track = Color(0xFFF2F4F7); // progress track
+
+  /// 기간 그래프의 **목표 이내 칼로리 막대** 한 색 (#1427). 탄단지 농담으로
+  /// 쌓던 자리다 — 막대에서 탄·단·지 수치를 읽을 수 없는데 색만 셋으로
+  /// 갈라져 있어, 없는 정확도를 있는 것처럼 보이게 했다. 탄단지는 카드 머리의
+  /// 상세와 막대 툴팁이 숫자와 함께 말한다.
+  ///
+  /// 회색은 트랙([track])보다 짙어 빈 칸과 구분되고, 초과([dangerRed])와도
+  /// 명도로 갈린다.
+  static const Color barNeutral = Color(0xFFB0BAC6);
   static const Color statBg = Color(0xFFF8FAFB);
   static const Color hairline = Color(0x14000000); // rgba(0,0,0,0.08)
   static const Color sheetScrim = Color(0x8008121C); // rgba(8,18,28,0.5)
