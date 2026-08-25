@@ -212,8 +212,8 @@ void main() {
 
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      // 목록만 — 지도 자리가 사라지고 목록이 그 자리를 받는다.
-      expect(tester.getSize(mapSlot).height, 0);
+      // 목록만 — 지도 자리가 통째로 사라지고 목록이 그 자리를 받는다 (#1382).
+      expect(mapSlot, findsNothing);
       expect(find.byType(KakaoMapView), findsNothing);
       expect(tester.getTopLeft(sheet).dy, lessThan(sheetTop));
       // 다시 부를 머리줄은 남아 있고, 화살표가 방향을 뒤집는다.
