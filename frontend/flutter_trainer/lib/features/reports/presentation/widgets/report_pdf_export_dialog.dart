@@ -7,6 +7,7 @@ import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart
 import 'package:oncare_trainer/features/reports/services/report_pdf_file_name.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_sender.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 /// A generated report's explicit delivery actions.
 ///
@@ -32,15 +33,12 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
 
   Future<void> _run(Future<void> Function() action, String success) async {
     final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await action();
-      if (mounted) messenger.showSnackBar(SnackBar(content: Text(success)));
+      if (mounted) showAppToast(context, success, kind: AppToastKind.success);
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l.reportsPdfActionFailed)),
-        );
+        showAppToast(context, l.reportsPdfActionFailed, kind: AppToastKind.error);
       }
     }
   }

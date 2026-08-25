@@ -21,6 +21,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
@@ -155,25 +156,24 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
     );
     if (feedback == null || !mounted) return;
 
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
       await ref
           .read(clientRepositoryProvider)
           .updateHistoryFeedback(widget.clientId, widget.entry.id, feedback);
       ref.invalidate(clientHistoryProvider(widget.clientId));
-      messenger.showSnackBar(SnackBar(content: Text(l.routineFeedbackSaved)));
+      if (!mounted) return;
+      showAppToast(context, l.routineFeedbackSaved, kind: AppToastKind.success);
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            serverDetailOr(
-              l,
-              error is AppError ? error.message : null,
-              l.routineFeedbackFailed,
-            ),
-          ),
+      if (!mounted) return;
+      showAppToast(
+        context,
+        serverDetailOr(
+          l,
+          error is AppError ? error.message : null,
+          l.routineFeedbackFailed,
         ),
+        kind: AppToastKind.error,
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -821,20 +821,22 @@ class _PendingRoutineRowState extends ConsumerState<_PendingRoutineRow> {
     );
     if (ok != true || !mounted) return;
 
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
       // 프로그램 탭이 쓰는 것과 **같은** mutation 이다(#504, #1020).
       await ref
           .read(trainerRoutineRepositoryProvider)
           .deleteRoutine(widget.clientId, widget.routine.id);
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
+      if (!mounted) return;
+      showAppToast(context, l.routineDeleted, kind: AppToastKind.success);
     } on StateError {
       // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 목록만 다시 읽고
       // 그 줄을 화면에서 걷어낸다.
-      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
+      if (!mounted) return;
+      showAppToast(context, l.routineAlreadyGone);
     } on Object {
-      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
+      if (!mounted) return;
+      showAppToast(context, l.routineDeleteFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
       ref.invalidate(assignedRoutinesProvider(widget.clientId));

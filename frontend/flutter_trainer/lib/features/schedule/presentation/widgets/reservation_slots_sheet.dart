@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
 class ReservationSlotsSheet extends ConsumerStatefulWidget {
   const ReservationSlotsSheet({super.key, required this.selectedDay});
@@ -98,9 +99,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             sessionType: _type,
           );
       ref.invalidate(reservationSlotsProvider);
-      _showMessage(l.slotOpened);
+      _showMessage(l.slotOpened, kind: AppToastKind.success);
     } catch (error) {
-      _showMessage(_errorMessage(l, error));
+      _showMessage(_errorMessage(l, error), kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -189,9 +190,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             sessionType: changed.$3 == slot.sessionType ? null : changed.$3,
           );
       ref.invalidate(reservationSlotsProvider);
-      _showMessage(l.slotUpdated);
+      _showMessage(l.slotUpdated, kind: AppToastKind.success);
     } catch (error) {
-      _showMessage(_errorMessage(l, error));
+      _showMessage(_errorMessage(l, error), kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -224,9 +225,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref.read(reservationSlotRepositoryProvider).close(slot.id);
       ref.invalidate(reservationSlotsProvider);
-      _showMessage(l.slotClosed);
+      _showMessage(l.slotClosed, kind: AppToastKind.success);
     } catch (error) {
-      _showMessage(_errorMessage(l, error));
+      _showMessage(_errorMessage(l, error), kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -252,11 +253,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     return l.slotActionFailed;
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {AppToastKind kind = AppToastKind.info}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAppToast(context, message, kind: kind);
   }
 
   /// 종류·날짜·시간 세 필드가 한 줄에서 같은 무게로 보이도록 쓰는 옅은
