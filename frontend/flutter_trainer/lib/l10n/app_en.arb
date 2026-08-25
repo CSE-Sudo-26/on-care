@@ -396,6 +396,7 @@
   "metricCalories": "Calories",
   "metricSodium": "Sodium",
   "metricSugar": "Sugar",
+  "clientDietMacrosMissing": "No carbs/protein/fat recorded",
   "metricCarbs": "Carbs",
   "metricProtein": "Protein",
   "metricFat": "Fat",
