@@ -289,13 +289,13 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
-              // 종류·날짜·시간을 한 줄에 둔다 — 셋 다 "언제·누구 자리를
-              // 열까"를 정하는 같은 층위의 선택이라, 셋 중 하나만 다른
+              // 종류·날짜·시간·추가 버튼을 한 줄에 둔다 — 넷 다 "언제·누구
+              // 자리를 열까"를 정하고 실행하는 같은 흐름이라, 하나만 다른
               // 줄에 서면 무엇이 먼저인지 자리로 오해된다. 라벨 + 흰
               // 테두리 상자 모양은 스케줄 프로그램 수정 화면과 같은
               // 언어다(#1090).
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
                   Expanded(
                     child: Column(
@@ -342,17 +342,19 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                       onTap: _saving ? null : _pickRange,
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
+                  FilledButton.icon(
+                    key: const ValueKey<String>('slot-create'),
+                    onPressed: _saving ? null : _create,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l.slotOpenAction),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                    ),
+                  ),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  key: const ValueKey<String>('slot-create'),
-                  onPressed: _saving ? null : _create,
-                  icon: const Icon(Icons.add),
-                  label: Text(l.slotOpenAction),
-                ),
               ),
               const SizedBox(height: AppSpacing.xl),
               const Divider(height: 1),
