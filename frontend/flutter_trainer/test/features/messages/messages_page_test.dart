@@ -145,6 +145,42 @@ void main() {
     });
   });
 
+  testWidgets(
+    '안읽음 배지 숫자는 글자 배율이 커도 원을 벗어나지 않는다 (#1380)',
+    (tester) async {
+      await withWideSurface(tester, size: const Size(1440, 2200), () async {
+        // 기기 접근성 배율이 앱 기본 바닥값(1.10)보다 큰 경우를 흉내낸다.
+        // Container는 자식을 자르지 않으므로, 숫자가 원(20x20)보다 크게
+        // 그려지면 위아래로 삐져나와 타원처럼 보인다 — FittedBox로 줄여야
+        // 원 안에 남는다.
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token-existing',
+          seedClock: DateTime(2026, 8, 16), // 일요일
+        );
+        await goTo(tester, AppRoutes.messages);
+
+        final unreadBadge = find.byKey(
+          const ValueKey<String>('messages-unread-seed-client-8'),
+        );
+        expect(unreadBadge, findsOneWidget);
+        final Size badgeSize = tester.getSize(unreadBadge);
+        expect(badgeSize.width, badgeSize.height);
+
+        final numberText = find.descendant(
+          of: unreadBadge,
+          matching: find.byType(Text),
+        );
+        final Size textSize = tester.getSize(numberText);
+        expect(textSize.height, lessThanOrEqualTo(20));
+        expect(textSize.width, lessThanOrEqualTo(20));
+      });
+    },
+  );
+
   testWidgets('conversation without a thread still shows a preview line', (
     tester,
   ) async {

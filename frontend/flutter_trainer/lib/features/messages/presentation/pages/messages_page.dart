@@ -400,15 +400,28 @@ class _ConversationTile extends StatelessWidget {
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Text(
-                                  unread > 99 ? '99+' : '$unread',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    // 3 characters ("99+") only fit at a
-                                    // smaller size inside a fixed circle.
-                                    fontSize: unread > 99 ? 8.5 : 10,
-                                    fontWeight: FontWeight.w800,
+                                // 앱 전체 글자 배율(#995, 1.10배)이 고정
+                                // fontSize에도 곱해져, Text만 두면 원 높이를
+                                // 넘겨 위아래로 삐져나온다 — Container는
+                                // 자식을 자르지 않으니 그 삐져나온 부분이
+                                // 세로로 긴 타원처럼 보였다. FittedBox로
+                                // 원 안에 들어갈 만큼 항상 줄인다.
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      unread > 99 ? '99+' : '$unread',
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
