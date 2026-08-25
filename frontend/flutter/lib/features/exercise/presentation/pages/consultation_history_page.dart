@@ -79,8 +79,15 @@ class ConsultationHistoryPage extends ConsumerWidget {
                                       onPressed: () => Navigator.pop(dialogContext, false),
                                       child: const Text('유지'),
                                     ),
+                                    // 되돌릴 수 없는 쪽이다 — 카드의 취소
+                                    // 버튼과 같은 파괴적 색 토큰을 쓴다.
+                                    // 유지와 취소가 같은 색이면 두 동작의
+                                    // 위험도 차이가 보이지 않는다(#1429).
                                     TextButton(
                                       onPressed: () => Navigator.pop(dialogContext, true),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: AppColors.destructive,
+                                      ),
                                       child: Text(l.actionCancel),
                                     ),
                                   ],
