@@ -3857,7 +3857,7 @@ abstract class AppLocalizations {
   /// Title of the completion dialog.
   ///
   /// In en, this message translates to:
-  /// **'Mark routine done'**
+  /// **'Mark personal exercise done'**
   String get coachRoutineCompleteTitle;
 
   /// Field label in the completion dialog.

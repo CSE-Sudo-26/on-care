@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/core/utils/portrait_date_picker.dart';
+import 'package:oncare/design_system/atoms/app_choice_chip.dart';
 import 'package:oncare/design_system/atoms/app_number_stepper.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
@@ -493,37 +494,19 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     return PopScope(canPop: !_saving, child: sheet);
   }
 
+  /// 개인운동 완료창의 강도 선택도 같은 칩을 쓴다 — 모양을 한 벌만 둔다
+  /// (#1457).
   Widget _chip(
     String label,
     bool on,
     VoidCallback onTap, {
     bool center = false,
   }) {
-    return Semantics(
-      button: true,
+    return AppChoiceChip(
+      label: label,
       selected: on,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          alignment: center ? Alignment.center : null,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: on ? FigmaColors.primaryA(0.10) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: on ? FigmaColors.primary : FigmaColors.hairline,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: on ? FigmaColors.primary : AppColors.mutedForeground,
-            ),
-          ),
-        ),
-      ),
+      onTap: onTap,
+      center: center,
     );
   }
 }
