@@ -147,6 +147,33 @@ void main() {
     }
   });
 
+  test('어제는 수행한 스트레칭을 하나 갖는다 (#1361)', () {
+    // 오늘 PT 가 근력뿐이라(#1352), 어제까지 스트레칭이 하나도 없으면 이번 주
+    // 운동 현황에서 스트레칭 링만 늘 0 으로 남는다. 세 링이 함께 도는 화면을
+    // 시연 어느 날에 열어도 볼 수 있어야 한다.
+    for (final DateTime now in <DateTime>[
+      DateTime(2026, 8, 10),
+      DateTime(2026, 8, 16),
+      DateTime(2027, 1, 1),
+    ]) {
+      final List<FixtureDay> days = fixture.daysFor(now);
+      final FixtureDay yesterday = days[days.length - 2];
+      expect(
+        yesterday.doneExercises.any(
+          (FixtureExercise e) => e.type == 'stretching',
+        ),
+        isTrue,
+        reason: '$now',
+      );
+      // 못 한 항목도 남아 있어야 이행률이 100% 가 아닌 날을 보여 줄 수 있다.
+      expect(
+        yesterday.exercises.any((FixtureExercise e) => !e.done),
+        isTrue,
+        reason: '$now',
+      );
+    }
+  });
+
   test('픽스처 전체는 네 유형을 모두 담는다 (#1265)', () {
     // 유형별 분해 화면의 네 칸(특히 `기타`)이 실제로 그려지는지 시연에서 볼 수
     // 있어야 한다. 오늘 하루가 아니라 **기간 전체**가 그것을 책임진다.
