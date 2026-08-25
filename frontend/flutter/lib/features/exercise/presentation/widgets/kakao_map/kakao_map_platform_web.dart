@@ -121,6 +121,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
   JSObject? _map;
   final List<JSObject> _markers = <JSObject>[];
   web.ResizeObserver? _resize;
+  Timer? _relayoutDebounce;
 
   @override
   void initState() {
@@ -128,7 +129,11 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     _container = web.document.createElement('div') as web.HTMLDivElement;
     _container.style
       ..width = '100%'
-      ..height = '100%';
+      ..height = '100%'
+      // 폰에서 지도 위 손짓은 **지도의 것**이다 (#1362). 그대로 두면 브라우저가
+      // 한 손가락 끌기를 페이지 스크롤로, 두 손가락을 페이지 확대로 먼저
+      // 가져가 지도가 움직이지 않는다.
+      ..touchAction = 'none';
     ui_web.platformViewRegistry.registerViewFactory(
       _viewType,
       (int _) => _container,
@@ -138,6 +143,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   @override
   void dispose() {
+    _relayoutDebounce?.cancel();
     _resize?.disconnect();
     super.dispose();
   }
@@ -165,6 +171,7 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     final JSObject map = (_maps['Map'] as JSFunction)
         .callAsConstructor<JSObject>(_container, options);
     _map = map;
+    _addZoomControl(map);
     _syncMarkers();
 
     // 플랫폼 뷰가 배치된 뒤 크기가 확정되므로 한 프레임 뒤 다시 계산시킨다.
@@ -176,17 +183,45 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     // 왼쪽 절반)만 그려지고 나머지는 빈 채로 남았다(#1072). 컨테이너 크기가
     // 바뀔 때마다 relayout 을 걸어 항상 부모 폭을 채우게 한다.
     final web.ResizeObserver observer = web.ResizeObserver(
-      ((JSArray<JSAny?> _, web.ResizeObserver _) => _relayout()).toJS,
+      ((JSArray<JSAny?> _, web.ResizeObserver _) => _scheduleRelayout()).toJS,
     );
     observer.observe(_container);
     _resize = observer;
   }
 
+  /// 확대·축소 버튼. 폰에서 두 손가락이 마음대로 되지 않아도 배율을 바꿀 수
+  /// 있어야 한다 (#1362). SDK 버전에 따라 없을 수 있으므로 있을 때만 붙인다 —
+  /// 여기서 예외가 나면 지도 전체가 폴백 그래픽으로 떨어진다.
+  void _addZoomControl(JSObject map) {
+    final JSObject? position = _prop(_maps, 'ControlPosition');
+    if (!_maps.hasProperty('ZoomControl'.toJS).toDart || position == null) {
+      return;
+    }
+    final JSObject control = (_maps['ZoomControl'] as JSFunction)
+        .callAsConstructor<JSObject>();
+    map.callMethodVarArgs('addControl'.toJS, <JSAny?>[
+      control,
+      position['RIGHT'],
+    ]);
+  }
+
   /// 컨테이너 크기가 바뀐 뒤 지도에 다시 계산시키고 중심을 되돌린다.
   /// relayout 만 하면 카카오가 새 크기의 좌상단을 기준으로 잡아 중심이 밀린다.
+  ///
+  /// **한 박자 미룬다** (#1362). 시트를 끄는 동안 지도 높이가 매 프레임 바뀌는데,
+  /// 그때마다 타일을 다시 까는 것은 폰에서 눈에 띄게 무겁다. 손이 멈춘 뒤 한 번만
+  /// 계산하면 결과는 같다.
+  void _scheduleRelayout() {
+    _relayoutDebounce?.cancel();
+    _relayoutDebounce = Timer(const Duration(milliseconds: 120), _relayout);
+  }
+
   void _relayout() {
     final JSObject? map = _map;
     if (map == null || !mounted) return;
+    // 시트가 화면을 다 덮으면 지도 자리가 0 이 된다 — 그 크기로 타일을 다시
+    // 깔게 두지 않는다. 자리가 생기면 ResizeObserver 가 다시 부른다.
+    if (_container.clientWidth == 0 || _container.clientHeight == 0) return;
     map.callMethod('relayout'.toJS);
     map.callMethod(
       'setCenter'.toJS,

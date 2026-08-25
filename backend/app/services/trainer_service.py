@@ -473,6 +473,7 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         items = ", ".join(_food_names(r.foods_json))
         photo_id = photo_ids.get(r.id)
         out.append(ClientDietEntryOut(
+            id=r.id,
             meal=_meal_kr(r.meal_type),
             items=items,
             # 회원 앱 끼니 카드와 같은 재료를 그대로 넘긴다(#1166). 이름만 이어
