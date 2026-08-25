@@ -3704,6 +3704,30 @@ abstract class AppLocalizations {
   /// **'e.g. Squat, Treadmill'**
   String get routineFieldExerciseNameHint;
 
+  /// No description provided for @routineFieldExerciseNameHintCardio.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Treadmill, Indoor cycling'**
+  String get routineFieldExerciseNameHintCardio;
+
+  /// No description provided for @routineFieldExerciseNameHintStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Bench press'**
+  String get routineFieldExerciseNameHintStrength;
+
+  /// No description provided for @routineFieldExerciseNameHintFlexibility.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Full-body stretch, Yoga'**
+  String get routineFieldExerciseNameHintFlexibility;
+
+  /// No description provided for @routineFieldExerciseNameHintOther.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Rehab exercise, Sports activity'**
+  String get routineFieldExerciseNameHintOther;
+
   /// No description provided for @routineFieldSets.
   ///
   /// In en, this message translates to:
@@ -5815,12 +5839,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add exercises to build this session.'**
   String get programEditorSessionEmpty;
-
-  /// No description provided for @programEditorExerciseSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'Search exercises or enter one'**
-  String get programEditorExerciseSearch;
 
   /// No description provided for @programEditorAdd.
   ///
