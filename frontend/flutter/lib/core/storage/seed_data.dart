@@ -25,7 +25,7 @@ const String kDietDayMessagesKey = 'diet_day_messages';
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v18']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v19']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -53,7 +53,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
   final now = nowKst();
   final today = _fmtDate(now);
 
-  final seedDate = await db.readValue('seeded_v18');
+  final seedDate = await db.readValue('seeded_v19');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -102,6 +102,9 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
   // (#1265). 올리지 않으면 오늘 이미 시드된 설치가 그 값 없이 남아 근력을
   // 분에서 되짚은 수로 보여 준다.
   await db.deleteValue('seeded_v17');
+  // v19: 어제에 수행한 스트레칭이 한 건 생겼다(#1361). 올리지 않으면 오늘 이미
+  // 시드된 설치가 예전 하루를 그대로 들고 있어 이번 주 스트레칭 링이 계속 0 이다.
+  await db.deleteValue('seeded_v18');
   // Also clear the curated KV advice so re-seed state is fully reset: this
   // version re-writes it below, but if a later seed drops or renames the key
   // an existing install would otherwise keep the stale text forever.
@@ -267,7 +270,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
     }),
   );
 
-  await db.putValue('seeded_v18', today);
+  await db.putValue('seeded_v19', today);
 }
 
 /// 하루·한 종류로 접은 값. 운동 기록 한 행이 되는 그대로다.

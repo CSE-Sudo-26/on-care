@@ -2474,6 +2474,18 @@ abstract class AppLocalizations {
   /// **'Weekly completion'**
   String get reportsWeeklyCompletion;
 
+  /// No description provided for @clientWeeklyRoutineAdherence.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly routine adherence'**
+  String get clientWeeklyRoutineAdherence;
+
+  /// No description provided for @clientRoutineAdherenceUnmeasured.
+  ///
+  /// In en, this message translates to:
+  /// **'Not measured'**
+  String get clientRoutineAdherenceUnmeasured;
+
   /// No description provided for @reportsCompletionByDay.
   ///
   /// In en, this message translates to:

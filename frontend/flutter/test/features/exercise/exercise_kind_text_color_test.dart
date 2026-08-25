@@ -1,6 +1,7 @@
-/// 운동 현황이 유형과 `기타` 를 색으로 가르는 규칙 (#1352).
+/// 운동 현황이 유형과 `기타` 를 색으로 가르는 규칙 (#1352 → #1364).
 ///
-///  * `전체` 에서 고른 주의 유형별 내역은 유형별 3단계 파랑 글씨다.
+///  * `전체` 에서 고른 주의 유형별 내역은 **이름만** 유형 색이고, 그 색은 옆
+///    막대·링과 같은 [kindColor] 다. 값(`195분`·`12세트`)은 검정이다.
 ///  * `기타` 는 유형이 아니라 회색이고, 기록이 있는 날에만 맨 아래 붙는다.
 ///  * 세 유형은 값이 0 이어도 줄로 남는다 — 무엇을 안 했는지도 답해야 한다.
 library;
@@ -87,13 +88,23 @@ Widget _app(int period, ExerciseWeek week) => ProviderScope(
 Color? _colorOf(WidgetTester tester, Finder finder) =>
     tester.widget<Text>(finder).style?.color;
 
-/// [text] 로 시작하는 첫 줄 — `전체` 내역은 라벨과 값이 한 `Text` 다.
+/// [text] 로 시작하는 `전체` 내역 한 줄. 이름과 값이 한 `Text.rich` 의 두
+/// 조각이라, 색은 조각마다 따로 본다 (#1364).
 Finder _startsWith(String text) => find.byWidgetPredicate(
-  (Widget w) => w is Text && (w.data ?? '').startsWith(text),
+  (Widget w) => w is Text && (w.textSpan?.toPlainText() ?? '').startsWith(text),
 );
 
+/// 그 줄의 (이름 색, 값 색).
+(Color?, Color?) _lineColors(WidgetTester tester, String label) {
+  final Text line = tester.widget<Text>(_startsWith(label));
+  final List<InlineSpan> spans = (line.textSpan! as TextSpan).children!;
+  return (spans.first.style?.color, spans.last.style?.color);
+}
+
 void main() {
-  testWidgets('전체: 고른 주의 유형별 내역은 유형별 3단계 파랑이다', (WidgetTester tester) async {
+  testWidgets('전체: 유형 이름은 그래프 색이고 값은 검정이다 (#1364)', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -113,32 +124,25 @@ void main() {
     await tester.tap(bars.last, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(
-      _colorOf(tester, _startsWith(l.exTypeCardio)),
-      kindTextColor(ExerciseLoadKind.cardio),
+    // 이름은 옆 막대·링과 **같은 색**이다. 값은 색이 가리키는 것이 아니므로
+    // 검정으로 적는다.
+    for (final (String label, ExerciseLoadKind kind)
+        in <(String, ExerciseLoadKind)>[
+          (l.exTypeCardio, ExerciseLoadKind.cardio),
+          (l.exTypeStrength, ExerciseLoadKind.strength),
+          (l.exTypeFlexibility, ExerciseLoadKind.flexibility),
+        ]) {
+      final (Color? name, Color? value) = _lineColors(tester, label);
+      expect(name, kindColor(kind), reason: label);
+      expect(value, FigmaColors.ink, reason: label);
+    }
+    // 기타는 유형이 아니라 회색 이름이다. 값은 다른 줄과 같이 검정이다.
+    final (Color? otherName, Color? otherValue) = _lineColors(
+      tester,
+      l.exTypeOtherChip,
     );
-    expect(
-      _colorOf(tester, _startsWith(l.exTypeStrength)),
-      kindTextColor(ExerciseLoadKind.strength),
-    );
-    expect(
-      _colorOf(tester, _startsWith(l.exTypeFlexibility)),
-      kindTextColor(ExerciseLoadKind.flexibility),
-    );
-    // 셋은 서로 다른 단계여야 한다 — 한 색으로 뭉치면 가른 뜻이 없다.
-    expect(
-      <Color>{
-        kindTextColor(ExerciseLoadKind.cardio),
-        kindTextColor(ExerciseLoadKind.strength),
-        kindTextColor(ExerciseLoadKind.flexibility),
-      }.length,
-      3,
-    );
-    // 기타는 유형이 아니라 회색이다.
-    expect(
-      _colorOf(tester, _startsWith(l.exTypeOtherChip)),
-      FigmaColors.textBody,
-    );
+    expect(otherName, FigmaColors.textBody);
+    expect(otherValue, FigmaColors.ink);
   });
 
   testWidgets('오늘: 세 유형은 0 이어도 남고, 기타는 없으면 뜨지 않는다', (

@@ -1388,6 +1388,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsWeeklyCompletion => 'Weekly completion';
 
   @override
+  String get clientWeeklyRoutineAdherence => 'Weekly routine adherence';
+
+  @override
+  String get clientRoutineAdherenceUnmeasured => 'Not measured';
+
+  @override
   String get reportsCompletionByDay => 'Weekly workout completion';
 
   @override
