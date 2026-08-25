@@ -1034,6 +1034,24 @@ abstract class AppLocalizations {
   /// **'Cardio'**
   String get exTypeCardio;
 
+  /// No description provided for @exRoutinePhaseWarmup.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm-up'**
+  String get exRoutinePhaseWarmup;
+
+  /// No description provided for @exRoutinePhaseMain.
+  ///
+  /// In en, this message translates to:
+  /// **'Main'**
+  String get exRoutinePhaseMain;
+
+  /// No description provided for @exRoutinePhaseCooldown.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool-down'**
+  String get exRoutinePhaseCooldown;
+
   /// No description provided for @exTypeStrength.
   ///
   /// In en, this message translates to:

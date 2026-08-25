@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/domain/routine_phase.dart';
 
 /// 트레이너가 반복해 쓰는 운동 블록. (#920)
 ///
@@ -72,9 +72,19 @@ class MockTrainerProgramTemplateRepository
       name: '혈압 관리 기본',
       goal: '혈압 관리 · 초급',
       exercises: <TemplateExercise>[
-        TemplateExercise(name: '준비 스트레칭', minutes: 10, type: '스트레칭'),
+        TemplateExercise(
+          name: '준비 스트레칭',
+          minutes: 10,
+          type: '스트레칭',
+          phase: kRoutinePhaseWarmup,
+        ),
         TemplateExercise(name: '저강도 걷기', minutes: 20, type: '유산소'),
-        TemplateExercise(name: '호흡 이완', minutes: 10, type: '스트레칭'),
+        TemplateExercise(
+          name: '호흡 이완',
+          minutes: 10,
+          type: '스트레칭',
+          phase: kRoutinePhaseCooldown,
+        ),
       ],
     ),
     ProgramTemplate(
@@ -84,7 +94,12 @@ class MockTrainerProgramTemplateRepository
       exercises: <TemplateExercise>[
         TemplateExercise(name: '인터벌 유산소', minutes: 20, type: '유산소'),
         TemplateExercise(name: '전신 서킷', minutes: 20, type: '근력'),
-        TemplateExercise(name: '마무리 스트레칭', minutes: 10, type: '스트레칭'),
+        TemplateExercise(
+          name: '마무리 스트레칭',
+          minutes: 10,
+          type: '스트레칭',
+          phase: kRoutinePhaseCooldown,
+        ),
       ],
     ),
     ProgramTemplate(

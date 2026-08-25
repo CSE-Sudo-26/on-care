@@ -292,6 +292,14 @@ ProgramExerciseSource = Literal["ai", "trainer"]
 #: (#1276)
 RoutineIntensity = Literal["light", "moderate", "high"]
 
+#: 루틴 한 줄이 속한 단계 — 준비운동 · 본운동 · 마무리. (#934)
+#:
+#: 값을 영어 키로 두는 이유는 화면 문구와 저장값을 가르기 위해서다. 이 칸이
+#: 없던 시절에 저장된 루틴은 전부 `main`(본운동)으로 읽는다 — 트레이너가 그때
+#: 적은 구성은 실제로 본운동이었고, 없는 단계를 지어내지 않는다.
+RoutinePhase = Literal["warmup", "main", "cooldown"]
+ROUTINE_PHASE_DEFAULT: RoutinePhase = "main"
+
 
 def _loose_int(value: object) -> object:
     """예전 자유 입력("10회"·"3세트"·"")을 정수로 되돌린다. (#1276)
@@ -366,6 +374,8 @@ class ProgramDraftExercise(BaseModel):
     reps: LooseInt = Field(default=None, ge=0, le=999)
     weight: LooseFloat = Field(default=None, ge=0, le=1000)
     intensity: RoutineIntensity = "moderate"
+    #: 이 줄이 속한 단계(#934). 옛 초안·루틴에는 없어 기본값이 본운동이다.
+    phase: RoutinePhase = ROUTINE_PHASE_DEFAULT
     memo: str = Field(default="", max_length=300)
     source: ProgramExerciseSource = "trainer"
 
@@ -805,6 +815,9 @@ class RoutineOptionExerciseOut(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     minutes: int = Field(ge=1, le=180)
     type: RoutineType
+    #: 준비운동·본운동·마무리 중 하나(#934). 옛 응답·모델 출력에는 없어
+    #: 기본값이 본운동이다 — 없는 단계를 지어내지 않는다.
+    phase: RoutinePhase = ROUTINE_PHASE_DEFAULT
 
 
 class RoutineOptionPlanOut(BaseModel):

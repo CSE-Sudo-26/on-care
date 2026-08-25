@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/domain/entities/routine_phase.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -500,21 +500,16 @@ class _RecommendedExerciseRowState
                     ),
                     // 운동 구성이 오면 그것을 보여 준다 — 이름만 이어 붙인
                     // reason 보다 정확하다(세트·횟수·중량까지 온다, #709).
+                    // 단계가 둘 이상이면 몸을 풀고 → 본 운동 → 정리하는
+                    // 차례로 묶어 보여 준다(#934).
                     if (routine.exercises.isNotEmpty)
-                      for (final CoachRoutineExercise exercise
-                          in routine.exercises) ...<Widget>[
-                        const SizedBox(height: 2),
-                        Text(
-                          exercise.detail.isEmpty
-                              ? exercise.name
-                              : '${exercise.name} · ${exercise.detail}',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: detailColor,
-                          ),
-                        ),
-                      ]
-                    else if (routine.reason.isNotEmpty) ...<Widget>[
+                      ...routinePhaseLines(
+                        l,
+                        routine: routine,
+                        titleColor: titleColor,
+                        detailColor: detailColor,
+                      )
+                                        else if (routine.reason.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 2),
                       Text(
                         routine.reason,
@@ -875,4 +870,58 @@ class _ProgramHeading extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 배정 루틴의 운동 줄들 — 단계가 둘 이상이면 머리글로 묶는다. (#934)
+///
+/// 단계가 하나뿐인(옛) 루틴에는 머리글을 붙이지 않는다 — `본운동` 이라고 적어
+/// 봐야 새로 알려 주는 것이 없고, 예전 화면 그대로 읽힌다.
+List<Widget> routinePhaseLines(
+  AppLocalizations l, {
+  required CoachRoutine routine,
+  required Color titleColor,
+  required Color detailColor,
+}) {
+  final Set<String> phases = <String>{
+    for (final CoachRoutineExercise exercise in routine.exercises)
+      normaliseRoutinePhase(exercise.phase),
+  };
+  final bool grouped = phases.length > 1;
+  final List<Widget> lines = <Widget>[];
+  for (final String phase in kRoutinePhases) {
+    final List<CoachRoutineExercise> inPhase = routine.exercises
+        .where(
+          (CoachRoutineExercise e) => normaliseRoutinePhase(e.phase) == phase,
+        )
+        .toList(growable: false);
+    if (inPhase.isEmpty) continue;
+    if (grouped) {
+      lines
+        ..add(const SizedBox(height: 6))
+        ..add(
+          Text(
+            routinePhaseLabel(l, phase),
+            key: ValueKey<String>('routine-phase-$phase-${routine.id}'),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              color: titleColor,
+            ),
+          ),
+        );
+    }
+    for (final CoachRoutineExercise exercise in inPhase) {
+      lines
+        ..add(const SizedBox(height: 2))
+        ..add(
+          Text(
+            exercise.detail.isEmpty
+                ? exercise.name
+                : '${exercise.name} · ${exercise.detail}',
+            style: TextStyle(fontSize: 12.5, color: detailColor),
+          ),
+        );
+    }
+  }
+  return lines;
 }

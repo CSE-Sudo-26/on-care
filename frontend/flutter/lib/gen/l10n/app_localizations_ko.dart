@@ -515,6 +515,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTypeCardio => '유산소';
 
   @override
+  String get exRoutinePhaseWarmup => '준비운동';
+
+  @override
+  String get exRoutinePhaseMain => '본운동';
+
+  @override
+  String get exRoutinePhaseCooldown => '마무리';
+
+  @override
   String get exTypeStrength => '근력';
 
   @override

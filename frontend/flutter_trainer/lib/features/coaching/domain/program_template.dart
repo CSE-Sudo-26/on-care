@@ -1,3 +1,5 @@
+import 'package:oncare_trainer/features/coaching/domain/routine_phase.dart';
+
 /// One exercise inside a [ProgramTemplate].
 class TemplateExercise {
   /// Creates a template exercise.
@@ -8,6 +10,7 @@ class TemplateExercise {
     this.sets = 0,
     this.reps = 0,
     this.weight = 0,
+    this.phase = kRoutinePhaseMain,
   });
 
   /// Exercise name.
@@ -27,6 +30,9 @@ class TemplateExercise {
   final int reps;
   final double weight;
 
+  /// 이 줄이 속한 단계(#934). 단계 칸이 없던 템플릿은 본운동으로 읽는다.
+  final String phase;
+
   /// `ProgramTemplateExercise` 한 줄.
   factory TemplateExercise.fromJson(Map<String, Object?> json) =>
       TemplateExercise(
@@ -36,6 +42,7 @@ class TemplateExercise {
         sets: (json['sets'] as num?)?.toInt() ?? 0,
         reps: (json['reps'] as num?)?.toInt() ?? 0,
         weight: (json['weight'] as num?)?.toDouble() ?? 0,
+        phase: normaliseRoutinePhase(json['phase']),
       );
 
   /// 저장 요청에 실리는 형태.
@@ -46,6 +53,7 @@ class TemplateExercise {
     'sets': sets,
     'reps': reps,
     'weight': weight,
+    'phase': phase,
   };
 }
 

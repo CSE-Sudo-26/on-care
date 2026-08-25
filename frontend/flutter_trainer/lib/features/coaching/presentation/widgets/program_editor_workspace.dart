@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item
 import 'package:oncare_trainer/features/coaching/domain/exercise_estimate.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/domain/routine_phase.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -111,6 +112,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   double _newExerciseWeight = 20;
   int _newExerciseMinutes = 30;
   String _newExerciseIntensity = 'moderate';
+  /// 새 운동 줄의 단계. 기본은 본운동이다 — 대부분의 줄이 그쪽이고, 준비·
+  /// 마무리는 트레이너가 짚어 고른다(#934).
+  String _newExercisePhase = kRoutinePhaseMain;
   var _nextId = 2;
 
   @override
@@ -471,6 +475,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               exerciseWeight: _newExerciseWeight,
               exerciseMinutes: _newExerciseMinutes,
               exerciseIntensity: _newExerciseIntensity,
+              exercisePhase: _newExercisePhase,
+              onExercisePhaseChanged: (value) =>
+                  setState(() => _newExercisePhase = value),
               onNameChanged: (value) => _replaceSession(
                 index,
                 _draft.sessions[index].copyWith(name: value),
@@ -656,6 +663,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             weight: _newExerciseWeight,
             minutes: _newExerciseMinutes,
             intensity: _newExerciseIntensity,
+            phase: _newExercisePhase,
           ),
         ],
       ),
@@ -674,6 +682,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       _newExerciseWeight = 20;
       _newExerciseMinutes = 30;
       _newExerciseIntensity = 'moderate';
+      _newExercisePhase = kRoutinePhaseMain;
     });
   }
 
@@ -756,6 +765,8 @@ class _SessionEditor extends StatefulWidget {
     required this.exerciseWeight,
     required this.exerciseMinutes,
     required this.exerciseIntensity,
+    required this.exercisePhase,
+    required this.onExercisePhaseChanged,
     required this.onNameChanged,
     required this.onMoveUp,
     required this.onMoveDown,
@@ -789,6 +800,10 @@ class _SessionEditor extends StatefulWidget {
   final double exerciseWeight;
   final int exerciseMinutes;
   final String exerciseIntensity;
+
+  /// 새 운동 줄이 속할 단계(#934).
+  final String exercisePhase;
+  final ValueChanged<String> onExercisePhaseChanged;
   final ValueChanged<String> onNameChanged;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
@@ -1058,6 +1073,12 @@ class _SessionEditorState extends State<_SessionEditor> {
                     keyPrefix: 'custom-exercise-intensity',
                     value: widget.exerciseIntensity,
                     onChanged: widget.onExerciseIntensityChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutinePhaseChips(
+                    keyPrefix: 'custom-exercise-phase',
+                    value: widget.exercisePhase,
+                    onChanged: widget.onExercisePhaseChanged,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   RoutineCaloriesLine(
@@ -1369,6 +1390,14 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                     value: exercise.intensity,
                     onChanged: (value) =>
                         widget.onChanged(exercise.copyWith(intensity: value)),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  // 몸을 풀고 → 본 운동 → 정리하는 차례를 줄마다 정한다(#934).
+                  RoutinePhaseChips(
+                    keyPrefix: '${exercise.id}-phase',
+                    value: exercise.phase,
+                    onChanged: (value) =>
+                        widget.onChanged(exercise.copyWith(phase: value)),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   RoutineCaloriesLine(calories: exercise.calories),

@@ -1,3 +1,5 @@
+import 'package:oncare/features/member_coach/domain/entities/routine_phase.dart';
+
 /// The member's assigned trainer (coach) summary — `/me/coach`.
 class MemberCoach {
   const MemberCoach({
@@ -259,6 +261,7 @@ class CoachRoutineExercise {
     this.duration = '',
     this.rest = '',
     this.memo = '',
+    this.phase = kRoutinePhaseMain,
   });
 
   final String name;
@@ -268,6 +271,10 @@ class CoachRoutineExercise {
   final String duration;
   final String rest;
   final String memo;
+
+  /// 이 운동이 속한 단계 — 준비운동 · 본운동 · 마무리(#934). 단계 칸이 없던
+  /// 루틴은 전부 본운동으로 읽는다.
+  final String phase;
 
   /// "4세트 × 12회 · 60kg" 처럼 한 줄로 읽히는 요약. 비어 있는 값은 건너뛴다.
   String get detail => <String>[

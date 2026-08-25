@@ -5,6 +5,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/features/coaching/domain/routine_phase.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/number_stepper.dart';
 
@@ -436,6 +437,61 @@ class _FieldLabel extends StatelessWidget {
       color: AppColors.subtleForeground,
     ),
   );
+}
+
+/// 준비운동 · 본운동 · 마무리를 고르는 세 버튼. (#934)
+///
+/// 강도 칩과 같은 모양이다 — 같은 줄에서 같은 방식으로 고르는 값이라, 생김새가
+/// 다르면 하나만 다른 규칙처럼 보인다. 저장되는 것은 계약값(`warmup` 등)이고
+/// 라벨만 로케일을 따른다.
+class RoutinePhaseChips extends StatelessWidget {
+  const RoutinePhaseChips({
+    required this.value,
+    required this.onChanged,
+    this.keyPrefix = 'routine-phase',
+    super.key,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+  final String keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String selected = normaliseRoutinePhase(value);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          l.routinePhase,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: <Widget>[
+            for (var index = 0; index < kRoutinePhases.length; index++) ...<Widget>[
+              Expanded(
+                child: _ChoiceButton(
+                  key: ValueKey<String>('$keyPrefix-${kRoutinePhases[index]}'),
+                  label: routinePhaseLabel(l, kRoutinePhases[index]),
+                  selected: selected == kRoutinePhases[index],
+                  centered: true,
+                  onTap: () => onChanged(kRoutinePhases[index]),
+                ),
+              ),
+              if (index < kRoutinePhases.length - 1)
+                const SizedBox(width: AppSpacing.sm),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// Three-button intensity picker matching the member add sheet.

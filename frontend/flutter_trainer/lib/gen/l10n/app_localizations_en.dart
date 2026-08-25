@@ -2050,6 +2050,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineTypeCardio => 'Cardio';
 
   @override
+  String get routinePhase => 'Phase';
+
+  @override
+  String get routinePhaseWarmup => 'Warm-up';
+
+  @override
+  String get routinePhaseMain => 'Main';
+
+  @override
+  String get routinePhaseCooldown => 'Cool-down';
+
+  @override
   String get routineTypeStrength => 'Strength';
 
   @override

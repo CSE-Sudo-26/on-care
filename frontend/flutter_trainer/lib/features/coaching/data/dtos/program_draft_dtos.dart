@@ -1,6 +1,7 @@
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
+import 'package:oncare_trainer/features/coaching/domain/routine_phase.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 
 /// Wire values the backend accepts for an exercise's origin.
@@ -41,6 +42,8 @@ Map<String, Object?> programExerciseToJson(
   'reps': exercise.isStrength ? exercise.reps.clamp(0, 999) : null,
   'weight': exercise.isStrength ? exercise.weight.clamp(0, 1000) : null,
   'intensity': normaliseRoutineIntensity(exercise.intensity),
+  // 준비운동·본운동·마무리(#934). 서버는 모르는 값을 본운동으로 읽는다.
+  'phase': normaliseRoutinePhase(exercise.phase),
   'memo': _cap(exercise.memo, _kMemoMax),
   'source': kProgramExerciseSources.contains(exercise.source)
       ? exercise.source
@@ -62,6 +65,7 @@ ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
       reps: looseInt(json['reps']) ?? 10,
       weight: looseDouble(json['weight']) ?? 20,
       intensity: normaliseRoutineIntensity(json['intensity'] as String?),
+      phase: normaliseRoutinePhase(json['phase']),
       memo: json['memo'] as String? ?? '',
       source: json['source'] as String? ?? 'trainer',
     );

@@ -814,3 +814,36 @@ def test_resolve_conditions_fills_blanks_from_analysis_then_defaults():
     resolved_explicit = resolve(analysis_with_suggestion, explicit)
     assert resolved_explicit.available_minutes == 15
     assert resolved_explicit.intensity_preference == "high"
+
+
+# ---- 준비운동/본운동/마무리 단계 (#934) ----
+
+
+def test_rule_plans_carry_phases_and_open_with_a_warmup():
+    """규칙 기반 계획도 단계를 매긴다 — 화면이 전부 본운동으로만 보이지 않게."""
+    options = trainer_routine_options_service.build_rule_options(
+        _analysis().model_copy(update={"conditions": "", "note": ""}),
+        RoutineOptionsRequest(available_minutes=40, intensity_preference="high"),
+    )
+
+    phases_b = [exercise.phase for exercise in options.plan_b.exercises]
+    assert phases_b[0] == "warmup"
+    assert phases_b[-1] == "cooldown"
+    assert "main" in phases_b
+
+
+def test_prompt_asks_for_the_three_phases():
+    prompt = trainer_routine_options_service._SYSTEM_PROMPT
+
+    assert "warmup" in prompt and "cooldown" in prompt
+    assert "준비운동" in prompt
+
+
+def test_exercise_without_a_phase_reads_as_main():
+    """단계 칸이 없던 응답·저장분은 본운동이다 — 하위 호환."""
+    from app.schemas.trainer_api import ProgramDraftExercise, RoutineOptionExerciseOut
+
+    assert (
+        RoutineOptionExerciseOut(name="스쿼트", minutes=10, type="근력").phase == "main"
+    )
+    assert ProgramDraftExercise(id="e-1", name="스쿼트").phase == "main"

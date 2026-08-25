@@ -1,4 +1,5 @@
 import 'package:oncare_trainer/features/coaching/domain/exercise_estimate.dart';
+import 'package:oncare_trainer/features/coaching/domain/routine_phase.dart';
 
 /// Frontend-only draft for the Figma multi-session program editor.
 ///
@@ -107,6 +108,7 @@ class ProgramExerciseDraft {
     this.reps = 10,
     this.weight = 20,
     this.intensity = 'moderate',
+    this.phase = kRoutinePhaseMain,
     this.memo = '',
     this.source = 'trainer',
     this.templateName,
@@ -130,6 +132,10 @@ class ProgramExerciseDraft {
 
   /// 운동 강도 계약값('light'|'moderate'|'high').
   final String intensity;
+
+  /// 이 줄이 속한 단계 — `warmup`·`main`·`cooldown`(#934). 단계 칸이 없던
+  /// 시절의 초안은 본운동으로 열린다.
+  final String phase;
 
   final String memo;
 
@@ -167,6 +173,7 @@ class ProgramExerciseDraft {
     int? reps,
     double? weight,
     String? intensity,
+    String? phase,
     String? memo,
     String? source,
     String? templateName,
@@ -180,6 +187,7 @@ class ProgramExerciseDraft {
     reps: reps ?? this.reps,
     weight: weight ?? this.weight,
     intensity: intensity ?? this.intensity,
+    phase: phase ?? this.phase,
     memo: memo ?? this.memo,
     source: source ?? this.source,
     templateName: templateName ?? this.templateName,

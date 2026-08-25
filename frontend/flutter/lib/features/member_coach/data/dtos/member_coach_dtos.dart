@@ -1,4 +1,5 @@
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/domain/entities/routine_phase.dart';
 
 /// `/me/coach` (MemberCoachOut) → [MemberCoach].
 MemberCoach memberCoachFromJson(Map<String, Object?> json) {
@@ -57,6 +58,7 @@ List<CoachRoutineExercise> _coachRoutineExercises(Object? raw) {
           duration: _str(entry['duration']),
           rest: _str(entry['rest']),
           memo: _str(entry['memo']),
+          phase: normaliseRoutinePhase(entry['phase']),
         ),
   ];
 }

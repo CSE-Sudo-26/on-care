@@ -1964,6 +1964,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineTypeCardio => '유산소';
 
   @override
+  String get routinePhase => '단계';
+
+  @override
+  String get routinePhaseWarmup => '준비운동';
+
+  @override
+  String get routinePhaseMain => '본운동';
+
+  @override
+  String get routinePhaseCooldown => '마무리';
+
+  @override
   String get routineTypeStrength => '근력';
 
   @override

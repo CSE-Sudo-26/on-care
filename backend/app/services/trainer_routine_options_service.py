@@ -162,6 +162,10 @@ member_analysis.recommendation_status 에 따라 두 계획의 성격을 다르�
     + prompt_safety.TRAINER_NOTE_GUARD
     + """
 
+각 운동에는 단계(phase)를 매기세요 — "warmup"(준비운동) · "main"(본운동) ·
+"cooldown"(마무리). 두 계획 모두 짧은 준비운동으로 시작하고 마무리로 끝내되,
+준비·마무리가 본운동 시간을 잠식하지 않게 짧게 두세요.
+
 반드시 설명이나 마크다운 없이 아래 JSON 객체만 반환하세요.
 {
   "plan_a": {
@@ -170,7 +174,7 @@ member_analysis.recommendation_status 에 따라 두 계획의 성격을 다르�
     "total_minutes": 30,
     "intensity": "낮음|보통|높음",
     "exercises": [
-      {"name": "운동명", "minutes": 15, "type": "걷기|유산소|근력|요가|스트레칭|기타"}
+      {"name": "운동명", "minutes": 15, "type": "걷기|유산소|근력|요가|스트레칭|기타", "phase": "warmup|main|cooldown"}
     ],
     "reason": "회원에게 보여줄 짧은 추천 이유",
     "rationale": "트레이너가 확인할 데이터 근거"

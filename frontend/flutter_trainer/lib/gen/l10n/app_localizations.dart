@@ -3632,6 +3632,30 @@ abstract class AppLocalizations {
   /// **'Cardio'**
   String get routineTypeCardio;
 
+  /// No description provided for @routinePhase.
+  ///
+  /// In en, this message translates to:
+  /// **'Phase'**
+  String get routinePhase;
+
+  /// No description provided for @routinePhaseWarmup.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm-up'**
+  String get routinePhaseWarmup;
+
+  /// No description provided for @routinePhaseMain.
+  ///
+  /// In en, this message translates to:
+  /// **'Main'**
+  String get routinePhaseMain;
+
+  /// No description provided for @routinePhaseCooldown.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool-down'**
+  String get routinePhaseCooldown;
+
   /// No description provided for @routineTypeStrength.
   ///
   /// In en, this message translates to:

@@ -1038,6 +1038,10 @@
     "description": "Display label for the '걷기' routine type. The stored/wire value stays Korean — see kRoutineTypes."
   },
   "routineTypeCardio": "Cardio",
+  "routinePhase": "Phase",
+  "routinePhaseWarmup": "Warm-up",
+  "routinePhaseMain": "Main",
+  "routinePhaseCooldown": "Cool-down",
   "routineTypeStrength": "Strength",
   "routineTypeYoga": "Yoga",
   "routineTypeStretching": "Stretching",

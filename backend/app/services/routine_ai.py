@@ -37,19 +37,47 @@ def _guess_type(name: str) -> str:
     return "근력"
 
 
+def _phase_of(name: str, type_: str, *, index: int, last: int) -> str:
+    """이 줄이 속한 단계 — 준비운동 · 본운동 · 마무리. (#934)
+
+    스트레칭·저강도 걷기는 몸을 푸는 데 쓰는 동작이라, 맨 앞이면 준비운동,
+    맨 뒤면 마무리로 본다. 그 밖에는 본운동이다 — 없는 단계를 지어내지 않는다.
+    """
+    warmup_like = type_ == "스트레칭" or name == _CARDIO_EASY[0]
+    if not warmup_like or last == 0:
+        return "main"
+    if index == 0:
+        return "warmup"
+    if index == last:
+        return "cooldown"
+    return "main"
+
+
 def _compose(total: int, parts: list[tuple[str, str, int]]) -> list[dict]:
-    """[(name, type, weight)] 를 total 분으로 가중 분배(각 ≥1, 반올림 오차는 마지막에)."""
+    """[(name, type, weight)] 를 total 분으로 가중 분배(각 ≥1, 반올림 오차는 마지막에).
+
+    단계(`phase`)도 함께 매긴다 — 저장 계약이 그 칸을 갖게 됐고(#934), 규칙
+    기반 폴백이 비워 두면 화면이 전부 본운동으로만 보인다.
+    """
     total = max(len(parts), total)  # 각 운동 최소 1분 보장
     tw = sum(w for _, _, w in parts) or 1
     used = 0
     out: list[dict] = []
+    last = len(parts) - 1
     for i, (name, type_, w) in enumerate(parts):
         if i == len(parts) - 1:
             m = max(1, total - used)
         else:
             m = max(1, round(total * w / tw))
             used += m
-        out.append({"name": name, "minutes": m, "type": type_})
+        out.append(
+            {
+                "name": name,
+                "minutes": m,
+                "type": type_,
+                "phase": _phase_of(name, type_, index=i, last=last),
+            }
+        )
     return out
 
 
@@ -115,10 +143,14 @@ def rule_based_plans(
     # B안 — 입력한 가능 시간 전부, 근력+유산소 중심. 강도 선호는 운동
     # 강도를 조절하는 값이지 트레이너가 입력한 시간 계약을 바꾸지 않는다.
     total_b = available_minutes
+    # 몸을 풀고 → 본 운동 → 정리하는 차례로 짠다(#934). 준비·마무리는 짧게
+    # 두어 본운동 시간을 잠식하지 않는다.
     parts_b = [
+        (_CARDIO_EASY[0], _CARDIO_EASY[1], 1),
         (_CARDIO_HARD[0], _CARDIO_HARD[1], 3),
         (_STRENGTH[0], _STRENGTH[1], 2),
         (_STRENGTH2[0], _STRENGTH2[1], 1),
+        (_STRETCH[0], _STRETCH[1], 1),
     ]
     plan_b = {
         "key": "B",

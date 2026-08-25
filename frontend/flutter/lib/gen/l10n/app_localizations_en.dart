@@ -525,6 +525,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTypeCardio => 'Cardio';
 
   @override
+  String get exRoutinePhaseWarmup => 'Warm-up';
+
+  @override
+  String get exRoutinePhaseMain => 'Main';
+
+  @override
+  String get exRoutinePhaseCooldown => 'Cool-down';
+
+  @override
   String get exTypeStrength => 'Strength';
 
   @override
