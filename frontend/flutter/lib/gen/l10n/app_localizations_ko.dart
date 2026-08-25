@@ -779,6 +779,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exLogged => '운동이 기록됐어요';
 
   @override
+  String get exOwnRecords => '직접 기록한 운동';
+
+  @override
+  String get exOwnRecordsEmpty => '직접 추가한 운동이 없어요';
+
+  @override
+  String get exOwnRecordSource => '직접 기록';
+
+  @override
+  String get exDeleteExercise => '운동 기록 삭제';
+
+  @override
+  String get exDeleteExerciseBody => '이 기록을 삭제하면 되돌릴 수 없어요.';
+
+  @override
+  String get exDeleted => '운동 기록을 삭제했어요';
+
+  @override
+  String get exDeleteFailed => '삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get exCannotDelete => '이 기록은 삭제할 수 없어요';
+
+  @override
   String get exSaveFailed => '저장에 실패했어요. 잠시 후 다시 시도해 주세요';
 
   @override

@@ -102,6 +102,7 @@ Widget _handle() => Container(
 Future<void> showExerciseAddSheet(
   BuildContext context, {
   ExerciseSession? session,
+  DateTime? initialDate,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -110,14 +111,69 @@ Future<void> showExerciseAddSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => _ExerciseAddSheet(session: session),
+    builder: (BuildContext ctx) =>
+        _ExerciseAddSheet(session: session, initialDate: initialDate),
   );
 }
 
+/// 기록 하나를 지운다 — 확인창을 거친 뒤에만 지운다. (#1428)
+///
+/// 목록에서 바로 지울 수 있어야 추가한 기록을 되돌릴 자리가 생긴다. 서버가 준
+/// id 가 없는 기록(데모 시드의 옛 행)은 지울 수 없다 — 조용히 실패하는 대신
+/// 그렇다고 말한다.
+Future<bool> confirmDeleteExerciseSession(
+  BuildContext context,
+  WidgetRef ref,
+  ExerciseSession session,
+) async {
+  final AppLocalizations l = AppLocalizations.of(context);
+  final AppToastHost toast = AppToastHost.of(context);
+  final String? id = session.id;
+  if (id == null) {
+    toast.show(l.exCannotDelete, kind: AppToastKind.error);
+    return false;
+  }
+  final bool? confirmed = await showDialog<bool>(
+    context: context,
+    builder: (BuildContext dialogContext) => AlertDialog(
+      title: Text(l.exDeleteExercise),
+      content: Text(l.exDeleteExerciseBody),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: Text(l.actionCancel),
+        ),
+        // 되돌릴 수 없는 쪽은 파괴적 색으로 말한다.
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          style: TextButton.styleFrom(foregroundColor: AppColors.destructive),
+          child: Text(l.actionDelete),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return false;
+  try {
+    await ref.read(exerciseRepositoryProvider).deleteSession(id);
+    // 목록·주간 통계·그래프가 한 번에 최신이 된다 — 추가 경로와 같은 무효화다.
+    ref.invalidate(exerciseWeekProvider);
+    toast.show(l.exDeleted, kind: AppToastKind.success);
+    return true;
+  } on Object {
+    toast.show(l.exDeleteFailed, kind: AppToastKind.error);
+    return false;
+  }
+}
+
 class _ExerciseAddSheet extends ConsumerStatefulWidget {
-  const _ExerciseAddSheet({this.session});
+  const _ExerciseAddSheet({this.session, this.initialDate});
 
   final ExerciseSession? session;
+
+  /// 새 기록의 기본 날짜. 운동 탭 안에서 열면 그 탭에서 보고 있는 날이다 —
+  /// 어제를 보다가 추가했는데 오늘로 저장되면 방금 적은 기록이 목록에서
+  /// 사라진다(#1428). 하단 `+` 로 열면 null 이라 오늘이 기본값이다.
+  final DateTime? initialDate;
 
   bool get isEdit => session != null;
 
@@ -141,7 +197,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   late double _weight = widget.session?.weight ?? 20;
   // 기본값은 오늘. 지난 기록을 고치면 그 기록의 날짜로 열린다 — 오늘로
   // 되돌리면 기록을 고치기만 해도 이번 주로 옮겨 간다.
-  late DateTime _date = _dateOnly(widget.session?.date ?? nowKst());
+  late DateTime _date = _dateOnly(
+    widget.session?.date ?? widget.initialDate ?? nowKst(),
+  );
   late final TextEditingController _name = TextEditingController(
     text: widget.session?.name ?? '',
   );
@@ -155,9 +213,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     if (session == null || session.type != ExerciseType.strength) return 12;
     final int? recorded = session.sets;
     if (recorded != null && recorded > 0) return recorded.toDouble();
-    return setsFromStrengthMinutes(session.minutes.toDouble())
-        .clamp(1, 40)
-        .toDouble();
+    return setsFromStrengthMinutes(
+      session.minutes.toDouble(),
+    ).clamp(1, 40).toDouble();
   }
 
   @override
@@ -263,7 +321,8 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       if (!mounted) return;
       ref.invalidate(exerciseWeekProvider);
       navigator.pop();
-      toast.show(widget.isEdit ? l.exUpdated : l.exLogged,
+      toast.show(
+        widget.isEdit ? l.exUpdated : l.exLogged,
         kind: AppToastKind.success,
       );
     } catch (_) {
