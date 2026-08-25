@@ -10,7 +10,6 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -63,6 +62,12 @@ class _FakeTemplateRepository implements TrainerProgramTemplateRepository {
 
 Finder get _saveButton =>
     find.byKey(const ValueKey<String>('program-editor-save'));
+
+/// The save button is an icon-only bookmark now — outline before a
+/// successful save, filled after. Reading the icon (not a text label) is
+/// how these tests check that state.
+IconData? _saveButtonIcon(WidgetTester tester) =>
+    (tester.widget<IconButton>(_saveButton).icon as Icon).icon;
 
 Future<void> _openCoaching(
   WidgetTester tester,
@@ -149,34 +154,36 @@ void main() {
     );
   });
 
-  testWidgets('버튼은 여러 번 저장해도 항상 `저장`이다 — `수정 저장`으로 바뀌지 않는다', (
-    tester,
-  ) async {
-    final repository = _FakeTemplateRepository();
-    await _openCoaching(tester, repository);
-    await _addExercise(tester, '스쿼트 3세트');
+  testWidgets(
+    '북마크는 저장 전 outline, 성공 후 filled — 다시 눌러도 덮어쓰지 않고 새로 만든다',
+    (tester) async {
+      final repository = _FakeTemplateRepository();
+      await _openCoaching(tester, repository);
+      await _addExercise(tester, '스쿼트 3세트');
 
-    expect(tester.widget<ActionButton>(_saveButton).label, '저장');
+      expect(_saveButtonIcon(tester), Icons.bookmark_border);
 
-    await _tapSave(tester);
-    await settle(tester);
+      await _tapSave(tester);
+      await settle(tester);
 
-    expect(repository.saved, hasLength(1));
-    // 저장에 성공한 뒤에도 라벨은 그대로다.
-    await tester.scrollUntilVisible(
-      _saveButton,
-      150,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(tester.widget<ActionButton>(_saveButton).label, '저장');
+      expect(repository.saved, hasLength(1));
+      // 저장에 성공한 뒤에는 아이콘이 채워진다.
+      await tester.scrollUntilVisible(
+        _saveButton,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(_saveButtonIcon(tester), Icons.bookmark);
 
-    // 다시 눌러도 새 템플릿이 하나 더 만들어질 뿐, 덮어쓰지 않는다.
-    await _addExercise(tester, '런지 3세트');
-    await _tapSave(tester);
-    await settle(tester);
-    expect(repository.saved, hasLength(2));
-    expect(repository.createCalls, 2);
-  });
+      // 다시 눌러도 새 템플릿이 하나 더 만들어질 뿐, 덮어쓰지 않는다.
+      await _addExercise(tester, '런지 3세트');
+      await _tapSave(tester);
+      await settle(tester);
+      expect(repository.saved, hasLength(2));
+      expect(repository.createCalls, 2);
+      expect(_saveButtonIcon(tester), Icons.bookmark);
+    },
+  );
 
   testWidgets('운동이 하나도 없으면 저장하지 않는다', (tester) async {
     final repository = _FakeTemplateRepository();
@@ -199,18 +206,20 @@ void main() {
 
     expect(find.textContaining('템플릿을 저장하지 못했어요'), findsOneWidget);
     expect(repository.saved, isEmpty);
-    // 버튼이 잠긴 채로 남지 않는다.
+    // 버튼이 잠긴 채로 남지 않고, 실패했으니 아이콘도 채워지지 않는다.
     await tester.scrollUntilVisible(
       _saveButton,
       150,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(tester.widget<ActionButton>(_saveButton).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(_saveButton).onPressed, isNotNull);
+    expect(_saveButtonIcon(tester), Icons.bookmark_border);
     expect(find.text('벤치프레스 4세트'), findsWidgets);
 
     repository.failWrites = false;
     await _tapSave(tester);
     await settle(tester);
     expect(repository.saved, hasLength(1));
+    expect(_saveButtonIcon(tester), Icons.bookmark);
   });
 }
