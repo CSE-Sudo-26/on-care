@@ -87,6 +87,25 @@ void main() {
     expect(_mapTop(tester), before, reason: '목록을 밀었더니 지도까지 따라 올라갔다');
   });
 
+  testWidgets('시트는 화면 가로를 다 쓰고 지도와 겹치지 않는다 (#1362)', (tester) async {
+    await _pumpFinder(tester);
+
+    // `주변 헬스장` 은 화면 아래에 붙는 창이라 지도 폭에 맞춰 들여쓰지 않는다.
+    final Finder sheet = find.byKey(const Key('gym-result-sheet'));
+    expect(tester.getSize(sheet).width, 390);
+
+    // 지도와 시트가 겹치는 자리가 있으면, 웹에서 시트 위의 터치가 아래 지도
+    // (플랫폼 뷰)로 새어 나가 시트를 끌 수도 목록을 밀 수도 없게 된다.
+    Rect map() => tester.getRect(find.byType(KakaoMapView).first);
+    expect(map().bottom, lessThanOrEqualTo(tester.getTopLeft(sheet).dy + 0.5));
+
+    // 시트를 끌어 올린 뒤에도 겹치지 않는다 — 지도는 시트가 남긴 자리만큼만
+    // 차지한다.
+    await tester.drag(sheet, const Offset(0, -260));
+    await tester.pumpAndSettle();
+    expect(map().bottom, lessThanOrEqualTo(tester.getTopLeft(sheet).dy + 0.5));
+  });
+
   testWidgets('검색 결과가 없으면 빈 문구가 그 자리에 뜬다', (tester) async {
     await _pumpFinder(tester);
 
