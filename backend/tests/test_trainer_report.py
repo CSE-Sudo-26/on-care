@@ -883,3 +883,129 @@ def test_rule_summary_without_records_does_not_invent_a_week():
 
     assert out.points == []
     assert "기록이 없어" in out.headline
+
+
+# ---- 주간 주의사항 통합 (#1430) ----
+#
+# 예전에는 AI 입력이 이행률·나트륨·칼로리 평균만 담고, 당류는 앱이 따로 계산해
+# `다음 주 할 일` 에만 적었다. 나트륨 외 주의사항만 있는 주는 요약이 "목표 범위
+# 안"이라고 말할 수 있었다. 판정을 한 곳(`watchpoints`)으로 모은다.
+
+def test_sugar_only_week_is_still_a_watch_week():
+    """당류만 넘긴 주도 근거와 규칙 요약이 그 사실을 말한다."""
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report(
+        completion_avg=95,
+        sodium_avg=1500,
+        sodium_over_days=0,
+        sugar_week=[72, 80, 61, 90, 0, 0, 0],
+        calories_week=[2000, 2000, 2000, 2000, 0, 0, 0],
+        days=[],
+    )
+    evidence = svc._evidence(report)
+    out = svc._rule_summary(report, evidence)
+
+    assert any("당류" in line for line in evidence)
+    assert "목표 범위 안" not in out.headline
+    assert "당류" in out.headline
+
+
+def test_calories_are_judged_against_the_personal_target():
+    """평균만 싣지 않는다 — 목표와 견준 결과가 근거에 담긴다."""
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report(
+        completion_avg=95,
+        sodium_avg=1400,
+        sodium_over_days=0,
+        calorie_target=2600,
+        calories_week=[1700, 1750, 1680, 1720, 0, 0, 0],
+        days=[],
+    )
+    kinds = {w.kind for w in svc.watchpoints(report)}
+    evidence = svc._evidence(report)
+
+    assert "calories" in kinds
+    # 어느 기준으로 판정했는지도 문장에 남는다 — 고객마다 목표가 다르다.
+    assert any("개인 목표 2,600kcal" in line and "부족" in line for line in evidence)
+
+
+def test_macro_balance_uses_personal_targets_only():
+    """탄·단·지는 개인 목표가 있을 때만 본다 — 지어낸 기준으로 나무라지 않는다."""
+    from app.services import trainer_report_summary_service as svc
+
+    without = _report(
+        completion_avg=95, sodium_avg=1400, sodium_over_days=0,
+        protein_week=[40, 45, 38, 0, 0, 0, 0], days=[],
+    )
+    assert not any(w.kind == "macro" for w in svc.watchpoints(without))
+
+    with_target = without.model_copy(update={"protein_target": 120})
+    watch = [w for w in svc.watchpoints(with_target) if w.kind == "macro"]
+    assert watch and "단백질" in watch[0].text and "부족" in watch[0].text
+
+
+def test_no_record_and_future_days_are_not_counted_as_over():
+    """기록 없는 날(0)은 초과·미달 계산에 들어가지 않는다."""
+    from app.services import trainer_report_summary_service as svc
+
+    # 화요일까지만 기록한 주 — 나머지 0 을 함께 나누면 평균이 반토막 난다.
+    report = _report(
+        completion_avg=95, sodium_avg=1400, sodium_over_days=0,
+        calories_week=[2000, 2050, 0, 0, 0, 0, 0],
+        sugar_week=[20, 22, 0, 0, 0, 0, 0],
+        days=[],
+    )
+    kinds = {w.kind for w in svc.watchpoints(report)}
+
+    assert "calories" not in kinds
+    assert "sugar" not in kinds
+
+
+def test_many_watchpoints_are_not_silently_dropped():
+    """근거를 잘라야 하면 위험한 것부터 남기고, 잘린 수를 카드가 말한다."""
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report(
+        completion_avg=40,
+        sodium_avg=2600,
+        sodium_over_days=5,
+        sugar_week=[80, 90, 75, 70, 60, 0, 0],
+        calories_week=[3000, 3100, 2900, 3050, 0, 0, 0],
+    )
+    evidence = svc._evidence(report)
+    out = svc._rule_summary(report, evidence)
+
+    assert len(svc.watchpoints(report)) > svc.MAX_POINTS
+    assert len(out.points) == svc.MAX_POINTS
+    assert out.points[-1].startswith("외 ")
+    # 가장 위험한 항목이 먼저 남는다.
+    assert "운동 이행률" in out.points[0]
+    assert "목표 범위 안" not in out.headline
+
+
+def test_llm_and_rule_paths_share_the_same_watchpoints():
+    """모델이 고르는 근거와 규칙 기반 요약이 같은 목록에서 나온다."""
+    import json
+
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report(
+        completion_avg=95, sodium_avg=1400, sodium_over_days=0,
+        sugar_week=[80, 90, 75, 0, 0, 0, 0], days=[],
+    )
+    evidence = svc._evidence(report)
+    sugar_line = next(line for line in evidence if "당류" in line)
+
+    out = svc._decode(
+        json.dumps(
+            {"headline": "당류를 함께 챙기면 좋겠습니다.", "points": [sugar_line]},
+            ensure_ascii=False,
+        ),
+        report,
+        evidence,
+    )
+
+    assert out.points == [sugar_line]
+    assert sugar_line in svc._evidence(report)

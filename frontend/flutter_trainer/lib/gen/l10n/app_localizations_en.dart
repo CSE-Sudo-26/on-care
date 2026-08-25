@@ -3470,6 +3470,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsAiNextWeek => 'Next week\'s coaching';
 
   @override
+  String reportsAiMoreWatchpoints(int count) {
+    return '$count more — see the full report.';
+  }
+
+  @override
   String get reportsActionSodium =>
       'Ask them to leave half the broth and the pickled sides.';
 
