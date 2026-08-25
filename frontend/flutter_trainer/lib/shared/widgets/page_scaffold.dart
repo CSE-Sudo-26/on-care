@@ -18,6 +18,7 @@ class PageScaffold extends StatefulWidget {
     required this.title,
     required this.child,
     this.subtitle,
+    this.subtitleWidget,
     this.actions = const <Widget>[],
     this.headerCenter,
     this.maxWidth = AppLayout.wideMaxWidth,
@@ -30,6 +31,11 @@ class PageScaffold extends StatefulWidget {
 
   /// Optional second line under the title (date, count, context).
   final String? subtitle;
+
+  /// Replaces [subtitle] with a custom widget in the same slot — the same
+  /// vertical centering as the plain-text subtitle, just not limited to a
+  /// `Text`. When set, [subtitle] is skipped.
+  final Widget? subtitleWidget;
 
   /// Right-aligned header actions.
   final List<Widget> actions;
@@ -121,6 +127,7 @@ class _PageScaffoldState extends State<PageScaffold> {
           _Header(
             title: widget.title,
             subtitle: widget.subtitle,
+            subtitleWidget: widget.subtitleWidget,
             actions: widget.actions,
             center: widget.headerCenter,
             maxWidth: widget.maxWidth,
@@ -146,6 +153,7 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.title,
     required this.subtitle,
+    required this.subtitleWidget,
     required this.actions,
     required this.center,
     required this.maxWidth,
@@ -153,6 +161,7 @@ class _Header extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final Widget? subtitleWidget;
   final List<Widget> actions;
   final Widget? center;
   final double maxWidth;
@@ -198,7 +207,9 @@ class _Header extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (subtitle != null)
+                    if (subtitleWidget != null)
+                      subtitleWidget!
+                    else if (subtitle != null)
                       Text(
                         subtitle!,
                         overflow: TextOverflow.ellipsis,

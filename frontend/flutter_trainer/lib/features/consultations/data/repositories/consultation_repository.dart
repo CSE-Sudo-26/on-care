@@ -113,7 +113,9 @@ class DemoConsultationRepository implements ConsultationRepository {
               goalCode: 'fitness',
               purposeCode: 'general',
               preferredDate: nowKst().add(const Duration(days: 1)),
-              preferredTimeCode: '19:00',
+              // 사용자 앱은 시작–종료 범위로 희망 시간을 받는다(#1256) — 시드도
+              // 그 형태를 따라야 트레이너 화면에서 종료 시각까지 보인다.
+              preferredTimeCode: '19:00-20:00',
               status: 'pending',
               message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
             ),
