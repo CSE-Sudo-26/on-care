@@ -361,9 +361,9 @@ class _SuggestionCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // `수정` 은 판단이 아니라 **보조 동작**이다(#939). 아래 줄에 같은
-              // 크기로 세워 두면 `추천 안 함`·`추천` 과 함께 셋 중 하나를 고르는
-              // 것처럼 읽혔다. 손볼 대상(운동 이름·시간) 옆에 연필로 둔다.
+              // `수정`·`거절` 은 판단이 아니라 **보조 동작**이다(#939). 아래
+              // 줄에 세워 두면 `고객에게 추천` 과 함께 판단처럼 읽혔다. 손볼
+              // 대상(운동 이름·시간) 옆에 연필·휴지통으로 둔다.
               const SizedBox(width: AppSpacing.xs),
               SizedBox(
                 width: 28,
@@ -376,6 +376,26 @@ class _SuggestionCard extends StatelessWidget {
                   icon: const Icon(Icons.edit_outlined, size: 16),
                   color: AppColors.primary,
                   tooltip: l.actionEdit,
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  key: ValueKey<String>(
+                    'routine-suggestion-dismiss-${suggestion.id}',
+                  ),
+                  onPressed: busy ? null : onDismiss,
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  color: AppColors.mutedForeground,
+                  tooltip: l.suggestionDismiss,
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                   constraints: const BoxConstraints.tightFor(
@@ -412,57 +432,34 @@ class _SuggestionCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          // 아래 줄에는 **결정 둘만** 남는다 — 이 제안을 고객에게 줄 것인가.
-          // 둘 다 오른쪽에 붙여 카드 하나의 결정처럼 읽히게 한다. 라벨은
-          // 로케일을 크게 탄다. 한국어 `추천 안 함`·`고객에게 추천` 은 한
-          // 줄에 들어가지만 영어 `Don't recommend`·`Recommend to client` 는 배율
-          // 1.3 에서 카드를 크게 넘겼다(#849). `Row` + `Spacer` 대신
-          // `OverflowBar` 를 쓰면 넓을 때는 오른쪽 배치를 그대로 두고, 좁아지면
-          // 세로로 흘려 준다.
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            overflowAlignment: OverflowBarAlignment.end,
-            spacing: AppSpacing.sm,
-            overflowSpacing: AppSpacing.xs,
-            children: <Widget>[
-              // 다른 카드들과 같은 공용 버튼([ActionButton]) 이다 — 이
-              // 카드만 기본 Material 버튼을 쓰면 높이·글꼴·테두리가 조금씩
-              // 달라 눈에 띈다. 카드 한 장에 여러 제안이 쌓이는 자리라 `dense`
-              // 로 줄인다.
-              ActionButton(
-                key: ValueKey<String>(
-                  'routine-suggestion-dismiss-${suggestion.id}',
-                ),
-                label: l.suggestionDismiss,
-                tone: AppColors.subtleForeground,
-                dense: true,
-                onPressed: busy ? null : onDismiss,
-              ),
-              // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
-              // 않아야 "무엇이 도는 중인지" 가 읽힌다.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (busy) ...<Widget>[
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                  ],
-                  ActionButton(
-                    key: ValueKey<String>(
-                      'routine-suggestion-approve-${suggestion.id}',
-                    ),
-                    label: l.suggestionApprove,
-                    primary: true,
-                    dense: true,
-                    onPressed: busy ? null : onApprove,
+          // 아래 줄에는 **결정 하나**만 남는다 — 이 제안을 고객에게 줄 것인가.
+          // 거절은 판단이 아니라 위의 휴지통으로 옮겼다(#939 후속).
+          Align(
+            alignment: Alignment.centerRight,
+            // 진행 표시와 추천은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
+            // 않아야 "무엇이 도는 중인지" 가 읽힌다.
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (busy) ...<Widget>[
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
                 ],
-              ),
-            ],
+                ActionButton(
+                  key: ValueKey<String>(
+                    'routine-suggestion-approve-${suggestion.id}',
+                  ),
+                  label: l.suggestionApprove,
+                  primary: true,
+                  dense: true,
+                  onPressed: busy ? null : onApprove,
+                ),
+              ],
+            ),
           ),
         ],
       ),
