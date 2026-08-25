@@ -167,7 +167,7 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
                 // (#1274). 시트가 화면 몫을 다 쓰므로 남는 높이를 그대로
                 // 넘긴다.
                 Expanded(
-                  child: _GymMapAndSheet(
+                  child: _GymMapAndList(
                     gyms: visible,
                     header: l.exNearbyGyms,
                     controls: gymsAsync.hasValue
@@ -238,22 +238,24 @@ class _GymFinderViewState extends ConsumerState<GymFinderView> {
   }
 }
 
-/// 지도 위에 얹혀 세 자리를 오가는 결과 목록 시트 (#1274).
+/// 위에 고정된 지도와 그 아래 결과 목록 (#1274 → #1362 → #1370).
 ///
-/// **위 = 목록만 · 중간 = 반반 · 아래 = 지도만.** 손을 뗀 자리에서 가장 가까운
-/// 단계에 붙고, 뗄 때의 속도도 반영돼 짧게 튕겨도 다음 단계로 넘어간다 —
-/// [DraggableScrollableSheet] 의 스냅이 그 둘을 함께 해 준다.
+/// **자리는 둘뿐이다 — 반반 / 목록만.** 머리줄의 화살표로만 오간다. 예전에는
+/// 시트를 손으로 끌어 크기를 바꿨는데([DraggableScrollableSheet]), 그 손짓이
+/// 목록 스크롤과 같은 방향이라 폰에서 목록이 넘어가지 않았다. 끄는 동작을
+/// 없애면 목록에 닿은 손은 언제나 목록의 것이다.
 ///
-/// 지도는 **윗변이 자리에 못 박힌 채** 시트가 남긴 만큼만 차지한다. 시트가
-/// 오르내려도 지도가 따라 움직이지 않고, 둘이 겹치는 자리가 없다 — 겹쳐 두면
-/// 웹에서 시트 위의 터치가 아래 지도(플랫폼 뷰, DOM 요소)로 새어 나가 폰에서
-/// 시트를 끌 수도 목록을 밀 수도 없었다 (#1362).
+/// 지도는 위에 **가로로 긴 띠 하나**로 고정된다(높이 고정, #1382). 목록만 보는
+/// 자리에서는 그 띠가 통째로 사라진다 — 아래쪽에 지도가 다시 나오는 일은 없다.
 ///
-/// 머리줄·정렬 줄·카드가 **한 스크롤 뷰**에 얹혀 있다. 그래야 목록이 맨 위에
-/// 닿은 채로 계속 내리면 시트가 이어서 내려가고, 머리줄을 잡고 끌어도 시트가
-/// 움직인다.
-class _GymMapAndSheet extends StatefulWidget {
-  const _GymMapAndSheet({
+/// 지도와 목록은 **자리를 나눠 갖는다** — 겹치지 않는다. 겹쳐 두면 웹에서
+/// 목록 위의 터치가 아래 지도(플랫폼 뷰, DOM 요소)로 새어 나간다 (#1362).
+/// 그래서 목록을 굴려도 지도는 움직이지 않고, 지도를 끌어도 목록은 그대로다.
+///
+/// 머리줄·정렬 줄은 목록 **위에 고정**되고, 구르는 것은 카드뿐이다. 접는
+/// 화살표가 목록과 함께 굴러 사라지면 다시 펼 데가 없다.
+class _GymMapAndList extends StatefulWidget {
+  const _GymMapAndList({
     required this.gyms,
     required this.header,
     required this.controls,
@@ -267,132 +269,85 @@ class _GymMapAndSheet extends StatefulWidget {
   final Widget? controls;
   final Widget resultSliver;
 
-  /// 시트가 가장 낮을 때 남는 높이 — 손잡이와 머리줄만큼이다. 여기가 0 이 되면
-  /// 목록을 다시 올릴 자리가 사라진다.
-  static const double kCollapsedExtent = 76;
+  /// 지도 띠의 높이. **고정값**이다 (#1382) — 위에 가로로 길게 눕는 띠 하나이고,
+  /// 그 아래는 목록뿐이다. 화면 비율로 잡으면 큰 폰에서 지도가 화면 절반을
+  /// 먹어 머리줄·탭 줄까지 밀려 보이지 않는다.
+  static const double kMapHeight = 200;
 
-  /// 반반 자리. 지도를 절반 남긴 채 여러 곳을 견주는 자리다.
-  static const double kMidSize = 0.5;
+  /// 자리가 좁을 때 지도가 가져갈 수 있는 최대 몫. 목록이 카드 한 장도 못
+  /// 세우게 두지 않는다.
+  static const double kMapMaxFraction = 0.45;
 
   @override
-  State<_GymMapAndSheet> createState() => _GymMapAndSheetState();
+  State<_GymMapAndList> createState() => _GymMapAndListState();
 }
 
-class _GymMapAndSheetState extends State<_GymMapAndSheet> {
-  final DraggableScrollableController _sheet = DraggableScrollableController();
-
-  /// 지금 시트가 차지한 비율. 머리줄 화살표가 이 값을 보고 방향을 정한다 —
-  /// 드래그와 화살표가 같은 상태를 가리켜야 둘이 어긋나지 않는다.
-  double _size = _GymMapAndSheet.kMidSize;
-
-  @override
-  void initState() {
-    super.initState();
-    _sheet.addListener(_onSheetMoved);
-  }
-
-  void _onSheetMoved() {
-    if (!_sheet.isAttached) return;
-    final double next = _sheet.size;
-    if ((next - _size).abs() < 0.001) return;
-    setState(() => _size = next);
-  }
-
-  @override
-  void dispose() {
-    _sheet.removeListener(_onSheetMoved);
-    _sheet.dispose();
-    super.dispose();
-  }
-
-  /// 화살표를 눌렀을 때 갈 자리. 맨 아래에서는 위로, 그 밖에서는 한 단계
-  /// 아래로 간다 — 계속 누르면 지도만 남을 때까지 내려가고, 거기서 방향이
-  /// 뒤집힌다.
-  double _nextStop(double min) {
-    if (_size <= min + 0.01) return _GymMapAndSheet.kMidSize;
-    if (_size > _GymMapAndSheet.kMidSize + 0.01) {
-      return _GymMapAndSheet.kMidSize;
-    }
-    return min;
-  }
+class _GymMapAndListState extends State<_GymMapAndList> {
+  /// 목록만 보는 자리인가. 화살표가 이 값 하나를 뒤집는다.
+  bool _listOnly = false;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints box) {
         final double height = box.maxHeight;
-        // 낮은 화면에서도 손잡이와 머리줄은 남아야 하고, 높은 화면에서 그
-        // 비율이 반반을 넘어서도 안 된다.
-        final double minSize = height <= 0
-            ? 0.2
-            : (_GymMapAndSheet.kCollapsedExtent / height).clamp(0.12, 0.45);
-        final bool collapsed = _size <= minSize + 0.01;
-        // 지도는 **시트가 덮지 않는 자리에만** 놓는다 (#1362). 웹에서 카카오
-        // 지도는 플랫폼 뷰(DOM 요소)라, 그 위를 덮은 Flutter 시트에서 시작한
-        // 터치가 아래 지도로 새어 나간다 — 폰에서 시트를 끌면 시트 대신 지도가
-        // 끌리고, 목록을 밀면 목록 대신 지도가 움직였다. 겹치는 자리를 아예
-        // 없애면 그 새는 길이 사라진다. 지도의 **윗변은 그대로** 있으므로 시트가
-        // 오르내려도 지도는 제자리다 (#1135).
-        final double mapHeight = (height * (1 - _size)).clamp(0.0, height);
-        return Stack(
+        // 좁은 자리에서는 고정값보다 그 자리를 따른다 — 지도가 부모를 넘겨
+        // 목록을 밀어내면 안 된다.
+        final double mapHeight = math.min(
+          _GymMapAndList.kMapHeight,
+          height * _GymMapAndList.kMapMaxFraction,
+        );
+        return Column(
           children: <Widget>[
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: mapHeight,
-              child: _GymMap(gyms: widget.gyms),
-            ),
-            DraggableScrollableSheet(
-              controller: _sheet,
-              initialChildSize: _GymMapAndSheet.kMidSize.clamp(minSize, 1),
-              minChildSize: minSize,
-              snap: true,
-              snapSizes: <double>[_GymMapAndSheet.kMidSize.clamp(minSize, 1)],
-              builder:
-                  (
-                    BuildContext context,
-                    ScrollController scrollController,
-                  ) => _SheetSurface(
-                    // 시트의 **겉면**이 이 키를 갖는다. 시트 위젯 자체는
-                    // 스택 전체를 덮고 있어, 그 자리를 재면 시트가 어디에
-                    // 붙어 있는지가 아니라 스택의 윗변이 나온다.
-                    key: const Key('gym-result-sheet'),
-                    child: CustomScrollView(
-                      // 시트 안에서 실제로 구르는 목록. 이 키로 가리킨다 —
-                      // `Scrollable` 이 시트에 둘(시트 자신과 이 목록)이라
-                      // "찾기 화면 안의 유일한 스크롤" 로는 집을 수 없다.
-                      key: const Key('gym-result-list'),
-                      controller: scrollController,
-                      slivers: <Widget>[
-                        SliverToBoxAdapter(
-                          child: _SheetHead(
-                            title: widget.header,
-                            collapsed: collapsed,
-                            onToggle: () => _sheet.animateTo(
-                              _nextStop(minSize),
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
-                            ),
-                          ),
-                        ),
-                        if (widget.controls != null)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                              child: widget.controls,
-                            ),
-                          ),
-                        // 시트는 화면 가로를 다 쓰고, 여백은 그 안에서
-                        // 준다 (#1362).
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          sliver: widget.resultSliver,
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                      ],
+            // 지도는 위에 가로로 긴 띠 하나로 **붙박이**다 (#1382). 목록만 보는
+            // 자리에서는 크기를 0 으로 줄이는 대신 **트리에서 아예 뺀다** —
+            // 웹에서 지도는 플랫폼 뷰(DOM 요소)라, 크기가 애니메이션으로
+            // 흔들리는 상자 안에 있으면 제 상자를 벗어나 머리줄·탭 줄 위를
+            // 덮었다. 사각 클립도 함께 씌워 상자 밖으로 넘치지 못하게 한다.
+            if (!_listOnly)
+              SizedBox(
+                key: const Key('gym-map-slot'),
+                height: mapHeight,
+                width: double.infinity,
+                child: ClipRect(child: _GymMap(gyms: widget.gyms)),
+              ),
+            Expanded(
+              child: _SheetSurface(
+                key: const Key('gym-result-sheet'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _SheetHead(
+                      title: widget.header,
+                      // 반반 자리가 곧 **접힌** 목록이다 — 여기서 화살표는
+                      // 위를 가리키고, 누르면 목록이 화면을 다 쓴다.
+                      collapsed: !_listOnly,
+                      onToggle: () => setState(() => _listOnly = !_listOnly),
                     ),
-                  ),
+                    if (widget.controls != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                        child: widget.controls,
+                      ),
+                    // 구르는 것은 카드뿐이다. 제 자리 안에서 구르므로 지도도,
+                    // 바깥 화면도 따라 움직이지 않는다.
+                    Expanded(
+                      child: CustomScrollView(
+                        key: const Key('gym-result-list'),
+                        slivers: <Widget>[
+                          // 시트는 화면 가로를 다 쓰고, 여백은 그 안에서
+                          // 준다 (#1362).
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            sliver: widget.resultSliver,
+                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         );
@@ -429,11 +384,13 @@ class _SheetSurface extends StatelessWidget {
   }
 }
 
-/// 시트 머리 — 잡아 끄는 자리를 알리는 손잡이와, 제목·화살표 한 줄 (#1186).
+/// 목록 머리 — 제목과 화살표 한 줄 (#1186, #1370).
 ///
-/// 화살표는 시트가 맨 아래에 있으면 위를(올릴 수 있다), 그 밖에서는 아래를
-/// (내릴 수 있다) 가리킨다. 드래그와 같은 상태([_GymMapAndSheetState._size])를
-/// 읽으므로 손으로 끌어 놓은 자리와 화살표 방향이 어긋나지 않는다.
+/// 손잡이 표시는 없다. 자리를 바꾸는 길이 화살표 하나뿐이라, 끌 수 있다는
+/// 뜻으로 읽히는 표시를 두면 되지 않는 손짓을 부른다.
+///
+/// 화살표는 목록만 보고 있으면 아래를(지도를 다시 부를 수 있다), 반반이면
+/// 위를(목록을 크게 볼 수 있다) 가리킨다.
 class _SheetHead extends StatelessWidget {
   const _SheetHead({
     required this.title,
@@ -447,28 +404,13 @@ class _SheetHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        const SizedBox(height: 8),
-        Center(
-          child: Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: FigmaColors.hairline,
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _NearbyHeader(
-            title: title,
-            collapsed: collapsed,
-            onToggle: onToggle,
-          ),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: _NearbyHeader(
+        title: title,
+        collapsed: collapsed,
+        onToggle: onToggle,
+      ),
     );
   }
 }

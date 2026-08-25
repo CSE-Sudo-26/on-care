@@ -437,44 +437,6 @@ class _MyPageState extends ConsumerState<MyPage> {
                 onChanged: (v) =>
                     _applySetting(() => controller.setNewMessageAlerts(v)),
               ),
-              const Divider(height: 1, color: AppColors.borderStrong),
-              _SwitchRow(
-                label: l.myNotifSessionReminder,
-                hint: l.myNotifSessionReminderHint,
-                value: settings.sessionReminders,
-                onChanged: (v) =>
-                    _applySetting(() => controller.setSessionReminders(v)),
-              ),
-              if (settings.sessionReminders) ...<Widget>[
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        l.myReminderLead,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                    ),
-                    SegmentedSwitch(
-                      labels: <String>[
-                        for (final m in reminderLeadOptions)
-                          l.myMinutesBefore(m),
-                      ],
-                      selected: reminderLeadOptions.indexOf(
-                        settings.reminderLeadMinutes,
-                      ),
-                      onChanged: (i) => _applySetting(
-                        () =>
-                            controller.setReminderLead(reminderLeadOptions[i]),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),

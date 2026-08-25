@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -19,22 +20,26 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// Multi-session persistence remains unsupported. A one-session draft can be
 /// handed to the existing flat routine boundary through the supplied actions.
 ///
-/// **이 편집기는 회원에게 아무것도 보내지 않는다 (#1028).** 예전에는 여기에
-/// `배정`·`PT 등록` 버튼이 나란히 있어, 편집 중 아무 때나 실제 전송이
-/// 일어날 수 있었다. 이제 이 화면의 마지막 동작은 [onReview] — 지금 구성의
-/// **스냅샷**을 최종 검토 단계로 넘기는 것뿐이고, 실제 배정·등록은 그
-/// 단계에서만 일어난다. 그래서 이 파일에는 repository 호출이 하나도 없다.
+/// **이 편집기는 회원에게 직접 API 를 부르지 않는다.** 실제 확인창·배정·PT
+/// 등록은 전부 [onSend] 콜백을 통해 호출부(`CoachingPage`)가 한다 — 이
+/// 위젯은 트리거(버튼)와 보낼 값(초안·등록일·등록시각)만 쥐고 있다. 그래서
+/// 이 파일에는 repository 호출이 하나도 없다.
 class ProgramEditorWorkspace extends StatefulWidget {
   const ProgramEditorWorkspace({
     super.key,
     required this.clientGoal,
     required this.aiSuggestions,
-    required this.onReview,
+    required this.onSend,
+    required this.registerDate,
+    required this.onRegisterDateChanged,
+    required this.registerTime,
+    required this.onRegisterTimeChanged,
     this.template,
     this.templateRevision = 0,
     this.initialDraft,
     this.onSave,
     this.saving = false,
+    this.sending = false,
   });
 
   final String clientGoal;
@@ -42,9 +47,19 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final ProgramTemplate? template;
   final int templateRevision;
 
-  /// 지금 구성을 최종 검토 단계로 넘긴다. **전송이 아니다** — 넘어간 값이
-  /// 그대로 검토 화면에 그려지고, 전송은 거기서만 할 수 있다 (#1028).
-  final ValueChanged<ProgramEditorState> onReview;
+  /// 지금 구성을 실제로 보낸다 — 확인 다이얼로그를 띄우고, 확인되면 배정과
+  /// PT 일정 등록까지 호출부가 순서대로 처리한다. 이 위젯은 트리거만 한다.
+  final ValueChanged<ProgramEditorState> onSend;
+
+  /// PT 스케줄에 등록할 날짜 — `일정 추가` 로 고른다. 기본값(오늘)은
+  /// 호출부가 들고 있다.
+  final DateTime registerDate;
+  final ValueChanged<DateTime> onRegisterDateChanged;
+
+  /// PT 스케줄에 등록할 시각 — 위 날짜와 함께 `일정 추가` 다이얼로그에서
+  /// 고른다. 기본값(오전 10시)도 호출부가 들고 있다.
+  final TimeOfDay registerTime;
+  final ValueChanged<TimeOfDay> onRegisterTimeChanged;
 
   /// A saved draft to open instead of starting from the client's goal.
   ///
@@ -54,11 +69,18 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final ProgramEditorState? initialDraft;
 
   /// Saves the current draft. Null when saving isn't wired up.
-  final Future<void> Function(ProgramEditorState draft)? onSave;
+  ///
+  /// Resolves to whether the save actually succeeded — the header's bookmark
+  /// button uses this (and only this) to flip from outline to filled.
+  final Future<bool> Function(ProgramEditorState draft)? onSave;
 
   /// A save is in flight — the button locks so a second click can't create
   /// a duplicate draft.
   final bool saving;
+
+  /// 전송(배정+PT 등록)이 진행 중이거나 막 끝났다 — `일정 추가` 버튼이
+  /// 잠겨 두 번째 클릭이 두 번째 전송을 만들지 않는다.
+  final bool sending;
 
   @override
   State<ProgramEditorWorkspace> createState() => _ProgramEditorWorkspaceState();
@@ -68,6 +90,12 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   late ProgramEditorState _draft;
   var _initialized = false;
   var _editingProgramInfo = false;
+
+  /// 이번 편집기 세션에서 템플릿 저장을 한 번이라도 성공했는가 — 북마크
+  /// 아이콘을 outline↔filled 로 바꾸는 데만 쓴다. 저장은 누를 때마다 새
+  /// 템플릿을 만드는 동작이라(#1028) "저장 취소"는 없고, 한 번 채워지면
+  /// 이 편집기가 다시 열리기 전까지는 그대로 둔다.
+  var _templateSaved = false;
   final TextEditingController _programName = TextEditingController();
   String? _addingToSession;
   final TextEditingController _exerciseName = TextEditingController();
@@ -189,8 +217,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     });
   }
 
-  /// 카드 헤더 오른쪽 자리 — 평소엔 `저장`/`검토하기`, 이름을 고치는
-  /// 동안에는 그 자리를 그대로 `취소`/`저장`으로 바꿔 쓴다.
+  /// 카드 헤더 오른쪽 자리 — 평소엔 저장(북마크), 이름을 고치는 동안에는
+  /// 그 자리를 그대로 `취소`/`저장`으로 바꿔 쓴다. `일정 추가`는 여기
+  /// 없다 — 박스 하단으로 옮겼다(`build`).
   Widget _headerActions(AppLocalizations l) {
     if (_editingProgramInfo) {
       return Wrap(
@@ -210,38 +239,39 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
         ],
       );
     }
-    final canReview = _draft.supportsAssignment;
     final canSave = widget.onSave != null && _draft.name.trim().isNotEmpty;
-    return Wrap(
-      spacing: AppSpacing.xs,
-      children: <Widget>[
-        Tooltip(
-          message: canSave ? '' : l.programEditorSaveUnsupported,
-          child: ActionButton(
-            key: const ValueKey<String>('program-editor-save'),
-            // 몇 번을 눌러도 항상 `저장` 이다 — 이 버튼은 지금 구성을
-            // 프로그램 템플릿으로 새로 저장하는 동작이라 "고친 걸 다시
-            // 저장"이라는 의미의 `수정 저장` 표시가 맞지 않는다.
-            label: widget.saving ? l.progSaving : l.actionSave,
-            onPressed: canSave && !widget.saving
-                ? () => widget.onSave!(_draft)
-                : null,
-          ),
-        ),
-        // 저장 옆에 있던 `고객에게 배정` 이 있던 자리다. 이제는 전송이
-        // 아니라 **최종 검토로 넘어가는** 동작이라, 저장과 나란히 있어도
-        // 둘 다 회원에게 아무것도 보내지 않는다 (#1028).
-        Tooltip(
-          message: canReview ? '' : l.programEditorAssignUnsupported,
-          child: ActionButton(
-            key: const ValueKey<String>('program-editor-review'),
-            label: l.programEditorReview,
-            primary: true,
-            onPressed: canReview ? () => widget.onReview(_draft) : null,
-          ),
-        ),
-      ],
+    // `보내기`는 이제 헤더가 아니라 박스 하단(footer)에 있다 — 여기 남는
+    // 것은 저장(북마크) 하나뿐이다.
+    //
+    // 텍스트 버튼이던 `저장`을 북마크 아이콘 하나로 줄였다 — 저장 함수·API
+    // 호출·중복 저장 방지(`widget.saving`)는 그대로, 채워진 아이콘
+    // (`_templateSaved`)만 이 저장이 실제로 성공했음을 보여준다. 저장은
+    // 여전히 누를 때마다 새 템플릿을 만드는 동작이라 "저장 취소"에 대응하는
+    // outline 복귀는 없다.
+    return IconButton(
+      key: const ValueKey<String>('program-editor-save'),
+      tooltip: !canSave
+          ? l.programEditorSaveUnsupported
+          : widget.saving
+          ? l.progSaving
+          : l.programEditorSaveTemplate,
+      onPressed: canSave && !widget.saving ? _handleSaveTemplate : null,
+      icon: Icon(_templateSaved ? Icons.bookmark : Icons.bookmark_border),
+      color: _templateSaved ? AppColors.primary : AppColors.subtleForeground,
+      disabledColor: AppColors.disabledForeground,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
     );
+  }
+
+  /// 기존 저장 함수(`widget.onSave`)를 그대로 부르고, 성공했을 때만 북마크
+  /// 아이콘을 채운다 — 새 저장 로직이 아니라 반환값(성공 여부)을 아이콘
+  /// 상태에 반영하는 얇은 래퍼다.
+  Future<void> _handleSaveTemplate() async {
+    final saved = await widget.onSave!(_draft);
+    if (!mounted || !saved) return;
+    setState(() => _templateSaved = true);
   }
 
   @override
@@ -396,10 +426,25 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
                   ),
                 ),
               ),
-              ActionButton(
-                label: l.programEditorAddSession,
-                icon: Icons.add,
+              // 박스형 버튼이던 `세션 추가`를 작은 텍스트 액션으로 줄였다 —
+              // `_addSession` 과 그 결과(빈 세션 append)는 그대로다, 시각
+              // 형태만 낮은 우선순위로 바뀌었다.
+              TextButton.icon(
+                key: const ValueKey<String>('program-editor-add-session'),
                 onPressed: _addSession,
+                icon: const Icon(Icons.add, size: 14),
+                label: Text(l.programEditorAddSession),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ],
           ),
@@ -461,11 +506,77 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          // `오늘 PT 스케줄에 등록` 과 날짜 칩은 최종 검토 단계로 옮겼다 —
-          // 편집 도중에 일정이 잡히는 일이 더는 없다 (#1028).
+          // 박스 하단 — PT 등록 날짜·시각은 다이얼로그 뒤에 숨기지 않고
+          // 칩 형태로 바로 보인다. 그 아래 `일정 추가`(예전 `보내기`)가
+          // 확인창을 거쳐 실제로 배정+PT 등록까지 한다. 실제 전송·등록
+          // API 호출은 전부 호출부(`onSend`)가 한다 — 여기는 트리거와
+          // 등록일·시각 값만 쥔다.
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            children: <Widget>[
+              ActionButton(
+                key: const ValueKey<String>('program-register-date'),
+                label: ymd(widget.registerDate),
+                icon: Icons.calendar_month_outlined,
+                onPressed: () => unawaited(_pickRegisterDate(context)),
+              ),
+              ActionButton(
+                key: const ValueKey<String>('program-register-time'),
+                label: widget.registerTime.format(context),
+                icon: Icons.schedule_outlined,
+                onPressed: () => unawaited(_pickRegisterTime(context)),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Tooltip(
+              message: _draft.supportsAssignment
+                  ? ''
+                  : l.programEditorAssignUnsupported,
+              child: ActionButton(
+                key: const ValueKey<String>('program-editor-send'),
+                label: l.programEditorAddSchedule,
+                primary: true,
+                onPressed: _draft.supportsAssignment && !widget.sending
+                    ? () => widget.onSend(_draft)
+                    : null,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// 등록할 날짜를 고른다 — 기본값은 오늘, 과거 날짜는 고를 수 없다.
+  Future<void> _pickRegisterDate(BuildContext context) async {
+    final today = _todayDate();
+    final picked = await showDatePicker(
+      context: context,
+      // 자정을 넘긴 채로 다이얼로그가 열려 있으면 `registerDate`(연 상태)가
+      // `today`(지금 다시 계산한 값)보다 이전일 수 있다 — `showDatePicker`
+      // 는 initialDate가 firstDate보다 빠르면 assertion으로 죽는다.
+      initialDate: widget.registerDate.isBefore(today)
+          ? today
+          : widget.registerDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    widget.onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
+  }
+
+  /// 등록할 시각을 고른다.
+  Future<void> _pickRegisterTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: widget.registerTime,
+    );
+    if (picked == null) return;
+    widget.onRegisterTimeChanged(picked);
   }
 
   void _update(ProgramEditorState next) => setState(() => _draft = next);
@@ -1362,12 +1473,8 @@ class _ExerciseSummary extends StatelessWidget {
   }
 }
 
-/// 운동 한 줄의 지표 요약 — 근력은 세트·횟수·중량, 그 외 유형은 시간.
-///
-/// 최종 검토 화면이 같은 함수를 쓴다 (#1028) — 검토 화면이 편집기와 다른
-/// 방식으로 값을 그리면, 트레이너가 확인한 내용과 실제로 나가는 payload 가
-/// 어긋났는지 눈으로는 알 수 없다. 유형마다 재는 단위가 다르다는 규칙은
-/// 회원 앱·서버와도 같다 (#1276).
+/// 운동 한 줄의 지표 요약 — 근력은 세트·횟수·중량, 그 외 유형은 시간. 유형마다
+/// 재는 단위가 다르다는 규칙은 회원 앱·서버와도 같다 (#1276).
 List<String> programExerciseMetrics(
   ProgramExerciseDraft exercise, {
   required bool korean,

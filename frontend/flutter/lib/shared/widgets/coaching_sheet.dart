@@ -70,32 +70,24 @@ final coachingBadgeCountProvider = Provider<int>((ref) {
 class _CoachCard {
   const _CoachCard({
     required this.tag,
-    required this.tagColor,
     required this.title,
     required this.body,
-    required this.done,
   });
   final String tag;
-  final Color tagColor;
   final String title;
   final String body;
-  final bool done;
 }
 
 List<_CoachCard> _cardsOf(AppLocalizations l) => <_CoachCard>[
   _CoachCard(
     tag: l.coachCardDietTag,
-    tagColor: FigmaColors.orange,
     title: l.coachCardDietTitle,
     body: l.coachCardDietBody,
-    done: true,
   ),
   _CoachCard(
     tag: l.coachCardExerciseTag,
-    tagColor: FigmaColors.greenTag,
     title: l.coachCardExerciseTitle,
     body: l.coachCardExerciseBody,
-    done: true,
   ),
 ];
 
@@ -109,19 +101,10 @@ String _suggestionTagLabel(AppLocalizations l, AiSuggestionTag tag) =>
       AiSuggestionTag.hydration => l.coachCardWaterTag,
     };
 
-Color _suggestionTagColor(AiSuggestionTag tag) => switch (tag) {
-  AiSuggestionTag.diet => FigmaColors.orange,
-  AiSuggestionTag.exercise => FigmaColors.greenTag,
-  AiSuggestionTag.sleep => FigmaColors.sugarPurple,
-  AiSuggestionTag.hydration => FigmaColors.primary,
-};
-
 _CoachCard _cardFromSuggestion(AppLocalizations l, AiSuggestion s) => _CoachCard(
   tag: _suggestionTagLabel(l, s.tag),
-  tagColor: _suggestionTagColor(s.tag),
   title: s.title,
   body: s.body,
-  done: false,
 );
 
 class _CoachingSheet extends ConsumerWidget {
@@ -276,16 +259,18 @@ class _CoachCardTile extends StatelessWidget {
         children: <Widget>[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            // 태그는 종류를 알려 줄 뿐 상태가 아니라, 카드마다 색을 달리
+            // 하지 않고 시트의 다른 요소와 같은 메인 컬러로 둔다(#1375).
             decoration: BoxDecoration(
-              color: card.tagColor.withValues(alpha: 0.12),
+              color: FigmaColors.primaryA(0.12),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               card.tag,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: card.tagColor,
+                color: FigmaColors.primary,
               ),
             ),
           ),
@@ -315,18 +300,6 @@ class _CoachCardTile extends StatelessWidget {
               ],
             ),
           ),
-          if (card.done) ...<Widget>[
-            const SizedBox(width: 8),
-            Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(
-                color: FigmaColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, size: 13, color: Colors.white),
-            ),
-          ],
         ],
       ),
     );

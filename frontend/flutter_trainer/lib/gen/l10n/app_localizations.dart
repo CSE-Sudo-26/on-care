@@ -2540,6 +2540,18 @@ abstract class AppLocalizations {
   /// **'Not logged'**
   String get chartNoRecord;
 
+  /// No description provided for @chartNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get chartNotYet;
+
+  /// No description provided for @chartOverGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} {unit} over goal'**
+  String chartOverGoal(String amount, String unit);
+
   /// No description provided for @reportsSendStateSent.
   ///
   /// In en, this message translates to:
@@ -3265,30 +3277,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A sidebar badge appears when a client messages you'**
   String get myNotifNewMessageHint;
-
-  /// No description provided for @myNotifSessionReminder.
-  ///
-  /// In en, this message translates to:
-  /// **'Session reminders'**
-  String get myNotifSessionReminder;
-
-  /// No description provided for @myNotifSessionReminderHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming sessions are highlighted on the dashboard'**
-  String get myNotifSessionReminderHint;
-
-  /// No description provided for @myReminderLead.
-  ///
-  /// In en, this message translates to:
-  /// **'Remind me'**
-  String get myReminderLead;
-
-  /// No description provided for @myMinutesBefore.
-  ///
-  /// In en, this message translates to:
-  /// **'{minutes} min before'**
-  String myMinutesBefore(int minutes);
 
   /// No description provided for @myAccount.
   ///
@@ -5570,29 +5558,29 @@ abstract class AppLocalizations {
   /// **'Check each exercise\'s name and set count.'**
   String get programEditorAssignUnsupported;
 
-  /// No description provided for @programEditorAssign.
-  ///
-  /// In en, this message translates to:
-  /// **'Assign to client'**
-  String get programEditorAssign;
-
   /// No description provided for @programAssignConfirmTitle.
   ///
   /// In en, this message translates to:
-  /// **'Assign to this client?'**
+  /// **'Add to the schedule?'**
   String get programAssignConfirmTitle;
 
   /// No description provided for @programAssignConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'This program will be assigned to {name}, and also scheduled on their PT calendar for {date}.'**
-  String programAssignConfirmBody(String name, String date);
+  /// **'This program will be added to {name}\'s PT schedule on {date} at {time}.'**
+  String programAssignConfirmBody(String name, String date, String time);
 
-  /// No description provided for @programEditorReview.
+  /// No description provided for @programEditorSaveTemplate.
   ///
   /// In en, this message translates to:
-  /// **'Confirm & send'**
-  String get programEditorReview;
+  /// **'Save as template'**
+  String get programEditorSaveTemplate;
+
+  /// No description provided for @programEditorAddSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to schedule'**
+  String get programEditorAddSchedule;
 
   /// No description provided for @programReviewTitle.
   ///

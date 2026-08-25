@@ -1429,6 +1429,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartNoRecord => 'Not logged';
 
   @override
+  String get chartNotYet => 'Not yet';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '$amount $unit over goal';
+  }
+
+  @override
   String get reportsSendStateSent => 'Sent';
 
   @override
@@ -1846,21 +1854,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get myNotifNewMessageHint =>
       'A sidebar badge appears when a client messages you';
-
-  @override
-  String get myNotifSessionReminder => 'Session reminders';
-
-  @override
-  String get myNotifSessionReminderHint =>
-      'Upcoming sessions are highlighted on the dashboard';
-
-  @override
-  String get myReminderLead => 'Remind me';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes min before';
-  }
 
   @override
   String get myAccount => 'Account';
@@ -3181,18 +3174,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Check each exercise\'s name and set count.';
 
   @override
-  String get programEditorAssign => 'Assign to client';
+  String get programAssignConfirmTitle => 'Add to the schedule?';
 
   @override
-  String get programAssignConfirmTitle => 'Assign to this client?';
-
-  @override
-  String programAssignConfirmBody(String name, String date) {
-    return 'This program will be assigned to $name, and also scheduled on their PT calendar for $date.';
+  String programAssignConfirmBody(String name, String date, String time) {
+    return 'This program will be added to $name\'s PT schedule on $date at $time.';
   }
 
   @override
-  String get programEditorReview => 'Confirm & send';
+  String get programEditorSaveTemplate => 'Save as template';
+
+  @override
+  String get programEditorAddSchedule => 'Add to schedule';
 
   @override
   String get programReviewTitle => 'Confirm & send';

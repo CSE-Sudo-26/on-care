@@ -1360,6 +1360,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chartNoRecord => '기록 없음';
 
   @override
+  String get chartNotYet => '아직 오지 않은 날';
+
+  @override
+  String chartOverGoal(String amount, String unit) {
+    return '목표 초과 +$amount $unit';
+  }
+
+  @override
   String get reportsSendStateSent => '전송됨';
 
   @override
@@ -1766,20 +1774,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myNotifNewMessageHint => '고객이 메시지를 보내면 사이드바 뱃지로 알려드려요';
-
-  @override
-  String get myNotifSessionReminder => '수업 시작 전 알림';
-
-  @override
-  String get myNotifSessionReminderHint => '예정된 세션이 다가오면 대시보드에서 강조해요';
-
-  @override
-  String get myReminderLead => '알림 시점';
-
-  @override
-  String myMinutesBefore(int minutes) {
-    return '$minutes분 전';
-  }
 
   @override
   String get myAccount => '계정';
@@ -3045,18 +3039,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAssignUnsupported => '운동 이름과 세트 수를 확인해 주세요';
 
   @override
-  String get programEditorAssign => '고객에게 배정';
+  String get programAssignConfirmTitle => '일정에 추가할까요?';
 
   @override
-  String get programAssignConfirmTitle => '고객에게 배정할까요?';
-
-  @override
-  String programAssignConfirmBody(String name, String date) {
-    return '이 프로그램이 $name님에게 배정되고, $date PT 스케줄에도 함께 등록돼요.';
+  String programAssignConfirmBody(String name, String date, String time) {
+    return '$date $time에 $name님의 PT 스케줄에 이 프로그램이 추가돼요.';
   }
 
   @override
-  String get programEditorReview => '전송 확인';
+  String get programEditorSaveTemplate => '템플릿 저장';
+
+  @override
+  String get programEditorAddSchedule => '일정 추가';
 
   @override
   String get programReviewTitle => '전송 확인';
