@@ -22,6 +22,7 @@ class SectionCard extends StatelessWidget {
     this.dense = false,
     this.padding,
     this.titleWidget,
+    this.expandChild = false,
   });
 
   /// Card heading.
@@ -47,6 +48,12 @@ class SectionCard extends StatelessWidget {
   /// Overrides the body padding entirely.
   final EdgeInsets? padding;
 
+  /// When true, [child] fills the remaining height instead of sizing to
+  /// its own content, so the card's own box stays a fixed size and only
+  /// [child] scrolls inside it (the card needs a bounded height from its
+  /// parent — e.g. via `Expanded` — for this to have any effect).
+  final bool expandChild;
+
   @override
   Widget build(BuildContext context) {
     final pad =
@@ -65,7 +72,7 @@ class SectionCard extends StatelessWidget {
         padding: pad,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: expandChild ? MainAxisSize.max : MainAxisSize.min,
           children: <Widget>[
             Row(
               children: <Widget>[
@@ -96,7 +103,7 @@ class SectionCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: dense ? AppSpacing.sm : AppSpacing.md),
-            child,
+            expandChild ? Expanded(child: child) : child,
           ],
         ),
       ),
