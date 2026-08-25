@@ -359,10 +359,6 @@ class _DetailEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final int done = entry.exercises
-        .where((String line) => !line.contains('✗'))
-        .length;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Column(
@@ -382,13 +378,21 @@ class _DetailEntry extends StatelessWidget {
                   ),
                 ),
               ),
-              if (entry.exercises.isNotEmpty)
-                Text(
-                  l.workoutDoneOfTotal(entry.exercises.length, done),
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.subtleForeground,
+              // 고객 탭 기록 카드와 같은 표기다(#1484) — 좁은 칸이라
+              // `3/3 · 100%` 로 붙여 적고, 자리가 모자라면 퍼센트부터
+              // 줄어든다.
+              if (entry.totalCount > 0)
+                Flexible(
+                  child: Text(
+                    '${entry.completionCountLabel} · ${entry.displayRate}%',
+                    key: ValueKey<String>('program-done-count-${entry.id}'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.subtleForeground,
+                    ),
                   ),
                 ),
             ],
