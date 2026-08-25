@@ -880,6 +880,7 @@
   "progNoteHint": "Notes to follow while running this program",
   "progSaving": "Saving...",
   "progSaveAction": "Save program",
+  "progSaveNoteAction": "Save note",
   "progExerciseName": "Exercise",
   "progDeleteExercise": "Remove exercise",
   "progSets": "Sets",

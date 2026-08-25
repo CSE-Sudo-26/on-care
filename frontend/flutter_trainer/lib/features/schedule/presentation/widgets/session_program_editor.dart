@@ -163,6 +163,8 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                 hintStyle: const TextStyle(color: AppColors.mutedForeground),
                 border: const OutlineInputBorder(),
                 isDense: true,
+                filled: true,
+                fillColor: AppColors.card,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -187,7 +189,13 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
                   onPressed: _saving ? null : _save,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text(_saving ? l.progSaving : l.progSaveAction),
+                    child: Text(
+                      _saving
+                          ? l.progSaving
+                          : widget.noteOnly
+                          ? l.progSaveNoteAction
+                          : l.progSaveAction,
+                    ),
                   ),
                 ),
               ),
