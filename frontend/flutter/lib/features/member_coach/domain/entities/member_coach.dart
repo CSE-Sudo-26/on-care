@@ -198,6 +198,7 @@ class CoachMessage {
     required this.timeLabel,
     required this.createdAt,
     this.attachment,
+    this.reportWeekStart,
   });
 
   final String id;
@@ -206,6 +207,14 @@ class CoachMessage {
   final String timeLabel;
   final DateTime createdAt;
   final CoachAttachment? attachment;
+
+  /// 이 메시지가 주간 리포트 등록 안내라면 그 주의 월요일. (#1421)
+  ///
+  /// 파일명으로 리포트 여부를 추측하지 않는다 — 트레이너가 보낸 사진에
+  /// `report` 가 들어 있다고 리포트가 되지는 않는다. 리포트라는 사실은
+  /// 보내는 쪽이 실어 보내는 값으로만 판단한다. 트레이너 앱의
+  /// `ClientChatMessage.reportWeekStart` 와 같은 값이다.
+  final DateTime? reportWeekStart;
 
   bool get fromMe => sender == CoachSender.me;
 }

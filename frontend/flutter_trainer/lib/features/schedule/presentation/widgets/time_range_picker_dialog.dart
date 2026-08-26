@@ -17,6 +17,289 @@ Future<TimeRangeValue?> showScheduleTimeRangePicker({
   builder: (_) => _TimeRangePickerDialog(start: start, end: end),
 );
 
+/// 시각 **하나**를 같은 시계로 고르는 선택기 (#1425).
+///
+/// 프로그램 직접 만들기의 PT 등록 시각처럼 시작 시각만 필요한 자리가 쓴다.
+/// 범위 선택기와 같은 값 상자·오전/오후·시계 얼굴을 그대로 쓰고 단계만
+/// 시 → 분 둘이다 — 같은 앱에서 시각을 고르는 방법이 화면마다 달라지지 않게.
+Future<TimeOfDay?> showScheduleTimePicker({
+  required BuildContext context,
+  required TimeOfDay initialTime,
+}) => showDialog<TimeOfDay>(
+  context: context,
+  builder: (_) => _TimePickerDialog(initialTime: initialTime),
+);
+
+class _TimePickerDialog extends StatefulWidget {
+  const _TimePickerDialog({required this.initialTime});
+
+  final TimeOfDay initialTime;
+
+  @override
+  State<_TimePickerDialog> createState() => _TimePickerDialogState();
+}
+
+class _TimePickerDialogState extends State<_TimePickerDialog> {
+  late TimeOfDay _time = widget.initialTime;
+  late final TextEditingController _controller = TextEditingController(
+    text: _clock(_time),
+  );
+
+  /// 0 = 시, 1 = 분. 범위 선택기의 네 단계 중 앞의 둘만 쓴다.
+  int _step = 0;
+
+  bool get _isHour => _step == 0;
+
+  String _clock(TimeOfDay value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _readField(String text) {
+    final match = RegExp(r'^(\d{1,2}):(\d{1,2})$').firstMatch(text.trim());
+    if (match == null) return;
+    final hour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (hour == null || minute == null || hour > 23 || minute > 59) return;
+    setState(() {
+      _time = TimeOfDay(hour: hour, minute: minute);
+      _step = 0;
+    });
+  }
+
+  void _setValue(int value, {required bool advance}) {
+    setState(() {
+      _time = _isHour
+          ? TimeOfDay(hour: value, minute: _time.minute)
+          : TimeOfDay(hour: _time.hour, minute: value);
+      if (advance && _step == 0) _step = 1;
+      _controller.text = _clock(_time);
+    });
+  }
+
+  void _setPeriod(bool pm) {
+    setState(() {
+      _time = TimeOfDay(hour: _time.hour % 12 + (pm ? 12 : 0), minute: _time.minute);
+      _controller.text = _clock(_time);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppToastStyle.dialogTopClearance,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.lg),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        '시간 선택',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _timeValueBox(
+                  label: '시각',
+                  controller: _controller,
+                  active: true,
+                  fieldKey: const ValueKey<String>('session-time-input'),
+                  onTap: () => setState(() => _step = 0),
+                  onSubmitted: _readField,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  height: 48,
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          _isHour ? '시' : '분',
+                          style: const TextStyle(
+                            color: AppColors.mutedForeground,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        key: const ValueKey<String>('session-time-back'),
+                        tooltip: '이전 단계',
+                        onPressed: _step > 0
+                            ? () => setState(() => _step = 0)
+                            : null,
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      IconButton(
+                        key: const ValueKey<String>('session-time-next'),
+                        tooltip: '다음 단계',
+                        onPressed: _step == 0
+                            ? () => setState(() => _step = 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  height: 52,
+                  child: Center(
+                    child: Visibility(
+                      visible: _isHour,
+                      maintainAnimation: true,
+                      maintainSize: true,
+                      maintainState: true,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          _timePeriodButton('오전', pm: false, time: _time, onTap: _setPeriod),
+                          const SizedBox(width: AppSpacing.sm),
+                          _timePeriodButton('오후', pm: true, time: _time, onTap: _setPeriod),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _ClockFace(
+                  key: ValueKey<String>('session-time-step-$_step'),
+                  isHour: _isHour,
+                  selected: _isHour ? _time.hour : _time.minute,
+                  onChanged: (value) => _setValue(value, advance: false),
+                  onSelected: (value) => _setValue(value, advance: true),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextButton(
+                        key: const ValueKey<String>('session-time-cancel'),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('취소'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: FilledButton(
+                        key: const ValueKey<String>('session-time-confirm'),
+                        onPressed: () => Navigator.pop(context, _time),
+                        child: const Text('확인'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 범위 선택기의 값 상자와 같은 모양 — 두 선택기가 같은 필드를 쓴다.
+Widget _timeValueBox({
+  required String label,
+  required TextEditingController controller,
+  required bool active,
+  required Key fieldKey,
+  required VoidCallback onTap,
+  required ValueChanged<String> onSubmitted,
+}) => Container(
+  padding: const EdgeInsets.symmetric(
+    horizontal: AppSpacing.md,
+    vertical: AppSpacing.sm,
+  ),
+  decoration: BoxDecoration(
+    color: active ? AppColors.accentSurface : AppColors.inputBackground,
+    borderRadius: const BorderRadius.all(AppRadius.md),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text(label, style: const TextStyle(color: AppColors.mutedForeground)),
+      TextField(
+        key: fieldKey,
+        controller: controller,
+        onTap: onTap,
+        onChanged: onSubmitted,
+        onSubmitted: onSubmitted,
+        onEditingComplete: () => onSubmitted(controller.text),
+        keyboardType: TextInputType.datetime,
+        textAlign: TextAlign.center,
+        decoration: const InputDecoration(
+          isDense: true,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: active ? AppColors.primary : AppColors.foreground,
+        ),
+      ),
+    ],
+  ),
+);
+
+/// 범위 선택기의 오전·오후 버튼과 같은 모양.
+Widget _timePeriodButton(
+  String label, {
+  required bool pm,
+  required TimeOfDay time,
+  required ValueChanged<bool> onTap,
+}) {
+  final active = (time.hour >= 12) == pm;
+  return Material(
+    color: active ? AppColors.accentSurface : AppColors.inputBackground,
+    borderRadius: const BorderRadius.all(AppRadius.sm),
+    child: InkWell(
+      key: ValueKey<String>('session-time-period-${pm ? 'pm' : 'am'}'),
+      onTap: () => onTap(pm),
+      borderRadius: const BorderRadius.all(AppRadius.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? AppColors.primary : AppColors.mutedForeground,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 /// 시 → 분 → 종료 시 → 종료 분을 한 시계에서 고르는 범위 선택기.
 /// 기본 Material 시간 선택기의 검은 윤곽선을 쓰지 않고 스케줄 화면의 옅은
 /// 채움과 브랜드 남색만 사용한다.

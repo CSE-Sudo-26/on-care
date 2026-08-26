@@ -1,4 +1,5 @@
 import 'package:oncare_trainer/features/clients/domain/entities/client_period.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// One past workout in a client's history (운동기록 sub-tab). Decoded
 /// from the drift `ClientRoutineHistory` row (`exercisesJson` becomes
@@ -72,4 +73,66 @@ List<RoutineHistoryEntry> historyInRange(
         return !day.isBefore(from) && !day.isAfter(to);
       })
       .toList(growable: false);
+}
+
+
+/// 그 기록에서 실제로 한 운동 수와 배정된 수, 그리고 둘로 만든 이행률.
+/// (#1484)
+///
+/// 개수와 퍼센트가 같은 사실을 말해야 한다 — 개수는 `✗` 를 세어 만들고
+/// 퍼센트는 서버 필드(`completionRate`)를 쓰던 탓에 둘이 다른 값을 말할 수
+/// 있었다. 운동 줄이 있으면 그 줄에서 함께 만든다.
+extension RoutineHistoryCompletion on RoutineHistoryEntry {
+  /// 배정된 운동 수. 줄이 없으면 0.
+  int get totalCount => exercises.length;
+
+  /// 그중 마친 수 — `✗` 가 없는 줄이다.
+  int get doneCount =>
+      exercises.where((String line) => !line.contains('✗')).length;
+
+  /// `3/3` — 카드 오른쪽 위, 퍼센트 바로 왼쪽에 선다.
+  String get completionCountLabel => '$doneCount/$totalCount';
+
+  /// 화면에 적는 이행률(%). 운동 줄이 있으면 그 줄로 만든 값이라 개수와 같은
+  /// 사실을 말한다. 줄이 없는 기록(옛 데이터)은 서버 값을 그대로 쓴다.
+  int get displayRate => totalCount == 0
+      ? completionRate
+      : (doneCount / totalCount * 100).round();
+}
+
+/// 화면에 그리는 기록 종류 이름. (#1453)
+///
+/// 옛 시드·픽스처가 `AI 루틴 · 자율 운동` 이라는 이름으로 저장돼 있다. 지금
+/// 두 앱이 같은 대상을 부르는 이름은 `AI 개인운동` 이다. 저장된 문자열을
+/// 고치는 마이그레이션 대신 **그릴 때 정규화**한다 — 이미 깔린 데모 DB 와
+/// 실서버의 옛 행까지 한 번에 같은 이름으로 보이고, 새 시드는 애초에 새
+/// 이름으로 저장한다.
+String routineKindLabel(AppLocalizations l, String raw) {
+  const String legacyAiRoutine = 'AI 루틴 · 자율 운동';
+  return raw.trim() == legacyAiRoutine ? l.workoutKindAiPersonal : raw;
+}
+
+/// 고객 피드백 상자의 제목. 무엇에 달린 말인지까지 적는다. (#1453)
+///
+/// 배정된 개인 운동 기록이고 운동이 하나면 그 운동 이름을 넣는다. 여러 개가
+/// 묶인 기록(PT·프로그램)은 세션 전체에 달린 말이므로 운동 하나에 억지로
+/// 붙이지 않는다.
+String clientFeedbackTitle(AppLocalizations l, RoutineHistoryEntry entry) {
+  if (entry.assignedRoutineId == null) return l.clientFeedbackSession;
+  if (entry.exercises.length != 1) return l.clientFeedbackPersonal;
+  final String name = _exerciseName(entry.exercises.single);
+  return name.isEmpty ? l.clientFeedbackPersonal : l.clientFeedbackOn(name);
+}
+
+/// `런닝 25분 ✓` 처럼 분량·표시가 붙은 줄에서 운동 이름만 떼어 낸다.
+String _exerciseName(String line) {
+  final String cleaned = line.replaceAll('✓', '').replaceAll('✗', '').trim();
+  final RegExp trailing = RegExp(
+    r'\s+(\d+[^\s]*|\(.*\))$',
+  );
+  String name = cleaned;
+  while (trailing.hasMatch(name)) {
+    name = name.replaceFirst(trailing, '').trim();
+  }
+  return name;
 }

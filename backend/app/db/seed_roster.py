@@ -127,7 +127,7 @@ _SUGAR_PER_KCAL = 0.022
 
 #: 상세 기록은 기존 3명만 둔다. 여기 12명의 식단은 지표를 만들기 위한 한 줄짜리다.
 _MEAL_NAME = "기록된 식사"
-_ROUTINE_LABEL = "AI 루틴 · 자율 운동"
+_ROUTINE_LABEL = "AI 개인운동"
 _AWAITING_TEXT = "트레이너님, 이번 주 루틴 관련해서 여쭤볼 게 있어요."
 
 

@@ -14,6 +14,10 @@ WeeklyReport _report({
   required int sodiumOverDays,
   List<int> weekCompletion = const <int>[],
   List<double> sugarWeek = const <double>[],
+  List<int> caloriesWeek = const <int>[],
+  List<double> proteinWeek = const <double>[],
+  int? calorieTarget,
+  double? proteinTarget,
   List<ReportDay> days = const <ReportDay>[],
 }) => WeeklyReport(
   client: makeClient(name: '김민수'),
@@ -26,6 +30,10 @@ WeeklyReport _report({
   isCurrentWeek: false,
   weekCompletion: weekCompletion,
   sugarWeek: sugarWeek,
+  caloriesWeek: caloriesWeek,
+  proteinWeek: proteinWeek,
+  calorieTarget: calorieTarget,
+  proteinTarget: proteinTarget,
   days: days,
 );
 
@@ -61,10 +69,8 @@ void main() {
         makeClient(name: '김민수'),
       );
 
-      expect(
-        summary.points,
-        contains('나트륨 평균 1,916mg · 목표 2,000mg 초과 3일'),
-      );
+      // 어느 기준으로 판정했는지도 문장에 남는다 — 회원마다 목표가 다르다(#1430).
+      expect(summary.points, contains('나트륨 평균 1,916mg · 기본 목표 2,000mg 초과 3일'));
     });
   });
 
@@ -97,9 +103,11 @@ void main() {
       );
 
       // 카드가 스스로 스크롤하기 시작하면 채우려던 자리가 오히려 잘려 보인다.
+      // 자를 때는 위험도 순으로 남긴다 — 입력 순서로 자르면 이행률처럼 무거운
+      // 항목이 조용히 빠진다(#1430).
       expect(actions.length, 2);
-      expect(actions.first, contains('국물'));
-      expect(actions.last, contains('당류'));
+      expect(actions.first, contains('루틴 난이도'));
+      expect(actions.last, contains('국물'));
     });
 
     test('잘 지킨 주에는 다음 단계를 권한다', () {
@@ -114,6 +122,107 @@ void main() {
       );
 
       expect(actions, <String>[_ko.reportsActionHighCompletion]);
+    });
+  });
+
+  group('summaryWatchpoints (#1430)', () {
+    test('당류만 넘긴 주도 주의 주간으로 판정한다', () {
+      final report = _report(
+        completionAvg: 95,
+        sodiumAvg: 1400,
+        sodiumOverDays: 0,
+        sugarWeek: const <double>[72, 80, 61, 90, 0, 0, 0],
+      );
+
+      final kinds = summaryWatchpoints(report).map((w) => w.kind).toList();
+      final summary = ruleReportSummary(report, makeClient(name: '김민수'));
+
+      expect(kinds, contains('sugar'));
+      expect(summary.headline, isNot(contains('목표 범위 안')));
+      expect(summary.headline, contains('당류'));
+      expect(summaryEvidence(report).any((l) => l.contains('당류')), isTrue);
+    });
+
+    test('칼로리는 평균이 아니라 목표와 견준 결과로 말한다', () {
+      final report = _report(
+        completionAvg: 95,
+        sodiumAvg: 1400,
+        sodiumOverDays: 0,
+        calorieTarget: 2600,
+        caloriesWeek: const <int>[1700, 1750, 1680, 1720, 0, 0, 0],
+      );
+
+      final watch = summaryWatchpoints(report);
+
+      expect(watch.any((w) => w.kind == 'calories'), isTrue);
+      expect(
+        summaryEvidence(
+          report,
+        ).any((l) => l.contains('개인 목표 2,600kcal') && l.contains('부족')),
+        isTrue,
+      );
+    });
+
+    test('탄·단·지는 개인 목표가 있을 때만 본다', () {
+      const series = <double>[40, 45, 38, 0, 0, 0, 0];
+      final without = _report(
+        completionAvg: 95,
+        sodiumAvg: 1400,
+        sodiumOverDays: 0,
+        proteinWeek: series,
+      );
+      final withTarget = _report(
+        completionAvg: 95,
+        sodiumAvg: 1400,
+        sodiumOverDays: 0,
+        proteinWeek: series,
+        proteinTarget: 120,
+      );
+
+      expect(
+        summaryWatchpoints(without).any((w) => w.kind == 'macro'),
+        isFalse,
+      );
+      final macro = summaryWatchpoints(
+        withTarget,
+      ).firstWhere((w) => w.kind == 'macro');
+      expect(macro.text, contains('단백질'));
+      expect(macro.text, contains('부족'));
+    });
+
+    test('기록 없는 날과 아직 오지 않은 날은 초과·부족으로 세지 않는다', () {
+      final report = _report(
+        completionAvg: 95,
+        sodiumAvg: 1400,
+        sodiumOverDays: 0,
+        // 화요일까지만 기록한 주 — 나머지 0 을 함께 나누면 평균이 반토막 난다.
+        caloriesWeek: const <int>[2000, 2050, 0, 0, 0, 0, 0],
+        sugarWeek: const <double>[20, 22, 0, 0, 0, 0, 0],
+      );
+
+      final kinds = summaryWatchpoints(report).map((w) => w.kind).toSet();
+
+      expect(kinds.contains('calories'), isFalse);
+      expect(kinds.contains('sugar'), isFalse);
+    });
+
+    test('주의사항이 여럿이면 잘린 수를 카드가 말한다', () {
+      final report = _report(
+        completionAvg: 40,
+        sodiumAvg: 2600,
+        sodiumOverDays: 5,
+        sugarWeek: const <double>[80, 90, 75, 70, 60, 0, 0],
+        caloriesWeek: const <int>[3000, 3100, 2900, 3050, 0, 0, 0],
+      );
+
+      final summary = ruleReportSummary(report, makeClient(name: '김민수'));
+
+      expect(summaryWatchpoints(report).length, greaterThan(summaryMaxPoints));
+      expect(summary.points.length, summaryMaxPoints);
+      expect(summary.points.last, startsWith('외 '));
+      // 가장 위험한 항목이 먼저 남는다.
+      expect(summary.points.first, contains('운동 이행률'));
+      expect(summaryHiddenWatchCount(_ko, report), greaterThan(0));
     });
   });
 
