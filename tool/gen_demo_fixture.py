@@ -61,15 +61,25 @@ HISTORY_WEEKS = 35
 #
 # 유형은 화면이 그대로 쓰는 한국어다(유산소·근력·스트레칭). 회원 앱은 `스트레칭`,
 # 트레이너 그래프는 `스트레칭` 이라 부르지만 재는 값은 같다.
-ROUTINES: list[tuple[str, str, int, str, str, str]] = [
-    ("seed-routine-user-7d4e9a2c5f18-0", "저강도 유산소 (걷기)", 30, "유산소",
-     "혈압 안정에 효과적", "ai"),
-    ("seed-routine-user-7d4e9a2c5f18-1", "하체 스트레칭", 15, "스트레칭",
-     "혈액순환 개선", "trainer"),
-    ("seed-routine-user-7d4e9a2c5f18-2", "코어 강화", 10, "근력",
-     "기초대사량 향상", "ai"),
-    ("seed-routine-user-7d4e9a2c5f18-3", "어깨 관절 보호 스트레칭", 8, "스트레칭",
-     "PT 피드백 반영 · 오른쪽 어깨 보호", "trainer"),
+#
+# 근력 한 줄은 세트·횟수·중량을 함께 든다(#1276). 유형마다 재는 단위가 달라서,
+# 근력 배정이 `10분` 으로만 적히면 회원도 트레이너도 무엇을 몇 번 하라는 것인지
+# 화면에서 읽을 수가 없다. 맨몸 운동의 중량은 `0` 이다 — 두 앱의 중량 칸은 비울
+# 수 없어(최솟값 0) 근력이면 언제나 값을 하나 든다. 같은 운동(`코어 강화 10분`)의
+# 기록이 `RECENT`·`WEEKS` 에도 3세트 · 15회로 있어 두 자리가 같은 수를 말한다.
+ROUTINES: list[dict] = [
+    {"id": "seed-routine-user-7d4e9a2c5f18-0", "name": "저강도 유산소 (걷기)",
+     "minutes": 30, "type": "유산소", "reason": "혈압 안정에 효과적",
+     "source": "ai"},
+    {"id": "seed-routine-user-7d4e9a2c5f18-1", "name": "하체 스트레칭",
+     "minutes": 15, "type": "스트레칭", "reason": "혈액순환 개선",
+     "source": "trainer"},
+    {"id": "seed-routine-user-7d4e9a2c5f18-2", "name": "코어 강화",
+     "minutes": 10, "type": "근력", "reason": "기초대사량 향상",
+     "source": "ai", "sets": 3, "reps": 15, "weight": 0},
+    {"id": "seed-routine-user-7d4e9a2c5f18-3", "name": "어깨 관절 보호 스트레칭",
+     "minutes": 8, "type": "스트레칭",
+     "reason": "PT 피드백 반영 · 오른쪽 어깨 보호", "source": "trainer"},
 ]
 
 # ── 음식 ───────────────────────────────────────────────────────────────────
@@ -204,7 +214,7 @@ ROUTINE: dict[int, list[tuple]] = {
 #
 # 데모는 오늘 하루만 보는 것이 아니다. 지난주·전체로 넘겨도 PT 를 받은 날과 그때
 # 무엇을 몇 세트 했는지, 회원이 뭐라고 했고 트레이너가 뭘 적어 뒀는지가 보여야
-# "충분히 구현된 제품"으로 읽힌다. 예전에는 과거 35주가 전부 `AI 루틴 · 자율 운동`
+# "충분히 구현된 제품"으로 읽힌다. 예전에는 과거 35주가 전부 `AI 개인운동`
 # 한 줄이었고 PT 는 오늘 하나뿐이었다. (#1265)
 #
 # 수요일에 둔다 — 격자에서 비어 있는 요일이라 그날의 자율 운동과 겹치지 않는다.
@@ -444,7 +454,7 @@ RECENT: list[dict] = [
     },
     {
         "offset": 1,
-        "label": "AI 루틴 · 자율 운동",
+        "label": "AI 개인운동",
         "pt": False,
         "clientFeedback": "하체 스트레칭은 시간이 없어서 못 했어요",
         "trainerNote": "",
@@ -466,7 +476,7 @@ RECENT: list[dict] = [
     },
     {
         "offset": 2,
-        "label": "AI 루틴 · 자율 운동",
+        "label": "AI 개인운동",
         "pt": False,
         "clientFeedback": "오늘은 다 했어요! 뿌듯해요 💪",
         "trainerNote": "",
@@ -572,7 +582,7 @@ def _grid_day(
         exercises.append(_exercise(name, kind, minutes, True))
     return {
         "weekday": weekday,
-        "label": "AI 루틴 · 자율 운동",
+        "label": "AI 개인운동",
         "pt": False,
         "exercises": exercises,
         "meals": meals,
@@ -653,17 +663,7 @@ def build() -> dict:
         },
         "recent": recent,
         "weeks": weeks,
-        "routines": [
-            {
-                "id": rid,
-                "name": name,
-                "minutes": minutes,
-                "type": rtype,
-                "reason": reason,
-                "source": source,
-            }
-            for rid, name, minutes, rtype, reason, source in ROUTINES
-        ],
+        "routines": [dict(routine) for routine in ROUTINES],
     }
 
 

@@ -51,17 +51,23 @@ Map<String, Object?> scheduleProgramRegisterToJson({
 };
 
 /// 항목 하나의 계약 형태. 서버 `ProgramItem` 스키마와 1:1 이다 (#1276).
-Map<String, Object?> programItemToJson(ProgramItem item) => <String, Object?>{
-  'name': item.name,
-  'type': item.type,
-  'date': item.date == null ? null : ymd(item.date!),
-  'duration': item.duration,
-  'sets': item.sets,
-  'reps': item.reps,
-  'weight': item.weight,
-  'intensity': item.intensity,
-  'session': item.session,
-};
+///
+/// 유형에 맞지 않는 칸은 싣지 않는다([ProgramItem.byType]) — 유산소를 세트로
+/// 적은 항목이 한 번 저장되면 그 뒤로는 모든 화면이 그렇게 읽는다.
+Map<String, Object?> programItemToJson(ProgramItem raw) {
+  final ProgramItem item = raw.byType;
+  return <String, Object?>{
+    'name': item.name,
+    'type': item.type,
+    'date': item.date == null ? null : ymd(item.date!),
+    'duration': item.duration,
+    'sets': item.sets,
+    'reps': item.reps,
+    'weight': item.weight,
+    'intensity': item.intensity,
+    'session': item.session,
+  };
+}
 
 List<ProgramItem> _programFromJson(Object? raw) {
   if (raw is! List) return const <ProgramItem>[];
@@ -75,6 +81,10 @@ List<ProgramItem> _programFromJson(Object? raw) {
 ///
 /// 세트·중량·시간은 예전에 자유 문자열("10회"·"20kg")로 저장됐다 — 숫자만
 /// 되짚어 읽는다(#1276). 서버의 `LooseInt`/`LooseFloat` 와 같은 규칙이다.
+///
+/// 유형과 맞지 않는 칸은 읽으면서 버린다([ProgramItem.byType]) — 규칙이 서기
+/// 전에 저장된 행이 그대로 남아 있어, 읽는 쪽에서 거르지 않으면 `유산소
+/// 3세트 · 30회` 같은 줄이 계속 화면에 뜬다.
 ProgramItem programItemFromJson(Map<String, Object?> entry) => ProgramItem(
   name: _str(entry['name']),
   // 이 키가 없던 예전 일정은 기본값으로 읽힌다(#1233).
@@ -92,7 +102,7 @@ ProgramItem programItemFromJson(Map<String, Object?> entry) => ProgramItem(
       : 'moderate',
   // 세션 키가 없던 예전 일정은 빈 문자열 — 평면 목록으로 읽힌다(#709).
   session: _str(entry['session']),
-);
+).byType;
 
 /// 숫자거나 숫자를 품은 문자열("10회")이면 정수로. 아니면 null.
 int? looseInt(Object? v) {

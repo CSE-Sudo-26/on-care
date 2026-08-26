@@ -1368,7 +1368,10 @@ def approve_routine_suggestion(
         kind=notification_service.EXERCISE,
         category=notification_service.MEMBER_ROUTINE,
         title="새 운동 루틴이 배정되었어요",
-        body=f"{row.name} · {row.minutes}분",
+        body=f"{row.name} · " + _amount_label(
+            row.type, minutes=row.minutes,
+            sets=row.sets, reps=row.reps, weight=row.weight,
+        ),
     )
     db.commit()
     db.refresh(row)
@@ -1549,7 +1552,12 @@ def _assigned_history_out(row: ExerciseSession) -> RoutineHistoryOut:
         label=row.assigned_routine_name or "배정 루틴 수행",
         completion_rate=100,
         exercises=[
-            f"{row.assigned_routine_name or row.type} · {row.minutes}분 · {row.intensity}"
+            f"{row.assigned_routine_name or row.type} · "
+            + _amount_label(
+                row.type, minutes=row.minutes,
+                sets=row.sets, reps=row.reps, weight=row.weight,
+            )
+            + f" · {row.intensity}"
         ],
         client_feedback=row.member_note,
         trainer_note=row.trainer_feedback,
@@ -1643,7 +1651,9 @@ def assign_routine(
         kind=notification_service.EXERCISE,
         category=notification_service.MEMBER_ROUTINE,
         title="새 운동 루틴이 배정되었어요",
-        body=f"{name} · {minutes}분",
+        body=f"{name} · " + _amount_label(
+            type_, minutes=minutes, sets=sets, reps=reps, weight=weight,
+        ),
     )
     db.commit()
     db.refresh(rt)
@@ -2471,11 +2481,47 @@ def _program_item_label(item: ProgramItem) -> str:
         parts = [f"{item.sets}세트"] if item.sets else []
         if item.reps:
             parts.append(f"{item.reps}회")
-        if item.weight:
+        # 맨몸 운동은 `0kg` 이다 — 두 앱의 중량 칸은 비울 수 없어(최솟값 0)
+        # 근력이면 언제나 값을 하나 든다. 값이 아예 없는 것은 이 규칙이 서기
+        # 전에 저장된 행뿐이라, 그때만 자리를 비운다.
+        if item.weight is not None:
             parts.append(f"{item.weight:g}kg")
     else:
         parts = [f"{item.duration}분"] if item.duration else []
     return " ".join([item.name, *parts])
+
+
+def _amount_label(
+    type_: str,
+    *,
+    minutes: int,
+    sets: int | None,
+    reps: int | None,
+    weight: float | None,
+) -> str:
+    """운동 한 줄이 말하는 **양**. 근력은 세트·횟수·중량, 나머지는 시간이다.
+
+    `_program_item_label` 과 같은 규칙이고(#1276), 프로그램이 아니라 배정 한 건을
+    다루는 자리(알림 본문·배정 수행 이력)가 쓴다. 예전에는 그 두 곳이 유형과
+    무관하게 `분` 으로 적어, 근력을 배정받은 회원의 알림이 `스쿼트 · 15분` 이라고
+    말했다 — 무엇을 몇 번 하라는 것인지가 빠진 문장이다.
+
+    근력인데 세트가 아예 없는 것은 이 칸이 생기기 전의 배정뿐이라, 그때만
+    예전처럼 분으로 되돌아간다.
+
+    유형은 두 어휘로 들어온다 — 트레이너 배정은 한글(`근력`), 회원 기록은 영문
+    코드(`strength`)다. 한쪽만 보면 다른 쪽이 조용히 분으로 떨어지므로 정규화해서
+    비교한다.
+    """
+    if exercise_types.normalize(type_) != exercise_types.STRENGTH or sets is None:
+        return f"{minutes}분"
+    parts = [f"{sets}세트"]
+    if reps:
+        parts.append(f"{reps}회")
+    # 맨몸 운동은 `0kg` 이다 — 중량 칸을 비울 수 없으므로 0 도 적은 값이다.
+    if weight is not None:
+        parts.append(f"{weight:g}kg")
+    return " · ".join(parts)
 
 
 def _program_minutes_and_type(

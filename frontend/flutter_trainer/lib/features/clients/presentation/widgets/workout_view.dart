@@ -782,14 +782,15 @@ class _PendingRoutines extends ConsumerWidget {
 /// 규칙이다 — 다만 이 목록은 [RoutineSuggestion] 이 아니라 이미 배정된
 /// [AssignedRoutine] 을 다룬다.
 ///
-/// 중량은 적었을 때만 붙인다 — 맨몸 운동에 `0kg` 이 붙으면 트레이너가 적지
-/// 않은 값을 적은 것처럼 읽힌다.
+/// 맨몸 운동의 중량은 `0kg` 이다 — 중량 칸은 비울 수 없고(최솟값 0) 근력을
+/// 고르면 언제나 값을 하나 든다. 값이 아예 없는 것은 규칙이 서기 전에 저장된
+/// 행뿐이라, 그때만 자리를 비운다.
 String _pendingRoutineAmountLabel(AppLocalizations l, AssignedRoutine routine) {
   if (routine.type != '근력') return l.minutesShort(routine.minutes);
   final List<String> parts = <String>[
     if (routine.sets != null) l.progSetsValue(routine.sets!),
     if (routine.reps != null) l.progRepsValue(routine.reps!),
-    if (routine.weight != null && routine.weight! > 0)
+    if (routine.weight != null)
       '${_trimZero(routine.weight!)}${l.routineUnitKg}',
   ];
   return parts.isEmpty ? l.minutesShort(routine.minutes) : parts.join(' · ');
