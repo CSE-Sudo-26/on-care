@@ -11,6 +11,9 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 /// 늘 세로 배치로 그린다 — CalendarDatePicker 자체는 orientation 에 따라
 /// 모양을 바꾸지 않아 별도 세로 고정 트릭이 필요 없다. 앱의 시간
 /// 선택기와 같은 우측 상단 X 와, 하단 취소·확인 버튼을 모두 둔다.
+///
+/// Material 기본 다이얼로그처럼 연필 아이콘으로 그리드([CalendarDatePicker])
+/// ↔ 키보드 직접 입력([InputDatePickerFormField]) 을 전환할 수 있다.
 Future<DateTime?> showPortraitDatePicker({
   required BuildContext context,
   required DateTime initialDate,
@@ -46,10 +49,30 @@ class _PortraitDatePickerDialog extends StatefulWidget {
 
 class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
   late DateTime _selected = widget.initialDate;
+  final GlobalKey<FormState> _inputFormKey = GlobalKey<FormState>();
+  DatePickerEntryMode _entryMode = DatePickerEntryMode.calendar;
+
+  void _toggleEntryMode() {
+    setState(() {
+      _entryMode = _entryMode == DatePickerEntryMode.calendar
+          ? DatePickerEntryMode.input
+          : DatePickerEntryMode.calendar;
+    });
+  }
+
+  void _confirm() {
+    if (_entryMode == DatePickerEntryMode.input) {
+      final FormState? form = _inputFormKey.currentState;
+      if (form == null || !form.validate()) return;
+      form.save();
+    }
+    Navigator.of(context).pop(_selected);
+  }
 
   @override
   Widget build(BuildContext context) {
     final MaterialLocalizations l = MaterialLocalizations.of(context);
+    final bool isCalendar = _entryMode == DatePickerEntryMode.calendar;
     return Dialog(
       key: const Key('portraitDatePicker'),
       backgroundColor: AppColors.card,
@@ -86,19 +109,43 @@ class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
                     ),
                   ),
                   IconButton(
+                    tooltip: isCalendar
+                        ? l.inputDateModeButtonLabel
+                        : l.calendarModeButtonLabel,
+                    onPressed: _toggleEntryMode,
+                    icon: Icon(isCalendar ? Icons.edit : Icons.calendar_today),
+                  ),
+                  IconButton(
                     tooltip: l.closeButtonTooltip,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
                   ),
                 ],
               ),
-              CalendarDatePicker(
-                initialDate: widget.initialDate,
-                firstDate: widget.firstDate,
-                lastDate: widget.lastDate,
-                onDateChanged: (DateTime date) =>
-                    setState(() => _selected = date),
-              ),
+              if (isCalendar)
+                CalendarDatePicker(
+                  initialDate: widget.initialDate,
+                  firstDate: widget.firstDate,
+                  lastDate: widget.lastDate,
+                  onDateChanged: (DateTime date) =>
+                      setState(() => _selected = date),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  child: Form(
+                    key: _inputFormKey,
+                    child: InputDatePickerFormField(
+                      initialDate: _selected,
+                      firstDate: widget.firstDate,
+                      lastDate: widget.lastDate,
+                      onDateSubmitted: (DateTime date) =>
+                          setState(() => _selected = date),
+                      onDateSaved: (DateTime date) =>
+                          setState(() => _selected = date),
+                    ),
+                  ),
+                ),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
@@ -113,7 +160,7 @@ class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
                   Expanded(
                     child: FilledButton(
                       key: const Key('portraitDatePickerConfirm'),
-                      onPressed: () => Navigator.of(context).pop(_selected),
+                      onPressed: _confirm,
                       child: Text(l.okButtonLabel),
                     ),
                   ),

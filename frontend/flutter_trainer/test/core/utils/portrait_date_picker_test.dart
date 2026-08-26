@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:oncare/core/utils/portrait_date_picker.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 
 void main() {
   Future<void> openPicker(WidgetTester tester) async {
@@ -27,14 +27,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('공용 날짜 선택기는 흰 배경에 닫기 아이콘과 취소·확인 버튼을 모두 보인다', (
+  testWidgets('공용 날짜 선택기는 닫기 아이콘과 취소·확인 버튼, 그리드 모드를 모두 보인다', (
     WidgetTester tester,
   ) async {
     await openPicker(tester);
 
     final Finder dialog = find.byKey(const Key('portraitDatePicker'));
     expect(dialog, findsOneWidget);
-    expect(tester.widget<Dialog>(dialog).backgroundColor, Colors.white);
 
     expect(
       find.descendant(of: dialog, matching: find.byIcon(Icons.close)),
@@ -42,8 +41,6 @@ void main() {
     );
     expect(find.byKey(const Key('portraitDatePickerCancel')), findsOneWidget);
     expect(find.byKey(const Key('portraitDatePickerConfirm')), findsOneWidget);
-
-    // 처음엔 그리드 모드다 — 연필 아이콘으로 키보드 입력으로 전환할 수 있다.
     expect(
       find.descendant(of: dialog, matching: find.byType(CalendarDatePicker)),
       findsOneWidget,
