@@ -27,7 +27,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('공용 날짜 선택기는 흰 배경에 취소 텍스트 없이 닫기 아이콘과 확인 버튼만 보인다', (
+  testWidgets('공용 날짜 선택기는 흰 배경에 닫기 아이콘과 취소·확인 버튼을 모두 보인다', (
     WidgetTester tester,
   ) async {
     await openPicker(tester);
@@ -36,16 +36,12 @@ void main() {
     expect(dialog, findsOneWidget);
     expect(tester.widget<Dialog>(dialog).backgroundColor, Colors.white);
 
-    // 하단 '취소' 텍스트 버튼이 없다 — 닫기는 우측 상단 X 하나로 충분하다.
-    expect(find.text('취소'), findsNothing);
     expect(
       find.descendant(of: dialog, matching: find.byIcon(Icons.close)),
       findsOneWidget,
     );
-    expect(
-      find.byKey(const Key('portraitDatePickerConfirm')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('portraitDatePickerCancel')), findsOneWidget);
+    expect(find.byKey(const Key('portraitDatePickerConfirm')), findsOneWidget);
   });
 
   testWidgets('우측 상단 X 를 누르면 아무 값 없이 닫힌다', (WidgetTester tester) async {
@@ -71,6 +67,34 @@ void main() {
     await tester.tap(find.text('달력 열기'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    expect(result, isNull);
+  });
+
+  testWidgets('취소를 누르면 아무 값 없이 닫힌다', (WidgetTester tester) async {
+    DateTime? result = DateTime(1999);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (BuildContext context) => TextButton(
+            onPressed: () async {
+              result = await showPortraitDatePicker(
+                context: context,
+                initialDate: DateTime(2026, 8, 24),
+                firstDate: DateTime(2026),
+                lastDate: DateTime(2027),
+              );
+            },
+            child: const Text('달력 열기'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('달력 열기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('portraitDatePickerCancel')));
     await tester.pumpAndSettle();
 
     expect(result, isNull);

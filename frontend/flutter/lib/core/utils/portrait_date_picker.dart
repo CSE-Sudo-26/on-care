@@ -5,13 +5,13 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 
 /// 앱 전역에서 날짜 하나를 고르는 공용 달력 모달.
 ///
-/// Material 기본 [showDatePicker] 는 하단에 취소/확인 텍스트 버튼을 나란히
-/// 두고, 넓은 화면에서는 달력을 좌우로 나눈 landscape 모양으로 바꾼다.
-/// 이 화면은 그 대신 [CalendarDatePicker](Material 이 그리드에만 쓰는
-/// 하위 위젯)를 직접 감싸, 앱의 다른 모달들과 같은 우측 상단 X 로 닫고
-/// 확인 버튼 하나만 그리드 바로 아래 둔다 — 취소는 X 하나로 충분하고,
-/// CalendarDatePicker 자체는 orientation 에 따라 모양을 바꾸지 않아 별도
-/// 세로 고정 트릭도 필요 없다.
+/// Material 기본 [showDatePicker] 는 넓은 화면에서 달력을 좌우로 나눈
+/// landscape 모양으로 바꾼다. 이 화면은 그 대신 [CalendarDatePicker]
+/// (Material 이 그리드에만 쓰는 하위 위젯)를 직접 감싸 늘 세로 배치로
+/// 그린다 — CalendarDatePicker 자체는 orientation 에 따라 모양을 바꾸지
+/// 않아 별도 세로 고정 트릭이 필요 없다. 우측 상단 X 와 하단 취소·확인
+/// 버튼을 모두 둔다 — 앱의 다른 모달과 같은 X 로도 닫히고, 하단
+/// 취소·확인은 다른 다이얼로그 액션과 같은 자리를 유지한다.
 Future<DateTime?> showPortraitDatePicker({
   required BuildContext context,
   required DateTime initialDate,
@@ -110,13 +110,24 @@ class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
                     setState(() => _selected = date),
               ),
               const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  key: const Key('portraitDatePickerConfirm'),
-                  onPressed: () => Navigator.of(context).pop(_selected),
-                  child: Text(l.okButtonLabel),
-                ),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextButton(
+                      key: const Key('portraitDatePickerCancel'),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l.cancelButtonLabel),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: FilledButton(
+                      key: const Key('portraitDatePickerConfirm'),
+                      onPressed: () => Navigator.of(context).pop(_selected),
+                      child: Text(l.okButtonLabel),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
