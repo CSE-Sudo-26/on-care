@@ -143,7 +143,7 @@ void main() {
   });
 
   group('일정 추가', () {
-    testWidgets('넓은 화면에서 날짜 → 시간 범위 → 추가가 같은 높이의 한 줄이다', (tester) async {
+    testWidgets('넓은 화면에서 날짜 → 시간 범위 → 추가가 오른쪽 정렬로 한 줄이다', (tester) async {
       await pumpEditor(tester);
       final date = find.byKey(const ValueKey<String>('program-register-date'));
       final time = find.byKey(const ValueKey<String>('program-register-time'));
@@ -154,14 +154,13 @@ void main() {
       final dateRect = tester.getRect(date);
       final timeRect = tester.getRect(time);
       final sendRect = tester.getRect(send);
-      expect(dateRect.top, timeRect.top);
-      expect(timeRect.top, sendRect.top);
+      // 날짜·시간은 예약 슬롯과 같은 라벨+박스 UI라 `일정 추가` 버튼보다
+      // 키가 크다 — 아래(bottom) 기준으로 같은 줄에 나란히 선다.
+      expect(dateRect.bottom, timeRect.bottom);
+      expect(timeRect.bottom, sendRect.bottom);
       expect(dateRect.left, lessThan(timeRect.left));
       expect(timeRect.left, lessThan(sendRect.left));
-      expect(
-        <double>[dateRect.height, timeRect.height, sendRect.height],
-        <double>[36, 36, 36],
-      );
+      expect(dateRect.height, timeRect.height);
       expect(
         find.descendant(
           of: date,
@@ -171,7 +170,7 @@ void main() {
       );
     });
 
-    testWidgets('좁은 화면·글자 확대에서 순서와 왼쪽 기준을 유지해 줄바꿈한다', (tester) async {
+    testWidgets('좁은 화면·글자 확대에서 순서와 오른쪽 기준을 유지해 줄바꿈한다', (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(600, 1000);
       addTearDown(tester.view.resetPhysicalSize);
@@ -213,14 +212,27 @@ void main() {
       await tester.ensureVisible(controls.first);
       await tester.pump();
       final rects = controls.map(tester.getRect).toList();
+      // 같은 줄에서는 순서(왼→오)를 유지하고, 다음 줄로 넘어가면 아래로
+      // 내려간다.
       for (var i = 1; i < rects.length; i++) {
         final followsInSameRun =
             rects[i].top == rects[i - 1].top &&
             rects[i].left > rects[i - 1].left;
-        final startsLaterRun =
-            rects[i].top > rects[i - 1].top &&
-            rects[i].left == rects.first.left;
+        final startsLaterRun = rects[i].top > rects[i - 1].top;
         expect(followsInSameRun || startsLaterRun, isTrue);
+      }
+      // 오른쪽 정렬이라, 각 줄의 마지막 칸은 모두 같은 오른쪽 기준선에
+      // 붙는다.
+      final rightEdge = rects.fold<double>(
+        0,
+        (max, r) => r.right > max ? r.right : max,
+      );
+      for (var i = 0; i < rects.length; i++) {
+        final isLastInRow =
+            i == rects.length - 1 || rects[i + 1].top != rects[i].top;
+        if (isLastInRow) {
+          expect(rects[i].right, closeTo(rightEdge, 1));
+        }
       }
       expect(tester.takeException(), isNull);
     });
