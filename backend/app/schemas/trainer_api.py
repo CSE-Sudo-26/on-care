@@ -997,6 +997,7 @@ class ScheduleProgramRegisterRequest(BaseModel):
 
     date: str = Field(max_length=10)
     time: str = Field(max_length=10)
+    duration_minutes: int = Field(gt=0, le=600)
     client_name: str = Field(default="", max_length=100)
     program: list[ProgramItem] = Field(min_length=1, max_length=30)
 

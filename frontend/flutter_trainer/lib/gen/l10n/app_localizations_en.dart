@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1785,6 +1786,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get progSaveAction => 'Save program';
 
   @override
+  String get progSaveNoteAction => 'Save note';
+
+  @override
   String get progExerciseName => 'Exercise';
 
   @override
@@ -2232,7 +2236,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachRegisteredAttachedExisting(String date) {
-    return 'There was already a session planned on $date, so the program was only attached to it — the time you picked wasn\'t applied';
+    return 'There was already a session planned on $date, so the program was only attached to it — the time range you picked wasn\'t applied';
   }
 
   @override

@@ -34,8 +34,9 @@ class ProgramEditorWorkspace extends StatefulWidget {
     required this.onSend,
     required this.registerDate,
     required this.onRegisterDateChanged,
-    required this.registerTime,
-    required this.onRegisterTimeChanged,
+    required this.registerStartTime,
+    required this.registerEndTime,
+    required this.onRegisterTimeRangeChanged,
     this.template,
     this.templateRevision = 0,
     this.initialDraft,
@@ -58,10 +59,11 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final DateTime registerDate;
   final ValueChanged<DateTime> onRegisterDateChanged;
 
-  /// PT 스케줄에 등록할 시각 — 위 날짜와 함께 `일정 추가` 다이얼로그에서
-  /// 고른다. 기본값(오전 10시)도 호출부가 들고 있다.
-  final TimeOfDay registerTime;
-  final ValueChanged<TimeOfDay> onRegisterTimeChanged;
+  /// PT 스케줄에 등록할 시작·종료 시각. 기본값은 호출부가 들고
+  /// 있고, 범위 선택기에서 두 값을 함께 바꾼다.
+  final TimeOfDay registerStartTime;
+  final TimeOfDay registerEndTime;
+  final ValueChanged<TimeRangeValue> onRegisterTimeRangeChanged;
 
   /// A saved draft to open instead of starting from the client's goal.
   ///
@@ -112,6 +114,11 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   int _newExerciseMinutes = 30;
   String _newExerciseIntensity = 'moderate';
   var _nextId = 2;
+
+  bool get _hasValidRegisterTimeRange =>
+      _minutes(widget.registerEndTime) > _minutes(widget.registerStartTime);
+
+  int _minutes(TimeOfDay value) => value.hour * 60 + value.minute;
 
   @override
   void didChangeDependencies() {
@@ -508,8 +515,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          // 박스 하단 — PT 등록 날짜·시각은 다이얼로그 뒤에 숨기지 않고
-          // 칩 형태로 바로 보인다. 그 아래 `일정 추가`(예전 `보내기`)가
+          // 박스 하단 — PT 등록 날짜·시간 범위·일정 추가를 순서대로
+          // 같은 Wrap에 둔다. 넓으면 한 줄, 좁거나 글자가 커지면 왼쪽
+          // 기준과 순서를 유지한 채 줄바꿈된다. `일정 추가`(예전 `보내기`)가
           // 확인창을 거쳐 실제로 배정+PT 등록까지 한다. 실제 전송·등록
           // API 호출은 전부 호출부(`onSend`)가 한다 — 여기는 트리거와
           // 등록일·시각 값만 쥔다.
@@ -520,34 +528,49 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               ActionButton(
                 key: const ValueKey<String>('program-register-date'),
                 label: ymd(widget.registerDate),
-                icon: Icons.calendar_month_outlined,
+                icon: Icons.calendar_today_outlined,
                 onPressed: () => unawaited(_pickRegisterDate(context)),
               ),
               ActionButton(
                 key: const ValueKey<String>('program-register-time'),
-                label: widget.registerTime.format(context),
+                label:
+                    '${widget.registerStartTime.format(context)} – '
+                    '${widget.registerEndTime.format(context)}',
                 icon: Icons.schedule_outlined,
-                onPressed: () => unawaited(_pickRegisterTime(context)),
+                onPressed: () => unawaited(_pickRegisterTimeRange(context)),
+              ),
+              Tooltip(
+                message: !_draft.supportsAssignment
+                    ? l.programEditorAssignUnsupported
+                    : !_hasValidRegisterTimeRange
+                    ? l.schedEndBeforeStart
+                    : '',
+                child: ActionButton(
+                  key: const ValueKey<String>('program-editor-send'),
+                  label: l.programEditorAddSchedule,
+                  primary: true,
+                  onPressed:
+                      _draft.supportsAssignment &&
+                          _hasValidRegisterTimeRange &&
+                          !widget.sending
+                      ? () => widget.onSend(_draft)
+                      : null,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Tooltip(
-              message: _draft.supportsAssignment
-                  ? ''
-                  : l.programEditorAssignUnsupported,
-              child: ActionButton(
-                key: const ValueKey<String>('program-editor-send'),
-                label: l.programEditorAddSchedule,
-                primary: true,
-                onPressed: _draft.supportsAssignment && !widget.sending
-                    ? () => widget.onSend(_draft)
-                    : null,
+          if (!_hasValidRegisterTimeRange) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l.schedEndBeforeStart,
+              key: const ValueKey<String>('program-register-time-invalid'),
+              style: const TextStyle(
+                color: AppColors.destructive,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -570,20 +593,20 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       lastDate: today.add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    widget.onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
+    widget.onRegisterDateChanged(
+      DateTime(picked.year, picked.month, picked.day),
+    );
   }
 
-  /// 등록할 시각을 고른다 — 스케줄 탭과 같은 시각 선택 모달이다(#1425).
-  ///
-  /// 프로그램은 시작 시각 하나만 필요하므로 시작·종료 범위 모달 대신 같은
-  /// 필드·시계 다이얼을 쓰는 단일 시각용을 부른다.
-  Future<void> _pickRegisterTime(BuildContext context) async {
-    final picked = await showScheduleTimePicker(
+  /// 등록할 시작·종료 시각을 스케줄 탭과 같은 범위 선택기로 고른다.
+  Future<void> _pickRegisterTimeRange(BuildContext context) async {
+    final picked = await showScheduleTimeRangePicker(
       context: context,
-      initialTime: widget.registerTime,
+      start: widget.registerStartTime,
+      end: widget.registerEndTime,
     );
     if (picked == null) return;
-    widget.onRegisterTimeChanged(picked);
+    widget.onRegisterTimeRangeChanged(picked);
   }
 
   void _update(ProgramEditorState next) => setState(() => _draft = next);
@@ -631,7 +654,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   void _resetSession(int index) {
     _replaceSession(
       index,
-      _draft.sessions[index].copyWith(exercises: const <ProgramExerciseDraft>[]),
+      _draft.sessions[index].copyWith(
+        exercises: const <ProgramExerciseDraft>[],
+      ),
     );
   }
 
@@ -982,7 +1007,9 @@ class _SessionEditorState extends State<_SessionEditor> {
                             ),
                             border: const OutlineInputBorder(
                               borderRadius: BorderRadius.all(AppRadius.sm),
-                              borderSide: BorderSide(color: AppColors.borderStrong),
+                              borderSide: BorderSide(
+                                color: AppColors.borderStrong,
+                              ),
                             ),
                             enabledBorder: const OutlineInputBorder(
                               borderRadius: BorderRadius.all(AppRadius.sm),
@@ -1229,7 +1256,8 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
               // 직접 추가는 `트레이너 추가` 로 — `source` 는 그대로 서버
               // 계약값(`trainer`)이라 [templateName] 이 있을 때만 우선한다
               // (#1029).
-              if (exercise.templateName != null || exercise.source == 'trainer') ...<Widget>[
+              if (exercise.templateName != null ||
+                  exercise.source == 'trainer') ...<Widget>[
                 const SizedBox(width: AppSpacing.xs),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -1488,27 +1516,19 @@ List<String> programExerciseMetrics(
 }) {
   final metrics = <String>[];
   if (exercise.isStrength) {
-    metrics.add(
-      korean ? '${exercise.sets}세트' : '${exercise.sets} sets',
-    );
+    metrics.add(korean ? '${exercise.sets}세트' : '${exercise.sets} sets');
     if (exercise.reps > 0) {
-      metrics.add(
-        korean ? '${exercise.reps}회' : '${exercise.reps} reps',
-      );
+      metrics.add(korean ? '${exercise.reps}회' : '${exercise.reps} reps');
     }
     if (exercise.weight > 0) {
       final double w = exercise.weight;
       metrics.add('${w == w.roundToDouble() ? w.round() : w}kg');
     }
   } else {
-    metrics.add(
-      korean ? '${exercise.minutes}분' : '${exercise.minutes} min',
-    );
+    metrics.add(korean ? '${exercise.minutes}분' : '${exercise.minutes} min');
   }
   return metrics;
 }
-
-
 
 class _DraftField extends StatelessWidget {
   const _DraftField({

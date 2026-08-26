@@ -898,6 +898,7 @@
   "progNoteHint": "Notes to follow while running this program",
   "progSaving": "Saving...",
   "progSaveAction": "Save program",
+  "progSaveNoteAction": "Save note",
   "progExerciseName": "Exercise",
   "progDeleteExercise": "Remove exercise",
   "progSets": "Sets",
@@ -1111,7 +1112,7 @@
       }
     }
   },
-  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn't applied",
+  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time range you picked wasn't applied",
   "@coachRegisteredAttachedExisting": {"placeholders": {"date": {"type": "String"}}},
   "coachRegisterOn": "Add to the {date} PT schedule",
   "@coachRegisterOn": {

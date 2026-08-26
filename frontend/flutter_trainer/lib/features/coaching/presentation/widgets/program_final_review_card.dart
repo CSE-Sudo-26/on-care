@@ -12,7 +12,8 @@ Future<bool?> showProgramAssignConfirmDialog(
   BuildContext context, {
   required String clientName,
   required DateTime registerDate,
-  required TimeOfDay registerTime,
+  required TimeOfDay registerStartTime,
+  required TimeOfDay registerEndTime,
 }) {
   return showDialog<bool>(
     context: context,
@@ -34,7 +35,8 @@ Future<bool?> showProgramAssignConfirmDialog(
             l.programAssignConfirmBody(
               clientName,
               ymd(registerDate),
-              registerTime.format(dialogContext),
+              '${registerStartTime.format(dialogContext)} – '
+              '${registerEndTime.format(dialogContext)}',
             ),
             style: const TextStyle(
               fontSize: 12,

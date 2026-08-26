@@ -1,54 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/design_system/tokens/radius.dart';
+import 'package:oncare/design_system/tokens/spacing.dart';
 
-/// [showDatePicker] 를 늘 세로(portrait) 배치의 달력 그리드로 띄운다.
+/// 앱 전역에서 날짜 하나를 고르는 공용 달력 모달.
 ///
-/// Material 은 다이얼로그를 담는 화면이 가로로 넓으면(landscape) 달력을
-/// 헤더·그리드가 좌우로 나뉜 모양으로 바꾼다. 넓은 데스크톱 창에서 열리면
-/// 그대로 두는 것만으로 모달마다 매번 좌우로 퍼진 달력이 뜬다 — 세로로
-/// 좁고 긴 모양을 원한다면 그때마다 다이얼로그 자신의 화면 판단만
-/// 속여야 한다.
-///
-/// 다이얼로그의 `MediaQuery.size` 만 가로·세로를 뒤바꿔 넘긴다 — 앱
-/// 전체가 아니라 이 다이얼로그의 내부 레이아웃 판단(`Orientation`)만
-/// 영향을 받는다. 이미 세로인 화면(좁은 창)에서는 그대로 둔다.
-///
-/// 처음 뜨는 모습은 달력 그리드다(`DatePickerEntryMode.calendar`) — 키보드
-/// 입력은 우측 상단 연필 아이콘으로 언제든 전환할 수 있어, 기본을 입력
-/// 모드로 두면 오히려 한 번 더 눌러야 늘 보던 달력이 나온다.
+/// Material 기본 [showDatePicker] 는 넓은 화면에서 달력을 좌우로 나눈
+/// landscape 모양으로 바꾼다. 이 화면은 그 대신 [CalendarDatePicker]
+/// (Material 이 그리드에만 쓰는 하위 위젯)를 직접 감싸 늘 세로 배치로
+/// 그린다 — CalendarDatePicker 자체는 orientation 에 따라 모양을 바꾸지
+/// 않아 별도 세로 고정 트릭이 필요 없다. 우측 상단 X 와 하단 취소·확인
+/// 버튼을 모두 둔다 — 앱의 다른 모달과 같은 X 로도 닫히고, 하단
+/// 취소·확인은 다른 다이얼로그 액션과 같은 자리를 유지한다.
 Future<DateTime?> showPortraitDatePicker({
   required BuildContext context,
   required DateTime initialDate,
   required DateTime firstDate,
   required DateTime lastDate,
-  DatePickerEntryMode initialEntryMode = DatePickerEntryMode.calendar,
-  TransitionBuilder? builder,
 }) {
-  return showDatePicker(
+  return showDialog<DateTime>(
     context: context,
-    initialDate: initialDate,
-    firstDate: firstDate,
-    lastDate: lastDate,
-    initialEntryMode: initialEntryMode,
-    builder: (context, child) {
-      final Widget whitePicker = Theme(
-        data: Theme.of(context).copyWith(
-          datePickerTheme: Theme.of(context).datePickerTheme.copyWith(
-            backgroundColor: Colors.white,
-            headerBackgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
+    barrierColor: Colors.black54,
+    builder: (BuildContext ctx) => _PortraitDatePickerDialog(
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    ),
+  );
+}
+
+class _PortraitDatePickerDialog extends StatefulWidget {
+  const _PortraitDatePickerDialog({
+    required this.initialDate,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  final DateTime initialDate;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  @override
+  State<_PortraitDatePickerDialog> createState() =>
+      _PortraitDatePickerDialogState();
+}
+
+class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
+  late DateTime _selected = widget.initialDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final MaterialLocalizations l = MaterialLocalizations.of(context);
+    return Dialog(
+      key: const Key('portraitDatePicker'),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.card),
+      ),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      l.datePickerHelpText,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Material(
+                    color: AppColors.accent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Tooltip(
+                        message: l.closeButtonTooltip,
+                        child: const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Icon(Icons.close, size: 18),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              CalendarDatePicker(
+                initialDate: widget.initialDate,
+                firstDate: widget.firstDate,
+                lastDate: widget.lastDate,
+                onDateChanged: (DateTime date) =>
+                    setState(() => _selected = date),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextButton(
+                      key: const Key('portraitDatePickerCancel'),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l.cancelButtonLabel),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: FilledButton(
+                      key: const Key('portraitDatePickerConfirm'),
+                      onPressed: () => Navigator.of(context).pop(_selected),
+                      child: Text(l.okButtonLabel),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        child: child!,
-      );
-      final Widget themed = builder == null
-          ? whitePicker
-          : builder(context, whitePicker);
-      final MediaQueryData query = MediaQuery.of(context);
-      if (query.size.width <= query.size.height) return themed;
-      return MediaQuery(
-        data: query.copyWith(size: Size(query.size.height, query.size.width)),
-        child: themed,
-      );
-    },
-  );
+      ),
+    );
+  }
 }

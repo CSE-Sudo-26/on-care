@@ -767,14 +767,9 @@ Future<void> submitConsultation(
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 
-  // 확인 버튼을 **문구로 찾지 않는다** — 로케일에 따라 '확인'도 'OK'도 된다.
-  // 다이얼로그의 액션은 [취소, 확인] 순서라 마지막이 확인이다.
-  final Finder dialog = find.byType(DatePickerDialog);
+  final Finder dialog = find.byKey(const Key('portraitDatePicker'));
   await pumpUntil(tester, dialog, step: '날짜 선택 다이얼로그');
-  final Finder ok = find
-      .descendant(of: dialog, matching: find.byType(TextButton))
-      .last;
-  await tester.tap(ok);
+  await tester.tap(find.byKey(const Key('portraitDatePickerConfirm')));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 
