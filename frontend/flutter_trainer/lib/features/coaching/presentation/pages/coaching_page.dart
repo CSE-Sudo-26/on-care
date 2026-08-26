@@ -1049,7 +1049,12 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          ClientAvatar(label: client.avatar, size: 32),
+                          // 아바타 크기는 리포트 탭 고객 목록과 같은
+                          // 기준을 쓴다(#1423).
+                          ClientAvatar(
+                            label: client.avatar,
+                            size: clientListAvatarSize,
+                          ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Column(
@@ -1121,23 +1126,23 @@ class _WeekCompletionBars extends StatelessWidget {
       child: week.length != weekdayCount
           ? EmptyHint(message: l.reportsNoWorkoutsThisWeek)
           : BarSeriesChart(
-            key: const ValueKey<String>('program-week-completion-chart'),
-            title: l.reportsCompletionByDay,
-            values: week,
-            labels: weekdayLabels(l),
-            maxValue: 100,
-            height: 72,
-            showValues: true,
-            valueSuffix: '%',
-            // 로스터의 계열은 늘 이번 주다 — 아직 오지 않은 요일을 0% 로
-            // 그리면 `0% 수행` 이라는 다른 뜻이 된다.
-            pendingFromIndex: elapsedWeekdays(nowKst()),
-            // 지난 날인데 기록이 없는 요일도 0% 가 아니다.
-            missingIndices: <int>{
-              for (var i = 0; i < elapsedWeekdays(nowKst()); i++)
-                if (i < week.length && week[i] == 0) i,
-            },
-          ),
+              key: const ValueKey<String>('program-week-completion-chart'),
+              title: l.reportsCompletionByDay,
+              values: week,
+              labels: weekdayLabels(l),
+              maxValue: 100,
+              height: 72,
+              showValues: true,
+              valueSuffix: '%',
+              // 로스터의 계열은 늘 이번 주다 — 아직 오지 않은 요일을 0% 로
+              // 그리면 `0% 수행` 이라는 다른 뜻이 된다.
+              pendingFromIndex: elapsedWeekdays(nowKst()),
+              // 지난 날인데 기록이 없는 요일도 0% 가 아니다.
+              missingIndices: <int>{
+                for (var i = 0; i < elapsedWeekdays(nowKst()); i++)
+                  if (i < week.length && week[i] == 0) i,
+              },
+            ),
     );
   }
 }

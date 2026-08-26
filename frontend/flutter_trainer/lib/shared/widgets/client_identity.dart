@@ -75,6 +75,14 @@ TextStyle clientListNameStyle({required bool selected}) => TextStyle(
 /// 이름에서 잘리기 쉬웠고, 13.5 는 리포트 탭에서 목표 줄과 위계가 붙었다.
 const double clientListNameFontSize = 14;
 
+/// 고객 목록 아바타 지름. (#1423)
+///
+/// 이름 글씨는 14 로 맞췄지만 아바타는 프로그램 탭 32·리포트 탭 38 로
+/// 남아 있었다 — 탭을 오갈 때 같은 목록의 원 크기가 달라 보였다. 프로그램
+/// 탭 열이 세 열 중 가장 좁아, 이름 크기를 고를 때와 같은 이유로 더 작은
+/// 쪽에 맞춘다.
+const double clientListAvatarSize = 32;
+
 /// 이름 아래 목표 한 줄의 글씨 크기. 이름보다 한 단계 작다 — 두 탭이 같은
 /// 위계를 쓰도록 [ClientGoalLabel] 의 기본값 대신 이 값을 함께 준다.
 const double clientListGoalFontSize = 11;

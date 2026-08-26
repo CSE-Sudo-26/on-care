@@ -89,7 +89,12 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
                       ),
                       child: Row(
                         children: <Widget>[
-                          ClientAvatar(label: client.avatar, size: 38),
+                          // 아바타 크기는 프로그램 탭 고객 목록과 같은
+                          // 기준을 쓴다(#1423).
+                          ClientAvatar(
+                            label: client.avatar,
+                            size: clientListAvatarSize,
+                          ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: Column(
