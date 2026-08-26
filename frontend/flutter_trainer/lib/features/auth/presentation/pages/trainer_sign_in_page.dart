@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
@@ -11,10 +12,12 @@ import 'package:oncare_trainer/features/auth/presentation/widgets/auth_fields.da
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 
-/// Trainer login screen — email/password login plus a "로그인 없이 데모
-/// 둘러보기" bypass. Layout follows the user app's sign-in page; the
-/// trainer app has no social login or self sign-up (accounts are 1:1),
-/// so those are intentionally omitted. Wired to [SessionController].
+/// Trainer login screen — email/password login. Layout follows the user
+/// app's sign-in page. Wired to [SessionController].
+///
+/// "로그인 없이 데모 둘러보기" 진입은 화면에서 내렸다. 코드는 지우지 않고
+/// [AppConfig.showDemoEntry] 로 감춰 두었으므로, 다시 열려면
+/// `--dart-define=SHOW_DEMO_ENTRY=true` 로 빌드한다. (#1526)
 class TrainerSignInPage extends ConsumerStatefulWidget {
   /// Creates the trainer login screen.
   const TrainerSignInPage({super.key});
@@ -233,15 +236,19 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                         ),
                       ],
                     ),
-                  Center(
-                    child: TextButton(
-                      onPressed: _loading ? null : _enterDemo,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
+                  // 로그인 없이 들어가는 경로는 기본으로 감춰 둔다 — 되돌릴
+                  // 여지를 남겨야 해서 지우는 대신 플래그로 막았다. (#1526)
+                  if (ref.watch(appConfigProvider).showDemoEntry)
+                    Center(
+                      child: TextButton(
+                        key: const Key('demoEnterButton'),
+                        onPressed: _loading ? null : _enterDemo,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
+                        child: Text(l.authBrowseDemo),
                       ),
-                      child: Text(l.authBrowseDemo),
                     ),
-                  ),
                 ],
               ),
             ),

@@ -183,14 +183,15 @@ void main() {
       tester,
     ) async {
       await pumpTrainerApp(tester);
-      expect(find.text('로그인 없이 데모 둘러보기'), findsOneWidget);
+      // 로그인 화면의 표식 = 가입 링크. 데모 진입은 감춰 뒀다(#1526).
+      expect(find.text('계정 만들기'), findsOneWidget);
     });
 
     testWidgets('restored session boots into the 대시보드', (tester) async {
       await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
 
       // Auth gate redirected past sign-in into the shell.
-      expect(find.text('로그인 없이 데모 둘러보기'), findsNothing);
+      expect(find.text('계정 만들기'), findsNothing);
       expect(find.text('대시보드'), findsWidgets);
     });
 
@@ -205,16 +206,19 @@ void main() {
         bootAt: AppRoutes.messagesFor('seed-client-1'),
       );
 
-      expect(find.text('로그인 없이 데모 둘러보기'), findsNothing);
+      expect(find.text('계정 만들기'), findsNothing);
       expect(currentLocation(tester), AppRoutes.messagesFor('seed-client-1'));
     });
 
     testWidgets('a deep link opened signed-out resumes after login', (
       tester,
     ) async {
+      // 데모 진입은 기본 빌드에서 감춰 뒀지만 경로는 살아 있다 — 이 테스트가
+      // 보는 것은 '진입 뒤 원래 자리로 잇는가' 라서 플래그를 켜고 편다. (#1526)
       final container = await pumpTrainerApp(
         tester,
         bootAt: AppRoutes.clientDetail('seed-client-1'),
+        demoEntry: true,
       );
 
       // 세션이 없으니 로그인 화면이지만, 가려던 자리는 URL 에 남아 있다.

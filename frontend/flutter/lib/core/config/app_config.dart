@@ -61,6 +61,7 @@ class AppConfig {
     required this.useMockApi,
     this.sentryDsn,
     this.realApiFeatures = const <String>{},
+    this.showDemoEntry = false,
   });
 
   final Environment environment;
@@ -101,6 +102,16 @@ class AppConfig {
     return false;
   }
 
+  /// 로그인 화면에 "로그인 없이 데모 둘러보기" 진입을 노출할지. (#1526)
+  ///
+  /// 기본은 꺼짐 — 로그인 없이 앱 안으로 들어가는 경로를 화면에서 내렸다. 코드와
+  /// 문구·`SessionController.enterDemo` 는 그대로 살려 두고 노출만 막는다.
+  /// 주석 처리 대신 플래그인 이유: 죽은 코드는 주변이 바뀌면 그대로 되살아나지
+  /// 않지만, 플래그는 경로가 살아 있어 테스트가 계속 지켜 준다.
+  ///
+  /// 다시 열 때: `--dart-define=SHOW_DEMO_ENTRY=true`
+  final bool showDemoEntry;
+
   bool get isProd => environment == Environment.prod;
   bool get isDev => environment == Environment.dev;
 
@@ -121,6 +132,7 @@ class AppConfig {
     // 알 수 없는 키는 무시된다(오타가 조용히 전 기능을 실서버로 보내지 않도록,
     // 매칭되는 경로가 없으면 아무 일도 일어나지 않는다).
     const realApi = String.fromEnvironment('REAL_API');
+    const showDemoEntry = bool.fromEnvironment('SHOW_DEMO_ENTRY');
     return AppConfig(
       environment: env,
       apiBaseUrl: apiBaseUrl,
@@ -130,6 +142,10 @@ class AppConfig {
         for (final String key in realApi.split(','))
           if (key.trim().isNotEmpty) key.trim(),
       },
+      // 기본값과 같은 값이어도 그대로 흘려보낸다 — SHOW_DEMO_ENTRY 를 주면
+      // 여기서 값이 갈린다.
+      // ignore: avoid_redundant_argument_values
+      showDemoEntry: showDemoEntry,
     );
   }
 }
