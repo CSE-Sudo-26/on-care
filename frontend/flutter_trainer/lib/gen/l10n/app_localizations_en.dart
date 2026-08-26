@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2239,9 +2238,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachClientNotified => 'The client app was notified';
-
-  @override
   String coachRegisteredOn(String date) {
     return 'Added to the $date schedule';
   }
@@ -2260,12 +2256,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachRegisterAction => 'Add to PT schedule';
 
   @override
-  String get labelTomorrow => 'Tomorrow';
+  String get coachGoToSchedule => 'Go to schedule';
 
   @override
-  String coachFindInSchedule(String date) {
-    return 'You\'ll find it in the Schedule tab as the $date session\'s program';
-  }
+  String get labelTomorrow => 'Tomorrow';
 
   @override
   String get coachRequestCustom => 'Ask AI for a custom routine';
@@ -2273,11 +2267,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String coachRequestBlurb(String name) {
     return 'We\'ll analyse $name\'s data, draft a recovery and a push option, and let you compare and edit them here.';
-  }
-
-  @override
-  String coachSentToClient(String name) {
-    return 'Sent to $name';
   }
 
   @override

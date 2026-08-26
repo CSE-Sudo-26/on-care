@@ -1009,29 +1009,29 @@ void main() {
       // 실제로 1600×550 에서 "BOTTOM OVERFLOWED BY 60 PIXELS" 가 났던
       // 창 높이 — 고객 목록(5줄) 하나만으로도 이 열에 남는 여유가
       // 거의 없어, 템플릿 카드를 `Expanded` 로 억지로 나누면 카드
-        // 헤더 한 줄 그릴 자리도 없다.
-        tester.view.devicePixelRatio = 1.0;
-        tester.view.physicalSize = const Size(1600, 550);
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        await pumpTrainerApp(
-          tester,
-          token: 'demo-trainer-token',
-          at: AppRoutes.coaching,
-        );
+      // 헤더 한 줄 그릴 자리도 없다.
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1600, 550);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
 
-        // 나누지 않고 예전처럼 열 전체를 한 스크롤로 묶은 경로로
-        // 떨어져야 한다 — 오버플로우가 나지 않아야 한다.
-        expect(
-          find.byKey(const ValueKey<String>('coaching-sidebar-scroll')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const ValueKey<String>('program-client-list-scroll')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const ValueKey<String>('program-template-sidebar')),
+      // 나누지 않고 예전처럼 열 전체를 한 스크롤로 묶은 경로로
+      // 떨어져야 한다 — 오버플로우가 나지 않아야 한다.
+      expect(
+        find.byKey(const ValueKey<String>('coaching-sidebar-scroll')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-client-list-scroll')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('program-template-sidebar')),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -1371,51 +1371,51 @@ void main() {
       await openTab(tester);
 
       await tester.ensureVisible(
-          find.byKey(const ValueKey<String>('generate-routine-options')),
-        );
-        await tester.pump();
-        await tester.tap(
-          find.byKey(const ValueKey<String>('generate-routine-options')),
-        );
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(
-          find.byKey(const ValueKey<String>('complete-routine-review')),
-        );
-        await tester.pump();
-        await tester.tap(
-          find.byKey(const ValueKey<String>('complete-routine-review')),
-        );
-        await tester.pumpAndSettle();
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pumpAndSettle();
 
-        // 검토 단계에 들어온 것만으로는 아직 편집기에 아무것도 반영되지
-        // 않는다 — `템플릿에 반영`을 눌러야 한다.
-        expect(
-          find.descendant(
-            of: find.byType(ProgramEditorWorkspace),
-            matching: find.text('저강도 걷기'),
-          ),
-          findsNothing,
-        );
+      // 검토 단계에 들어온 것만으로는 아직 편집기에 아무것도 반영되지
+      // 않는다 — `템플릿에 반영`을 눌러야 한다.
+      expect(
+        find.descendant(
+          of: find.byType(ProgramEditorWorkspace),
+          matching: find.text('저강도 걷기'),
+        ),
+        findsNothing,
+      );
 
-        await tester.ensureVisible(
-          find.byKey(const ValueKey<String>('apply-routine-to-template')),
-        );
-        await tester.pump();
-        await tester.tap(
-          find.byKey(const ValueKey<String>('apply-routine-to-template')),
-        );
-        await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('apply-routine-to-template')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('apply-routine-to-template')),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byType(AiRoutineOptionsFlow), findsNothing);
+      expect(find.byType(AiRoutineOptionsFlow), findsNothing);
 
-        // 편집기 안으로 범위를 좁힌다 — 같은 이름의 운동이 오른쪽 `AI 개인운동
-        // 제안` 영역(#790)에도 뜰 수 있고, 이 테스트가 확인하는 것은 검토한
-        // 후보가 프로그램 정보에 반영됐는지다.
-        expect(
-          find.descendant(
-            of: find.byType(ProgramEditorWorkspace),
-            matching: find.text('저강도 걷기'),
-          ),
+      // 편집기 안으로 범위를 좁힌다 — 같은 이름의 운동이 오른쪽 `AI 개인운동
+      // 제안` 영역(#790)에도 뜰 수 있고, 이 테스트가 확인하는 것은 검토한
+      // 후보가 프로그램 정보에 반영됐는지다.
+      expect(
+        find.descendant(
+          of: find.byType(ProgramEditorWorkspace),
+          matching: find.text('저강도 걷기'),
+        ),
         findsOneWidget,
       );
       expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
@@ -1499,40 +1499,40 @@ void main() {
       await openTab(tester);
       await _openManualProgram(tester);
 
-        // 안내 배너 없이도 편집기는 빈 상태로 시작한다 — 직접 운동을 하나
-        // 추가해 "작성 중"인 상태를 만든다.
-        await tester.scrollUntilVisible(
-          find.text('운동 추가'),
-          150,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.ensureVisible(find.text('운동 추가'));
-        await tester.pump();
-        await tester.tap(find.text('운동 추가'));
-        await tester.pump();
-        await tester.enterText(
-          find.byKey(const ValueKey<String>('custom-exercise-name')),
-          '탭 이동 테스트 운동',
-        );
-        await tester.ensureVisible(find.text('추가'));
-        await tester.pump();
-        await tester.tap(find.text('추가'));
-        await tester.pump();
-        await tester.scrollUntilVisible(
-          find.text('탭 이동 테스트 운동'),
-          150,
-          scrollable: find.byType(Scrollable).first,
-        );
-        expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
+      // 안내 배너 없이도 편집기는 빈 상태로 시작한다 — 직접 운동을 하나
+      // 추가해 "작성 중"인 상태를 만든다.
+      await tester.scrollUntilVisible(
+        find.text('운동 추가'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('운동 추가'));
+      await tester.pump();
+      await tester.tap(find.text('운동 추가'));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+        '탭 이동 테스트 운동',
+      );
+      await tester.ensureVisible(find.text('추가'));
+      await tester.pump();
+      await tester.tap(find.text('추가'));
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text('탭 이동 테스트 운동'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
 
-        // 다른 탭(대시보드)으로 갔다가 프로그램 탭으로 돌아온다 — 저장
-        // 버튼을 누르지 않았다.
-        await goTo(tester, AppRoutes.dashboard);
-        await goTo(tester, AppRoutes.coaching);
+      // 다른 탭(대시보드)으로 갔다가 프로그램 탭으로 돌아온다 — 저장
+      // 버튼을 누르지 않았다.
+      await goTo(tester, AppRoutes.dashboard);
+      await goTo(tester, AppRoutes.coaching);
 
-        await tester.scrollUntilVisible(
-          find.text('탭 이동 테스트 운동'),
-          150,
+      await tester.scrollUntilVisible(
+        find.text('탭 이동 테스트 운동'),
+        150,
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
@@ -1624,7 +1624,7 @@ void main() {
         find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요'),
         findsOneWidget,
       );
-      expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsNothing);
 
       // The 스케줄 tab shows the registered plan on his 예정 session.
       await goTo(tester, AppRoutes.schedule);
@@ -1645,7 +1645,9 @@ void main() {
 
       await _sendProgram(tester);
       await settle(tester);
-      expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
+      // 고객 전송 문구는 더 이상 뜨지 않는다(#1536) — 일정 등록 토스트가
+      // 흐름이 끝까지 성공했다는 신호를 대신한다.
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsOneWidget);
 
       // Routine delivery is shown in the member's routine feed, not as a
       // trainer-authored blue chat bubble.
@@ -1690,7 +1692,7 @@ void main() {
 
       await _sendProgram(tester);
       await settle(tester);
-      expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
+      expect(find.text('내일 스케줄에 등록됐어요'), findsOneWidget);
 
       // Booked under tomorrow's date, not today's. Reading a drift stream
       // must run outside the fake-async zone (`runAsync`), otherwise the
@@ -1759,15 +1761,23 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('program-register-date')),
+      final dateButton = find.byKey(
+        const ValueKey<String>('program-register-date'),
       );
+      await tester.scrollUntilVisible(
+        dateButton,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(dateButton);
+      await tester.pump();
+      await tester.tap(dateButton);
       await tester.pumpAndSettle();
       await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
 
       await _sendProgram(tester);
       await settle(tester);
-      expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
+      expect(find.text('내일 스케줄에 등록됐어요'), findsOneWidget);
 
       final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
       final rows = await tester.runAsync(
@@ -1793,10 +1803,14 @@ void main() {
       await openTab(tester);
 
       await _sendProgram(tester);
-      await tester.pump();
+      // 배정에 이어 등록까지 끝나야 토스트가 뜬다 — 배정만 끝나는 시점을
+      // 잡던 예전 단일 `pump()`로는 부족하다(#1536).
+      await settle(tester);
 
-      expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
-      expect(find.text('고객 앱에 알림이 전송됐어요'), findsOneWidget);
+      // 고객 전송 문구는 더 이상 뜨지 않는다(#1536) — 일정 등록 토스트와
+      // "스케줄로 이동하기" 액션이 완료 안내를 대신한다.
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsOneWidget);
+      expect(find.text('스케줄로 이동하기'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4)); // reset window
       // 초기화된 편집기는 다시 빈 프로그램 정보 박스로 시작한다(#1028) —
@@ -1889,7 +1903,7 @@ void main() {
       // must not be left disabled by the previous client's guard. The
       // editor is a lazy list, so bring the button back into view first.
       final send = await _ensureSendButtonReady(tester);
-      expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsNothing);
       expect(tester.widget<ActionButton>(send).onPressed, isNotNull);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
@@ -1913,7 +1927,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
-      expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsOneWidget);
     });
 
     testWidgets('A → B → A cannot double-register while A is still saving', (
@@ -2047,9 +2061,9 @@ void main() {
 
       // 김민수's send resolved while 이지수 is on screen: no success flash
       // lands on 이지수, and her edit survives — 김민수's reset timer must
-      // not fire against her (review PR 239).
-      expect(find.text('김민수님에게 전송 완료!'), findsNothing);
-      expect(find.text('이지수님에게 전송 완료!'), findsNothing);
+      // not fire against her (review PR 239). 새 등록 토스트에는 고객
+      // 이름이 없으므로(#1536) 문구 하나로 두 회원 다 대신 검증한다.
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsNothing);
       await tester.scrollUntilVisible(
         find.text('레그프레스 5세트'),
         150,
@@ -2149,7 +2163,7 @@ void main() {
         find.byKey(const ValueKey<String>('program-assign-confirm')),
         findsNothing,
       );
-      expect(find.text('김민수님에게 전송 완료!'), findsNothing);
+      expect(find.text('오늘 스케줄에 등록됐어요'), findsNothing);
       // 취소했으니 편집기 내용도 그대로 남아 있고, 다시 눌러 보낼 수 있다.
       expect(tester.widget<ActionButton>(send).onPressed, isNotNull);
     });
@@ -2315,7 +2329,9 @@ void main() {
         // 세션에 붙었다)를 돌려준다 — 그래서 성공 문구가 아니라 경고가
         // 뜬다.
         expect(
-          find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요'),
+          find.text(
+            '오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요',
+          ),
           findsOneWidget,
         );
       },
@@ -2330,7 +2346,10 @@ void main() {
 
         await tapSend(tester);
 
-        expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
+        // 이 하네스는 PT 등록(schedule-program) 엔드포인트를 목킹하지
+        // 않는다 — 배정이 채팅과 무관하게 끝난다는 것만 `routineRepo`로
+        // 직접 확인한다. 고객 전송 안내 문구는 더 이상 없고(#1536), 등록
+        // 성공 토스트는 이 케이스에서 뜨지 않는다.
         expect(routineRepo.lastAssigned, isNotNull);
       },
     );
@@ -2426,7 +2445,8 @@ void main() {
 
         await tapSend(tester);
 
-        expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
+        // 이 하네스는 PT 등록 엔드포인트를 목킹하지 않는다 — 배정
+        // payload만 `routineRepo`로 직접 확인한다.
         // 유형·출처 요약은 서버가 세션 단위로 접는다(#709) — 클라이언트는
         // 트레이너가 넣은 운동을 그대로 실어 보낸다.
         expect(
