@@ -876,14 +876,18 @@ int _scaled(num value, double factor) => (value * factor).round();
 
 /// 요일마다 다른 루틴. 한 고객이 한 주 내내 같은 운동만 하면 화면이 복사본
 /// 처럼 읽힌다 — 요일과 고객을 함께 돌려 서로 다른 조합이 나오게 한다.
+///
+/// 근력 한 줄은 세트·횟수·중량을, 유산소는 시간을 단다(#1276) — 유형마다 재는
+/// 단위가 다르다. 맨몸 운동은 중량을 비운다: 적지 않은 값을 `0kg` 으로 적으면
+/// 트레이너가 정해 준 무게처럼 읽힌다.
 const List<List<String>> _routinePool = <List<String>>[
-  <String>['스쿼트 4세트', '런지 3세트', '레그컬 3세트'],
-  <String>['벤치프레스 4세트', '푸시업 3세트', '덤벨 플라이 3세트'],
-  <String>['데드리프트 4세트', '바벨 로우 3세트', '풀업 3세트'],
-  <String>['숄더 프레스 4세트', '사이드 레터럴 3세트', '페이스 풀 3세트'],
-  <String>['런닝 30분', '사이클 20분', '코어 서킷 10분'],
-  <String>['레그프레스 4세트', '힙 쓰러스트 3세트', '카프 레이즈 3세트'],
-  <String>['플랭크 3세트', '버피 3세트', '마운틴 클라이머 3세트'],
+  <String>['스쿼트 4세트 · 10회 · 50kg', '런지 3세트 · 12회 · 10kg', '레그컬 3세트 · 12회 · 35kg'],
+  <String>['벤치프레스 4세트 · 8회 · 50kg', '푸시업 3세트 · 15회', '덤벨 플라이 3세트 · 12회 · 10kg'],
+  <String>['데드리프트 4세트 · 8회 · 60kg', '바벨 로우 3세트 · 10회 · 40kg', '풀업 3세트 · 8회'],
+  <String>['숄더 프레스 4세트 · 10회 · 20kg', '사이드 레터럴 3세트 · 15회 · 6kg', '페이스 풀 3세트 · 15회 · 15kg'],
+  <String>['런닝 30분', '사이클 20분', '코어 서킷 3세트 · 12회'],
+  <String>['레그프레스 4세트 · 12회 · 70kg', '힙 쓰러스트 3세트 · 12회 · 40kg', '카프 레이즈 3세트 · 20회'],
+  <String>['플랭크 3세트 · 3회', '버피 3세트 · 12회', '마운틴 클라이머 3세트 · 20회'],
 ];
 
 /// 그날 **실제로 한** 운동 목록. 미수행은 싣지 않는다. (#1288)
@@ -1277,7 +1281,7 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
     note: '전신 순환. 세트 사이 휴식을 45초로 줄여 본다.',
     program: <Map<String, Object?>>[
       <String, Object?>{'name': '케틀벨 스윙', 'type': '근력', 'sets': 4, 'reps': 15, 'weight': 12},
-      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3},
+      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3, 'reps': 3},
     ],
   ),
   _WeekSlot(
@@ -1380,15 +1384,17 @@ const List<_Slot> _schedule = <_Slot>[
         'name': '레그프레스',
         'type': '근력',
         'sets': 3,
+        'reps': 12,
         'weight': 80.0,
       },
       <String, Object?>{
         'name': '레그컬',
         'type': '근력',
         'sets': 3,
+        'reps': 12,
         'weight': 40.0,
       },
-      <String, Object?>{'name': '카프레이즈', 'type': '근력', 'sets': 3},
+      <String, Object?>{'name': '카프레이즈', 'type': '근력', 'sets': 3, 'reps': 20},
       <String, Object?>{
         'name': '하체 스트레칭',
         'type': '스트레칭',
@@ -1408,16 +1414,18 @@ const List<_Slot> _schedule = <_Slot>[
         'name': '데드리프트',
         'type': '근력',
         'sets': 4,
+        'reps': 8,
         'weight': 55.0,
       },
       <String, Object?>{
         'name': '루마니안 데드리프트',
         'type': '근력',
         'sets': 3,
+        'reps': 10,
         'weight': 40.0,
       },
-      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3},
-      <String, Object?>{'name': '코어 서킷', 'type': '근력', 'sets': 2},
+      <String, Object?>{'name': '플랭크', 'type': '근력', 'sets': 3, 'reps': 3},
+      <String, Object?>{'name': '코어 서킷', 'type': '근력', 'sets': 2, 'reps': 12},
     ],
   ),
   _Slot(
@@ -1441,15 +1449,17 @@ const List<_Slot> _schedule = <_Slot>[
         'name': '벤치프레스',
         'type': '근력',
         'sets': 4,
+        'reps': 8,
         'weight': 65.0,
       },
       <String, Object?>{
         'name': '인클라인 덤벨 프레스',
         'type': '근력',
         'sets': 3,
+        'reps': 10,
         'weight': 26.0,
       },
-      <String, Object?>{'name': '트라이셉스 딥', 'type': '근력', 'sets': 3},
+      <String, Object?>{'name': '트라이셉스 딥', 'type': '근력', 'sets': 3, 'reps': 12},
     ],
   ),
   // 상담으로 잡힌 가망 고객 — 로스터에 없으니 화면이 `이름(신규)` 로 부른다.

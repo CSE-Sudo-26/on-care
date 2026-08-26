@@ -31,6 +31,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from typing import TypeVar
 
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
@@ -121,16 +122,20 @@ _SODIUM_WEEK: dict[str, list[int]] = {
 # 오늘/이틀전/나흘전 날짜로 시드. PT 세션은 trainer_id 를 붙인다.
 _HISTORY: dict[str, list[tuple[int, str, list[str], str, str]]] = {
     "user-jisu": [
-        (100, "AI 개인운동", ["인터벌 런닝 25분 ✓", "스쿼트 3세트 ✓", "플랭크 10분 ✓"],
+        (100, "AI 개인운동",
+         ["인터벌 런닝 25분 ✓", "스쿼트 3세트 · 12회 · 40kg ✓", "플랭크 3세트 · 3회 ✓"],
          "런닝이 힘들었는데 다 했어요! 숨이 많이 찼어요",
          "심폐지구력 향상 중. 다음 주 런닝 강도 소폭 올릴 예정."),
-        (100, "PT 세션 · 트레이너 지도", ["데드리프트 3세트", "런지 3세트", "코어 서킷"],
+        (100, "PT 세션 · 트레이너 지도",
+         ["데드리프트 3세트 · 8회 · 55kg", "런지 3세트 · 12회 · 10kg", "코어 서킷 2세트 · 12회"],
          "데드리프트 자세 교정 도움 많이 됐어요!", ""),
         (67, "AI 개인운동", ["런닝 25분 ✓", "스쿼트 ✓", "플랭크 ✗ (피로)"],
          "마지막 플랭크는 너무 지쳐서 못 했어요", ""),
     ],
     "user-sungho": [
-        (100, "PT 세션 · 트레이너 지도", ["벤치프레스 4세트", "인클라인 덤벨 3세트", "트라이셉스 딥"],
+        (100, "PT 세션 · 트레이너 지도",
+         ["벤치프레스 4세트 · 8회 · 65kg", "인클라인 덤벨 3세트 · 10회 · 26kg",
+          "트라이셉스 딥 3세트 · 12회"],
          "가슴이 많이 타는 느낌이었어요. 좋았어요!",
          "벤치 중량 62.5kg → 65kg 도전 가능. 다음 PT 때 시도 예정."),
         (33, "AI 개인운동", ["벤치프레스 ✓", "데드리프트 ✗", "유산소 ✗"],
@@ -213,18 +218,25 @@ _CHAT: dict[str, list[tuple[str, str, int]]] = {
     ],
 }
 
-# 픽스처가 없는 회원의 AI 배정 루틴 (name, minutes, type, reason).
+# 픽스처가 없는 회원의 AI 배정 루틴 (name, minutes, type, reason, sets, reps, weight).
 # 김민수(user-7d4e9a2c5f18)는 여기 없다 — 공유 픽스처의 `routines` 가 원본이다(#1199).
-_ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
+#
+# 근력은 세트·횟수·중량을 칸으로 든다(#1276). 예전에는 그 값이 이름 안에 문자열로
+# 박혀 있었고(`스쿼트 3세트`) 칸은 비어 있어서, 트레이너 화면이 배정을 `15분` 으로만
+# 읽었다 — 세트는 이름에 있으니 옮겨 적을 수도, 세어 볼 수도 없는 값이었다. 맨몸
+# 운동(플랭크)은 중량만 비운다.
+_ROUTINES: dict[
+    str, list[tuple[str, int, str, str, int | None, int | None, float | None]]
+] = {
     "user-jisu": [
-        ("인터벌 런닝", 25, "유산소", "체지방 연소 효율↑"),
-        ("스쿼트 3세트", 15, "근력", "하체 근력 강화"),
-        ("플랭크", 10, "근력", "코어 안정화"),
+        ("인터벌 런닝", 25, "유산소", "체지방 연소 효율↑", None, None, None),
+        ("스쿼트", 15, "근력", "하체 근력 강화", 3, 12, 40.0),
+        ("플랭크", 10, "근력", "코어 안정화", 3, 3, None),
     ],
     "user-sungho": [
-        ("벤치프레스 4세트", 20, "근력", "상체 근력 목표"),
-        ("데드리프트 3세트", 15, "근력", "전신 근력 향상"),
-        ("유산소 쿨다운", 10, "유산소", "나트륨 배출 지원"),
+        ("벤치프레스", 20, "근력", "상체 근력 목표", 4, 8, 65.0),
+        ("데드리프트", 15, "근력", "전신 근력 향상", 3, 8, 60.0),
+        ("유산소 쿨다운", 10, "유산소", "나트륨 배출 지원", None, None, None),
     ],
 }
 
@@ -282,7 +294,7 @@ _SCHEDULE: list[tuple[str, str, str | None, str, int, str, str, list[dict]]] = [
     ("12:00", "이지수", "user-jisu", "1:1 PT", 50, "완료", "데드리프트 자세 안정적. 다음 세션 60kg 도전.", [
         {"name": "데드리프트", "type": "근력", "sets": 4, "reps": 8, "weight": 55},
         {"name": "루마니안 데드리프트", "type": "근력", "sets": 3, "reps": 10, "weight": 40},
-        {"name": "플랭크", "type": "근력", "sets": 3},
+        {"name": "플랭크", "type": "근력", "sets": 3, "reps": 3},
         {"name": "코어 서킷", "type": "근력", "sets": 2, "reps": 12},
     ]),
     ("14:00", "", None, "", 0, "공백", "", []),
@@ -572,11 +584,22 @@ def _routine_rows(member_id: str) -> list[FixtureRoutine]:
             reason=reason,
             # 픽스처가 없는 회원은 예전과 같이 전부 AI 추천이다.
             source="ai",
+            sets=sets,
+            reps=reps,
+            weight=weight,
         )
-        for i, (name, minutes, rtype, reason) in enumerate(
+        for i, (name, minutes, rtype, reason, sets, reps, weight) in enumerate(
             _ROUTINES.get(member_id, ())
         )
     ]
+
+
+_T = TypeVar("_T")
+
+
+def _strength_only(type_: str, value: _T | None) -> _T | None:
+    """근력이 아니면 버린다 — 세트·횟수·중량은 근력에서만 뜻이 있다(#1276)."""
+    return value if type_ == "근력" else None
 
 
 def _seed_routines(db: Session, member_id: str) -> None:
@@ -602,6 +625,12 @@ def _seed_routines(db: Session, member_id: str) -> None:
                 type=routine.type,
                 reason=routine.reason,
                 source=routine.source,
+                # 근력에만 싣는다 — 배정 API(`assign_routine`)와 같은 규칙이라,
+                # 시드로 들어온 배정과 트레이너가 보낸 배정이 화면에서 같은
+                # 모양으로 읽힌다(#1276).
+                sets=_strength_only(routine.type, routine.sets),
+                reps=_strength_only(routine.type, routine.reps),
+                weight=_strength_only(routine.type, routine.weight),
                 sort_order=i,
             ))
             continue
@@ -610,6 +639,9 @@ def _seed_routines(db: Session, member_id: str) -> None:
         row.type = routine.type
         row.reason = routine.reason
         row.source = routine.source
+        row.sets = _strength_only(routine.type, routine.sets)
+        row.reps = _strength_only(routine.type, routine.reps)
+        row.weight = _strength_only(routine.type, routine.weight)
         row.sort_order = i
     _safe_commit(db)
 
