@@ -1027,7 +1027,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String consultApproved(String name) {
-    return '$name 고객을 담당으로 등록했어요';
+    return '$name님의 상담 요청을 승인했어요. 스케줄 탭에서 일정을 추가해 주세요.';
+  }
+
+  @override
+  String consultScheduleCreated(String name) {
+    return '$name님의 상담 일정을 등록했어요';
   }
 
   @override
@@ -1502,7 +1507,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
-  String get schedDetailTitle => '상세 스케줄';
+  String get schedDetailTitle => '상세 일정';
 
   @override
   String get schedDeleteTitle => '일정 삭제';
@@ -1573,6 +1578,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldStartDate => '시작 날짜';
 
   @override
+  String get schedFieldDateRange => '시작 - 종료일';
+
+  @override
   String get schedFieldTime => '시간';
 
   @override
@@ -1625,26 +1633,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedRepeatDays => '반복 요일';
 
   @override
-  String get schedRepeatEndByCount => '횟수';
-
-  @override
-  String get schedRepeatEndByDate => '종료일';
-
-  @override
-  String schedRepeatCount(int count) {
-    return '$count회';
-  }
-
-  @override
-  String get schedRepeatCountUnit => '회';
-
-  @override
   String schedRepeatPreview(int count, String first, String last) {
     return '총 $count회 · $first ~ $last';
   }
 
   @override
   String get schedRepeatNeedsDays => '반복할 요일을 골라 주세요.';
+
+  @override
+  String get schedRepeatNeedsEndDate => '반복 종료일을 골라 주세요.';
 
   @override
   String schedRepeatConflictTitle(int total, int count) {
@@ -1679,10 +1676,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedNoteHint => '수업 준비사항이나 고객 특이사항을 입력하세요';
 
   @override
-  String get schedAddAction => '추가하기';
+  String get schedAddAction => '추가';
 
   @override
-  String get schedSaveAction => '저장하기';
+  String get schedSaveAction => '저장';
 
   @override
   String get progInvalid => '운동 이름과 세트 수를 확인해 주세요';
@@ -2052,6 +2049,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFieldExerciseNameHint => '예) 스쿼트, 러닝머신';
+
+  @override
+  String get routineFieldExerciseNameHintCardio => '예) 러닝머신, 실내 자전거';
+
+  @override
+  String get routineFieldExerciseNameHintStrength => '예) 스쿼트, 벤치프레스';
+
+  @override
+  String get routineFieldExerciseNameHintFlexibility => '예) 전신 스트레칭, 요가';
+
+  @override
+  String get routineFieldExerciseNameHintOther => '예) 재활 운동, 스포츠 활동';
 
   @override
   String get routineFieldSets => '세트 수';
@@ -3239,9 +3248,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorSessionEmpty => '운동을 추가해 세션을 구성하세요.';
-
-  @override
-  String get programEditorExerciseSearch => '운동 이름 검색 또는 직접 입력';
 
   @override
   String get programEditorAdd => '추가';

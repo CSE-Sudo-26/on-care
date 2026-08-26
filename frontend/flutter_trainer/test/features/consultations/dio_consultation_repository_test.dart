@@ -7,8 +7,12 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 
 class _MockDio extends Mock implements Dio {}
+
+class _MockScheduleRepository extends Mock implements ScheduleRepository {}
 
 Response<T> _ok<T>(T body, String path) => Response<T>(
   requestOptions: RequestOptions(path: path),
@@ -170,13 +174,14 @@ void main() {
           data: any(named: 'data'),
         ),
       ).thenAnswer(
-        (_) async => _ok<Map<String, Object?>>(
-          <String, Object?>{},
-          '/trainer/consultations/consult-1/accept',
-        ),
+        (_) async => _ok<Map<String, Object?>>(<String, Object?>{
+          'client_connected': true,
+          'schedule_created': true,
+          'schedule_id': 'sched-1',
+        }, '/trainer/consultations/consult-1/accept'),
       );
 
-      await repo.accept(
+      final result = await repo.accept(
         'consult-1',
         schedule: const ConsultationSchedule(
           date: '2026-08-12',
@@ -198,6 +203,9 @@ void main() {
       expect(data['time'], '19:30');
       expect(data['type'], '상담');
       expect(data['duration_minutes'], 30);
+      expect(result.clientConnected, isTrue);
+      expect(result.scheduleCreated, isTrue);
+      expect(result.scheduleId, 'sched-1');
     });
 
     test('reject carries the note the member will receive', () async {
@@ -408,5 +416,52 @@ void main() {
       expect(await repo.fetch(), isEmpty);
       expect((await repo.fetch(status: 'all')).single.status, 'accepted');
     });
+
+    test(
+      'the demo source creates the requested consultation session',
+      () async {
+        final scheduleRepository = _MockScheduleRepository();
+        when(() => scheduleRepository.watchDate('2026-08-12'))
+            .thenAnswer((_) => Stream<List<ScheduleSession>>.value(const []));
+        when(
+          () => scheduleRepository.addSession(
+            date: any(named: 'date'),
+            clientName: any(named: 'clientName'),
+            clientId: any(named: 'clientId'),
+            time: any(named: 'time'),
+            type: any(named: 'type'),
+            durationMinutes: any(named: 'durationMinutes'),
+            note: any(named: 'note'),
+          ),
+        ).thenAnswer((_) async {});
+        final repo = DemoConsultationRepository(
+          scheduleRepository: () => scheduleRepository,
+        );
+        final request = (await repo.fetch()).single;
+
+        final result = await repo.accept(
+          request.id,
+          schedule: const ConsultationSchedule(
+            date: '2026-08-12',
+            time: '19:00',
+            type: '상담',
+            durationMinutes: 30,
+          ),
+        );
+
+        expect(result.scheduleCreated, isTrue);
+        verify(
+          () => scheduleRepository.addSession(
+            date: '2026-08-12',
+            clientName: request.memberName,
+            clientId: request.memberId,
+            time: '19:00',
+            type: '상담',
+            durationMinutes: 30,
+            note: request.message ?? '',
+          ),
+        ).called(1);
+      },
+    );
   });
 }
