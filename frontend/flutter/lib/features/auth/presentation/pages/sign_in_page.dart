@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
@@ -11,7 +12,11 @@ import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 
-/// 로그인 화면 — 이메일/비밀번호 로그인 + 우측 상단 "데모로 시작" 바로가기.
+/// 로그인 화면 — 이메일/비밀번호 로그인 + 소셜 로그인.
+///
+/// "로그인 없이 데모 둘러보기" 진입은 화면에서 내렸다. 코드는 지우지 않고
+/// [AppConfig.showDemoEntry] 로 감춰 두었으므로, 다시 열려면
+/// `--dart-define=SHOW_DEMO_ENTRY=true` 로 빌드한다. (#1526)
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
 
@@ -201,16 +206,19 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           ),
                         ],
                       ),
-                      Center(
-                        child: TextButton(
-                          key: const Key('demoEnterButton'),
-                          onPressed: _enterDemo,
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary,
+                      // 로그인 없이 들어가는 경로는 기본으로 감춰 둔다 — 되돌릴
+                      // 여지를 남겨야 해서 지우는 대신 플래그로 막았다. (#1526)
+                      if (ref.watch(appConfigProvider).showDemoEntry)
+                        Center(
+                          child: TextButton(
+                            key: const Key('demoEnterButton'),
+                            onPressed: _enterDemo,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                            ),
+                            child: Text(l.authDemoAction),
                           ),
-                          child: Text(l.authDemoAction),
                         ),
-                      ),
                     ],
                   ),
                 ),

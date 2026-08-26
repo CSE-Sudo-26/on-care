@@ -30,6 +30,16 @@ const AppConfig kTestAppConfig = AppConfig(
   useMockApi: true,
 );
 
+/// [kTestAppConfig] + 로그인 화면의 데모 진입 노출. 화면에서는 내렸지만 진입
+/// 경로 자체는 살아 있어야 하므로(플래그로 되돌릴 수 있게), 그 경로를 지나는
+/// 테스트는 이 설정으로 편다. `pumpTrainerApp(..., demoEntry: true)`. (#1526)
+const AppConfig kTestAppConfigWithDemoEntry = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: 'http://localhost/v1',
+  useMockApi: true,
+  showDemoEntry: true,
+);
+
 /// Pumps the full trainer app for a widget test, backed by a fresh
 /// in-memory (seeded) drift DB and an optional persisted session token.
 ///
@@ -57,6 +67,7 @@ Future<ProviderContainer> pumpTrainerApp(
   String? at,
   String? bootAt,
   List<Override> extraOverrides = const <Override>[],
+  bool demoEntry = false,
   Locale locale = const Locale('ko'),
   DateTime? seedClock,
 }) async {
@@ -76,7 +87,9 @@ Future<ProviderContainer> pumpTrainerApp(
 
   final container = ProviderContainer(
     overrides: <Override>[
-      appConfigProvider.overrideWithValue(kTestAppConfig),
+      appConfigProvider.overrideWithValue(
+        demoEntry ? kTestAppConfigWithDemoEntry : kTestAppConfig,
+      ),
       sharedPreferencesProvider.overrideWithValue(prefs),
       appDatabaseProvider.overrideWithValue(db),
       if (bootAt != null)
