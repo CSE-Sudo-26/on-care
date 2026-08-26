@@ -7,7 +7,7 @@ GET /trainer/me 응답:
 from __future__ import annotations
 
 from datetime import date as _date, datetime as _datetime
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal, TypeVar
 
 from pydantic import (
     BaseModel,
@@ -359,6 +359,31 @@ LooseIntZero = Annotated[int, BeforeValidator(_loose_int_zero)]
 LooseFloatZero = Annotated[float, BeforeValidator(_loose_float_zero)]
 
 
+#: 유형과 맞지 않는 칸을 비운 뒤 자신을 돌려주는 모델.
+_ProgramLike = TypeVar("_ProgramLike", bound=BaseModel)
+
+
+def _drop_fields_not_in_type(model: _ProgramLike) -> _ProgramLike:
+    """유형과 맞지 않는 칸을 비운다 — 근력은 시간을, 나머지는 세트·횟수·중량을.
+
+    통일 스펙(#1276)은 유형마다 재는 단위를 하나로 정해 두었다: 유산소·
+    스트레칭·기타는 시간, 근력은 세트·횟수·중량. 그런데 값을 **받는** 자리에는
+    그 규칙이 없어, 두 칸을 함께 실은 항목이 그대로 저장됐다 — 화면은 그것을
+    `저강도 유산소(걷기) 3세트 · 30회` 라고 읽었다. 한 번 그렇게 저장되면 그
+    행을 다시 쓰는 화면마다 같은 값이 따라다닌다.
+
+    저장된 행을 되읽는 자리(`_program_items`)도 이 모델을 지나므로, 규칙이 서기
+    전에 들어온 행은 고치지 않아도 유형에 맞게 읽힌다.
+    """
+    if model.type == "근력":
+        model.duration = None
+    else:
+        model.sets = None
+        model.reps = None
+        model.weight = None
+    return model
+
+
 class ProgramDraftExercise(BaseModel):
     """초안의 운동 한 항목 — 편집기 `ProgramExerciseDraft` 계약 정렬.
 
@@ -385,6 +410,10 @@ class ProgramDraftExercise(BaseModel):
     intensity: RoutineIntensity = "moderate"
     memo: str = Field(default="", max_length=300)
     source: ProgramExerciseSource = "trainer"
+
+    _drop_mismatched_fields = model_validator(mode="after")(
+        _drop_fields_not_in_type
+    )
 
 
 
@@ -883,6 +912,10 @@ class ProgramItem(BaseModel):
     weight: LooseFloat = Field(default=None, ge=0, le=1000)
     intensity: RoutineIntensity = "moderate"
     session: str = Field(default="", max_length=100)
+
+    _drop_mismatched_fields = model_validator(mode="after")(
+        _drop_fields_not_in_type
+    )
 
 
 #: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아 있어야
@@ -1418,6 +1451,20 @@ class ProgramTemplateExercise(BaseModel):
     sets: LooseIntZero = Field(default=0, ge=0, le=99)
     reps: LooseIntZero = Field(default=0, ge=0, le=999)
     weight: LooseFloatZero = Field(default=0, ge=0, le=1000)
+
+    @model_validator(mode="after")
+    def _drop_fields_not_in_type(self) -> ProgramTemplateExercise:
+        """근력이 아니면 세트·횟수·중량을 비운다 — `_drop_fields_not_in_type`
+        와 같은 규칙이고, 빈 값만 이 모델이 쓰는 0 이다.
+
+        `minutes` 는 근력에서도 남긴다: 템플릿은 블록의 길이로 자리를 잡고,
+        운동 한 줄이 아니라 끼워 넣을 시간을 먼저 말한다.
+        """
+        if self.type != "근력":
+            self.sets = 0
+            self.reps = 0
+            self.weight = 0.0
+        return self
 
 
 class TrainerProgramTemplateOut(BaseModel):

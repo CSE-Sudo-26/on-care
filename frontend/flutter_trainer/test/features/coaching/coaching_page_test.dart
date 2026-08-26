@@ -1634,8 +1634,10 @@ void main() {
       await tester.pump();
       await tester.tap(block);
       await settle(tester);
-      await tester.ensureVisible(find.text('벤치프레스 4세트'));
-      expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item
+      // 세트 수는 이름이 아니라 칸이 든다(#1276) — 배정 이름은 `벤치프레스`
+      // 이고, 세트·횟수·중량은 그 아래 줄에 따로 적힌다.
+      await tester.ensureVisible(find.text('벤치프레스'));
+      expect(find.text('벤치프레스'), findsOneWidget); // AI routine item
     });
 
     testWidgets('homework send does not create a trainer chat bubble', (
@@ -2325,6 +2327,23 @@ void main() {
         expect(scheduleRepo.time, '10:00');
         expect(scheduleRepo.durationMinutes, 60);
         expect(scheduleRepo.program, isNotEmpty);
+        // 유형마다 재는 칸이 다르다(#1276). 근력은 세트·횟수·중량을 그대로
+        // 들고 나가야 한다 — 횟수가 여기서만 빠져 있어, 편집기에서 채운
+        // 값이 일정에 등록되는 순간 사라졌다.
+        final strength = scheduleRepo.program!.singleWhere(
+          (item) => item.type == '근력',
+        );
+        expect(strength.name, '스쿼트');
+        expect(strength.sets, isNotNull);
+        expect(strength.reps, isNotNull);
+        expect(strength.weight, isNotNull);
+        expect(strength.duration, isNull);
+        final cardio = scheduleRepo.program!.singleWhere(
+          (item) => item.type == '유산소',
+        );
+        expect(cardio.duration, 30);
+        expect(cardio.sets, isNull);
+        expect(cardio.reps, isNull);
         // `_CapturingScheduleRepository.registerProgram` 은 늘 `true`(기존
         // 세션에 붙었다)를 돌려준다 — 그래서 성공 문구가 아니라 경고가
         // 뜬다.
