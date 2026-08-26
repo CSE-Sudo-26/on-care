@@ -309,7 +309,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     final request = widget.request;
     final String? startTime = preferredStartTime(request.preferredTimeCode);
     try {
-      await acceptConsultation(
+      final result = await acceptConsultation(
         ref,
         request.id,
         schedule: startTime == null
@@ -324,7 +324,9 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       if (!mounted) return;
       showAppToast(
         context,
-        l.consultApproved(request.memberName),
+        result.scheduleCreated
+            ? l.consultScheduleCreated(request.memberName)
+            : l.consultApproved(request.memberName),
         kind: AppToastKind.success,
       );
     } on ConsultationScheduleConflictError catch (e) {

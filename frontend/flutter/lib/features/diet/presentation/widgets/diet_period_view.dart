@@ -1,4 +1,6 @@
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
@@ -430,7 +432,7 @@ class _PeriodBody extends StatelessWidget {
                             ),
                             if (macros != null) ...<Widget>[
                               const SizedBox(width: 12),
-                              _MacroDetail(macros: macros),
+                              _MacroDetail(macros: macros, muted: weekly),
                             ],
                           ],
                         ),
@@ -529,17 +531,30 @@ class _Macros {
 }
 
 class _MacroDetail extends StatelessWidget {
-  const _MacroDetail({required this.macros});
+  const _MacroDetail({required this.macros, required this.muted});
 
   final _Macros macros;
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<(String, double, Color)> rows = <(String, double, Color)>[
-      (l.homeMacroCarbs, macros.carbs, FigmaColors.macroCarbs),
-      (l.homeMacroProtein, macros.protein, FigmaColors.macroProtein),
-      (l.homeMacroFat, macros.fat, FigmaColors.macroFat),
+      (
+        l.homeMacroCarbs,
+        macros.carbs,
+        muted ? AppColors.mutedForeground : FigmaColors.macroCarbs,
+      ),
+      (
+        l.homeMacroProtein,
+        macros.protein,
+        muted ? AppColors.mutedForeground : FigmaColors.macroProtein,
+      ),
+      (
+        l.homeMacroFat,
+        macros.fat,
+        muted ? AppColors.mutedForeground : FigmaColors.macroFat,
+      ),
     ];
     return Column(
       key: const Key('diet-period-macros'),
@@ -607,14 +622,11 @@ class _PeriodBars extends StatelessWidget {
   final Color color;
   final Object replayKey;
 
-  /// 칼로리를 볼 때의 원본. 막대는 이 값으로 쌓지 않고(#1427) 툴팁이 그날의
-  /// 탄·단·지를 숫자로 적는 데 쓴다.
+  /// 칼로리를 볼 때의 원본. 막대의 탄단지 구간과 툴팁에 사용한다.
   final List<DietPeriodDay>? days;
 
-  /// 목표 이내 막대의 색. 칼로리는 회색 한 색이다 (#1427) — 막대에서 읽을 수
-  /// 없는 구성을 색으로 말하지 않는다. 나트륨·당류는 쌓을 성분이 없던 지표라
-  /// 지금까지 쓰던 브랜드 색 그대로다.
-  Color get _barColor => days == null ? color : FigmaColors.barNeutral;
+  /// 탄단지를 쌓지 않는 나트륨·당류와 영양 정보가 없는 칼로리 막대의 색.
+  Color get _barColor => color;
 
   /// 툴팁이 부를 지표 이름(칼로리·나트륨·당류)과 단위, 그리고 카드 머리 숫자와
   /// 같은 숫자 서식.
@@ -846,10 +858,11 @@ class _PeriodBars extends StatelessWidget {
                       height:
                           chartHeight * (values[i] / maxValue).clamp(0.0, 1.0),
                       pending: _isPending(i),
-                      // 목표를 넘긴 날만 빨강이다. 그 밖의 날은 지표에 따라
-                      // 회색(칼로리) 또는 브랜드 파랑(나트륨·당류) 한 색이다.
+                      // 목표를 넘긴 날만 빨강이다. 칼로리는 탄단지 원본이 있으면
+                      // 누적 구간, 나트륨·당류는 기존 브랜드 색 한 칸이다.
                       over: hasGoal && values[i] > goal,
                       color: _barColor,
+                      day: _dayAt(i),
                     ),
                   ),
                 ),
@@ -862,36 +875,33 @@ class _PeriodBars extends StatelessWidget {
   }
 }
 
-/// 한 칸의 막대. **한 색**이다 (#1427).
-///
-/// 탄·단·지 농담으로 쌓던 자리다. 막대에서 탄·단·지 수치를 읽을 수는 없는데
-/// 색만 셋으로 갈라져 있어, 구성까지 정확히 말해 주는 그림처럼 보였다. 구성은
-/// 카드 머리의 상세와 이 막대의 툴팁이 **숫자와 함께** 말한다 — 색만 남기지
-/// 않는다.
+/// 한 칸의 막대. 탄단지가 있으면 아래에서부터 탄·단·지 순으로 쌓는다.
 class _Bar extends StatelessWidget {
   const _Bar({
     super.key,
     required this.height,
+    required this.day,
     required this.over,
     required this.color,
     this.pending = false,
   });
 
   final double height;
+  final DietPeriodDay? day;
 
   /// 아직 오지 않은 날인가. 지나간 빈 날의 그루터기보다 **더 옅게** 그린다 —
   /// 트레이너 리포트가 `pendingFromIndex` 에 쓰는 규칙과 같다(#754, #950).
   final bool pending;
 
-  /// 목표를 넘긴 날인가. 넘긴 날만 색으로 말한다.
+  /// 목표를 넘긴 날인가. 넘긴 날은 통째로 빨강으로 표시한다.
   final bool over;
 
-  /// 목표 이내 막대의 색. 칼로리는 회색([FigmaColors.barNeutral]), 나트륨·당류는
-  /// 지금까지처럼 브랜드 파랑이다.
+  /// 탄단지 원본이 없을 때 사용하는 지표 색.
   final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final DietPeriodDay? d = day;
     const BorderRadius radius = BorderRadius.vertical(top: Radius.circular(3));
     if (pending) {
       // 아직 오지 않은 날은 **빈 트랙**이다. 지나간 빈 날과 같은 그루터기를
@@ -904,13 +914,52 @@ class _Bar extends StatelessWidget {
         ),
       );
     }
-    // 목표를 넘긴 날은 통으로 빨강이다 (#1352) — 같은 카드의 나트륨·당류가
-    // 초과를 한 색으로 말하는 것과 같은 문법이다.
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: (over ? FigmaColors.dangerRed : color).withValues(alpha: 0.85),
-        borderRadius: radius,
+    if (over || d == null || !d.hasMacros) {
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: (over ? FigmaColors.dangerRed : color).withValues(alpha: 0.85),
+          borderRadius: radius,
+        ),
+      );
+    }
+    final double total = d.carbsKcal + d.proteinKcal + d.fatKcal;
+    if (total <= 0) {
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.85),
+          borderRadius: radius,
+        ),
+      );
+    }
+    // 총높이는 기록 칼로리를 따르되, 설명되지 않는 열량은 나머지 구간으로 둔다.
+    // 탄단지 환산 열량이 더 크면 음수 나머지를 만들지 않고 그 합계를 기준으로 한다.
+    final double basis = math.max(d.calories.toDouble(), total);
+    final double rest = basis - total;
+    final List<({Color color, double kcal})> parts =
+        <({Color color, double kcal})>[
+          if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
+          if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
+          if (d.proteinKcal > 0)
+            (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
+          if (d.carbsKcal > 0)
+            (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
+        ];
+    return ClipRRect(
+      borderRadius: radius,
+      child: SizedBox(
+        height: height,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (final ({Color color, double kcal}) part in parts)
+              Expanded(
+                flex: math.max(1, (part.kcal / basis * 1000).round()),
+                child: ColoredBox(color: part.color),
+              ),
+          ],
+        ),
       ),
     );
   }

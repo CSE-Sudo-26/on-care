@@ -66,8 +66,10 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
   /// 상담 요청 인박스(`showConsultationsDialog`)와 같은 자리에서 여는
   /// 작업이라 같은 형식(가운데 뜨는 작은 창)으로 통일한다 — 하나는 아래에서
   /// 올라오고 하나는 가운데 뜨면, 두 흐름이 다른 화면처럼 읽힌다.
-  Future<void> _openConnectDialog(BuildContext context) =>
-      showDialog<void>(context: context, builder: (_) => const ClientConnectDialog());
+  Future<void> _openConnectDialog(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (_) => const ClientConnectDialog(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -356,6 +358,7 @@ class _MemberManagementToolbar extends StatelessWidget {
 
   final Set<RosterManagementFilter> managementFilters;
   final RosterSort sort;
+
   final ValueChanged<Set<RosterManagementFilter>> onFiltersChanged;
   final ValueChanged<RosterSort> onSortChanged;
 
@@ -373,21 +376,7 @@ class _MemberManagementToolbar extends StatelessWidget {
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
-        // 안내와 컨트롤을 오른쪽에 모은다(#1464). 좁아지면 `Wrap` 이 줄을
-        // 접어 겹치거나 잘리지 않는다.
-        alignment: WrapAlignment.end,
         children: <Widget>[
-          // 목록의 모든 그래프가 같은 지표라, 카드마다 되풀이하던 문구를
-          // 여기서 한 번만 말한다.
-          Text(
-            l.clientWeeklyRoutineAdherence,
-            key: const ValueKey<String>('clients-adherence-legend'),
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.subtleForeground,
-            ),
-          ),
           _FilterMenuButton(
             filters: managementFilters,
             labelFor: (value) => _managementLabel(l, value),

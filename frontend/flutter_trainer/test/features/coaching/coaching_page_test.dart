@@ -531,12 +531,16 @@ Future<void> _sendProgram(WidgetTester tester) async {
   );
 }
 
-/// `showDatePicker` 의 기본 달력에서 [date] 를 고르고 확인한다 (#1028).
+/// [showPortraitDatePicker] 의 세로형 달력에서 [date] 를 고르고 확인한다 (#1028).
+///
+/// 프로그램 편집 화면(`program_editor_workspace.dart`)도 앱의 다른 화면과 같은
+/// `showPortraitDatePicker` 를 쓴다 — 확인 버튼은 취소 버튼과 나란히 있어
+/// 텍스트가 아니라 키(`portraitDatePickerConfirm`)로 찾는다.
 ///
 /// 지금 보이는 달과 [date] 의 달이 다르면(예: 오늘이 말일이라 "내일"이 다음
 /// 달인 경우) 한 달 넘긴다 — 오늘에서 하루 넘어가는 것뿐이라 한 번이면 된다.
 Future<void> _pickDateInPicker(WidgetTester tester, DateTime date) async {
-  final dialog = find.byType(DatePickerDialog);
+  final dialog = find.byKey(const Key('portraitDatePicker'));
   final today = nowKst();
   if (date.year != today.year || date.month != today.month) {
     await tester.tap(
@@ -548,9 +552,7 @@ Future<void> _pickDateInPicker(WidgetTester tester, DateTime date) async {
     find.descendant(of: dialog, matching: find.text('${date.day}')).last,
   );
   await tester.pumpAndSettle();
-  await tester.tap(
-    find.descendant(of: dialog, matching: find.byType(TextButton)).last,
-  );
+  await tester.tap(find.byKey(const Key('portraitDatePickerConfirm')));
   await tester.pumpAndSettle();
 }
 
@@ -835,9 +837,10 @@ void main() {
           tester.getBottomRight(nutrition).dy,
           lessThanOrEqualTo(tester.view.physicalSize.height),
         );
+        // 나트륨·당류는 좌우가 아니라 위아래로 쌓인다.
         expect(
-          tester.getTopLeft(sodium).dx,
-          lessThan(tester.getTopLeft(sugar).dx),
+          tester.getTopLeft(sodium).dy,
+          lessThan(tester.getTopLeft(sugar).dy),
         );
         _expectNutritionStatusCardsInBounds(tester);
         // 전송 이력은 편집기 아래가 아니라 오른쪽 열이다 — 이 고객에게 이미
@@ -1681,7 +1684,7 @@ void main() {
       await tester.tap(dateButton);
       await tester.pumpAndSettle();
 
-      expect(find.byType(DatePickerDialog), findsOneWidget);
+      expect(find.byKey(const Key('portraitDatePicker')), findsOneWidget);
       await _pickDateInPicker(tester, nowKst().add(const Duration(days: 1)));
 
       await _sendProgram(tester);

@@ -8,10 +8,9 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 프로그램 직접 만들기의 PT 등록 날짜·시각 선택 UI. (#1425)
 ///
-/// 이 흐름만 기본 Material `showDatePicker`·`showTimePicker` 를 썼다. 앱의 다른
-/// 입력 화면은 세로형 달력(`showPortraitDatePicker`)과 스케줄 탭의 시계
-/// 선택기를 쓴다 — 같은 앱에서 날짜·시각을 고르는 방법이 탭마다 다르면 공통
-/// 검증·접근성 개선도 함께 가지 않는다.
+/// 앱의 다른 입력 화면과 같은 세로형 달력(`showPortraitDatePicker`)과 스케줄
+/// 탭의 시계 선택기(`showScheduleTimePicker`)를 쓴다 — 같은 앱에서 날짜·시각을
+/// 고르는 방법이 탭마다 다르면 공통 검증·접근성 개선도 함께 가지 않는다.
 void main() {
   DateTime today() {
     final now = nowKst();
@@ -95,26 +94,28 @@ void main() {
     await pumpWorkspace(tester);
     await tapChip(tester, 'program-register-date');
 
-    expect(find.byType(DatePickerDialog), findsOneWidget);
-    // 달력은 자기 화면이 가로로 넓으면 헤더와 그리드를 좌우로 나눈다.
-    // `showPortraitDatePicker` 는 이 다이얼로그에게만 세로 화면을 넘겨 늘
-    // 위아래로 선 달력이 되게 한다 — 트레이너 웹은 늘 넓은 창이다.
-    final BuildContext dialogContext = tester.element(
-      find.byType(DatePickerDialog),
+    // `showPortraitDatePicker` 는 Material 기본 `DatePickerDialog` 대신
+    // `CalendarDatePicker` 를 직접 감싸 그린다 — 그 자체가 화면 가로·세로에
+    // 상관없이 늘 세로 배치라 트레이너 웹처럼 늘 넓은 창에서도 좌우로
+    // 갈라지지 않는다.
+    final Finder dialog = find.byKey(const Key('portraitDatePicker'));
+    expect(dialog, findsOneWidget);
+    expect(
+      find.descendant(of: dialog, matching: find.byType(CalendarDatePicker)),
+      findsOneWidget,
     );
-    expect(MediaQuery.of(dialogContext).orientation, Orientation.portrait);
   });
 
   testWidgets('과거 날짜는 고를 수 없고 한 해 앞까지 고른다', (tester) async {
     await pumpWorkspace(tester);
     await tapChip(tester, 'program-register-date');
 
-    final DatePickerDialog dialog = tester.widget<DatePickerDialog>(
-      find.byType(DatePickerDialog),
+    final CalendarDatePicker picker = tester.widget<CalendarDatePicker>(
+      find.byType(CalendarDatePicker),
     );
-    expect(dialog.firstDate, today());
-    expect(dialog.lastDate, today().add(const Duration(days: 365)));
-    expect(dialog.initialDate, today());
+    expect(picker.firstDate, today());
+    expect(picker.lastDate, today().add(const Duration(days: 365)));
+    expect(picker.initialDate, today());
   });
 
   testWidgets('시각 선택은 스케줄 탭과 같은 범위 선택기다', (tester) async {

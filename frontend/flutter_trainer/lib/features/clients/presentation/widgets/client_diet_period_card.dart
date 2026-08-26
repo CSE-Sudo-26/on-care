@@ -402,7 +402,11 @@ class _Body extends StatelessWidget {
                     ),
                     if (macros != null) ...<Widget>[
                       const SizedBox(width: AppSpacing.md),
-                      _MacroDetail(macros: macros, format: format),
+                      _MacroDetail(
+                        macros: macros,
+                        format: format,
+                        muted: weekly,
+                      ),
                     ],
                   ],
                 ),
@@ -518,18 +522,35 @@ class _Macros {
 }
 
 class _MacroDetail extends StatelessWidget {
-  const _MacroDetail({required this.macros, required this.format});
+  const _MacroDetail({
+    required this.macros,
+    required this.format,
+    required this.muted,
+  });
 
   final _Macros macros;
   final String Function(num) format;
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<(String, double, Color)> rows = <(String, double, Color)>[
-      (l.metricCarbs, macros.carbs, AppColors.macroCarbs),
-      (l.metricProtein, macros.protein, AppColors.macroProtein),
-      (l.metricFat, macros.fat, AppColors.macroFat),
+      (
+        l.metricCarbs,
+        macros.carbs,
+        muted ? AppColors.mutedForeground : AppColors.macroCarbs,
+      ),
+      (
+        l.metricProtein,
+        macros.protein,
+        muted ? AppColors.mutedForeground : AppColors.macroProtein,
+      ),
+      (
+        l.metricFat,
+        macros.fat,
+        muted ? AppColors.mutedForeground : AppColors.macroFat,
+      ),
     ];
     return Column(
       key: const ValueKey<String>('client-diet-period-macros'),
@@ -559,7 +580,7 @@ class _MacroDetail extends StatelessWidget {
                   maxLines: 1,
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.foreground,
                   ),
                 ),
@@ -909,6 +930,8 @@ class _MacroBar extends StatelessWidget {
               // 목표 안쪽 막대는 [AppColors.dietChart] — 이 앱의 브랜드
               // 남색이다. 한때 초록이었지만(#1027) 초록은 `정상` 으로 읽혀
               // 목표에 한참 못 미친 날까지 괜찮다고 말해 걷어냈다(#1168).
+              // 판단은 초과 여부만 하고, 초과한 날만 [AppColors.overTarget]
+              // 으로 갈린다(#1239).
               : AppColors.dietChart.withValues(alpha: 0.85),
           borderRadius: radius,
         ),
