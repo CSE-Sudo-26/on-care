@@ -51,6 +51,10 @@ class OwnExerciseRecords extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Row(
+          // 추가 버튼은 늘 오른쪽 끝이다 — 식단 탭의 `식사 추가` 와 같은 자리.
+          // `spaceBetween` 없이 두면 제목이 짧을 때 버튼이 제목 바로 옆에
+          // 붙어, 오른쪽 끝에 있어야 할 버튼이 줄 가운데로 당겨진다.
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             // 좁은 화면·큰 배율에서는 제목이 먼저 줄어든다 — 추가 버튼이
             // 밀려 나가면 이 자리에서 적을 방법이 사라진다(#766 과 같은 종류).
@@ -210,28 +214,19 @@ class _OwnRecordCard extends ConsumerWidget {
               ],
             ),
           ),
+          // 지우기는 수정 시트 맨 아래로 옮겼다 — 목록 줄에는 되돌릴 수 없는
+          // 동작을 한 번에 누를 자리를 두지 않는다(#1468). 연필만 남기고,
+          // 색은 상세 식사 카드의 수정 아이콘과 같은 옅은 회색을 쓴다.
           IconButton(
             key: session.id == null
                 ? null
                 : ValueKey<String>('exercise-own-record-edit-${session.id}'),
             tooltip: l.exEditExercise,
-            iconSize: 18,
+            iconSize: 16,
             visualDensity: VisualDensity.compact,
-            color: AppColors.mutedForeground,
+            color: FigmaColors.textFaint,
             onPressed: () => showExerciseAddSheet(context, session: session),
             icon: const Icon(Icons.edit_outlined),
-          ),
-          IconButton(
-            key: session.id == null
-                ? null
-                : ValueKey<String>('exercise-own-record-delete-${session.id}'),
-            tooltip: l.exDeleteExercise,
-            iconSize: 18,
-            visualDensity: VisualDensity.compact,
-            color: AppColors.destructive,
-            onPressed: () =>
-                confirmDeleteExerciseSession(context, ref, session),
-            icon: const Icon(Icons.delete_outline),
           ),
         ],
       ),

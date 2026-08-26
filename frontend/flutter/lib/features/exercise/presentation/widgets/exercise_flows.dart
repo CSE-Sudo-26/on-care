@@ -249,6 +249,20 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   int get _effectiveMinutes =>
       _isStrength ? _strengthMinutes : _minutes.round();
 
+  /// 편집 시트 안에서 지운다 — 목록 줄에는 더 이상 휴지통을 두지 않는다.
+  /// 지우기는 되돌릴 수 없는 동작이라, 고치는 화면 안에 한 번 더 들어와야만
+  /// 닿을 수 있는 자리에 둔다(식단 탭의 끼니 수정 화면과 같은 자리, #1468).
+  Future<void> _delete() async {
+    final ExerciseSession? session = widget.session;
+    if (session == null || _saving) return;
+    final bool deleted = await confirmDeleteExerciseSession(
+      context,
+      ref,
+      session,
+    );
+    if (deleted && mounted) Navigator.of(context).pop(true);
+  }
+
   Future<void> _pickDate() async {
     final DateTime now = nowKst();
     final DateTime? picked = await showPortraitDatePicker(
@@ -578,6 +592,37 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     ],
                   ),
                 ),
+                // 지우기는 고치는 화면 맨 아래에서만 한다 — 목록 줄의 휴지통은
+                // 없앴다. 새로 적는 시트에는(수정이 아니면) 지울 기록 자체가
+                // 없으니 두지 않는다.
+                if (widget.isEdit) ...<Widget>[
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      key: const Key('exerciseDeleteButton'),
+                      onPressed: _saving ? null : _delete,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.destructive,
+                        side: BorderSide(
+                          color: AppColors.destructive.withValues(alpha: 0.2),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: Text(
+                        l.exDeleteExercise,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

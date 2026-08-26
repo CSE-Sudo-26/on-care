@@ -292,15 +292,18 @@ void main() {
     ).pop();
     await tester.pumpAndSettle();
 
-    // 삭제 — 확인창을 거친 뒤에만 지운다.
-    final Finder remove = find.byKey(
-      const ValueKey<String>('exercise-own-record-delete-own-1'),
-    );
+    // 삭제 — 목록 줄이 아니라 수정 시트 맨 아래에서, 확인창을 거친 뒤에만
+    // 지운다(#1523). 다시 연필을 눌러 시트를 연다.
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+    final Finder remove = find.byKey(const Key('exerciseDeleteButton'));
     await tester.ensureVisible(remove);
     await tester.pumpAndSettle();
     await tester.tap(remove);
     await tester.pumpAndSettle();
-    expect(find.text(l.exDeleteExercise), findsOneWidget);
+    // 확인창의 제목은 시트의 삭제 버튼과 같은 문구(`exDeleteExercise`)를 쓴다
+    // — 버튼은 확인창 아래 그대로 남아 있으므로, 본문으로 확인창만 짚는다.
+    expect(find.text(l.exDeleteExerciseBody), findsOneWidget);
     expect(repo.deletedId, isNull, reason: '확인 전에는 지우지 않는다');
 
     await tester.tap(find.widgetWithText(TextButton, l.actionDelete));
