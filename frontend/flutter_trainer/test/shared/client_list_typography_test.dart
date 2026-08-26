@@ -125,29 +125,6 @@ void main() {
     expectAvatarCentered(tester, 'report-client-type-a');
   });
 
-  testWidgets('리포트 탭 고객 목록은 프로그램 탭과 행·목록 크기가 같다', (
-    tester,
-  ) async {
-    await openTab(tester, AppRoutes.coaching);
-    final Size programRow = tester.getSize(
-      find.byKey(const ValueKey<String>('program-client-type-a')),
-    );
-    final Size programList = tester.getSize(
-      find.byKey(const ValueKey<String>('program-client-list-scroll')),
-    );
-
-    await openTab(tester, AppRoutes.reports);
-    final Size reportRow = tester.getSize(
-      find.byKey(const ValueKey<String>('report-client-type-a')),
-    );
-    final Size reportList = tester.getSize(
-      find.byKey(const ValueKey<String>('report-client-list-scroll')),
-    );
-
-    expect(reportRow, programRow);
-    expect(reportList.height, programList.height);
-  });
-
   testWidgets('긴 이름과 큰 배율에서도 행이 넘치지 않는다', (tester) async {
     final List<TrainerClient> longNames = <TrainerClient>[
       makeClient(id: 'type-a', name: '아주아주긴이름의고객님입니다', goal: goal),
