@@ -3971,7 +3971,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachRegisteredAttachedExisting.
   ///
   /// In en, this message translates to:
-  /// **'There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn\'t applied'**
+  /// **'There was already a session planned on {date}, so the program was only attached to it — the time range you picked wasn\'t applied'**
   String coachRegisteredAttachedExisting(String date);
 
   /// No description provided for @coachRegisterOn.
