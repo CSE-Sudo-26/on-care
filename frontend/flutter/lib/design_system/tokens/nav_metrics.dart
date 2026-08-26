@@ -24,4 +24,9 @@ class AppNavMetrics {
   /// 닿아 가려 보였고, 28 로도 실기에서 빠듯했다. 지금 값은 그런 기기의
   /// 인셋을 그대로 따른다 — 즉 이 상한은 그보다 깊은 기기에서만 걸린다.
   static const double maxBottomInset = 34;
+
+  /// 안전영역 **위에** 항상 얹는 고정 여백. 인셋을 다 따라도 라벨이 화면
+  /// 끝(홈 인디케이터)에 가까워 빠듯해 보여, 그만큼을 더 띄운다. 인셋이 없는
+  /// 기기에서도 라벨 아래에 이 여백은 남는다.
+  static const double labelBottomPadding = 8;
 }
