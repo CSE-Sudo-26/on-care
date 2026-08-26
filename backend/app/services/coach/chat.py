@@ -2,10 +2,13 @@
 
 RAG(retrieve)로 개인+공공 근거를 모아 LLM 으로 대화형 답변을 생성한다.
 LLM 키가 없거나 실패하면 검색 기반(추출형) 답변으로 폴백해, 키 없이도 근거 있는 응답을 준다.
+검색(임베딩) 자체가 실패해도 같은 폴백으로 내려간다 — 외부 장애가 코치 전체 장애가 되지 않게(#1543).
 개인/공공 격리·도메인 필터는 retrieve 가 이미 보장한다.
 """
 
 from __future__ import annotations
+
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,6 +30,8 @@ _SYSTEM = (
     # '내 건강 기록'에는 트레이너와 주고받은 대화도 섞여 들어온다(#580).
     + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
+
+logger = logging.getLogger(__name__)
 
 _MAX_HISTORY = 6
 
@@ -89,6 +94,34 @@ def _fallback_reply(hits: dict) -> str:
     return "고혈압·당뇨 관리(식단·운동)에 대해 물어봐 주시면 온이가 도와드릴게요!"
 
 
+def _safe_retrieve(db: Session, user_id: str, message: str) -> dict:
+    """검색 실패를 폴백 경계 **안**으로 끌어온다 (#1543).
+
+    검색은 질의 임베딩부터 한다. 임베딩 provider 가 timeout·429·이상 응답으로
+    실패하면 여기서 예외가 올라오는데, 그 호출이 `try` 밖에 있으면 생성 실패에는
+    걸려 있는 규칙 기반 폴백에 닿지 못하고 엔드포인트가 그대로 500 을 낸다 —
+    임베딩 서비스 장애 하나가 회원·트레이너 AI 코치 전체 장애가 된다.
+
+    근거 없이 답하는 것이 답하지 못하는 것보다 낫다. 빈 hit 을 돌려주면 뒤의
+    경로가 그대로 이어진다 — LLM 이 살아 있으면 프로필·기간 요약만으로 답하고,
+    그것도 실패하면 규칙 기반 문구로 내려간다.
+    """
+    try:
+        return retrieve(db, message, user_id=user_id, domain=None)
+    except Exception:  # noqa: BLE001 — 임베딩/DB 오류 → 근거 없이 계속
+        logger.exception(
+            "RAG 검색 실패 (user_id=%s) → 근거 없이 폴백 응답 생성", user_id
+        )
+        # 검색이 DB 쪽에서 깨졌다면 세션이 실패한 트랜잭션에 갇힌다. 그대로 두면
+        # 폴백 답변은 만들어도 호출부의 대화 저장이 다시 터져 결국 500 이 된다.
+        # 이 시점까지 이 함수는 읽기만 했으므로 되돌릴 쓰기도 없다.
+        try:
+            db.rollback()
+        except Exception:  # noqa: BLE001 — 정리 실패까지 응답을 깨뜨리진 않는다
+            logger.exception("검색 실패 후 세션 롤백 실패 (user_id=%s)", user_id)
+        return {"personal": [], "public": []}
+
+
 def answer(
     db: Session,
     user_id: str,
@@ -97,7 +130,7 @@ def answer(
 ) -> tuple[str, list[str]]:
     """(답변 텍스트, 근거 공공문서 제목들) 반환."""
     history = history or []
-    hits = retrieve(db, message, user_id=user_id, domain=None)
+    hits = _safe_retrieve(db, user_id, message)
     sources = list(dict.fromkeys(d.title for d in hits["public"] if d.title))
 
     try:
