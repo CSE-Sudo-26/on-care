@@ -20,7 +20,17 @@ class GeminiEmbedder(Embedder):
             raise RuntimeError("GEMINI_API_KEY 가 설정되지 않았습니다.")
         from google import genai
         from google.genai import types
-        self._client = genai.Client(api_key=s.gemini_api_key)
+        # HTTP 타임아웃을 반드시 건다(#1545). 없으면 provider 가 응답하지 않을 때
+        # 호출이 무기한 매달리는데, 개인 문서 교체는 advisory lock 을 쥔 채
+        # 임베딩을 부르므로 DB connection 과 잠금까지 함께 묶인다 — 지연이 요청
+        # 하나로 끝나지 않고 pool 고갈로 번진다. 챗·인식 client 와 같은 설정값을
+        # 쓴다(`coach/llm.py`).
+        self._client = genai.Client(
+            api_key=s.gemini_api_key,
+            http_options=types.HttpOptions(
+                timeout=int(s.gemini_timeout_seconds * 1000)  # SDK 는 밀리초
+            ),
+        )
         self._types = types
         self._model = "gemini-embedding-001"
         self.dim = s.embed_dim
