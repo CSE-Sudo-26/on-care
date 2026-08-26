@@ -83,6 +83,17 @@ const double clientListNameFontSize = 14;
 /// 쪽에 맞춘다.
 const double clientListAvatarSize = 32;
 
+/// 프로그램·리포트 탭 고객 목록의 기본 행 높이와 노출 행 수. (#1423)
+const double clientListBaseRowHeight = 64;
+const int clientListVisibleRows = 5;
+
+/// 접근성 글자 배율을 반영한 공용 고객 목록 행 높이.
+double clientListRowHeight(BuildContext context) {
+  final double scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+  final double extraScale = (scale - 1).clamp(0.0, 2.0);
+  return clientListBaseRowHeight + 56 * extraScale;
+}
+
 /// 이름 아래 목표 한 줄의 글씨 크기. 이름보다 한 단계 작다 — 두 탭이 같은
 /// 위계를 쓰도록 [ClientGoalLabel] 의 기본값 대신 이 값을 함께 준다.
 const double clientListGoalFontSize = 11;

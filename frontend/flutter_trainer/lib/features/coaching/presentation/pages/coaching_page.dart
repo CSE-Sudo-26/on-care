@@ -962,9 +962,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   ///
   /// 웹에서는 줄 안의 글이 브라우저 기본 글꼴로 몇 px 넘쳐 줄무늬가 뜬 적이
   /// 있다(#958) — 테스트 글꼴보다 줄 높이가 살짝 크다. 그만큼 여유를 둔다.
-  static const double _baseRowHeight = 64;
-  static const int _visibleRows = 5;
-
   final ScrollController _scroll = ScrollController();
 
   @override
@@ -990,7 +987,7 @@ class _MemberProgramListState extends State<_MemberProgramList> {
 
   void _revealSelected() {
     if (!_scroll.hasClients) return;
-    final rowHeight = _rowHeight(context);
+    final rowHeight = clientListRowHeight(context);
     final index = widget.clients.indexWhere(
       (client) => client.id == widget.selectedId,
     );
@@ -1020,10 +1017,10 @@ class _MemberProgramListState extends State<_MemberProgramList> {
       icon: Icons.people_outline,
       dense: true,
       child: SizedBox(
-        height: rowHeight * _visibleRows,
+        height: rowHeight * clientListVisibleRows,
         child: Scrollbar(
           controller: _scroll,
-          thumbVisibility: widget.clients.length > _visibleRows,
+          thumbVisibility: widget.clients.length > clientListVisibleRows,
           child: ListView.builder(
             key: const ValueKey<String>('program-client-list-scroll'),
             controller: _scroll,
@@ -1093,11 +1090,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
     );
   }
 
-  double _rowHeight(BuildContext context) {
-    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final extraScale = (scale - 1).clamp(0.0, 2.0);
-    return _baseRowHeight + 56 * extraScale;
-  }
 }
 
 /// 요일별 운동 이행률(월→일). (#899)
