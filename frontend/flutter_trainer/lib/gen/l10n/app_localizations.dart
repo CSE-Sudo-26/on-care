@@ -3158,6 +3158,12 @@ abstract class AppLocalizations {
   /// **'Save program'**
   String get progSaveAction;
 
+  /// No description provided for @progSaveNoteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save note'**
+  String get progSaveNoteAction;
+
   /// No description provided for @progExerciseName.
   ///
   /// In en, this message translates to:

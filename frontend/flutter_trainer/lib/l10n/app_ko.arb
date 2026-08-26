@@ -553,6 +553,7 @@
   "progNoteHint": "프로그램 진행 시 참고할 내용을 입력하세요",
   "progSaving": "저장 중...",
   "progSaveAction": "프로그램 저장",
+  "progSaveNoteAction": "메모 저장",
   "progExerciseName": "운동 이름",
   "progDeleteExercise": "운동 삭제",
   "progSets": "세트",

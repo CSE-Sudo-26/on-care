@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1706,6 +1707,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get progSaveAction => '프로그램 저장';
+
+  @override
+  String get progSaveNoteAction => '메모 저장';
 
   @override
   String get progExerciseName => '운동 이름';
