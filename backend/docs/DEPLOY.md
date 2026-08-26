@@ -37,8 +37,9 @@ GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:800
 
 ## 1) ECR 리포지토리
 
-App Runner가 지원되는 도쿄(`ap-northeast-1`)를 기본 리전으로 사용한다. 서울
-(`ap-northeast-2`)에는 App Runner 엔드포인트가 없으므로 백엔드 배포 리전으로 사용할 수 없다.
+Neon DB와 같은 싱가포르(`ap-southeast-1`)를 기본 리전으로 사용한다. 서울
+(`ap-northeast-2`)에는 App Runner 엔드포인트가 없고, DB와 컴퓨트를 같은 리전에 두면
+데모 환경의 리전 간 지연과 데이터 전송을 피할 수 있다.
 
 Neon 연결정보가 나오기 전에는 비용이 없는 부트스트랩 스택만 먼저 생성한다. 이 스택은 ECR,
 GitHub OIDC 배포 역할, App Runner의 ECR pull 역할을 만들며 App Runner 컴퓨트는 만들지 않는다.
@@ -50,11 +51,11 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
     ExistingGitHubOidcProviderArn=arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com \
-  --region ap-northeast-1
+  --region ap-southeast-1
 ```
 
 ECR에는 최근 이미지 10개만 유지하는 lifecycle policy가 적용된다. GitHub 저장소 변수
-`AWS_BACKEND_REGION`도 `ap-northeast-1`로 설정한다.
+`AWS_BACKEND_REGION`도 `ap-southeast-1`로 설정한다.
 
 ## 2) Neon Postgres (pgvector)
 
