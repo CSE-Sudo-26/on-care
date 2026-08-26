@@ -9,6 +9,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/goal_update.dart';
+import 'package:oncare/features/account/domain/entities/health_focus.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -393,9 +394,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   late final TextEditingController _weight = TextEditingController(
     text: widget.initial.weightKg?.toString() ?? '',
   );
-  late final TextEditingController _goals = TextEditingController(
-    text: widget.initial.goals,
-  );
   bool _saving = false;
 
   @override
@@ -406,7 +404,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     _birth.dispose();
     _height.dispose();
     _weight.dispose();
-    _goals.dispose();
     super.dispose();
   }
 
@@ -427,7 +424,8 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             gender: _gender,
             heightCm: num.tryParse(_height.text.trim()),
             weightKg: num.tryParse(_weight.text.trim()),
-            goals: _goals.text.trim(),
+            // 자유 입력 운동 목표는 `건강 목표` 화면으로 옮겼다(#1471) —
+            // 여기서 보내지 않으므로 그 화면에서 정한 값이 덮이지 않는다.
           );
       // Sheet dismissed mid-save → don't touch ref/pop the page below.
       if (!mounted) return;
@@ -494,8 +492,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           controller: _weight,
           keyboardType: TextInputType.number,
         ),
-        const SizedBox(height: 12),
-        _SheetField(label: l.myFieldGoals, controller: _goals),
       ]),
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
@@ -581,6 +577,15 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round(),
   );
   bool _saving = false;
+
+  /// 주로 관리하고 싶은 항목. 진단·치료 중인 질환을 단정하는 값이 아니라
+  /// **어디에 초점을 둘지**다(#1471). 온보딩이 저장한 값을 그대로 이어받는다.
+  late final Set<String> _focus = parseHealthFocus(widget.initial.conditions);
+
+  /// 자유 입력 운동 목표 — 내 프로필 수정에 있던 칸을 여기로 옮겼다(#1471).
+  late final TextEditingController _exerciseGoal = TextEditingController(
+    text: widget.initial.goals,
+  );
 
   // 목표 칸을 가리키는 이름. 어느 칸이 '아직 회원이 세운 적 없는 칸' 인지
   // 기억하는 열쇠다.
@@ -765,6 +770,8 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           // `GoalUpdate(null)` 로 나가 서버에서 목표 해제가 된다 — 회원이 지운
           // 목표는 지워져야 한다.
           .updateHealthGoals(
+            conditions: formatHealthFocus(_focus),
+            goals: _exerciseGoal.text.trim(),
             dailyCalories: GoalUpdate(_valueToSave(_kKcal, _kcal)),
             dailySodiumMg: GoalUpdate(_valueToSave(_kSodium, _sodium)),
             dailySugarG: GoalUpdate(_valueToSave(_kSugar, _sugar)),
@@ -802,6 +809,104 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     // 만질 때마다 사라진다.
     final split = _suggestedSplit;
     return _shell(context, l.myHealthGoalsTitle, <Widget>[
+      // 순서: 관리 초점 → 자유 입력 운동 목표 → 수치형 운동 목표 → 식단 목표
+      // (#1471). 온보딩 2단계가 묻는 것과 같은 순서라, 두 화면이 같은 이야기를
+      // 같은 차례로 한다.
+      _GoalsSectionLabel(l.myGoalsFocusSection),
+      const SizedBox(height: 8),
+      _card(<Widget>[
+        Text(
+          l.myGoalsFocusHint,
+          style: const TextStyle(
+            fontSize: 12.5,
+            height: 1.4,
+            color: AppColors.mutedForeground,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            for (final ({String key, String label}) option
+                in <({String key, String label})>[
+                  (key: kHealthFocusHypertension, label: l.myGoalsFocusHypertension),
+                  (key: kHealthFocusDiabetes, label: l.myGoalsFocusDiabetes),
+                ])
+              _FocusChip(
+                key: ValueKey<String>('goal-focus-${option.key}'),
+                label: option.label,
+                selected: _focus.contains(option.key),
+                onTap: () => setState(() {
+                  if (!_focus.remove(option.key)) _focus.add(option.key);
+                }),
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        _SheetField(
+          key: const Key('goalExerciseNoteField'),
+          label: l.myGoalsExerciseNote,
+          controller: _exerciseGoal,
+          hintText: l.myGoalsExerciseNoteHint,
+        ),
+      ]),
+      const SizedBox(height: 20),
+      _GoalsSectionLabel(l.myGoalsExerciseSection),
+      const SizedBox(height: 8),
+      _card(<Widget>[
+        _SheetField(
+          key: const Key('goalDailyBurnField'),
+          label: l.myGoalBurnDaily,
+          controller: _burn,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText: '${kDefaultExerciseLoadGoals.dailyBurnKcal.round()}',
+          onChanged: (_) => _markTouched(_kBurn),
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          key: const Key('goalCardioField'),
+          label: l.myGoalCardioWeekly,
+          controller: _cardio,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText: '${kDefaultExerciseLoadGoals.weeklyCardioMinutes.round()}',
+          onChanged: (_) => _markTouched(_kCardio),
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          key: const Key('goalStrengthField'),
+          label: l.myGoalStrengthWeekly,
+          controller: _strength,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText: '${kDefaultExerciseLoadGoals.weeklyStrengthSets.round()}',
+          onChanged: (_) => _markTouched(_kStrength),
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          key: const Key('goalFlexibilityField'),
+          label: l.myGoalFlexibilityWeekly,
+          controller: _flexibility,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+          hintText:
+              '${kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round()}',
+          onChanged: (_) => _markTouched(_kFlexibility),
+        ),
+        // 식단 목표의 `권장 비율로 채우기` 와 같은 자리·같은 모양이다 (#1139).
+        // 권장값은 WHO 권고(주 150분 중강도 유산소)를 따르는
+        // [kDefaultExerciseLoadGoals] 그대로다.
+        const SizedBox(height: 10),
+        _MacroSuggestionRow(
+          buttonKey: const Key('goalApplyExerciseGoals'),
+          note: l.myGoalExerciseSuggestionNote,
+          actionLabel: l.myGoalExerciseApplySuggestion,
+          onApply: _applySuggestedExerciseGoals,
+        ),
+      ]),
+      const SizedBox(height: 20),
       _GoalsSectionLabel(l.myGoalsDietSection),
       const SizedBox(height: 8),
       _card(<Widget>[
@@ -895,64 +1000,53 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           ),
         ],
       ]),
-      const SizedBox(height: 20),
-      _GoalsSectionLabel(l.myGoalsExerciseSection),
-      const SizedBox(height: 8),
-      _card(<Widget>[
-        _SheetField(
-          key: const Key('goalDailyBurnField'),
-          label: l.myGoalBurnDaily,
-          controller: _burn,
-          keyboardType: TextInputType.number,
-          inputFormatters: _digitsOnly,
-          hintText: '${kDefaultExerciseLoadGoals.dailyBurnKcal.round()}',
-          onChanged: (_) => _markTouched(_kBurn),
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          key: const Key('goalCardioField'),
-          label: l.myGoalCardioWeekly,
-          controller: _cardio,
-          keyboardType: TextInputType.number,
-          inputFormatters: _digitsOnly,
-          hintText: '${kDefaultExerciseLoadGoals.weeklyCardioMinutes.round()}',
-          onChanged: (_) => _markTouched(_kCardio),
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          key: const Key('goalStrengthField'),
-          label: l.myGoalStrengthWeekly,
-          controller: _strength,
-          keyboardType: TextInputType.number,
-          inputFormatters: _digitsOnly,
-          hintText: '${kDefaultExerciseLoadGoals.weeklyStrengthSets.round()}',
-          onChanged: (_) => _markTouched(_kStrength),
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          key: const Key('goalFlexibilityField'),
-          label: l.myGoalFlexibilityWeekly,
-          controller: _flexibility,
-          keyboardType: TextInputType.number,
-          inputFormatters: _digitsOnly,
-          hintText:
-              '${kDefaultExerciseLoadGoals.weeklyFlexibilityMinutes.round()}',
-          onChanged: (_) => _markTouched(_kFlexibility),
-        ),
-        // 식단 목표의 `권장 비율로 채우기` 와 같은 자리·같은 모양이다 (#1139).
-        // 권장값은 WHO 권고(주 150분 중강도 유산소)를 따르는
-        // [kDefaultExerciseLoadGoals] 그대로다.
-        const SizedBox(height: 10),
-        _MacroSuggestionRow(
-          buttonKey: const Key('goalApplyExerciseGoals'),
-          note: l.myGoalExerciseSuggestionNote,
-          actionLabel: l.myGoalExerciseApplySuggestion,
-          onApply: _applySuggestedExerciseGoals,
-        ),
-      ]),
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
     ], saving: _saving);
+  }
+}
+
+/// 관리 초점 하나를 고르는 칩. 온보딩 2단계의 칩과 같은 모양이다 — 두 화면이
+/// 같은 값을 묻는데 생김새가 다르면 같은 질문으로 읽히지 않는다. (#1471)
+class _FocusChip extends StatelessWidget {
+  const _FocusChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? FigmaColors.primaryA(0.10) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? FigmaColors.primary : FigmaColors.hairline,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: selected ? FigmaColors.primary : AppColors.mutedForeground,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

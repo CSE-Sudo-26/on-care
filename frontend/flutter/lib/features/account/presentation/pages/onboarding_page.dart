@@ -438,17 +438,26 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     child: Row(
       children: <Widget>[
         if (_step > 0) ...<Widget>[
-          OutlinedButton(
+          // 되돌아가기는 보조 동작이다 — 글자를 단 큰 외곽선 버튼이면 옆의
+          // 주 동작과 무게가 비슷해진다(#1471). 화살표 하나로 줄이되 터치
+          // 영역과 접근성 라벨은 그대로 둔다.
+          IconButton(
+            key: const Key('onboardBackButton'),
             onPressed: _saving ? null : _back,
-            style: OutlinedButton.styleFrom(
+            tooltip: l.onboardPrevious,
+            iconSize: 22,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            style: IconButton.styleFrom(
               foregroundColor: AppColors.foreground,
-              side: const BorderSide(color: AppColors.border),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: 16,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.border),
               ),
             ),
-            child: Text(l.onboardPrevious),
+            icon: Semantics(
+              label: l.onboardPrevious,
+              child: const Icon(Icons.chevron_left),
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
         ],

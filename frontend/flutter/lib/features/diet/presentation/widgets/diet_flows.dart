@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' show DateFormat;
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/core/utils/portrait_date_picker.dart';
@@ -158,9 +158,15 @@ Widget _sheetHandle() => Container(
 
 // ─────────────────────────────────────────────────── 식단 추가하기 ──
 
+/// 고른 사진과 끼니. 사진 선택 시트가 닫히면서 부르는 쪽에 넘긴다.
+typedef DietPickedPhoto = ({MealPhoto photo, String mealType});
+
 /// Opens the short photo-source choice as a content-sized bottom sheet.
-Future<void> showDietAddSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+///
+/// **기록이 저장되면 true.** 하단 `+` 로 연 흐름이 저장 성공에만 식단 탭으로
+/// 옮겨 가려면, 취소·권한 거부·분석 실패와 저장 성공을 구분해야 한다(#1434).
+Future<bool> showDietAddSheet(BuildContext context) async {
+  final DietPickedPhoto? picked = await showModalBottomSheet<DietPickedPhoto>(
     context: context,
     // Keep the sheet above the main shell's floating buttons even when it is
     // opened from a tab page that has its own nested Navigator.
@@ -170,6 +176,11 @@ Future<void> showDietAddSheet(BuildContext context) {
     barrierColor: FigmaColors.sheetScrim,
     builder: (BuildContext ctx) => const _DietAddSheet(),
   );
+  if (picked == null) return false;
+  if (!context.mounted) return false;
+  // 결과 시트는 사진 선택 시트가 **닫힌 뒤** 열린다 — 두 시트가 겹치면 뒤엣
+  // 것이 스크림 위로 비친다.
+  return showDietResultSheet(context, picked.photo, picked.mealType);
 }
 
 /// Photo-source choice for 식단 추가.
@@ -218,8 +229,10 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
     _settle(null);
     if (photo == null) return; // user cancelled
 
-    navigator.pop();
-    await showDietResultSheet(navigator.context, photo, _currentMealType());
+    // 고른 사진을 부르는 쪽에 넘기고 닫힌다 — 결과 시트는 그쪽이 연다. 이
+    // 시트가 직접 열면 부르는 쪽 future 가 결과보다 먼저 끝나, 저장 성공을
+    // 알 방법이 없다(#1434).
+    navigator.pop((photo: photo, mealType: _currentMealType()));
   }
 
   void _settle(MealPhotoFailure? failure) {
@@ -281,10 +294,12 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Column(
               children: <Widget>[
+                // 두 갈래 모두 브랜드 파랑의 농담이다 — 촬영이 진한 쪽(주된
+                // 경로), 갤러리가 옅은 쪽이다.
                 _SourceOption(
                   icon: Icons.image_outlined,
-                  iconBg: FigmaColors.primaryA(0.12),
-                  iconColor: FigmaColors.primary,
+                  iconBg: FigmaColors.primaryA(0.10),
+                  iconColor: FigmaColors.primaryA(0.55),
                   title: l.dietPickPhoto,
                   subtitle: l.dietPickPhotoSub,
                   onTap: () => _pickAndAnalyze(MealPhotoSource.gallery),
@@ -292,8 +307,8 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
                 const SizedBox(height: 12),
                 _SourceOption(
                   icon: Icons.photo_camera_outlined,
-                  iconBg: FigmaColors.greenA(0.12),
-                  iconColor: FigmaColors.greenText,
+                  iconBg: FigmaColors.primaryA(0.12),
+                  iconColor: FigmaColors.primary,
                   title: l.dietTakePhoto,
                   subtitle: l.dietTakePhotoSub,
                   onTap: () => _pickAndAnalyze(MealPhotoSource.camera),
@@ -301,6 +316,9 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
               ],
             ),
           ),
+          // 마지막 카드가 화면 끝(홈 인디케이터)에 닿아 잘려 보이던 것을
+          // 띄운다 — 시스템 인셋이 없는 기기에서도 남는 여백이다.
+          const SizedBox(height: 20),
         ],
       ),
       key: const Key('dietAddSheet'),
@@ -523,12 +541,14 @@ class _SourceOption extends StatelessWidget {
 /// Runs the real `POST /diet/analyze` on the picked [photo] and shows the
 /// recognised foods + nutrition. The backend persists the entry as part of
 /// analysis, so a successful result refreshes [dietTodayProvider].
-Future<void> showDietResultSheet(
+/// 결과 시트. `완료` 까지 마치면 true — 저장된 기록을 확인할 준비가 됐다는
+/// 뜻이다(#1434).
+Future<bool> showDietResultSheet(
   BuildContext context,
   MealPhoto photo,
   String mealType,
-) {
-  return showModalBottomSheet<void>(
+) async {
+  final bool? done = await showModalBottomSheet<bool>(
     context: context,
     // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다. 식단 추가 시트와
     // 같은 규칙이다 — 그 시트가 이 시트를 열므로 둘이 같은 층에 있어야 한다(#791).
@@ -539,6 +559,7 @@ Future<void> showDietResultSheet(
     builder: (BuildContext ctx) =>
         _ResultSheet(photo: photo, mealType: mealType),
   );
+  return done ?? false;
 }
 
 class _ResultSheet extends ConsumerStatefulWidget {
@@ -775,9 +796,13 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: _body(),
+          // 결과가 길어지면 시트 안에서 스크롤한다 — 탄·단·지 줄이 붙으면서
+          // 작은 화면에서는 버튼이 시트 밖으로 밀렸다(#1432).
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: _body(),
+            ),
           ),
         ],
       ),
@@ -967,23 +992,51 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           value: '${r.totalSugarG}',
           unit: l.dietUnitG,
         ),
+        const SizedBox(height: 8),
+        // 탄·단·지는 칼로리를 나눈 것이라 한 줄에 묶는다 — 나트륨·당류처럼
+        // 따로 세우면 같은 칼로리를 설명하는 값이라는 것이 보이지 않는다.
+        // 색·이름·단위는 식단 탭의 기존 규칙 그대로다(#1432).
+        _MacroRow(
+          key: const Key('diet-result-macros'),
+          carbsG: r.totalCarbsG,
+          proteinG: r.totalProteinG,
+          fatG: r.totalFatG,
+        ),
         if (r.coachComment.isNotEmpty) ...<Widget>[
           const SizedBox(height: 12),
           Container(
+            key: const Key('diet-result-coach-comment'),
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: FigmaColors.statBg,
+              // AI 가 쓴 말은 수치 카드와 같은 회색이면 서버가 잰 값처럼
+              // 읽힌다. AI 조언 카드와 같은 옅은 파랑을 쓴다(#1432).
+              color: FigmaColors.softBlue,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              r.coachComment,
-              style: const TextStyle(
-                fontSize: 13.5,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: AppColors.foreground,
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.only(top: 1, right: 8),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 15,
+                    color: FigmaColors.primary,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    r.coachComment,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -992,7 +1045,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(true);
               showAppToast(context, l.dietSaved, kind: AppToastKind.success);
             },
             style: FilledButton.styleFrom(
@@ -1012,6 +1065,99 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       ],
     );
   }
+}
+
+/// 탄·단·지 한 줄. 값 셋이 한 칼로리를 나눈 것이라 한 상자 안에 나란히 선다.
+///
+/// 색은 기간 그래프가 쓰는 브랜드 색의 농담 셋이다 — 같은 세 값이 화면마다
+/// 다른 색이면 색이 뜻을 잃는다. 서버가 0 을 주면 0 을 적는다: 값을 감추면
+/// 분석이 그 영양소를 재지 못한 것인지 정말 0 인지 알 수 없다.
+class _MacroRow extends StatelessWidget {
+  const _MacroRow({
+    super.key,
+    required this.carbsG,
+    required this.proteinG,
+    required this.fatG,
+  });
+
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<({String label, double grams, Color color})> parts =
+        <({String label, double grams, Color color})>[
+          (label: l.homeMacroCarbs, grams: carbsG, color: FigmaColors.macroCarbs),
+          (
+            label: l.homeMacroProtein,
+            grams: proteinG,
+            color: FigmaColors.macroProtein,
+          ),
+          (label: l.homeMacroFat, grams: fatG, color: FigmaColors.macroFat),
+        ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: <Widget>[
+          for (final part in parts)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(right: 5),
+                        decoration: BoxDecoration(
+                          color: part.color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Flexible(
+                        child: Text(
+                          part.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_macroText(part.grams)}${l.dietUnitG}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: FigmaColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 소수 첫째 자리까지만. 정수는 콤마만 — 식단 탭의 다른 수치와 같은 서식이다.
+  static String _macroText(double grams) => grams == grams.roundToDouble()
+      ? NumberFormat('#,###').format(grams)
+      : NumberFormat('#,##0.#').format(grams);
 }
 
 class _ResultRow extends StatelessWidget {

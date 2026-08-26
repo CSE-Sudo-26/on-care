@@ -654,6 +654,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthGoals => '고객 목표';
 
   @override
+  String get memberHealthDietGoal => '식단 목표';
+
+  @override
+  String get memberHealthExerciseGoal => '운동 목표';
+
+  @override
+  String get memberHealthGoalCalories => '일일 칼로리 제한 (kcal)';
+
+  @override
+  String get memberHealthGoalSodium => '일일 나트륨 제한 (mg)';
+
+  @override
+  String get memberHealthGoalSugar => '일일 당류 제한 (g)';
+
+  @override
+  String get memberHealthGoalCarbs => '일일 탄수화물 제한 (g)';
+
+  @override
+  String get memberHealthGoalProtein => '일일 단백질 제한 (g)';
+
+  @override
+  String get memberHealthGoalFat => '일일 지방 제한 (g)';
+
+  @override
+  String get memberHealthGoalBurnDaily => '일일 소모 칼로리 (kcal)';
+
+  @override
+  String get memberHealthGoalCardioWeekly => '주간 유산소 (분)';
+
+  @override
+  String get memberHealthGoalStrengthWeekly => '주간 근력 (세트)';
+
+  @override
+  String get memberHealthGoalFlexibilityWeekly => '주간 스트레칭 (분)';
+
+  @override
   String get memberHealthWeeklyGoal => '주간 운동 목표';
 
   @override
@@ -678,8 +714,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '회원 ID로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
 
   @override
-  String get clientInviteIntroImmediate =>
-      '회원 ID로 고객을 확인한 뒤 바로 등록해요. 성별·나이·운동 목표는 데모 회원 정보에서 가져와요.';
+  String get clientInviteIntroImmediate => '회원 ID로 고객을 확인한 뒤 바로 등록해요.';
 
   @override
   String get clientInviteMemberIdLabel => '회원 ID';
@@ -741,9 +776,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteConfirmPrompt => '이 고객이 맞나요?';
-
-  @override
-  String get clientInviteGoalLabel => '운동 목표';
 
   @override
   String get coachTemplateNew => '새 템플릿';
@@ -830,6 +862,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get metricSugar => '당류';
+
+  @override
+  String get clientDietMacrosMissing => '탄·단·지 기록 없음';
 
   @override
   String get metricCarbs => '탄수화물';
@@ -1102,6 +1137,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientFeedback => '고객 피드백';
 
   @override
+  String clientFeedbackOn(String name) {
+    return '$name에 대한 고객 피드백';
+  }
+
+  @override
+  String get clientFeedbackPersonal => '개인 운동에 대한 고객 피드백';
+
+  @override
+  String get clientFeedbackSession => '이 세션에 대한 고객 피드백';
+
+  @override
+  String get workoutKindAiPersonal => 'AI 개인운동';
+
+  @override
   String get trainerNote => '트레이너 메모';
 
   @override
@@ -1336,7 +1385,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsWeeklyCompletion => '주간 이행률';
 
   @override
-  String get clientWeeklyRoutineAdherence => '주간 루틴 이행률';
+  String get clientWeeklyRoutineAdherence => '주간 이행률';
 
   @override
   String get clientRoutineAdherenceUnmeasured => '미집계';
@@ -3327,6 +3376,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsAiNextWeek => '다음 주 코칭 제안';
+
+  @override
+  String reportsAiMoreWatchpoints(int count) {
+    return '외 $count건은 리포트 본문에서 확인하세요.';
+  }
 
   @override
   String get reportsActionSodium => '국물·절임 반찬을 절반만 남기도록 안내해 주세요.';

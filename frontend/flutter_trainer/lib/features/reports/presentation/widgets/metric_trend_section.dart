@@ -144,6 +144,12 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
             goalLabel: l.chartGoalLabel(metricTrendNumber(_goal)),
             formatTick: metricTrendNumber,
           ),
+        // 칼로리를 볼 때만 그 칼로리가 무엇으로 이루어졌는지 함께 적는다
+        // (#1437). 나트륨·당류는 쪼갤 성분이 없어 지금 그림 그대로다.
+        if (_metric == _TrendMetric.calories) ...<Widget>[
+          const SizedBox(height: AppSpacing.sm),
+          _WeeklyMacroStrip(report: widget.report),
+        ],
         const Divider(height: AppSpacing.xl, color: AppColors.border),
         FourWeekMetricTrend(
           report: widget.report,
@@ -156,6 +162,238 @@ class _MetricTrendSectionState extends State<MetricTrendSection> {
           goal: _goal,
           unit: _unit(l),
         ),
+      ],
+    );
+  }
+}
+
+/// 요일별 탄·단·지 한 줄. (#1437)
+///
+/// 위 꺾은선은 그날 **얼마나** 먹었는지를 말하고, 이 줄은 그 칼로리가
+/// **무엇으로** 이루어졌는지를 말한다. 값은 리포트가 이미 들고 있는
+/// `carbsWeek`·`proteinWeek`·`fatWeek` 그대로이며, 색은 비교 그래프·고객 식단
+/// 카드가 쓰는 같은 토큰이다.
+///
+/// 기록이 없는 날은 빈 트랙으로 둔다 — 0g 막대를 그리면 "안 먹은 날" 과
+/// "영양을 모르는 날" 이 같은 그림이 된다. 계열이 7일이 아닌 응답(옛 서버)은
+/// 줄 자체를 그리지 않는다.
+class _WeeklyMacroStrip extends StatelessWidget {
+  const _WeeklyMacroStrip({required this.report});
+
+  final WeeklyReport report;
+
+  /// 7일 계열만 쓴다. 길이가 다르면 빈 목록이다.
+  List<double> _series(List<double> raw) =>
+      raw.length == weekdayCount ? raw : const <double>[];
+
+  /// 요일 하나를 읽는 한 문장. 인접 문자열을 목록 안에 두지 않으려고 함수로
+  /// 뺐다.
+  String _dayPoint(
+    AppLocalizations l,
+    String day,
+    double carbs,
+    double protein,
+    double fat,
+    String Function(double) grams,
+  ) =>
+      '$day ${l.metricCarbs} ${grams(carbs)} · '
+      '${l.metricProtein} ${grams(protein)} · '
+      '${l.metricFat} ${grams(fat)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final List<double> carbs = _series(report.carbsWeek);
+    final List<double> protein = _series(report.proteinWeek);
+    final List<double> fat = _series(report.fatWeek);
+    if (carbs.isEmpty || protein.isEmpty || fat.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    // 하루라도 영양이 있어야 그린다. 셋 다 0 인 주는 값이 없는 주다.
+    final bool anyRecorded = <double>[
+      ...carbs,
+      ...protein,
+      ...fat,
+    ].any((double v) => v > 0);
+    if (!anyRecorded) return const SizedBox.shrink();
+
+    final List<String> days = weekdayLabels(l);
+    String grams(double v) => '${metricTrendNumber(v)}${l.unitGram}';
+    // 음성 안내는 요일마다 세 값을 함께 읽는다 — 그림으로만 말하지 않는다.
+    final List<String> points = <String>[
+      for (int i = 0; i < weekdayCount; i++)
+        if (carbs[i] > 0 || protein[i] > 0 || fat[i] > 0)
+          _dayPoint(l, days[i], carbs[i], protein[i], fat[i], grams),
+    ];
+
+    return Semantics(
+      container: true,
+      label: chartSemanticsLabel(
+        l,
+        title: l.reportsMetricTrend(l.dietMacros),
+        points: points,
+      ),
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SizedBox(
+              height: 34,
+              child: Row(
+                key: const ValueKey<String>('trend-macro-strip'),
+                children: <Widget>[
+                  for (int i = 0; i < weekdayCount; i++)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: _MacroDayBar(
+                          carbs: carbs[i],
+                          protein: protein[i],
+                          fat: fat[i],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            // 어느 색이 무엇인지 — 값은 기록이 있는 날의 하루 평균이다.
+            Align(
+              alignment: Alignment.centerRight,
+              child: _MacroWeekLegend(
+                carbs: carbs,
+                protein: protein,
+                fat: fat,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 하루치 탄·단·지 누적 막대. 세 값이 모두 0 이면 빈 트랙이다.
+class _MacroDayBar extends StatelessWidget {
+  const _MacroDayBar({
+    required this.carbs,
+    required this.protein,
+    required this.fat,
+  });
+
+  final double carbs;
+  final double protein;
+  final double fat;
+
+  @override
+  Widget build(BuildContext context) {
+    // 쌓는 기준은 **열량 기여분**이다(탄·단 4kcal/g, 지방 9kcal/g) — 그램으로
+    // 쌓으면 열량의 절반을 내는 지방이 가장 얇게 그려진다. 비교 그래프의
+    // 조각과 같은 규칙이다.
+    final List<({double kcal, Color color})> parts =
+        <({double kcal, Color color})>[
+          (kcal: carbs * 4, color: AppColors.macroCarbs),
+          (kcal: protein * 4, color: AppColors.macroProtein),
+          (kcal: fat * 9, color: AppColors.macroFat),
+        ].where((({double kcal, Color color}) p) => p.kcal > 0).toList();
+    if (parts.isEmpty) {
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          height: 3,
+          decoration: const BoxDecoration(
+            color: AppColors.border,
+            borderRadius: BorderRadius.all(Radius.circular(2)),
+          ),
+        ),
+      );
+    }
+    final double total = parts.fold<double>(
+      0,
+      (double sum, ({double kcal, Color color}) p) => sum + p.kcal,
+    );
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(Radius.circular(3)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final ({double kcal, Color color}) part in parts.reversed)
+            Expanded(
+              flex: (part.kcal / total * 1000).round().clamp(1, 1000),
+              child: ColoredBox(color: part.color),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 색과 이름, 그리고 기록이 있는 날의 하루 평균(g).
+class _MacroWeekLegend extends StatelessWidget {
+  const _MacroWeekLegend({
+    required this.carbs,
+    required this.protein,
+    required this.fat,
+  });
+
+  final List<double> carbs;
+  final List<double> protein;
+  final List<double> fat;
+
+  /// 기록이 있는 날만 나눈다 — 아직 오지 않은 요일의 0 까지 세면 주 초반
+  /// 평균이 실제보다 낮아진다.
+  double _mean(List<double> series) {
+    final List<double> recorded = series
+        .where((double v) => v > 0)
+        .toList(growable: false);
+    if (recorded.isEmpty) return 0;
+    return recorded.reduce((double a, double b) => a + b) / recorded.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final List<({String label, double mean, Color color})> rows =
+        <({String label, double mean, Color color})>[
+          (
+            label: l.metricCarbs,
+            mean: _mean(carbs),
+            color: AppColors.macroCarbs,
+          ),
+          (
+            label: l.metricProtein,
+            mean: _mean(protein),
+            color: AppColors.macroProtein,
+          ),
+          (label: l.metricFat, mean: _mean(fat), color: AppColors.macroFat),
+        ];
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: 2,
+      children: <Widget>[
+        for (final ({String label, double mean, Color color}) row in rows)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: row.color,
+                  borderRadius: const BorderRadius.all(Radius.circular(2)),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${row.label} ${metricTrendNumber(row.mean)}${l.unitGram}',
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }

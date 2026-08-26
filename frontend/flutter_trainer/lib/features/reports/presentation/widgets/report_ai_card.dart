@@ -94,6 +94,9 @@ class ReportAiCard extends ConsumerWidget {
                     data: (value) => _SummaryBody(
                       summary: value,
                       actions: summaryCoachingActions(l, report),
+                      // 자리가 모자라 접은 주의사항이 몇 건인지 말한다 —
+                      // 말하지 않으면 카드가 다 보여 준 것으로 읽힌다(#1430).
+                      hiddenCount: summaryHiddenWatchCount(l, report),
                       fill: fill,
                       onRegenerate: () =>
                           ref.invalidate(reportSummaryProvider(key)),
@@ -115,6 +118,7 @@ class _SummaryBody extends StatelessWidget {
   const _SummaryBody({
     required this.summary,
     required this.actions,
+    this.hiddenCount = 0,
     required this.onRegenerate,
     required this.onUseAsDraft,
     this.fill = false,
@@ -125,6 +129,9 @@ class _SummaryBody extends StatelessWidget {
   /// 다음 주에 할 일. 요약이 지난 주를 말하면, 이쪽은 그래서 무엇을 하면
   /// 되는지를 말한다 — 카드 아래가 비어 있던 자리다(#1177).
   final List<String> actions;
+
+  /// 자리가 모자라 접은 주의사항 수. 0 이면 접은 것이 없다. (#1430)
+  final int hiddenCount;
   final VoidCallback onRegenerate;
   final VoidCallback onUseAsDraft;
 
@@ -196,6 +203,18 @@ class _SummaryBody extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (hiddenCount > 0) ...<Widget>[
+            const SizedBox(height: 3),
+            Text(
+              key: const ValueKey<String>('reports-summary-hidden'),
+              l.reportsAiMoreWatchpoints(hiddenCount),
+              style: const TextStyle(
+                color: AppColors.subtleForeground,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ],

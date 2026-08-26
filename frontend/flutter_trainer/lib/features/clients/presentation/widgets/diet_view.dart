@@ -309,17 +309,9 @@ class _MealCard extends StatelessWidget {
           ),
           // 탄단지는 알약 아래 한 줄로. 회원 앱 끼니 카드에는 없지만, 트레이너는
           // 이 값을 보고 다음 식단을 고쳐 주므로 남긴다(#1025 에서 들어온 줄).
+          // `이번 주`·`전체` 의 펼친 끼니도 같은 줄을 쓴다(#1439).
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            '${l.metricCarbs} ${_grams(entry.carbsG)}g · '
-            '${l.metricProtein} ${_grams(entry.proteinG)}g · '
-            '${l.metricFat} ${_grams(entry.fatG)}g',
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.subtleForeground,
-            ),
-          ),
+          _MealMacroLine(entry: entry),
         ],
       ),
     );
@@ -524,9 +516,9 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
               extra: _openDay == ymd(day.date) && day.logged
                   ? _DayMeals(clientId: widget.clientId, date: day.date)
                   : null,
-              summary:
-                  '${formatNumber(day.calories)} ${l.unitKcal} · '
-                  '${l.dietSodiumValue(day.sodiumMg)}',
+              // 칼로리 → 나트륨 → 당류 순서다. 탄·단·지는 따로 선 항목이
+              // 아니라 **칼로리의 구성**이라, 칼로리 알약 안에 작고 옅게
+              // 붙인다(#1465) — `탄단지` 라는 상위 용어도 함께 사라진다.
               details: <({String label, String value})>[
                 (
                   label: l.metricCalories,
@@ -534,15 +526,14 @@ class _DailyDietRecordsState extends ConsumerState<_DailyDietRecords> {
                 ),
                 (label: l.metricSodium, value: l.dietSodiumValue(day.sodiumMg)),
                 (label: l.metricSugar, value: '${_grams(day.sugarG)}g'),
-                if (day.hasMacros)
-                  (
-                    label: l.dietMacros,
-                    value:
-                        '${l.metricCarbs} ${_grams(day.carbsG)}g · '
-                        '${l.metricProtein} ${_grams(day.proteinG)}g · '
-                        '${l.metricFat} ${_grams(day.fatG)}g',
-                  ),
               ],
+              notes: <String, String>{
+                if (day.hasMacros)
+                  l.metricCalories:
+                      '${l.metricCarbs} ${_grams(day.carbsG)}g · '
+                      '${l.metricProtein} ${_grams(day.proteinG)}g · '
+                      '${l.metricFat} ${_grams(day.fatG)}g',
+              },
             ),
         ],
       ),
@@ -612,6 +603,10 @@ class _DayMeals extends ConsumerWidget {
                               color: AppColors.subtleForeground,
                             ),
                           ),
+                          // `오늘` 끼니 카드와 같은 줄이다(#1439) — 트레이너가
+                          // 과거 식단을 볼 때만 정보가 얕아질 이유가 없다.
+                          const SizedBox(height: 2),
+                          _MealMacroLine(entry: meal),
                         ],
                       ),
                     ),
@@ -623,6 +618,42 @@ class _DayMeals extends ConsumerWidget {
       },
       // 읽는 동안·실패했을 때는 위 상세만 남는다 — 펼친 자리가 흔들리지 않는다.
       orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// 끼니 하나의 탄·단·지 한 줄. `오늘` 카드와 `이번 주`·`전체` 의 펼친 끼니가
+/// 같은 규칙으로 읽는다. (#1439)
+///
+/// **먹었는데 영양이 비어 있는** 기록은 0g 으로 적지 않고 기록이 없다고
+/// 말한다 — 영양을 저장하기 전의 옛 기록이 그렇다. 거른 끼니(칼로리 0)는
+/// 0g 이 곧 사실이라 지금처럼 값을 적는다(#1166 계약).
+class _MealMacroLine extends StatelessWidget {
+  const _MealMacroLine({required this.entry});
+
+  final ClientDietEntry entry;
+
+  bool get _hasMacros =>
+      entry.carbsG > 0 || entry.proteinG > 0 || entry.fatG > 0;
+
+  /// 값을 적을 수 있는가. 칼로리가 0 인 끼니는 거른 끼니라 0g 이 사실이다.
+  bool get _tellsMacros => _hasMacros || entry.calories <= 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Text(
+      key: ValueKey<String>('client-diet-macros-${entry.id}'),
+      _tellsMacros
+          ? '${l.metricCarbs} ${_grams(entry.carbsG)}g · '
+                '${l.metricProtein} ${_grams(entry.proteinG)}g · '
+                '${l.metricFat} ${_grams(entry.fatG)}g'
+          : l.clientDietMacrosMissing,
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w600,
+        color: AppColors.subtleForeground,
+      ),
     );
   }
 }

@@ -170,7 +170,10 @@ class _NextUpBanner extends StatelessWidget {
             key: const ValueKey<String>('dashboard-next-session-cta'),
             onPressed: () => context.go(
               isConsultation || clientId == null
-                  ? AppRoutes.scheduleAt(date: next.date)
+                  // 날짜만 실어 보내면 그날 첫 일정이 열려, 정작 메모를
+                  // 남기려던 상담이 아닌 다른 일정이 선택된다(#1422).
+                  // 스케줄 화면은 `session` 을 받아 그 일정을 고를 수 있다.
+                  ? AppRoutes.scheduleAt(date: next.date, sessionId: next.id)
                   : AppRoutes.coachingFor(clientId),
             ),
             style: FilledButton.styleFrom(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -11,6 +12,7 @@ import 'package:oncare_trainer/features/coaching/domain/exercise_estimate.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -554,11 +556,13 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   /// 등록할 날짜를 고른다 — 기본값은 오늘, 과거 날짜는 고를 수 없다.
   Future<void> _pickRegisterDate(BuildContext context) async {
     final today = _todayDate();
-    final picked = await showDatePicker(
+    // 다른 탭의 날짜 입력과 같은 세로형 달력이다(#1425) — 트레이너 웹은 늘
+    // 넓은 창이라 기본 `showDatePicker` 는 좌우로 퍼진 달력을 띄운다.
+    final picked = await showPortraitDatePicker(
       context: context,
       // 자정을 넘긴 채로 다이얼로그가 열려 있으면 `registerDate`(연 상태)가
-      // `today`(지금 다시 계산한 값)보다 이전일 수 있다 — `showDatePicker`
-      // 는 initialDate가 firstDate보다 빠르면 assertion으로 죽는다.
+      // `today`(지금 다시 계산한 값)보다 이전일 수 있다 — 달력은 initialDate
+      // 가 firstDate 보다 빠르면 assertion 으로 죽는다.
       initialDate: widget.registerDate.isBefore(today)
           ? today
           : widget.registerDate,
@@ -569,9 +573,12 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     widget.onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
   }
 
-  /// 등록할 시각을 고른다.
+  /// 등록할 시각을 고른다 — 스케줄 탭과 같은 시각 선택 모달이다(#1425).
+  ///
+  /// 프로그램은 시작 시각 하나만 필요하므로 시작·종료 범위 모달 대신 같은
+  /// 필드·시계 다이얼을 쓰는 단일 시각용을 부른다.
   Future<void> _pickRegisterTime(BuildContext context) async {
-    final picked = await showTimePicker(
+    final picked = await showScheduleTimePicker(
       context: context,
       initialTime: widget.registerTime,
     );

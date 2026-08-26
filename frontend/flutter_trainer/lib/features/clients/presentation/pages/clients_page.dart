@@ -373,7 +373,21 @@ class _MemberManagementToolbar extends StatelessWidget {
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
+        // 안내와 컨트롤을 오른쪽에 모은다(#1464). 좁아지면 `Wrap` 이 줄을
+        // 접어 겹치거나 잘리지 않는다.
+        alignment: WrapAlignment.end,
         children: <Widget>[
+          // 목록의 모든 그래프가 같은 지표라, 카드마다 되풀이하던 문구를
+          // 여기서 한 번만 말한다.
+          Text(
+            l.clientWeeklyRoutineAdherence,
+            key: const ValueKey<String>('clients-adherence-legend'),
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.subtleForeground,
+            ),
+          ),
           _FilterMenuButton(
             filters: managementFilters,
             labelFor: (value) => _managementLabel(l, value),
