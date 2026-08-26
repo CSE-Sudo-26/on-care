@@ -1967,8 +1967,14 @@ abstract class AppLocalizations {
   /// No description provided for @consultApproved.
   ///
   /// In en, this message translates to:
-  /// **'{name} is now one of your clients'**
+  /// **'{name}\'s request was approved. Add a session from the Schedule tab.'**
   String consultApproved(String name);
+
+  /// No description provided for @consultScheduleCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added a consultation session for {name}'**
+  String consultScheduleCreated(String name);
 
   /// No description provided for @consultRejected.
   ///

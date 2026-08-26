@@ -1066,7 +1066,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String consultApproved(String name) {
-    return '$name is now one of your clients';
+    return '$name\'s request was approved. Add a session from the Schedule tab.';
+  }
+
+  @override
+  String consultScheduleCreated(String name) {
+    return 'Added a consultation session for $name';
   }
 
   @override

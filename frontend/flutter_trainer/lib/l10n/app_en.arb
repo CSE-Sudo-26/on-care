@@ -492,8 +492,16 @@
   "consultEmptyHistory": "No consultation history",
   "consultEmptyHint": "Requests appear here when a member asks for a consultation with your gym or with you",
   "consultActionFailed": "Couldn't process the request",
-  "consultApproved": "{name} is now one of your clients",
+  "consultApproved": "{name}'s request was approved. Add a session from the Schedule tab.",
   "@consultApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "consultScheduleCreated": "Added a consultation session for {name}",
+  "@consultScheduleCreated": {
     "placeholders": {
       "name": {
         "type": "String"
