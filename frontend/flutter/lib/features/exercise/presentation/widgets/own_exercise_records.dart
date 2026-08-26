@@ -278,9 +278,11 @@ String exerciseAmountLabel(AppLocalizations l, ExerciseSession s) {
   final double? weight = s.weight;
   final StringBuffer buffer = StringBuffer(l.exSetsCount(sets));
   // 횟수·중량은 적었을 때만 붙인다 — 이 칸이 생기기 전 기록에 아무도 적지
-  // 않은 수가 뜨면 안 된다.
+  // 않은 수가 뜨면 안 된다. 다만 맨몸 운동의 `0kg` 은 적은 값이다: 중량 칸은
+  // 비울 수 없어(최솟값 0) 근력이면 언제나 값을 하나 든다. 트레이너 앱도 같은
+  // 규칙이라, 같은 기록이 두 앱에서 같은 줄로 읽힌다.
   if (reps != null && reps > 0) buffer.write(' · ${l.exRepsCount(reps)}');
-  if (weight != null && weight > 0) {
+  if (weight != null) {
     buffer.write(' · ${NumberFormat('#,##0.#').format(weight)}${l.exUnitKg}');
   }
   return buffer.toString();

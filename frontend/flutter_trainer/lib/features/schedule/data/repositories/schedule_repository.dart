@@ -719,8 +719,10 @@ String _programItemLabel(ProgramItem raw) {
     if (item.sets != null) parts.add('${item.sets}세트');
     final int? reps = item.reps;
     if (reps != null && reps > 0) parts.add('$reps회');
+    // 맨몸 운동은 `0kg` 이다 — 중량 칸을 비울 수 없으므로 적지 않은 값과
+    // 0 은 다른 뜻이다. 값이 없는 것은 규칙 이전의 옛 행뿐이다.
     final double? weight = item.weight;
-    if (weight != null && weight > 0) {
+    if (weight != null) {
       parts.add(
         '${weight == weight.roundToDouble() ? weight.round() : weight}kg',
       );

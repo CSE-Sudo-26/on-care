@@ -1,7 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/session_program_section.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 유형마다 재는 단위가 다르다(#1276) — 근력은 세트·횟수·중량, 나머지는 시간.
 ///
@@ -72,6 +75,44 @@ void main() {
     });
   });
 
+  group('SessionProgramRow', () {
+    Future<void> pumpRow(WidgetTester tester, ProgramItem item) =>
+        tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: SessionProgramRow(index: 1, item: item)),
+          ),
+        );
+
+    testWidgets('맨몸 근력은 중량을 0kg 으로 적는다', (tester) async {
+      // 중량 칸은 비울 수 없다(최솟값 0) — 근력을 고르면 언제나 값을 하나
+      // 든다. 그래서 0 은 적지 않은 값이 아니라 트레이너가 적은 맨몸이다.
+      await pumpRow(
+        tester,
+        const ProgramItem(name: '플랭크', sets: 3, reps: 3, weight: 0),
+      );
+
+      expect(find.text('3세트 · 3회 · 0kg'), findsOneWidget);
+    });
+
+    testWidgets('중량이 아예 없는 옛 행은 그 자리를 비운다', (tester) async {
+      await pumpRow(tester, const ProgramItem(name: '플랭크', sets: 3, reps: 3));
+
+      expect(find.text('3세트 · 3회'), findsOneWidget);
+    });
+
+    testWidgets('유산소는 시간만 적는다', (tester) async {
+      await pumpRow(
+        tester,
+        const ProgramItem(name: '걷기', type: '유산소', duration: 30),
+      );
+
+      expect(find.text('30분'), findsOneWidget);
+    });
+  });
+
   group('programItemToJson', () {
     test('유형에 맞지 않는 칸은 아예 실어 보내지 않는다', () {
       final json = programItemToJson(
@@ -89,6 +130,14 @@ void main() {
       expect(json['sets'], isNull);
       expect(json['reps'], isNull);
       expect(json['weight'], isNull);
+    });
+
+    test('맨몸 근력의 0kg 는 값이라 그대로 싣는다', () {
+      final json = programItemToJson(
+        const ProgramItem(name: '플랭크', sets: 3, reps: 3, weight: 0),
+      );
+
+      expect(json['weight'], 0.0);
     });
 
     test('근력은 세트·횟수·중량을 그대로 싣는다', () {

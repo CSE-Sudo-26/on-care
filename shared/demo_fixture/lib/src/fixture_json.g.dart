@@ -9248,7 +9248,8 @@ const String kimMinsuFixtureJson = r'''
       "reason": "기초대사량 향상",
       "source": "ai",
       "sets": 3,
-      "reps": 15
+      "reps": 15,
+      "weight": 0
     },
     {
       "id": "seed-routine-user-7d4e9a2c5f18-3",

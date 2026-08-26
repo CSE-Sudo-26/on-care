@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+from app.services.trainer_service import _amount_label
 from app.schemas.trainer_api import (
     ProgramDraftExercise,
     ProgramItem,
@@ -86,3 +87,27 @@ def test_seeded_strength_routine_carries_sets_reps_weight(client):
     assert (running["sets"], running["reps"], running["weight"]) == (
         None, None, None,
     )
+
+
+def test_amount_label_reads_strength_in_sets_reps_weight():
+    """배정 알림·배정 수행 이력이 근력을 분으로 적던 자리. (#1276)
+
+    유형 어휘가 둘이다 — 트레이너 배정은 한글, 회원 기록은 영문 코드. 둘 다
+    같은 줄로 읽혀야 한다. 맨몸의 `0kg` 은 적은 값이라 그대로 적는다.
+    """
+    assert _amount_label("근력", minutes=15, sets=3, reps=12, weight=40.0) == (
+        "3세트 · 12회 · 40kg"
+    )
+    assert _amount_label("strength", minutes=12, sets=3, reps=15, weight=0) == (
+        "3세트 · 15회 · 0kg"
+    )
+    assert _amount_label(
+        "cardio", minutes=30, sets=None, reps=None, weight=None,
+    ) == "30분"
+
+
+def test_amount_label_falls_back_to_minutes_without_sets():
+    """세트가 아예 없는 근력은 그 칸이 생기기 전의 배정뿐이다."""
+    assert _amount_label(
+        "근력", minutes=15, sets=None, reps=None, weight=None,
+    ) == "15분"
