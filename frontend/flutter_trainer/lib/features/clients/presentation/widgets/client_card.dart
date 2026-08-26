@@ -212,32 +212,22 @@ class _WeeklyRoutineAdherence extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                l.clientWeeklyRoutineAdherence,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: compact ? 10.5 : 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
+        // 카드마다 `주간 이행률` 을 되풀이하지 않는다(#1464) — 목록의 모든
+        // 그래프가 같은 지표라, 그 말은 목록 위 툴바가 한 번만 한다. 카드에는
+        // 견줄 값(%)과 그래프만 남는다.
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            valueLabel,
+            key: ValueKey<String>('client-adherence-value-${client.id}'),
+            style: TextStyle(
+              fontSize: compact ? 10.5 : 11.5,
+              fontWeight: FontWeight.w700,
+              color: percent == null
+                  ? AppColors.mutedForeground
+                  : AppColors.foreground,
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              valueLabel,
-              style: TextStyle(
-                fontSize: compact ? 10.5 : 11.5,
-                fontWeight: FontWeight.w700,
-                color: percent == null
-                    ? AppColors.mutedForeground
-                    : AppColors.foreground,
-              ),
-            ),
-          ],
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Semantics(

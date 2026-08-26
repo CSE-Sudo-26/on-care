@@ -146,7 +146,11 @@ class _MainShellState extends ConsumerState<MainShell>
     // 예전에는 라벨을 4dp 아래로 '그려서' 미는 바람에 바닥 여백이 0 인 웹에서
     // 글자 아래가 잘렸고, 그만큼을 웹에서만 따로 확보하고 있었다. 이제
     // 목적지 열이 바 높이 안에서 가운데 정렬되므로 그 보정은 필요 없다(#840).
-    final double effectiveBottomPadding = navBottomPadding;
+    //
+    // 안전영역 위에 얹는 고정 여백은 라벨이 화면 끝에 붙어 보이지 않게 한다 —
+    // 인셋을 다 따르는 기기에서도 빠듯했다.
+    final double effectiveBottomPadding =
+        navBottomPadding + AppNavMetrics.labelBottomPadding;
     // 바 본체 높이와 `+` 버튼이 솟은 높이는 [AppNavMetrics] 가 들고 있다 —
     // 바 위에 뜨는 토스트가 같은 값을 봐야 `+` 를 비킬 수 있다(#1259).
     const double barHeight = AppNavMetrics.barHeight;

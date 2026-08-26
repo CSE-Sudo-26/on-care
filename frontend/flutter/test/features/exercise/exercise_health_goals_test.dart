@@ -348,12 +348,16 @@ void main() {
     await tester.tap(find.byKey(const Key('openGoals')));
     await tester.pumpAndSettle();
     // 운동 목표 네 칸: 일일 소모 · 주간 유산소 · 주간 근력 · 주간 스트레칭.
-    // 식단 여섯 칸 뒤에 온다.
-    final Finder fields = find.byType(TextField);
-    await tester.enterText(fields.at(6), '400');
-    await tester.enterText(fields.at(7), '240');
-    await tester.enterText(fields.at(8), '30');
-    await tester.enterText(fields.at(9), '90');
+    // 자리 대신 키로 집는다 — 화면 순서가 바뀌어도(#1471) 같은 칸을 고친다.
+    for (final ({String key, String value}) field
+        in <({String key, String value})>[
+          (key: 'goalDailyBurnField', value: '400'),
+          (key: 'goalCardioField', value: '240'),
+          (key: 'goalStrengthField', value: '30'),
+          (key: 'goalFlexibilityField', value: '90'),
+        ]) {
+      await tester.enterText(find.byKey(Key(field.key)), field.value);
+    }
     final Finder save = find.text('저장');
     await tester.ensureVisible(save);
     await tester.tap(save);

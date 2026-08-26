@@ -45,13 +45,13 @@ Future<AppLocalizations> _openProfile(
 }
 
 void main() {
-  testWidgets('데모 회원은 성별과 건강·운동 목표가 이미 채워져 있다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('데모 회원은 성별이 이미 채워져 있다', (WidgetTester tester) async {
     final AppLocalizations l = await _openProfile(tester);
 
     expect(find.text(l.onboardGenderMale), findsOneWidget);
-    expect(find.text('혈압 관리 · 체중 감량'), findsOneWidget);
+    // 자유 입력 운동 목표는 `건강 목표` 화면으로 옮겼다(#1471) — 내 프로필
+    // 수정에는 기본 신체·계정 정보만 남는다.
+    expect(find.text('혈압 관리 · 체중 감량'), findsNothing);
   });
 
   testWidgets('성별을 고른 적 없는 회원도 빈 칸으로 두지 않는다', (WidgetTester tester) async {
