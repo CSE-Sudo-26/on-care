@@ -167,54 +167,84 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     showAppToast(context, message, kind: kind);
   }
 
-  /// 종류·날짜·시간 세 필드가 한 줄에서 같은 무게로 보이도록 쓰는 옅은
-  /// 채움 칩. `OutlinedButton` 의 짙은 윤곽선 대신 트레이너 웹 다른 곳
-  /// (필터 칩 등)과 같은 `inputBackground` 채움을 쓴다(#1090).
-  Widget _compactField({required IconData icon, required String label}) {
+  /// 종류·날짜·시간 세 필드가 같은 모양으로 보이도록 쓰는 라벨 + 테두리 상자
+  /// — 스케줄 프로그램 수정(운동 날짜 필드 등)과 같은 언어다: 위에 옅은
+  /// 라벨, 아래에 `borderStrong` 테두리 상자, 아이콘은 강조색으로 둔다.
+  /// 예전 채움 칩(`inputBackground` 배경, 라벨 없음)은 이 시트만 다른 필드
+  /// 모양이라 다른 곳과 이어 보이지 않았다.
+  Widget _fieldLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.subtleForeground,
+      ),
+    );
+  }
+
+  Widget _fieldBox({required IconData icon, required String value}) {
     return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      decoration: const BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.all(AppRadius.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(icon, size: 17, color: AppColors.mutedForeground),
-          const SizedBox(width: 6),
-          Flexible(
+          Icon(icon, size: 15, color: AppColors.accent),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
             child: Text(
-              label,
+              value,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppColors.foreground,
               ),
             ),
+          ),
+          const Icon(
+            Icons.keyboard_arrow_down,
+            size: 18,
+            color: AppColors.subtleForeground,
           ),
         ],
       ),
     );
   }
 
-  /// [_compactField] 를 누를 수 있게 감싼다 — 날짜·시간처럼 다이얼로그를
-  /// 여는 자리에 쓴다. 종류는 [PopupMenuButton] 이 자기 탭 처리를 이미
-  /// 하므로 이 래퍼를 쓰지 않는다.
-  Widget _tappableField({
-    required Widget child,
+  /// 라벨 + [_fieldBox] 한 벌. 날짜·시간처럼 눌러서 다이얼로그를 여는
+  /// 자리에 쓴다. 종류는 [PopupMenuButton] 이 자기 탭 처리를 이미 하므로
+  /// 이 래퍼 대신 그 `child` 자리에 [_fieldBox] 만 준다.
+  Widget _tappableFieldColumn({
+    required String label,
+    required IconData icon,
+    required String value,
     required VoidCallback? onTap,
     Key? key,
   }) {
-    return Material(
-      key: key,
-      color: Colors.transparent,
-      borderRadius: const BorderRadius.all(AppRadius.sm),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.sm),
-        child: child,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _fieldLabel(label),
+        const SizedBox(height: AppSpacing.sm),
+        Material(
+          key: key,
+          color: Colors.transparent,
+          borderRadius: const BorderRadius.all(AppRadius.md),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: const BorderRadius.all(AppRadius.md),
+            child: _fieldBox(icon: icon, value: value),
+          ),
+        ),
+      ],
     );
   }
 
@@ -259,67 +289,70 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
-              // 종류·날짜·시간을 한 줄에 둔다 — 셋 다 "언제·누구 자리를
-              // 열까"를 정하는 같은 층위의 선택이라, 종류만 위에 따로 서고
-              // 나머지가 아래에 서면 무엇이 먼저인지 자리로 오해된다.
-              // 옅은 채움만 쓰고 테두리를 넣지 않는다 — 기본
-              // `OutlinedButton` 의 짙은 윤곽선은 이 시트에서 유일하게
-              // 선을 두른 요소라 눈에 튀었다(#1090).
-              // 가운데 모달(최대 560)에서는 넷을 한 줄에 두면 넘친다 — 두 줄로
-              // 나눈다. 새 일정 모달의 고객·유형/날짜·시간과 같은 두 칸짜리
-              // 줄 언어다.
+              // 종류·날짜·시간·추가 버튼을 한 줄에 둔다 — 넷 다 "언제·누구
+              // 자리를 열까"를 정하고 실행하는 같은 흐름이라, 하나만 다른
+              // 줄에 서면 무엇이 먼저인지 자리로 오해된다. 라벨 + 흰
+              // 테두리 상자 모양은 스케줄 프로그램 수정 화면과 같은
+              // 언어다(#1090).
               Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
                   Expanded(
-                    child: PopupMenuButton<String>(
-                      key: const ValueKey<String>('slot-session-type'),
-                      enabled: !_saving,
-                      itemBuilder: (context) => <PopupMenuEntry<String>>[
-                        for (final t in SessionType.all)
-                          PopupMenuItem<String>(
-                            value: t,
-                            child: Text(sessionTypeLabel(l, t)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        _fieldLabel(l.schedFieldType),
+                        const SizedBox(height: AppSpacing.sm),
+                        PopupMenuButton<String>(
+                          key: const ValueKey<String>('slot-session-type'),
+                          enabled: !_saving,
+                          itemBuilder: (context) => <PopupMenuEntry<String>>[
+                            for (final t in SessionType.all)
+                              PopupMenuItem<String>(
+                                value: t,
+                                child: Text(sessionTypeLabel(l, t)),
+                              ),
+                          ],
+                          onSelected: (v) => setState(() => _type = v),
+                          child: _fieldBox(
+                            icon: Icons.badge_outlined,
+                            value: sessionTypeLabel(l, _type),
                           ),
+                        ),
                       ],
-                      onSelected: (v) => setState(() => _type = v),
-                      child: _compactField(
-                        icon: Icons.badge_outlined,
-                        label: sessionTypeLabel(l, _type),
-                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: _tappableField(
+                    child: _tappableFieldColumn(
                       key: const ValueKey<String>('slot-date'),
+                      label: l.schedFieldDate,
+                      icon: Icons.calendar_today_outlined,
+                      value: l.dateMonthDay(_date.month, _date.day),
                       onTap: _saving ? null : _pickDate,
-                      child: _compactField(
-                        icon: Icons.calendar_today_outlined,
-                        label: l.dateMonthDay(_date.month, _date.day),
-                      ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: <Widget>[
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: _tappableField(
+                    child: _tappableFieldColumn(
                       key: const ValueKey<String>('slot-time-range'),
+                      label: l.schedFieldTime,
+                      icon: Icons.schedule_outlined,
+                      value: '${_hhmm(_time)} – ${_hhmm(_endTime)}',
                       onTap: _saving ? null : _pickRange,
-                      child: _compactField(
-                        icon: Icons.schedule_outlined,
-                        label: '${_hhmm(_time)} – ${_hhmm(_endTime)}',
-                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   FilledButton.icon(
                     key: const ValueKey<String>('slot-create'),
                     onPressed: _saving ? null : _create,
-                    icon: const Icon(Icons.add),
+                    icon: const Icon(Icons.add, size: 18),
                     label: Text(l.slotOpenAction),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                    ),
                   ),
                 ],
               ),
