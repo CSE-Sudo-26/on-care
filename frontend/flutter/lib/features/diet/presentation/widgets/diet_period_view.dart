@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -608,8 +607,14 @@ class _PeriodBars extends StatelessWidget {
   final Color color;
   final Object replayKey;
 
-  /// 칼로리를 볼 때의 원본. 탄단지가 있는 날은 막대를 셋으로 쌓는다.
+  /// 칼로리를 볼 때의 원본. 막대는 이 값으로 쌓지 않고(#1427) 툴팁이 그날의
+  /// 탄·단·지를 숫자로 적는 데 쓴다.
   final List<DietPeriodDay>? days;
+
+  /// 목표 이내 막대의 색. 칼로리는 회색 한 색이다 (#1427) — 막대에서 읽을 수
+  /// 없는 구성을 색으로 말하지 않는다. 나트륨·당류는 쌓을 성분이 없던 지표라
+  /// 지금까지 쓰던 브랜드 색 그대로다.
+  Color get _barColor => days == null ? color : FigmaColors.barNeutral;
 
   /// 툴팁이 부를 지표 이름(칼로리·나트륨·당류)과 단위, 그리고 카드 머리 숫자와
   /// 같은 숫자 서식.
@@ -686,7 +691,8 @@ class _PeriodBars extends StatelessWidget {
           height: 9,
           margin: const EdgeInsets.only(right: 6),
           decoration: BoxDecoration(
-            color: over ? FigmaColors.dangerRed : color,
+            // 막대와 같은 색이어야 툴팁의 첫 줄이 그 막대를 가리킨다.
+            color: over ? FigmaColors.dangerRed : _barColor,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -840,11 +846,10 @@ class _PeriodBars extends StatelessWidget {
                       height:
                           chartHeight * (values[i] / maxValue).clamp(0.0, 1.0),
                       pending: _isPending(i),
-                      day: _dayAt(i),
-                      // 목표를 넘긴 날은 빨강으로 칠한다 — 탄단지가 있는 날은
-                      // 파랑 세 단계 대신 빨강 세 단계로 쌓는다 (#1201).
+                      // 목표를 넘긴 날만 빨강이다. 그 밖의 날은 지표에 따라
+                      // 회색(칼로리) 또는 브랜드 파랑(나트륨·당류) 한 색이다.
                       over: hasGoal && values[i] > goal,
-                      color: color,
+                      color: _barColor,
                     ),
                   ),
                 ),
@@ -857,16 +862,16 @@ class _PeriodBars extends StatelessWidget {
   }
 }
 
-/// 한 칸의 막대. 탄단지가 있으면 아래에서부터 탄·단·지 순으로 쌓는다.
+/// 한 칸의 막대. **한 색**이다 (#1427).
 ///
-/// 쌓는 기준은 **칼로리**다(탄·단 4kcal/g, 지 9kcal/g). 그램으로 쌓으면 지방
-/// 1g 이 탄수화물 1g 과 같은 높이를 차지해, 칼로리 막대인데 칼로리와 다른
-/// 이야기를 하게 된다.
+/// 탄·단·지 농담으로 쌓던 자리다. 막대에서 탄·단·지 수치를 읽을 수는 없는데
+/// 색만 셋으로 갈라져 있어, 구성까지 정확히 말해 주는 그림처럼 보였다. 구성은
+/// 카드 머리의 상세와 이 막대의 툴팁이 **숫자와 함께** 말한다 — 색만 남기지
+/// 않는다.
 class _Bar extends StatelessWidget {
   const _Bar({
     super.key,
     required this.height,
-    required this.day,
     required this.over,
     required this.color,
     this.pending = false,
@@ -878,15 +883,15 @@ class _Bar extends StatelessWidget {
   /// 트레이너 리포트가 `pendingFromIndex` 에 쓰는 규칙과 같다(#754, #950).
   final bool pending;
 
-  final DietPeriodDay? day;
-
-  /// 목표를 넘긴 날인가. 쌓을 성분이 없을 때만 색으로 말한다.
+  /// 목표를 넘긴 날인가. 넘긴 날만 색으로 말한다.
   final bool over;
+
+  /// 목표 이내 막대의 색. 칼로리는 회색([FigmaColors.barNeutral]), 나트륨·당류는
+  /// 지금까지처럼 브랜드 파랑이다.
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final DietPeriodDay? d = day;
     const BorderRadius radius = BorderRadius.vertical(top: Radius.circular(3));
     if (pending) {
       // 아직 오지 않은 날은 **빈 트랙**이다. 지나간 빈 날과 같은 그루터기를
@@ -899,77 +904,13 @@ class _Bar extends StatelessWidget {
         ),
       );
     }
-    // 목표를 넘긴 날은 **통으로 빨강** 한 색이다 (#1352). 탄단지를 빨강 세
-    // 단계로 쌓아 봤지만(#1201), 같은 카드의 나트륨·당류는 초과를 한 색으로
-    // 말하고 있어 칼로리만 초과의 생김새가 달랐다 — 지표마다 다른 문법으로
-    // 넘김을 말하면 눈이 매번 다시 배워야 한다. 넘기지 않은 날은 지금처럼
-    // 탄·단·지 파랑 세 단계로 쌓는다.
-    if (over || d == null || !d.hasMacros) {
-      return Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: (over ? FigmaColors.dangerRed : color).withValues(alpha: 0.85),
-          borderRadius: radius,
-        ),
-      );
-    }
-    final double total = d.carbsKcal + d.proteinKcal + d.fatKcal;
-    if (total <= 0) {
-      return Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.85),
-          borderRadius: radius,
-        ),
-      );
-    }
-    // 막대 **높이**는 칼로리를 따른다(목표선과 견주려면 그래야 한다). 그런데
-    // 구간 비율만 탄단지 합계로 잡으면, 둘이 어긋나는 날에 세 색이 막대를 꽉
-    // 채워 **없는 기여분을 지어내는 셈**이 된다 — 1,800kcal 인 날의 탄단지가
-    // 1,200kcal 어치뿐이어도 "이 1,800kcal 이 전부 탄·단·지에서 왔다" 고
-    // 말하게 된다. 실서버 값은 음식 DB 에서 오므로 딱 맞지 않는 날이 흔하다.
-    //
-    // 그래서 분모를 **둘 중 큰 값**으로 둔다. 탄단지가 칼로리에 못 미치면 남는
-    // 만큼이 `나머지` 로 위에 남고, 넘치면 탄단지 합계에 맞춰 꽉 찬다(#956).
-    final double basis = math.max(d.calories.toDouble(), total);
-    final double rest = basis - total;
-    // 값이 있는 구간만 만든다. `flex: 0` 이 터지지는 않지만(확인함), 셋이 모두
-    // 0 으로 반올림되면 높이만 있고 아무것도 그려지지 않은 막대가 남는다 —
-    // #947 과 같은 종류의 사라짐이다. 그래서 남는 구간에는 **최소 1** 을 준다:
-    // 아주 적게 먹은 영양소는 실오라기로라도 보이는 편이 없는 것보다 낫다.
-    //
-    // 위에서부터 나머지·지방·단백질·탄수화물 — 아래가 탄수화물이라 눈이 바닥부터
-    // 읽는 순서가 라벨 순서(탄·단·지)와 같아진다.
-    // 여기까지 온 날은 목표 안이다 — 넘긴 날은 위에서 한 색으로 끝냈다.
-    final List<({Color color, double kcal})>
-    parts = <({Color color, double kcal})>[
-      // 어느 영양소로도 설명되지 않는 칼로리. 반올림 때문에 생기는
-      // 실오라기는 그리지 않는다 — 1% 를 넘을 때만 자리를 준다.
-      if (rest / basis > 0.01) (color: FigmaColors.track, kcal: rest),
-      if (d.fatKcal > 0) (color: FigmaColors.macroFat, kcal: d.fatKcal),
-      if (d.proteinKcal > 0)
-        (color: FigmaColors.macroProtein, kcal: d.proteinKcal),
-      if (d.carbsKcal > 0) (color: FigmaColors.macroCarbs, kcal: d.carbsKcal),
-    ];
-    return ClipRRect(
-      borderRadius: radius,
-      child: SizedBox(
-        height: height,
-        child: Column(
-          // **stretch 여야 한다.** 기본값(center)이면 자식이 가로로 느슨하게
-          // 제약되는데, 자식 없는 `ColoredBox` 의 고유 너비는 0 이라 구간이
-          // 통째로 사라진다(#947). 한 색 막대가 멀쩡했던 이유는 그쪽이
-          // `Container` 라서다 — 자식도 크기도 없는 Container 는 들어온 제약만큼
-          // 커지려고 하므로 폭을 다 채운다.
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            for (final ({Color color, double kcal}) part in parts)
-              Expanded(
-                flex: math.max(1, (part.kcal / basis * 1000).round()),
-                child: ColoredBox(color: part.color),
-              ),
-          ],
-        ),
+    // 목표를 넘긴 날은 통으로 빨강이다 (#1352) — 같은 카드의 나트륨·당류가
+    // 초과를 한 색으로 말하는 것과 같은 문법이다.
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: (over ? FigmaColors.dangerRed : color).withValues(alpha: 0.85),
+        borderRadius: radius,
       ),
     );
   }

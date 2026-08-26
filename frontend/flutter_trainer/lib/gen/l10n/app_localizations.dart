@@ -1268,6 +1268,78 @@ abstract class AppLocalizations {
   /// **'Member goals'**
   String get memberHealthGoals;
 
+  /// No description provided for @memberHealthDietGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition goals'**
+  String get memberHealthDietGoal;
+
+  /// No description provided for @memberHealthExerciseGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise goals'**
+  String get memberHealthExerciseGoal;
+
+  /// No description provided for @memberHealthGoalCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily calories (kcal)'**
+  String get memberHealthGoalCalories;
+
+  /// No description provided for @memberHealthGoalSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sodium (mg)'**
+  String get memberHealthGoalSodium;
+
+  /// No description provided for @memberHealthGoalSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sugar (g)'**
+  String get memberHealthGoalSugar;
+
+  /// No description provided for @memberHealthGoalCarbs.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily carbs (g)'**
+  String get memberHealthGoalCarbs;
+
+  /// No description provided for @memberHealthGoalProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily protein (g)'**
+  String get memberHealthGoalProtein;
+
+  /// No description provided for @memberHealthGoalFat.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily fat (g)'**
+  String get memberHealthGoalFat;
+
+  /// No description provided for @memberHealthGoalBurnDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily burn (kcal)'**
+  String get memberHealthGoalBurnDaily;
+
+  /// No description provided for @memberHealthGoalCardioWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly cardio (min)'**
+  String get memberHealthGoalCardioWeekly;
+
+  /// No description provided for @memberHealthGoalStrengthWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly strength (sets)'**
+  String get memberHealthGoalStrengthWeekly;
+
+  /// No description provided for @memberHealthGoalFlexibilityWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly stretching (min)'**
+  String get memberHealthGoalFlexibilityWeekly;
+
   /// No description provided for @memberHealthWeeklyGoal.
   ///
   /// In en, this message translates to:
@@ -1313,7 +1385,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.'**
+  /// **'Find a client by member ID and register them right away.'**
   String get clientInviteIntroImmediate;
 
   /// No description provided for @clientInviteMemberIdLabel.
@@ -1429,12 +1501,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Is this the right client?'**
   String get clientInviteConfirmPrompt;
-
-  /// No description provided for @clientInviteGoalLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Goal'**
-  String get clientInviteGoalLabel;
 
   /// No description provided for @coachTemplateNew.
   ///
@@ -1604,6 +1670,12 @@ abstract class AppLocalizations {
   /// **'Sugar'**
   String get metricSugar;
 
+  /// No description provided for @clientDietMacrosMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'No carbs/protein/fat recorded'**
+  String get clientDietMacrosMissing;
+
   /// No description provided for @metricCarbs.
   ///
   /// In en, this message translates to:
@@ -1670,11 +1742,17 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the PDF. Please try again'**
   String get chatPdfOpenFailed;
 
-  /// No description provided for @chatReportSentNotice.
+  /// No description provided for @chatReportRegistered.
   ///
   /// In en, this message translates to:
-  /// **'Sent the {range} weekly report'**
-  String chatReportSentNotice(Object range);
+  /// **'Weekly report added'**
+  String get chatReportRegistered;
+
+  /// No description provided for @chatReportOpenInReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Reports'**
+  String get chatReportOpenInReports;
 
   /// No description provided for @chatLoadFailed.
   ///
@@ -2096,6 +2174,30 @@ abstract class AppLocalizations {
   /// **'Client feedback'**
   String get clientFeedback;
 
+  /// No description provided for @clientFeedbackOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Client feedback on {name}'**
+  String clientFeedbackOn(String name);
+
+  /// No description provided for @clientFeedbackPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Client feedback on this personal exercise'**
+  String get clientFeedbackPersonal;
+
+  /// No description provided for @clientFeedbackSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Client feedback on this session'**
+  String get clientFeedbackSession;
+
+  /// No description provided for @workoutKindAiPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'AI personal exercise'**
+  String get workoutKindAiPersonal;
+
   /// No description provided for @trainerNote.
   ///
   /// In en, this message translates to:
@@ -2507,7 +2609,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientWeeklyRoutineAdherence.
   ///
   /// In en, this message translates to:
-  /// **'Weekly routine adherence'**
+  /// **'Weekly adherence'**
   String get clientWeeklyRoutineAdherence;
 
   /// No description provided for @clientRoutineAdherenceUnmeasured.
@@ -6067,6 +6169,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next week\'s coaching'**
   String get reportsAiNextWeek;
+
+  /// No description provided for @reportsAiMoreWatchpoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more — see the full report.'**
+  String reportsAiMoreWatchpoints(int count);
 
   /// No description provided for @reportsActionSodium.
   ///

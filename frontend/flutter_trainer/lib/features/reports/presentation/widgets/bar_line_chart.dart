@@ -29,6 +29,8 @@ class BarLineChart extends StatelessWidget {
     this.pendingFrom,
     this.segments,
     this.goal,
+    this.barColor,
+    this.lineColor,
     this.height = 118,
     this.maxBarWidth = 30,
     this.highlightIndex,
@@ -60,8 +62,17 @@ class BarLineChart extends StatelessWidget {
   /// 칸별 누적 조각. 준 칸은 조각 색으로 쌓고, 안 준 칸은 한 색으로 채운다.
   final List<List<BarSegment>?>? segments;
 
-  /// 넘으면 막대가 빨강이 되는 값. 없으면 늘 브랜드 색이다.
+  /// 넘으면 막대가 빨강이 되는 값. 없으면 늘 [barColor] 다.
   final double? goal;
+
+  /// 목표 이내 막대의 색. 기본은 브랜드 색이다. 보고 있는 지표가 색을 갖는
+  /// 그래프(운동 유형별 비교 등)만 자기 색을 준다 — 지표를 바꿔도 그림이 그대로면
+  /// 지금 무엇을 보고 있는지 색으로 알 수 없다(#1424).
+  final Color? barColor;
+
+  /// 꺾은선·점의 색. 기본은 [AppColors.accentDark]. 막대에 지표 색을 줄 때는
+  /// 같은 계열의 진한 색을 함께 줘 한 그림이 한 지표를 말하게 한다.
+  final Color? lineColor;
 
   /// 막대 영역 높이(값 라벨·칸 라벨 제외).
   final double height;
@@ -91,6 +102,8 @@ class BarLineChart extends StatelessWidget {
               pendingFrom: pendingFrom ?? values.length,
               segments: segments,
               goal: goal,
+              barColor: barColor ?? AppColors.primary,
+              lineColor: lineColor ?? AppColors.accentDark,
               maxBarWidth: maxBarWidth,
               highlightIndex: highlightIndex,
               textDirection: Directionality.of(context),
@@ -117,6 +130,8 @@ class _BarLinePainter extends CustomPainter {
     required this.pendingFrom,
     required this.segments,
     required this.goal,
+    required this.barColor,
+    required this.lineColor,
     required this.maxBarWidth,
     required this.highlightIndex,
     required this.textDirection,
@@ -131,6 +146,8 @@ class _BarLinePainter extends CustomPainter {
   final int pendingFrom;
   final List<List<BarSegment>?>? segments;
   final double? goal;
+  final Color barColor;
+  final Color lineColor;
   final double maxBarWidth;
   final int? highlightIndex;
   final TextDirection textDirection;
@@ -205,7 +222,7 @@ class _BarLinePainter extends CustomPainter {
           Paint()
             ..color = goal != null && value > goal!
                 ? AppColors.overTarget
-                : AppColors.primary,
+                : barColor,
         );
       }
     }
@@ -222,7 +239,7 @@ class _BarLinePainter extends CustomPainter {
         canvas.drawPath(
           path,
           Paint()
-            ..color = AppColors.accentDark
+            ..color = lineColor
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2
             ..strokeCap = StrokeCap.round
@@ -249,7 +266,7 @@ class _BarLinePainter extends CustomPainter {
         point,
         4,
         Paint()
-          ..color = AppColors.accentDark
+          ..color = lineColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2,
       );
@@ -338,6 +355,8 @@ class _BarLinePainter extends CustomPainter {
       old.ceiling != ceiling ||
       old.pendingFrom != pendingFrom ||
       old.goal != goal ||
+      old.barColor != barColor ||
+      old.lineColor != lineColor ||
       old.emptyLabel != emptyLabel ||
       old.highlightIndex != highlightIndex ||
       old.maxBarWidth != maxBarWidth ||

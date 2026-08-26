@@ -539,6 +539,23 @@ double ringOverflowTurn(double ratio) {
   return ratio - ratio.floorToDouble();
 }
 
+/// 부동소수점 오차를 감안한 허용 오차. 목표의 정확한 정수 배(100%, 200% …)
+/// 인지 판정할 때, 계산 과정에서 `1.999999…` 또는 `2.000000…` 처럼 오차가
+/// 섞여도 같은 자리로 본다 (#1462).
+const double _kRingMultipleEpsilon = 1e-6;
+
+/// [filled] 가 목표의 정확한 양의 정수 배(1, 2, 3 …)에 아주 가까운가.
+///
+/// 이 자리에서는 원호 끝이 12시의 고정 시작 기호와 겹친다 — 캡 그림자와
+/// 진행 끝 `>` 기호를 여기 또 그리면 검은 얼룩과 아이콘 중복으로 보인다
+/// (#1462). 0(아직 시작 전)은 배수로 치지 않는다 — 빈 트랙 표시를 그대로
+/// 둔다.
+bool isAtRingMultiple(double filled) {
+  if (!filled.isFinite || filled < 1 - _kRingMultipleEpsilon) return false;
+  final double nearest = filled.roundToDouble();
+  return nearest >= 1 && (filled - nearest).abs() <= _kRingMultipleEpsilon;
+}
+
 /// 원호의 **끝**에 얹는 얇고 작은 흰 `>`. 어디까지 왔는지와 어느 쪽으로 도는지를
 /// 함께 짚는다.
 ///
@@ -678,7 +695,12 @@ class _DonutPainter extends CustomPainter {
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round
       ..color = color;
-    if (filled >= 1) {
+    // 정확한 목표 배수(100%, 200% …)에서는 원호 끝이 12시로 되돌아와 고정
+    // 시작 기호와 겹친다 — 이때는 캡 그림자와 끝 기호를 그리지 않는다
+    // (#1462). 부동소수점 오차가 섞인 값(`1.999999…`, `2.000000…`)도 같은
+    // 자리로 본다.
+    final bool atMultiple = isAtRingMultiple(filled);
+    if (filled >= 1 - _kRingMultipleEpsilon) {
       // 한 바퀴는 **끝이 없는 원**으로. 2π 원호에 둥근 끝을 주면 시작과 끝의
       // 캡이 같은 자리에 겹쳐 혹처럼 튀어나온다.
       canvas.drawCircle(
@@ -689,11 +711,13 @@ class _DonutPainter extends CustomPainter {
           ..strokeWidth = stroke
           ..color = color,
       );
-      final double over = ringOverflowTurn(filled);
+      final double over = atMultiple ? 0 : ringOverflowTurn(filled);
       capAngle = -math.pi / 2 + math.pi * 2 * over;
-      _paintCapShadow(canvas, c, r, stroke, capAngle);
-      if (over > 0) {
-        canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * over, false, arc);
+      if (!atMultiple) {
+        _paintCapShadow(canvas, c, r, stroke, capAngle);
+        if (over > 0) {
+          canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * over, false, arc);
+        }
       }
     } else if (filled > 0) {
       capAngle = -math.pi / 2 + math.pi * 2 * filled;
@@ -731,8 +755,9 @@ class _DonutPainter extends CustomPainter {
       ),
     ], gap: size.width * 0.012);
     // 끝에 얇은 `>` 를 얹는다 — 그림자가 누른 자리 위에서 끝이 정확히 어디인지
-    // 가리킨다.
-    if (filled > 0) {
+    // 가리킨다. 정확한 목표 배수에서는 이 끝이 12시 고정 기호와 같은
+    // 자리라 그리지 않는다 — 안 그러면 기호가 둘로 겹쳐 보인다 (#1462).
+    if (filled > 0 && !atMultiple) {
       paintRingCapChevron(
         canvas,
         center: c,
@@ -1023,7 +1048,11 @@ class _RingsPainter extends CustomPainter {
         ..strokeWidth = stroke
         ..strokeCap = StrokeCap.round
         ..color = color;
-      if (ratio >= 1) {
+      // 정확한 목표 배수(100%, 200% …)에서는 원호 끝이 12시로 되돌아와
+      // 고정 시작 기호와 겹친다 — 이때는 캡 그림자와 끝 기호를 그리지
+      // 않는다(#1462). 부동소수점 오차가 섞인 값도 같은 자리로 본다.
+      final bool atMultiple = isAtRingMultiple(ratio);
+      if (ratio >= 1 - _kRingMultipleEpsilon) {
         canvas.drawCircle(
           c,
           r,
@@ -1032,11 +1061,13 @@ class _RingsPainter extends CustomPainter {
             ..strokeWidth = stroke
             ..color = color,
         );
-        final double over = ringOverflowTurn(ratio);
+        final double over = atMultiple ? 0 : ringOverflowTurn(ratio);
         capAngle = -math.pi / 2 + math.pi * 2 * over;
-        _paintCapShadow(canvas, c, r, stroke, capAngle);
-        if (over > 0) {
-          canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * over, false, arc);
+        if (!atMultiple) {
+          _paintCapShadow(canvas, c, r, stroke, capAngle);
+          if (over > 0) {
+            canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * over, false, arc);
+          }
         }
       } else if (ratio > 0) {
         capAngle = -math.pi / 2 + math.pi * 2 * ratio;
@@ -1044,7 +1075,8 @@ class _RingsPainter extends CustomPainter {
         canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * ratio, false, arc);
       }
       // 끝에 얇은 `>` 를 얹는다 — 세 링이 각자 어디까지 왔는지 짚는다.
-      if (ratio > 0) {
+      // 정확한 목표 배수에서는 12시 고정 기호와 겹치므로 그리지 않는다.
+      if (ratio > 0 && !atMultiple) {
         paintRingCapChevron(
           canvas,
           center: c,

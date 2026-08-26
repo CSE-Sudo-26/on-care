@@ -143,18 +143,28 @@ class GymTrainerLine extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
+                key: const ValueKey<String>('gym-trainer-reason'),
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
+                  // 추천 이유는 고를 근거다 — 흰 배경에 회색 글씨면 옆의 일반
+                  // 설명과 위계가 같아진다. 트레이너 목록·상세가 이미 쓰는
+                  // 브랜드 파랑으로 윤곽선과 글자를 맞춘다(#1445). 배경은
+                  // 흰색 그대로다 — 줄 자체가 옅은 파랑이라 배지까지 파래지면
+                  // 배지가 사라진다.
                   color: Colors.white,
+                  border: Border.all(color: FigmaColors.primaryA(0.45)),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   '${l.exRecommendationReason}: $reason',
                   maxLines: 2,
+                  // 두 줄을 넘기면 줄여 적는다 — 큰 배율에서 배지가 카드 밖으로
+                  // 밀려 나가지 않게.
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: FigmaColors.textBody,
+                    color: FigmaColors.primary,
                     height: 1.3,
                   ),
                 ),

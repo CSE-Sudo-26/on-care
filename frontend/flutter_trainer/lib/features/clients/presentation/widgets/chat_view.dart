@@ -688,10 +688,11 @@ class _Bubble extends ConsumerWidget {
       // 데모/드리프트는 PDF를 저장하지 못한다(#1378) — 그냥 텍스트 말풍선
       // 대신, 리포트를 보냈다는 걸 알아볼 수 있는 카드로 구분해 그린다.
       // 눌러도 파일을 열 수는 없으니, 대신 그 리포트 화면으로 보낸다.
-      bubble = _ReportSentCard(
+      bubble = ReportRegisteredCard(
         key: ValueKey<String>('trainer-message-bubble-${message.id}'),
         weekStart: weekStart,
-        onOpen: () => context.go(AppRoutes.reportFor(clientId)),
+        onOpen: () =>
+            context.go(AppRoutes.reportFor(clientId, weekStart: weekStart)),
       );
     } else {
       bubble = Container(
@@ -819,16 +820,30 @@ class _Bubble extends ConsumerWidget {
   }
 }
 
-/// 리포트 PDF 전송 안내. (#1378) 일반 텍스트 말풍선과 헷갈리지 않도록
-/// 더 진한 남색으로 구분하고, 누르면 그 고객의 리포트 화면으로 이동한다.
-class _ReportSentCard extends StatelessWidget {
-  const _ReportSentCard({
+/// 리포트 등록 안내. (#1378, #1421)
+///
+/// 회원 앱과 **같은 정보 구조**로 그린다 — 아이콘, `리포트가 등록되었어요`,
+/// 대상 주, 그리고 다음 행동 한 줄. 같은 사건을 두 앱이 다른 모양으로 보여
+/// 주면 회원과 트레이너가 같은 화면을 두고 이야기할 수 없다.
+///
+/// 색만 각 앱의 메인 색을 쓴다. 구조가 같으면 같은 카드로 읽히고, 색은 어느
+/// 앱을 보고 있는지를 말해 준다.
+///
+/// 다음 행동은 역할마다 다르다. 트레이너 쪽에는 열 PDF 가 없다 — 데모·드리프트
+/// 는 파일을 저장하지 못하므로(#1378), 있지도 않은 파일을 여는 시늉 대신 그
+/// 리포트가 있는 화면으로 보낸다.
+class ReportRegisteredCard extends StatelessWidget {
+  /// Creates the card. [onOpen] 은 리포트 탭으로 보내는 동작이다.
+  const ReportRegisteredCard({
     required this.weekStart,
     required this.onOpen,
     super.key,
   });
 
+  /// 카드가 가리키는 주의 월요일.
   final DateTime weekStart;
+
+  /// 카드를 눌렀을 때 — 리포트 탭으로 이동한다.
   final VoidCallback onOpen;
 
   @override
@@ -849,24 +864,57 @@ class _ReportSentCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.sm),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               const Icon(Icons.description_outlined, color: Colors.white),
               const SizedBox(width: AppSpacing.sm),
+              // 글자 배율을 키우면 제목·기간·다음 행동이 차례로 길어진다.
+              // 셋을 한 줄에 이어 붙이지 않고 세로로 쌓아 두면, 배율이 커져도
+              // 잘리는 대신 카드가 아래로 자란다.
               Flexible(
-                child: Text(
-                  l.chatReportSentNotice(range),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l.chatReportRegistered,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      range,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            l.chatReportOpenInReports,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              const Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: Colors.white,
               ),
             ],
           ),

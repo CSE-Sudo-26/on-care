@@ -738,6 +738,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get exExerciseNameHintCardio => 'e.g. Treadmill, Indoor cycling';
+
+  @override
+  String get exExerciseNameHintStrength => 'e.g. Squat, Bench press';
+
+  @override
+  String get exExerciseNameHintFlexibility => 'e.g. Full-body stretch, Yoga';
+
+  @override
+  String get exExerciseNameHintOther => 'e.g. Rehab exercise, Sports activity';
+
+  @override
   String get exExerciseReps => 'Reps';
 
   @override
@@ -794,6 +806,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exLogged => 'Exercise logged';
+
+  @override
+  String get exOwnRecords => 'Workouts you logged';
+
+  @override
+  String get exOwnRecordsEmpty => 'No workouts logged yet';
+
+  @override
+  String get exOwnRecordSource => 'Self-logged';
+
+  @override
+  String get exDeleteExercise => 'Delete workout';
+
+  @override
+  String get exDeleteExerciseBody => 'Deleting this record cannot be undone.';
+
+  @override
+  String get exDeleted => 'Workout deleted';
+
+  @override
+  String get exDeleteFailed => 'Could not delete. Please try again in a moment';
+
+  @override
+  String get exCannotDelete => 'This record cannot be deleted';
 
   @override
   String get exSaveFailed => 'Couldn\'t save. Please try again in a moment';
@@ -1257,6 +1293,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t open the PDF. Please try again';
 
   @override
+  String get coachChatReportRegistered => 'Weekly report added';
+
+  @override
+  String coachChatReportWeek(int sm, int sd, int em, int ed) {
+    return '$sm/$sd – $em/$ed';
+  }
+
+  @override
+  String get coachChatReportOpenPdf => 'Open PDF';
+
+  @override
   String get coachChatInputHint => 'Message your trainer...';
 
   @override
@@ -1516,9 +1563,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exConsultHistoryInProgress => 'In Progress';
 
   @override
-  String get exConsultHistoryPast => 'Past Requests';
-
-  @override
   String get exConsultRejectedReasonLabel => 'Reason for decline';
 
   @override
@@ -1671,21 +1715,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardWeightHint => 'Weight (kg)';
 
   @override
-  String get onboardHealthTitle => 'Health conditions';
+  String get onboardHealthTitle => 'Health goals';
 
   @override
   String get onboardHealthSubtitle =>
-      'Select the chronic conditions you manage. (Choose any that apply)';
+      'Pick what you want to focus on in your health care. (multiple allowed)';
 
   @override
-  String get onboardGoalTitle => 'Health goals';
+  String get onboardGoalTitle => 'Exercise goal';
 
   @override
   String get onboardGoalSubtitle =>
       'Tell us what you want to achieve. You can change this later.';
 
   @override
-  String get onboardGoalHint => 'Health and exercise goals';
+  String get onboardGoalHint => 'e.g. Finish a 5K within three months';
 
   @override
   String get onboardOptionalTag => '(optional)';
@@ -1930,10 +1974,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHealthGoalsTitle => 'Health goals';
 
   @override
+  String get myGoalsFocusSection => 'What you want to focus on';
+
+  @override
+  String get myGoalsFocusHint =>
+      'Pick what you want to focus on in your health care. (multiple allowed)';
+
+  @override
+  String get myGoalsFocusHypertension => 'Blood pressure';
+
+  @override
+  String get myGoalsFocusDiabetes => 'Blood sugar';
+
+  @override
+  String get myGoalsExerciseNote => 'Exercise goal';
+
+  @override
+  String get myGoalsExerciseNoteHint => 'e.g. Finish a 5K within three months';
+
+  @override
   String get myGoalsDietSection => 'Diet goals';
 
   @override
-  String get myGoalsExerciseSection => 'Exercise goals';
+  String get myGoalsExerciseSection => 'Exercise targets';
 
   @override
   String get myGoalBurnDaily => 'Daily calories burned (kcal)';
@@ -2093,7 +2156,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachRoutineCompleteTitle => 'Mark routine done';
+  String get coachRoutineCompleteTitle => 'Mark personal exercise done';
 
   @override
   String get coachRoutineIntensity => 'Intensity';
