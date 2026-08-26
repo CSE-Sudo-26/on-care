@@ -1009,7 +1009,7 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final rowHeight = _rowHeight(context);
+    final rowHeight = clientListRowHeight(context);
     return SectionCard(
       // 리포트 탭 좌측 고객 카드와 같은 제목·아이콘을 쓴다 — 두 탭이 같은
       // `왼쪽 고객 열 + 오른쪽 작업 영역` 구조라, 카드가 서로 다른 이름을
