@@ -1742,11 +1742,17 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the PDF. Please try again'**
   String get chatPdfOpenFailed;
 
-  /// No description provided for @chatReportSentNotice.
+  /// No description provided for @chatReportRegistered.
   ///
   /// In en, this message translates to:
-  /// **'Sent the {range} weekly report'**
-  String chatReportSentNotice(Object range);
+  /// **'Weekly report added'**
+  String get chatReportRegistered;
+
+  /// No description provided for @chatReportOpenInReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Reports'**
+  String get chatReportOpenInReports;
 
   /// No description provided for @chatLoadFailed.
   ///

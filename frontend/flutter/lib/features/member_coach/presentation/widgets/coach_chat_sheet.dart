@@ -8,6 +8,7 @@ import 'package:oncare/features/member_coach/data/repositories/chat_pdf_reposito
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_report_card.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:printing/printing.dart';
@@ -474,55 +475,76 @@ class _Bubble extends ConsumerWidget {
             _MessageTime(message: message),
             const SizedBox(width: 5),
           ],
-          Flexible(
-            child: Container(
-              key: ValueKey<String>('coach-message-bubble-${message.id}'),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.70,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-              decoration: BoxDecoration(
-                color: fromMe ? FigmaColors.primary : Colors.white,
-                border: fromMe ? null : Border.all(color: FigmaColors.hairline),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(14),
-                  topRight: const Radius.circular(14),
-                  bottomLeft: Radius.circular(fromMe ? 14 : 4),
-                  bottomRight: Radius.circular(fromMe ? 4 : 14),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    message.body,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.4,
-                      fontWeight: FontWeight.w500,
-                      color: fromMe ? Colors.white : FigmaColors.ink,
-                    ),
-                  ),
-                  if (message.attachment case final attachment?) ...<Widget>[
-                    const SizedBox(height: 8),
-                    // 사진은 대화 안에서 그리고, 리포트 PDF 는 내려받는
-                    // 카드로 둔다. 사진을 카드로 두면 볼 때마다 파일을
-                    // 열어야 한다. (#921)
-                    if (attachment.isImage)
-                      CoachImageAttachment(attachment: attachment)
-                    else
-                      _PdfCard(
-                        attachment: attachment,
-                        onOpen: () => _openPdf(context, ref, attachment),
-                      ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          Flexible(child: _bubble(context, ref)),
           if (!fromMe) ...<Widget>[
             const SizedBox(width: 5),
             _MessageTime(message: message),
+          ],
+        ],
+      ),
+    );
+  }
+
+
+  /// 말풍선 — 리포트 등록 안내만 전용 카드로 갈라진다. (#1421)
+  ///
+  /// 트레이너 앱이 같은 사건에 같은 카드를 그린다. 회원 쪽에서만 파일
+  /// 카드로 보이면, 두 사람이 같은 리포트를 두고 다른 것을 본 채로
+  /// 이야기하게 된다.
+  Widget _bubble(BuildContext context, WidgetRef ref) {
+    final bool fromMe = message.fromMe;
+    if (message.reportWeekStart case final weekStart?) {
+      final CoachAttachment? attachment = message.attachment;
+      return CoachReportCard(
+        key: ValueKey<String>('coach-message-bubble-${message.id}'),
+        weekStart: weekStart,
+        // 열 파일이 있을 때만 `PDF 열기` 를 보여 준다. 데모에는 첨부가
+        // 없으므로, 없는 파일을 여는 시늉을 하지 않는다.
+        onOpenPdf: attachment == null
+            ? null
+            : () => _openPdf(context, ref, attachment),
+      );
+    }
+    return Container(
+      key: ValueKey<String>('coach-message-bubble-${message.id}'),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * 0.70,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      decoration: BoxDecoration(
+        color: fromMe ? FigmaColors.primary : Colors.white,
+        border: fromMe ? null : Border.all(color: FigmaColors.hairline),
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(14),
+          topRight: const Radius.circular(14),
+          bottomLeft: Radius.circular(fromMe ? 14 : 4),
+          bottomRight: Radius.circular(fromMe ? 4 : 14),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            message.body,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+              color: fromMe ? Colors.white : FigmaColors.ink,
+            ),
+          ),
+          if (message.attachment case final attachment?) ...<Widget>[
+            const SizedBox(height: 8),
+            // 사진은 대화 안에서 그리고, 리포트 PDF 는 내려받는
+            // 카드로 둔다. 사진을 카드로 두면 볼 때마다 파일을
+            // 열어야 한다. (#921)
+            if (attachment.isImage)
+              CoachImageAttachment(attachment: attachment)
+            else
+              _PdfCard(
+                attachment: attachment,
+                onOpen: () => _openPdf(context, ref, attachment),
+              ),
           ],
         ],
       ),

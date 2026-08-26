@@ -900,9 +900,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
 
   @override
-  String chatReportSentNotice(Object range) {
-    return '$range 주간 리포트를 보냈어요';
-  }
+  String get chatReportRegistered => '리포트가 등록되었어요';
+
+  @override
+  String get chatReportOpenInReports => '리포트 탭에서 확인하기';
 
   @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';

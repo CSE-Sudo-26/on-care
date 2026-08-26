@@ -528,6 +528,39 @@ void main() {
     expect(currentWeek, findsNothing);
   });
 
+  testWidgets('채팅의 리포트 카드가 가리킨 주로 열린다 (#1421)', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(1600, 1200);
+    addTearDown(tester.view.reset);
+
+    // 카드는 지나간 주를 가리킨다 — 이번 주로 열리면 트레이너가 어느 주였는지
+    // 다시 찾아야 한다.
+    final DateTime lastWeek = weekStartOf(
+      nowKst(),
+    ).subtract(const Duration(days: 7));
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.reportFor('seed-client-1', weekStart: lastWeek),
+    );
+    await settle(tester);
+
+    final DateTime weekEnd = lastWeek.add(const Duration(days: 6));
+    expect(
+      find.text(
+        '${lastWeek.month}월 ${lastWeek.day}일 – ${weekEnd.month}월 ${weekEnd.day}일',
+      ),
+      findsWidgets,
+    );
+    // 이번 주가 아니라는 증거 — 이번 주에는 이 버튼을 아예 그리지 않는다.
+    expect(
+      find.byKey(const ValueKey<String>('reports-go-this-week')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('`이번 주` 버튼 여부와 무관하게 날짜·화살표 묶음은 중앙이다 (#1295)', (
     WidgetTester tester,
   ) async {
