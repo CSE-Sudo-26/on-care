@@ -532,14 +532,12 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             children: <Widget>[
               _RegisterFieldBox(
                 key: const ValueKey<String>('program-register-date'),
-                label: l.schedFieldDate,
                 icon: Icons.calendar_today_outlined,
                 value: ymd(widget.registerDate),
                 onTap: () => unawaited(_pickRegisterDate(context)),
               ),
               _RegisterFieldBox(
                 key: const ValueKey<String>('program-register-time'),
-                label: l.schedFieldTime,
                 icon: Icons.schedule_outlined,
                 value:
                     '${widget.registerStartTime.format(context)} – '
@@ -1419,80 +1417,72 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
   }
 }
 
-/// 라벨 + 테두리 박스(아이콘·값·펼침 화살표) 한 벌 — 날짜·시간처럼 눌러서
-/// 다이얼로그를 여는 자리에 쓴다. 예약 슬롯 시트(`reservation_slots_sheet.
-/// dart`의 `_tappableFieldColumn`/`_fieldBox`)와 같은 모양이다 — 트레이너
-/// 웹의 날짜·시간 선택 UI가 화면마다 다르면 안 된다.
+/// 테두리 박스(아이콘·값·펼침 화살표) — 날짜·시간처럼 눌러서 다이얼로그를
+/// 여는 자리에 쓴다. 값 자체(날짜·시간)가 무엇을 고르는 칸인지 이미
+/// 말해 주므로 위에 별도 라벨을 얹지 않는다(#1536) — 라벨이 있던 예약
+/// 슬롯 시트(`reservation_slots_sheet.dart`의 `_tappableFieldColumn`)와는
+/// 박스 자체의 생김새만 같다.
 class _RegisterFieldBox extends StatelessWidget {
   const _RegisterFieldBox({
-    required this.label,
     required this.icon,
     required this.value,
     required this.onTap,
     super.key,
   });
 
-  final String label;
   final IconData icon;
   final String value;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Material(
-          color: Colors.transparent,
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          child: InkWell(
-            onTap: onTap,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: const BorderRadius.all(AppRadius.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.card,
             borderRadius: const BorderRadius.all(AppRadius.md),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 2,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                border: Border.all(color: AppColors.borderStrong),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(icon, size: 15, color: AppColors.accent),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.foreground,
-                    ),
+            border: Border.all(color: AppColors.borderStrong),
+          ),
+          // `ActionButton`(공용 컴포넌트, `shared/widgets/action_button.dart`)의
+          // 고정 높이(36)와 맞춘다 — `일정 추가` 버튼이 바로 옆에 나란히
+          // 서므로 세로 패딩만으로는 폰트 지표에 따라 미세하게 어긋날 수
+          // 있어, 높이를 직접 고정한다(#1536). `Container.height`+
+          // `alignment`는 쓰지 않는다 — 그 조합은 내부적으로 `Align`이
+          // 되어 `Wrap`이 주는 만큼 가로로 늘어나 버린다(각 칩이 한
+          // 줄씩 차지하게 됨). `SizedBox`는 세로만 고정하고 가로는
+          // 그대로 내용 크기를 따른다.
+          child: SizedBox(
+            height: 36,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(icon, size: 15, color: AppColors.accent),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 18,
-                    color: AppColors.subtleForeground,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 18,
+                  color: AppColors.subtleForeground,
+                ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

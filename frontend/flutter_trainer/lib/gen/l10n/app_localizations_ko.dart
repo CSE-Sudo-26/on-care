@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2146,11 +2145,8 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachClientNotified => '고객 앱에 알림이 전송됐어요';
-
-  @override
   String coachRegisteredOn(String date) {
-    return '$date 스케줄에 등록됨';
+    return '$date 스케줄에 등록됐어요';
   }
 
   @override
@@ -2167,12 +2163,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachRegisterAction => 'PT 스케줄에 등록';
 
   @override
-  String get labelTomorrow => '내일';
+  String get coachGoToSchedule => '스케줄로 이동하기';
 
   @override
-  String coachFindInSchedule(String date) {
-    return '스케줄 탭에서 $date 세션의 프로그램으로 확인할 수 있어요';
-  }
+  String get labelTomorrow => '내일';
 
   @override
   String get coachRequestCustom => 'AI에게 맞춤 루틴 요청하기';
@@ -2180,11 +2174,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String coachRequestBlurb(String name) {
     return '$name님의 데이터를 분석해 회복형·강화형 후보를 만들고 이 화면에서 비교·수정할 수 있어요.';
-  }
-
-  @override
-  String coachSentToClient(String name) {
-    return '$name님에게 전송 완료!';
   }
 
   @override
