@@ -233,6 +233,9 @@ class FixtureRoutine {
     required this.type,
     required this.reason,
     required this.source,
+    this.sets,
+    this.reps,
+    this.weight,
   });
 
   factory FixtureRoutine.fromJson(Map<String, Object?> json) => FixtureRoutine(
@@ -242,6 +245,9 @@ class FixtureRoutine {
     type: json['type']! as String,
     reason: json['reason']! as String,
     source: json['source']! as String,
+    sets: (json['sets'] as num?)?.toInt(),
+    reps: (json['reps'] as num?)?.toInt(),
+    weight: (json['weight'] as num?)?.toDouble(),
   );
 
   /// 실서버 시드가 쓰는 것과 같은 id. 두 앱이 같은 루틴을 같은 이름으로
@@ -258,6 +264,13 @@ class FixtureRoutine {
 
   /// `ai` | `trainer` — 누가 정했는지. 회원 화면이 줄마다 출처를 적는다.
   final String source;
+
+  /// 근력 배정의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 비어 있다(#1276)
+  /// — 유형마다 재는 단위가 다르다. 맨몸 운동은 중량만 비어 있다: 적지 않은
+  /// 값을 `0kg` 으로 적으면 트레이너가 정해 준 무게처럼 읽힌다.
+  final int? sets;
+  final int? reps;
+  final double? weight;
 }
 
 /// 픽스처 파일 한 벌.

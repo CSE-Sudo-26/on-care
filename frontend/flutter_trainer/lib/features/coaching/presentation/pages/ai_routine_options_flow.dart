@@ -1280,13 +1280,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
 /// 근력 한 줄의 요약 문구 — 세트 × 횟수 · 중량. (#1310)
 ///
-/// 중량은 적었을 때만 붙인다 — 맨몸 운동에 `0kg` 이 붙으면 트레이너가 적지
-/// 않은 값을 적은 것처럼 읽힌다.
+/// 맨몸 운동은 `0kg` 이다 — 중량 칸을 비울 수 없으므로 0 도 트레이너가 적은
+/// 값이다.
 String _strengthSummary(RoutineExercise exercise, {required bool korean}) {
   final String base = korean
       ? '${exercise.sets}세트 × ${exercise.reps}회'
       : '${exercise.sets} sets × ${exercise.reps} reps';
-  if (exercise.weight <= 0) return base;
   final double w = exercise.weight;
   final String weight = w == w.roundToDouble() ? '${w.round()}' : '$w';
   return '$base · ${weight}kg';

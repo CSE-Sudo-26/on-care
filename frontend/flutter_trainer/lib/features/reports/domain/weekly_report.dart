@@ -340,13 +340,20 @@ List<String> _skippedNames(WeeklyReport report) {
 /// 저장 규칙은 `하체 스트레칭 10분`, `벤치프레스 40kg · 4세트` 처럼 이름 뒤에
 /// 그날의 분량이 붙는다. 초안·요약이 운동을 **묶어 세는** 자리에서는 그 분량이
 /// 서로 다른 운동으로 갈라 놓는다.
+///
+/// 분량은 하나가 아닐 수 있다 — 근력 한 줄은 세트·횟수·중량 셋을 잇달아 단다
+/// (`레그프레스 3세트 12회 80kg`, #1276). 뒤에서부터 붙어 있는 만큼 뗀다:
+/// 한 번만 떼면 `레그프레스 3세트 12회` 가 남아, 같은 운동이 무게를 올린 날마다
+/// 다른 운동으로 세어졌다.
 String exerciseBaseName(String line) {
   var name = line.replaceAll('✗', '').replaceAll('✓', '').trim();
   final cut = name.indexOf('·');
   if (cut > 0) name = name.substring(0, cut).trim();
-  return name
-      .replaceAll(RegExp(r'\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$'), '')
-      .trim();
+  final RegExp amount = RegExp(r'\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$');
+  while (amount.hasMatch(name)) {
+    name = name.replaceAll(amount, '').trim();
+  }
+  return name;
 }
 
 /// `은`/`는` 을 받침에 맞춰 붙인다.

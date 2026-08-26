@@ -1571,10 +1571,10 @@ List<String> programExerciseMetrics(
     if (exercise.reps > 0) {
       metrics.add(korean ? '${exercise.reps}회' : '${exercise.reps} reps');
     }
-    if (exercise.weight > 0) {
-      final double w = exercise.weight;
-      metrics.add('${w == w.roundToDouble() ? w.round() : w}kg');
-    }
+    // 맨몸 운동은 `0kg` 이다 — 중량 칸을 비울 수 없으므로 0 도 트레이너가 적은
+    // 값이다.
+    final double w = exercise.weight;
+    metrics.add('${w == w.roundToDouble() ? w.round() : w}kg');
   } else {
     metrics.add(korean ? '${exercise.minutes}분' : '${exercise.minutes} min');
   }
