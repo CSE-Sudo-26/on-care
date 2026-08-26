@@ -3980,12 +3980,6 @@ abstract class AppLocalizations {
   /// **'Added from {name} template'**
   String coachTemplateAdded(String name);
 
-  /// No description provided for @coachClientNotified.
-  ///
-  /// In en, this message translates to:
-  /// **'The client app was notified'**
-  String get coachClientNotified;
-
   /// No description provided for @coachRegisteredOn.
   ///
   /// In en, this message translates to:
@@ -4010,17 +4004,17 @@ abstract class AppLocalizations {
   /// **'Add to PT schedule'**
   String get coachRegisterAction;
 
+  /// No description provided for @coachGoToSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to schedule'**
+  String get coachGoToSchedule;
+
   /// No description provided for @labelTomorrow.
   ///
   /// In en, this message translates to:
   /// **'Tomorrow'**
   String get labelTomorrow;
-
-  /// No description provided for @coachFindInSchedule.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ll find it in the Schedule tab as the {date} session\'s program'**
-  String coachFindInSchedule(String date);
 
   /// No description provided for @coachRequestCustom.
   ///
@@ -4033,12 +4027,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We\'ll analyse {name}\'s data, draft a recovery and a push option, and let you compare and edit them here.'**
   String coachRequestBlurb(String name);
-
-  /// No description provided for @coachSentToClient.
-  ///
-  /// In en, this message translates to:
-  /// **'Sent to {name}'**
-  String coachSentToClient(String name);
 
   /// No description provided for @coachTemplates.
   ///

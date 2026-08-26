@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
@@ -93,15 +95,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   String? _sendRequestId;
   String? _sendRequestFor;
 
-  /// A schedule registration just succeeded (drives the 3s flash).
+  /// A schedule registration just succeeded — blocks re-registration for a
+  /// few seconds while the success toast is still fresh.
   bool _registered = false;
-
-  /// 방금 등록이 새 세션을 만든 게 아니라 그 날짜에 이미 있던 세션에
-  /// 프로그램만 붙은 경우다 — 이때는 고른 시각이 적용되지 않고 기존 세션의
-  /// 시각이 그대로 남는다(`registerProgram` 이 돌려주는
-  /// `attached_to_existing`). [_registered] 플래시를 성공이 아니라 경고로
-  /// 보여줘야 한다는 뜻이라 따로 든다.
-  bool _registeredAttachedExisting = false;
   // Every client whose registration is in flight. Multiple clients may save
   // concurrently, but each client may have only one pending write.
   final Set<String> _registeringClientIds = <String>{};
@@ -150,7 +146,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _sent = false;
       _sending = false;
       _registered = false;
-      _registeredAttachedExisting = false;
       _registerDate = _todayKst();
       _registerStartTime = const TimeOfDay(hour: 10, minute: 0);
       _registerEndTime = const TimeOfDay(hour: 11, minute: 0);
@@ -350,16 +345,30 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       return;
     }
     if (!mounted) return;
+    final stillSelected = _isStillSelected(registeredFor);
     setState(() {
       _registeringClientIds.remove(registeredFor);
-      if (_isStillSelected(registeredFor)) {
-        _registered = true;
-        // `attachedToExisting` 이면 그 날짜에 이미 있던 세션에 프로그램만
-        // 붙은 것이다 — 방금 고른 시각은 적용되지 않고 기존 세션 시각이
-        // 그대로 남으니, 성공이 아니라 경고로 알려야 한다.
-        _registeredAttachedExisting = attachedToExisting;
-      }
+      if (stillSelected) _registered = true;
     });
+    if (stillSelected) {
+      // 등록 완료는 인라인 문구가 아니라 다른 성공 알림과 같은 상단
+      // 토스트로 뜬다(#1536) — "스케줄로 이동" 액션으로 바로 그 날짜의
+      // 스케줄 탭을 연다. `AppToastKind`엔 경고 종류가 없어, 기존 세션에
+      // 붙은 경우도 실패는 아니므로 `info`로 알린다.
+      showAppToast(
+        context,
+        attachedToExisting
+            ? l.coachRegisteredAttachedExisting(
+                _dateChipLabel(l, _registerDate),
+              )
+            : l.coachRegisteredOn(_dateChipLabel(l, _registerDate)),
+        kind: attachedToExisting ? AppToastKind.info : AppToastKind.success,
+        action: AppToastAction(
+          label: l.coachGoToSchedule,
+          onTap: () => context.go(AppRoutes.scheduleAt(date: date)),
+        ),
+      );
+    }
     _registerTimer?.cancel();
     _registerTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => _registered = false);
@@ -674,7 +683,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     _templateRevision++;
     _aiWizardVisible = false;
     _registered = false;
-    _registeredAttachedExisting = false;
     _sent = false;
   });
 
@@ -685,7 +693,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     _editorRevision++;
     _aiWizardVisible = false;
     _registered = false;
-    _registeredAttachedExisting = false;
     _sent = false;
   });
 
@@ -820,7 +827,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 onRegisterDateChanged: (date) => setState(() {
                   _registerDate = date;
                   _registered = false;
-                  _registeredAttachedExisting = false;
                 }),
                 registerStartTime: _registerStartTime,
                 registerEndTime: _registerEndTime,
@@ -828,80 +834,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   _registerStartTime = range.start;
                   _registerEndTime = range.end;
                   _registered = false;
-                  _registeredAttachedExisting = false;
                 }),
               ),
             ),
-            if (_sent)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      l.coachSentToClient(client.name),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.success,
-                      ),
-                    ),
-                    Text(
-                      l.coachClientNotified,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (_registered && _registeredAttachedExisting)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      l.coachRegisteredAttachedExisting(
-                        _dateChipLabel(l, _registerDate),
-                      ),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.warning,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else if (_registered)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      l.coachRegisteredOn(_dateChipLabel(l, _registerDate)),
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.success,
-                      ),
-                    ),
-                    Text(
-                      l.coachFindInSchedule(_dateChipLabel(l, _registerDate)),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),

@@ -1112,7 +1112,6 @@
   "coachTrainerAdded": "Added by trainer",
   "coachTemplateAdded": "Added from {name} template",
   "@coachTemplateAdded": {"placeholders": {"name": {"type": "String"}}},
-  "coachClientNotified": "The client app was notified",
   "coachRegisteredOn": "Added to the {date} schedule",
   "@coachRegisteredOn": {
     "placeholders": {
@@ -1132,26 +1131,11 @@
     }
   },
   "coachRegisterAction": "Add to PT schedule",
+  "coachGoToSchedule": "Go to schedule",
   "labelTomorrow": "Tomorrow",
-  "coachFindInSchedule": "You'll find it in the Schedule tab as the {date} session's program",
-  "@coachFindInSchedule": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
   "coachRequestCustom": "Ask AI for a custom routine",
   "coachRequestBlurb": "We'll analyse {name}'s data, draft a recovery and a push option, and let you compare and edit them here.",
   "@coachRequestBlurb": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "coachSentToClient": "Sent to {name}",
-  "@coachSentToClient": {
     "placeholders": {
       "name": {
         "type": "String"

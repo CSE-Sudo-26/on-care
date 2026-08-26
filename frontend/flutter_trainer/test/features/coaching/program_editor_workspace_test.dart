@@ -154,13 +154,17 @@ void main() {
       final dateRect = tester.getRect(date);
       final timeRect = tester.getRect(time);
       final sendRect = tester.getRect(send);
-      // 날짜·시간은 예약 슬롯과 같은 라벨+박스 UI라 `일정 추가` 버튼보다
-      // 키가 크다 — 아래(bottom) 기준으로 같은 줄에 나란히 선다.
+      // 날짜·시간은 라벨이 위에 붙은 박스라 위쪽 기준선은 다르지만,
+      // 아래(bottom) 기준으로는 셋 다 같은 줄에 나란히 선다.
       expect(dateRect.bottom, timeRect.bottom);
       expect(timeRect.bottom, sendRect.bottom);
       expect(dateRect.left, lessThan(timeRect.left));
       expect(timeRect.left, lessThan(sendRect.left));
       expect(dateRect.height, timeRect.height);
+      // `일정 추가` 버튼 자체(테두리 박스)의 높이는 날짜·시간 칩의 테두리
+      // 박스와 같다 — 라벨 한 줄만큼(위)만 셋보다 낮게 시작한다(#1536).
+      expect(sendRect.height, 36);
+      expect(dateRect.bottom - dateRect.top, greaterThan(sendRect.height));
       expect(
         find.descendant(
           of: date,
