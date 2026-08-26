@@ -20,7 +20,6 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_period.da
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_template_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
@@ -30,6 +29,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routin
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -740,7 +740,7 @@ void main() {
         await openTab(tester);
 
         expect(find.text('프로그램'), findsWidgets);
-        expect(find.byType(NutritionSummaryCard), findsOneWidget);
+        expect(find.byType(ProgramNutritionSummaryCard), findsOneWidget);
         expect(
           find.byKey(const Key('client-nutrition-summary-card')),
           findsOneWidget,
@@ -837,10 +837,11 @@ void main() {
           tester.getBottomRight(nutrition).dy,
           lessThanOrEqualTo(tester.view.physicalSize.height),
         );
-        // 나트륨·당류는 좌우가 아니라 위아래로 쌓인다.
+        // 프로그램 탭 카드는 고객 탭과 독립적으로 관리된다(#1531) — 나트륨·
+        // 당류는 위아래가 아니라 좌우로 나란히 놓인다.
         expect(
-          tester.getTopLeft(sodium).dy,
-          lessThan(tester.getTopLeft(sugar).dy),
+          tester.getTopLeft(sodium).dx,
+          lessThan(tester.getTopLeft(sugar).dx),
         );
         _expectNutritionStatusCardsInBounds(tester);
         // 전송 이력은 편집기 아래가 아니라 오른쪽 열이다 — 이 고객에게 이미
@@ -1046,12 +1047,12 @@ void main() {
         const ValueKey<String>('program-client-data-tabs'),
       );
       expect(tabs, findsOneWidget);
-      expect(find.byType(NutritionSummaryCard), findsOneWidget);
+      expect(find.byType(ProgramNutritionSummaryCard), findsOneWidget);
 
       await tester.tap(find.descendant(of: tabs, matching: find.text('운동')));
       await tester.pumpAndSettle();
 
-      expect(find.byType(NutritionSummaryCard), findsNothing);
+      expect(find.byType(ProgramNutritionSummaryCard), findsNothing);
       expect(find.byType(ClientExerciseStatusCard), findsOneWidget);
       final workout = find.byKey(
         const ValueKey<String>('program-workout-seed-client-1'),
@@ -1248,7 +1249,7 @@ void main() {
         tester.getTopLeft(detail).dy,
         greaterThan(tester.getTopLeft(name).dy),
       );
-      expect(find.byType(NutritionSummaryCard), findsOneWidget);
+      expect(find.byType(ProgramNutritionSummaryCard), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

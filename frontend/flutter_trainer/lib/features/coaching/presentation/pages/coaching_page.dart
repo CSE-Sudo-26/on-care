@@ -15,7 +15,6 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_period.da
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_diet_period_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_exercise_status_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_period_toggle.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
@@ -29,6 +28,7 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_final_review_card.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_template_dialog.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
@@ -1208,7 +1208,7 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
         // 옮길 때마다 그 그래프가 다시 떠오른다.
         if (_view == _ClientDataView.diet)
           if (_period == ClientPeriod.today)
-            NutritionSummaryCard(
+            ProgramNutritionSummaryCard(
               key: ValueKey<String>('program-diet-${widget.client.id}'),
               client: widget.client,
             )
