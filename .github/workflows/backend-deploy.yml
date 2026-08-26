@@ -29,7 +29,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ap-northeast-2
+  # App Runner is not available in Seoul. Keep the deploy region configurable,
+  # with Tokyo as the project default.
+  AWS_REGION: ${{ vars.AWS_BACKEND_REGION || 'ap-northeast-1' }}
   ECR_REPOSITORY: oncare-backend
 
 jobs:
