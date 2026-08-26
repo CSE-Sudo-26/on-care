@@ -817,43 +817,63 @@ class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 아이콘·글자만 붉고 배경은 일반 설정 카드와 같아서, 목록을 훑을 때
+    // 로그아웃이 다른 설정 항목과 같은 무게로 보였다. 카드 전체를 파괴적
+    // 색으로 세운다(#1472). 크기·모서리·눌림 영역과 확인 절차는 그대로다.
     return Container(
+      key: const ValueKey<String>('my-logout-button'),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.destructive,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FigmaColors.hairline),
+        border: Border.all(color: AppColors.destructive),
         boxShadow: kCardShadow,
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: const Color(0x14FF3B30),
-                  borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          // 붉은 바탕 위에서도 눌림·포커스가 보이도록 흰 계열 잉크를 쓴다.
+          splashColor: AppColors.destructiveForeground.withValues(alpha: 0.18),
+          highlightColor: AppColors.destructiveForeground.withValues(
+            alpha: 0.10,
+          ),
+          focusColor: AppColors.destructiveForeground.withValues(alpha: 0.14),
+          hoverColor: AppColors.destructiveForeground.withValues(alpha: 0.08),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.destructiveForeground.withValues(
+                      alpha: 0.18,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    size: 16,
+                    color: AppColors.destructiveForeground,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.logout,
-                  size: 16,
-                  color: Color(0xFFFF3B30),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    l.myLogout,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.destructiveForeground,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                l.myLogout,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFFF3B30),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

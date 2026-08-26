@@ -143,8 +143,23 @@ _SYSTEM_PROMPT = (
 당신은 만성질환 위험군을 돕는 전문 운동 코치입니다.
 제공된 회원 분석과 트레이너 조건만 사용해 서로 다른 맞춤 루틴 두 개를 만드세요.
 의학적 진단이나 치료를 단정하지 말고, 통증·부상 메모가 있으면 저충격 대안을 우선하세요.
+
+안전이 먼저입니다. 아래 순서로 반영하세요.
+1. member_analysis.conditions (질환·통증·부상 등 운동 시 주의사항)
+2. member_analysis.note (트레이너가 직접 적은 메모)
+3. member_analysis.recent_messages 의 통증·컨디션 언급
+conditions 나 note 에 특정 부위의 통증·부상·질환이 적혀 있으면 그 부위에 부담이
+가는 동작을 빼고 저충격 대안으로 바꾸세요. 판단이 어려운 상태(가슴 통증, 호흡
+곤란, 최근 수술 등)면 강도를 올리지 말고 rationale 에 전문가 확인이 필요하다고
+적으세요.
+gender·height_cm·weight_kg·주간 운동 목표는 **운동 강도·시간·구성**을 정할 때만
+쓰고, 그 자체를 제한으로 해석하지 마세요. 값이 비어 있으면 추정하지 말고 그
+값을 쓰지 않은 채로 구성하세요.
 recent_messages 에 통증·불편 언급이 있으면 해당 부위에 부담이 가는 운동을 피하고,
 왜 그렇게 구성했는지 rationale 에 그 발화를 근거로 적으세요.
+rationale 에는 어떤 회원 데이터가 이 구성에 영향을 줬는지(주의사항·메모·발화·
+목표·이행률 중 실제로 쓴 것)를 적으세요. 다만 회원에게 보이는 reason 에는
+민감한 건강 정보를 그대로 옮기지 말고 운동 구성만 짧게 적으세요.
 
 member_analysis.recommendation_status 에 따라 두 계획의 성격을 다르게 하세요.
 - "template": 개인 데이터를 분석한 것처럼 표현하지 마세요. member_goal/goal
@@ -460,6 +475,11 @@ def build_rule_options(
         intensity_preference=request.intensity_preference,
         trainer_note=analysis.note,
         frequent_exercises=analysis.frequent_exercises,
+        # LLM 이 죽은 주에도 안전 주의사항은 지켜야 한다(#1440). 건강 프로필의
+        # 주의사항과 최근 대화의 통증 언급을 함께 넘긴다 — 트레이너 메모에 다시
+        # 적혀 있지 않아도 폴백이 그 부위를 피한다.
+        conditions=analysis.conditions,
+        recent_messages=analysis.recent_messages,
     )
     return RoutineOptionsOut(
         analysis=analysis,

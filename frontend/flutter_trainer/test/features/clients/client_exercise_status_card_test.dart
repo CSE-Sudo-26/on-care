@@ -359,15 +359,18 @@ void main() {
       ),
     ];
 
-    Widget detailApp(List<RoutineHistoryEntry> fixture) => ProviderScope(
+    Widget detailApp(
+      List<RoutineHistoryEntry> fixture, {
+      ClientPeriod period = ClientPeriod.week,
+    }) => ProviderScope(
       overrides: <Override>[
         ...withSplit(),
         clientHistoryProvider.overrideWith(
           (ref, clientId) => Stream<List<RoutineHistoryEntry>>.value(fixture),
         ),
       ],
-      child: const MaterialApp(
-        locale: Locale('ko'),
+      child: MaterialApp(
+        locale: const Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -375,7 +378,7 @@ void main() {
             child: ClientExerciseStatusCard(
               clientId: 'c1',
               clientName: '김민수',
-              period: ClientPeriod.week,
+              period: period,
             ),
           ),
         ),
@@ -437,12 +440,12 @@ void main() {
       expect(find.textContaining('어제 기록'), findsNothing);
     });
 
-    testWidgets('더보기는 한 주씩 내려간다 (#1172)', (tester) async {
+    testWidgets('이번 주는 한 번에 한 주치를 펼치고 버튼은 하나만 남는다 (#1426)', (tester) async {
       // 목록이 길어지면 버튼이 화면 밖으로 내려가 탭이 빗나간다.
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(900, 4000);
       addTearDown(tester.view.reset);
-      // 스무 건 — 한 주(7)로 두 번 내려가고도 남는다.
+      // 스무 건 — 한 주(7)를 넘고도 남는다.
       await tester.pumpWidget(detailApp(manyDays(20)));
       await tester.pumpAndSettle();
 
@@ -452,28 +455,77 @@ void main() {
       expect(day(0), findsOneWidget);
       expect(day(1), findsNothing);
 
-      // 첫 `더보기` 는 한 주를 통째로 연다 — 전부가 아니다.
+      // `더보기` 는 한 번이다 — 한 주치가 한꺼번에 열리고, 그 뒤로 더 내려가는
+      // 버튼은 나오지 않는다.
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(day(6), findsOneWidget);
       expect(day(7), findsNothing);
-      // 더 내려갈 수도, 처음으로 접을 수도 있어야 한다.
-      expect(toggle, findsOneWidget);
+      expect(toggle, findsNothing, reason: '펼친 뒤 `더보기` 가 다시 나오면 안 된다');
       expect(collapse, findsOneWidget);
 
-      // 또 누르면 한 주가 더 열린다.
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(day(13), findsOneWidget);
-      expect(day(14), findsNothing);
-      expect(toggle, findsOneWidget);
-      expect(collapse, findsOneWidget);
+      // 이번 주는 일곱 줄이라 안쪽 스크롤을 만들지 않는다.
+      expect(
+        find.byKey(const ValueKey<String>('client-exercise-detail-scroll')),
+        findsNothing,
+      );
 
-      // `접기` 는 몇 주를 열었든 처음 상태로 되돌린다.
       await tester.tap(collapse);
       await tester.pumpAndSettle();
       expect(day(0), findsOneWidget);
       expect(day(1), findsNothing);
+      expect(collapse, findsNothing);
+      expect(toggle, findsOneWidget);
+    });
+
+    testWidgets('전체는 정해진 높이 안에서 전체 기록을 스크롤한다 (#1426)', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(900, 4000);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        detailApp(manyDays(20), period: ClientPeriod.month),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      final Finder scroller = find.byKey(
+        const ValueKey<String>('client-exercise-detail-scroll'),
+      );
+      expect(scroller, findsOneWidget);
+      // 열이 기록 수만큼 길어지지 않는다 — 스무 건이 정해진 높이 안에 든다.
+      expect(tester.getSize(scroller).height, lessThanOrEqualTo(260));
+
+      // 안쪽에서 내리면 뒤쪽 기록이 나온다.
+      final ScrollableState inner = tester.state<ScrollableState>(
+        find.descendant(of: scroller, matching: find.byType(Scrollable)),
+      );
+      expect(inner.position.maxScrollExtent, greaterThan(0));
+      inner.position.jumpTo(inner.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('19일 전 기록'), findsOneWidget);
+    });
+
+    testWidgets('기간을 바꾸면 다시 접힌다 (#1426)', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(900, 4000);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(detailApp(manyDays(20)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(collapse, findsOneWidget);
+
+      await tester.pumpWidget(
+        detailApp(manyDays(20), period: ClientPeriod.month),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('0일 전 기록'), findsOneWidget);
+      expect(find.textContaining('1일 전 기록'), findsNothing);
+      expect(toggle, findsOneWidget);
       expect(collapse, findsNothing);
     });
 

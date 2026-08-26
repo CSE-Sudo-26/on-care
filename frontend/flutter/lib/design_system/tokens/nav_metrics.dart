@@ -19,5 +19,9 @@ class AppNavMetrics {
 
   /// 바 아래 안전영역을 이만큼까지만 따른다. 그보다 깊은 기기에서도
   /// 바가 지나치게 두꺼워지지 않는다.
-  static const double maxBottomInset = 22;
+  ///
+  /// 22 일 때 홈 인디케이터가 있는 기기(인셋 34)에서 라벨 아래가 인디케이터에
+  /// 닿아 가려 보였다. 인셋을 그대로 따르면 바가 두꺼워지므로, 라벨이 비켜설
+  /// 만큼만 올린다.
+  static const double maxBottomInset = 28;
 }
