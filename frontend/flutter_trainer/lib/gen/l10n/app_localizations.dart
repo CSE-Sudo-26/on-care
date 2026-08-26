@@ -1742,11 +1742,17 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the PDF. Please try again'**
   String get chatPdfOpenFailed;
 
-  /// No description provided for @chatReportSentNotice.
+  /// No description provided for @chatReportRegistered.
   ///
   /// In en, this message translates to:
-  /// **'Sent the {range} weekly report'**
-  String chatReportSentNotice(Object range);
+  /// **'Weekly report added'**
+  String get chatReportRegistered;
+
+  /// No description provided for @chatReportOpenInReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Reports'**
+  String get chatReportOpenInReports;
 
   /// No description provided for @chatLoadFailed.
   ///
@@ -1961,8 +1967,14 @@ abstract class AppLocalizations {
   /// No description provided for @consultApproved.
   ///
   /// In en, this message translates to:
-  /// **'{name} is now one of your clients'**
+  /// **'{name}\'s request was approved. Add a session from the Schedule tab.'**
   String consultApproved(String name);
+
+  /// No description provided for @consultScheduleCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added a consultation session for {name}'**
+  String consultScheduleCreated(String name);
 
   /// No description provided for @consultRejected.
   ///
@@ -2900,6 +2912,12 @@ abstract class AppLocalizations {
   /// **'Start date'**
   String get schedFieldStartDate;
 
+  /// No description provided for @schedFieldDateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Start - end date'**
+  String get schedFieldDateRange;
+
   /// No description provided for @schedFieldTime.
   ///
   /// In en, this message translates to:
@@ -3002,30 +3020,6 @@ abstract class AppLocalizations {
   /// **'Repeat on'**
   String get schedRepeatDays;
 
-  /// No description provided for @schedRepeatEndByCount.
-  ///
-  /// In en, this message translates to:
-  /// **'After'**
-  String get schedRepeatEndByCount;
-
-  /// No description provided for @schedRepeatEndByDate.
-  ///
-  /// In en, this message translates to:
-  /// **'On date'**
-  String get schedRepeatEndByDate;
-
-  /// No description provided for @schedRepeatCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} times'**
-  String schedRepeatCount(int count);
-
-  /// No description provided for @schedRepeatCountUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'times'**
-  String get schedRepeatCountUnit;
-
   /// No description provided for @schedRepeatPreview.
   ///
   /// In en, this message translates to:
@@ -3037,6 +3031,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick at least one weekday.'**
   String get schedRepeatNeedsDays;
+
+  /// No description provided for @schedRepeatNeedsEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an end date for the repeat.'**
+  String get schedRepeatNeedsEndDate;
 
   /// No description provided for @schedRepeatConflictTitle.
   ///
@@ -3151,6 +3151,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save program'**
   String get progSaveAction;
+
+  /// No description provided for @progSaveNoteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save note'**
+  String get progSaveNoteAction;
 
   /// No description provided for @progExerciseName.
   ///
@@ -3800,6 +3806,30 @@ abstract class AppLocalizations {
   /// **'e.g. Squat, Treadmill'**
   String get routineFieldExerciseNameHint;
 
+  /// No description provided for @routineFieldExerciseNameHintCardio.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Treadmill, Indoor cycling'**
+  String get routineFieldExerciseNameHintCardio;
+
+  /// No description provided for @routineFieldExerciseNameHintStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Bench press'**
+  String get routineFieldExerciseNameHintStrength;
+
+  /// No description provided for @routineFieldExerciseNameHintFlexibility.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Full-body stretch, Yoga'**
+  String get routineFieldExerciseNameHintFlexibility;
+
+  /// No description provided for @routineFieldExerciseNameHintOther.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Rehab exercise, Sports activity'**
+  String get routineFieldExerciseNameHintOther;
+
   /// No description provided for @routineFieldSets.
   ///
   /// In en, this message translates to:
@@ -3965,7 +3995,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachRegisteredAttachedExisting.
   ///
   /// In en, this message translates to:
-  /// **'There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn\'t applied'**
+  /// **'There was already a session planned on {date}, so the program was only attached to it — the time range you picked wasn\'t applied'**
   String coachRegisteredAttachedExisting(String date);
 
   /// No description provided for @coachRegisterOn.
@@ -5911,12 +5941,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add exercises to build this session.'**
   String get programEditorSessionEmpty;
-
-  /// No description provided for @programEditorExerciseSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'Search exercises or enter one'**
-  String get programEditorExerciseSearch;
 
   /// No description provided for @programEditorAdd.
   ///

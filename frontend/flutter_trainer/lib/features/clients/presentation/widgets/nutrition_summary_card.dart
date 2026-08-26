@@ -8,11 +8,11 @@
 /// 두 앱은 서로 다른 Dart 패키지라 위젯을 그대로 가져올 수 없어 여기에 옮겼다.
 /// 색은 트레이너 토큰으로 바꾸되 **구성과 규칙은 회원 앱을 따른다.**
 ///
-///  * 위: `오늘 섭취 칼로리` → 큰 숫자 `값 / 목표 kcal` → **탄·단·지 글자 세
-///    줄**(막대 없음). 오른쪽에 달성률 도넛. 칼로리가 무엇으로 채워졌는지가
-///    그 숫자 바로 아래에서 읽혀야 한다.
-///  * 아래: 나트륨·당류 두 칸의 가로 진행 바. 초과분은 라벨 오른쪽에
-///    `+1,429mg` 로 작게 빨간 글씨.
+///  * 웹 넓은 화면 전용 3열: `오늘 섭취 칼로리` → 큰 숫자 `값 / 목표 kcal` →
+///    **탄·단·지 글자 세 줄**(막대 없음) | 나트륨·당류 세로 진행 바(위아래) |
+///    달성률 도넛(맨 왼쪽). 칼로리가 무엇으로
+///    채워졌는지가 그 숫자 바로 아래에서 읽혀야 한다. 초과분은 라벨
+///    오른쪽에 `+1,429mg` 로 작게 빨간 글씨.
 ///  * 색은 **목표 안쪽 = 트레이너 메인 색([AppColors.statusWithinGoal]),
 ///    초과 = 빨강** 하나의 규칙이다. 초록은 쓰지 않는다 — "정상" 으로 읽혀서
 ///    목표에 한참 못 미친 날까지 괜찮다고 말한다(회원 앱 #1070).
@@ -46,6 +46,25 @@ const Color _track = AppColors.inputBackground;
 
 /// 카드가 쓰는 모서리. 회원 앱 카드와 같은 20이다.
 const double _cardRadius = 20;
+
+/// 정보(칼로리+탄단지) 칸의 고정 폭.
+const double _infoColumnWidth = 260;
+
+/// 나트륨·당류 칸의 최대 폭 — 진행 바 길이를 여기서 제한한다. 폭 그대로
+/// 늘어나게 두면 넓은 화면에서 바가 지나치게 길어진다.
+const double _mineralColumnWidth = 260;
+
+/// 달성률 도넛의 지름.
+const double _donutDimension = 112;
+
+/// 도넛 | 정보 | 나트륨·당류 세 칸 사이의 간격. 셋 다 같은 값을 써서
+/// 리듬이 고르게 읽힌다.
+const double _columnGap = 24;
+
+/// 세 칸 + 간격을 다 더한 콘텐츠 폭. 카드가 이보다 좁아지면 가운데
+/// 정렬 대신 전체를 비례 축소해 넘침·경계 밖 렌더링을 막는다.
+const double _contentWidth =
+    _donutDimension + _columnGap * 2 + _infoColumnWidth + _mineralColumnWidth;
 
 /// 한 지표의 표시값 한 벌.
 class _Item {
@@ -158,12 +177,25 @@ class NutritionSummaryCard extends StatelessWidget {
         boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
+      // 넓은 웹 화면 전용 3열: 도넛 | 정보 | 나트륨·당류(위아래).
+      // 세 칸 모두 고정 폭이고 사이 간격도 [_columnGap] 하나로 통일해
+      // 리듬이 고르게 읽힌다. `Row` 는 내용 크기만큼만 차지하고
+      // (`mainAxisSize.min`), 그 덩어리를 `Center` 가 카드 한가운데
+      // 두어 좌우 여백이 정확히 같다. 좁은 화면(분할 패널 등)에 맞춰
+      // 배치를 다시 짜지는 않지만, 카드가 [_contentWidth] 보다 좁아지면
+      // 넘치는 대신 전체가 비례 축소된다 — 화면이 깨지지 않게 하는
+      // 안전장치일 뿐 좁은 화면을 위한 설계는 아니다.
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints c) {
+          final Widget row = Row(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Expanded(
+              // 1열 — 달성률 도넛.
+              _CalorieDonut(calories: calories, color: calorieColor),
+              const SizedBox(width: _columnGap),
+              // 2열 — 칼로리 + 탄단지.
+              SizedBox(
+                width: _infoColumnWidth,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -206,10 +238,8 @@ class NutritionSummaryCard extends StatelessWidget {
                         maxLines: 1,
                       ),
                     ),
-                    // 탄단지는 칼로리 숫자와 도넛 사이에 놓는다 — 칼로리가
-                    // 무엇으로 채워졌는지가 그 숫자 바로 아래에서 읽혀야 한다.
-                    // 바는 두지 않는다: 옆의 도넛이 이미 달성률을 그리고 있어,
-                    // 좁은 왼쪽 칸에 바까지 넣으면 읽을 것만 는다. (회원 앱 #1120)
+                    // 탄단지는 칼로리 숫자 바로 아래에 둔다 — 칼로리가 무엇으로
+                    // 채워졌는지가 그 숫자 아래에서 곧장 읽혀야 한다.
                     const SizedBox(height: 10),
                     for (final _Item m in macros) ...<Widget>[
                       _MacroTextLine(item: m),
@@ -218,17 +248,13 @@ class NutritionSummaryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
-              _CalorieDonut(calories: calories, color: calorieColor),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const Divider(height: 1, thickness: 1, color: AppColors.borderStrong),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints c) {
-              if (c.maxWidth < 280) {
-                return Column(
+              const SizedBox(width: _columnGap),
+              // 3열 — 나트륨 위, 당류 아래. 폭을 고정해 바 길이를 제한한다.
+              SizedBox(
+                width: _mineralColumnWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     for (final _Item m in minerals) ...<Widget>[
                       _MineralItem(item: m),
@@ -236,21 +262,17 @@ class NutritionSummaryCard extends StatelessWidget {
                         const SizedBox(height: AppSpacing.md),
                     ],
                   ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  for (int i = 0; i < minerals.length; i++) ...<Widget>[
-                    Expanded(child: _MineralItem(item: minerals[i])),
-                    if (i < minerals.length - 1)
-                      const SizedBox(width: AppSpacing.sm),
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
+                ),
+              ),
+            ],
+          );
+          // 카드가 [_contentWidth] 보다 좁아지면 전체를 비례 축소한다 —
+          // 카드 밖으로 요소가 벗어나지 않아야 하므로 스크롤이 아니라
+          // `FittedBox` 다(이 파일의 칼로리 숫자·탄단지 줄과 같은 패턴).
+          return c.maxWidth >= _contentWidth
+              ? Center(child: row)
+              : FittedBox(fit: BoxFit.scaleDown, child: row);
+        },
       ),
     );
   }
@@ -271,16 +293,16 @@ class _CalorieDonut extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return SizedBox.square(
-      dimension: 92,
+      dimension: _donutDimension,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
           SizedBox.square(
-            dimension: 92,
+            dimension: _donutDimension,
             child: CircularProgressIndicator(
               key: const Key('client-nutrition-calorie-progress'),
               value: calories.gaugeValue,
-              strokeWidth: 9,
+              strokeWidth: 10,
               strokeCap: StrokeCap.round,
               backgroundColor: _track,
               valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -289,7 +311,7 @@ class _CalorieDonut extends StatelessWidget {
           // 링은 지름이 고정이라 글자 배율이 커지면 안쪽 두 줄이 원을 넘어선다.
           // 원 안에 들어가도록 함께 줄인다.
           Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(22),
             child: FittedBox(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -297,7 +319,7 @@ class _CalorieDonut extends StatelessWidget {
                   Text(
                     '${(calories.ratio * 100).round()}%',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 21,
                       fontWeight: FontWeight.w800,
                       color: color,
                       height: 1,
@@ -307,7 +329,7 @@ class _CalorieDonut extends StatelessWidget {
                   Text(
                     l.dietAchieveRate,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.mutedForeground,
                     ),

@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/time_range_picker_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 void main() {
   const duplicateSuggestions = <AiRoutineItem>[
@@ -40,8 +42,9 @@ void main() {
           onSend: (draft) => sent = draft,
           registerDate: DateTime(2026),
           onRegisterDateChanged: (_) {},
-          registerTime: const TimeOfDay(hour: 10, minute: 0),
-          onRegisterTimeChanged: (_) {},
+          registerStartTime: const TimeOfDay(hour: 10, minute: 0),
+          registerEndTime: const TimeOfDay(hour: 11, minute: 0),
+          onRegisterTimeRangeChanged: (_) {},
         ),
       ),
     ),
@@ -63,7 +66,9 @@ void main() {
   /// 단축 버튼은 이제 없고(#1028 후속), 실제 앱에서는 AI 요청 흐름의
   /// `템플릿에 반영`이 정확히 이 방식으로(넘어온 프롭이 바뀌면) 병합시킨다.
   Future<void> mergeSuggestions(WidgetTester tester) async {
-    await tester.pumpWidget(buildApp(List<AiRoutineItem>.of(duplicateSuggestions)));
+    await tester.pumpWidget(
+      buildApp(List<AiRoutineItem>.of(duplicateSuggestions)),
+    );
     await tester.pump();
   }
 
@@ -100,27 +105,26 @@ void main() {
     expect(editable.focusNode.hasFocus, isTrue);
   });
 
-  testWidgets(
-    '이 편집기는 API를 직접 부르지 않는다 — 전송은 onSend 콜백으로 호출부가 한다',
-    (tester) async {
-      await pumpEditor(tester);
+  testWidgets('이 편집기는 API를 직접 부르지 않는다 — 전송은 onSend 콜백으로 호출부가 한다', (
+    tester,
+  ) async {
+    await pumpEditor(tester);
 
-      // 예전 검토 화면 전용 버튼 키가 이 위젯 안에 남아 있으면, 편집기가
-      // 직접 배정·등록을 흉내 내고 있다는 뜻이다 — 그 화면은 없어졌다.
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-assign')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-register')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-send')),
-        findsOneWidget,
-      );
-    },
-  );
+    // 예전 검토 화면 전용 버튼 키가 이 위젯 안에 남아 있으면, 편집기가
+    // 직접 배정·등록을 흉내 내고 있다는 뜻이다 — 그 화면은 없어졌다.
+    expect(
+      find.byKey(const ValueKey<String>('program-editor-assign')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('program-editor-register')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('program-editor-send')),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('보내기는 지금 구성의 스냅샷을 그대로 onSend 로 넘긴다', (tester) async {
     await pumpEditor(tester);
@@ -139,6 +143,128 @@ void main() {
   });
 
   group('일정 추가', () {
+    testWidgets('넓은 화면에서 날짜 → 시간 범위 → 추가가 같은 높이의 한 줄이다', (tester) async {
+      await pumpEditor(tester);
+      final date = find.byKey(const ValueKey<String>('program-register-date'));
+      final time = find.byKey(const ValueKey<String>('program-register-time'));
+      final send = find.byKey(const ValueKey<String>('program-editor-send'));
+      await tester.ensureVisible(date);
+      await tester.pump();
+
+      final dateRect = tester.getRect(date);
+      final timeRect = tester.getRect(time);
+      final sendRect = tester.getRect(send);
+      expect(dateRect.top, timeRect.top);
+      expect(timeRect.top, sendRect.top);
+      expect(dateRect.left, lessThan(timeRect.left));
+      expect(timeRect.left, lessThan(sendRect.left));
+      expect(
+        <double>[dateRect.height, timeRect.height, sendRect.height],
+        <double>[36, 36, 36],
+      );
+      expect(
+        find.descendant(
+          of: date,
+          matching: find.byIcon(Icons.calendar_today_outlined),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('좁은 화면·글자 확대에서 순서와 왼쪽 기준을 유지해 줄바꿈한다', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(600, 1000);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.8)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProgramEditorWorkspace(
+                clientGoal: '체중 감량',
+                aiSuggestions: const <AiRoutineItem>[],
+                onSend: (_) {},
+                registerDate: DateTime(2026),
+                onRegisterDateChanged: (_) {},
+                registerStartTime: const TimeOfDay(hour: 10, minute: 0),
+                registerEndTime: const TimeOfDay(hour: 11, minute: 0),
+                onRegisterTimeRangeChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final controls = <Finder>[
+        find.byKey(const ValueKey<String>('program-register-date')),
+        find.byKey(const ValueKey<String>('program-register-time')),
+        find.byKey(const ValueKey<String>('program-editor-send')),
+      ];
+      await tester.ensureVisible(controls.first);
+      await tester.pump();
+      final rects = controls.map(tester.getRect).toList();
+      for (var i = 1; i < rects.length; i++) {
+        final followsInSameRun =
+            rects[i].top == rects[i - 1].top &&
+            rects[i].left > rects[i - 1].left;
+        final startsLaterRun =
+            rects[i].top > rects[i - 1].top &&
+            rects[i].left == rects.first.left;
+        expect(followsInSameRun || startsLaterRun, isTrue);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('종료가 시작과 같거나 빠르면 안내하고 일정 추가를 막는다', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ProgramEditorWorkspace(
+                clientGoal: '체중 감량',
+                aiSuggestions: const <AiRoutineItem>[],
+                onSend: (_) => fail('잘못된 시간 범위로 전송되면 안 됨'),
+                registerDate: DateTime(2026),
+                onRegisterDateChanged: (_) {},
+                registerStartTime: const TimeOfDay(hour: 11, minute: 0),
+                registerEndTime: const TimeOfDay(hour: 11, minute: 0),
+                onRegisterTimeRangeChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final error = find.byKey(
+        const ValueKey<String>('program-register-time-invalid'),
+      );
+      await tester.ensureVisible(error);
+      await tester.pump();
+
+      expect(find.text('종료 시간은 시작 시간보다 늦어야 해요'), findsOneWidget);
+      expect(
+        tester
+            .widget<ActionButton>(
+              find.byKey(const ValueKey<String>('program-editor-send')),
+            )
+            .onPressed,
+        isNull,
+      );
+    });
+
     testWidgets('날짜·시각 칩은 다이얼로그 없이 박스 하단에 바로 보인다', (tester) async {
       await pumpEditor(tester);
 
@@ -165,7 +291,8 @@ void main() {
             .descendant(
               of: timeChip,
               matching: find.text(
-                const TimeOfDay(hour: 10, minute: 0).format(tester.element(timeChip)),
+                '${const TimeOfDay(hour: 10, minute: 0).format(tester.element(timeChip))} – '
+                '${const TimeOfDay(hour: 11, minute: 0).format(tester.element(timeChip))}',
               ),
             )
             .evaluate()
@@ -174,11 +301,9 @@ void main() {
       );
     });
 
-    testWidgets('날짜·시각 칩은 호출부의 onRegisterDateChanged/onRegisterTimeChanged 로 값을 넘긴다', (
-      tester,
-    ) async {
+    testWidgets('날짜·시간 범위 칩은 호출부 콜백으로 값을 넘긴다', (tester) async {
       DateTime? changedDate;
-      TimeOfDay? changedTime;
+      TimeRangeValue? changedRange;
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ko'),
@@ -192,8 +317,9 @@ void main() {
                 onSend: (_) {},
                 registerDate: DateTime(2026),
                 onRegisterDateChanged: (date) => changedDate = date,
-                registerTime: const TimeOfDay(hour: 10, minute: 0),
-                onRegisterTimeChanged: (time) => changedTime = time,
+                registerStartTime: const TimeOfDay(hour: 10, minute: 0),
+                registerEndTime: const TimeOfDay(hour: 11, minute: 0),
+                onRegisterTimeRangeChanged: (range) => changedRange = range,
               ),
             ),
           ),
@@ -208,10 +334,14 @@ void main() {
         find.byType(ProgramEditorWorkspace),
       );
       workspace.onRegisterDateChanged(DateTime(2026, 1, 2));
-      workspace.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
+      workspace.onRegisterTimeRangeChanged((
+        start: const TimeOfDay(hour: 14, minute: 30),
+        end: const TimeOfDay(hour: 15, minute: 45),
+      ));
 
       expect(changedDate, DateTime(2026, 1, 2));
-      expect(changedTime, const TimeOfDay(hour: 14, minute: 30));
+      expect(changedRange?.start, const TimeOfDay(hour: 14, minute: 30));
+      expect(changedRange?.end, const TimeOfDay(hour: 15, minute: 45));
     });
   });
 
@@ -257,7 +387,9 @@ void main() {
 
   group('세션 초기화', () {
     // 더보기(⋯) 메뉴에 묻지 않고, 그 왼쪽에 따로 있는 아이콘 버튼이다.
-    final resetIcon = find.byKey(const ValueKey<String>('session-reset-session-1'));
+    final resetIcon = find.byKey(
+      const ValueKey<String>('session-reset-session-1'),
+    );
 
     testWidgets('운동이 없으면 초기화 아이콘이 비활성이다', (tester) async {
       await pumpEditor(tester);
@@ -274,13 +406,21 @@ void main() {
       await tester.tap(resetIcon);
       await tester.pump();
 
-      expect(find.byKey(const ValueKey<String>('session-reset-confirm')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-reset-confirm')),
+        findsOneWidget,
+      );
 
-      await tester.tap(find.byKey(const ValueKey<String>('session-reset-submit')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-reset-submit')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('스쿼트'), findsNothing);
-      expect(find.byKey(const ValueKey<String>('session-actions-session-1')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-actions-session-1')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('취소하면 운동이 그대로 남는다', (tester) async {
@@ -289,7 +429,9 @@ void main() {
 
       await tester.tap(resetIcon);
       await tester.pump();
-      await tester.tap(find.byKey(const ValueKey<String>('session-reset-cancel')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-reset-cancel')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('스쿼트'), findsOneWidget);
@@ -385,9 +527,7 @@ void main() {
       expect(
         tester
             .widget<TextField>(
-              find.byKey(
-                const ValueKey<String>('custom-exercise-sets-field'),
-              ),
+              find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
             )
             .controller!
             .text,
@@ -443,9 +583,7 @@ void main() {
       expect(
         tester
             .widget<TextField>(
-              find.byKey(
-                const ValueKey<String>('custom-exercise-sets-field'),
-              ),
+              find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
             )
             .controller!
             .text,
@@ -459,9 +597,7 @@ void main() {
       expect(
         tester
             .widget<TextField>(
-              find.byKey(
-                const ValueKey<String>('custom-exercise-sets-field'),
-              ),
+              find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
             )
             .controller!
             .text,
@@ -551,6 +687,50 @@ void main() {
       await tester.pump();
 
       expect(find.text('버피'), findsNothing);
+    });
+
+    // #1483 — 검색 아이콘·문구 제거, 유형별 이름 예시, 날짜 선택 UI 제거.
+    testWidgets('검색 아이콘·문구 없이 유형별 이름 예시가 뜨고 날짜 선택 UI는 없다', (tester) async {
+      await pumpEditor(tester);
+
+      await openAddForm(tester);
+
+      expect(find.byIcon(Icons.search), findsNothing);
+      expect(find.text('운동 이름 검색 또는 직접 입력'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('custom-exercise-date')),
+        findsNothing,
+      );
+
+      // 기본 유형은 근력 — 근력 예시가 placeholder 로 보인다.
+      final nameField = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+      );
+      expect(nameField.decoration?.hintText, '예) 스쿼트, 벤치프레스');
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('custom-exercise-category-유산소')),
+      );
+      await tester.pump();
+
+      final nameFieldAfterTypeChange = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+      );
+      expect(nameFieldAfterTypeChange.decoration?.hintText, '예) 러닝머신, 실내 자전거');
+    });
+
+    testWidgets('유형을 바꿔도 이미 입력한 운동 이름은 지워지지 않는다', (tester) async {
+      await pumpEditor(tester);
+
+      await openAddForm(tester);
+      await typeName(tester, '클라이밍');
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('custom-exercise-category-기타')),
+      );
+      await tester.pump();
+
+      expect(find.text('클라이밍'), findsOneWidget);
     });
   });
 }

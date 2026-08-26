@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -934,9 +935,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
 
   @override
-  String chatReportSentNotice(Object range) {
-    return 'Sent the $range weekly report';
-  }
+  String get chatReportRegistered => 'Weekly report added';
+
+  @override
+  String get chatReportOpenInReports => 'Open in Reports';
 
   @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
@@ -1064,7 +1066,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String consultApproved(String name) {
-    return '$name is now one of your clients';
+    return '$name\'s request was approved. Add a session from the Schedule tab.';
+  }
+
+  @override
+  String consultScheduleCreated(String name) {
+    return 'Added a consultation session for $name';
   }
 
   @override
@@ -1646,6 +1653,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldStartDate => 'Start date';
 
   @override
+  String get schedFieldDateRange => 'Start - end date';
+
+  @override
   String get schedFieldTime => 'Time';
 
   @override
@@ -1699,26 +1709,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedRepeatDays => 'Repeat on';
 
   @override
-  String get schedRepeatEndByCount => 'After';
-
-  @override
-  String get schedRepeatEndByDate => 'On date';
-
-  @override
-  String schedRepeatCount(int count) {
-    return '$count times';
-  }
-
-  @override
-  String get schedRepeatCountUnit => 'times';
-
-  @override
   String schedRepeatPreview(int count, String first, String last) {
     return '$count sessions · $first – $last';
   }
 
   @override
   String get schedRepeatNeedsDays => 'Pick at least one weekday.';
+
+  @override
+  String get schedRepeatNeedsEndDate => 'Pick an end date for the repeat.';
 
   @override
   String schedRepeatConflictTitle(int total, int count) {
@@ -1782,6 +1781,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progSaveAction => 'Save program';
+
+  @override
+  String get progSaveNoteAction => 'Save note';
 
   @override
   String get progExerciseName => 'Exercise';
@@ -2137,6 +2139,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldExerciseNameHint => 'e.g. Squat, Treadmill';
 
   @override
+  String get routineFieldExerciseNameHintCardio =>
+      'e.g. Treadmill, Indoor cycling';
+
+  @override
+  String get routineFieldExerciseNameHintStrength => 'e.g. Squat, Bench press';
+
+  @override
+  String get routineFieldExerciseNameHintFlexibility =>
+      'e.g. Full-body stretch, Yoga';
+
+  @override
+  String get routineFieldExerciseNameHintOther =>
+      'e.g. Rehab exercise, Sports activity';
+
+  @override
   String get routineFieldSets => 'Sets';
 
   @override
@@ -2231,7 +2248,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachRegisteredAttachedExisting(String date) {
-    return 'There was already a session planned on $date, so the program was only attached to it — the time you picked wasn\'t applied';
+    return 'There was already a session planned on $date, so the program was only attached to it — the time range you picked wasn\'t applied';
   }
 
   @override
@@ -3375,9 +3392,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get programEditorSessionEmpty =>
       'Add exercises to build this session.';
-
-  @override
-  String get programEditorExerciseSearch => 'Search exercises or enter one';
 
   @override
   String get programEditorAdd => 'Add';

@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/exercise_estimate.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
@@ -34,8 +35,9 @@ class ProgramEditorWorkspace extends StatefulWidget {
     required this.onSend,
     required this.registerDate,
     required this.onRegisterDateChanged,
-    required this.registerTime,
-    required this.onRegisterTimeChanged,
+    required this.registerStartTime,
+    required this.registerEndTime,
+    required this.onRegisterTimeRangeChanged,
     this.template,
     this.templateRevision = 0,
     this.initialDraft,
@@ -58,10 +60,11 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final DateTime registerDate;
   final ValueChanged<DateTime> onRegisterDateChanged;
 
-  /// PT 스케줄에 등록할 시각 — 위 날짜와 함께 `일정 추가` 다이얼로그에서
-  /// 고른다. 기본값(오전 10시)도 호출부가 들고 있다.
-  final TimeOfDay registerTime;
-  final ValueChanged<TimeOfDay> onRegisterTimeChanged;
+  /// PT 스케줄에 등록할 시작·종료 시각. 기본값은 호출부가 들고
+  /// 있고, 범위 선택기에서 두 값을 함께 바꾼다.
+  final TimeOfDay registerStartTime;
+  final TimeOfDay registerEndTime;
+  final ValueChanged<TimeRangeValue> onRegisterTimeRangeChanged;
 
   /// A saved draft to open instead of starting from the client's goal.
   ///
@@ -105,13 +108,21 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   // [ProgramExerciseDraft] 의 기본값과 맞춘다. 세트·중량은 근력일 때만,
   // 시간은 그 외 유형일 때만 보인다(#1029, #1276) — 유형이 무엇을 재는
   // 운동인지가 다르기 때문이다.
-  DateTime _newExerciseDate = _todayDate();
+  //
+  // 운동별 날짜 입력은 없다(#1483) — 트레이너가 등록할 실제 일정 날짜는
+  // 이 아래 [widget.registerDate] 하나뿐이고, 새 운동은 그 값을 그대로
+  // 물려받는다. 두 군데서 날짜를 고르게 하면 서로 어긋날 수 있다.
   int _newExerciseSets = 3;
   int _newExerciseReps = 10;
   double _newExerciseWeight = 20;
   int _newExerciseMinutes = 30;
   String _newExerciseIntensity = 'moderate';
   var _nextId = 2;
+
+  bool get _hasValidRegisterTimeRange =>
+      _minutes(widget.registerEndTime) > _minutes(widget.registerStartTime);
+
+  int _minutes(TimeOfDay value) => value.hour * 60 + value.minute;
 
   @override
   void didChangeDependencies() {
@@ -465,7 +476,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               addingExercise: _addingToSession == _draft.sessions[index].id,
               exerciseNameController: _exerciseName,
               exerciseType: _newExerciseType,
-              exerciseDate: _newExerciseDate,
               exerciseSets: _newExerciseSets,
               exerciseReps: _newExerciseReps,
               exerciseWeight: _newExerciseWeight,
@@ -486,8 +496,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               onCancelAdd: _cancelExerciseAdd,
               onExerciseTypeChanged: (type) =>
                   setState(() => _newExerciseType = type),
-              onExerciseDateChanged: (value) =>
-                  setState(() => _newExerciseDate = value),
               onExerciseSetsChanged: (value) =>
                   setState(() => _newExerciseSets = value),
               onExerciseRepsChanged: (value) =>
@@ -508,8 +516,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
-          // 박스 하단 — PT 등록 날짜·시각은 다이얼로그 뒤에 숨기지 않고
-          // 칩 형태로 바로 보인다. 그 아래 `일정 추가`(예전 `보내기`)가
+          // 박스 하단 — PT 등록 날짜·시간 범위·일정 추가를 순서대로
+          // 같은 Wrap에 둔다. 넓으면 한 줄, 좁거나 글자가 커지면 왼쪽
+          // 기준과 순서를 유지한 채 줄바꿈된다. `일정 추가`(예전 `보내기`)가
           // 확인창을 거쳐 실제로 배정+PT 등록까지 한다. 실제 전송·등록
           // API 호출은 전부 호출부(`onSend`)가 한다 — 여기는 트리거와
           // 등록일·시각 값만 쥔다.
@@ -520,34 +529,49 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               ActionButton(
                 key: const ValueKey<String>('program-register-date'),
                 label: ymd(widget.registerDate),
-                icon: Icons.calendar_month_outlined,
+                icon: Icons.calendar_today_outlined,
                 onPressed: () => unawaited(_pickRegisterDate(context)),
               ),
               ActionButton(
                 key: const ValueKey<String>('program-register-time'),
-                label: widget.registerTime.format(context),
+                label:
+                    '${widget.registerStartTime.format(context)} – '
+                    '${widget.registerEndTime.format(context)}',
                 icon: Icons.schedule_outlined,
-                onPressed: () => unawaited(_pickRegisterTime(context)),
+                onPressed: () => unawaited(_pickRegisterTimeRange(context)),
+              ),
+              Tooltip(
+                message: !_draft.supportsAssignment
+                    ? l.programEditorAssignUnsupported
+                    : !_hasValidRegisterTimeRange
+                    ? l.schedEndBeforeStart
+                    : '',
+                child: ActionButton(
+                  key: const ValueKey<String>('program-editor-send'),
+                  label: l.programEditorAddSchedule,
+                  primary: true,
+                  onPressed:
+                      _draft.supportsAssignment &&
+                          _hasValidRegisterTimeRange &&
+                          !widget.sending
+                      ? () => widget.onSend(_draft)
+                      : null,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Tooltip(
-              message: _draft.supportsAssignment
-                  ? ''
-                  : l.programEditorAssignUnsupported,
-              child: ActionButton(
-                key: const ValueKey<String>('program-editor-send'),
-                label: l.programEditorAddSchedule,
-                primary: true,
-                onPressed: _draft.supportsAssignment && !widget.sending
-                    ? () => widget.onSend(_draft)
-                    : null,
+          if (!_hasValidRegisterTimeRange) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l.schedEndBeforeStart,
+              key: const ValueKey<String>('program-register-time-invalid'),
+              style: const TextStyle(
+                color: AppColors.destructive,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -570,20 +594,20 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       lastDate: today.add(const Duration(days: 365)),
     );
     if (picked == null) return;
-    widget.onRegisterDateChanged(DateTime(picked.year, picked.month, picked.day));
+    widget.onRegisterDateChanged(
+      DateTime(picked.year, picked.month, picked.day),
+    );
   }
 
-  /// 등록할 시각을 고른다 — 스케줄 탭과 같은 시각 선택 모달이다(#1425).
-  ///
-  /// 프로그램은 시작 시각 하나만 필요하므로 시작·종료 범위 모달 대신 같은
-  /// 필드·시계 다이얼을 쓰는 단일 시각용을 부른다.
-  Future<void> _pickRegisterTime(BuildContext context) async {
-    final picked = await showScheduleTimePicker(
+  /// 등록할 시작·종료 시각을 스케줄 탭과 같은 범위 선택기로 고른다.
+  Future<void> _pickRegisterTimeRange(BuildContext context) async {
+    final picked = await showScheduleTimeRangePicker(
       context: context,
-      initialTime: widget.registerTime,
+      start: widget.registerStartTime,
+      end: widget.registerEndTime,
     );
     if (picked == null) return;
-    widget.onRegisterTimeChanged(picked);
+    widget.onRegisterTimeRangeChanged(picked);
   }
 
   void _update(ProgramEditorState next) => setState(() => _draft = next);
@@ -631,7 +655,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   void _resetSession(int index) {
     _replaceSession(
       index,
-      _draft.sessions[index].copyWith(exercises: const <ProgramExerciseDraft>[]),
+      _draft.sessions[index].copyWith(
+        exercises: const <ProgramExerciseDraft>[],
+      ),
     );
   }
 
@@ -648,7 +674,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             id: 'exercise-${_nextId++}',
             name: name,
             type: _newExerciseType,
-            date: _newExerciseDate,
+            // 이 운동의 날짜는 편집기 하단에서 고르는 실제 등록 날짜를
+            // 그대로 물려받는다(#1483) — 폼 안에 따로 날짜 선택은 없다.
+            date: widget.registerDate,
             // 근력은 세트·횟수·중량으로, 그 외 유형은 시간으로 잰다 — 쓰지
             // 않는 쪽도 값을 들고 있어야 유형을 오갈 때 각자의 값이 남는다.
             sets: _newExerciseSets,
@@ -668,7 +696,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       _addingToSession = null;
       _exerciseName.clear();
       _newExerciseType = '근력';
-      _newExerciseDate = _todayDate();
       _newExerciseSets = 3;
       _newExerciseReps = 10;
       _newExerciseWeight = 20;
@@ -750,7 +777,6 @@ class _SessionEditor extends StatefulWidget {
     required this.addingExercise,
     required this.exerciseNameController,
     required this.exerciseType,
-    required this.exerciseDate,
     required this.exerciseSets,
     required this.exerciseReps,
     required this.exerciseWeight,
@@ -764,7 +790,6 @@ class _SessionEditor extends StatefulWidget {
     required this.onStartAdd,
     required this.onCancelAdd,
     required this.onExerciseTypeChanged,
-    required this.onExerciseDateChanged,
     required this.onExerciseSetsChanged,
     required this.onExerciseRepsChanged,
     required this.onExerciseWeightChanged,
@@ -783,7 +808,6 @@ class _SessionEditor extends StatefulWidget {
   final bool addingExercise;
   final TextEditingController exerciseNameController;
   final String exerciseType;
-  final DateTime exerciseDate;
   final int exerciseSets;
   final int exerciseReps;
   final double exerciseWeight;
@@ -799,7 +823,6 @@ class _SessionEditor extends StatefulWidget {
   final VoidCallback onStartAdd;
   final VoidCallback onCancelAdd;
   final ValueChanged<String> onExerciseTypeChanged;
-  final ValueChanged<DateTime> onExerciseDateChanged;
   final ValueChanged<int> onExerciseSetsChanged;
   final ValueChanged<int> onExerciseRepsChanged;
   final ValueChanged<double> onExerciseWeightChanged;
@@ -945,88 +968,24 @@ class _SessionEditorState extends State<_SessionEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        child: TextField(
-                          key: const ValueKey<String>('custom-exercise-name'),
-                          controller: widget.exerciseNameController,
-                          autofocus: true,
-                          onSubmitted: (_) => widget.onConfirmAdd(),
-                          style: const TextStyle(
-                            color: AppColors.foreground,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: l.programEditorExerciseSearch,
-                            hintStyle: const TextStyle(
-                              color: AppColors.subtleForeground,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.search,
-                              size: 17,
-                              color: AppColors.subtleForeground,
-                            ),
-                            isDense: true,
-                            filled: true,
-                            fillColor: AppColors.card,
-                            contentPadding: const EdgeInsets.fromLTRB(
-                              AppSpacing.sm,
-                              AppSpacing.sm,
-                              AppSpacing.sm,
-                              7,
-                            ),
-                            border: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(AppRadius.sm),
-                              borderSide: BorderSide(color: AppColors.borderStrong),
-                            ),
-                            enabledBorder: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(AppRadius.sm),
-                              borderSide: BorderSide(color: AppColors.border),
-                            ),
-                            focusedBorder: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(AppRadius.sm),
-                              borderSide: BorderSide(
-                                color: AppColors.primary,
-                                width: 1.25,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      ActionButton(
-                        label: l.actionCancel,
-                        onPressed: widget.onCancelAdd,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      ActionButton(
-                        label: l.programEditorAdd,
-                        primary: true,
-                        onPressed: widget.onConfirmAdd,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
                   // 회원 앱의 운동 추가 시트와 같은 순서·같은 위젯이다
-                  // (#1276) — 날짜 → 종류 → 시간(또는 세트·중량) → 강도 →
-                  // 예상 칼로리. 이름은 위쪽 입력줄에서 이미 받는다.
-                  RoutineDateField(
-                    keyPrefix: 'custom-exercise-date',
-                    date: widget.exerciseDate,
-                    onChanged: widget.onExerciseDateChanged,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // 유형을 먼저 골라야 아래 입력칸이 세트·횟수·중량인지
-                  // 시간인지 정해진다.
+                  // (#1276, #1483) — 유형 → 이름 → 세부 운동량(시간 또는
+                  // 세트·횟수·중량) → 강도 → 예상 칼로리. 날짜는 없다 —
+                  // 트레이너 프로그램은 편집기 하단의 등록 날짜 하나만 쓴다.
+                  // 유형을 먼저 골라야 이름 placeholder 와 아래 입력칸이
+                  // 무엇을 재는지(세트·횟수·중량 또는 시간) 정해진다.
                   RoutineCategoryChips(
                     keyPrefix: 'custom-exercise-category',
                     value: widget.exerciseType,
                     onChanged: widget.onExerciseTypeChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  RoutineNameField(
+                    keyPrefix: 'custom-exercise-name',
+                    controller: widget.exerciseNameController,
+                    autofocus: true,
+                    hint: routineTypeNameHint(l, widget.exerciseType),
+                    onSubmitted: (_) => widget.onConfirmAdd(),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   if (widget.exerciseType == '근력') ...<Widget>[
@@ -1068,6 +1027,22 @@ class _SessionEditorState extends State<_SessionEditor> {
                           : widget.exerciseMinutes,
                       intensity: widget.exerciseIntensity,
                     ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      ActionButton(
+                        label: l.actionCancel,
+                        onPressed: widget.onCancelAdd,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      ActionButton(
+                        label: l.programEditorAdd,
+                        primary: true,
+                        onPressed: widget.onConfirmAdd,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1229,7 +1204,8 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
               // 직접 추가는 `트레이너 추가` 로 — `source` 는 그대로 서버
               // 계약값(`trainer`)이라 [templateName] 이 있을 때만 우선한다
               // (#1029).
-              if (exercise.templateName != null || exercise.source == 'trainer') ...<Widget>[
+              if (exercise.templateName != null ||
+                  exercise.source == 'trainer') ...<Widget>[
                 const SizedBox(width: AppSpacing.xs),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -1319,15 +1295,10 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
               builder: (context, constraints) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  // 회원 앱의 운동 추가 시트와 같은 칸이다 (#1276) — 날짜 →
+                  // 회원 앱의 운동 추가 시트와 같은 칸이다 (#1276, #1483) —
                   // 종류 → 시간(또는 세트·횟수·중량) → 강도 → 예상 칼로리.
-                  RoutineDateField(
-                    keyPrefix: '${exercise.id}-date',
-                    date: exercise.date ?? _todayDate(),
-                    onChanged: (value) =>
-                        widget.onChanged(exercise.copyWith(date: value)),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                  // 날짜는 없다 — 트레이너 프로그램은 편집기 하단의 등록
+                  // 날짜 하나만 쓴다.
                   RoutineCategoryChips(
                     keyPrefix: '${exercise.id}-type',
                     value: exercise.type,
@@ -1488,27 +1459,19 @@ List<String> programExerciseMetrics(
 }) {
   final metrics = <String>[];
   if (exercise.isStrength) {
-    metrics.add(
-      korean ? '${exercise.sets}세트' : '${exercise.sets} sets',
-    );
+    metrics.add(korean ? '${exercise.sets}세트' : '${exercise.sets} sets');
     if (exercise.reps > 0) {
-      metrics.add(
-        korean ? '${exercise.reps}회' : '${exercise.reps} reps',
-      );
+      metrics.add(korean ? '${exercise.reps}회' : '${exercise.reps} reps');
     }
     if (exercise.weight > 0) {
       final double w = exercise.weight;
       metrics.add('${w == w.roundToDouble() ? w.round() : w}kg');
     }
   } else {
-    metrics.add(
-      korean ? '${exercise.minutes}분' : '${exercise.minutes} min',
-    );
+    metrics.add(korean ? '${exercise.minutes}분' : '${exercise.minutes} min');
   }
   return metrics;
 }
-
-
 
 class _DraftField extends StatelessWidget {
   const _DraftField({

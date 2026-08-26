@@ -2408,6 +2408,24 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the PDF. Please try again'**
   String get coachChatPdfOpenFailed;
 
+  /// No description provided for @coachChatReportRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report added'**
+  String get coachChatReportRegistered;
+
+  /// Week the registered report covers, shown on the report card.
+  ///
+  /// In en, this message translates to:
+  /// **'{sm}/{sd} – {em}/{ed}'**
+  String coachChatReportWeek(int sm, int sd, int em, int ed);
+
+  /// No description provided for @coachChatReportOpenPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Open PDF'**
+  String get coachChatReportOpenPdf;
+
   /// No description provided for @coachChatInputHint.
   ///
   /// In en, this message translates to:

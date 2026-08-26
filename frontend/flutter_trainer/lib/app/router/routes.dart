@@ -1,3 +1,5 @@
+import 'package:oncare_trainer/core/utils/date_format.dart';
+
 /// Centralised route paths for the trainer app. Anything that needs to
 /// navigate imports this rather than another feature module
 /// (STRUCTURE.md §4).
@@ -175,9 +177,16 @@ class AppRoutes {
   ).toString();
 
   /// Builds the 리포트 tab focused on [clientId].
-  static String reportFor(String clientId) => Uri(
+  ///
+  /// [weekStart] 를 주면 그 주가 선택된 채로 열린다. 채팅의 리포트 카드가
+  /// 가리키는 주와 리포트 화면이 보여 주는 주가 어긋나면, 트레이너는 카드를
+  /// 누르고도 어느 주였는지 다시 찾아야 한다(#1421).
+  static String reportFor(String clientId, {DateTime? weekStart}) => Uri(
     path: reports,
-    queryParameters: <String, String>{'client': clientId},
+    queryParameters: <String, String>{
+      'client': clientId,
+      if (weekStart != null) 'week': ymd(weekStart),
+    },
   ).toString();
 
   /// Builds the 스케줄 tab on a given date.

@@ -97,7 +97,7 @@ void main() {
       find.byKey(const ValueKey<String>('session-time-range-confirm')),
     );
     await settle(tester);
-    await tester.tap(find.text('추가하기'));
+    await tester.tap(find.text('추가'));
     await settle(tester);
 
     // 화면에 없는 일정은 없는 일정과 같다.

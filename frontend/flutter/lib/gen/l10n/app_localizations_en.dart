@@ -1293,6 +1293,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t open the PDF. Please try again';
 
   @override
+  String get coachChatReportRegistered => 'Weekly report added';
+
+  @override
+  String coachChatReportWeek(int sm, int sd, int em, int ed) {
+    return '$sm/$sd – $em/$ed';
+  }
+
+  @override
+  String get coachChatReportOpenPdf => 'Open PDF';
+
+  @override
   String get coachChatInputHint => 'Message your trainer...';
 
   @override

@@ -419,7 +419,8 @@
   "chatTooLong": "Message is too long (2000 characters max)",
   "chatSendFailed": "Couldn't send the message. Please try again",
   "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
-  "chatReportSentNotice": "Sent the {range} weekly report",
+  "chatReportRegistered": "Weekly report added",
+  "chatReportOpenInReports": "Open in Reports",
   "chatLoadFailed": "Couldn't load the conversation",
   "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
   "@chatDemoAnalyzed": {
@@ -491,8 +492,16 @@
   "consultEmptyHistory": "No consultation history",
   "consultEmptyHint": "Requests appear here when a member asks for a consultation with your gym or with you",
   "consultActionFailed": "Couldn't process the request",
-  "consultApproved": "{name} is now one of your clients",
+  "consultApproved": "{name}'s request was approved. Add a session from the Schedule tab.",
   "@consultApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "consultScheduleCreated": "Added a consultation session for {name}",
+  "@consultScheduleCreated": {
     "placeholders": {
       "name": {
         "type": "String"
@@ -851,6 +860,7 @@
   "schedFieldType": "Type",
   "schedFieldDate": "Date",
   "schedFieldStartDate": "Start date",
+  "schedFieldDateRange": "Start - end date",
   "schedFieldTime": "Time",
   "schedHourSuffix": "hr",
   "schedMinuteSuffix": "min",
@@ -868,14 +878,10 @@
   "schedRepeat": "Repeat",
   "schedRepeatWeekly": "Weekly",
   "schedRepeatDays": "Repeat on",
-  "schedRepeatEndByCount": "After",
-  "schedRepeatEndByDate": "On date",
-  "schedRepeatCount": "{count} times",
-  "@schedRepeatCount": {"placeholders": {"count": {"type": "int"}}},
-  "schedRepeatCountUnit": "times",
   "schedRepeatPreview": "{count} sessions · {first} – {last}",
   "@schedRepeatPreview": {"placeholders": {"count": {"type": "int"}, "first": {"type": "String"}, "last": {"type": "String"}}},
   "schedRepeatNeedsDays": "Pick at least one weekday.",
+  "schedRepeatNeedsEndDate": "Pick an end date for the repeat.",
   "schedRepeatConflictTitle": "{count} of {total} sessions clash",
   "@schedRepeatConflictTitle": {"placeholders": {"total": {"type": "int"}, "count": {"type": "int"}}},
   "schedRepeatConflictRow": "{date} {time} · already booked: {name}",
@@ -897,6 +903,7 @@
   "progNoteHint": "Notes to follow while running this program",
   "progSaving": "Saving...",
   "progSaveAction": "Save program",
+  "progSaveNoteAction": "Save note",
   "progExerciseName": "Exercise",
   "progDeleteExercise": "Remove exercise",
   "progSets": "Sets",
@@ -1067,6 +1074,10 @@
   "routineFieldDate": "Date",
   "routineFieldExerciseName": "Exercise name",
   "routineFieldExerciseNameHint": "e.g. Squat, Treadmill",
+  "routineFieldExerciseNameHintCardio": "e.g. Treadmill, Indoor cycling",
+  "routineFieldExerciseNameHintStrength": "e.g. Squat, Bench press",
+  "routineFieldExerciseNameHintFlexibility": "e.g. Full-body stretch, Yoga",
+  "routineFieldExerciseNameHintOther": "e.g. Rehab exercise, Sports activity",
   "routineFieldSets": "Sets",
   "routineFieldReps": "Reps",
   "routineFieldWeight": "Weight",
@@ -1110,7 +1121,7 @@
       }
     }
   },
-  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn't applied",
+  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time range you picked wasn't applied",
   "@coachRegisteredAttachedExisting": {"placeholders": {"date": {"type": "String"}}},
   "coachRegisterOn": "Add to the {date} PT schedule",
   "@coachRegisterOn": {
@@ -1762,7 +1773,6 @@
   "programEditorSessionResetBody": "Every exercise in '{name}' will be cleared. The session itself and other sessions stay.",
   "@programEditorSessionResetBody": {"placeholders": {"name": {"type": "String"}}},
   "programEditorSessionEmpty": "Add exercises to build this session.",
-  "programEditorExerciseSearch": "Search exercises or enter one",
   "programEditorAdd": "Add",
   "programEditorAddExercise": "Add exercise",
   "programEditorExercise": "Exercise",
