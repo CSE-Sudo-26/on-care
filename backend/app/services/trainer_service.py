@@ -3958,9 +3958,22 @@ def build_weekly_report(
         round(sum(recorded_sodium) / len(recorded_sodium)) if recorded_sodium else None
     )
 
+    # 회원이 적어 둔 하루 목표. 없으면 null 로 두고 판정 쪽이 공통 상수로
+    # 되돌아간다 — 여기서 상수를 채워 보내면 화면이 '이 회원의 목표'와
+    # '기본값'을 구분할 수 없다(#1430).
+    profile = db.scalars(
+        select(HealthProfile).where(HealthProfile.user_id == member_id)
+    ).first()
+
     report = WeeklyReportOut(
         member_id=member_id,
         member_name=member_name,
+        calorie_target=profile.daily_calories if profile else None,
+        sodium_target=profile.daily_sodium_mg if profile else None,
+        sugar_target=profile.daily_sugar_g if profile else None,
+        carbs_target=profile.daily_carbs_g if profile else None,
+        protein_target=profile.daily_protein_g if profile else None,
+        fat_target=profile.daily_fat_g if profile else None,
         week_start=monday_str,
         week_end=sunday_str,
         sessions_booked=booked,

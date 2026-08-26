@@ -15,6 +15,7 @@ import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_activity_status.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
+import 'package:oncare/features/exercise/presentation/widgets/own_exercise_records.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dart';
@@ -312,6 +313,15 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
               child: ExerciseActivityStatus(week: week),
             ),
             const SizedBox(height: 20),
+            // 1-1) 직접 기록한 운동 — 하단 `+` 로 적었든 아래 `운동 추가` 로
+            // 적었든, 방금 적은 기록이 이 자리에 남는다. 오늘도 예외가 아니다
+            // (#1428). PT 일지·추천 개인운동과 섞이지 않도록 제목과 카드를
+            // 따로 둔다.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: OwnExerciseRecords(week: week, date: today),
+            ),
+            const SizedBox(height: 20),
             // 2) AI 맞춤 조언 — "얼마나 했나" 다음은 "그래서 오늘 뭘 할까" 다.
             //    식단 탭과 같은 카드를 쓴다. (#1021)
             Padding(
@@ -583,11 +593,30 @@ class _ExerciseDayDetail extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final int i = date.weekday - 1; // 0 = 월
     final double minutes = _at(week.dailyMinutes, i);
-    if (minutes <= 0) return const _ExerciseDayEmpty();
+    if (minutes <= 0) {
+      // 기록이 없는 날에도 **그날로** 적을 자리는 있어야 한다(#1428).
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _ExerciseDayEmpty(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: OwnExerciseRecords(week: week, date: date),
+          ),
+          const SizedBox(height: 20),
+        ],
+      );
+    }
 
     final String dayLabel = i < week.dayLabels.length ? week.dayLabels[i] : '';
+    // 회원이 직접 적은 기록은 위 `직접 기록한 운동` 이 맡는다 — 여기서는
+    // PT 일지와 배정 루틴만 남긴다. 같은 기록을 한 화면에 두 번 그리지
+    // 않는다(#1428).
     final List<ExerciseSession> sessions = week.sessions
-        .where((ExerciseSession s) => s.dayLabel == dayLabel)
+        .where(
+          (ExerciseSession s) =>
+              s.dayLabel == dayLabel && s.source != ExerciseSource.member,
+        )
         .toList();
     // 유형별 값은 `운동 현황 > 오늘` 과 **같은 카드**로 그린다 — 유산소·스트레칭은
     // 분, 근력은 세트로. 같은 데이터를 두 가지 모양으로 그리지 않는다(#682).
@@ -619,6 +648,9 @@ class _ExerciseDayDetail extends StatelessWidget {
           // 했나** 다. (#1021)
           const SizedBox(height: 12),
           ExerciseDayLoadCard(load: load, isToday: false),
+          const SizedBox(height: 20),
+          // 직접 적은 기록은 따로 모아 그 자리에서 고치고 지운다(#1428).
+          OwnExerciseRecords(week: week, date: date),
           if (sessions.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             for (final ExerciseSession s in sessions)
@@ -643,7 +675,7 @@ class _ExerciseDayDetail extends StatelessWidget {
                             child: Text(
                               s.assignedRoutineName.isNotEmpty
                                   ? s.assignedRoutineName
-                                  : _exerciseTypeLabel(l, s.type),
+                                  : exerciseTypeLabel(l, s.type),
                               style: const TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
@@ -652,7 +684,7 @@ class _ExerciseDayDetail extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${_exerciseAmountLabel(l, s)} · '
+                            '${exerciseAmountLabel(l, s)} · '
                             '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
                             style: const TextStyle(
                               fontSize: 12.5,
@@ -725,28 +757,6 @@ class _ExerciseDayDetail extends StatelessWidget {
 /// 기록 한 줄이 말하는 **양**. 근력은 세트·횟수로, 나머지는 분으로 읽는다 —
 /// 홈 운동 카드·운동 현황 링·주간 목표가 이미 근력을 세트로 세므로, 목록만
 /// 분으로 적으면 같은 기록이 화면마다 다른 수로 보인다. (#1262, #1310)
-String _exerciseAmountLabel(AppLocalizations l, ExerciseSession s) {
-  if (s.type != ExerciseType.strength) {
-    return '${s.minutes}${l.unitMinutes}';
-  }
-  final int sets = s.sets ?? setsFromStrengthMinutes(s.minutes.toDouble());
-  final int? reps = s.reps;
-  // 횟수는 적었을 때만 붙인다 — 이 칸이 생기기 전 기록에 아무도 적지 않은
-  // 수가 뜨면 안 된다.
-  if (reps == null || reps <= 0) return l.exSetsCount(sets);
-  return '${l.exSetsCount(sets)} · ${l.exRepsCount(reps)}';
-}
-
-/// 운동 유형 → 화면 라벨. 유형별 분해 카드와 같은 문구를 쓴다.
-String _exerciseTypeLabel(AppLocalizations l, ExerciseType type) =>
-    switch (type) {
-      ExerciseType.cardio || ExerciseType.walking => l.exTypeCardio,
-      ExerciseType.strength => l.exTypeStrength,
-      ExerciseType.stretching || ExerciseType.yoga => l.exTypeFlexibility,
-      // 기타는 기타라고 적는다 — 유산소로 적으면 하지 않은 운동을 한 것처럼
-      // 읽힌다.
-      ExerciseType.other => l.exTypeOtherChip,
-    };
 
 /// 정말로 기록이 없는 날 — 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 낀다.
 class _ExerciseDayEmpty extends StatelessWidget {

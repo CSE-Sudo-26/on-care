@@ -1406,6 +1406,30 @@ abstract class AppLocalizations {
   /// **'e.g. Squat, Treadmill'**
   String get exExerciseNameHint;
 
+  /// No description provided for @exExerciseNameHintCardio.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Treadmill, Indoor cycling'**
+  String get exExerciseNameHintCardio;
+
+  /// No description provided for @exExerciseNameHintStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Squat, Bench press'**
+  String get exExerciseNameHintStrength;
+
+  /// No description provided for @exExerciseNameHintFlexibility.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Full-body stretch, Yoga'**
+  String get exExerciseNameHintFlexibility;
+
+  /// No description provided for @exExerciseNameHintOther.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Rehab exercise, Sports activity'**
+  String get exExerciseNameHintOther;
+
   /// No description provided for @exExerciseReps.
   ///
   /// In en, this message translates to:
@@ -1513,6 +1537,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exercise logged'**
   String get exLogged;
+
+  /// No description provided for @exOwnRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts you logged'**
+  String get exOwnRecords;
+
+  /// No description provided for @exOwnRecordsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No workouts logged yet'**
+  String get exOwnRecordsEmpty;
+
+  /// No description provided for @exOwnRecordSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-logged'**
+  String get exOwnRecordSource;
+
+  /// No description provided for @exDeleteExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete workout'**
+  String get exDeleteExercise;
+
+  /// No description provided for @exDeleteExerciseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting this record cannot be undone.'**
+  String get exDeleteExerciseBody;
+
+  /// No description provided for @exDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout deleted'**
+  String get exDeleted;
+
+  /// No description provided for @exDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete. Please try again in a moment'**
+  String get exDeleteFailed;
+
+  /// No description provided for @exCannotDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'This record cannot be deleted'**
+  String get exCannotDelete;
 
   /// No description provided for @exSaveFailed.
   ///
@@ -2336,6 +2408,24 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open the PDF. Please try again'**
   String get coachChatPdfOpenFailed;
 
+  /// No description provided for @coachChatReportRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report added'**
+  String get coachChatReportRegistered;
+
+  /// Week the registered report covers, shown on the report card.
+  ///
+  /// In en, this message translates to:
+  /// **'{sm}/{sd} – {em}/{ed}'**
+  String coachChatReportWeek(int sm, int sd, int em, int ed);
+
+  /// No description provided for @coachChatReportOpenPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Open PDF'**
+  String get coachChatReportOpenPdf;
+
   /// No description provided for @coachChatInputHint.
   ///
   /// In en, this message translates to:
@@ -3101,19 +3191,19 @@ abstract class AppLocalizations {
   /// No description provided for @onboardHealthTitle.
   ///
   /// In en, this message translates to:
-  /// **'Health conditions'**
+  /// **'Health goals'**
   String get onboardHealthTitle;
 
   /// No description provided for @onboardHealthSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Select the chronic conditions you manage. (Choose any that apply)'**
+  /// **'Pick what you want to focus on in your health care. (multiple allowed)'**
   String get onboardHealthSubtitle;
 
   /// No description provided for @onboardGoalTitle.
   ///
   /// In en, this message translates to:
-  /// **'Health goals'**
+  /// **'Exercise goal'**
   String get onboardGoalTitle;
 
   /// No description provided for @onboardGoalSubtitle.
@@ -3125,7 +3215,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardGoalHint.
   ///
   /// In en, this message translates to:
-  /// **'Health and exercise goals'**
+  /// **'e.g. Finish a 5K within three months'**
   String get onboardGoalHint;
 
   /// No description provided for @onboardOptionalTag.
@@ -3560,6 +3650,42 @@ abstract class AppLocalizations {
   /// **'Health goals'**
   String get myHealthGoalsTitle;
 
+  /// No description provided for @myGoalsFocusSection.
+  ///
+  /// In en, this message translates to:
+  /// **'What you want to focus on'**
+  String get myGoalsFocusSection;
+
+  /// No description provided for @myGoalsFocusHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what you want to focus on in your health care. (multiple allowed)'**
+  String get myGoalsFocusHint;
+
+  /// No description provided for @myGoalsFocusHypertension.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood pressure'**
+  String get myGoalsFocusHypertension;
+
+  /// No description provided for @myGoalsFocusDiabetes.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood sugar'**
+  String get myGoalsFocusDiabetes;
+
+  /// No description provided for @myGoalsExerciseNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise goal'**
+  String get myGoalsExerciseNote;
+
+  /// No description provided for @myGoalsExerciseNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Finish a 5K within three months'**
+  String get myGoalsExerciseNoteHint;
+
   /// Section label in the health goals sheet.
   ///
   /// In en, this message translates to:
@@ -3569,7 +3695,7 @@ abstract class AppLocalizations {
   /// Section label in the health goals sheet.
   ///
   /// In en, this message translates to:
-  /// **'Exercise goals'**
+  /// **'Exercise targets'**
   String get myGoalsExerciseSection;
 
   /// No description provided for @myGoalBurnDaily.
@@ -3857,7 +3983,7 @@ abstract class AppLocalizations {
   /// Title of the completion dialog.
   ///
   /// In en, this message translates to:
-  /// **'Mark routine done'**
+  /// **'Mark personal exercise done'**
   String get coachRoutineCompleteTitle;
 
   /// Field label in the completion dialog.

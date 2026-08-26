@@ -149,6 +149,15 @@ class MemberHealthProfileOut(BaseModel):
     daily_carbs_g: int | None = None
     daily_protein_g: int | None = None
     daily_fat_g: int | None = None
+    #: 운동 탭이 실제로 견주는 목표 (#1139) — 회원 앱 마이페이지가 쓰는 값이다.
+    #: 트레이너 화면도 같은 필드를 읽고 저장해야 한 쪽에서 고친 목표가 다른
+    #: 쪽에서 옛 값으로 남지 않는다(#1449).
+    daily_burn_kcal: int | None = None
+    weekly_cardio_minutes: int | None = None
+    weekly_strength_sets: int | None = None
+    weekly_flexibility_minutes: int | None = None
+    #: 옛 주간 목표(횟수·시간·소모). 다른 화면이 아직 읽고 있어 응답에는
+    #: 남기지만, 트레이너 편집 폼은 위의 현행 목표만 다룬다(#1449).
     weekly_workout_goal: int | None = None
     weekly_exercise_minutes_goal: int | None = None
     weekly_burn_goal: int | None = None
@@ -166,6 +175,10 @@ class MemberHealthProfileUpdate(PartialUpdate):
     daily_carbs_g: int | None = Field(default=None, ge=0, le=2000)
     daily_protein_g: int | None = Field(default=None, ge=0, le=1000)
     daily_fat_g: int | None = Field(default=None, ge=0, le=1000)
+    daily_burn_kcal: int | None = Field(default=None, ge=0, le=20000)
+    weekly_cardio_minutes: int | None = Field(default=None, ge=0, le=10080)
+    weekly_strength_sets: int | None = Field(default=None, ge=0, le=1000)
+    weekly_flexibility_minutes: int | None = Field(default=None, ge=0, le=10080)
     weekly_workout_goal: int | None = Field(default=None, ge=0, le=21)
     weekly_exercise_minutes_goal: int | None = Field(default=None, ge=0, le=10080)
     weekly_burn_goal: int | None = Field(default=None, ge=0, le=100000)
@@ -180,6 +193,10 @@ class MemberHealthProfileUpdate(PartialUpdate):
             "daily_carbs_g",
             "daily_protein_g",
             "daily_fat_g",
+            "daily_burn_kcal",
+            "weekly_cardio_minutes",
+            "weekly_strength_sets",
+            "weekly_flexibility_minutes",
             "weekly_workout_goal",
             "weekly_exercise_minutes_goal",
             "weekly_burn_goal",
@@ -1176,6 +1193,16 @@ class WeeklyReportOut(BaseModel):
     carbs_week: list[float] = Field(default_factory=list)
     protein_week: list[float] = Field(default_factory=list)
     fat_week: list[float] = Field(default_factory=list)
+    #: 그 회원의 하루 목표. 건강 프로필에 적혀 있으면 그 값, 없으면 null 이다
+    #: (#1430). 주의사항 판정이 고정 상수보다 이 값을 먼저 쓴다 — 같은 1,900kcal
+    #: 이 어떤 회원에게는 부족이고 어떤 회원에게는 초과다. 근거 문장도 어느
+    #: 기준을 썼는지 이 값으로 적는다.
+    calorie_target: int | None = None
+    sodium_target: int | None = None
+    sugar_target: float | None = None
+    carbs_target: float | None = None
+    protein_target: float | None = None
+    fat_target: float | None = None
     #: 월→일 7칸. 이행률과 함께 그날의 운동 내역을 담는다(#754).
     days: list[WeeklyReportDayOut] = Field(default_factory=list)
     message: str                 # 회원에게 전송될 본문(미리보기와 동일)
