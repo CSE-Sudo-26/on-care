@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_invite.da
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/app_toast.dart';
+import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 /// 회원 ID로 기존 회원을 찾아 연결하는 신규 고객 등록 창. (#919)
 ///
@@ -134,7 +135,11 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
       await ref.read(clientInviteRepositoryProvider).cancel(invite.id);
       ref.invalidate(pendingClientInvitesProvider);
       if (!mounted) return;
-      showAppToast(context, l.clientInviteCancelled, kind: AppToastKind.success);
+      showAppToast(
+        context,
+        l.clientInviteCancelled,
+        kind: AppToastKind.success,
+      );
     } on AppError catch (error) {
       if (!mounted) return;
       showAppToast(
@@ -458,6 +463,10 @@ class _FoundMemberCard extends StatelessWidget {
           ? '$genderLabel · ${found.age}세'
           : '$genderLabel · Age ${found.age}';
     }
+    final String initial = found.name.isEmpty
+        ? '?'
+        : String.fromCharCode(found.name.runes.first);
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -465,47 +474,69 @@ class _FoundMemberCard extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            found.name,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.foreground,
+          ClientAvatar(label: initial, size: 36),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        found.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                    ),
+                    if (demographics != null) ...<Widget>[
+                      const SizedBox(width: AppSpacing.xs),
+                      Flexible(
+                        child: Text(
+                          demographics,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.subtleForeground,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (found.goal case final String goal
+                    when goal.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    goal,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.subtleForeground,
+                    ),
+                  ),
+                ],
+                if (blocked != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    blocked,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (demographics != null) ...<Widget>[
-            const SizedBox(height: 2),
-            Text(
-              demographics,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.subtleForeground,
-              ),
-            ),
-          ],
-          if (found.goal case final String goal
-              when goal.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 2),
-            Text(
-              '${l.clientInviteGoalLabel} · $goal',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.subtleForeground,
-              ),
-            ),
-          ],
-          if (blocked != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              blocked,
-              style: const TextStyle(fontSize: 12, color: AppColors.warning),
-            ),
-          ],
         ],
       ),
     );

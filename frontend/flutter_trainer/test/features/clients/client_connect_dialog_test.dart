@@ -8,6 +8,7 @@ import 'package:oncare_trainer/features/clients/data/repositories/client_invite_
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_connect_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 /// 회원 ID로 찾고, 확인하고, 연결한다. 한 번에 연결하지 않는 것이 이 창의
 /// 요지라(오타 한 글자가 다른 사람에게 가는 요청이 된다) 그 순서를 검증한다.
@@ -282,6 +283,23 @@ void main() {
     expect(find.byType(BottomSheet), findsNothing);
   });
 
+  testWidgets('실 API 안내는 요청·수락 절차를 말하고 데모 정보를 언급하지 않는다', (tester) async {
+    await _pumpDialog(tester, _FakeInviteRepository());
+
+    expect(
+      find.text('회원 ID로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('데모'), findsNothing);
+  });
+
+  testWidgets('데모 안내는 데모 회원 정보라는 내부 출처를 언급하지 않는다', (tester) async {
+    await _pumpDialog(tester, _FakeInviteRepository(connectsImmediately: true));
+
+    expect(find.text('회원 ID로 고객을 확인한 뒤 바로 등록해요.'), findsOneWidget);
+    expect(find.textContaining('데모 회원 정보'), findsNothing);
+  });
+
   group('connectsImmediately (데모)', () {
     testWidgets('메시지 칸·대기 목록 없이 바로 등록하고 성공을 안내한다', (tester) async {
       final repository = _FakeInviteRepository(
@@ -347,7 +365,56 @@ void main() {
       expect(find.text('이 고객이 맞나요?'), findsOneWidget);
       expect(find.textContaining('여성'), findsOneWidget);
       expect(find.textContaining('29세'), findsOneWidget);
-      expect(find.textContaining('체지방 감량'), findsOneWidget);
+      // 목표는 "운동 목표 · " 접두어 없이 문구만 뜬다 — 고객 목록의 목표
+      // 표기와 같은 형태다.
+      expect(find.text('체지방 감량'), findsOneWidget);
+      expect(find.textContaining('운동 목표'), findsNothing);
+    });
+
+    testWidgets('조회 결과에는 고객 목록과 같은 이름 첫 글자 아바타가 뜨고 상태 점은 없다', (tester) async {
+      final repository = _FakeInviteRepository(
+        found: _lookup(gender: 'female', age: 29, goal: '체지방 감량'),
+        connectsImmediately: true,
+      );
+      await _pumpDialog(tester, repository);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-a3f9c81e4b2d',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
+      await tester.pumpAndSettle();
+
+      final avatarFinder = find.byType(ClientAvatar);
+      expect(avatarFinder, findsOneWidget);
+      final avatar = tester.widget<ClientAvatar>(avatarFinder);
+      expect(avatar.label, '김');
+      // 아직 담당으로 연결되기 전이라 활성/휴면 상태를 붙이지 않는다.
+      expect(avatar.showStatus, isFalse);
+    });
+
+    testWidgets('성별·나이·목표가 없으면 빈 구분자나 빈 줄 없이 이름만 보인다', (tester) async {
+      final repository = _FakeInviteRepository(
+        found: _lookup(),
+        connectsImmediately: true,
+      );
+      await _pumpDialog(tester, repository);
+
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-a3f9c81e4b2d',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('김민수'), findsOneWidget);
+      expect(find.byType(ClientAvatar), findsOneWidget);
+      // 정보가 없다고 해서 " · " 만 남은 빈 구분자를 그리지 않는다.
+      expect(find.textContaining('·'), findsNothing);
     });
 
     testWidgets('데모용 회원 ID를 다이얼로그에 노출하지 않는다', (tester) async {

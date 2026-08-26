@@ -153,6 +153,18 @@ class MockMemberCoachRepository implements MemberCoachRepository {
       day: 2,
     ),
     _seed(17, CoachSender.me, '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16', day: 2),
+    // 트레이너 앱이 리포트를 보내면 그 쪽 대화에는 리포트 카드가 남는데,
+    // 회원 쪽 데모에는 같은 사건이 없어 두 앱을 나란히 놓고 시연할 때만
+    // 한쪽이 비어 있었다(#1421). 마지막 인사 **앞에** 둔다 — 스레드 맨 끝은
+    // "추천운동을 받았어요" 안내가 붙는 자리다.
+    _seed(
+      19,
+      CoachSender.trainer,
+      '이번 주 리포트 등록해 뒀어요. 확인해 보세요',
+      '18:17',
+      day: 2,
+      reportWeekStart: _reportWeekStart,
+    ),
     _seed(
       18,
       CoachSender.trainer,
@@ -167,12 +179,24 @@ class MockMemberCoachRepository implements MemberCoachRepository {
   /// `timeLabel` 은 화면에 보일 문자열일 뿐 날짜가 아니다. 날짜를 실제로
   /// 벌려 두지 않으면, 대화를 날짜로 묶는 쪽(하루치 AI 분석 안내)이 사흘치를
   /// 하루로 본다.
+  /// 리포트가 다루는 주 — 스레드 마지막 날이 속한 주의 월요일.
+  ///
+  /// `nowKst()` 로 잡지 않는다. 이 스레드는 [_seedEpoch] 에 못 박힌 사흘치라,
+  /// 오늘 주를 쓰면 대화 날짜와 카드가 가리키는 주가 어긋난다.
+  static final DateTime _reportWeekStart = _mondayOf(
+    _seedEpoch.add(const Duration(days: 2)),
+  );
+
+  static DateTime _mondayOf(DateTime day) =>
+      DateTime(day.year, day.month, day.day - (day.weekday - DateTime.monday));
+
   static CoachMessage _seed(
     int index,
     CoachSender sender,
     String body,
     String timeLabel, {
     required int day,
+    DateTime? reportWeekStart,
   }) => CoachMessage(
     id: 'seed-m$index',
     sender: sender,
@@ -181,6 +205,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     createdAt: _seedEpoch.add(
       Duration(days: day, minutes: _minutesOfDay(timeLabel)),
     ),
+    reportWeekStart: reportWeekStart,
   );
 
   static int _minutesOfDay(String timeLabel) {
