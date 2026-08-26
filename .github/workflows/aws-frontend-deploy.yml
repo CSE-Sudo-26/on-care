@@ -85,14 +85,93 @@ jobs:
           role-to-assume: ${{ vars.AWS_FRONTEND_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Upload files to S3
+      # 운영 경로를 먼저 덮어쓰지 않는다. 이번 빌드는 커밋 SHA 로 격리된 자기
+      # prefix 에만 올라가고, 지금 서비스 중인 릴리스의 객체는 손대지 않는다 —
+      # 검증이 실패하면 아무것도 전환하지 않은 채 끝나면 된다.
+      - name: Upload release to S3
         env:
           BUCKET: ${{ vars.AWS_FRONTEND_BUCKET }}
         run: |
           set -euo pipefail
-          aws s3 sync public/ "s3://$BUCKET/" \
+          # `--delete` 는 이 prefix 안에서만 작용한다(재실행이 남긴 잔여 파일 정리).
+          aws s3 sync public/ "s3://$BUCKET/releases/$GITHUB_SHA/" \
             --delete \
             --cache-control "public,max-age=300"
+
+      - name: Verify the uploaded release before switching traffic
+        env:
+          BUCKET: ${{ vars.AWS_FRONTEND_BUCKET }}
+        run: |
+          set -euo pipefail
+          PREFIX="releases/$GITHUB_SHA"
+
+          # 파일 이름을 박아 두는 대신 개수로 본다 — Flutter 산출물 이름이 버전에
+          # 따라 바뀌어도 "빌드한 것이 전부 올라갔는가" 는 그대로 검증된다.
+          LOCAL_COUNT=$(find public -type f | wc -l | tr -d ' ')
+          REMOTE_COUNT=$(aws s3 ls "s3://$BUCKET/$PREFIX/" --recursive | wc -l | tr -d ' ')
+          if [ "$LOCAL_COUNT" != "$REMOTE_COUNT" ]; then
+            echo "::error::Release upload incomplete: local=$LOCAL_COUNT remote=$REMOTE_COUNT"
+            exit 1
+          fi
+
+          for key in index.html frontend/index.html trainer/index.html; do
+            SIZE=$(aws s3api head-object --bucket "$BUCKET" --key "$PREFIX/$key" \
+              --query 'ContentLength' --output text)
+            if [ "${SIZE:-0}" -le 0 ]; then
+              echo "::error::Empty or missing object: $PREFIX/$key"
+              exit 1
+            fi
+          done
+
+          UPLOADED_SHA=$(aws s3 cp "s3://$BUCKET/$PREFIX/version.txt" - | tr -d '[:space:]')
+          if [ "$UPLOADED_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::Release version mismatch: expected=$GITHUB_SHA actual=$UPLOADED_SHA"
+            exit 1
+          fi
+
+      # 여기서 처음으로 운영 트래픽이 움직인다. origin pointer 하나만 바꾸므로
+      # 전환이 원자적이고, 직전 릴리스 객체가 그대로 남아 되돌릴 수 있다.
+      - name: Switch CloudFront origin to the new release
+        id: switch
+        env:
+          DISTRIBUTION_ID: ${{ vars.AWS_FRONTEND_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          CONFIG=$(aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID")
+          ETAG=$(printf '%s' "$CONFIG" | jq -r '.ETag')
+          ORIGIN_ID=$(printf '%s' "$CONFIG" \
+            | jq -r '.DistributionConfig.DefaultCacheBehavior.TargetOriginId')
+          PREVIOUS=$(printf '%s' "$CONFIG" \
+            | jq -r --arg id "$ORIGIN_ID" \
+              '.DistributionConfig.Origins.Items[] | select(.Id == $id) | .OriginPath')
+          NEW="/releases/$GITHUB_SHA"
+
+          {
+            echo "origin_id=$ORIGIN_ID"
+            echo "previous_origin_path=$PREVIOUS"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$PREVIOUS" = "$NEW" ]; then
+            echo "이미 이 릴리스를 가리키고 있어 전환을 건너뜁니다: $NEW"
+            echo "switched=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s' "$CONFIG" \
+            | jq --arg id "$ORIGIN_ID" --arg path "$NEW" \
+              '.DistributionConfig
+               | (.Origins.Items[] | select(.Id == $id) | .OriginPath) = $path' \
+            > new-distribution-config.json
+
+          # 되돌리기 표시는 갱신을 **부르기 직전에** 남긴다. 아래 wait 가 끊겨도
+          # 전환은 이미 접수됐을 수 있으므로 롤백 단계가 돌아야 한다.
+          echo "switched=true" >> "$GITHUB_OUTPUT"
+          aws cloudfront update-distribution \
+            --id "$DISTRIBUTION_ID" \
+            --if-match "$ETAG" \
+            --distribution-config file://new-distribution-config.json > /dev/null
+          aws cloudfront wait distribution-deployed --id "$DISTRIBUTION_ID"
+          echo "origin path: '${PREVIOUS}' -> '${NEW}'"
 
       - name: Invalidate CloudFront cache and verify deployment
         env:
@@ -127,4 +206,76 @@ jobs:
             echo "### AWS frontend deployment"
             echo "- URL: $BASE_URL/"
             echo "- Commit: $GITHUB_SHA"
+            echo "- Release: /releases/$GITHUB_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # 전환 이후 검증이 깨진 경우에만 돈다. 직전 릴리스 객체를 지운 적이 없으므로
+      # pointer 만 되돌리면 그대로 다시 서비스된다.
+      - name: Roll back to the previous release
+        if: failure() && steps.switch.outputs.switched == 'true'
+        env:
+          DISTRIBUTION_ID: ${{ vars.AWS_FRONTEND_DISTRIBUTION_ID }}
+          ORIGIN_ID: ${{ steps.switch.outputs.origin_id }}
+          PREVIOUS_ORIGIN_PATH: ${{ steps.switch.outputs.previous_origin_path }}
+        run: |
+          set -euo pipefail
+          CONFIG=$(aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID")
+          ETAG=$(printf '%s' "$CONFIG" | jq -r '.ETag')
+          printf '%s' "$CONFIG" \
+            | jq --arg id "$ORIGIN_ID" --arg path "$PREVIOUS_ORIGIN_PATH" \
+              '.DistributionConfig
+               | (.Origins.Items[] | select(.Id == $id) | .OriginPath) = $path' \
+            > rollback-distribution-config.json
+          aws cloudfront update-distribution \
+            --id "$DISTRIBUTION_ID" \
+            --if-match "$ETAG" \
+            --distribution-config file://rollback-distribution-config.json > /dev/null
+          aws cloudfront wait distribution-deployed --id "$DISTRIBUTION_ID"
+
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$DISTRIBUTION_ID" \
+            --paths '/*' \
+            --query 'Invalidation.Id' \
+            --output text)
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "$DISTRIBUTION_ID" \
+            --id "$INVALIDATION_ID"
+
+          echo "::error::Deployment verification failed. Rolled back to '${PREVIOUS_ORIGIN_PATH:-/}'."
+          {
+            echo "### AWS frontend deployment rolled back"
+            echo "- Failed release: /releases/$GITHUB_SHA"
+            echo "- Restored origin path: ${PREVIOUS_ORIGIN_PATH:-/}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 릴리스가 무한정 쌓이지 않게 한다. 최근 것만 남기되, 지금 서비스 중인
+      # 릴리스와 되돌아갈 직전 릴리스는 어떤 경우에도 지우지 않는다.
+      - name: Prune old releases
+        env:
+          BUCKET: ${{ vars.AWS_FRONTEND_BUCKET }}
+          KEEP: '5'
+          PREVIOUS_ORIGIN_PATH: ${{ steps.switch.outputs.previous_origin_path }}
+        run: |
+          set -euo pipefail
+          KEEP_PREFIXES=" releases/$GITHUB_SHA/ "
+          if [ -n "$PREVIOUS_ORIGIN_PATH" ]; then
+            KEEP_PREFIXES="$KEEP_PREFIXES${PREVIOUS_ORIGIN_PATH#/}/ "
+          fi
+
+          # 릴리스마다 version.txt 가 하나씩 있으므로 그 객체의 시각이 곧 릴리스
+          # 시각이다. 최신 $KEEP 개를 남기고 나머지 prefix 를 통째로 지운다.
+          KEYS=$(aws s3api list-objects-v2 --bucket "$BUCKET" --prefix 'releases/' \
+            --query "reverse(sort_by(Contents[?ends_with(Key, '/version.txt')], &LastModified))[].Key" \
+            --output text | tr '\t' '\n')
+
+          INDEX=0
+          for key in $KEYS; do
+            INDEX=$((INDEX + 1))
+            PREFIX="${key%version.txt}"
+            case "$KEEP_PREFIXES" in *" $PREFIX "*) continue ;; esac
+            if [ "$INDEX" -le "$KEEP" ]; then
+              continue
+            fi
+            echo "오래된 릴리스 삭제: $PREFIX"
+            aws s3 rm "s3://$BUCKET/$PREFIX" --recursive > /dev/null
+          done
