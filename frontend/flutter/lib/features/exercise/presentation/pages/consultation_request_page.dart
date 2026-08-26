@@ -79,7 +79,7 @@ class _ConsultationRequestPageState
       firstDate: today,
       lastDate: DateTime(today.year + 100),
       // 바로 아래 희망 시간대 선택 팝업의 X 버튼과 같은 모습으로 맞춘다.
-      builder: (BuildContext context, Widget child) => IconButtonTheme(
+      builder: (BuildContext context, Widget? child) => IconButtonTheme(
         data: IconButtonThemeData(
           style: IconButton.styleFrom(
             backgroundColor: Colors.transparent,
@@ -87,7 +87,7 @@ class _ConsultationRequestPageState
             highlightColor: Colors.transparent,
           ),
         ),
-        child: child,
+        child: child!,
       ),
     );
     if (selected != null && mounted) {
