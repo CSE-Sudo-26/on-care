@@ -74,7 +74,7 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: <Widget>[
                           // 아바타 크기는 프로그램 탭 고객 목록과 같은
                           // 기준을 쓴다(#1423).
@@ -85,6 +85,7 @@ class _ReportClientPickerState extends State<ReportClientPicker> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 // 프로그램 탭 고객 목록과 같은 기준이다(#1423).

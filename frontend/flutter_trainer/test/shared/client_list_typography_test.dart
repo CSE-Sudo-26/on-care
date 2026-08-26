@@ -69,6 +69,15 @@ void main() {
         .size;
   }
 
+  void expectAvatarCentered(WidgetTester tester, String rowKey) {
+    final Finder row = find.byKey(ValueKey<String>(rowKey));
+    final Finder avatar = find.descendant(
+      of: row,
+      matching: find.byType(ClientAvatar),
+    );
+    expect(tester.getCenter(avatar).dy, closeTo(tester.getCenter(row).dy, 0.1));
+  }
+
   testWidgets('프로그램 탭 고객명은 공용 크기·굵기를 쓴다', (tester) async {
     await openTab(tester, AppRoutes.coaching);
 
@@ -90,6 +99,7 @@ void main() {
     expect(unselected.fontWeight, FontWeight.w600);
     expect(goalSizeIn(tester, 'program-client-type-a'), clientListGoalFontSize);
     expect(avatarSizeIn(tester, 'program-client-type-a'), clientListAvatarSize);
+    expectAvatarCentered(tester, 'program-client-type-a');
   });
 
   testWidgets('리포트 탭 고객명이 프로그램 탭과 같은 크기·굵기다', (tester) async {
@@ -112,6 +122,7 @@ void main() {
     expect(unselected.fontWeight, FontWeight.w600);
     expect(goalSizeIn(tester, 'report-client-type-a'), clientListGoalFontSize);
     expect(avatarSizeIn(tester, 'report-client-type-a'), clientListAvatarSize);
+    expectAvatarCentered(tester, 'report-client-type-a');
   });
 
   testWidgets('리포트 탭 고객 목록은 프로그램 탭과 행·목록 크기가 같다', (
