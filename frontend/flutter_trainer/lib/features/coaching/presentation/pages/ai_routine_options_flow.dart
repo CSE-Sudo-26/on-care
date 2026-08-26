@@ -305,9 +305,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
               visualDensity: VisualDensity.compact,
             ),
             icon: const Icon(Icons.edit_note_outlined, size: 14),
@@ -833,41 +831,58 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             decoration: _inputDecoration(hintText: l.progExerciseName),
           ),
           const SizedBox(height: AppSpacing.sm),
-          // 근력은 세트·횟수·중량으로, 그 외 유형은 시간으로 잰다
-          // (#1029, #1310). 다른 편집 화면과 같은 스테퍼를 쓴다 — 같은 운동을
-          // 화면마다 다른 칸으로 받으면 나가는 값도 화면마다 달라진다.
-          if (exercise.type == '근력') ...<Widget>[
-            RoutineSetsField(
-              key: ValueKey<String>('routine-sets-$_selectedKey-$index'),
-              keyPrefix: 'routine-sets-$_selectedKey-$index',
-              sets: exercise.sets > 0 ? exercise.sets : 3,
-              onChanged: (sets) => setState(() {
-                _edited[index] = _edited[index].copyWith(sets: sets);
-              }),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RoutineRepsField(
-              key: ValueKey<String>('routine-reps-$_selectedKey-$index'),
-              keyPrefix: 'routine-reps-$_selectedKey-$index',
-              reps: exercise.reps > 0 ? exercise.reps : 10,
-              onChanged: (reps) => setState(() {
-                _edited[index] = _edited[index].copyWith(reps: reps);
-              }),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RoutineWeightField(
-              key: ValueKey<String>('routine-weight-$_selectedKey-$index'),
-              keyPrefix: 'routine-weight-$_selectedKey-$index',
-              weight: exercise.weight,
-              onChanged: (weight) => setState(() {
-                _edited[index] = _edited[index].copyWith(weight: weight);
-              }),
-            ),
-          ] else
+          // 근력은 세트·횟수·중량을 한 줄에, 그 외 유형은 시간 한 칸으로
+          // 잰다(#1029, #1310, #1489). 다른 편집 화면과 같은 compact 입력을
+          // 쓴다 — 같은 운동을 화면마다 다른 칸으로 받으면 나가는 값도
+          // 화면마다 달라진다.
+          if (exercise.type == '근력')
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: RoutineSetsField(
+                    key: ValueKey<String>('routine-sets-$_selectedKey-$index'),
+                    keyPrefix: 'routine-sets-$_selectedKey-$index',
+                    sets: exercise.sets > 0 ? exercise.sets : 3,
+                    compact: true,
+                    onChanged: (sets) => setState(() {
+                      _edited[index] = _edited[index].copyWith(sets: sets);
+                    }),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: RoutineRepsField(
+                    key: ValueKey<String>('routine-reps-$_selectedKey-$index'),
+                    keyPrefix: 'routine-reps-$_selectedKey-$index',
+                    reps: exercise.reps > 0 ? exercise.reps : 10,
+                    compact: true,
+                    onChanged: (reps) => setState(() {
+                      _edited[index] = _edited[index].copyWith(reps: reps);
+                    }),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: RoutineWeightField(
+                    key: ValueKey<String>(
+                      'routine-weight-$_selectedKey-$index',
+                    ),
+                    keyPrefix: 'routine-weight-$_selectedKey-$index',
+                    weight: exercise.weight,
+                    compact: true,
+                    onChanged: (weight) => setState(() {
+                      _edited[index] = _edited[index].copyWith(weight: weight);
+                    }),
+                  ),
+                ),
+              ],
+            )
+          else
             RoutineMinutesField(
               key: ValueKey<String>('routine-minutes-$index'),
               keyPrefix: 'routine-minutes-$index',
               minutes: exercise.minutes,
+              compact: true,
               onChanged: (minutes) => setState(() {
                 _edited[index] = _edited[index].copyWith(minutes: minutes);
               }),
@@ -901,34 +916,50 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             onChanged: (type) => setState(() => _newExerciseType = type),
           ),
           const SizedBox(height: AppSpacing.sm),
-          // 근력은 세트·횟수·중량으로, 그 외 유형은 시간으로 잰다
-          // (#1029, #1310).
-          if (_newExerciseType == '근력') ...<Widget>[
-            RoutineSetsField(
-              key: const ValueKey<String>('new-exercise-sets'),
-              keyPrefix: 'new-exercise-sets',
-              sets: _newExerciseSets,
-              onChanged: (sets) => setState(() => _newExerciseSets = sets),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RoutineRepsField(
-              key: const ValueKey<String>('new-exercise-reps'),
-              keyPrefix: 'new-exercise-reps',
-              reps: _newExerciseReps,
-              onChanged: (reps) => setState(() => _newExerciseReps = reps),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RoutineWeightField(
-              key: const ValueKey<String>('new-exercise-weight'),
-              keyPrefix: 'new-exercise-weight',
-              weight: _newExerciseWeight,
-              onChanged: (weight) =>
-                  setState(() => _newExerciseWeight = weight),
-            ),
-          ] else
+          // 근력은 세트·횟수·중량을 한 줄에, 그 외 유형은 시간 한 칸으로
+          // 잰다(#1029, #1310, #1489).
+          if (_newExerciseType == '근력')
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: RoutineSetsField(
+                    key: const ValueKey<String>('new-exercise-sets'),
+                    keyPrefix: 'new-exercise-sets',
+                    sets: _newExerciseSets,
+                    compact: true,
+                    onChanged: (sets) =>
+                        setState(() => _newExerciseSets = sets),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: RoutineRepsField(
+                    key: const ValueKey<String>('new-exercise-reps'),
+                    keyPrefix: 'new-exercise-reps',
+                    reps: _newExerciseReps,
+                    compact: true,
+                    onChanged: (reps) =>
+                        setState(() => _newExerciseReps = reps),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: RoutineWeightField(
+                    key: const ValueKey<String>('new-exercise-weight'),
+                    keyPrefix: 'new-exercise-weight',
+                    weight: _newExerciseWeight,
+                    compact: true,
+                    onChanged: (weight) =>
+                        setState(() => _newExerciseWeight = weight),
+                  ),
+                ),
+              ],
+            )
+          else
             RoutineMinutesField(
               key: const ValueKey<String>('new-exercise-minutes'),
               minutes: _newExerciseMinutes,
+              compact: true,
               onChanged: (minutes) => setState(() {
                 _newExerciseMinutes = minutes;
               }),

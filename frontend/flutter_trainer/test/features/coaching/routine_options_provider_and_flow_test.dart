@@ -209,39 +209,33 @@ void main() {
       }
     });
 
-    test(
-      '#776 — demo member has no real history, so the mock reports '
-      'template (never claims to be personalized)',
-      () async {
-        const repo = MockTrainerRoutineOptionsRepository();
-        final options = await repo.generate(
-          'm1',
-          availableMinutes: 40,
-          intensityPreference: 'moderate',
-          trainerNote: '',
-        );
-        expect(
-          options.analysis.recommendationStatus,
-          RecommendationStatus.template,
-        );
-        expect(options.analysis.frequentExercises, isEmpty);
-      },
-    );
+    test('#776 — demo member has no real history, so the mock reports '
+        'template (never claims to be personalized)', () async {
+      const repo = MockTrainerRoutineOptionsRepository();
+      final options = await repo.generate(
+        'm1',
+        availableMinutes: 40,
+        intensityPreference: 'moderate',
+        trainerNote: '',
+      );
+      expect(
+        options.analysis.recommendationStatus,
+        RecommendationStatus.template,
+      );
+      expect(options.analysis.frequentExercises, isEmpty);
+    });
 
-    test(
-      '#776 — null conditions fall back to the same default as the backend '
-      '(30 minutes / moderate)',
-      () async {
-        const repo = MockTrainerRoutineOptionsRepository();
-        final options = await repo.generate(
-          'm1',
-          availableMinutes: null,
-          intensityPreference: null,
-          trainerNote: '',
-        );
-        expect(options.planB.totalMinutes, 30);
-      },
-    );
+    test('#776 — null conditions fall back to the same default as the backend '
+        '(30 minutes / moderate)', () async {
+      const repo = MockTrainerRoutineOptionsRepository();
+      final options = await repo.generate(
+        'm1',
+        availableMinutes: null,
+        intensityPreference: null,
+        trainerNote: '',
+      );
+      expect(options.planB.totalMinutes, 30);
+    });
   });
 
   group('#1028 단계 이름 · 자연어 요청 · 데모', () {
@@ -337,14 +331,8 @@ void main() {
       expect(find.text('맞춤 루틴 후보 생성'), findsOneWidget);
     });
 
-    testWidgets('실 API 모드에서는 기록이 적은 회원에게 그 사실을 그대로 말한다', (
-      tester,
-    ) async {
-      await pumpFlow(
-        tester,
-        config: realConfig,
-        response: _templateOptions(),
-      );
+    testWidgets('실 API 모드에서는 기록이 적은 회원에게 그 사실을 그대로 말한다', (tester) async {
+      await pumpFlow(tester, config: realConfig, response: _templateOptions());
       await generate(tester);
 
       expect(find.text('목표 기반 기본 추천'), findsOneWidget);
@@ -403,9 +391,7 @@ void main() {
         expect(
           tester
               .widget<TextField>(
-                find.byKey(
-                  const ValueKey<String>('generation-minutes-field'),
-                ),
+                find.byKey(const ValueKey<String>('generation-minutes-field')),
               )
               .controller!
               .text,
@@ -508,249 +494,21 @@ void main() {
 
   testWidgets(
     'inline flow: analyse → horizontal options → edit/apply to template',
-    (
-    tester,
-  ) async {
-    // Tall viewport so every step's content fits (buttons sit at the bottom
-    // of a scrolling list otherwise, and taps miss off-screen).
-    tester.view.physicalSize = const Size(1000, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final assigned = _CapturingRoutineRepository();
-    List<RoutineExercise>? reviewed;
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          appConfigProvider.overrideWithValue(_mockConfig),
-          trainerRoutineRepositoryProvider.overrideWithValue(assigned),
-        ],
-        child: MaterialApp(
-          locale: const Locale('ko'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: AiRoutineOptionsFlow(
-            client: _client,
-            recommendedExercises: const <RoutineExercise>[
-              RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
-            ],
-            recommendedReason: '기존 고객 데이터 기반 추천',
-            onReviewCompleted: (exercises) => reviewed = exercises,
-          ),
-        ),
-      ),
-    );
-
-    // 조건 설정 단계에는 자연어 요청 칸이 있고(#1028), 예시 문구는 입력 전
-    // 참고용이라 흐린 placeholder 로 남는다.
-    expect(
-      find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'),
-      findsOneWidget,
-    );
-    // 분석 제목과 생성 버튼의 AI 아이콘은 유지하되 요청 제목 아이콘만 뺀다.
-    expect(find.byIcon(Icons.auto_awesome), findsNWidgets(2));
-    expect(find.text('요청 내용'), findsOneWidget);
-    final promptBlurb = tester.widget<Text>(
-      find.textContaining('요청은 고객 데이터와 함께 AI에 전달돼요'),
-    );
-    expect(promptBlurb.maxLines, 1);
-    expect(promptBlurb.overflow, TextOverflow.ellipsis);
-    final promptField = find.byKey(
-      const ValueKey<String>('ai-natural-language-prompt'),
-    );
-    final initialPrompt = tester.widget<TextField>(promptField);
-    expect(initialPrompt.decoration?.hintStyle?.color, AppColors.mutedForeground);
-    expect(initialPrompt.decoration?.fillColor, AppColors.card);
-    expect(
-      (initialPrompt.decoration?.enabledBorder! as OutlineInputBorder)
-          .borderSide
-          .color,
-      AppColors.borderStrong,
-    );
-    expect(initialPrompt.buildCounter, isNotNull);
-    expect(
-      find.byKey(const ValueKey<String>('ai-prompt-counter')),
-      findsOneWidget,
-    );
-    // 서버 상한(`trainer_note`, 500자)을 화면에서 먼저 막는다.
-    expect(initialPrompt.maxLength, 500);
-    expect(
-      initialPrompt.decoration?.hintText,
-      '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘',
-    );
-    final generationMinutes = find.byKey(
-      const ValueKey<String>('generation-minutes'),
-    );
-    expect(
-      find.descendant(of: generationMinutes, matching: find.text('총 운동시간')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: generationMinutes, matching: find.text('운동 시간')),
-      findsNothing,
-    );
-    await tester.enterText(promptField, '무릎 부담 적게, 유산소 위주로 만들어줘');
-
-    await tester.ensureVisible(
-      find.byKey(const ValueKey<String>('generate-routine-options')),
-    );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('generate-routine-options')),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
-    await tester.pumpAndSettle();
-
-    // A/B + the existing recommendation are shown together. The layout
-    // adapts — side by side when the column is wide enough, stacked
-    // vertically when it isn't — so this asserts the three options
-    // themselves rather than which of the two layouts rendered them.
-    expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
-    expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
-    expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
-    // 세 번째 후보의 key 는 선택 식별자다 — 화면 문구가 아니라서 로케일과
-    // 무관하게 'recommended' 로 고정돼 있다(#501).
-    final optionHeights = <String>['A', 'B', 'recommended']
-        .map(
-          (key) => tester
-              .getSize(find.byKey(ValueKey<String>('routine-option-$key')))
-              .height,
-        )
-        .toSet();
-    expect(optionHeights, hasLength(1));
-
-    // Select B and edit its first exercise in the common inline editor.
-    await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
-    await tester.pumpAndSettle();
-    final categoryNameGap = tester.widget<SizedBox>(
-      find.byKey(const ValueKey<String>('routine-category-name-gap-0')),
-    );
-    expect(categoryNameGap.height, AppSpacing.md);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('routine-minutes-0')),
-        matching: find.text('운동 시간'),
-      ),
-      findsOneWidget,
-    );
-
-    final showAddExerciseForm = find.byKey(
-      const ValueKey<String>('show-add-exercise-form'),
-    );
-    await tester.ensureVisible(showAddExerciseForm);
-    await tester.tap(showAddExerciseForm);
-    await tester.pumpAndSettle();
-    // 기본 유형이 근력이라 시간 슬라이더 대신 세트·횟수 칸이 보인다(#1029).
-    expect(
-      find.byKey(const ValueKey<String>('new-exercise-sets')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('new-exercise-minutes')),
-      findsNothing,
-    );
-    // 근력이 아닌 유형으로 바꾸면 시간 슬라이더로 바뀐다.
-    await tester.tap(
-      find.byKey(const ValueKey<String>('new-exercise-category-유산소')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('new-exercise-minutes')),
-        matching: find.text('운동 시간'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('new-exercise-sets')),
-      findsNothing,
-    );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('hide-add-exercise-form')),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
-    final minutesField = find.byKey(
-      const ValueKey<String>('routine-minutes-0-field'),
-    );
-    await tester.enterText(minutesField, '20');
-    await tester.pump();
-    expect(tester.widget<TextField>(minutesField).controller!.text, '20');
-    // 유형은 네 가지다 (#996, #1276).
-    for (final category in <String>['유산소', '근력', '스트레칭', '기타']) {
-      expect(
-        find.byKey(ValueKey<String>('routine-category-B-0-$category')),
-        findsOneWidget,
-      );
-    }
-    await tester.pump();
-
-    // 고객에게 함께 보낼 메모는 AI 요청과 **다른 칸**이다 (#1028) — 여기 적은
-    // 것만 회원이 받는 루틴 사유로 나간다.
-    final clientNote = find.byKey(
-      const ValueKey<String>('final-trainer-memo'),
-    );
-    await tester.ensureVisible(clientNote);
-    await tester.enterText(clientNote, '무릎 충격 주의');
-    await tester.pump();
-
-    await tester.ensureVisible(
-      find.byKey(const ValueKey<String>('complete-routine-review')),
-    );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('complete-routine-review')),
-    );
-    await tester.pumpAndSettle();
-    // 최종 검토에 들어온 것만으로는 아직 아무 데도 반영되지 않는다 (#1028
-    // 후속) — `템플릿에 반영`을 눌러야 [onReviewCompleted] 가 호출된다.
-    expect(reviewed, isNull);
-    expect(
-      find.byKey(const ValueKey<String>('reviewed-routine-list')),
-      findsOneWidget,
-    );
-    expect(assigned.memberId, isNull);
-    expect(assigned.assigned, isNull);
-    // 이 화면에는 고객에게 직접 보내는 버튼이 없다 — `템플릿에 반영` 뿐이다.
-    expect(
-      find.byKey(const ValueKey<String>('send-selected-routine')),
-      findsNothing,
-    );
-
-    await tester.ensureVisible(
-      find.byKey(const ValueKey<String>('apply-routine-to-template')),
-    );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('apply-routine-to-template')),
-    );
-    await tester.pumpAndSettle();
-
-    // 템플릿(편집기)로만 반영된다 — 서버에는 여전히 아무것도 나가지 않는다.
-    expect(reviewed, isNotNull);
-    expect(reviewed!.first.name, '인터벌 걷기');
-    expect(assigned.memberId, isNull);
-    expect(assigned.assigned, isNull);
-  });
-
-  testWidgets(
-    '템플릿에 반영은 회원에게 보내는 API를 호출하지 않는다 (#1028 후속)',
     (tester) async {
-      // AI 3단계 최종 검토는 더 이상 여기서 곧바로 전송하지 않는다 — `템플릿에
-      // 반영`은 [onReviewCompleted] 로 편집기에 넘길 뿐이다. 실수로라도 회원
-      // 전송 API 가 호출되면 곧바로 던지도록 만들어 회귀를 잡는다.
+      // Tall viewport so every step's content fits (buttons sit at the bottom
+      // of a scrolling list otherwise, and taps miss off-screen).
       tester.view.physicalSize = const Size(1000, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final repository = _ThrowingRoutineRepository(const NetworkError());
+      final assigned = _CapturingRoutineRepository();
       List<RoutineExercise>? reviewed;
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
             appConfigProvider.overrideWithValue(_mockConfig),
-            trainerRoutineRepositoryProvider.overrideWithValue(repository),
+            trainerRoutineRepositoryProvider.overrideWithValue(assigned),
           ],
           child: MaterialApp(
             locale: const Locale('ko'),
@@ -768,17 +526,247 @@ void main() {
         ),
       );
 
-      await _driveToApplyReady(tester);
+      // 조건 설정 단계에는 자연어 요청 칸이 있고(#1028), 예시 문구는 입력 전
+      // 참고용이라 흐린 placeholder 로 남는다.
+      expect(find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'), findsOneWidget);
+      // 분석 제목과 생성 버튼의 AI 아이콘은 유지하되 요청 제목 아이콘만 뺀다.
+      expect(find.byIcon(Icons.auto_awesome), findsNWidgets(2));
+      expect(find.text('요청 내용'), findsOneWidget);
+      final promptBlurb = tester.widget<Text>(
+        find.textContaining('요청은 고객 데이터와 함께 AI에 전달돼요'),
+      );
+      expect(promptBlurb.maxLines, 1);
+      expect(promptBlurb.overflow, TextOverflow.ellipsis);
+      final promptField = find.byKey(
+        const ValueKey<String>('ai-natural-language-prompt'),
+      );
+      final initialPrompt = tester.widget<TextField>(promptField);
+      expect(
+        initialPrompt.decoration?.hintStyle?.color,
+        AppColors.mutedForeground,
+      );
+      expect(initialPrompt.decoration?.fillColor, AppColors.card);
+      expect(
+        (initialPrompt.decoration?.enabledBorder! as OutlineInputBorder)
+            .borderSide
+            .color,
+        AppColors.borderStrong,
+      );
+      expect(initialPrompt.buildCounter, isNotNull);
+      expect(
+        find.byKey(const ValueKey<String>('ai-prompt-counter')),
+        findsOneWidget,
+      );
+      // 서버 상한(`trainer_note`, 500자)을 화면에서 먼저 막는다.
+      expect(initialPrompt.maxLength, 500);
+      expect(
+        initialPrompt.decoration?.hintText,
+        '예: 하체 부담 적고 유산소 비중 높은 40분 프로그램 만들어줘',
+      );
+      final generationMinutes = find.byKey(
+        const ValueKey<String>('generation-minutes'),
+      );
+      expect(
+        find.descendant(of: generationMinutes, matching: find.text('총 운동시간')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: generationMinutes, matching: find.text('운동 시간')),
+        findsNothing,
+      );
+      await tester.enterText(promptField, '무릎 부담 적게, 유산소 위주로 만들어줘');
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+
+      // A/B + the existing recommendation are shown together. The layout
+      // adapts — side by side when the column is wide enough, stacked
+      // vertically when it isn't — so this asserts the three options
+      // themselves rather than which of the two layouts rendered them.
+      expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
+      expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
+      expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
+      // 세 번째 후보의 key 는 선택 식별자다 — 화면 문구가 아니라서 로케일과
+      // 무관하게 'recommended' 로 고정돼 있다(#501).
+      final optionHeights = <String>['A', 'B', 'recommended']
+          .map(
+            (key) => tester
+                .getSize(find.byKey(ValueKey<String>('routine-option-$key')))
+                .height,
+          )
+          .toSet();
+      expect(optionHeights, hasLength(1));
+
+      // Select B and edit its first exercise in the common inline editor.
+      await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
+      await tester.pumpAndSettle();
+      final categoryNameGap = tester.widget<SizedBox>(
+        find.byKey(const ValueKey<String>('routine-category-name-gap-0')),
+      );
+      expect(categoryNameGap.height, AppSpacing.md);
+      // 시간 칸은 스테퍼가 아니라 라벨 없는 compact 입력이다(#1489) — 값
+      // 오른쪽의 단위(suffixText)로 무엇을 재는 칸인지 구분한다.
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey<String>('routine-minutes-0-field')),
+            )
+            .decoration
+            ?.suffixText,
+        '분',
+      );
+
+      final showAddExerciseForm = find.byKey(
+        const ValueKey<String>('show-add-exercise-form'),
+      );
+      await tester.ensureVisible(showAddExerciseForm);
+      await tester.tap(showAddExerciseForm);
+      await tester.pumpAndSettle();
+      // 기본 유형이 근력이라 시간 슬라이더 대신 세트·횟수 칸이 보인다(#1029).
+      expect(
+        find.byKey(const ValueKey<String>('new-exercise-sets')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('new-exercise-minutes')),
+        findsNothing,
+      );
+      // 근력이 아닌 유형으로 바꾸면 시간 슬라이더로 바뀐다.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('new-exercise-category-유산소')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey<String>('routine-minutes-field')),
+            )
+            .decoration
+            ?.suffixText,
+        '분',
+      );
+      expect(
+        find.byKey(const ValueKey<String>('new-exercise-sets')),
+        findsNothing,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('hide-add-exercise-form')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
+      final minutesField = find.byKey(
+        const ValueKey<String>('routine-minutes-0-field'),
+      );
+      await tester.enterText(minutesField, '20');
+      await tester.pump();
+      expect(tester.widget<TextField>(minutesField).controller!.text, '20');
+      // 유형은 네 가지다 (#996, #1276).
+      for (final category in <String>['유산소', '근력', '스트레칭', '기타']) {
+        expect(
+          find.byKey(ValueKey<String>('routine-category-B-0-$category')),
+          findsOneWidget,
+        );
+      }
+      await tester.pump();
+
+      // 고객에게 함께 보낼 메모는 AI 요청과 **다른 칸**이다 (#1028) — 여기 적은
+      // 것만 회원이 받는 루틴 사유로 나간다.
+      final clientNote = find.byKey(
+        const ValueKey<String>('final-trainer-memo'),
+      );
+      await tester.ensureVisible(clientNote);
+      await tester.enterText(clientNote, '무릎 충격 주의');
+      await tester.pump();
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pumpAndSettle();
+      // 최종 검토에 들어온 것만으로는 아직 아무 데도 반영되지 않는다 (#1028
+      // 후속) — `템플릿에 반영`을 눌러야 [onReviewCompleted] 가 호출된다.
+      expect(reviewed, isNull);
+      expect(
+        find.byKey(const ValueKey<String>('reviewed-routine-list')),
+        findsOneWidget,
+      );
+      expect(assigned.memberId, isNull);
+      expect(assigned.assigned, isNull);
+      // 이 화면에는 고객에게 직접 보내는 버튼이 없다 — `템플릿에 반영` 뿐이다.
+      expect(
+        find.byKey(const ValueKey<String>('send-selected-routine')),
+        findsNothing,
+      );
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('apply-routine-to-template')),
+      );
       await tester.tap(
         find.byKey(const ValueKey<String>('apply-routine-to-template')),
       );
       await tester.pumpAndSettle();
 
+      // 템플릿(편집기)로만 반영된다 — 서버에는 여전히 아무것도 나가지 않는다.
       expect(reviewed, isNotNull);
-      expect(repository.attempts, isEmpty);
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+      expect(reviewed!.first.name, '인터벌 걷기');
+      expect(assigned.memberId, isNull);
+      expect(assigned.assigned, isNull);
     },
   );
+
+  testWidgets('템플릿에 반영은 회원에게 보내는 API를 호출하지 않는다 (#1028 후속)', (tester) async {
+    // AI 3단계 최종 검토는 더 이상 여기서 곧바로 전송하지 않는다 — `템플릿에
+    // 반영`은 [onReviewCompleted] 로 편집기에 넘길 뿐이다. 실수로라도 회원
+    // 전송 API 가 호출되면 곧바로 던지도록 만들어 회귀를 잡는다.
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _ThrowingRoutineRepository(const NetworkError());
+    List<RoutineExercise>? reviewed;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(_mockConfig),
+          trainerRoutineRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AiRoutineOptionsFlow(
+            client: _client,
+            recommendedExercises: const <RoutineExercise>[
+              RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
+            ],
+            recommendedReason: '기존 고객 데이터 기반 추천',
+            onReviewCompleted: (exercises) => reviewed = exercises,
+          ),
+        ),
+      ),
+    );
+
+    await _driveToApplyReady(tester);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('apply-routine-to-template')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(reviewed, isNotNull);
+    expect(repository.attempts, isEmpty);
+    expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+  });
 }
 
 /// Records what conditions the flow actually sent, and returns a fixed
@@ -911,7 +899,10 @@ class _ThrowingOptionsRepository implements TrainerRoutineOptionsRepository {
   }
 }
 
-Future<void> _pumpFlowWithOptionsError(WidgetTester tester, Object error) async {
+Future<void> _pumpFlowWithOptionsError(
+  WidgetTester tester,
+  Object error,
+) async {
   tester.view.physicalSize = const Size(1000, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);

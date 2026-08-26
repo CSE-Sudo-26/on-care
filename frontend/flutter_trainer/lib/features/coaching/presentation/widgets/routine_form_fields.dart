@@ -102,8 +102,8 @@ class RoutineMinutesField extends StatelessWidget {
         value: minutes.toDouble(),
         min: 1,
         max: 600,
-        placeholder:
-            '${label ?? l.routineFieldMinutes}(${l.routineUnitMinutes})',
+        label: label ?? l.routineFieldMinutes,
+        suffix: l.routineUnitMinutes,
         keyPrefix: keyPrefix ?? 'routine-minutes',
         onChanged: (double v) => onChanged(v.round()),
       );
@@ -145,7 +145,8 @@ class RoutineSetsField extends StatelessWidget {
         value: sets.toDouble(),
         min: 1,
         max: 99,
-        placeholder: '${l.routineFieldSets}(${l.routineUnitSets})',
+        label: l.routineFieldSets,
+        suffix: l.routineUnitSets,
         keyPrefix: keyPrefix ?? 'routine-sets',
         onChanged: (double v) => onChanged(v.round()),
       );
@@ -190,7 +191,8 @@ class RoutineRepsField extends StatelessWidget {
         value: reps.toDouble(),
         min: 1,
         max: 999,
-        placeholder: '${l.routineFieldReps}(${l.routineUnitReps})',
+        label: l.routineFieldReps,
+        suffix: l.routineUnitReps,
         keyPrefix: keyPrefix ?? 'routine-reps',
         onChanged: (double v) => onChanged(v.round()),
       );
@@ -233,7 +235,8 @@ class RoutineWeightField extends StatelessWidget {
         min: 0,
         max: 1000,
         decimals: 1,
-        placeholder: '${l.routineFieldWeight}(${l.routineUnitKg})',
+        label: l.routineFieldWeight,
+        suffix: l.routineUnitKg,
         keyPrefix: keyPrefix ?? 'routine-weight',
         onChanged: onChanged,
       );
@@ -495,9 +498,10 @@ class _LabeledStepper extends StatelessWidget {
   }
 }
 
-/// 숫자 한 칸 — 스테퍼 없이 키보드로 직접 입력한다. 라벨은 얹지 않고
-/// placeholder 로 대신한다. 근력의 세트·횟수·중량을 한 줄에 나란히 둘 때
-/// 쓴다 — 셋 다 라벨+스테퍼 박스를 쌓으면 세로 폭이 다른 필드보다 훨씬
+/// 숫자 한 칸 — 스테퍼 없이 키보드로 직접 입력한다. 라벨은 위에 따로 얹지
+/// 않고 테두리에 걸치는 Material outline label 로 대신한다. 근력의
+/// 세트·횟수·중량을 한 줄에 나란히 둘 때 쓴다 — 셋 다 라벨+스테퍼 박스를
+/// 쌓으면 세로 폭이 다른 필드보다 훨씬
 /// 길어진다. (#1489)
 class _CompactNumberField extends StatefulWidget {
   const _CompactNumberField({
@@ -505,7 +509,8 @@ class _CompactNumberField extends StatefulWidget {
     required this.onChanged,
     required this.min,
     required this.max,
-    required this.placeholder,
+    required this.label,
+    required this.suffix,
     this.decimals = 0,
     this.keyPrefix,
   });
@@ -514,7 +519,15 @@ class _CompactNumberField extends StatefulWidget {
   final ValueChanged<double> onChanged;
   final double min;
   final double max;
-  final String placeholder;
+
+  /// 테두리에 얹히는 라벨("세트 수"·"횟수"·"중량"·"운동 시간"). 칸이 항상
+  /// 기본값으로 채워져 있어 hint(빈 칸 문구)는 사실상 보이지 않는다 —
+  /// Material 의 outline label 은 값이 있어도 계속 보이므로 이걸 쓴다.
+  /// (#1489 후속)
+  final String label;
+
+  /// 값 오른쪽에 붙는 단위("세트"·"회"·"kg"·"분").
+  final String suffix;
   final int decimals;
   final String? keyPrefix;
 
@@ -603,8 +616,19 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
       ),
       decoration: InputDecoration(
         isDense: true,
-        hintText: widget.placeholder,
-        hintStyle: const TextStyle(
+        labelText: widget.label,
+        labelStyle: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.subtleForeground,
+        ),
+        floatingLabelStyle: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.accent,
+        ),
+        suffixText: widget.suffix,
+        suffixStyle: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: AppColors.subtleForeground,

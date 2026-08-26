@@ -517,28 +517,34 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             const SizedBox(height: AppSpacing.sm),
           ],
           // 박스 하단 — PT 등록 날짜·시간 범위·일정 추가를 순서대로
-          // 같은 Wrap에 둔다. 넓으면 한 줄, 좁거나 글자가 커지면 왼쪽
-          // 기준과 순서를 유지한 채 줄바꿈된다. `일정 추가`(예전 `보내기`)가
-          // 확인창을 거쳐 실제로 배정+PT 등록까지 한다. 실제 전송·등록
-          // API 호출은 전부 호출부(`onSend`)가 한다 — 여기는 트리거와
-          // 등록일·시각 값만 쥔다.
+          // 오른쪽 정렬로 둔다. 날짜·시간은 예약 슬롯(`reservation_slots_
+          // sheet.dart`)과 같은 라벨+테두리 박스 UI다 — 트레이너 웹의 날짜·
+          // 시간 선택 자리가 화면마다 다른 모양이면 안 된다. 넓으면 한 줄,
+          // 좁거나 글자가 커지면 오른쪽 기준을 유지한 채 줄바꿈된다.
+          // `일정 추가`(예전 `보내기`)가 확인창을 거쳐 실제로 배정+PT
+          // 등록까지 한다. 실제 전송·등록 API 호출은 전부 호출부(`onSend`)
+          // 가 한다 — 여기는 트리거와 등록일·시각 값만 쥔다.
           Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.end,
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.xs,
             children: <Widget>[
-              ActionButton(
+              _RegisterFieldBox(
                 key: const ValueKey<String>('program-register-date'),
-                label: ymd(widget.registerDate),
+                label: l.schedFieldDate,
                 icon: Icons.calendar_today_outlined,
-                onPressed: () => unawaited(_pickRegisterDate(context)),
+                value: ymd(widget.registerDate),
+                onTap: () => unawaited(_pickRegisterDate(context)),
               ),
-              ActionButton(
+              _RegisterFieldBox(
                 key: const ValueKey<String>('program-register-time'),
-                label:
+                label: l.schedFieldTime,
+                icon: Icons.schedule_outlined,
+                value:
                     '${widget.registerStartTime.format(context)} – '
                     '${widget.registerEndTime.format(context)}',
-                icon: Icons.schedule_outlined,
-                onPressed: () => unawaited(_pickRegisterTimeRange(context)),
+                onTap: () => unawaited(_pickRegisterTimeRange(context)),
               ),
               Tooltip(
                 message: !_draft.supportsAssignment
@@ -988,28 +994,45 @@ class _SessionEditorState extends State<_SessionEditor> {
                     onSubmitted: (_) => widget.onConfirmAdd(),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (widget.exerciseType == '근력') ...<Widget>[
-                    RoutineSetsField(
-                      keyPrefix: 'custom-exercise-sets',
-                      sets: widget.exerciseSets,
-                      onChanged: widget.onExerciseSetsChanged,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineRepsField(
-                      keyPrefix: 'custom-exercise-reps',
-                      reps: widget.exerciseReps,
-                      onChanged: widget.onExerciseRepsChanged,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineWeightField(
-                      keyPrefix: 'custom-exercise-weight',
-                      weight: widget.exerciseWeight,
-                      onChanged: widget.onExerciseWeightChanged,
-                    ),
-                  ] else
+                  // 근력은 세트·횟수·중량을 한 줄에, 그 외 유형은 시간
+                  // 한 칸으로 잰다(#1029, #1310, #1489) — 스케줄 탭·AI
+                  // 루틴 2단계와 같은 compact 입력이다.
+                  if (widget.exerciseType == '근력')
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: RoutineSetsField(
+                            keyPrefix: 'custom-exercise-sets',
+                            sets: widget.exerciseSets,
+                            compact: true,
+                            onChanged: widget.onExerciseSetsChanged,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineRepsField(
+                            keyPrefix: 'custom-exercise-reps',
+                            reps: widget.exerciseReps,
+                            compact: true,
+                            onChanged: widget.onExerciseRepsChanged,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineWeightField(
+                            keyPrefix: 'custom-exercise-weight',
+                            weight: widget.exerciseWeight,
+                            compact: true,
+                            onChanged: widget.onExerciseWeightChanged,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
                     RoutineMinutesField(
                       keyPrefix: 'custom-exercise-duration',
                       minutes: widget.exerciseMinutes,
+                      compact: true,
                       onChanged: widget.onExerciseMinutesChanged,
                     ),
                   const SizedBox(height: AppSpacing.sm),
@@ -1306,31 +1329,48 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                         widget.onChanged(exercise.copyWith(type: value)),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (exercise.isStrength) ...<Widget>[
-                    RoutineSetsField(
-                      keyPrefix: '${exercise.id}-sets',
-                      sets: exercise.sets,
-                      onChanged: (value) =>
-                          widget.onChanged(exercise.copyWith(sets: value)),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineRepsField(
-                      keyPrefix: '${exercise.id}-reps',
-                      reps: exercise.reps,
-                      onChanged: (value) =>
-                          widget.onChanged(exercise.copyWith(reps: value)),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineWeightField(
-                      keyPrefix: '${exercise.id}-weight',
-                      weight: exercise.weight,
-                      onChanged: (value) =>
-                          widget.onChanged(exercise.copyWith(weight: value)),
-                    ),
-                  ] else
+                  if (exercise.isStrength)
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: RoutineSetsField(
+                            keyPrefix: '${exercise.id}-sets',
+                            sets: exercise.sets,
+                            compact: true,
+                            onChanged: (value) => widget.onChanged(
+                              exercise.copyWith(sets: value),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineRepsField(
+                            keyPrefix: '${exercise.id}-reps',
+                            reps: exercise.reps,
+                            compact: true,
+                            onChanged: (value) => widget.onChanged(
+                              exercise.copyWith(reps: value),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineWeightField(
+                            keyPrefix: '${exercise.id}-weight',
+                            weight: exercise.weight,
+                            compact: true,
+                            onChanged: (value) => widget.onChanged(
+                              exercise.copyWith(weight: value),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
                     RoutineMinutesField(
                       keyPrefix: '${exercise.id}-duration',
                       minutes: exercise.minutes,
+                      compact: true,
                       onChanged: (value) =>
                           widget.onChanged(exercise.copyWith(minutes: value)),
                     ),
@@ -1376,6 +1416,84 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
         widget.onDelete();
         return;
     }
+  }
+}
+
+/// 라벨 + 테두리 박스(아이콘·값·펼침 화살표) 한 벌 — 날짜·시간처럼 눌러서
+/// 다이얼로그를 여는 자리에 쓴다. 예약 슬롯 시트(`reservation_slots_sheet.
+/// dart`의 `_tappableFieldColumn`/`_fieldBox`)와 같은 모양이다 — 트레이너
+/// 웹의 날짜·시간 선택 UI가 화면마다 다르면 안 된다.
+class _RegisterFieldBox extends StatelessWidget {
+  const _RegisterFieldBox({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final IconData icon;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Material(
+          color: Colors.transparent,
+          borderRadius: const BorderRadius.all(AppRadius.md),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: const BorderRadius.all(AppRadius.md),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: const BorderRadius.all(AppRadius.md),
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(icon, size: 15, color: AppColors.accent),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: AppColors.subtleForeground,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
