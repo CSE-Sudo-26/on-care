@@ -837,9 +837,10 @@ void main() {
           tester.getBottomRight(nutrition).dy,
           lessThanOrEqualTo(tester.view.physicalSize.height),
         );
+        // 나트륨·당류는 좌우가 아니라 위아래로 쌓인다.
         expect(
-          tester.getTopLeft(sodium).dx,
-          lessThan(tester.getTopLeft(sugar).dx),
+          tester.getTopLeft(sodium).dy,
+          lessThan(tester.getTopLeft(sugar).dy),
         );
         _expectNutritionStatusCardsInBounds(tester);
         // 전송 이력은 편집기 아래가 아니라 오른쪽 열이다 — 이 고객에게 이미

@@ -128,10 +128,16 @@ void main() {
       await tester.pumpAndSettle();
 
       // 나트륨에는 쌓을 성분이 없다 — 한 색 막대로 돌아가고 머리의 탄단지
-      // 줄도 사라진다.
+      // 줄도 사라진다. 카드 안으로 범위를 좁힌다 — `AppColors.macroCarbs`
+      // 와 `AppColors.primary` 가 같은 색이라, 넓은 화면에서 옆에 함께
+      // 뜨는 고객 목록의 정렬 툴바(선택 고객 주간 이행률 바)까지 훑으면
+      // 이 카드와 무관한 primary색 막대까지 걸린다.
       expect(
-        find.byWidgetPredicate(
-          (Widget w) => w is ColoredBox && w.color == AppColors.macroCarbs,
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('client-diet-period-card')),
+          matching: find.byWidgetPredicate(
+            (Widget w) => w is ColoredBox && w.color == AppColors.macroCarbs,
+          ),
         ),
         findsNothing,
       );
@@ -206,6 +212,25 @@ void main() {
         find.byKey(const ValueKey<String>('client-period-toggle')),
         findsOneWidget,
       );
+
+      // 배포 화면에서 사용하는 기간 토글 규격을 유지한다.
+      final Container periodToggle = tester.widget<Container>(
+        find.byKey(const ValueKey<String>('client-period-toggle')),
+      );
+      expect(periodToggle.padding, const EdgeInsets.all(3));
+
+      final Finder todayButton = find.byKey(const Key('client-period-today'));
+      final Padding todayPadding = tester.widget<Padding>(
+        find.descendant(of: todayButton, matching: find.byType(Padding)).first,
+      );
+      expect(
+        todayPadding.padding,
+        const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+      );
+      final Text todayLabel = tester.widget<Text>(
+        find.descendant(of: todayButton, matching: find.text('오늘')),
+      );
+      expect(todayLabel.style?.fontSize, 12.5);
       expect(
         find.byKey(const ValueKey<String>('client-diet-period-card')),
         findsNothing,
