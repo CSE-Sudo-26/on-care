@@ -344,9 +344,7 @@ void main() {
     expect(rendered.first.client.sodiumOverBudget, isTrue);
   });
 
-  testWidgets('고객 행에는 더 이상 주간 이행률이 없고, 선택하면 정렬 툴바 옆에 뜬다 (#1284)', (
-    tester,
-  ) async {
+  testWidgets('고객 카드가 기록된 날의 주간 루틴 이행률을 보여 준다 (#1284)', (tester) async {
     await openWide(tester);
     await scrollToCard(tester, '배준혁');
 
@@ -354,49 +352,29 @@ void main() {
       of: find.text('배준혁'),
       matching: find.byType(ClientCard),
     );
-    // 선택 전: 행 자체에는 이행률이 없다 — 정렬 토글 옆으로 옮겼다.
+    final progress = find.descendant(
+      of: clientCard,
+      matching: find.byKey(
+        const ValueKey<String>('client-weekly-adherence-seed-client-9'),
+      ),
+    );
+    expect(progress, findsOneWidget);
+    final renderedClient = tester.widget<ClientCard>(clientCard).client;
+    final expected = recordedCompletionMean(renderedClient)!;
     expect(
       find.descendant(
         of: clientCard,
-        matching: find.byKey(
-          const ValueKey<String>('client-weekly-adherence-seed-client-9'),
-        ),
-      ),
-      findsNothing,
-    );
-
-    final renderedClient = tester.widget<ClientCard>(clientCard).client;
-    final expected = recordedCompletionMean(renderedClient)!;
-
-    await tester.tap(card('배준혁'));
-    await settle(tester);
-
-    // 선택 후: 정렬 토글 옆에 이 고객의 주간 이행률이 뜬다.
-    final adherence = find.byKey(
-      const ValueKey<String>('clients-selected-adherence-seed-client-9'),
-    );
-    expect(adherence, findsOneWidget);
-    expect(
-      find.descendant(
-        of: adherence,
         matching: find.text('${expected.round()}%'),
       ),
       findsOneWidget,
     );
     expect(
-      tester
-          .widget<FractionallySizedBox>(
-            find.descendant(
-              of: adherence,
-              matching: find.byType(FractionallySizedBox),
-            ),
-          )
-          .widthFactor,
+      tester.widget<LinearProgressIndicator>(progress).value,
       closeTo(expected / 100, 0.001),
     );
   });
 
-  testWidgets('루틴 기록이 없는 고객을 고르면 정렬 툴바 옆에 미집계로 뜬다 (#1284)', (tester) async {
+  testWidgets('루틴 기록이 없는 고객은 0%가 아니라 미집계로 표시한다 (#1284)', (tester) async {
     await openWide(tester);
     await scrollToCard(tester, '임도현');
 
@@ -404,23 +382,17 @@ void main() {
       of: find.text('임도현'),
       matching: find.byType(ClientCard),
     );
-    // 선택 전: 행 자체에는 이행률이 없다.
     expect(
       find.descendant(of: clientCard, matching: find.text('미집계')),
-      findsNothing,
-    );
-
-    await tester.tap(card('임도현'));
-    await settle(tester);
-
-    final adherence = find.byKey(
-      const ValueKey<String>('clients-selected-adherence-seed-client-7'),
-    );
-    expect(adherence, findsOneWidget);
-    expect(
-      find.descendant(of: adherence, matching: find.text('미집계')),
       findsOneWidget,
     );
+    final progress = find.descendant(
+      of: clientCard,
+      matching: find.byKey(
+        const ValueKey<String>('client-weekly-adherence-seed-client-7'),
+      ),
+    );
+    expect(tester.widget<LinearProgressIndicator>(progress).value, 0);
   });
 
   testWidgets('the panel location is a path that encodes the section', (

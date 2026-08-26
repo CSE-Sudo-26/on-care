@@ -20,7 +20,6 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -139,13 +138,6 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
         // instead. Silently showing the roster while the URL still names
         // a client reads as data loss.
         final selected = widget.selectedId;
-        // 정렬 토글 옆 주간 이행률에 쓸 선택 고객. `ClientDetailView` 가 같은
-        // id를 찾을 때와 같은 방식이다 — 필터로 걸러진 목록이 아니라 전체
-        // 목록(`all`)에서 찾는다.
-        final selectedMatches = all.where((c) => c.id == selected);
-        final TrainerClient? selectedClient = selectedMatches.isEmpty
-            ? null
-            : selectedMatches.first;
 
         return _Frame(
           subtitle: l.clientsCountSummary(
@@ -232,7 +224,6 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                     _MemberManagementToolbar(
                       managementFilters: view.filters,
                       sort: view.sort,
-                      selectedClient: selectedClient,
                       onFiltersChanged: (value) =>
                           ref.read(rosterViewProvider.notifier).state = view
                               .copyWith(filters: value),
@@ -361,7 +352,6 @@ class _MemberManagementToolbar extends StatelessWidget {
   const _MemberManagementToolbar({
     required this.managementFilters,
     required this.sort,
-    required this.selectedClient,
     required this.onFiltersChanged,
     required this.onSortChanged,
   });
@@ -369,17 +359,12 @@ class _MemberManagementToolbar extends StatelessWidget {
   final Set<RosterManagementFilter> managementFilters;
   final RosterSort sort;
 
-  /// 정렬 토글 옆에 주간 이행률을 보여 줄 고객. 선택된 고객이 없으면
-  /// 이행률 자리를 아예 그리지 않는다.
-  final TrainerClient? selectedClient;
-
   final ValueChanged<Set<RosterManagementFilter>> onFiltersChanged;
   final ValueChanged<RosterSort> onSortChanged;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final client = selectedClient;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
@@ -405,10 +390,6 @@ class _MemberManagementToolbar extends StatelessWidget {
             itemLabel: (value) => _sortLabel(l, value),
             onSelected: onSortChanged,
           ),
-          // 선택 고객의 주간 이행률. 예전에는 고객 목록의 행마다 있었다 —
-          // 지금 보고 있는 한 명 옆으로 옮긴 자리다. 계산은 고객 카드·주의
-          // 배지·검색이 쓰는 것과 같은 [recordedCompletionMean].
-          if (client != null) _SelectedClientAdherence(client: client, l: l),
         ],
       ),
     );
@@ -446,37 +427,6 @@ class _MemberManagementToolbar extends StatelessWidget {
       case RosterSort.activeFirst:
         return l.clientsSortActiveFirst;
     }
-  }
-}
-
-/// 정렬 토글 옆의 선택 고객 주간 이행률 한 줄.
-///
-/// 예전에는 고객 목록의 행마다 있었다(#1284) — 지금 보고 있는 한 명 옆으로
-/// 옮긴 자리다. 값은 고객 카드·주의 배지·검색이 이미 쓰는
-/// [recordedCompletionMean] 그대로다.
-class _SelectedClientAdherence extends StatelessWidget {
-  const _SelectedClientAdherence({required this.client, required this.l});
-
-  final TrainerClient client;
-  final AppLocalizations l;
-
-  @override
-  Widget build(BuildContext context) {
-    final double? mean = recordedCompletionMean(client);
-    return SizedBox(
-      key: ValueKey<String>('clients-selected-adherence-${client.id}'),
-      width: 220,
-      child: InlineBarValue(
-        label: l.clientWeeklyRoutineAdherence,
-        // "주간 이행률"(5자) 기준 — 이전 문구("주간 루틴 이행률")보다 짧아진
-        // 만큼 라벨 칸도 줄여 바 그래프와의 간격이 벌어지지 않게 한다.
-        labelWidth: 62,
-        fraction: mean == null ? null : mean / 100,
-        text: mean == null
-            ? l.clientRoutineAdherenceUnmeasured
-            : '${mean.round()}%',
-      ),
-    );
   }
 }
 
