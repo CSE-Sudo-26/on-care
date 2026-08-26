@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 
@@ -137,21 +136,15 @@ class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
-                    Material(
-                      color: AppColors.accent,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Tooltip(
-                          message: l.closeButtonTooltip,
-                          child: const SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: Icon(Icons.close, size: 18),
-                          ),
-                        ),
+                    IconButton(
+                      tooltip: l.closeButtonTooltip,
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
                       ),
+                      icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
