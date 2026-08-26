@@ -78,6 +78,17 @@ class _ConsultationRequestPageState
       initialDate: _preferredDate ?? today,
       firstDate: today,
       lastDate: DateTime(today.year + 100),
+      // 바로 아래 희망 시간대 선택 팝업의 X 버튼과 같은 모습으로 맞춘다.
+      builder: (BuildContext context, Widget child) => IconButtonTheme(
+        data: IconButtonThemeData(
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+          ),
+        ),
+        child: child,
+      ),
     );
     if (selected != null && mounted) {
       setState(() => _preferredDate = selected);
