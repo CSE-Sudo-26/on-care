@@ -34,11 +34,15 @@ class ProgramDraft {
     intensity: normaliseRoutineIntensity(item.intensity),
   );
 
-  /// 새 운동 행의 기본값 — 오늘, 근력 3세트 10회 20kg, 보통 강도.
-  factory ProgramDraft.empty() => ProgramDraft(
+  /// 새 운동 행의 기본값 — 근력 3세트 10회 20kg, 보통 강도.
+  ///
+  /// [date] 는 이 운동이 속한 세션의 날짜를 그대로 받는다(#1489 후속) — 운동
+  /// 행마다 날짜를 따로 고르게 하면 세션 날짜와 어긋날 수 있는 두 번째
+  /// 입력이 생긴다. 넘기지 않으면 오늘로 떨어진다.
+  factory ProgramDraft.empty({DateTime? date}) => ProgramDraft(
     name: '',
     type: '근력',
-    date: _today(),
+    date: date ?? _today(),
     minutes: 30,
     sets: 3,
     reps: 10,

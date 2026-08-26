@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-// 스테퍼(-/+) 대신 라벨 없는 키보드 입력 칸으로 바뀐 근력 세트·횟수·중량 및
-// 시간 입력을 검증한다. (#1489)
+// 스테퍼(-/+) 대신 테두리 라벨 + 오른쪽 단위로 바뀐 근력 세트·횟수·중량 및
+// 시간 입력을 검증한다. (#1489, #1489 후속)
 void main() {
   Widget buildApp(Widget child) => MaterialApp(
     locale: const Locale('ko'),
@@ -14,7 +14,7 @@ void main() {
     home: Scaffold(body: child),
   );
 
-  testWidgets('compact 세트 입력은 스테퍼 버튼 없이 placeholder 만 보인다', (tester) async {
+  testWidgets('compact 세트 입력은 스테퍼 버튼 없이 테두리 라벨과 단위를 보여준다', (tester) async {
     int? changed;
     await tester.pumpWidget(
       buildApp(
@@ -25,7 +25,8 @@ void main() {
     expect(find.byIcon(Icons.remove), findsNothing);
     expect(find.byIcon(Icons.add), findsNothing);
     final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.decoration?.hintText, '세트 수(세트)');
+    expect(field.decoration?.labelText, '세트 수');
+    expect(field.decoration?.suffixText, '세트');
 
     await tester.enterText(find.byType(TextField), '5');
     await tester.testTextInput.receiveAction(TextInputAction.done);
@@ -33,7 +34,7 @@ void main() {
     expect(changed, 5);
   });
 
-  testWidgets('compact 중량 입력은 placeholder 로 중량(kg) 를 보여준다', (tester) async {
+  testWidgets('compact 중량 입력은 테두리 라벨 중량과 단위 kg 를 보여준다', (tester) async {
     await tester.pumpWidget(
       buildApp(
         RoutineWeightField(weight: 40, compact: true, onChanged: (_) {}),
@@ -41,10 +42,11 @@ void main() {
     );
 
     final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.decoration?.hintText, '중량(kg)');
+    expect(field.decoration?.labelText, '중량');
+    expect(field.decoration?.suffixText, 'kg');
   });
 
-  testWidgets('compact 시간 입력은 placeholder 로 운동 시간(분) 을 보여준다', (tester) async {
+  testWidgets('compact 시간 입력은 테두리 라벨 운동 시간과 단위 분 을 보여준다', (tester) async {
     await tester.pumpWidget(
       buildApp(
         RoutineMinutesField(minutes: 30, compact: true, onChanged: (_) {}),
@@ -52,7 +54,8 @@ void main() {
     );
 
     final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.decoration?.hintText, '운동 시간(분)');
+    expect(field.decoration?.labelText, '운동 시간');
+    expect(field.decoration?.suffixText, '분');
   });
 
   testWidgets('근력 세트·횟수·중량 세 칸이 한 줄 Row 에 나란히 들어간다', (tester) async {

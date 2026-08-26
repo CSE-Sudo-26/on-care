@@ -461,9 +461,7 @@ void main() {
         );
         await tester.ensureVisible(confirmButton);
         await tester.pump();
-        await tester.tap(
-          confirmButton,
-        );
+        await tester.tap(confirmButton);
         await settle(tester);
       }
     }
@@ -479,9 +477,9 @@ void main() {
     ) async {
       final AppDatabase db = container.read(appDatabaseProvider);
       await tester.runAsync(
-        () => (db.delete(db.trainerScheduleEntries)
-              ..where((t) => t.date.equals(ymd(day))))
-            .go(),
+        () => (db.delete(
+          db.trainerScheduleEntries,
+        )..where((t) => t.date.equals(ymd(day)))).go(),
       );
       await settle(tester);
     }
@@ -1060,6 +1058,13 @@ void main() {
       // 읽는 사람이 알 수 없다(#1011).
       expect(
         find.byKey(const ValueKey<String>('program-trainer-note')),
+        findsNothing,
+      );
+      // 운동별 날짜 선택도 없다(#1489 후속) — 이 운동은 이미 이 세션(위
+      // 실제 일정)에 속해 있고, 여기서 따로 고르면 세션 날짜와 어긋나는
+      // 두 번째 입력이 생긴다.
+      expect(
+        find.byKey(const ValueKey<String>('program-date-0')),
         findsNothing,
       );
       await tester.ensureVisible(

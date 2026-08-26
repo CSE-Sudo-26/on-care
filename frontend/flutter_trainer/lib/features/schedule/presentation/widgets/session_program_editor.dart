@@ -58,7 +58,11 @@ class _SessionProgramEditorState extends ConsumerState<SessionProgramEditor> {
   }
 
   void _addItem() {
-    setState(() => _items.add(ProgramDraft.empty()));
+    setState(
+      () => _items.add(
+        ProgramDraft.empty(date: DateTime.parse(widget.session.date)),
+      ),
+    );
   }
 
   void _removeItem(int index) {
@@ -236,17 +240,20 @@ class _ProgramDraftFields extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          // 회원 앱의 운동 추가 시트와 같은 순서다 (#1276) — 날짜 → 종류 →
-          // 이름 → 시간(또는 세트·중량) → 강도 → 예상 칼로리.
+          // 회원 앱의 운동 추가 시트와 같은 순서다 (#1276) — 종류 → 이름 →
+          // 시간(또는 세트·중량) → 강도 → 예상 칼로리. 날짜는 없다(#1489
+          // 후속) — 이 운동은 세션 날짜(위 카드의 실제 일정)에 속해 있고,
+          // 여기서 따로 고르게 하면 세션 날짜와 어긋나는 두 번째 입력이
+          // 생긴다.
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: RoutineDateField(
-                  keyPrefix: 'program-date-$index',
-                  date: draft.date,
-                  onChanged: (DateTime value) {
-                    draft.date = value;
+                child: RoutineCategoryChips(
+                  keyPrefix: 'program-type-$index',
+                  value: normaliseRoutineType(draft.type),
+                  onChanged: (String value) {
+                    draft.type = value;
                     onChanged();
                   },
                 ),
@@ -263,15 +270,6 @@ class _ProgramDraftFields extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineCategoryChips(
-            keyPrefix: 'program-type-$index',
-            value: normaliseRoutineType(draft.type),
-            onChanged: (String value) {
-              draft.type = value;
-              onChanged();
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
           RoutineNameField(
             keyPrefix: 'program-name-$index',
             controller: draft.name,
@@ -279,8 +277,8 @@ class _ProgramDraftFields extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           // 근력은 세트·횟수·중량을 한 줄에, 나머지는 시간 한 칸으로 묻는다.
-          // 라벨 대신 placeholder 를 쓰는 compact 입력이라 세 칸이 나란히
-          // 들어가도 세로 폭이 늘어나지 않는다. (#1489)
+          // 라벨이 테두리에 얹히는 compact 입력이라 세 칸이 나란히 들어가도
+          // 세로 폭이 늘어나지 않는다. (#1489)
           if (draft.isStrength)
             Row(
               children: <Widget>[
