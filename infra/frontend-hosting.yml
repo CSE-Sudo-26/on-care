@@ -8,9 +8,26 @@ Parameters:
   GitHubRepository:
     Type: String
     Default: on-care
+  GitHubOwnerId:
+    Type: String
+    Default: '265976266'
+    AllowedPattern: '^[0-9]+$'
+    Description: Immutable numeric GitHub organization or owner ID
+  GitHubRepositoryId:
+    Type: String
+    Default: '1174354664'
+    AllowedPattern: '^[0-9]+$'
+    Description: Immutable numeric GitHub repository ID
   GitHubBranch:
     Type: String
     Default: main
+  UseImmutableGitHubOidcSubject:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Use GitHub's owner-ID and repository-ID based OIDC subject format
   ExistingGitHubOidcProviderArn:
     Type: String
     Default: ''
@@ -18,6 +35,7 @@ Parameters:
 
 Conditions:
   CreateGitHubOidcProvider: !Equals [!Ref ExistingGitHubOidcProviderArn, '']
+  UseImmutableGitHubOidcSubjectCondition: !Equals [!Ref UseImmutableGitHubOidcSubject, 'true']
 
 Resources:
   FrontendBucket:
@@ -193,7 +211,10 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}'
+                token.actions.githubusercontent.com:sub: !If
+                  - UseImmutableGitHubOidcSubjectCondition
+                  - !Sub 'repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}'
+                  - !Sub 'repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}'
       Policies:
         - PolicyName: deploy-frontend
           PolicyDocument:
