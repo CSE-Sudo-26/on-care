@@ -151,6 +151,15 @@ const List<_Client> _clients = <_Client>[
         dayIndex: 2,
       ),
       _Chat('client', '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16', dayIndex: 2),
+      // 회원 앱 시드와 같은 자리에 같은 문구로 둔다. 마지막 인사 **앞**이다 —
+      // 스레드 맨 끝 메시지는 고객 목록의 미리보기로 쓰인다.
+      _Chat(
+        'trainer',
+        '이번 주 리포트 등록해 뒀어요. 확인해 보세요',
+        '18:17',
+        dayIndex: 2,
+        report: true,
+      ),
       _Chat(
         'trainer',
         '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
@@ -205,7 +214,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 1,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['인터벌 런닝 25분 ✓', '스쿼트 3세트 ✓', '플랭크 10분 ✓'],
         clientFeedback: '런닝이 힘들었는데 다 했어요! 숨이 많이 찼어요',
@@ -221,7 +230,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 5,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 67,
         exercises: <String>['런닝 25분 ✓', '스쿼트 ✓', '플랭크 ✗ (피로)'],
         clientFeedback: '마지막 플랭크는 너무 지쳐서 못 했어요',
@@ -296,7 +305,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 7,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 33,
         exercises: <String>['벤치프레스 ✓', '데드리프트 ✗', '유산소 ✗'],
         clientFeedback: '회사 일이 생겨서 벤치만 하고 나왔어요',
@@ -304,7 +313,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 9,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 0,
         exercises: <String>['벤치프레스 ✗', '데드리프트 ✗', '유산소 ✗'],
         clientFeedback: '못 갔어요 😓',
@@ -361,7 +370,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 0,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['걷기 25분 ✓', '골반 안정화 15분 ✓', '밴드 로우 12분 ✓'],
         clientFeedback: '컨디션 돌아온 게 느껴져요. 다 했습니다!',
@@ -369,7 +378,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 3,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 50,
         exercises: <String>['걷기 25분 ✓', '골반 안정화 ✗ (아이 컨디션)'],
         clientFeedback: '아이가 아파서 절반만 했어요',
@@ -377,7 +386,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 6,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 0,
         exercises: <String>['걷기 ✗', '골반 안정화 ✗', '밴드 로우 ✗'],
         clientFeedback: '한 주 통째로 쉬었어요',
@@ -447,7 +456,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 0,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['LSD 러닝 45분 ✓', '힙 힌지 12분 ✓', '스트레칭 10분 ✓'],
         clientFeedback: '페이스 안정적이었어요',
@@ -455,7 +464,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 1,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['인터벌 8세트 ✓', '코어 서킷 ✓', '스트레칭 ✓'],
         clientFeedback: '인터벌 끝나고 다리가 후들거렸어요 😅',
@@ -518,7 +527,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 1,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 0,
         exercises: <String>['걷기 ✗', '전신 서킷 ✗', '스트레칭 ✗'],
         clientFeedback: '주말은 약속이 계속 있었어요 😅',
@@ -526,7 +535,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 3,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['전신 서킷 20분 ✓', '걷기 30분 ✓', '스트레칭 10분 ✓'],
         clientFeedback: '평일엔 루틴대로 잘 되고 있어요',
@@ -612,7 +621,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 4,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 20,
         exercises: <String>['걷기 ✓ (10분만)', '호흡 이완 ✗', '의자 스쿼트 ✗'],
         clientFeedback: '10분 걷다가 회사에서 전화 와서 끊었어요',
@@ -620,7 +629,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 6,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 33,
         exercises: <String>['걷기 ✓', '호흡 이완 ✗', '의자 스쿼트 ✗'],
         clientFeedback: '피곤해서 걷기만 했어요',
@@ -673,7 +682,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 2,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 25,
         exercises: <String>['목·어깨 스트레칭 ✓', '걷기 ✗', '플랭크 ✗'],
         clientFeedback: '자기 전에 스트레칭만 겨우 했어요',
@@ -681,7 +690,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 4,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 33,
         exercises: <String>['걷기 15분 ✓', '스트레칭 ✗', '플랭크 ✗'],
         clientFeedback: '',
@@ -742,7 +751,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 0,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['실내 자전거 20분 ✓', '레그 익스텐션 12분 ✓', '가동범위 10분 ✓'],
         clientFeedback: '무릎 통증 없이 다 했어요!',
@@ -750,7 +759,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 2,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 67,
         exercises: <String>['실내 자전거 ✓', '레그 익스텐션 ✓', '가동범위 ✗'],
         clientFeedback: '마지막에 시간이 부족했어요',
@@ -804,7 +813,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 1,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 67,
         exercises: <String>['경사 걷기 ✓', '풀업 어시스트 ✓', '스트레칭 ✗'],
         clientFeedback: '늘 하던 만큼 했어요',
@@ -849,7 +858,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 21,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 33,
         exercises: <String>['걷기 20분 ✓', '스트레칭 ✗', '스쿼트 ✗'],
         clientFeedback: '당분간 쉬려고요',
@@ -917,7 +926,7 @@ const List<_Client> _clients = <_Client>[
       ),
       _History(
         daysAgo: 1,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 0,
         exercises: <String>['스쿼트 ✗', '벤치프레스 ✗', '쿨다운 ✗'],
         clientFeedback: '어제는 아예 못 갔어요',
@@ -971,7 +980,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 0,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['러닝머신 30분 ✓', '근력 서킷 25분 ✓', '스트레칭 10분 ✓'],
         clientFeedback: '운동은 빠짐없이 하고 있어요',
@@ -1016,7 +1025,7 @@ const List<_Client> _clients = <_Client>[
     history: <_History>[
       _History(
         daysAgo: 1,
-        label: 'AI 루틴 · 자율 운동',
+        label: 'AI 개인운동',
         completionRate: 100,
         exercises: <String>['걷기 20분 ✓', '맨몸 스쿼트 8분 ✓', '스트레칭 10분 ✓'],
         clientFeedback: '첫 운동 했어요! 생각보다 할 만했어요',

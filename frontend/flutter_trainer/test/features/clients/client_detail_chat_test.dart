@@ -507,6 +507,17 @@ void main() {
       expect(find.text('다음 세션 때 봐요!'), findsWidgets);
     });
 
+    testWidgets('데모 시드의 리포트 등록도 같은 카드로 뜬다 (#1421)', (tester) async {
+      // 회원 앱 데모 스레드에도 같은 자리에 같은 메시지가 있다. 한쪽만 카드로
+      // 보이면 두 사람이 같은 리포트를 두고 다른 것을 본다.
+      await openMessages(tester);
+
+      expect(find.text('리포트가 등록되었어요'), findsOneWidget);
+      expect(find.text('리포트 탭에서 확인하기'), findsOneWidget);
+      // 표시가 붙은 메시지는 본문 말풍선으로 겹쳐 그리지 않는다.
+      expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
+    });
+
     testWidgets(
       '리포트 전송 메시지는 일반 말풍선이 아니라 카드로 뜨고, 누르면 리포트로 이동한다 (#1378)',
       (tester) async {
@@ -526,8 +537,11 @@ void main() {
             );
         await settle(tester);
 
-        final notice = find.textContaining('8월 18일 – 8월 24일 주간 리포트를 보냈어요');
+        // 회원 앱과 같은 정보 구조 — 상태 문구, 대상 주, 다음 행동.
+        final notice = find.text('리포트가 등록되었어요');
         expect(notice, findsOneWidget);
+        expect(find.text('8월 18일 – 8월 24일'), findsOneWidget);
+        expect(find.text('리포트 탭에서 확인하기'), findsOneWidget);
         // 본문 그대로의 일반 말풍선은 그려지지 않는다.
         expect(
           find.text('김민수님, 8월 18일 – 8월 24일 주간 리포트 정리해서 보내드려요.'),
@@ -541,7 +555,13 @@ void main() {
         final location = GoRouter.of(
           ctx,
         ).routerDelegate.currentConfiguration.uri.toString();
-        expect(location, AppRoutes.reportFor('seed-client-1'));
+        // 카드가 가리키는 주가 리포트 화면에도 그대로 실린다 — 트레이너가
+        // 카드를 누르고도 어느 주였는지 다시 찾게 두지 않는다(#1421).
+        expect(
+          location,
+          AppRoutes.reportFor('seed-client-1', weekStart: DateTime(2026, 8, 18)),
+        );
+        expect(location, contains('week=2026-08-18'));
       },
     );
 

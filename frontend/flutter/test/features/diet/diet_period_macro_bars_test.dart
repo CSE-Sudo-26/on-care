@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -13,12 +14,7 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
 
-/// 칼로리 막대는 **한 색**이고, 탄단지는 툴팁이 숫자로 말한다 (#1427).
-///
-/// 같은 2,000kcal 이라도 밥에서 온 것과 기름에서 온 것은 다른 하루다. 한때는
-/// 그 차이를 막대의 농담 세 단계로 그렸지만, 막대에서 수치를 읽을 수는 없어
-/// 색만 정확한 척했다. 지금은 막대가 총칼로리 하나를 말하고, 구성은 툴팁과
-/// 카드 머리의 상세가 숫자와 함께 말한다.
+/// 전체 칼로리 막대는 탄단지의 칼로리 기여분을 색 구간으로 쌓는다 (#1479).
 class _MacroRepository extends FakeDietRepository {
   @override
   Future<DietDay> fetchByDate(DateTime date) async => _day;
@@ -139,18 +135,36 @@ void main() {
         .map((ColoredBox b) => b.color)
         .toList();
 
+    Color labelColor(WidgetTester tester, String label) =>
+        tester.widget<Text>(find.text(label).last).style!.color!;
+
+    testWidgets('이번 주 탄단지 라벨만 보조 회색을 사용한다 (#1479)', (
+      WidgetTester tester,
+    ) async {
+      await openMonth(tester);
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietRecordPage)),
+      );
+
+      expect(labelColor(tester, l.homeMacroCarbs), FigmaColors.macroCarbs);
+      expect(labelColor(tester, l.homeMacroProtein), FigmaColors.macroProtein);
+      expect(labelColor(tester, l.homeMacroFat), FigmaColors.macroFat);
+
+      await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+      await tester.pumpAndSettle();
+
+      expect(labelColor(tester, l.homeMacroCarbs), AppColors.mutedForeground);
+      expect(labelColor(tester, l.homeMacroProtein), AppColors.mutedForeground);
+      expect(labelColor(tester, l.homeMacroFat), AppColors.mutedForeground);
+    });
+
     testWidgets('막대가 칸 폭을 채우고 높이를 갖는다 (#947)', (WidgetTester tester) async {
       await openMonth(tester);
 
       // 폭 0 으로 그려져 통째로 사라진 적이 있다(#947) — 색만 확인하면 그
       // 사라짐을 그대로 통과시킨다.
       final Rect bar = tester.getRect(
-        find
-            .descendant(
-              of: find.byKey(const Key('diet-period-bar-0')),
-              matching: find.byType(Container),
-            )
-            .first,
+        find.byKey(const Key('diet-period-bar-0')),
       );
       expect(bar.width, greaterThan(0));
       expect(bar.height, greaterThan(0));
@@ -187,33 +201,17 @@ void main() {
       }
     });
 
-
-    testWidgets('막대는 회색 한 색이다 (#1427)', (WidgetTester tester) async {
+    testWidgets('막대는 탄단지 색 구간을 쌓는다 (#1479)', (WidgetTester tester) async {
       await openMonth(tester);
 
-      expect(segmentColorsOf(tester, 0), isEmpty, reason: '쌓지 않는다');
-      final Container bar = tester.widget<Container>(
-        find
-            .descendant(
-              of: find.byKey(const Key('diet-period-bar-0')),
-              matching: find.byType(Container),
-            )
-            .first,
-      );
       expect(
-        (bar.decoration! as BoxDecoration).color,
-        FigmaColors.barNeutral.withValues(alpha: 0.85),
+        segmentColorsOf(tester, 0),
+        <Color>[
+          FigmaColors.macroFat,
+          FigmaColors.macroProtein,
+          FigmaColors.macroCarbs,
+        ],
       );
-    });
-
-    testWidgets('막대 회색은 빈 트랙·초과와 갈린다 (#1427)', (WidgetTester tester) async {
-      // 기록 없는 칸의 그루터기·아직 오지 않은 날의 빈 트랙과 같은 색이면
-      // 기록한 날과 비운 날이 한 그림에서 구분되지 않는다.
-      expect(FigmaColors.barNeutral, isNot(FigmaColors.track));
-      expect(FigmaColors.barNeutral, isNot(FigmaColors.hairline));
-      expect(FigmaColors.barNeutral, isNot(FigmaColors.dangerRed));
-      // 목표선 위에 겹쳐 그리므로 색 자체는 불투명해야 한다.
-      expect(FigmaColors.barNeutral.a, 1.0);
     });
 
     testWidgets('툴팁이 탄단지 수치를 함께 적는다', (WidgetTester tester) async {
@@ -247,8 +245,7 @@ void main() {
       await tester.tap(find.text(l.dietSodium));
       await tester.pumpAndSettle();
 
-      // 회색은 칼로리 막대의 규칙이다 — 나트륨·당류까지 회색으로 바꾸지
-      // 않는다(#1427).
+      // 누적 구간은 칼로리만의 규칙이다. 나트륨·당류는 브랜드 색을 유지한다.
       final Container bar = tester.widget<Container>(
         find
             .descendant(

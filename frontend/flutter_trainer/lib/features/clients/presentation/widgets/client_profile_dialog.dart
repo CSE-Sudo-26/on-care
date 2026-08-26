@@ -130,9 +130,19 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
   final _weight = TextEditingController();
   final _conditions = TextEditingController();
   final _goals = TextEditingController();
-  final _weeklyCount = TextEditingController();
-  final _weeklyMinutes = TextEditingController();
-  final _weeklyBurn = TextEditingController();
+  // 회원 앱 마이페이지와 **같은 목표 필드**다(#1449). 옛 주간 목표(횟수·
+  // 시간·소모)는 회원 화면에 대응하는 자리가 없어 편집 폼에서 뺐다 — 응답에는
+  // 남아 있어 다른 화면이 읽던 값은 그대로다.
+  final _goalCalories = TextEditingController();
+  final _goalSodium = TextEditingController();
+  final _goalSugar = TextEditingController();
+  final _goalCarbs = TextEditingController();
+  final _goalProtein = TextEditingController();
+  final _goalFat = TextEditingController();
+  final _goalBurn = TextEditingController();
+  final _goalCardio = TextEditingController();
+  final _goalStrength = TextEditingController();
+  final _goalFlexibility = TextEditingController();
   String _gender = '';
   bool _initialized = false;
   bool _profileLoaded = false;
@@ -158,9 +168,16 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
       _weight,
       _conditions,
       _goals,
-      _weeklyCount,
-      _weeklyMinutes,
-      _weeklyBurn,
+      _goalCalories,
+      _goalSodium,
+      _goalSugar,
+      _goalCarbs,
+      _goalProtein,
+      _goalFat,
+      _goalBurn,
+      _goalCardio,
+      _goalStrength,
+      _goalFlexibility,
     ]) {
       controller.dispose();
     }
@@ -175,9 +192,16 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
     _weight.text = _displayNumber(profile.weightKg);
     _conditions.text = profile.conditions;
     _goals.text = profile.goals;
-    _weeklyCount.text = profile.weeklyWorkoutGoal?.toString() ?? '';
-    _weeklyMinutes.text = profile.weeklyExerciseMinutesGoal?.toString() ?? '';
-    _weeklyBurn.text = profile.weeklyBurnGoal?.toString() ?? '';
+    _goalCalories.text = profile.dailyCalories?.toString() ?? '';
+    _goalSodium.text = profile.dailySodiumMg?.toString() ?? '';
+    _goalSugar.text = profile.dailySugarG?.toString() ?? '';
+    _goalCarbs.text = profile.dailyCarbsG?.toString() ?? '';
+    _goalProtein.text = profile.dailyProteinG?.toString() ?? '';
+    _goalFat.text = profile.dailyFatG?.toString() ?? '';
+    _goalBurn.text = profile.dailyBurnKcal?.toString() ?? '';
+    _goalCardio.text = profile.weeklyCardioMinutes?.toString() ?? '';
+    _goalStrength.text = profile.weeklyStrengthSets?.toString() ?? '';
+    _goalFlexibility.text = profile.weeklyFlexibilityMinutes?.toString() ?? '';
   }
 
   String _displayNumber(double? value) => value == null
@@ -225,13 +249,23 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
             'weight_kg': _number(_weight.text, integer: false),
             'conditions': _conditions.text.trim(),
             'goals': _goals.text.trim(),
-            'weekly_workout_goal': _number(_weeklyCount.text, integer: true),
-            'weekly_exercise_minutes_goal': _number(
-              _weeklyMinutes.text,
+            'daily_calories': _number(_goalCalories.text, integer: true),
+            'daily_sodium_mg': _number(_goalSodium.text, integer: true),
+            'daily_sugar_g': _number(_goalSugar.text, integer: true),
+            'daily_carbs_g': _number(_goalCarbs.text, integer: true),
+            'daily_protein_g': _number(_goalProtein.text, integer: true),
+            'daily_fat_g': _number(_goalFat.text, integer: true),
+            'daily_burn_kcal': _number(_goalBurn.text, integer: true),
+            'weekly_cardio_minutes': _number(_goalCardio.text, integer: true),
+            'weekly_strength_sets': _number(_goalStrength.text, integer: true),
+            'weekly_flexibility_minutes': _number(
+              _goalFlexibility.text,
               integer: true,
             ),
-            'weekly_burn_goal': _number(_weeklyBurn.text, integer: true),
           });
+      // 저장한 값이 이 화면에도 바로 남는다 — 다음에 창을 열 때 서버에서 다시
+      // 읽는다(#1449).
+      ref.invalidate(clientsProvider);
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -256,6 +290,34 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
 
   InputDecoration _decoration(String label) =>
       InputDecoration(labelText: label, isDense: true);
+
+  /// 목표 두 칸을 한 줄에. 좁은 창에서도 라벨이 잘리지 않게 폭을 나눈다.
+  Widget _goalRow(List<Widget> fields) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      for (int i = 0; i < fields.length; i++) ...<Widget>[
+        if (i > 0) const SizedBox(width: AppSpacing.xs),
+        Expanded(child: fields[i]),
+      ],
+    ],
+  );
+
+  /// 목표 한 칸. 비우면 `없음` 이고, 서버가 그 자리를 지운다.
+  Widget _goalField({
+    required String key,
+    required TextEditingController controller,
+    required String label,
+    required AppLocalizations l,
+    required double min,
+    required double max,
+  }) => TextFormField(
+    key: ValueKey<String>(key),
+    controller: controller,
+    decoration: _decoration(label),
+    keyboardType: TextInputType.number,
+    validator: (value) =>
+        _validate(l, value, min: min, max: max, integer: true),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -358,53 +420,113 @@ class _HealthProfileSectionState extends ConsumerState<_HealthProfileSection> {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                l.memberHealthWeeklyGoal,
+                l.memberHealthDietGoal,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _weeklyCount,
-                      decoration: _decoration(l.memberHealthWeeklyCount),
-                      keyboardType: TextInputType.number,
-                      validator: (value) =>
-                          _validate(l, value, min: 0, max: 14, integer: true),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _weeklyMinutes,
-                      decoration: _decoration(l.memberHealthWeeklyMinutes),
-                      keyboardType: TextInputType.number,
-                      validator: (value) => _validate(
-                        l,
-                        value,
-                        min: 0,
-                        max: 10080,
-                        integer: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _weeklyBurn,
-                      decoration: _decoration(l.memberHealthWeeklyBurn),
-                      keyboardType: TextInputType.number,
-                      validator: (value) => _validate(
-                        l,
-                        value,
-                        min: 0,
-                        max: 100000,
-                        integer: true,
-                      ),
-                    ),
-                  ),
-                ],
+              // 회원 앱 마이페이지의 `식단 목표` 여섯과 같은 필드·단위·라벨이다.
+              _goalRow(<Widget>[
+                _goalField(
+                  key: 'client-goal-calories',
+                  controller: _goalCalories,
+                  label: l.memberHealthGoalCalories,
+                  l: l,
+                  min: 500,
+                  max: 10000,
+                ),
+                _goalField(
+                  key: 'client-goal-sodium',
+                  controller: _goalSodium,
+                  label: l.memberHealthGoalSodium,
+                  l: l,
+                  min: 0,
+                  max: 50000,
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.xs),
+              _goalRow(<Widget>[
+                _goalField(
+                  key: 'client-goal-sugar',
+                  controller: _goalSugar,
+                  label: l.memberHealthGoalSugar,
+                  l: l,
+                  min: 0,
+                  max: 1000,
+                ),
+                _goalField(
+                  key: 'client-goal-carbs',
+                  controller: _goalCarbs,
+                  label: l.memberHealthGoalCarbs,
+                  l: l,
+                  min: 0,
+                  max: 2000,
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.xs),
+              _goalRow(<Widget>[
+                _goalField(
+                  key: 'client-goal-protein',
+                  controller: _goalProtein,
+                  label: l.memberHealthGoalProtein,
+                  l: l,
+                  min: 0,
+                  max: 1000,
+                ),
+                _goalField(
+                  key: 'client-goal-fat',
+                  controller: _goalFat,
+                  label: l.memberHealthGoalFat,
+                  l: l,
+                  min: 0,
+                  max: 1000,
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                l.memberHealthExerciseGoal,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
+              const SizedBox(height: AppSpacing.xs),
+              // 회원 앱의 `운동 목표` 넷과 같은 값이다(#1139). 옛 주간
+              // 횟수·시간·소모 목표는 회원 화면에 대응하는 자리가 없어 여기서
+              // 다루지 않는다.
+              _goalRow(<Widget>[
+                _goalField(
+                  key: 'client-goal-burn',
+                  controller: _goalBurn,
+                  label: l.memberHealthGoalBurnDaily,
+                  l: l,
+                  min: 0,
+                  max: 20000,
+                ),
+                _goalField(
+                  key: 'client-goal-cardio',
+                  controller: _goalCardio,
+                  label: l.memberHealthGoalCardioWeekly,
+                  l: l,
+                  min: 0,
+                  max: 10080,
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.xs),
+              _goalRow(<Widget>[
+                _goalField(
+                  key: 'client-goal-strength',
+                  controller: _goalStrength,
+                  label: l.memberHealthGoalStrengthWeekly,
+                  l: l,
+                  min: 0,
+                  max: 1000,
+                ),
+                _goalField(
+                  key: 'client-goal-flexibility',
+                  controller: _goalFlexibility,
+                  label: l.memberHealthGoalFlexibilityWeekly,
+                  l: l,
+                  min: 0,
+                  max: 10080,
+                ),
+              ]),
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerRight,

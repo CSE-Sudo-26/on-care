@@ -1266,6 +1266,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachChatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
 
   @override
+  String get coachChatReportRegistered => '리포트가 등록되었어요';
+
+  @override
+  String coachChatReportWeek(int sm, int sd, int em, int ed) {
+    return '$sm월 $sd일 – $em월 $ed일';
+  }
+
+  @override
+  String get coachChatReportOpenPdf => 'PDF 열기';
+
+  @override
   String get coachChatInputHint => '트레이너에게 메시지 보내기...';
 
   @override
@@ -1659,19 +1670,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardWeightHint => '체중 (kg)';
 
   @override
-  String get onboardHealthTitle => '건강 상태';
+  String get onboardHealthTitle => '건강 목표';
 
   @override
-  String get onboardHealthSubtitle => '관리 중인 만성질환을 선택해 주세요. (복수 선택 가능)';
+  String get onboardHealthSubtitle =>
+      '건강 관리에서 더 집중하고 싶은 항목을 선택해 주세요. (복수 선택 가능)';
 
   @override
-  String get onboardGoalTitle => '건강 목표';
+  String get onboardGoalTitle => '운동 목표';
 
   @override
   String get onboardGoalSubtitle => '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.';
 
   @override
-  String get onboardGoalHint => '건강·운동 목표';
+  String get onboardGoalHint => '예) 3개월 안에 5km 완주';
 
   @override
   String get onboardOptionalTag => '(선택)';
@@ -1909,10 +1921,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myHealthGoalsTitle => '건강 목표';
 
   @override
+  String get myGoalsFocusSection => '주로 관리하고 싶은 항목';
+
+  @override
+  String get myGoalsFocusHint => '건강 관리에서 더 집중하고 싶은 항목을 골라 주세요. (복수 선택 가능)';
+
+  @override
+  String get myGoalsFocusHypertension => '고혈압';
+
+  @override
+  String get myGoalsFocusDiabetes => '당뇨';
+
+  @override
+  String get myGoalsExerciseNote => '운동 목표';
+
+  @override
+  String get myGoalsExerciseNoteHint => '예) 3개월 안에 5km 완주';
+
+  @override
   String get myGoalsDietSection => '식단 목표';
 
   @override
-  String get myGoalsExerciseSection => '운동 목표';
+  String get myGoalsExerciseSection => '운동 수치 목표';
 
   @override
   String get myGoalBurnDaily => '일일 소모 칼로리 (kcal)';
@@ -2069,7 +2099,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachRoutineCompleteTitle => '루틴 수행 완료';
+  String get coachRoutineCompleteTitle => '개인운동 수행 완료';
 
   @override
   String get coachRoutineIntensity => '수행 강도';

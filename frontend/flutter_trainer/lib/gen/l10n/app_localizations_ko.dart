@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -654,6 +655,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthGoals => '고객 목표';
 
   @override
+  String get memberHealthDietGoal => '식단 목표';
+
+  @override
+  String get memberHealthExerciseGoal => '운동 목표';
+
+  @override
+  String get memberHealthGoalCalories => '일일 칼로리 제한 (kcal)';
+
+  @override
+  String get memberHealthGoalSodium => '일일 나트륨 제한 (mg)';
+
+  @override
+  String get memberHealthGoalSugar => '일일 당류 제한 (g)';
+
+  @override
+  String get memberHealthGoalCarbs => '일일 탄수화물 제한 (g)';
+
+  @override
+  String get memberHealthGoalProtein => '일일 단백질 제한 (g)';
+
+  @override
+  String get memberHealthGoalFat => '일일 지방 제한 (g)';
+
+  @override
+  String get memberHealthGoalBurnDaily => '일일 소모 칼로리 (kcal)';
+
+  @override
+  String get memberHealthGoalCardioWeekly => '주간 유산소 (분)';
+
+  @override
+  String get memberHealthGoalStrengthWeekly => '주간 근력 (세트)';
+
+  @override
+  String get memberHealthGoalFlexibilityWeekly => '주간 스트레칭 (분)';
+
+  @override
   String get memberHealthWeeklyGoal => '주간 운동 목표';
 
   @override
@@ -678,8 +715,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '회원 ID로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
 
   @override
-  String get clientInviteIntroImmediate =>
-      '회원 ID로 고객을 확인한 뒤 바로 등록해요. 성별·나이·운동 목표는 데모 회원 정보에서 가져와요.';
+  String get clientInviteIntroImmediate => '회원 ID로 고객을 확인한 뒤 바로 등록해요.';
 
   @override
   String get clientInviteMemberIdLabel => '회원 ID';
@@ -741,9 +777,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientInviteConfirmPrompt => '이 고객이 맞나요?';
-
-  @override
-  String get clientInviteGoalLabel => '운동 목표';
 
   @override
   String get coachTemplateNew => '새 템플릿';
@@ -832,6 +865,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metricSugar => '당류';
 
   @override
+  String get clientDietMacrosMissing => '탄·단·지 기록 없음';
+
+  @override
   String get metricCarbs => '탄수화물';
 
   @override
@@ -865,9 +901,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
 
   @override
-  String chatReportSentNotice(Object range) {
-    return '$range 주간 리포트를 보냈어요';
-  }
+  String get chatReportRegistered => '리포트가 등록되었어요';
+
+  @override
+  String get chatReportOpenInReports => '리포트 탭에서 확인하기';
 
   @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';
@@ -990,7 +1027,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String consultApproved(String name) {
-    return '$name 고객을 담당으로 등록했어요';
+    return '$name님의 상담 요청을 승인했어요. 스케줄 탭에서 일정을 추가해 주세요.';
+  }
+
+  @override
+  String consultScheduleCreated(String name) {
+    return '$name님의 상담 일정을 등록했어요';
   }
 
   @override
@@ -1100,6 +1142,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientFeedback => '고객 피드백';
+
+  @override
+  String clientFeedbackOn(String name) {
+    return '$name에 대한 고객 피드백';
+  }
+
+  @override
+  String get clientFeedbackPersonal => '개인 운동에 대한 고객 피드백';
+
+  @override
+  String get clientFeedbackSession => '이 세션에 대한 고객 피드백';
+
+  @override
+  String get workoutKindAiPersonal => 'AI 개인운동';
 
   @override
   String get trainerNote => '트레이너 메모';
@@ -1336,7 +1392,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsWeeklyCompletion => '주간 이행률';
 
   @override
-  String get clientWeeklyRoutineAdherence => '주간 루틴 이행률';
+  String get clientWeeklyRoutineAdherence => '주간 이행률';
 
   @override
   String get clientRoutineAdherenceUnmeasured => '미집계';
@@ -1451,7 +1507,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedTitle => '스케줄';
 
   @override
-  String get schedDetailTitle => '상세 스케줄';
+  String get schedDetailTitle => '상세 일정';
 
   @override
   String get schedDeleteTitle => '일정 삭제';
@@ -1656,6 +1712,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get progSaveAction => '프로그램 저장';
+
+  @override
+  String get progSaveNoteAction => '메모 저장';
 
   @override
   String get progExerciseName => '운동 이름';
@@ -2092,7 +2151,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String coachRegisteredAttachedExisting(String date) {
-    return '$date에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요';
+    return '$date에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요';
   }
 
   @override

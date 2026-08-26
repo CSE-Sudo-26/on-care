@@ -336,6 +336,18 @@
   "memberHealthWeight": "Weight (kg)",
   "memberHealthConditions": "Conditions and cautions",
   "memberHealthGoals": "Member goals",
+  "memberHealthDietGoal": "Nutrition goals",
+  "memberHealthExerciseGoal": "Exercise goals",
+  "memberHealthGoalCalories": "Daily calories (kcal)",
+  "memberHealthGoalSodium": "Daily sodium (mg)",
+  "memberHealthGoalSugar": "Daily sugar (g)",
+  "memberHealthGoalCarbs": "Daily carbs (g)",
+  "memberHealthGoalProtein": "Daily protein (g)",
+  "memberHealthGoalFat": "Daily fat (g)",
+  "memberHealthGoalBurnDaily": "Daily burn (kcal)",
+  "memberHealthGoalCardioWeekly": "Weekly cardio (min)",
+  "memberHealthGoalStrengthWeekly": "Weekly strength (sets)",
+  "memberHealthGoalFlexibilityWeekly": "Weekly stretching (min)",
   "memberHealthWeeklyGoal": "Weekly exercise goal",
   "memberHealthWeeklyCount": "Sessions",
   "memberHealthWeeklyMinutes": "Minutes",
@@ -344,7 +356,7 @@
   "@memberHealthRange": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}},
   "clientInviteTitle": "Add a new client",
   "clientInviteIntro": "Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.",
-  "clientInviteIntroImmediate": "Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.",
+  "clientInviteIntroImmediate": "Find a client by member ID and register them right away.",
   "clientInviteMemberIdLabel": "Member ID",
   "clientInviteLookupAction": "Find",
   "clientInviteMessageLabel": "Message (optional)",
@@ -366,7 +378,6 @@
   "clientInviteCancelled": "Request withdrawn",
   "clientInviteCancelFailed": "Couldn't withdraw the request. Please try again",
   "clientInviteConfirmPrompt": "Is this the right client?",
-  "clientInviteGoalLabel": "Goal",
   "coachTemplateNew": "New template",
   "coachTemplateEdit": "Edit template",
   "coachTemplateSaveAsMine": "Save as my template",
@@ -396,6 +407,7 @@
   "metricCalories": "Calories",
   "metricSodium": "Sodium",
   "metricSugar": "Sugar",
+  "clientDietMacrosMissing": "No carbs/protein/fat recorded",
   "metricCarbs": "Carbs",
   "metricProtein": "Protein",
   "metricFat": "Fat",
@@ -407,7 +419,8 @@
   "chatTooLong": "Message is too long (2000 characters max)",
   "chatSendFailed": "Couldn't send the message. Please try again",
   "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
-  "chatReportSentNotice": "Sent the {range} weekly report",
+  "chatReportRegistered": "Weekly report added",
+  "chatReportOpenInReports": "Open in Reports",
   "chatLoadFailed": "Couldn't load the conversation",
   "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
   "@chatDemoAnalyzed": {
@@ -479,8 +492,16 @@
   "consultEmptyHistory": "No consultation history",
   "consultEmptyHint": "Requests appear here when a member asks for a consultation with your gym or with you",
   "consultActionFailed": "Couldn't process the request",
-  "consultApproved": "{name} is now one of your clients",
+  "consultApproved": "{name}'s request was approved. Add a session from the Schedule tab.",
   "@consultApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "consultScheduleCreated": "Added a consultation session for {name}",
+  "@consultScheduleCreated": {
     "placeholders": {
       "name": {
         "type": "String"
@@ -548,6 +569,11 @@
   "programNone": "No program recorded",
   "legendDone": "Done",
   "clientFeedback": "Client feedback",
+  "clientFeedbackOn": "Client feedback on {name}",
+  "@clientFeedbackOn": {"placeholders": {"name": {"type": "String"}}},
+  "clientFeedbackPersonal": "Client feedback on this personal exercise",
+  "clientFeedbackSession": "Client feedback on this session",
+  "workoutKindAiPersonal": "AI personal exercise",
   "trainerNote": "Trainer's note",
   "dietLoadFailed": "Couldn't load meals",
   "dietEmpty": "No meals logged yet",
@@ -731,7 +757,7 @@
   },
   "reportsCompletionAvg": "Workout completion",
   "reportsWeeklyCompletion": "Weekly completion",
-  "clientWeeklyRoutineAdherence": "Weekly routine adherence",
+  "clientWeeklyRoutineAdherence": "Weekly adherence",
   "clientRoutineAdherenceUnmeasured": "Not measured",
   "reportsCompletionByDay": "Weekly workout completion",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
@@ -880,6 +906,7 @@
   "progNoteHint": "Notes to follow while running this program",
   "progSaving": "Saving...",
   "progSaveAction": "Save program",
+  "progSaveNoteAction": "Save note",
   "progExerciseName": "Exercise",
   "progDeleteExercise": "Remove exercise",
   "progSets": "Sets",
@@ -1093,7 +1120,7 @@
       }
     }
   },
-  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time you picked wasn't applied",
+  "coachRegisteredAttachedExisting": "There was already a session planned on {date}, so the program was only attached to it — the time range you picked wasn't applied",
   "@coachRegisteredAttachedExisting": {"placeholders": {"date": {"type": "String"}}},
   "coachRegisterOn": "Add to the {date} PT schedule",
   "@coachRegisterOn": {

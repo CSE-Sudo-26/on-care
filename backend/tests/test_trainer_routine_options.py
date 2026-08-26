@@ -814,3 +814,113 @@ def test_resolve_conditions_fills_blanks_from_analysis_then_defaults():
     resolved_explicit = resolve(analysis_with_suggestion, explicit)
     assert resolved_explicit.available_minutes == 15
     assert resolved_explicit.intensity_preference == "high"
+
+
+# ---- 건강 주의사항이 모든 생성 경로에 닿는다 (#1440) ----
+
+
+def test_prompt_tells_the_model_to_use_conditions_and_body_data():
+    """시스템 프롬프트가 주의사항·신체·목표를 어떻게 쓸지 명시한다."""
+    prompt = trainer_routine_options_service._SYSTEM_PROMPT
+
+    assert "conditions" in prompt
+    assert "note" in prompt
+    # 신체·목표는 강도·시간·구성을 정할 때만 쓰고, 제한으로 읽지 않는다.
+    assert "height_cm" in prompt and "weight_kg" in prompt
+    # 무엇이 반영됐는지 트레이너가 rationale 에서 볼 수 있어야 한다.
+    assert "rationale" in prompt
+    # 회원에게 보이는 문구에는 민감한 정보를 옮기지 않는다.
+    assert "reason" in prompt
+
+
+def test_rule_fallback_avoids_the_part_the_member_is_guarding():
+    """LLM 이 죽어도 주의사항은 지킨다 — 무릎이면 러닝·스쿼트를 빼고 대안을 준다."""
+    analysis = _analysis().model_copy(
+        update={"conditions": "무릎 통증으로 러닝 자제", "note": ""}
+    )
+
+    options = trainer_routine_options_service.build_rule_options(
+        analysis, RoutineOptionsRequest(available_minutes=40, intensity_preference="high")
+    )
+
+    names = [
+        exercise.name
+        for plan in (options.plan_a, options.plan_b)
+        for exercise in plan.exercises
+    ]
+    assert not any("러닝" in name for name in names)
+    assert not any("스쿼트" in name for name in names)
+    assert names, "대안까지 사라져 빈 루틴이 되면 안 된다"
+    # 무엇이 반영됐는지 트레이너가 읽을 수 있다.
+    assert "무릎" in options.plan_b.rationale
+
+
+def test_rule_fallback_reads_recent_messages_when_the_profile_is_silent():
+    """건강 프로필이 비어 있어도 최근 대화의 통증 언급을 놓치지 않는다."""
+    analysis = _analysis().model_copy(
+        update={
+            "conditions": "",
+            "note": "",
+            "recent_messages": ["회원: 어제부터 허리가 아파요"],
+        }
+    )
+
+    options = trainer_routine_options_service.build_rule_options(
+        analysis, RoutineOptionsRequest(available_minutes=40, intensity_preference="high")
+    )
+
+    names = [exercise.name for exercise in options.plan_b.exercises]
+    assert not any("데드리프트" in name for name in names)
+    assert "허리" in options.plan_b.rationale
+
+
+def test_rule_fallback_does_not_raise_intensity_when_a_check_is_needed():
+    """운동으로 답할 수 없는 상태에서는 강도를 올리지 않고 확인을 권한다."""
+    analysis = _analysis().model_copy(
+        update={"conditions": "최근 가슴 통증 있었음", "note": ""}
+    )
+
+    options = trainer_routine_options_service.build_rule_options(
+        analysis, RoutineOptionsRequest(available_minutes=40, intensity_preference="high")
+    )
+
+    assert options.plan_b.intensity != "높음"
+    assert "전문가" in options.plan_b.rationale
+
+
+def test_rule_fallback_invents_nothing_when_the_profile_is_empty():
+    """비어 있는 프로필에서 의학적 결론이나 임의 주의사항을 만들지 않는다."""
+    analysis = _analysis().model_copy(
+        update={"conditions": "", "note": "", "recent_messages": []}
+    )
+
+    options = trainer_routine_options_service.build_rule_options(
+        analysis, RoutineOptionsRequest(available_minutes=40, intensity_preference="high")
+    )
+
+    assert "주의사항" not in options.plan_a.rationale
+    assert "전문가" not in options.plan_b.rationale
+    assert options.plan_a.exercises and options.plan_b.exercises
+
+
+def test_rule_fallback_drops_a_repeated_exercise_that_now_hurts():
+    """반복해 온 운동이라도 지금 아픈 부위에 부담이면 그대로 다시 내밀지 않는다."""
+    analysis = _analysis().model_copy(
+        update={
+            "conditions": "무릎 통증",
+            "note": "",
+            "frequent_exercises": ["인터벌 러닝", "코어 스트레칭"],
+        }
+    )
+
+    options = trainer_routine_options_service.build_rule_options(
+        analysis, RoutineOptionsRequest(available_minutes=40, intensity_preference="high")
+    )
+
+    names = [
+        exercise.name
+        for plan in (options.plan_a, options.plan_b)
+        for exercise in plan.exercises
+    ]
+    assert not any("러닝" in name for name in names)
+    assert any("스트레칭" in name for name in names)

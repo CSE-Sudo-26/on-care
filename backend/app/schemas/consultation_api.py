@@ -166,3 +166,11 @@ class TrainerConsultationOut(ConsultationOut):
     #: "누가 언제 처리했는지"를 그대로 보여 줘야 해 응답에 남긴다. 회원 응답에는
     #: 없는 필드다.
     decided_by: str | None = None
+
+
+class ConsultationAcceptOut(TrainerConsultationOut):
+    """승인으로 실제 만들어진 결과를 화면이 판별할 수 있게 한다."""
+
+    client_connected: bool = True
+    schedule_created: bool
+    schedule_id: str | None = None

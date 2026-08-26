@@ -325,13 +325,11 @@ void main() {
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
     await tester.tap(find.text(l.exSelectDate));
     await tester.pumpAndSettle();
-    final BuildContext pickerContext = tester.element(
-      find.byType(DatePickerDialog),
+    final Finder datePickerDialog = find.byKey(const Key('portraitDatePicker'));
+    expect(
+      tester.widget<Dialog>(datePickerDialog).backgroundColor,
+      Colors.white,
     );
-    final DatePickerThemeData pickerTheme = DatePickerTheme.of(pickerContext);
-    expect(pickerTheme.backgroundColor, Colors.white);
-    expect(pickerTheme.headerBackgroundColor, Colors.white);
-    expect(pickerTheme.surfaceTintColor, Colors.transparent);
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     dateMaterial = find

@@ -43,6 +43,7 @@ from app.schemas.exercise_api import (
 )
 from app.schemas.consultation_api import (
     ConsultationAccept,
+    ConsultationAcceptOut,
     ConsultationDecision,
     ConsultationStatusFilter,
     TrainerConsultationOut,
@@ -361,6 +362,12 @@ def _member_health_out(db: Session, member_id: str) -> MemberHealthProfileOut:
             "daily_carbs_g",
             "daily_protein_g",
             "daily_fat_g",
+            # 회원 앱 마이페이지가 쓰는 현행 운동 목표(#1139) — 트레이너도 같은
+            # 값을 읽고 저장한다(#1449).
+            "daily_burn_kcal",
+            "weekly_cardio_minutes",
+            "weekly_strength_sets",
+            "weekly_flexibility_minutes",
             "weekly_workout_goal",
             "weekly_exercise_minutes_goal",
             "weekly_burn_goal",
@@ -1459,6 +1466,7 @@ def trainer_register_schedule_program(
         member_id,
         date=payload.date,
         time=payload.time,
+        duration_minutes=payload.duration_minutes,
         client_name=payload.client_name,
         program=payload.program,
     )
@@ -2229,14 +2237,14 @@ def trainer_consultations_pending_count(
 
 @router.post(
     "/trainer/consultations/{consultation_id}/accept",
-    response_model=TrainerConsultationOut,
+    response_model=ConsultationAcceptOut,
 )
 def trainer_accept_consultation(
     consultation_id: str,
     payload: ConsultationAccept,
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
-) -> TrainerConsultationOut:
+) -> ConsultationAcceptOut:
     """상담을 승인하고 회원을 담당 고객으로 편입한다."""
     try:
         return consultation_service.accept(
