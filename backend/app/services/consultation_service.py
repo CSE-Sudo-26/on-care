@@ -20,6 +20,7 @@ from app.models.models import (
     User,
 )
 from app.schemas.consultation_api import (
+    ConsultationAcceptOut,
     ConsultationCreate,
     ConsultationOut,
     ConsultationStatusFilter,
@@ -547,7 +548,7 @@ def accept(
     schedule_time: str | None = None,
     schedule_type: str | None = None,
     duration_minutes: int | None = None,
-) -> TrainerConsultationOut:
+) -> ConsultationAcceptOut:
     """상담을 승인하고 담당 링크를 만든다.
 
     `pending` 에서만 진행한다. 회원에게 이미 다른 트레이너의 활성 담당이 있으면
@@ -604,10 +605,12 @@ def accept(
     # request schema).  Keep this in the same transaction as the decision:
     # a request must never disappear from the inbox without its promised
     # calendar entry being created.
+    schedule_id: str | None = None
     if schedule_date is not None:
+        schedule_id = f"sched-{uuid.uuid4().hex[:12]}"
         db.add(
             TrainerSchedule(
-                id=f"sched-{uuid.uuid4().hex[:12]}",
+                id=schedule_id,
                 trainer_id=trainer_id,
                 member_id=row.member_id,
                 date=schedule_date.isoformat(),
@@ -638,7 +641,13 @@ def accept(
     )
     _commit_decision(db)
     db.refresh(row)
-    return _to_trainer_out(db, [row])[0]
+    consultation = _to_trainer_out(db, [row])[0]
+    return ConsultationAcceptOut(
+        **consultation.model_dump(),
+        client_connected=True,
+        schedule_created=schedule_id is not None,
+        schedule_id=schedule_id,
+    )
 
 
 def reject(

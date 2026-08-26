@@ -43,6 +43,7 @@ from app.schemas.exercise_api import (
 )
 from app.schemas.consultation_api import (
     ConsultationAccept,
+    ConsultationAcceptOut,
     ConsultationDecision,
     ConsultationStatusFilter,
     TrainerConsultationOut,
@@ -2236,14 +2237,14 @@ def trainer_consultations_pending_count(
 
 @router.post(
     "/trainer/consultations/{consultation_id}/accept",
-    response_model=TrainerConsultationOut,
+    response_model=ConsultationAcceptOut,
 )
 def trainer_accept_consultation(
     consultation_id: str,
     payload: ConsultationAccept,
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
-) -> TrainerConsultationOut:
+) -> ConsultationAcceptOut:
     """상담을 승인하고 회원을 담당 고객으로 편입한다."""
     try:
         return consultation_service.accept(

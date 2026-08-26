@@ -47,7 +47,7 @@ void main() {
   testWidgets('패널 머리글이 날짜 행과 한 줄에 선다', (tester) async {
     await openSchedule(tester, const Size(1440, 1200));
 
-    final Rect title = tester.getRect(find.text('상세 스케줄'));
+    final Rect title = tester.getRect(find.text('상세 일정'));
     final Rect dateRow = tester.getRect(find.byIcon(Icons.chevron_left));
 
     // 같은 `Row` 에 있으므로 세로로 겹친다 — 어느 한쪽 높이를 상수로 베끼면
@@ -60,7 +60,7 @@ void main() {
     await openSchedule(tester, const Size(1440, 1200));
 
     // `스케줄` 은 페이지 제목이라, 그 자리가 무엇인지 말하지 못했다.
-    expect(find.text('상세 스케줄'), findsOneWidget);
+    expect(find.text('상세 일정'), findsOneWidget);
   });
 
   testWidgets('좁은 화면에서는 패널이 아래로 쌓이고 제목을 함께 지닌다', (tester) async {
@@ -70,6 +70,6 @@ void main() {
     final Rect panel = tester.getRect(find.byKey(const Key('week-detail')));
 
     expect(panel.top, greaterThan(grid.bottom - 1));
-    expect(find.text('상세 스케줄'), findsOneWidget);
+    expect(find.text('상세 일정'), findsOneWidget);
   });
 }

@@ -1066,7 +1066,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String consultApproved(String name) {
-    return '$name is now one of your clients';
+    return '$name\'s request was approved. Add a session from the Schedule tab.';
+  }
+
+  @override
+  String consultScheduleCreated(String name) {
+    return 'Added a consultation session for $name';
   }
 
   @override
@@ -1648,6 +1653,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldStartDate => 'Start date';
 
   @override
+  String get schedFieldDateRange => 'Start - end date';
+
+  @override
   String get schedFieldTime => 'Time';
 
   @override
@@ -1701,26 +1709,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedRepeatDays => 'Repeat on';
 
   @override
-  String get schedRepeatEndByCount => 'After';
-
-  @override
-  String get schedRepeatEndByDate => 'On date';
-
-  @override
-  String schedRepeatCount(int count) {
-    return '$count times';
-  }
-
-  @override
-  String get schedRepeatCountUnit => 'times';
-
-  @override
   String schedRepeatPreview(int count, String first, String last) {
     return '$count sessions · $first – $last';
   }
 
   @override
   String get schedRepeatNeedsDays => 'Pick at least one weekday.';
+
+  @override
+  String get schedRepeatNeedsEndDate => 'Pick an end date for the repeat.';
 
   @override
   String schedRepeatConflictTitle(int total, int count) {

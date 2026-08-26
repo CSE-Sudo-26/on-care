@@ -492,8 +492,16 @@
   "consultEmptyHistory": "No consultation history",
   "consultEmptyHint": "Requests appear here when a member asks for a consultation with your gym or with you",
   "consultActionFailed": "Couldn't process the request",
-  "consultApproved": "{name} is now one of your clients",
+  "consultApproved": "{name}'s request was approved. Add a session from the Schedule tab.",
   "@consultApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "consultScheduleCreated": "Added a consultation session for {name}",
+  "@consultScheduleCreated": {
     "placeholders": {
       "name": {
         "type": "String"
@@ -852,6 +860,7 @@
   "schedFieldType": "Type",
   "schedFieldDate": "Date",
   "schedFieldStartDate": "Start date",
+  "schedFieldDateRange": "Start - end date",
   "schedFieldTime": "Time",
   "schedHourSuffix": "hr",
   "schedMinuteSuffix": "min",
@@ -869,14 +878,10 @@
   "schedRepeat": "Repeat",
   "schedRepeatWeekly": "Weekly",
   "schedRepeatDays": "Repeat on",
-  "schedRepeatEndByCount": "After",
-  "schedRepeatEndByDate": "On date",
-  "schedRepeatCount": "{count} times",
-  "@schedRepeatCount": {"placeholders": {"count": {"type": "int"}}},
-  "schedRepeatCountUnit": "times",
   "schedRepeatPreview": "{count} sessions · {first} – {last}",
   "@schedRepeatPreview": {"placeholders": {"count": {"type": "int"}, "first": {"type": "String"}, "last": {"type": "String"}}},
   "schedRepeatNeedsDays": "Pick at least one weekday.",
+  "schedRepeatNeedsEndDate": "Pick an end date for the repeat.",
   "schedRepeatConflictTitle": "{count} of {total} sessions clash",
   "@schedRepeatConflictTitle": {"placeholders": {"total": {"type": "int"}, "count": {"type": "int"}}},
   "schedRepeatConflictRow": "{date} {time} · already booked: {name}",
