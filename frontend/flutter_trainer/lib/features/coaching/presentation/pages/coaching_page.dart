@@ -898,9 +898,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   ///
   /// 웹에서는 줄 안의 글이 브라우저 기본 글꼴로 몇 px 넘쳐 줄무늬가 뜬 적이
   /// 있다(#958) — 테스트 글꼴보다 줄 높이가 살짝 크다. 그만큼 여유를 둔다.
-  static const double _baseRowHeight = 64;
-  static const int _visibleRows = 5;
-
   final ScrollController _scroll = ScrollController();
 
   @override
@@ -926,7 +923,7 @@ class _MemberProgramListState extends State<_MemberProgramList> {
 
   void _revealSelected() {
     if (!_scroll.hasClients) return;
-    final rowHeight = _rowHeight(context);
+    final rowHeight = clientListRowHeight(context);
     final index = widget.clients.indexWhere(
       (client) => client.id == widget.selectedId,
     );
@@ -947,7 +944,7 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final rowHeight = _rowHeight(context);
+    final rowHeight = clientListRowHeight(context);
     return SectionCard(
       // 리포트 탭 좌측 고객 카드와 같은 제목·아이콘을 쓴다 — 두 탭이 같은
       // `왼쪽 고객 열 + 오른쪽 작업 영역` 구조라, 카드가 서로 다른 이름을
@@ -956,10 +953,10 @@ class _MemberProgramListState extends State<_MemberProgramList> {
       icon: Icons.people_outline,
       dense: true,
       child: SizedBox(
-        height: rowHeight * _visibleRows,
+        height: rowHeight * clientListVisibleRows,
         child: Scrollbar(
           controller: _scroll,
-          thumbVisibility: widget.clients.length > _visibleRows,
+          thumbVisibility: widget.clients.length > clientListVisibleRows,
           child: ListView.builder(
             key: const ValueKey<String>('program-client-list-scroll'),
             controller: _scroll,
@@ -983,7 +980,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           // 아바타 크기는 리포트 탭 고객 목록과 같은
                           // 기준을 쓴다(#1423).
@@ -994,6 +990,7 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 // 이름 타이포는 리포트 탭 고객 목록과 같은
@@ -1029,11 +1026,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
     );
   }
 
-  double _rowHeight(BuildContext context) {
-    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final extraScale = (scale - 1).clamp(0.0, 2.0);
-    return _baseRowHeight + 56 * extraScale;
-  }
 }
 
 /// 요일별 운동 이행률(월→일). (#899)
