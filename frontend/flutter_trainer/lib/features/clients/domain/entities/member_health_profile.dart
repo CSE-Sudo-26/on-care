@@ -9,6 +9,14 @@ class MemberHealthProfile {
     this.goals = '',
     this.dailyCalories,
     this.dailySodiumMg,
+    this.dailySugarG,
+    this.dailyCarbsG,
+    this.dailyProteinG,
+    this.dailyFatG,
+    this.dailyBurnKcal,
+    this.weeklyCardioMinutes,
+    this.weeklyStrengthSets,
+    this.weeklyFlexibilityMinutes,
     this.weeklyWorkoutGoal,
     this.weeklyExerciseMinutesGoal,
     this.weeklyBurnGoal,
@@ -23,6 +31,22 @@ class MemberHealthProfile {
   final String goals;
   final int? dailyCalories;
   final int? dailySodiumMg;
+
+  /// 회원 앱 마이페이지가 관리하는 일일 식단 목표. 트레이너 화면도 같은 값을
+  /// 읽고 저장한다 — 한쪽에서 고친 목표가 다른 쪽에서 옛 값으로 남지 않게
+  /// (#1449).
+  final int? dailySugarG;
+  final int? dailyCarbsG;
+  final int? dailyProteinG;
+  final int? dailyFatG;
+
+  /// 운동 탭이 실제로 견주는 목표(#1139). 아래 `weekly*Goal` 셋은 그 이전
+  /// 세대의 값이라 트레이너 편집 폼에서는 다루지 않는다.
+  final int? dailyBurnKcal;
+  final int? weeklyCardioMinutes;
+  final int? weeklyStrengthSets;
+  final int? weeklyFlexibilityMinutes;
+
   final int? weeklyWorkoutGoal;
   final int? weeklyExerciseMinutesGoal;
   final int? weeklyBurnGoal;
@@ -38,6 +62,15 @@ class MemberHealthProfile {
         goals: json['goals'] as String? ?? '',
         dailyCalories: (json['daily_calories'] as num?)?.toInt(),
         dailySodiumMg: (json['daily_sodium_mg'] as num?)?.toInt(),
+        dailySugarG: (json['daily_sugar_g'] as num?)?.toInt(),
+        dailyCarbsG: (json['daily_carbs_g'] as num?)?.toInt(),
+        dailyProteinG: (json['daily_protein_g'] as num?)?.toInt(),
+        dailyFatG: (json['daily_fat_g'] as num?)?.toInt(),
+        dailyBurnKcal: (json['daily_burn_kcal'] as num?)?.toInt(),
+        weeklyCardioMinutes: (json['weekly_cardio_minutes'] as num?)?.toInt(),
+        weeklyStrengthSets: (json['weekly_strength_sets'] as num?)?.toInt(),
+        weeklyFlexibilityMinutes:
+            (json['weekly_flexibility_minutes'] as num?)?.toInt(),
         weeklyWorkoutGoal: (json['weekly_workout_goal'] as num?)?.toInt(),
         weeklyExerciseMinutesGoal:
             (json['weekly_exercise_minutes_goal'] as num?)?.toInt(),

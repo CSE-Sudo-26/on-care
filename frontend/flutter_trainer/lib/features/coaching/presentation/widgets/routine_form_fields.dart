@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -75,6 +76,7 @@ class RoutineMinutesField extends StatelessWidget {
     required this.onChanged,
     this.label,
     this.keyPrefix,
+    this.compact = false,
     super.key,
   });
 
@@ -87,9 +89,25 @@ class RoutineMinutesField extends StatelessWidget {
 
   final String? keyPrefix;
 
+  /// 스테퍼 박스 대신 라벨 없는 키보드 입력 칸으로 그린다. 근력의 세트·횟수·
+  /// 중량과 한 줄에 나란히 둘 때 쓴다 — 세 칸 모두 라벨을 얹으면 세로 폭이
+  /// 너무 길어진다. (#1489)
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    if (compact) {
+      return _CompactNumberField(
+        value: minutes.toDouble(),
+        min: 1,
+        max: 600,
+        placeholder:
+            '${label ?? l.routineFieldMinutes}(${l.routineUnitMinutes})',
+        keyPrefix: keyPrefix ?? 'routine-minutes',
+        onChanged: (double v) => onChanged(v.round()),
+      );
+    }
     return _LabeledStepper(
       label: label ?? l.routineFieldMinutes,
       value: minutes.toDouble(),
@@ -108,6 +126,7 @@ class RoutineSetsField extends StatelessWidget {
     required this.sets,
     required this.onChanged,
     this.keyPrefix,
+    this.compact = false,
     super.key,
   });
 
@@ -115,9 +134,22 @@ class RoutineSetsField extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final String? keyPrefix;
 
+  /// [RoutineMinutesField.compact] 참고.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    if (compact) {
+      return _CompactNumberField(
+        value: sets.toDouble(),
+        min: 1,
+        max: 99,
+        placeholder: '${l.routineFieldSets}(${l.routineUnitSets})',
+        keyPrefix: keyPrefix ?? 'routine-sets',
+        onChanged: (double v) => onChanged(v.round()),
+      );
+    }
     return _LabeledStepper(
       label: l.routineFieldSets,
       value: sets.toDouble(),
@@ -139,6 +171,7 @@ class RoutineRepsField extends StatelessWidget {
     required this.reps,
     required this.onChanged,
     this.keyPrefix,
+    this.compact = false,
     super.key,
   });
 
@@ -146,9 +179,22 @@ class RoutineRepsField extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final String? keyPrefix;
 
+  /// [RoutineMinutesField.compact] 참고.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    if (compact) {
+      return _CompactNumberField(
+        value: reps.toDouble(),
+        min: 1,
+        max: 999,
+        placeholder: '${l.routineFieldReps}(${l.routineUnitReps})',
+        keyPrefix: keyPrefix ?? 'routine-reps',
+        onChanged: (double v) => onChanged(v.round()),
+      );
+    }
     return _LabeledStepper(
       label: l.routineFieldReps,
       value: reps.toDouble(),
@@ -167,6 +213,7 @@ class RoutineWeightField extends StatelessWidget {
     required this.weight,
     required this.onChanged,
     this.keyPrefix,
+    this.compact = false,
     super.key,
   });
 
@@ -174,9 +221,23 @@ class RoutineWeightField extends StatelessWidget {
   final ValueChanged<double> onChanged;
   final String? keyPrefix;
 
+  /// [RoutineMinutesField.compact] 참고.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    if (compact) {
+      return _CompactNumberField(
+        value: weight,
+        min: 0,
+        max: 1000,
+        decimals: 1,
+        placeholder: '${l.routineFieldWeight}(${l.routineUnitKg})',
+        keyPrefix: keyPrefix ?? 'routine-weight',
+        onChanged: onChanged,
+      );
+    }
     return _LabeledStepper(
       label: l.routineFieldWeight,
       value: weight,
@@ -418,6 +479,141 @@ class _LabeledStepper extends StatelessWidget {
           onChanged: onChanged,
         ),
       ],
+    );
+  }
+}
+
+/// 숫자 한 칸 — 스테퍼 없이 키보드로 직접 입력한다. 라벨은 얹지 않고
+/// placeholder 로 대신한다. 근력의 세트·횟수·중량을 한 줄에 나란히 둘 때
+/// 쓴다 — 셋 다 라벨+스테퍼 박스를 쌓으면 세로 폭이 다른 필드보다 훨씬
+/// 길어진다. (#1489)
+class _CompactNumberField extends StatefulWidget {
+  const _CompactNumberField({
+    required this.value,
+    required this.onChanged,
+    required this.min,
+    required this.max,
+    required this.placeholder,
+    this.decimals = 0,
+    this.keyPrefix,
+  });
+
+  final double value;
+  final ValueChanged<double> onChanged;
+  final double min;
+  final double max;
+  final String placeholder;
+  final int decimals;
+  final String? keyPrefix;
+
+  @override
+  State<_CompactNumberField> createState() => _CompactNumberFieldState();
+}
+
+class _CompactNumberFieldState extends State<_CompactNumberField> {
+  late final TextEditingController _controller = TextEditingController(
+    text: _format(widget.value),
+  );
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _commit(_controller.text);
+    });
+  }
+
+  @override
+  void didUpdateWidget(_CompactNumberField old) {
+    super.didUpdateWidget(old);
+    // 밖에서 값이 바뀐 경우(유형 전환 등)만 필드를 다시 그린다 — 편집 중인
+    // 문자열을 덮어쓰면 커서가 튄다.
+    if (widget.value != old.value && !_focus.hasFocus) {
+      _controller.text = _format(widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  String _format(double v) => widget.decimals == 0
+      ? v.round().toString()
+      : v.toStringAsFixed(widget.decimals);
+
+  double _round(double v) => widget.decimals == 0
+      ? v.roundToDouble()
+      : double.parse(v.toStringAsFixed(widget.decimals));
+
+  double _clamp(double v) => v.clamp(widget.min, widget.max);
+
+  void _typed(String raw) {
+    final double? parsed = double.tryParse(raw.trim());
+    if (parsed != null) widget.onChanged(_round(_clamp(parsed)));
+  }
+
+  /// 비워 둔 칸이나 범위 밖 값을 되돌리고 글자를 다시 그린다.
+  void _commit(String raw) {
+    final double next = _round(
+      _clamp(double.tryParse(raw.trim()) ?? widget.value),
+    );
+    _controller.text = _format(next);
+    widget.onChanged(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      key: widget.keyPrefix == null
+          ? null
+          : ValueKey<String>('${widget.keyPrefix}-field'),
+      controller: _controller,
+      focusNode: _focus,
+      textAlign: TextAlign.center,
+      keyboardType: TextInputType.numberWithOptions(
+        decimal: widget.decimals > 0,
+      ),
+      inputFormatters: <TextInputFormatter>[
+        FilteringTextInputFormatter.allow(
+          widget.decimals > 0 ? RegExp(r'[0-9.]') : RegExp(r'[0-9]'),
+        ),
+      ],
+      onChanged: _typed,
+      onSubmitted: _commit,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: AppColors.foreground,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: widget.placeholder,
+        hintStyle: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.subtleForeground,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm + 2,
+        ),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(AppRadius.md),
+          borderSide: BorderSide(color: AppColors.borderStrong),
+        ),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(AppRadius.md),
+          borderSide: BorderSide(color: AppColors.borderStrong),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(AppRadius.md),
+          borderSide: BorderSide(color: AppColors.accent),
+        ),
+      ),
     );
   }
 }

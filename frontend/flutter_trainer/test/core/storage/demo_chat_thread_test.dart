@@ -43,6 +43,7 @@ const List<(ChatSender, String)> kDemoThread = <(ChatSender, String)>[
   (ChatSender.client, '찌개 먹을 때 국물을 많이 마셨나봐요 😅'),
   (ChatSender.trainer, '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?'),
   (ChatSender.client, '무릎이 가볍게 당기긴 했는데 괜찮아요'),
+  (ChatSender.trainer, '이번 주 리포트 등록해 뒀어요. 확인해 보세요'),
   (
     ChatSender.trainer,
     '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
@@ -67,6 +68,7 @@ final List<DateTime> kDemoCreatedAt = <DateTime>[
   DateTime(2026, 1, 3, 18, 13),
   DateTime(2026, 1, 3, 18, 14),
   DateTime(2026, 1, 3, 18, 16),
+  DateTime(2026, 1, 3, 18, 17),
   DateTime(2026, 1, 3, 18, 18),
 ];
 

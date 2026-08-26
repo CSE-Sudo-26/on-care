@@ -264,3 +264,47 @@ def test_profile_writes_require_auth(client):
     assert client.post("/v1/users/me/onboarding", json={}).status_code == 401
     assert client.put("/v1/users/me", json={"name": "x"}).status_code == 401
     assert client.delete("/v1/users/me").status_code == 401
+
+
+# ---- 건강 목표가 관리 초점·자유 입력 목표까지 다룬다 (#1471) ----
+
+
+def test_health_goals_saves_focus_and_free_text_goal(client):
+    """온보딩이 저장하던 두 값을 MY `건강 목표` 도 같은 열로 고친다."""
+    token, _ = _register_and_login(client)
+
+    saved = client.put(
+        "/v1/users/me/health-goals",
+        json={"conditions": "고혈압, 당뇨", "goals": "3개월 안에 5km 완주"},
+        headers=_auth(token),
+    )
+
+    assert saved.status_code == 200
+    assert saved.json()["conditions"] == "고혈압, 당뇨"
+    assert saved.json()["goals"] == "3개월 안에 5km 완주"
+
+    # 다시 읽어도 그대로다 — 온보딩과 MY 가 같은 값을 본다.
+    again = client.get("/v1/users/me/profile", headers=_auth(token))
+    assert again.json()["conditions"] == "고혈압, 당뇨"
+    assert again.json()["goals"] == "3개월 안에 5km 완주"
+
+
+def test_health_goals_does_not_wipe_focus_when_only_numbers_change(client):
+    """수치 목표만 보낸 저장이 관리 초점을 지우지 않는다."""
+    token, _ = _register_and_login(client)
+    client.put(
+        "/v1/users/me/health-goals",
+        json={"conditions": "당뇨", "goals": "주 3회 근력"},
+        headers=_auth(token),
+    )
+
+    client.put(
+        "/v1/users/me/health-goals",
+        json={"daily_calories": 2100},
+        headers=_auth(token),
+    )
+
+    view = client.get("/v1/users/me/profile", headers=_auth(token))
+    assert view.json()["conditions"] == "당뇨"
+    assert view.json()["goals"] == "주 3회 근력"
+    assert view.json()["daily_calories"] == 2100

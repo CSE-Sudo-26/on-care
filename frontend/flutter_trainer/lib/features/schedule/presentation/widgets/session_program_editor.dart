@@ -255,7 +255,7 @@ class _ProgramDraftFields extends StatelessWidget {
                 tooltip: l.progDeleteExercise,
                 onPressed: onRemove,
                 icon: const Icon(
-                  Icons.close,
+                  Icons.delete_outline,
                   size: 18,
                   color: AppColors.subtleForeground,
                 ),
@@ -278,38 +278,54 @@ class _ProgramDraftFields extends StatelessWidget {
             label: l.progExerciseName,
           ),
           const SizedBox(height: AppSpacing.sm),
-          // 근력은 세트·횟수·중량으로, 나머지는 시간으로 묻는다.
-          if (draft.isStrength) ...<Widget>[
-            RoutineSetsField(
-              keyPrefix: 'program-sets-$index',
-              sets: draft.sets,
-              onChanged: (int value) {
-                draft.sets = value;
-                onChanged();
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RoutineRepsField(
-              keyPrefix: 'program-reps-$index',
-              reps: draft.reps,
-              onChanged: (int value) {
-                draft.reps = value;
-                onChanged();
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RoutineWeightField(
-              keyPrefix: 'program-weight-$index',
-              weight: draft.weight,
-              onChanged: (double value) {
-                draft.weight = value;
-                onChanged();
-              },
-            ),
-          ] else
+          // 근력은 세트·횟수·중량을 한 줄에, 나머지는 시간 한 칸으로 묻는다.
+          // 라벨 대신 placeholder 를 쓰는 compact 입력이라 세 칸이 나란히
+          // 들어가도 세로 폭이 늘어나지 않는다. (#1489)
+          if (draft.isStrength)
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: RoutineSetsField(
+                    keyPrefix: 'program-sets-$index',
+                    sets: draft.sets,
+                    compact: true,
+                    onChanged: (int value) {
+                      draft.sets = value;
+                      onChanged();
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: RoutineRepsField(
+                    keyPrefix: 'program-reps-$index',
+                    reps: draft.reps,
+                    compact: true,
+                    onChanged: (int value) {
+                      draft.reps = value;
+                      onChanged();
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: RoutineWeightField(
+                    keyPrefix: 'program-weight-$index',
+                    weight: draft.weight,
+                    compact: true,
+                    onChanged: (double value) {
+                      draft.weight = value;
+                      onChanged();
+                    },
+                  ),
+                ),
+              ],
+            )
+          else
             RoutineMinutesField(
               keyPrefix: 'program-duration-$index',
               minutes: draft.minutes,
+              compact: true,
               onChanged: (int value) {
                 draft.minutes = value;
                 onChanged();
