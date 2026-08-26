@@ -110,9 +110,15 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// PT 스케줄에 등록할 날. 기본값은 오늘.
   DateTime _registerDate = _todayKst();
 
-  /// PT 스케줄에 등록할 시각. 기본값은 오전 10시 — 날짜 선택 박스 옆에서
-  /// 함께 고른다.
-  TimeOfDay _registerTime = const TimeOfDay(hour: 10, minute: 0);
+  /// PT 스케줄에 등록할 시작·종료 시각. 기존 기본 시작은 오전 10시,
+  /// 기본 종료는 한 시간 뒤이며 둘 다 사용자가 바꿀 수 있다.
+  TimeOfDay _registerStartTime = const TimeOfDay(hour: 10, minute: 0);
+  TimeOfDay _registerEndTime = const TimeOfDay(hour: 11, minute: 0);
+
+  int get _registerDurationMinutes =>
+      _registerEndTime.hour * 60 +
+      _registerEndTime.minute -
+      (_registerStartTime.hour * 60 + _registerStartTime.minute);
 
   /// A template save is in flight — blocks re-entry so one click is one
   /// template (#1028).
@@ -146,7 +152,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _registered = false;
       _registeredAttachedExisting = false;
       _registerDate = _todayKst();
-      _registerTime = const TimeOfDay(hour: 10, minute: 0);
+      _registerStartTime = const TimeOfDay(hour: 10, minute: 0);
+      _registerEndTime = const TimeOfDay(hour: 11, minute: 0);
       _appliedTemplate = null;
       _templateRevision = 0;
       _editorRevision = 0;
@@ -233,13 +240,22 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// (#1028). 초안은 편집기가 그 자리에서 쥐고 있던 값을 그대로 인자로
   /// 받는다 — 예전에는 "최종 검토" 화면이 스냅샷을 붙잡아 두는 역할을
   /// 했지만, 이제 그 화면이 없어 호출 시점의 값을 곧장 쓴다.
-  Future<void> _sendProgram(TrainerClient client, ProgramEditorState draft) async {
-    if (_sent || _sending || !draft.supportsAssignment) return;
+  Future<void> _sendProgram(
+    TrainerClient client,
+    ProgramEditorState draft,
+  ) async {
+    if (_sent ||
+        _sending ||
+        !draft.supportsAssignment ||
+        _registerDurationMinutes <= 0) {
+      return;
+    }
     final confirmed = await showProgramAssignConfirmDialog(
       context,
       clientName: client.name,
       registerDate: _registerDate,
-      registerTime: _registerTime,
+      registerStartTime: _registerStartTime,
+      registerEndTime: _registerEndTime,
     );
     if (confirmed != true || !mounted || !_isStillSelected(client.id)) return;
     final sentFor = client.id;
@@ -309,8 +325,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     final registeredFor = client.id;
     final date = ymd(_registerDate);
     final time =
-        '${_registerTime.hour.toString().padLeft(2, '0')}:'
-        '${_registerTime.minute.toString().padLeft(2, '0')}';
+        '${_registerStartTime.hour.toString().padLeft(2, '0')}:'
+        '${_registerStartTime.minute.toString().padLeft(2, '0')}';
     final l = AppLocalizations.of(context);
     setState(() => _registeringClientIds.add(registeredFor));
     bool attachedToExisting;
@@ -322,6 +338,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             clientId: client.id,
             clientName: client.name,
             time: time,
+            durationMinutes: _registerDurationMinutes,
             program: _draftProgram(draft),
           );
     } catch (_) {
@@ -804,9 +821,11 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   _registered = false;
                   _registeredAttachedExisting = false;
                 }),
-                registerTime: _registerTime,
-                onRegisterTimeChanged: (time) => setState(() {
-                  _registerTime = time;
+                registerStartTime: _registerStartTime,
+                registerEndTime: _registerEndTime,
+                onRegisterTimeRangeChanged: (range) => setState(() {
+                  _registerStartTime = range.start;
+                  _registerEndTime = range.end;
                   _registered = false;
                   _registeredAttachedExisting = false;
                 }),
@@ -863,9 +882,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 child: Column(
                   children: <Widget>[
                     Text(
-                      l.coachRegisteredOn(
-                        _dateChipLabel(l, _registerDate),
-                      ),
+                      l.coachRegisteredOn(_dateChipLabel(l, _registerDate)),
                       style: const TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
@@ -873,9 +890,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                       ),
                     ),
                     Text(
-                      l.coachFindInSchedule(
-                        _dateChipLabel(l, _registerDate),
-                      ),
+                      l.coachFindInSchedule(_dateChipLabel(l, _registerDate)),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 11.5,
@@ -1202,9 +1217,7 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
               // 키에 기간을 넣지 않는다. 넣으면 주 ↔ 달을 옮길 때마다 카드가
               // 새로 만들어져, 나트륨을 보다 기간만 넓힌 트레이너가 지표를
               // 다시 골라야 했다.
-              key: ValueKey<String>(
-                'program-diet-period-${widget.client.id}',
-              ),
+              key: ValueKey<String>('program-diet-period-${widget.client.id}'),
               clientId: widget.client.id,
               period: _period,
             )
@@ -1486,7 +1499,11 @@ class _TemplateCard extends ConsumerWidget {
       ref.invalidate(programTemplatesProvider);
     } on AppError {
       if (!context.mounted) return;
-      showAppToast(context, l.coachTemplateDeleteFailed, kind: AppToastKind.error);
+      showAppToast(
+        context,
+        l.coachTemplateDeleteFailed,
+        kind: AppToastKind.error,
+      );
     }
   }
 
@@ -1865,10 +1882,7 @@ class _SendHistoryTypeBadge extends StatelessWidget {
           key: ValueKey<String>('send-history-type-$label'),
           width: 40,
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 6,
-            vertical: 2,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: const BoxDecoration(
             color: AppColors.accentSurface,
             borderRadius: BorderRadius.all(AppRadius.pill),

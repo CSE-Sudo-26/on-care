@@ -99,6 +99,7 @@ class _SlowCountingScheduleRepository extends DriftScheduleRepository {
     required String clientId,
     required String clientName,
     required String time,
+    required int durationMinutes,
     required List<ProgramItem> program,
   }) async {
     registerCalls++;
@@ -109,6 +110,7 @@ class _SlowCountingScheduleRepository extends DriftScheduleRepository {
       clientId: clientId,
       clientName: clientName,
       time: time,
+      durationMinutes: durationMinutes,
       program: program,
     );
   }
@@ -121,6 +123,8 @@ class _CapturingScheduleRepository extends DriftScheduleRepository {
 
   int registerCalls = 0;
   String? clientId;
+  String? time;
+  int? durationMinutes;
   List<ProgramItem>? program;
 
   @override
@@ -129,10 +133,13 @@ class _CapturingScheduleRepository extends DriftScheduleRepository {
     required String clientId,
     required String clientName,
     required String time,
+    required int durationMinutes,
     required List<ProgramItem> program,
   }) async {
     registerCalls++;
     this.clientId = clientId;
+    this.time = time;
+    this.durationMinutes = durationMinutes;
     this.program = program;
     return true;
   }
@@ -439,9 +446,7 @@ Future<void> _applyRecommendedRoutine(WidgetTester tester) async {
   await tester.tap(complete);
   await tester.pumpAndSettle();
 
-  final apply = find.byKey(
-    const ValueKey<String>('apply-routine-to-template'),
-  );
+  final apply = find.byKey(const ValueKey<String>('apply-routine-to-template'));
   await tester.scrollUntilVisible(
     apply,
     150,
@@ -647,12 +652,19 @@ void main() {
       'registerToTodaySchedule attaches to an existing 예정 session',
       () async {
         final repo = DriftScheduleRepository(db);
-        // 박성호 has a seeded 15:00 예정 session.
+        final before = (await db.select(db.trainerScheduleEntries).get())
+            .singleWhere(
+              (row) =>
+                  row.clientName == '박성호' &&
+                  row.date == ymd(nowKst()) &&
+                  row.status == '예정',
+            );
         final attached = await repo.registerProgram(
           date: ymd(nowKst()),
           clientId: 'seed-client-3',
           clientName: '박성호',
           time: '10:00',
+          durationMinutes: 75,
           program: const <ProgramItem>[
             ProgramItem(name: '저강도 유산소', type: '유산소', duration: 30),
           ],
@@ -666,6 +678,8 @@ void main() {
             .toList();
         expect(his.length, 1); // no extra slot booked
         expect(his.single.programJson, contains('저강도 유산소'));
+        expect(his.single.time, before.time);
+        expect(his.single.durationMinutes, before.durationMinutes);
       },
     );
 
@@ -679,6 +693,7 @@ void main() {
           clientId: 'seed-client-1',
           clientName: '김민수',
           time: '10:00',
+          durationMinutes: 75,
           program: const <ProgramItem>[
             ProgramItem(name: '코어 강화', type: '스트레칭', duration: 10),
           ],
@@ -693,6 +708,8 @@ void main() {
         final booked = his.firstWhere((r) => r.status == '예정');
         expect(booked.programJson, contains('코어 강화'));
         expect(booked.id.startsWith('seed-'), isFalse);
+        expect(booked.time, '10:00');
+        expect(booked.durationMinutes, 75);
       },
     );
   });
@@ -750,7 +767,10 @@ void main() {
         // 이행률 막대·퍼센트는 이 목록에서 뺐다(#1029) — 이 목록은 회원을
         // 고르는 자리다.
         expect(
-          find.descendant(of: programCard, matching: find.byType(InlineBarValue)),
+          find.descendant(
+            of: programCard,
+            matching: find.byType(InlineBarValue),
+          ),
           findsNothing,
         );
         final avatar = tester.widget<ClientAvatar>(
@@ -889,9 +909,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('템플릿이 늘어나도 고객 목록은 자리·높이 그대로다 (레이아웃/스크롤 1차 수정)', (
-      tester,
-    ) async {
+    testWidgets('템플릿이 늘어나도 고객 목록은 자리·높이 그대로다 (레이아웃/스크롤 1차 수정)', (tester) async {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1600, 1200);
       addTearDown(tester.view.resetPhysicalSize);
@@ -931,9 +949,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('짧은 화면에서 템플릿이 많아도 오버플로우 없이 템플릿 영역만 스크롤한다', (
-      tester,
-    ) async {
+    testWidgets('짧은 화면에서 템플릿이 많아도 오버플로우 없이 템플릿 영역만 스크롤한다', (tester) async {
       // "화면 높이가 비교적 작은 경우" 케이스 — 폭은 3열이 뜨는 넓이를
       // 유지하고 높이만 줄인다.
       tester.view.devicePixelRatio = 1.0;
@@ -983,12 +999,12 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets(
-      '아주 짧은 화면에서는 고객 목록 하나만으로도 빠듯해 오버플로우 없이 열 전체가 스크롤로 물러난다',
-      (tester) async {
-        // 실제로 1600×550 에서 "BOTTOM OVERFLOWED BY 60 PIXELS" 가 났던
-        // 창 높이 — 고객 목록(5줄) 하나만으로도 이 열에 남는 여유가
-        // 거의 없어, 템플릿 카드를 `Expanded` 로 억지로 나누면 카드
+    testWidgets('아주 짧은 화면에서는 고객 목록 하나만으로도 빠듯해 오버플로우 없이 열 전체가 스크롤로 물러난다', (
+      tester,
+    ) async {
+      // 실제로 1600×550 에서 "BOTTOM OVERFLOWED BY 60 PIXELS" 가 났던
+      // 창 높이 — 고객 목록(5줄) 하나만으로도 이 열에 남는 여유가
+      // 거의 없어, 템플릿 카드를 `Expanded` 로 억지로 나누면 카드
         // 헤더 한 줄 그릴 자리도 없다.
         tester.view.devicePixelRatio = 1.0;
         tester.view.physicalSize = const Size(1600, 550);
@@ -1012,11 +1028,10 @@ void main() {
         );
         expect(
           find.byKey(const ValueKey<String>('program-template-sidebar')),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('client data buttons switch the diet summary to workout data', (
       tester,
@@ -1242,10 +1257,7 @@ void main() {
 
         // 클릭해야 나타나던 배너는 없다 — 흐름 자체가 항상 프로그램 정보
         // 박스 위에 있다.
-        expect(
-          find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'),
-          findsOneWidget,
-        );
+        expect(find.text('운동 목표와 최근 활동, 오늘의 식단 정보를 확인했어요'), findsOneWidget);
         expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
         // The persistent shell proves this lives inline in the tab, not a
         // dialog/page. Asserted on the sidebar's profile footer rather than
@@ -1257,9 +1269,7 @@ void main() {
       },
     );
 
-    testWidgets('AI 1·2·3단계에서 직접 만들기를 누르면 빈 편집기로 전환된다', (
-      tester,
-    ) async {
+    testWidgets('AI 1·2·3단계에서 직접 만들기를 누르면 빈 편집기로 전환된다', (tester) async {
       await openTab(tester);
 
       Future<void> expectBlankManualEditor() async {
@@ -1288,9 +1298,7 @@ void main() {
       }
 
       Future<void> returnToAi() async {
-        final back = find.byKey(
-          const ValueKey<String>('return-to-ai-flow'),
-        );
+        final back = find.byKey(const ValueKey<String>('return-to-ai-flow'));
         expect(
           find.descendant(of: back, matching: find.byIcon(Icons.chevron_left)),
           findsOneWidget,
@@ -1306,15 +1314,11 @@ void main() {
       expect(find.byType(ProgramEditorWorkspace), findsNothing);
       expect(
         tester
-            .getTopLeft(
-              find.byKey(const ValueKey<String>('ai-manual-create')),
-            )
+            .getTopLeft(find.byKey(const ValueKey<String>('ai-manual-create')))
             .dy,
         lessThan(
           tester
-              .getTopLeft(
-                find.byKey(const ValueKey<String>('routine-stage-0')),
-              )
+              .getTopLeft(find.byKey(const ValueKey<String>('routine-stage-0')))
               .dy,
         ),
       );
@@ -1357,12 +1361,12 @@ void main() {
       );
     });
 
-    testWidgets(
-      '템플릿에 반영을 눌러야 검토한 후보가 프로그램 정보에 반영된다 (#1028 후속)',
-      (tester) async {
-        await openTab(tester);
+    testWidgets('템플릿에 반영을 눌러야 검토한 후보가 프로그램 정보에 반영된다 (#1028 후속)', (
+      tester,
+    ) async {
+      await openTab(tester);
 
-        await tester.ensureVisible(
+      await tester.ensureVisible(
           find.byKey(const ValueKey<String>('generate-routine-options')),
         );
         await tester.pump();
@@ -1408,11 +1412,10 @@ void main() {
             of: find.byType(ProgramEditorWorkspace),
             matching: find.text('저강도 걷기'),
           ),
-          findsOneWidget,
-        );
-        expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
-      },
-    );
+        findsOneWidget,
+      );
+      expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
+    });
 
     testWidgets(
       'switching client updates the nutrition graph and suggestions',
@@ -1488,11 +1491,9 @@ void main() {
       expect(find.text('레그프레스 5세트'), findsNothing);
     });
 
-    testWidgets(
-      '다른 탭에 갔다 돌아와도 작성 중인 프로그램이 그대로 남는다 (#1028 후속)',
-      (tester) async {
-        await openTab(tester);
-        await _openManualProgram(tester);
+    testWidgets('다른 탭에 갔다 돌아와도 작성 중인 프로그램이 그대로 남는다 (#1028 후속)', (tester) async {
+      await openTab(tester);
+      await _openManualProgram(tester);
 
         // 안내 배너 없이도 편집기는 빈 상태로 시작한다 — 직접 운동을 하나
         // 추가해 "작성 중"인 상태를 만든다.
@@ -1528,11 +1529,10 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('탭 이동 테스트 운동'),
           150,
-          scrollable: find.byType(Scrollable).first,
-        );
-        expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
-      },
-    );
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('탭 이동 테스트 운동'), findsOneWidget);
+    });
 
     testWidgets('send reset also closes the add-exercise form', (tester) async {
       await openTab(tester);
@@ -1617,7 +1617,7 @@ void main() {
       // 오전 10시)은 적용되지 않는다. 그래서 성공 문구가 아니라 경고가
       // 뜬다.
       expect(
-        find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요'),
+        find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요'),
         findsOneWidget,
       );
       expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
@@ -1723,7 +1723,10 @@ void main() {
       final workspace = tester.widget<ProgramEditorWorkspace>(
         find.byType(ProgramEditorWorkspace),
       );
-      workspace.onRegisterTimeChanged(const TimeOfDay(hour: 14, minute: 30));
+      workspace.onRegisterTimeRangeChanged((
+        start: const TimeOfDay(hour: 14, minute: 30),
+        end: const TimeOfDay(hour: 15, minute: 45),
+      ));
       await tester.pump();
 
       // 날짜·시각 칩은 다이얼로그 없이 박스 하단에 바로 보인다 — 방금
@@ -1745,7 +1748,8 @@ void main() {
         find.descendant(
           of: timeButton,
           matching: find.text(
-            const TimeOfDay(hour: 14, minute: 30).format(tester.element(timeButton)),
+            '${const TimeOfDay(hour: 14, minute: 30).format(tester.element(timeButton))} – '
+            '${const TimeOfDay(hour: 15, minute: 45).format(tester.element(timeButton))}',
           ),
         ),
         findsOneWidget,
@@ -1773,6 +1777,10 @@ void main() {
         hasLength(1),
         reason: '고른 시각 그대로 한 건만 등록된다',
       );
+      expect(
+        rows.singleWhere((row) => row.time == '14:30').durationMinutes,
+        75,
+      );
 
       await tester.pump(const Duration(seconds: 3));
     });
@@ -1796,9 +1804,7 @@ void main() {
         ),
         findsNothing,
       );
-      final send = find.byKey(
-        const ValueKey<String>('program-editor-send'),
-      );
+      final send = find.byKey(const ValueKey<String>('program-editor-send'));
       await tester.scrollUntilVisible(
         send,
         150,
@@ -2112,9 +2118,7 @@ void main() {
       expect(find.text('PT 스케줄에 등록'), findsNothing);
     });
 
-    testWidgets('보내기를 누르면 확인창이 뜨고, 취소하면 아무 일도 일어나지 않는다', (
-      tester,
-    ) async {
+    testWidgets('보내기를 누르면 확인창이 뜨고, 취소하면 아무 일도 일어나지 않는다', (tester) async {
       await openTab(tester);
 
       final send = await _ensureSendButtonReady(tester);
@@ -2122,6 +2126,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey<String>('program-assign-confirm')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('program-assign-confirm')),
+          matching: find.textContaining('오전 10:00 – 오전 11:00'),
+        ),
         findsOneWidget,
       );
 
@@ -2139,21 +2150,18 @@ void main() {
       expect(tester.widget<ActionButton>(send).onPressed, isNotNull);
     });
 
-    testWidgets(
-      'AI 요청 흐름과 AI 개인운동 제안은 클릭 없이 동시에 보인다 (#1028 후속)',
-      (tester) async {
-        await openTab(tester, size: const Size(1920, 1200));
-
-        // 둘 다 처음부터 트리에 있다 — 하나를 열기 위해 다른 하나가
-        // 자리를 비켜 주지 않는다.
-        expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
-        expect(find.byType(RoutineSuggestionReviewCard), findsOneWidget);
-      },
-    );
-
-    testWidgets('좁은 화면에서도 AI 개인운동 제안이 사라지지 않는다', (
+    testWidgets('AI 요청 흐름과 AI 개인운동 제안은 클릭 없이 동시에 보인다 (#1028 후속)', (
       tester,
     ) async {
+      await openTab(tester, size: const Size(1920, 1200));
+
+      // 둘 다 처음부터 트리에 있다 — 하나를 열기 위해 다른 하나가
+      // 자리를 비켜 주지 않는다.
+      expect(find.byType(AiRoutineOptionsFlow), findsOneWidget);
+      expect(find.byType(RoutineSuggestionReviewCard), findsOneWidget);
+    });
+
+    testWidgets('좁은 화면에서도 AI 개인운동 제안이 사라지지 않는다', (tester) async {
       await openTab(tester, size: const Size(800, 1600));
 
       expect(find.byType(RoutineSuggestionReviewCard), findsOneWidget);
@@ -2296,12 +2304,14 @@ void main() {
 
         expect(scheduleRepo.registerCalls, 1);
         expect(scheduleRepo.clientId, 'real-client-1');
+        expect(scheduleRepo.time, '10:00');
+        expect(scheduleRepo.durationMinutes, 60);
         expect(scheduleRepo.program, isNotEmpty);
         // `_CapturingScheduleRepository.registerProgram` 은 늘 `true`(기존
         // 세션에 붙었다)를 돌려준다 — 그래서 성공 문구가 아니라 경고가
         // 뜬다.
         expect(
-          find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요'),
+          find.text('오늘에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요'),
           findsOneWidget,
         );
       },

@@ -697,7 +697,7 @@
   "@coachTemplateAdded": {"placeholders": {"name": {"type": "String"}}},
   "coachClientNotified": "고객 앱에 알림이 전송됐어요",
   "coachRegisteredOn": "{date} 스케줄에 등록됨",
-  "coachRegisteredAttachedExisting": "{date}에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시각은 적용되지 않았어요",
+  "coachRegisteredAttachedExisting": "{date}에 이미 예정된 세션이 있어 그 세션에 프로그램만 추가됐어요 — 고른 시간 범위는 적용되지 않았어요",
   "@coachRegisteredAttachedExisting": {"placeholders": {"date": {"type": "String"}}},
   "coachRegisterOn": "{date} PT 스케줄에 등록",
   "coachRegisterAction": "PT 스케줄에 등록",

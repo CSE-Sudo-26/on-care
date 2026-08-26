@@ -34,6 +34,22 @@ List<Map<String, Object?>> programToJson(List<ProgramItem> program) {
   ];
 }
 
+/// Encodes the atomic program-registration request. The duration is derived
+/// from the trainer's selected start/end range before reaching this boundary.
+Map<String, Object?> scheduleProgramRegisterToJson({
+  required String date,
+  required String time,
+  required int durationMinutes,
+  required String clientName,
+  required List<ProgramItem> program,
+}) => <String, Object?>{
+  'date': date,
+  'time': time,
+  'duration_minutes': durationMinutes,
+  'client_name': clientName,
+  'program': programToJson(program),
+};
+
 /// 항목 하나의 계약 형태. 서버 `ProgramItem` 스키마와 1:1 이다 (#1276).
 Map<String, Object?> programItemToJson(ProgramItem item) => <String, Object?>{
   'name': item.name,
