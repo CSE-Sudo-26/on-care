@@ -104,6 +104,7 @@ class RoutineMinutesField extends StatelessWidget {
         max: 600,
         placeholder:
             '${label ?? l.routineFieldMinutes}(${l.routineUnitMinutes})',
+        suffix: l.routineUnitMinutes,
         keyPrefix: keyPrefix ?? 'routine-minutes',
         onChanged: (double v) => onChanged(v.round()),
       );
@@ -146,6 +147,7 @@ class RoutineSetsField extends StatelessWidget {
         min: 1,
         max: 99,
         placeholder: '${l.routineFieldSets}(${l.routineUnitSets})',
+        suffix: l.routineUnitSets,
         keyPrefix: keyPrefix ?? 'routine-sets',
         onChanged: (double v) => onChanged(v.round()),
       );
@@ -191,6 +193,7 @@ class RoutineRepsField extends StatelessWidget {
         min: 1,
         max: 999,
         placeholder: '${l.routineFieldReps}(${l.routineUnitReps})',
+        suffix: l.routineUnitReps,
         keyPrefix: keyPrefix ?? 'routine-reps',
         onChanged: (double v) => onChanged(v.round()),
       );
@@ -234,6 +237,7 @@ class RoutineWeightField extends StatelessWidget {
         max: 1000,
         decimals: 1,
         placeholder: '${l.routineFieldWeight}(${l.routineUnitKg})',
+        suffix: l.routineUnitKg,
         keyPrefix: keyPrefix ?? 'routine-weight',
         onChanged: onChanged,
       );
@@ -506,6 +510,7 @@ class _CompactNumberField extends StatefulWidget {
     required this.min,
     required this.max,
     required this.placeholder,
+    required this.suffix,
     this.decimals = 0,
     this.keyPrefix,
   });
@@ -515,6 +520,11 @@ class _CompactNumberField extends StatefulWidget {
   final double min;
   final double max;
   final String placeholder;
+
+  /// 값 오른쪽에 붙는 단위("세트"·"회"·"kg"·"분"). 칸이 항상 기본값으로
+  /// 채워져 있어 placeholder(빈 칸 문구)는 사실상 보이지 않는다 — 입력된
+  /// 숫자가 무엇을 재는 값인지는 이 단위로 구분한다. (#1489 후속)
+  final String suffix;
   final int decimals;
   final String? keyPrefix;
 
@@ -605,6 +615,12 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
         isDense: true,
         hintText: widget.placeholder,
         hintStyle: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.subtleForeground,
+        ),
+        suffixText: widget.suffix,
+        suffixStyle: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: AppColors.subtleForeground,
