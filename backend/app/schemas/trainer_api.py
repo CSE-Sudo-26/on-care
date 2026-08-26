@@ -149,6 +149,15 @@ class MemberHealthProfileOut(BaseModel):
     daily_carbs_g: int | None = None
     daily_protein_g: int | None = None
     daily_fat_g: int | None = None
+    #: 운동 탭이 실제로 견주는 목표 (#1139) — 회원 앱 마이페이지가 쓰는 값이다.
+    #: 트레이너 화면도 같은 필드를 읽고 저장해야 한 쪽에서 고친 목표가 다른
+    #: 쪽에서 옛 값으로 남지 않는다(#1449).
+    daily_burn_kcal: int | None = None
+    weekly_cardio_minutes: int | None = None
+    weekly_strength_sets: int | None = None
+    weekly_flexibility_minutes: int | None = None
+    #: 옛 주간 목표(횟수·시간·소모). 다른 화면이 아직 읽고 있어 응답에는
+    #: 남기지만, 트레이너 편집 폼은 위의 현행 목표만 다룬다(#1449).
     weekly_workout_goal: int | None = None
     weekly_exercise_minutes_goal: int | None = None
     weekly_burn_goal: int | None = None
@@ -166,6 +175,10 @@ class MemberHealthProfileUpdate(PartialUpdate):
     daily_carbs_g: int | None = Field(default=None, ge=0, le=2000)
     daily_protein_g: int | None = Field(default=None, ge=0, le=1000)
     daily_fat_g: int | None = Field(default=None, ge=0, le=1000)
+    daily_burn_kcal: int | None = Field(default=None, ge=0, le=20000)
+    weekly_cardio_minutes: int | None = Field(default=None, ge=0, le=10080)
+    weekly_strength_sets: int | None = Field(default=None, ge=0, le=1000)
+    weekly_flexibility_minutes: int | None = Field(default=None, ge=0, le=10080)
     weekly_workout_goal: int | None = Field(default=None, ge=0, le=21)
     weekly_exercise_minutes_goal: int | None = Field(default=None, ge=0, le=10080)
     weekly_burn_goal: int | None = Field(default=None, ge=0, le=100000)
@@ -180,6 +193,10 @@ class MemberHealthProfileUpdate(PartialUpdate):
             "daily_carbs_g",
             "daily_protein_g",
             "daily_fat_g",
+            "daily_burn_kcal",
+            "weekly_cardio_minutes",
+            "weekly_strength_sets",
+            "weekly_flexibility_minutes",
             "weekly_workout_goal",
             "weekly_exercise_minutes_goal",
             "weekly_burn_goal",
@@ -980,6 +997,7 @@ class ScheduleProgramRegisterRequest(BaseModel):
 
     date: str = Field(max_length=10)
     time: str = Field(max_length=10)
+    duration_minutes: int = Field(gt=0, le=600)
     client_name: str = Field(default="", max_length=100)
     program: list[ProgramItem] = Field(min_length=1, max_length=30)
 

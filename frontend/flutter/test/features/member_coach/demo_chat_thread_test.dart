@@ -40,6 +40,7 @@ const List<(CoachSender, String)> kDemoThread = <(CoachSender, String)>[
   (CoachSender.me, '찌개 먹을 때 국물을 많이 마셨나봐요 😅'),
   (CoachSender.trainer, '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?'),
   (CoachSender.me, '무릎이 가볍게 당기긴 했는데 괜찮아요'),
+  (CoachSender.trainer, '이번 주 리포트 등록해 뒀어요. 확인해 보세요'),
   (
     CoachSender.trainer,
     '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
@@ -64,6 +65,7 @@ final List<DateTime> kDemoCreatedAt = <DateTime>[
   DateTime(2026, 1, 3, 18, 13),
   DateTime(2026, 1, 3, 18, 14),
   DateTime(2026, 1, 3, 18, 16),
+  DateTime(2026, 1, 3, 18, 17),
   DateTime(2026, 1, 3, 18, 18),
 ];
 
@@ -99,10 +101,11 @@ void main() {
   });
 
   test('미읽음은 마지막으로 내가 보낸 뒤에 온 것만 센다', () async {
-    // 스레드 전체의 트레이너 메시지를 세면 배지가 8이 된다 — 이미 주고받은
-    // 대화까지 안 읽은 것으로 치는 셈이다.
+    // 스레드 전체의 트레이너 메시지를 세면 배지가 9가 된다 — 이미 주고받은
+    // 대화까지 안 읽은 것으로 치는 셈이다. 내가 마지막으로 보낸 뒤에 온 것은
+    // 리포트 등록 안내와 마무리 인사 둘뿐이다.
     final repo = MockMemberCoachRepository();
-    expect(await repo.unreadCount(), 1);
+    expect(await repo.unreadCount(), 2);
 
     await repo.markRead();
     expect(await repo.unreadCount(), 0);

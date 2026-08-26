@@ -13,6 +13,8 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 class _FailingAccountRepository extends MockAccountRepository {
   @override
   Future<UserProfile> updateHealthGoals({
+    String? conditions,
+    String? goals,
     GoalUpdate? dailyCalories,
     GoalUpdate? dailySodiumMg,
     GoalUpdate? dailySugarG,

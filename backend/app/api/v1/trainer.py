@@ -361,6 +361,12 @@ def _member_health_out(db: Session, member_id: str) -> MemberHealthProfileOut:
             "daily_carbs_g",
             "daily_protein_g",
             "daily_fat_g",
+            # 회원 앱 마이페이지가 쓰는 현행 운동 목표(#1139) — 트레이너도 같은
+            # 값을 읽고 저장한다(#1449).
+            "daily_burn_kcal",
+            "weekly_cardio_minutes",
+            "weekly_strength_sets",
+            "weekly_flexibility_minutes",
             "weekly_workout_goal",
             "weekly_exercise_minutes_goal",
             "weekly_burn_goal",
@@ -1459,6 +1465,7 @@ def trainer_register_schedule_program(
         member_id,
         date=payload.date,
         time=payload.time,
+        duration_minutes=payload.duration_minutes,
         client_name=payload.client_name,
         program=payload.program,
     )

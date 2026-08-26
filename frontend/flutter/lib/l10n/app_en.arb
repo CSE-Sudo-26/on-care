@@ -371,6 +371,10 @@
   "exExerciseDate": "Date",
   "exExerciseName": "Exercise Name",
   "exExerciseNameHint": "e.g. Squat, Treadmill",
+  "exExerciseNameHintCardio": "e.g. Treadmill, Indoor cycling",
+  "exExerciseNameHintStrength": "e.g. Squat, Bench press",
+  "exExerciseNameHintFlexibility": "e.g. Full-body stretch, Yoga",
+  "exExerciseNameHintOther": "e.g. Rehab exercise, Sports activity",
   "exExerciseReps": "Reps",
   "exExerciseWeight": "Weight",
   "exUnitMinutes": "min",
@@ -673,6 +677,18 @@
   "coachChatLoadFailed": "Couldn't load the conversation",
   "coachChatSendFailed": "Couldn't send your message. Please try again",
   "coachChatPdfOpenFailed": "Couldn't open the PDF. Please try again",
+  "coachChatReportRegistered": "Weekly report added",
+  "coachChatReportWeek": "{sm}/{sd} – {em}/{ed}",
+  "@coachChatReportWeek": {
+    "description": "Week the registered report covers, shown on the report card.",
+    "placeholders": {
+      "sm": {"type": "int"},
+      "sd": {"type": "int"},
+      "em": {"type": "int"},
+      "ed": {"type": "int"}
+    }
+  },
+  "coachChatReportOpenPdf": "Open PDF",
   "coachChatInputHint": "Message your trainer...",
   "coachChatDemoAnalyzed": "AI analyzed your diet and exercise data",
   "coachChatDemoReportSent": "A summary report was sent to {trainer}",
@@ -830,11 +846,11 @@
   "onboardBasicSubtitle": "Tell us a little about yourself so we can tailor your care.",
   "onboardHeightHint": "Height (cm)",
   "onboardWeightHint": "Weight (kg)",
-  "onboardHealthTitle": "Health conditions",
-  "onboardHealthSubtitle": "Select the chronic conditions you manage. (Choose any that apply)",
-  "onboardGoalTitle": "Health goals",
+  "onboardHealthTitle": "Health goals",
+  "onboardHealthSubtitle": "Pick what you want to focus on in your health care. (multiple allowed)",
+  "onboardGoalTitle": "Exercise goal",
   "onboardGoalSubtitle": "Tell us what you want to achieve. You can change this later.",
-  "onboardGoalHint": "Health and exercise goals",
+  "onboardGoalHint": "e.g. Finish a 5K within three months",
   "onboardOptionalTag": "(optional)",
   "onboardSkipStep": "Skip this step",
   "onboardBirthLabel": "Date of birth",
@@ -1053,11 +1069,17 @@
   "@myHealthGoalsTitle": {
     "description": "Title of the health goals sheet."
   },
+  "myGoalsFocusSection": "What you want to focus on",
+  "myGoalsFocusHint": "Pick what you want to focus on in your health care. (multiple allowed)",
+  "myGoalsFocusHypertension": "Blood pressure",
+  "myGoalsFocusDiabetes": "Blood sugar",
+  "myGoalsExerciseNote": "Exercise goal",
+  "myGoalsExerciseNoteHint": "e.g. Finish a 5K within three months",
   "myGoalsDietSection": "Diet goals",
   "@myGoalsDietSection": {
     "description": "Section label in the health goals sheet."
   },
-  "myGoalsExerciseSection": "Exercise goals",
+  "myGoalsExerciseSection": "Exercise targets",
   "myGoalBurnDaily": "Daily calories burned (kcal)",
   "myGoalCardioWeekly": "Weekly cardio (min)",
   "myGoalStrengthWeekly": "Weekly strength (sets)",
@@ -1233,7 +1255,7 @@
       }
     }
   },
-  "coachRoutineCompleteTitle": "Mark routine done",
+  "coachRoutineCompleteTitle": "Mark personal exercise done",
   "@coachRoutineCompleteTitle": {
     "description": "Title of the completion dialog."
   },
