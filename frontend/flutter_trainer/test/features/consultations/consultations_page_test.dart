@@ -110,13 +110,21 @@ class _FakeConsultationRepository implements ConsultationRepository {
   Stream<int> watchPendingCount() => Stream<int>.fromFuture(pendingCount());
 
   @override
-  Future<void> accept(String id, {ConsultationSchedule? schedule}) async {
+  Future<ConsultationAcceptResult> accept(
+    String id, {
+    ConsultationSchedule? schedule,
+  }) async {
     if (acceptConflict != null) throw acceptConflict!;
     accepted.add(id);
     acceptedSchedules.add(schedule);
     requests = requests
         .map((r) => r.id == id ? _request(id: id, status: 'accepted') : r)
         .toList();
+    return ConsultationAcceptResult(
+      clientConnected: true,
+      scheduleCreated: schedule != null,
+      scheduleId: schedule == null ? null : 'sched-test',
+    );
   }
 
   @override
@@ -232,6 +240,7 @@ void main() {
     expect(schedule?.time, '19:00');
     expect(schedule?.type, '상담');
     expect(schedule?.durationMinutes, 30);
+    expect(find.text('김민수님의 상담 일정을 등록했어요'), findsOneWidget);
   });
 
   testWidgets(
@@ -247,6 +256,10 @@ void main() {
 
       expect(repo.accepted, <String>['consult-1']);
       expect(repo.acceptedSchedules.single, isNull);
+      expect(
+        find.text('김민수님의 상담 요청을 승인했어요. 스케줄 탭에서 일정을 추가해 주세요.'),
+        findsOneWidget,
+      );
     },
   );
 

@@ -26,15 +26,18 @@ ClientDietPeriod _period(
   );
 }
 
-Widget _app(List<Override> overrides) => ProviderScope(
+Widget _app(
+  List<Override> overrides, {
+  ClientPeriod period = ClientPeriod.month,
+}) => ProviderScope(
   overrides: overrides,
-  child: const MaterialApp(
-    locale: Locale('ko'),
+  child: MaterialApp(
+    locale: const Locale('ko'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: SingleChildScrollView(
-        child: ClientDietPeriodCard(clientId: 'c1', period: ClientPeriod.month),
+        child: ClientDietPeriodCard(clientId: 'c1', period: period),
       ),
     ),
   ),
@@ -43,8 +46,9 @@ Widget _app(List<Override> overrides) => ProviderScope(
 void main() {
   Future<void> pump(
     WidgetTester tester,
-    ClientDietDay Function(DateTime) build,
-  ) async {
+    ClientDietDay Function(DateTime) build, {
+    ClientPeriod period = ClientPeriod.month,
+  }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(900, 1400);
     addTearDown(tester.view.reset);
@@ -54,10 +58,41 @@ void main() {
           (ref, key) async =>
               _period(key, dayAt: (DateTime d) => <ClientDietDay>[build(d)]),
         ),
-      ]),
+      ], period: period),
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('이번 주 탄단지 라벨은 같은 보조 회색을 사용한다 (#1479)', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      (DateTime d) => ClientDietDay(
+        date: d,
+        calories: 1560,
+        sodiumMg: 900,
+        carbsG: 200,
+        proteinG: 100,
+        fatG: 40,
+      ),
+      period: ClientPeriod.week,
+    );
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(ClientDietPeriodCard)),
+    );
+    for (final String label in <String>[
+      l.metricCarbs,
+      l.metricProtein,
+      l.metricFat,
+    ]) {
+      expect(
+        tester.widget<Text>(find.text(label).last).style!.color,
+        AppColors.mutedForeground,
+      );
+    }
+  });
 
   /// 첫 칸 구간들의 색과 그려진 높이.
   List<(Color, double)> segmentsOf(WidgetTester tester) => <(Color, double)>[

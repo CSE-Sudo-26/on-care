@@ -402,7 +402,11 @@ class _Body extends StatelessWidget {
                     ),
                     if (macros != null) ...<Widget>[
                       const SizedBox(width: AppSpacing.md),
-                      _MacroDetail(macros: macros, format: format),
+                      _MacroDetail(
+                        macros: macros,
+                        format: format,
+                        muted: weekly,
+                      ),
                     ],
                   ],
                 ),
@@ -518,18 +522,35 @@ class _Macros {
 }
 
 class _MacroDetail extends StatelessWidget {
-  const _MacroDetail({required this.macros, required this.format});
+  const _MacroDetail({
+    required this.macros,
+    required this.format,
+    required this.muted,
+  });
 
   final _Macros macros;
   final String Function(num) format;
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<(String, double, Color)> rows = <(String, double, Color)>[
-      (l.metricCarbs, macros.carbs, AppColors.macroCarbs),
-      (l.metricProtein, macros.protein, AppColors.macroProtein),
-      (l.metricFat, macros.fat, AppColors.macroFat),
+      (
+        l.metricCarbs,
+        macros.carbs,
+        muted ? AppColors.mutedForeground : AppColors.macroCarbs,
+      ),
+      (
+        l.metricProtein,
+        macros.protein,
+        muted ? AppColors.mutedForeground : AppColors.macroProtein,
+      ),
+      (
+        l.metricFat,
+        macros.fat,
+        muted ? AppColors.mutedForeground : AppColors.macroFat,
+      ),
     ];
     return Column(
       key: const ValueKey<String>('client-diet-period-macros'),

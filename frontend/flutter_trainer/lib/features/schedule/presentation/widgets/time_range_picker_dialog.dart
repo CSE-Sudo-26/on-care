@@ -530,7 +530,7 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
                         ],
                       ),
                     ),
-                    if (_step == 3 && endMinutes < startMinutes)
+                    if (_step == 3 && endMinutes <= startMinutes)
                       const Text(
                         '종료 시간이 시작 시간보다 빠릅니다',
                         key: ValueKey<String>('time-range-invalid-end'),

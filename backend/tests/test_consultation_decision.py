@@ -274,6 +274,9 @@ def test_accept_links_member_into_roster(client, db_session):
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["status"] == "accepted"
+    assert body["client_connected"] is True
+    assert body["schedule_created"] is False
+    assert body["schedule_id"] is None
     assert body["decided_by"] == trainer.id
     assert body["decided_at"]
 
@@ -314,6 +317,10 @@ def test_accept_with_schedule_books_consultation_atomically(client, db_session):
     )
 
     assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["client_connected"] is True
+    assert body["schedule_created"] is True
+    assert body["schedule_id"]
     session = db_session.query(TrainerSchedule).filter_by(
         trainer_id=trainer.id,
         member_id=member_id,
@@ -322,6 +329,7 @@ def test_accept_with_schedule_books_consultation_atomically(client, db_session):
     assert session.time == "19:30"
     assert session.type == "상담"
     assert session.status == "예정"
+    assert session.id == body["schedule_id"]
 
 
 def test_accept_rejects_conflicting_schedule(client, db_session):

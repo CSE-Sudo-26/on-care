@@ -260,7 +260,7 @@ void main() {
     expect(bottomSpacing, 34);
   });
 
-  testWidgets('diet add opens as a content-sized sheet without a bottom gap', (
+  testWidgets('diet add opens as a content-sized sheet with a bottom gap', (
     tester,
   ) async {
     await pumpApp(tester, locale: const Locale('ko'));
@@ -281,9 +281,11 @@ void main() {
     final logicalHeight =
         tester.view.physicalSize.height / tester.view.devicePixelRatio;
     expect(tester.getBottomRight(sheet).dy, logicalHeight);
+    // 마지막 카드가 화면 끝(홈 인디케이터)에 붙어 잘려 보이지 않도록
+    // 시트 자체가 아래 여백을 갖는다 — 시스템 인셋이 없는 기기에서도.
     expect(
       tester.getBottomRight(sheet).dy - tester.getBottomRight(options).dy,
-      0,
+      20,
     );
     expect(find.byKey(const Key('recordAddSheet')), findsNothing);
   });

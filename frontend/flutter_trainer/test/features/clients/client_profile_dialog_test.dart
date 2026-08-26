@@ -89,9 +89,21 @@ class _DelayedClientRepository extends DriftClientRepository {
 
   final profile = Completer<MemberHealthProfile>();
 
+  /// 마지막으로 저장을 시도한 payload — 서버로 나가는 필드 이름을 본다(#1449).
+  Map<String, Object?>? savedProfile;
+
   @override
   Future<MemberHealthProfile> fetchHealthProfile(String clientId) =>
       profile.future;
+
+  @override
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> patch,
+  ) async {
+    savedProfile = patch;
+    return profile.future;
+  }
 }
 
 /// Pumps the merged dialog on its own.
@@ -502,12 +514,88 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
 
-    await tester.enterText(find.widgetWithText(TextFormField, '횟수'), '3.5');
+    // 목표 칸은 회원 앱 마이페이지와 같은 필드다(#1449) — 주간 근력 세트에
+    // 소수를 넣으면 되돌려보낸다.
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('client-goal-strength')),
+      '3.5',
+    );
     await tester.tap(save);
     await tester.pump();
 
-    expect(find.text('0.0~14.0 범위로 입력해 주세요.'), findsOneWidget);
+    expect(find.text('0.0~1000.0 범위로 입력해 주세요.'), findsOneWidget);
     expect(find.text('고객 신체·목표 관리'), findsOneWidget);
+  });
+
+  testWidgets('회원 앱과 같은 목표 필드를 읽고 저장한다 (#1449)', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final clients = _DelayedClientRepository(db);
+
+    await _pumpDialog(
+      tester,
+      _FakeMemoRepository(),
+      clients: clients,
+      settle: false,
+    );
+    await tester.pump();
+    clients.profile.complete(
+      const MemberHealthProfile(
+        memberId: 'm1',
+        memberName: '회원',
+        dailyCalories: 2100,
+        dailySodiumMg: 1800,
+        dailySugarG: 45,
+        dailyCarbsG: 260,
+        dailyProteinG: 130,
+        dailyFatG: 55,
+        dailyBurnKcal: 320,
+        weeklyCardioMinutes: 150,
+        weeklyStrengthSets: 21,
+        weeklyFlexibilityMinutes: 60,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 서버가 준 목표가 그대로 열린다 — 식단 6, 운동 4.
+    for (final ({String key, String value}) field
+        in <({String key, String value})>[
+          (key: 'client-goal-calories', value: '2100'),
+          (key: 'client-goal-sodium', value: '1800'),
+          (key: 'client-goal-sugar', value: '45'),
+          (key: 'client-goal-carbs', value: '260'),
+          (key: 'client-goal-protein', value: '130'),
+          (key: 'client-goal-fat', value: '55'),
+          (key: 'client-goal-burn', value: '320'),
+          (key: 'client-goal-cardio', value: '150'),
+          (key: 'client-goal-strength', value: '21'),
+          (key: 'client-goal-flexibility', value: '60'),
+        ]) {
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(ValueKey<String>(field.key)))
+            .controller!
+            .text,
+        field.value,
+        reason: field.key,
+      );
+    }
+
+    // 회원 화면에 대응하지 않는 옛 주간 목표는 이 폼에 없다.
+    expect(find.text('횟수'), findsNothing);
+    expect(find.text('소모 kcal'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('client-goal-protein')),
+      '140',
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('client-profile-save')));
+    await tester.pumpAndSettle();
+
+    // 저장은 같은 서버 필드 이름으로 나간다.
+    expect(clients.savedProfile?['daily_protein_g'], 140);
+    expect(clients.savedProfile?['weekly_strength_sets'], 21);
+    expect(clients.savedProfile?['daily_burn_kcal'], 320);
   });
 
   testWidgets('저장된 성별이 없으면 로스터가 말하는 성별로 열린다 (#960)', (tester) async {
