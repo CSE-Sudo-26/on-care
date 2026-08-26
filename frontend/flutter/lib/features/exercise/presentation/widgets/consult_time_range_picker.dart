@@ -157,6 +157,11 @@ class _TimeRangePickerDialogState extends State<_TimeRangePickerDialog> {
                     IconButton(
                       tooltip: l.actionClose,
                       onPressed: () => Navigator.pop(context),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                      ),
                       icon: const Icon(Icons.close),
                     ),
                   ],
