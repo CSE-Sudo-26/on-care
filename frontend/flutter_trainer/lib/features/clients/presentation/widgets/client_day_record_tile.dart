@@ -67,13 +67,13 @@ class ClientDayRecordTile extends StatelessWidget {
     super.key,
     required this.date,
     required this.logged,
-    required this.summary,
     required this.details,
     required this.expanded,
     required this.onToggle,
     this.toggleable = true,
     this.emptyLabel,
     this.extra,
+    this.notes = const <String, String>{},
   });
 
   /// 이 줄이 말하는 날.
@@ -83,11 +83,15 @@ class ClientDayRecordTile extends StatelessWidget {
   /// 상세를 펼쳐 보이면 "쉰 날" 이 "0을 기록한 날" 로 읽힌다.
   final bool logged;
 
-  /// 접힌 줄 오른쪽에 적는 한 줄 요약.
-  final String summary;
-
   /// 펼쳤을 때 보여 줄 항목들. 이름표를 단 알약으로 늘어놓는다.
+  ///
+  /// 접힌 줄에는 요약을 적지 않는다(#1465) — 같은 수치를 접힌 줄과 펼친 줄이
+  /// 두 번 말해 토글이 무엇을 여는 장치인지 흐려졌다.
   final List<({String label, String value})> details;
+
+  /// 항목에 곁들이는 보조 문구. 칼로리 알약 옆의 탄·단·지처럼 **그 값의
+  /// 구성**을 적는 자리다 — 따로 선 항목이 아니라 한 알약 안에서 작고 옅게.
+  final Map<String, String> notes;
 
   /// 지금 펼쳐져 있는가.
   final bool expanded;
@@ -156,19 +160,17 @@ class ClientDayRecordTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  // 요약은 오른쪽 끝에 붙는다 — 숫자끼리 한 줄에 서야 날짜를
-                  // 훑으며 견줄 수 있다.
+                  // 접힌 줄에는 수치를 적지 않는다(#1465). 기록이 없는 날만
+                  // 그렇다고 말한다 — 그 줄은 펼칠 것이 없어 화살표도 없다.
                   Expanded(
                     child: Text(
-                      logged ? summary : (emptyLabel ?? ''),
+                      logged ? '' : (emptyLabel ?? ''),
                       textAlign: TextAlign.end,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13.5,
-                        fontWeight: logged ? FontWeight.w600 : FontWeight.w500,
-                        color: logged
-                            ? AppColors.mutedForeground
-                            : AppColors.disabledForeground,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.disabledForeground,
                       ),
                     ),
                   ),
@@ -213,7 +215,11 @@ class ClientDayRecordTile extends StatelessWidget {
                     runSpacing: AppSpacing.xs,
                     children: <Widget>[
                       for (final ({String label, String value}) row in details)
-                        _DetailPill(label: row.label, value: row.value),
+                        _DetailPill(
+                          label: row.label,
+                          value: row.value,
+                          note: notes[row.label],
+                        ),
                     ],
                   ),
                 ?extra,
@@ -230,10 +236,14 @@ class ClientDayRecordTile extends StatelessWidget {
 /// 두 열짜리 표를 쓰지 않는다. 항목 수가 날마다 다른데(탄단지가 없는 날,
 /// 유형이 하나뿐인 날) 표로 두면 빈 칸이 남아 화면이 성글어 보인다.
 class _DetailPill extends StatelessWidget {
-  const _DetailPill({required this.label, required this.value});
+  const _DetailPill({required this.label, required this.value, this.note});
 
   final String label;
   final String value;
+
+  /// 값의 구성을 덧붙이는 보조 문구(칼로리 옆의 탄·단·지). 작고 옅게 적어
+  /// 값보다 한 단계 아래로 읽힌다(#1465).
+  final String? note;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -261,6 +271,15 @@ class _DetailPill extends StatelessWidget {
               color: AppColors.foreground,
             ),
           ),
+          if (note case final String text)
+            TextSpan(
+              text: '  $text',
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.subtleForeground,
+              ),
+            ),
         ],
       ),
     ),

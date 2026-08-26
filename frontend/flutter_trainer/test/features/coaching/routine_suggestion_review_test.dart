@@ -183,50 +183,37 @@ void main() {
       find.byKey(ValueKey<String>('routine-suggestion-edit-${s.id}'));
 
   group('동작 버튼의 생김새와 자리 (#939)', () {
-    testWidgets('수정은 이름 줄 오른쪽 끝의 연필 아이콘 버튼이다', (tester) async {
+    testWidgets('수정·거절은 이름 줄 오른쪽 끝의 아이콘 버튼이다', (tester) async {
       await openProgramTab(tester);
 
-      // 판단이 아니라 보조 동작이다. 아래 줄에 같은 크기로 세워 두면
-      // `추천 안 함`·`추천` 과 함께 셋 중 하나를 고르는 것처럼 읽힌다.
+      // 판단이 아니라 보조 동작이다. 아래 줄에 세워 두면 `고객에게 추천` 과
+      // 함께 판단처럼 읽힌다.
       final IconButton edit = tester.widget<IconButton>(editButton(_shoulder));
       expect((edit.icon as Icon).icon, Icons.edit_outlined);
       expect(edit.color, AppColors.primary);
 
+      final IconButton dismiss = tester.widget<IconButton>(
+        dismissButton(_shoulder),
+      );
+      expect((dismiss.icon as Icon).icon, Icons.delete_outline);
+      expect(dismiss.color, AppColors.mutedForeground);
+
       // 손볼 대상(운동 이름·시간) 옆에 있다 — 아래 판단 줄이 아니다.
       final Rect editRect = tester.getRect(editButton(_shoulder));
+      final Rect dismissRect = tester.getRect(dismissButton(_shoulder));
       final Rect nameRect = tester.getRect(find.textContaining(_shoulder.name));
       final Rect approveRect = tester.getRect(approveButton(_shoulder));
       expect(editRect.left, greaterThan(nameRect.right));
+      expect(dismissRect.left, greaterThan(editRect.right));
       expect(editRect.center.dy, lessThan(approveRect.top));
+      expect(dismissRect.center.dy, lessThan(approveRect.top));
     });
 
-    testWidgets('추천 안 함도 다른 카드와 같은 테두리 버튼이다', (tester) async {
+    testWidgets('아래 줄에는 판단 하나만 남는다', (tester) async {
       await openProgramTab(tester);
 
-      // 다른 카드들과 같은 공용 버튼([ActionButton]) 이다 — 예전처럼 흐린
-      // 글자만 있는 `TextButton` 이면 카드 안의 설명 문구와 구별되지 않아,
-      // 누를 수 있는 것인지 알 수 없었다.
-      final dismiss = tester.widget<ActionButton>(dismissButton(_shoulder));
-      expect(dismiss.primary, isFalse, reason: '채워진 버튼이 아니라 테두리만 있는 보조 버튼이다');
-      expect(dismiss.tone, AppColors.subtleForeground);
-      // 카드 안만 본다. 프로그램 탭 전체를 뒤지면 다른 영역에 `TextButton`
-      // 하나만 생겨도, 이 카드의 거절 버튼이 멀쩡한데 테스트가 깨진다.
-      expect(
-        find.descendant(
-          of: find.byKey(
-            const ValueKey<String>('routine-suggestion-review-card'),
-          ),
-          matching: find.byType(TextButton),
-        ),
-        findsNothing,
-      );
-    });
-
-    testWidgets('아래 줄에는 판단 둘만 남는다', (tester) async {
-      await openProgramTab(tester);
-
-      // 카드 하나에 결정 둘 — 추천 안 함 · 고객에게 추천.
-      expect(find.text('추천 안 함'), findsNWidgets(2));
+      // 카드 하나에 결정 하나 — 고객에게 추천. 거절은 위의 휴지통으로 옮겼다.
+      expect(find.text('추천 안 함'), findsNothing);
       expect(find.text('고객에게 추천'), findsNWidgets(2));
       // `회원` 은 이 화면의 다른 문구(`고객 관리` 등)와 어긋난다.
       expect(find.text('회원에게 추천'), findsNothing);
@@ -242,7 +229,7 @@ void main() {
         isNull,
       );
       expect(
-        tester.widget<ActionButton>(dismissButton(_shoulder)).onPressed,
+        tester.widget<IconButton>(dismissButton(_shoulder)).onPressed,
         isNull,
       );
       expect(

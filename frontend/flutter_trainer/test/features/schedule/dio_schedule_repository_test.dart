@@ -388,9 +388,8 @@ void main() {
         clientId: 'm1',
         clientName: '김민수',
         time: '16:00',
-        program: const <ProgramItem>[
-          ProgramItem(name: '스쿼트', sets: 1),
-        ],
+        durationMinutes: 75,
+        program: const <ProgramItem>[ProgramItem(name: '스쿼트', sets: 1)],
       );
 
       expect(attached, isTrue);
@@ -405,9 +404,11 @@ void main() {
       expect(body.keys.toSet(), <String>{
         'date',
         'time',
+        'duration_minutes',
         'client_name',
         'program',
       });
+      expect(body['duration_minutes'], 75);
       expect(body['client_name'], '김민수');
       expect((body['program'] as List<Object?>).single, <String, Object?>{
         'name': '스쿼트',
@@ -445,6 +446,7 @@ void main() {
         clientId: 'm1',
         clientName: '김민수',
         time: '16:00',
+        durationMinutes: 45,
         program: const <ProgramItem>[
           ProgramItem(name: '플랭크', type: '스트레칭', duration: 10),
         ],
@@ -499,11 +501,7 @@ void main() {
         'status': '예정',
         'note': '',
         'program': <dynamic>[
-          <String, dynamic>{
-            'name': '스쿼트',
-            'sets': 3.0,
-            'weight': '60kg',
-          },
+          <String, dynamic>{'name': '스쿼트', 'sets': 3.0, 'weight': '60kg'},
         ],
       },
     ]);

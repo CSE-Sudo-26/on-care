@@ -158,6 +158,11 @@ class HealthGoalsUpdate(BaseModel):
     해당하지 않고, 적용하면 목표를 지울 방법이 사라진다.
     """
 
+    #: 주로 관리하고 싶은 항목(`고혈압, 당뇨`)과 자유 입력 운동 목표. 온보딩이
+    #: 저장하던 두 값을 MY `건강 목표` 화면도 같은 열로 읽고 고친다(#1471) —
+    #: 두 화면이 다른 열을 쓰면 온보딩에서 고른 값이 MY 에서 보이지 않는다.
+    conditions: Optional[str] = None
+    goals: Optional[str] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
     daily_sugar_g: Optional[int] = None

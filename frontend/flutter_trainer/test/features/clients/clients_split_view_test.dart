@@ -107,9 +107,11 @@ void main() {
       lessThan(tester.getTopLeft(firstCard).dy),
     );
     expect(tester.getTopRight(filter).dx, lessThan(tester.getTopLeft(sort).dx));
+    // 툴바는 오른쪽으로 모인다(#1464) — 왼쪽 끝은 더 이상 카드 왼쪽 선에
+    // 맞지 않고, 정렬 버튼이 그 줄의 오른쪽 끝에 선다.
     expect(
       tester.getTopLeft(filter).dx,
-      closeTo(tester.getTopLeft(firstCard).dx, 1),
+      greaterThan(tester.getTopLeft(firstCard).dx),
     );
     expect(tester.getSize(filter).height, lessThanOrEqualTo(40));
     expect(tester.getSize(sort).height, lessThanOrEqualTo(40));

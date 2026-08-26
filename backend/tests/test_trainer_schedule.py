@@ -7,10 +7,12 @@ from datetime import timedelta
 from threading import Barrier
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.core import clock
 from app.models.models import TrainerClient, TrainerSchedule
+from app.schemas.trainer_api import ScheduleProgramRegisterRequest
 
 
 def _tok(client) -> str:
@@ -47,11 +49,24 @@ def _program_command_body(day: str, exercise: str) -> dict:
     return {
         "date": day,
         "time": "16:00",
+        "duration_minutes": 75,
         "client_name": "이지수",
         "program": [
             {"name": exercise, "sets": 1, "reps": "20분", "weight": "-"}
         ],
     }
+
+
+def test_schedule_program_payload_requires_positive_duration():
+    body = _program_command_body("2026-08-26", "걷기")
+    payload = ScheduleProgramRegisterRequest.model_validate(body)
+    assert payload.time == "16:00"
+    assert payload.duration_minutes == 75
+
+    with pytest.raises(ValidationError):
+        ScheduleProgramRegisterRequest.model_validate(
+            {**body, "duration_minutes": 0}
+        )
 
 
 def _delete_program_test_sessions(db_session, day: str) -> None:
@@ -81,7 +96,11 @@ def test_schedule_program_command_reuses_the_created_session(client, db_session)
         )
         second = client.put(
             url,
-            json=_program_command_body(day, "플랭크"),
+            json={
+                **_program_command_body(day, "플랭크"),
+                "time": "18:30",
+                "duration_minutes": 30,
+            },
             headers=_h(token),
         )
 
@@ -91,6 +110,10 @@ def test_schedule_program_command_reuses_the_created_session(client, db_session)
         assert second.json()["attached_to_existing"] is True
         assert first.json()["session"]["id"] == second.json()["session"]["id"]
         assert second.json()["session"]["program"][0]["name"] == "플랭크"
+        assert first.json()["session"]["time"] == "16:00"
+        assert first.json()["session"]["duration_minutes"] == 75
+        assert second.json()["session"]["time"] == "16:00"
+        assert second.json()["session"]["duration_minutes"] == 75
 
         db_session.expire_all()
         rows = db_session.scalars(
@@ -102,6 +125,8 @@ def test_schedule_program_command_reuses_the_created_session(client, db_session)
             )
         ).all()
         assert len(rows) == 1
+        assert rows[0].time == "16:00"
+        assert rows[0].duration_minutes == 75
     finally:
         _delete_program_test_sessions(db_session, day)
 

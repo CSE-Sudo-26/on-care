@@ -212,6 +212,7 @@ class DioScheduleRepository implements ScheduleRepository {
     required String clientId,
     required String clientName,
     required String time,
+    required int durationMinutes,
     required List<ProgramItem> program,
   }) async {
     late bool attachedToExisting;
@@ -219,12 +220,13 @@ class DioScheduleRepository implements ScheduleRepository {
     await _mutate(() async {
       final response = await _dio.put<Map<String, dynamic>>(
         '/trainer/clients/$memberId/schedule-program',
-        data: <String, Object?>{
-          'date': date,
-          'time': time,
-          'client_name': clientName,
-          'program': programToJson(program),
-        },
+        data: scheduleProgramRegisterToJson(
+          date: date,
+          time: time,
+          durationMinutes: durationMinutes,
+          clientName: clientName,
+          program: program,
+        ),
       );
       final attached = response.data?['attached_to_existing'];
       if (attached is! bool) {

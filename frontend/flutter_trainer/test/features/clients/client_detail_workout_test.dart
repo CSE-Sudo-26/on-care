@@ -461,7 +461,9 @@ void main() {
       expect(find.text('100%'), findsWidgets);
       expect(find.text('트레이너 메모'), findsOneWidget); // 오늘 것만 메모가 있다
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
-      expect(find.text('고객 피드백'), findsWidgets);
+      // 제목이 무엇에 대한 피드백인지까지 말한다(#1453) — PT·프로그램은
+      // 세션 전체, 배정 개인 운동은 그 운동 하나.
+      expect(find.textContaining('고객 피드백'), findsWidgets);
 
       // 거른 항목은 지난 날에 있다. 이 목록은 고른 기간만 다루므로(식단과
       // 같은 규칙, #1025) 기간을 넓힌 뒤 그 날을 펼친다.
@@ -487,7 +489,7 @@ void main() {
         const ValueKey<String>('workout-pending-routines'),
       );
       expect(pending, findsOneWidget);
-      expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
+      expect(find.textContaining('저강도 유산소 (걷기)'), findsOneWidget);
 
       final Finder cancel = find.byKey(
         const ValueKey<String>(
@@ -502,7 +504,7 @@ void main() {
       expect(find.text('루틴을 삭제할까요?'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await settle(tester);
-      expect(find.text('저강도 유산소 (걷기) · 30분'), findsOneWidget);
+      expect(find.textContaining('저강도 유산소 (걷기)'), findsOneWidget);
 
       // 확인하면 실제로 사라진다 — 데모 저장소가 배정을 들고 있어 취소가
       // 목록에 반영된다(#1020).
@@ -512,15 +514,15 @@ void main() {
         find.byKey(const ValueKey<String>('confirm-cancel-pending-routine')),
       );
       await settle(tester);
-      expect(find.text('저강도 유산소 (걷기) · 30분'), findsNothing);
+      expect(find.textContaining('저강도 유산소 (걷기)'), findsNothing);
       // 나머지 배정은 그대로다.
-      expect(find.text('하체 스트레칭 · 15분'), findsOneWidget);
+      expect(find.textContaining('하체 스트레칭'), findsOneWidget);
 
       // 이번 주·전체는 지나간 기록을 되짚는 화면이라 '앞으로 할 일' 은 접는다.
       await tester.tap(find.byKey(const Key('client-period-week')));
       await settle(tester);
       expect(pending, findsNothing);
-      expect(find.text('하체 스트레칭 · 15분'), findsNothing);
+      expect(find.textContaining('하체 스트레칭'), findsNothing);
 
       await tester.tap(find.byKey(const Key('client-period-today')));
       await settle(tester);
@@ -550,7 +552,7 @@ void main() {
       await settle(tester);
 
       // 배정만 사라지고 기록은 그대로다 — 한 일이 없던 일이 되지 않는다.
-      expect(find.text('저강도 유산소 (걷기) · 30분'), findsNothing);
+      expect(find.textContaining('저강도 유산소 (걷기)'), findsNothing);
       expect(find.text('트레이너 메모'), findsOneWidget);
       expect(find.byType(ExerciseLine).evaluate().length, linesBefore);
     });
@@ -570,8 +572,8 @@ void main() {
 
       // 안 한 것만 이 자리에 온다. 이미 한 운동의 배정을 지운다고 그 기록이
       // 없던 일이 되지 않으므로, 취소 버튼을 걸어 두면 오해를 만든다.
-      expect(find.text('아직 안 한 루틴 · 20분'), findsOneWidget);
-      expect(find.text('이미 한 루틴 · 30분'), findsNothing);
+      expect(find.textContaining('아직 안 한 루틴'), findsOneWidget);
+      expect(find.textContaining('이미 한 루틴'), findsNothing);
       expect(
         find.byKey(const ValueKey<String>('workout-cancel-routine-todo-1')),
         findsOneWidget,

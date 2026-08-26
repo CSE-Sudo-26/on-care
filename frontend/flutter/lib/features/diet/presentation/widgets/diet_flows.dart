@@ -158,9 +158,15 @@ Widget _sheetHandle() => Container(
 
 // ─────────────────────────────────────────────────── 식단 추가하기 ──
 
+/// 고른 사진과 끼니. 사진 선택 시트가 닫히면서 부르는 쪽에 넘긴다.
+typedef DietPickedPhoto = ({MealPhoto photo, String mealType});
+
 /// Opens the short photo-source choice as a content-sized bottom sheet.
-Future<void> showDietAddSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+///
+/// **기록이 저장되면 true.** 하단 `+` 로 연 흐름이 저장 성공에만 식단 탭으로
+/// 옮겨 가려면, 취소·권한 거부·분석 실패와 저장 성공을 구분해야 한다(#1434).
+Future<bool> showDietAddSheet(BuildContext context) async {
+  final DietPickedPhoto? picked = await showModalBottomSheet<DietPickedPhoto>(
     context: context,
     // Keep the sheet above the main shell's floating buttons even when it is
     // opened from a tab page that has its own nested Navigator.
@@ -170,6 +176,11 @@ Future<void> showDietAddSheet(BuildContext context) {
     barrierColor: FigmaColors.sheetScrim,
     builder: (BuildContext ctx) => const _DietAddSheet(),
   );
+  if (picked == null) return false;
+  if (!context.mounted) return false;
+  // 결과 시트는 사진 선택 시트가 **닫힌 뒤** 열린다 — 두 시트가 겹치면 뒤엣
+  // 것이 스크림 위로 비친다.
+  return showDietResultSheet(context, picked.photo, picked.mealType);
 }
 
 /// Photo-source choice for 식단 추가.
@@ -218,8 +229,10 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
     _settle(null);
     if (photo == null) return; // user cancelled
 
-    navigator.pop();
-    await showDietResultSheet(navigator.context, photo, _currentMealType());
+    // 고른 사진을 부르는 쪽에 넘기고 닫힌다 — 결과 시트는 그쪽이 연다. 이
+    // 시트가 직접 열면 부르는 쪽 future 가 결과보다 먼저 끝나, 저장 성공을
+    // 알 방법이 없다(#1434).
+    navigator.pop((photo: photo, mealType: _currentMealType()));
   }
 
   void _settle(MealPhotoFailure? failure) {
@@ -281,10 +294,12 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Column(
               children: <Widget>[
+                // 두 갈래 모두 브랜드 파랑의 농담이다 — 촬영이 진한 쪽(주된
+                // 경로), 갤러리가 옅은 쪽이다.
                 _SourceOption(
                   icon: Icons.image_outlined,
-                  iconBg: FigmaColors.primaryA(0.12),
-                  iconColor: FigmaColors.primary,
+                  iconBg: FigmaColors.primaryA(0.10),
+                  iconColor: FigmaColors.primaryA(0.55),
                   title: l.dietPickPhoto,
                   subtitle: l.dietPickPhotoSub,
                   onTap: () => _pickAndAnalyze(MealPhotoSource.gallery),
@@ -292,8 +307,8 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
                 const SizedBox(height: 12),
                 _SourceOption(
                   icon: Icons.photo_camera_outlined,
-                  iconBg: FigmaColors.greenA(0.12),
-                  iconColor: FigmaColors.greenText,
+                  iconBg: FigmaColors.primaryA(0.12),
+                  iconColor: FigmaColors.primary,
                   title: l.dietTakePhoto,
                   subtitle: l.dietTakePhotoSub,
                   onTap: () => _pickAndAnalyze(MealPhotoSource.camera),
@@ -301,6 +316,9 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
               ],
             ),
           ),
+          // 마지막 카드가 화면 끝(홈 인디케이터)에 닿아 잘려 보이던 것을
+          // 띄운다 — 시스템 인셋이 없는 기기에서도 남는 여백이다.
+          const SizedBox(height: 20),
         ],
       ),
       key: const Key('dietAddSheet'),
@@ -523,12 +541,14 @@ class _SourceOption extends StatelessWidget {
 /// Runs the real `POST /diet/analyze` on the picked [photo] and shows the
 /// recognised foods + nutrition. The backend persists the entry as part of
 /// analysis, so a successful result refreshes [dietTodayProvider].
-Future<void> showDietResultSheet(
+/// 결과 시트. `완료` 까지 마치면 true — 저장된 기록을 확인할 준비가 됐다는
+/// 뜻이다(#1434).
+Future<bool> showDietResultSheet(
   BuildContext context,
   MealPhoto photo,
   String mealType,
-) {
-  return showModalBottomSheet<void>(
+) async {
+  final bool? done = await showModalBottomSheet<bool>(
     context: context,
     // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다. 식단 추가 시트와
     // 같은 규칙이다 — 그 시트가 이 시트를 열므로 둘이 같은 층에 있어야 한다(#791).
@@ -539,6 +559,7 @@ Future<void> showDietResultSheet(
     builder: (BuildContext ctx) =>
         _ResultSheet(photo: photo, mealType: mealType),
   );
+  return done ?? false;
 }
 
 class _ResultSheet extends ConsumerStatefulWidget {
@@ -1024,7 +1045,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(true);
               showAppToast(context, l.dietSaved, kind: AppToastKind.success);
             },
             style: FilledButton.styleFrom(

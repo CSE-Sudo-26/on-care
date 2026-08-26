@@ -391,6 +391,9 @@ class _MemberManagementToolbar extends StatelessWidget {
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
+        // 안내와 컨트롤을 오른쪽에 모은다(#1464). 좁아지면 `Wrap` 이 줄을
+        // 접어 겹치거나 잘리지 않는다.
+        alignment: WrapAlignment.end,
         children: <Widget>[
           _FilterMenuButton(
             filters: managementFilters,

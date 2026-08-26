@@ -678,6 +678,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memberHealthGoals => 'Member goals';
 
   @override
+  String get memberHealthDietGoal => 'Nutrition goals';
+
+  @override
+  String get memberHealthExerciseGoal => 'Exercise goals';
+
+  @override
+  String get memberHealthGoalCalories => 'Daily calories (kcal)';
+
+  @override
+  String get memberHealthGoalSodium => 'Daily sodium (mg)';
+
+  @override
+  String get memberHealthGoalSugar => 'Daily sugar (g)';
+
+  @override
+  String get memberHealthGoalCarbs => 'Daily carbs (g)';
+
+  @override
+  String get memberHealthGoalProtein => 'Daily protein (g)';
+
+  @override
+  String get memberHealthGoalFat => 'Daily fat (g)';
+
+  @override
+  String get memberHealthGoalBurnDaily => 'Daily burn (kcal)';
+
+  @override
+  String get memberHealthGoalCardioWeekly => 'Weekly cardio (min)';
+
+  @override
+  String get memberHealthGoalStrengthWeekly => 'Weekly strength (sets)';
+
+  @override
+  String get memberHealthGoalFlexibilityWeekly => 'Weekly stretching (min)';
+
+  @override
   String get memberHealthWeeklyGoal => 'Weekly exercise goal';
 
   @override
@@ -703,7 +739,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteIntroImmediate =>
-      'Find a client by member ID and register them right away. Gender, age, and exercise goal come from the demo member profile.';
+      'Find a client by member ID and register them right away.';
 
   @override
   String get clientInviteMemberIdLabel => 'Member ID';
@@ -769,9 +805,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteConfirmPrompt => 'Is this the right client?';
-
-  @override
-  String get clientInviteGoalLabel => 'Goal';
 
   @override
   String get coachTemplateNew => 'New template';
@@ -864,6 +897,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricSugar => 'Sugar';
 
   @override
+  String get clientDietMacrosMissing => 'No carbs/protein/fat recorded';
+
+  @override
   String get metricCarbs => 'Carbs';
 
   @override
@@ -898,9 +934,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
 
   @override
-  String chatReportSentNotice(Object range) {
-    return 'Sent the $range weekly report';
-  }
+  String get chatReportRegistered => 'Weekly report added';
+
+  @override
+  String get chatReportOpenInReports => 'Open in Reports';
 
   @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
@@ -1140,6 +1177,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientFeedback => 'Client feedback';
+
+  @override
+  String clientFeedbackOn(String name) {
+    return 'Client feedback on $name';
+  }
+
+  @override
+  String get clientFeedbackPersonal =>
+      'Client feedback on this personal exercise';
+
+  @override
+  String get clientFeedbackSession => 'Client feedback on this session';
+
+  @override
+  String get workoutKindAiPersonal => 'AI personal exercise';
 
   @override
   String get trainerNote => 'Trainer\'s note';
@@ -2180,7 +2232,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String coachRegisteredAttachedExisting(String date) {
-    return 'There was already a session planned on $date, so the program was only attached to it — the time you picked wasn\'t applied';
+    return 'There was already a session planned on $date, so the program was only attached to it — the time range you picked wasn\'t applied';
   }
 
   @override
