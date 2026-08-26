@@ -444,64 +444,56 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
               const SizedBox(height: AppSpacing.lg),
               // 고객·유형은 같은 층위의 선택이라 한 줄에 묶는다 — 세로로
               // 나란한 두 드롭다운이 각자 한 줄을 다 쓸 이유가 없다(#1090).
-              //
-              // 값 길이에 맞춰 폭을 잡는다(`IntrinsicWidth`) — 예전에는 둘 다
-              // `Expanded` 로 줄 절반씩을 강제로 채워, "김민수" 같은 짧은
-              // 값에도 상자가 크게 남았다.
+              // 날짜·시간 필드 쌍과 같이 절반씩 나눈다(`Expanded`) — 값
+              // 길이에 맞춘 `IntrinsicWidth` 는 좁은 값일 때 상자 폭이 너무
+              // 좁아 보였다.
               Row(
                 children: <Widget>[
-                  IntrinsicWidth(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 96),
-                      child: _pillField(
-                        label: l.schedFieldClient,
-                        // 등록된 고객이 아니면(상담 신청자 등) 고를 수 없게
-                        // 값만 보여준다 — 드롭다운은 실제로 옮길 수 있는
-                        // 고객 목록만 옵션으로 내놓는다(#1396).
-                        child: _clientLocked
-                            ? Text(_client, style: _fieldValueStyle)
-                            : DropdownButton<String>(
-                                value: _client,
-                                underline: const SizedBox.shrink(),
-                                items: <DropdownMenuItem<String>>[
-                                  for (final name in _clientOptions)
-                                    DropdownMenuItem<String>(
-                                      value: name,
-                                      child: Text(
-                                        name,
-                                        style: _fieldValueStyle,
-                                      ),
-                                    ),
-                                ],
-                                onChanged: (v) =>
-                                    setState(() => _client = v ?? _client),
-                              ),
-                      ),
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldClient,
+                      // 등록된 고객이 아니면(상담 신청자 등) 고를 수 없게
+                      // 값만 보여준다 — 드롭다운은 실제로 옮길 수 있는
+                      // 고객 목록만 옵션으로 내놓는다(#1396).
+                      child: _clientLocked
+                          ? Text(_client, style: _fieldValueStyle)
+                          : DropdownButton<String>(
+                              value: _client,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: <DropdownMenuItem<String>>[
+                                for (final name in _clientOptions)
+                                  DropdownMenuItem<String>(
+                                    value: name,
+                                    child: Text(name, style: _fieldValueStyle),
+                                  ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _client = v ?? _client),
+                            ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  IntrinsicWidth(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 96),
-                      child: _pillField(
-                        label: l.schedFieldType,
-                        child: DropdownButton<String>(
-                          value: _type,
-                          underline: const SizedBox.shrink(),
-                          items: <DropdownMenuItem<String>>[
-                            for (final t in _typeOptions)
-                              // 값은 계약값 그대로, 보이는 문구만 로케일에서
-                              // 가져온다.
-                              DropdownMenuItem<String>(
-                                value: t,
-                                child: Text(
-                                  sessionTypeLabel(l, t),
-                                  style: _fieldValueStyle,
-                                ),
+                  Expanded(
+                    child: _pillField(
+                      label: l.schedFieldType,
+                      child: DropdownButton<String>(
+                        value: _type,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: <DropdownMenuItem<String>>[
+                          for (final t in _typeOptions)
+                            // 값은 계약값 그대로, 보이는 문구만 로케일에서
+                            // 가져온다.
+                            DropdownMenuItem<String>(
+                              value: t,
+                              child: Text(
+                                sessionTypeLabel(l, t),
+                                style: _fieldValueStyle,
                               ),
-                          ],
-                          onChanged: (v) => setState(() => _type = v ?? _type),
-                        ),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _type = v ?? _type),
                       ),
                     ),
                   ),
@@ -713,21 +705,15 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
           children: <Widget>[
             Expanded(
               child: Text(
+                // 프로그램 등록 날짜 칩(`program-register-date`)과 같이
+                // 연도까지 보이는 `ymd` 표기로 맞춘다 — 월·일만 있으면 해가
+                // 바뀌는 반복(예: 12월 시작 다음 해 1월 종료)에서 헷갈린다.
                 repeating
                     ? l.schedTimeRange(
-                        l.dateMonthDay(_date.month, _date.day),
-                        _repeatUntil == null
-                            ? '-'
-                            : l.dateMonthDay(
-                                _repeatUntil!.month,
-                                _repeatUntil!.day,
-                              ),
+                        ymd(_date),
+                        _repeatUntil == null ? '-' : ymd(_repeatUntil!),
                       )
-                    : l.dateMonthDayWeekday(
-                        _date.month,
-                        _date.day,
-                        weekdayNames(l)[_date.weekday - 1],
-                      ),
+                    : ymd(_date),
                 overflow: TextOverflow.ellipsis,
                 style: _fieldValueStyle,
               ),

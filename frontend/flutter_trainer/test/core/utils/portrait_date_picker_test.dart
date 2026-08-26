@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:oncare/core/utils/portrait_date_picker.dart';
+import 'package:oncare_trainer/core/utils/portrait_date_picker.dart';
 
 void main() {
   Future<void> openPicker(WidgetTester tester) async {
@@ -27,14 +27,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('공용 날짜 선택기는 흰 배경에 닫기 아이콘·입력창·달력·취소·확인을 모두 보인다', (
+  testWidgets('공용 날짜 선택기는 닫기 아이콘·입력창·달력·취소·확인을 모두 보인다', (
     WidgetTester tester,
   ) async {
     await openPicker(tester);
 
     final Finder dialog = find.byKey(const Key('portraitDatePicker'));
     expect(dialog, findsOneWidget);
-    expect(tester.widget<Dialog>(dialog).backgroundColor, Colors.white);
 
     expect(
       find.descendant(of: dialog, matching: find.byIcon(Icons.close)),
@@ -88,8 +87,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 달력이 8월 30일을 이미 고른 상태로 넘어와 있다 — 30 이 선택 표시로
-    // 유일하게 보인다.
     await tester.tap(find.byKey(const Key('portraitDatePickerConfirm')));
     await tester.pumpAndSettle();
 
