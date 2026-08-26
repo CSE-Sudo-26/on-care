@@ -419,7 +419,8 @@
   "chatTooLong": "Message is too long (2000 characters max)",
   "chatSendFailed": "Couldn't send the message. Please try again",
   "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
-  "chatReportSentNotice": "Sent the {range} weekly report",
+  "chatReportRegistered": "Weekly report added",
+  "chatReportOpenInReports": "Open in Reports",
   "chatLoadFailed": "Couldn't load the conversation",
   "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
   "@chatDemoAnalyzed": {

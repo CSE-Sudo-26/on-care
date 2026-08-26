@@ -453,6 +453,18 @@
   "coachChatLoadFailed": "대화를 불러오지 못했어요",
   "coachChatSendFailed": "메시지 전송에 실패했어요. 다시 시도해 주세요",
   "coachChatPdfOpenFailed": "PDF를 열지 못했어요. 다시 시도해 주세요",
+  "coachChatReportRegistered": "리포트가 등록되었어요",
+  "coachChatReportWeek": "{sm}월 {sd}일 – {em}월 {ed}일",
+  "@coachChatReportWeek": {
+    "description": "Week the registered report covers, shown on the report card.",
+    "placeholders": {
+      "sm": {"type": "int"},
+      "sd": {"type": "int"},
+      "em": {"type": "int"},
+      "ed": {"type": "int"}
+    }
+  },
+  "coachChatReportOpenPdf": "PDF 열기",
   "coachChatInputHint": "트레이너에게 메시지 보내기...",
   "coachChatDemoAnalyzed": "AI가 내 식단·운동 데이터를 분석했어요",
   "coachChatDemoReportSent": "{trainer}님께 요약 리포트가 전송됐어요",
