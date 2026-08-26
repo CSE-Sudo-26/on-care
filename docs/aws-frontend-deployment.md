@@ -16,6 +16,18 @@ Flutter 회원 앱과 트레이너 웹을 하나의 private S3 버킷에 올리�
 
 AWS CloudShell에서 브랜치를 받은 뒤 템플릿을 먼저 검증합니다.
 
+템플릿은 기본적으로 GitHub의 immutable OIDC subject를 사용합니다. 저장소 설정값은 다음 명령으로
+확인합니다. 응답의 `sub_claim_prefix`에 표시된 owner ID와 repository ID가 템플릿 기본값과 다르면
+배포 시 `GitHubOwnerId`, `GitHubRepositoryId` 파라미터로 전달합니다.
+
+```bash
+gh api repos/CSE-Sudo-26/on-care/actions/oidc/customization/sub
+```
+
+2026년 7월 15일 이전에 생성되어 이름 기반 subject를 계속 사용하는 저장소에서는
+`UseImmutableGitHubOidcSubject=false`를 전달할 수 있습니다. 와일드카드로 권한 범위를 넓히지 않고,
+저장소와 `main` 브랜치가 포함된 정확한 subject를 유지합니다.
+
 ```bash
 git clone https://github.com/CSE-Sudo-26/on-care.git
 cd on-care
@@ -65,7 +77,10 @@ aws cloudformation deploy \
 >   --template-file infra/frontend-hosting.yml \
 >   --stack-name oncare-frontend \
 >   --capabilities CAPABILITY_IAM \
->   --parameter-overrides GitHubRepository=on-care \
+>   --parameter-overrides \
+>     GitHubRepository=on-care \
+>     GitHubOwnerId=265976266 \
+>     GitHubRepositoryId=1174354664 \
 >   --region ap-northeast-2
 > ```
 
