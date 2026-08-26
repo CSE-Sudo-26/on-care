@@ -58,6 +58,9 @@ void main() {
       environment: Environment.dev,
       apiBaseUrl: 'https://dev.api.test',
       useMockApi: true,
+      // 데모 진입은 기본 빌드에서 감춰 뒀다 — 이 테스트는 그 경로로 화면에
+      // 들어가므로 플래그를 켜고 편다. (#1526)
+      showDemoEntry: true,
     );
     // 식단 탭과 홈 요약이 같은 데이터를 본다 — 아래 두 override 가 공유한다.
     final FakeDietRepository diet = FakeDietRepository();

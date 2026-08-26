@@ -102,7 +102,8 @@ void main() {
       await tester.tap(find.text('로그아웃'));
       await settle(tester);
 
-      expect(find.text('로그인 없이 데모 둘러보기'), findsOneWidget);
+      // 로그인 화면으로 돌아왔다 — 표식은 가입 링크(데모 진입은 감춤, #1526).
+      expect(find.text('계정 만들기'), findsOneWidget);
     });
 
     testWidgets('edit mode saves changes with a confirmation flash', (
