@@ -988,28 +988,45 @@ class _SessionEditorState extends State<_SessionEditor> {
                     onSubmitted: (_) => widget.onConfirmAdd(),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (widget.exerciseType == '근력') ...<Widget>[
-                    RoutineSetsField(
-                      keyPrefix: 'custom-exercise-sets',
-                      sets: widget.exerciseSets,
-                      onChanged: widget.onExerciseSetsChanged,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineRepsField(
-                      keyPrefix: 'custom-exercise-reps',
-                      reps: widget.exerciseReps,
-                      onChanged: widget.onExerciseRepsChanged,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineWeightField(
-                      keyPrefix: 'custom-exercise-weight',
-                      weight: widget.exerciseWeight,
-                      onChanged: widget.onExerciseWeightChanged,
-                    ),
-                  ] else
+                  // 근력은 세트·횟수·중량을 한 줄에, 그 외 유형은 시간
+                  // 한 칸으로 잰다(#1029, #1310, #1489) — 스케줄 탭·AI
+                  // 루틴 2단계와 같은 compact 입력이다.
+                  if (widget.exerciseType == '근력')
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: RoutineSetsField(
+                            keyPrefix: 'custom-exercise-sets',
+                            sets: widget.exerciseSets,
+                            compact: true,
+                            onChanged: widget.onExerciseSetsChanged,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineRepsField(
+                            keyPrefix: 'custom-exercise-reps',
+                            reps: widget.exerciseReps,
+                            compact: true,
+                            onChanged: widget.onExerciseRepsChanged,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineWeightField(
+                            keyPrefix: 'custom-exercise-weight',
+                            weight: widget.exerciseWeight,
+                            compact: true,
+                            onChanged: widget.onExerciseWeightChanged,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
                     RoutineMinutesField(
                       keyPrefix: 'custom-exercise-duration',
                       minutes: widget.exerciseMinutes,
+                      compact: true,
                       onChanged: widget.onExerciseMinutesChanged,
                     ),
                   const SizedBox(height: AppSpacing.sm),
@@ -1306,31 +1323,48 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                         widget.onChanged(exercise.copyWith(type: value)),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (exercise.isStrength) ...<Widget>[
-                    RoutineSetsField(
-                      keyPrefix: '${exercise.id}-sets',
-                      sets: exercise.sets,
-                      onChanged: (value) =>
-                          widget.onChanged(exercise.copyWith(sets: value)),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineRepsField(
-                      keyPrefix: '${exercise.id}-reps',
-                      reps: exercise.reps,
-                      onChanged: (value) =>
-                          widget.onChanged(exercise.copyWith(reps: value)),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    RoutineWeightField(
-                      keyPrefix: '${exercise.id}-weight',
-                      weight: exercise.weight,
-                      onChanged: (value) =>
-                          widget.onChanged(exercise.copyWith(weight: value)),
-                    ),
-                  ] else
+                  if (exercise.isStrength)
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: RoutineSetsField(
+                            keyPrefix: '${exercise.id}-sets',
+                            sets: exercise.sets,
+                            compact: true,
+                            onChanged: (value) => widget.onChanged(
+                              exercise.copyWith(sets: value),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineRepsField(
+                            keyPrefix: '${exercise.id}-reps',
+                            reps: exercise.reps,
+                            compact: true,
+                            onChanged: (value) => widget.onChanged(
+                              exercise.copyWith(reps: value),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: RoutineWeightField(
+                            keyPrefix: '${exercise.id}-weight',
+                            weight: exercise.weight,
+                            compact: true,
+                            onChanged: (value) => widget.onChanged(
+                              exercise.copyWith(weight: value),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
                     RoutineMinutesField(
                       keyPrefix: '${exercise.id}-duration',
                       minutes: exercise.minutes,
+                      compact: true,
                       onChanged: (value) =>
                           widget.onChanged(exercise.copyWith(minutes: value)),
                     ),

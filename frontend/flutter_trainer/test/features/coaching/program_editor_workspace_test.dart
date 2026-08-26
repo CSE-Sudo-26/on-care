@@ -572,40 +572,23 @@ void main() {
       expect(added.weight, 20);
     });
 
-    testWidgets('−/+ 버튼은 값을 한 칸씩 옮긴다', (tester) async {
+    testWidgets('세트 칸은 스테퍼 없이 키보드로 직접 값을 고친다 (#1489)', (tester) async {
       await pumpEditor(tester);
       await openAddForm(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('custom-exercise-sets-plus')),
-      );
-      await tester.pump();
-      expect(
-        tester
-            .widget<TextField>(
-              find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
-            )
-            .controller!
-            .text,
-        '4',
-      );
+      // 근력 세트·횟수·중량은 compact 입력이라 −/+ 스테퍼 버튼이 없다 —
+      // 키보드로 직접 값을 바꾼다.
+      expect(find.byIcon(Icons.remove), findsNothing);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('custom-exercise-sets-minus')),
+      final setsField = find.byKey(
+        const ValueKey<String>('custom-exercise-sets-field'),
       );
+      await tester.enterText(setsField, '4');
       await tester.pump();
-      expect(
-        tester
-            .widget<TextField>(
-              find.byKey(const ValueKey<String>('custom-exercise-sets-field')),
-            )
-            .controller!
-            .text,
-        '3',
-      );
+      expect(tester.widget<TextField>(setsField).controller!.text, '4');
     });
 
-    testWidgets('운동 수정 모드도 같은 스테퍼로 값을 고친다', (tester) async {
+    testWidgets('운동 수정 모드도 같은 compact 입력으로 값을 고친다', (tester) async {
       await pumpEditor(tester);
       await mergeSuggestions(tester);
 
