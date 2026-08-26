@@ -2507,7 +2507,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientWeeklyRoutineAdherence.
   ///
   /// In en, this message translates to:
-  /// **'Weekly routine adherence'**
+  /// **'Weekly adherence'**
   String get clientWeeklyRoutineAdherence;
 
   /// No description provided for @clientRoutineAdherenceUnmeasured.

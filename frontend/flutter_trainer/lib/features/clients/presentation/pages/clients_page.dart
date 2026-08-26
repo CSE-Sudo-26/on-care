@@ -468,7 +468,9 @@ class _SelectedClientAdherence extends StatelessWidget {
       width: 220,
       child: InlineBarValue(
         label: l.clientWeeklyRoutineAdherence,
-        labelWidth: 96,
+        // "주간 이행률"(5자) 기준 — 이전 문구("주간 루틴 이행률")보다 짧아진
+        // 만큼 라벨 칸도 줄여 바 그래프와의 간격이 벌어지지 않게 한다.
+        labelWidth: 62,
         fraction: mean == null ? null : mean / 100,
         text: mean == null
             ? l.clientRoutineAdherenceUnmeasured
