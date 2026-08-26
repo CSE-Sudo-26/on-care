@@ -1045,7 +1045,6 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: <Widget>[
                           // 아바타 크기는 리포트 탭 고객 목록과 같은
                           // 기준을 쓴다(#1423).
