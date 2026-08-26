@@ -38,6 +38,25 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      # 배포는 릴리스마다 별도 prefix 를 쓰고 origin pointer 만 전환하므로 되돌리기의
+      # 1차 수단은 이전 prefix 다. 버전 관리는 그 위의 안전망 — 실수로 덮어쓰거나
+      # 지운 객체를 복구할 수 있게 한다.
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-noncurrent-versions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+          - Id: abort-incomplete-multipart-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+          # 지운 릴리스가 남긴 delete marker 까지 정리해 목록 조회가 느려지지 않게 한다.
+          - Id: expire-orphaned-delete-markers
+            Status: Enabled
+            ExpiredObjectDeleteMarker: true
 
   FrontendOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
@@ -199,6 +218,14 @@ Resources:
                   - cloudfront:CreateInvalidation
                   - cloudfront:GetDistribution
                   - cloudfront:GetInvalidation
+                Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}'
+              # 릴리스 전환은 distribution 의 OriginPath 를 바꾸는 것이 전부다.
+              # 검증 실패 시 되돌리는 것도 같은 권한을 쓴다.
+              - Sid: SwitchFrontendRelease
+                Effect: Allow
+                Action:
+                  - cloudfront:GetDistributionConfig
+                  - cloudfront:UpdateDistribution
                 Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}'
 
 Outputs:
