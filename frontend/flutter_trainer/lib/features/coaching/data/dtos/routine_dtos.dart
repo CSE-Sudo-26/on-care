@@ -48,6 +48,19 @@ String routineTypeLabel(AppLocalizations l, String type) => switch (type) {
   _ => type,
 };
 
+/// 운동 이름 입력칸의 유형별 예시. 회원 앱 운동 추가(#1460)와 같은 문구를
+/// 쓴다 — 두 앱이 서로 다른 예시를 보여주면 트레이너가 회원 기록과 다른
+/// 이름 관습을 쓰게 된다.
+String routineTypeNameHint(AppLocalizations l, String type) => switch (type) {
+  '유산소' => l.routineFieldExerciseNameHintCardio,
+  '근력' => l.routineFieldExerciseNameHintStrength,
+  '스트레칭' => l.routineFieldExerciseNameHintFlexibility,
+  '기타' => l.routineFieldExerciseNameHintOther,
+  '걷기' => l.routineFieldExerciseNameHintCardio,
+  '요가' || '유연성' => l.routineFieldExerciseNameHintFlexibility,
+  _ => l.routineFieldExerciseNameHint,
+};
+
 /// 저장된 강도 계약값 → 화면 문구.
 String routineIntensityLabel(AppLocalizations l, String intensity) =>
     switch (intensity) {

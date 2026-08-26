@@ -111,16 +111,16 @@ void main() {
     await pumpEditor(tester);
 
     // 예전 검토 화면 전용 버튼 키가 이 위젯 안에 남아 있으면, 편집기가
-      // 직접 배정·등록을 흉내 내고 있다는 뜻이다 — 그 화면은 없어졌다.
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-assign')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('program-editor-register')),
-        findsNothing,
-      );
-      expect(
+    // 직접 배정·등록을 흉내 내고 있다는 뜻이다 — 그 화면은 없어졌다.
+    expect(
+      find.byKey(const ValueKey<String>('program-editor-assign')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('program-editor-register')),
+      findsNothing,
+    );
+    expect(
       find.byKey(const ValueKey<String>('program-editor-send')),
       findsOneWidget,
     );
@@ -687,6 +687,50 @@ void main() {
       await tester.pump();
 
       expect(find.text('버피'), findsNothing);
+    });
+
+    // #1483 — 검색 아이콘·문구 제거, 유형별 이름 예시, 날짜 선택 UI 제거.
+    testWidgets('검색 아이콘·문구 없이 유형별 이름 예시가 뜨고 날짜 선택 UI는 없다', (tester) async {
+      await pumpEditor(tester);
+
+      await openAddForm(tester);
+
+      expect(find.byIcon(Icons.search), findsNothing);
+      expect(find.text('운동 이름 검색 또는 직접 입력'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('custom-exercise-date')),
+        findsNothing,
+      );
+
+      // 기본 유형은 근력 — 근력 예시가 placeholder 로 보인다.
+      final nameField = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+      );
+      expect(nameField.decoration?.hintText, '예) 스쿼트, 벤치프레스');
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('custom-exercise-category-유산소')),
+      );
+      await tester.pump();
+
+      final nameFieldAfterTypeChange = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+      );
+      expect(nameFieldAfterTypeChange.decoration?.hintText, '예) 러닝머신, 실내 자전거');
+    });
+
+    testWidgets('유형을 바꿔도 이미 입력한 운동 이름은 지워지지 않는다', (tester) async {
+      await pumpEditor(tester);
+
+      await openAddForm(tester);
+      await typeName(tester, '클라이밍');
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('custom-exercise-category-기타')),
+      );
+      await tester.pump();
+
+      expect(find.text('클라이밍'), findsOneWidget);
     });
   });
 }
