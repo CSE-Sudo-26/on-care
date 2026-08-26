@@ -126,3 +126,30 @@ class _PortraitDatePickerDialogState extends State<_PortraitDatePickerDialog> {
     );
   }
 }
+
+/// 반복 일정의 시작·종료 날짜를 한 번의 달력에서 고른다 — 위
+/// [showPortraitDatePicker] 와 같은 자리에서 쓰이지만, Flutter 에는 그
+/// 자체 커스텀 다이얼로그에 대응하는 공용 범위 선택 위젯이 없어 여기서는
+/// Material 기본 [showDateRangePicker] 를 세로 배치로 강제해 쓴다.
+Future<DateTimeRange?> showPortraitDateRangePicker({
+  required BuildContext context,
+  required DateTimeRange initialDateRange,
+  required DateTime firstDate,
+  required DateTime lastDate,
+}) {
+  return showDateRangePicker(
+    context: context,
+    initialDateRange: initialDateRange,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    builder: (context, child) {
+      final Widget themed = child!;
+      final MediaQueryData query = MediaQuery.of(context);
+      if (query.size.width <= query.size.height) return themed;
+      return MediaQuery(
+        data: query.copyWith(size: Size(query.size.height, query.size.width)),
+        child: themed,
+      );
+    },
+  );
+}
