@@ -4,16 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 
 import '../helpers/client_factory.dart';
 import '../helpers/pump_app.dart';
 
-/// 프로그램 탭과 리포트 탭의 고객 목록은 같은 타이포를 쓴다. (#1423)
+/// 프로그램 탭과 리포트 탭의 고객 목록은 같은 타이포·아바타 크기를 쓴다. (#1423)
 ///
 /// 두 탭은 같은 구조(왼쪽 고객 목록 → 오른쪽 작업 영역)에 카드 제목·아이콘도
-/// 같은데, 이름 글씨만 13.5 와 15 로 갈려 있었다. 탭을 오갈 때 같은 목록이
-/// 다른 밀도로 보인다.
+/// 같은데, 이름 글씨는 13.5 와 15, 아바타는 32 와 38 로 갈려 있었다. 탭을
+/// 오갈 때 같은 목록이 다른 밀도로 보인다.
 void main() {
   const String goal = '혈압 관리 · 체중 감량';
 
@@ -58,6 +59,16 @@ void main() {
         .fontSize!;
   }
 
+  /// [rowKey] 행 안 [ClientAvatar] 의 지름.
+  double avatarSizeIn(WidgetTester tester, String rowKey) {
+    final Finder row = find.byKey(ValueKey<String>(rowKey));
+    return tester
+        .widget<ClientAvatar>(
+          find.descendant(of: row, matching: find.byType(ClientAvatar)),
+        )
+        .size;
+  }
+
   testWidgets('프로그램 탭 고객명은 공용 크기·굵기를 쓴다', (tester) async {
     await openTab(tester, AppRoutes.coaching);
 
@@ -78,6 +89,7 @@ void main() {
     expect(selected.fontWeight, FontWeight.w800);
     expect(unselected.fontWeight, FontWeight.w600);
     expect(goalSizeIn(tester, 'program-client-type-a'), clientListGoalFontSize);
+    expect(avatarSizeIn(tester, 'program-client-type-a'), clientListAvatarSize);
   });
 
   testWidgets('리포트 탭 고객명이 프로그램 탭과 같은 크기·굵기다', (tester) async {
@@ -99,6 +111,7 @@ void main() {
     expect(selected.fontWeight, FontWeight.w800);
     expect(unselected.fontWeight, FontWeight.w600);
     expect(goalSizeIn(tester, 'report-client-type-a'), clientListGoalFontSize);
+    expect(avatarSizeIn(tester, 'report-client-type-a'), clientListAvatarSize);
   });
 
   testWidgets('긴 이름과 큰 배율에서도 행이 넘치지 않는다', (tester) async {
