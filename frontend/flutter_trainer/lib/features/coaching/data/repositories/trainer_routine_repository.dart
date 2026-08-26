@@ -111,6 +111,11 @@ class MockTrainerRoutineRepository implements TrainerRoutineRepository {
         type: r.type,
         reason: r.reason,
         source: r.source,
+        // 근력은 세트·횟수·중량으로 읽는다(#1276) — 픽스처가 그 값을 들지
+        // 않던 동안 데모의 근력 배정은 `10분` 한 줄로만 보였다.
+        sets: r.sets,
+        reps: r.reps,
+        weight: r.weight,
       ),
   ];
 

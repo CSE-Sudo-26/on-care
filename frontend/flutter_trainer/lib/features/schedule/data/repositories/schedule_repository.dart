@@ -706,17 +706,23 @@ class DriftScheduleRepository implements ScheduleRepository {
   }
 }
 
-/// 이력 목록에 적히는 한 줄. 근력은 세트·중량, 나머지는 시간으로 읽는다.
+/// 이력 목록에 적히는 한 줄. 근력은 세트·횟수·중량, 나머지는 시간으로 읽는다.
 ///
 /// 서버 `_program_item_label` 과 같은 규칙이다(#1276) — 유형마다 재는 단위가
 /// 달라서, 근력을 "30분"으로 적으면 다음 무게를 정할 근거가 사라지고 유산소를
-/// "3세트"로 적으면 뜻이 없다.
-String _programItemLabel(ProgramItem item) {
+/// "3세트"로 적으면 뜻이 없다. 횟수도 함께 적는다: 세트·중량만으로는 근력 한
+/// 줄이 회원 기록에서 그대로 재현되지 않는다.
+String _programItemLabel(ProgramItem raw) {
+  final ProgramItem item = raw.byType;
   final List<String> parts = <String>[];
   if (item.type == '근력') {
     if (item.sets != null) parts.add('${item.sets}세트');
+    final int? reps = item.reps;
+    if (reps != null && reps > 0) parts.add('$reps회');
+    // 맨몸 운동은 `0kg` 이다 — 중량 칸을 비울 수 없으므로 적지 않은 값과
+    // 0 은 다른 뜻이다. 값이 없는 것은 규칙 이전의 옛 행뿐이다.
     final double? weight = item.weight;
-    if (weight != null && weight > 0) {
+    if (weight != null) {
       parts.add(
         '${weight == weight.roundToDouble() ? weight.round() : weight}kg',
       );

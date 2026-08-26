@@ -22,7 +22,10 @@ class SessionProgramRow extends StatelessWidget {
       if (item.type == '근력') ...<String>[
         if (item.sets != null) l.progSetsValue(item.sets!),
         if (item.reps != null && item.reps! > 0) l.progRepsValue(item.reps!),
-        if (item.weight != null && item.weight! > 0)
+        // 맨몸 운동은 `0kg` 이다 — 중량 칸은 비울 수 없고(최솟값 0) 근력을
+        // 고르면 언제나 값을 하나 든다. 값이 아예 없는 것은 이 규칙이 서기
+        // 전에 저장된 행뿐이라, 그때만 자리를 비운다.
+        if (item.weight != null)
           '${_trimZero(item.weight!)}${l.routineUnitKg}',
       ] else if (item.duration != null)
         l.minutesShort(item.duration!),

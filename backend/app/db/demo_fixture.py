@@ -131,6 +131,11 @@ class FixtureRoutine:
     reason: str
     #: `ai` | `trainer`.
     source: str
+    #: 근력 배정의 세트 수·한 세트당 횟수·중량(kg). 다른 유형은 None 이다(#1276)
+    #: — 유형마다 재는 단위가 다르다. 맨몸 운동은 중량만 비어 있다.
+    sets: int | None = None
+    reps: int | None = None
+    weight: float | None = None
 
 
 @dataclass(frozen=True)
@@ -221,6 +226,9 @@ class DemoFixture:
                 type=item["type"],
                 reason=item["reason"],
                 source=item["source"],
+                sets=item.get("sets"),
+                reps=item.get("reps"),
+                weight=item.get("weight"),
             )
             for item in payload.get("routines", ())
         )

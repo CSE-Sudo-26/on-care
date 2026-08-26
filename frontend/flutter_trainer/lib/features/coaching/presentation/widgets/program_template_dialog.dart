@@ -223,9 +223,10 @@ class _ExerciseDraft {
     reps: TextEditingController(
       text: exercise.reps > 0 ? '${exercise.reps}' : '10',
     ),
-    weight: TextEditingController(
-      text: exercise.weight > 0 ? '${exercise.weight}' : '20',
-    ),
+    // 중량만 0 을 그대로 연다 — 중량 칸은 비울 수 없어(최솟값 0) 저장된 0 은
+    // 트레이너가 적은 맨몸이다. 세트·횟수는 최솟값이 1 이라 0 이 나올 수 없고,
+    // 그 0 은 칸이 생기기 전에 저장된 템플릿의 빈자리다.
+    weight: TextEditingController(text: '${exercise.weight}'),
     type: kRoutineTypes.contains(exercise.type)
         ? exercise.type
         : kRoutineTypes.first,

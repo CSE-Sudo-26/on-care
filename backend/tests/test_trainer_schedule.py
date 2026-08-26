@@ -687,6 +687,10 @@ def test_complete_session_exercise_log_uses_program_item_duration_and_type(
 ):
     """프로그램 항목에 분·유형을 적으면 자동 기록이 슬롯 전체 길이·고정
     유형('근력') 대신 그 값을 쓴다(#1233).
+
+    근력 항목의 분은 세트에서 환산한다(#1276) — 유형마다 재는 단위가 달라서,
+    근력에 적힌 시간은 아예 저장되지 않는다. 여기서도 `duration` 을 함께 보내
+    그 값이 집계에 끼지 않는 것까지 본다.
     """
     token = _tok(client)
     mh = _member_h(client)
@@ -712,19 +716,28 @@ def test_complete_session_exercise_log_uses_program_item_duration_and_type(
         ],
     )
 
+    # 근력에 적어 보낸 시간은 저장되지 않는다 — 세트로 재는 유형이다.
+    day = client.get(f"/v1/trainer/schedule?date={_today()}", headers=_h(token))
+    assert day.status_code == 200, day.text
+    stored = next(s for s in day.json() if s["id"] == sid)["program"]
+    assert [(i["duration"], i["sets"]) for i in stored] == [
+        (10, None), (15, None), (None, 3),
+    ]
+
     done = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
     assert done.status_code == 200, done.text
 
     after = client.get("/v1/exercise/weeks/current", headers=mh).json()
-    # 슬롯은 60분이지만 항목 분의 합(10+15+10=35)을 쓴다.
-    assert after["total_minutes"] == before["total_minutes"] + 35
+    # 슬롯은 60분이지만 항목 분의 합을 쓴다: 유산소 10+15, 근력은 3세트를
+    # 환산한 9분(세트당 3분) — 항목에 적혀 온 10분이 아니다.
+    assert after["total_minutes"] == before["total_minutes"] + 34
     # 유산소 2건 > 근력 1건 — 가장 많은 유형을 쓴다(cardio=9kcal/분 x moderate 1.0).
-    assert after["total_calories"] == before["total_calories"] + 315
+    assert after["total_calories"] == before["total_calories"] + 306
 
     derived = [s for s in after["sessions"] if s["id"] == f"sched-ex-{sid}"]
     assert len(derived) == 1
     assert derived[0]["type"] == "cardio"
-    assert derived[0]["minutes"] == 35
+    assert derived[0]["minutes"] == 34
 
 
 def test_complete_session_exercise_log_is_idempotent(client, make_pt_session):

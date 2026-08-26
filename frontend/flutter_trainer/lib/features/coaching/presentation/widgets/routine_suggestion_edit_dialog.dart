@@ -156,8 +156,9 @@ Future<bool?> showRoutineSuggestionConfirmDialog(
 /// 승인 직전에 확인하는 값이 다르면 트레이너가 무엇을 보고 눌렀는지가 흐려진다.
 /// 그래서 수정 창 옆에 둔다(그 셋이 같은 칸을 말해야 한다).
 ///
-/// 중량은 적었을 때만 붙인다 — 맨몸 운동에 `0kg` 이 붙으면 트레이너가 적지
-/// 않은 값을 적은 것처럼 읽힌다.
+/// 맨몸 운동의 중량은 `0kg` 이다 — 중량 칸은 비울 수 없고(최솟값 0) 근력을
+/// 고르면 언제나 값을 하나 든다. 값이 아예 없는 것은 규칙이 서기 전에 저장된
+/// 행뿐이라, 그때만 자리를 비운다.
 String routineSuggestionAmountLabel(
   AppLocalizations l,
   RoutineSuggestion suggestion,
@@ -166,7 +167,7 @@ String routineSuggestionAmountLabel(
   final List<String> parts = <String>[
     if (suggestion.sets != null) l.progSetsValue(suggestion.sets!),
     if (suggestion.reps != null) l.progRepsValue(suggestion.reps!),
-    if (suggestion.weight != null && suggestion.weight! > 0)
+    if (suggestion.weight != null)
       '${_trimZero(suggestion.weight!)}${l.routineUnitKg}',
   ];
   return parts.isEmpty ? l.minutesShort(suggestion.minutes) : parts.join(' · ');

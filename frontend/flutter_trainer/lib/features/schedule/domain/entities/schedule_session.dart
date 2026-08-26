@@ -48,6 +48,24 @@ class ProgramItem {
   /// Empty for a single-session program and for rows written before sessions
   /// existed — the schedule then reads as the flat list it always was.
   final String session;
+
+  /// 유형에 맞지 않는 칸을 비운 항목.
+  ///
+  /// 근력은 세트·횟수·중량으로, 나머지는 시간으로 잰다(#1276). 유형과 다른 칸을
+  /// 달고 있는 항목은 화면에서 뜻이 없는 줄이 된다 — `저강도 유산소(걷기)
+  /// 3세트 · 30회` 처럼. 예전에 저장된 행과 다른 화면이 보낸 값이 그대로 들어오는
+  /// 자리라, 읽을 때와 보낼 때 양쪽에서 한 번씩 거른다.
+  ProgramItem get byType => ProgramItem(
+    name: name,
+    type: type,
+    date: date,
+    duration: type == '근력' ? null : duration,
+    sets: type == '근력' ? sets : null,
+    reps: type == '근력' ? reps : null,
+    weight: type == '근력' ? weight : null,
+    intensity: intensity,
+    session: session,
+  );
 }
 
 /// One slot on the trainer's daily timeline (스케줄 탭). Decoded from
