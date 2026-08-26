@@ -389,8 +389,11 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             name: exercise.name.trim(),
             type: exercise.type,
             date: exercise.date,
-            // 근력은 세트·중량으로만 재고 시간을 싣지 않는다 — 두 편집기와
-            // 회원 기록이 같은 규칙을 쓴다 (#1276).
+            // 근력은 세트·횟수·중량으로만 재고 시간을 싣지 않는다 — 두
+            // 편집기와 회원 기록이 같은 규칙을 쓴다 (#1276). 횟수는 예전에
+            // 여기서만 빠져 있었다: 편집기에서 채운 `12회` 가 일정에 등록하는
+            // 순간 사라져, 같은 프로그램이 코칭 탭과 스케줄 탭에서 다르게
+            // 읽혔다.
             duration: exercise.isStrength ? null : exercise.minutes,
             sets: exercise.isStrength ? exercise.sets : null,
             reps: exercise.isStrength ? exercise.reps : null,
