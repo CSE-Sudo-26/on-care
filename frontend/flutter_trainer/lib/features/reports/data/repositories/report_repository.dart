@@ -439,6 +439,14 @@ WeeklyReport weeklyReportFromJson(
     carbsWeek: doubles('carbs_week'),
     proteinWeek: doubles('protein_week'),
     fatWeek: doubles('fat_week'),
+    // 회원이 적어 둔 하루 목표. 없으면 null 이고 판정이 공통 상수로
+    // 되돌아간다(#1430).
+    calorieTarget: optInt('calorie_target'),
+    sodiumTarget: optInt('sodium_target'),
+    sugarTarget: (json['sugar_target'] as num?)?.toDouble(),
+    carbsTarget: (json['carbs_target'] as num?)?.toDouble(),
+    proteinTarget: (json['protein_target'] as num?)?.toDouble(),
+    fatTarget: (json['fat_target'] as num?)?.toDouble(),
     days: <ReportDay>[
       for (final day in (json['days'] as List<Object?>? ?? const <Object?>[]))
         if (day is Map<String, dynamic>)

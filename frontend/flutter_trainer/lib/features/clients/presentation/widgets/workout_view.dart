@@ -216,34 +216,27 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
                   children: <Widget>[
                     // 날짜는 적지 않는다 — 이 판을 펼친 줄이 바로 위에서
                     // 이미 그 날을 말하고 있다(#1025).
-                    _RecordTypeChip(label: entry.label),
-                    // 옆의 배지에 적힌 67% 가 어디서 나온 값인지 — 배정한 운동
-                    // 중 몇 개를 했는가다. 이 한 줄이 없으면 화면 어디에도
-                    // 그 분모가 없다(#754).
-                    if (entry.exercises.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          l.workoutDoneOfTotal(
-                            entry.exercises.length,
-                            entry.exercises
-                                .where((line) => !line.contains('✗'))
-                                .length,
-                          ),
-                          // 배지의 `67%` 가 어디서 나온 값인지 받쳐 주는 줄이라
-                          // 배지가 커진 만큼 이쪽도 읽혀야 한다(#754, #1025).
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.subtleForeground,
-                          ),
-                        ),
-                      ),
+                    _RecordTypeChip(label: routineKindLabel(l, entry.label)),
                   ],
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              _MissionBadge(rate: entry.completionRate),
+              // 배지의 `67%` 가 어디서 나온 값인지 — 배정한 운동 중 몇 개를
+              // 했는가다. 왼쪽에 한 문장으로 두던 것을 퍼센트 바로 옆으로
+              // 옮겨 두 값을 한눈에 함께 읽는다(#1484).
+              if (entry.totalCount > 0) ...<Widget>[
+                Text(
+                  entry.completionCountLabel,
+                  key: ValueKey<String>('workout-done-count-${entry.id}'),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              _MissionBadge(rate: entry.displayRate),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -251,7 +244,10 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
           if (entry.clientFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _NoteBox(
-              title: l.clientFeedback,
+              // 이 피드백이 **무엇에 대한 말인지** 제목이 말한다(#1453).
+              // `고객 피드백` 만 적으면 목록 아래에 붙은 그날 전체의 소감처럼
+              // 읽혔다 — 배정 개인 운동의 피드백은 그 운동 하나에 달린 것이다.
+              title: clientFeedbackTitle(l, entry),
               body: entry.clientFeedback,
               color: AppColors.accent,
             ),
@@ -629,16 +625,14 @@ class _DailyExerciseRecordsState extends ConsumerState<_DailyExerciseRecords> {
                           entries: dayEntries,
                         )
                       : null,
-                  summary:
-                      '${day.minutes}${l.unitMinutes} · '
-                      '${formatNumber(day.calories)} ${l.unitKcal}',
                   details: <({String label, String value})>[
                     (
                       label: l.clientTrendWorkoutMinutes,
                       value: '${day.minutes}${l.unitMinutes}',
                     ),
                     (
-                      label: l.metricCalories,
+                      // 섭취 칼로리와 같은 말로 부르지 않는다(#1465).
+                      label: l.clientTrendCaloriesBurned,
                       value: '${formatNumber(day.calories)} ${l.unitKcal}',
                     ),
                     if (day.cardioMinutes > 0)

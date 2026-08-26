@@ -42,10 +42,15 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// works identically in demo and against the real API.
 class ReportsPage extends ConsumerStatefulWidget {
   /// Creates the reports page. [clientId] preselects a client.
-  const ReportsPage({super.key, this.clientId});
+  const ReportsPage({super.key, this.clientId, this.weekStart});
 
   /// Client focused via the `client` query parameter.
   final String? clientId;
+
+  /// Week focused via the `week` query parameter. 채팅의 리포트 카드가
+  /// 가리키는 주로 열기 위한 값이라 월요일이 아닌 날짜가 와도 그 주의
+  /// 월요일로 맞춘다(#1421).
+  final DateTime? weekStart;
 
   @override
   ConsumerState<ReportsPage> createState() => _ReportsPageState();
@@ -55,8 +60,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   /// Selected client id; null falls back to the first in the roster.
   late String? _clientId = widget.clientId;
 
-  /// Monday of the week being reported. Starts on this week.
-  DateTime _weekStart = weekStartOf(nowKst());
+  /// Monday of the week being reported. Starts on the week the caller
+  /// asked for, otherwise this week.
+  late DateTime _weekStart = weekStartOf(widget.weekStart ?? nowKst());
 
   /// Clients whose report was sent this session — keeps the button from
   /// being pressed twice in a row by accident.

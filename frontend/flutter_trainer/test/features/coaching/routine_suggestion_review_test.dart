@@ -176,6 +176,7 @@ void main() {
       await tester.pump();
     }
   }
+
   Finder dismissButton(RoutineSuggestion s) =>
       find.byKey(ValueKey<String>('routine-suggestion-dismiss-${s.id}'));
   Finder editButton(RoutineSuggestion s) =>
@@ -193,7 +194,7 @@ void main() {
 
       // 손볼 대상(운동 이름·시간) 옆에 있다 — 아래 판단 줄이 아니다.
       final Rect editRect = tester.getRect(editButton(_shoulder));
-      final Rect nameRect = tester.getRect(find.text(_shoulder.name));
+      final Rect nameRect = tester.getRect(find.textContaining(_shoulder.name));
       final Rect approveRect = tester.getRect(approveButton(_shoulder));
       expect(editRect.left, greaterThan(nameRect.right));
       expect(editRect.center.dy, lessThan(approveRect.top));
@@ -206,11 +207,7 @@ void main() {
       // 글자만 있는 `TextButton` 이면 카드 안의 설명 문구와 구별되지 않아,
       // 누를 수 있는 것인지 알 수 없었다.
       final dismiss = tester.widget<ActionButton>(dismissButton(_shoulder));
-      expect(
-        dismiss.primary,
-        isFalse,
-        reason: '채워진 버튼이 아니라 테두리만 있는 보조 버튼이다',
-      );
+      expect(dismiss.primary, isFalse, reason: '채워진 버튼이 아니라 테두리만 있는 보조 버튼이다');
       expect(dismiss.tone, AppColors.subtleForeground);
       // 카드 안만 본다. 프로그램 탭 전체를 뒤지면 다른 영역에 `TextButton`
       // 하나만 생겨도, 이 카드의 거절 버튼이 멀쩡한데 테스트가 깨진다.
@@ -260,8 +257,8 @@ void main() {
     await openProgramTab(tester);
 
     expect(find.text('AI 개인운동 제안'), findsOneWidget);
-    expect(find.text(_shoulder.name), findsOneWidget);
-    expect(find.text('8분'), findsWidgets);
+    expect(find.textContaining(_shoulder.name), findsOneWidget);
+    expect(find.textContaining('8분'), findsWidgets);
     expect(find.text(_shoulder.reason), findsOneWidget);
     // 근거가 함께 있어야 트레이너가 승인 여부를 판단할 수 있다.
     expect(find.text('최근 PT 피드백 반영'), findsOneWidget);
@@ -467,7 +464,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.approvals, isEmpty);
-    expect(find.text(_shoulder.name), findsOneWidget);
+    expect(find.textContaining(_shoulder.name), findsOneWidget);
   });
 
   testWidgets('a double tap approves once', (tester) async {
@@ -534,8 +531,8 @@ void main() {
       },
     );
 
-    expect(find.text(_shoulder.name), findsOneWidget);
-    expect(find.text(_walking.name), findsNothing);
+    expect(find.textContaining(_shoulder.name), findsOneWidget);
+    expect(find.textContaining(_walking.name), findsNothing);
 
     await tester.tap(
       find.byKey(const ValueKey<String>('program-client-$secondClient')),
@@ -543,8 +540,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.reads, contains(secondClient));
-    expect(find.text(_walking.name), findsOneWidget);
-    expect(find.text(_shoulder.name), findsNothing);
+    expect(find.textContaining(_walking.name), findsOneWidget);
+    expect(find.textContaining(_shoulder.name), findsNothing);
   });
 
   testWidgets('no suggestions leaves a quiet one-line empty state', (

@@ -1040,19 +1040,23 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
+                                // 이름 타이포는 리포트 탭 고객 목록과 같은
+                                // 기준을 쓴다(#1423) — 같은 목록이 탭마다
+                                // 다른 크기로 보이지 않게.
                                 ClientIdentity(
                                   client: client,
-                                  nameStyle: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.foreground,
+                                  nameStyle: clientListNameStyle(
+                                    selected: selected,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 // 목표는 늘 보인다. 전에는 `lastRoutine` 이
                                 // 비었을 때만 그 자리를 빌려 써서, 루틴을 한
                                 // 번이라도 보낸 고객은 목표가 사라졌다(#898).
-                                ClientGoalLabel(client: client),
+                                ClientGoalLabel(
+                                  client: client,
+                                  fontSize: clientListGoalFontSize,
+                                ),
                               ],
                             ),
                           ),
@@ -1784,13 +1788,12 @@ class _SendHistoryCard extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                             )
-                          : Text(
-                              l.coachTrainer,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
+                          : IconLabel(
+                              icon: Icons.badge_outlined,
+                              label: l.coachTrainer,
+                              color: AppColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
                             ),
                       // 보낸 뒤 물리는 자리. 여기 목록이 배정된 개인운동을
                       // 보여 주는 유일한 곳인데 취소가 없어서, 잘못 보냈을 때
