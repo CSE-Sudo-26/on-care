@@ -11,16 +11,8 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
 
-/// 기간 그래프의 칼로리 막대가 **어떤 하루에도** 사실만 말하는지. (#956, #1427)
-///
-/// 한때 이 막대는 탄단지 농담으로 쌓았다(#956 은 그 분모를 다룬 이슈다).
-/// 지금은 한 색이다 — 막대에서 탄·단·지 수치를 읽을 수 없는데 색만 셋으로
-/// 갈라져 있어, 구성까지 정확히 말해 주는 그림처럼 보였기 때문이다(#1427).
-/// 탄단지는 카드 머리의 상세가 숫자와 함께 말한다.
-///
-/// 실서버 값은 음식 DB 에서 온다 — 탄수화물만 적힌 날도, 하루 칼로리와 탄단지
-/// 합계가 어긋나는 날도, 영양이 아예 없는 날도 온다. 어느 쪽이든 막대는
-/// 총칼로리 하나만 말해야 한다.
+/// 누적 칼로리 막대가 불완전한 영양 데이터에서도 총칼로리와 구성 비율을
+/// 함께 사실대로 표현하는지 확인한다. (#956, #1479)
 class _FixedDietRepository extends FakeDietRepository {
   _FixedDietRepository(this.day);
 
@@ -94,65 +86,61 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// 첫 칸 막대에 칠해진 색. 한 색 막대라 `Container` 의 배경이 곧 그 색이다.
-  Color? barColorOf(WidgetTester tester) {
-    final Container box = tester.widget<Container>(
-      find
-          .descendant(
-            of: find.byKey(const Key('diet-period-bar-0')),
-            matching: find.byType(Container),
-          )
-          .first,
-    );
-    return (box.decoration! as BoxDecoration).color;
-  }
+  List<(Color, double)> segmentsOf(WidgetTester tester) => <(Color, double)>[
+    for (final Element e
+        in find
+            .descendant(
+              of: find.byKey(const Key('diet-period-bar-0')),
+              matching: find.byType(ColoredBox),
+            )
+            .evaluate())
+      ((e.widget as ColoredBox).color, (e.renderObject! as RenderBox).size.height),
+  ];
 
-  /// 막대 안에 쌓인 구간. 쌓지 않으므로 언제나 비어 있어야 한다.
-  Iterable<Element> segmentsOf(WidgetTester tester) => find
-      .descendant(
-        of: find.byKey(const Key('diet-period-bar-0')),
-        matching: find.byType(ColoredBox),
-      )
-      .evaluate();
-
-  testWidgets('탄단지가 다 있는 날도 막대는 회색 한 색이다', (WidgetTester tester) async {
+  testWidgets('탄단지가 다 있는 날은 세 색 구간을 쌓는다', (WidgetTester tester) async {
     await openMonth(
       tester,
       _day(calories: 1560, carbsG: 200, proteinG: 100, fatG: 40),
     );
 
-    expect(segmentsOf(tester), isEmpty, reason: '막대를 셋으로 쌓지 않는다');
-    expect(barColorOf(tester), FigmaColors.barNeutral.withValues(alpha: 0.85));
+    expect(segmentsOf(tester).map(((Color, double) s) => s.$1), <Color>[
+      FigmaColors.macroFat,
+      FigmaColors.macroProtein,
+      FigmaColors.macroCarbs,
+    ]);
   });
 
-  testWidgets('칼로리와 탄단지 합계가 어긋나도 막대는 총칼로리만 말한다', (
+  testWidgets('칼로리와 탄단지 합계가 어긋나면 나머지 구간이 남는다', (
     WidgetTester tester,
   ) async {
     // 탄 100g(400) + 단 50g(200) + 지 20g(180) = 780kcal 인데 하루는 1,560kcal.
-    // 쌓던 시절에는 이 어긋남이 분모 문제였다(#956) — 이제는 그릴 구간 자체가
-    // 없으므로 막대는 1,560kcal 높이 하나다.
     await openMonth(
       tester,
       _day(calories: 1560, carbsG: 100, proteinG: 50, fatG: 20),
     );
 
-    expect(segmentsOf(tester), isEmpty);
-    expect(barColorOf(tester), FigmaColors.barNeutral.withValues(alpha: 0.85));
+    final List<(Color, double)> segments = segmentsOf(tester);
+    final double total = segments.fold<double>(
+      0,
+      (double sum, (Color, double) segment) => sum + segment.$2,
+    );
+    final (Color, double) rest = segments.firstWhere(
+      ((Color, double) segment) => segment.$1 == FigmaColors.track,
+    );
+    expect(rest.$2 / total, closeTo((1560 - 780) / 1560, 0.03));
   });
 
-  testWidgets('탄수화물만 있는 날도 같은 회색 막대다', (WidgetTester tester) async {
+  testWidgets('탄수화물만 있는 날도 해당 색 구간이 그려진다', (WidgetTester tester) async {
     await openMonth(tester, _day(calories: 800, carbsG: 200));
 
-    expect(segmentsOf(tester), isEmpty);
-    expect(barColorOf(tester), FigmaColors.barNeutral.withValues(alpha: 0.85));
+    expect(segmentsOf(tester).single.$1, FigmaColors.macroCarbs);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('영양이 아예 없는 날도 같은 회색 막대다', (WidgetTester tester) async {
+  testWidgets('영양이 아예 없는 날은 지표 기본색 막대다', (WidgetTester tester) async {
     await openMonth(tester, _day(calories: 1500));
 
     expect(segmentsOf(tester), isEmpty);
-    expect(barColorOf(tester), FigmaColors.barNeutral.withValues(alpha: 0.85));
   });
 
   testWidgets('영양이 하나도 없는 기간에는 탄단지 범례가 없다', (WidgetTester tester) async {

@@ -14,6 +14,10 @@ abstract class AccountRepository {
   /// 인자를 주지 않으면 그 목표는 손대지 않는다. [GoalUpdate.clear] 를 주면
   /// 목표를 해제한다 — 서버가 그 둘을 구분하므로 여기서도 구분해 보낸다.
   Future<UserProfile> updateHealthGoals({
+    /// 주로 관리하고 싶은 항목(`고혈압, 당뇨`)과 자유 입력 운동 목표. 온보딩이
+    /// 저장하던 두 값을 MY `건강 목표` 도 같은 열로 고친다(#1471).
+    String? conditions,
+    String? goals,
     GoalUpdate? dailyCalories,
     GoalUpdate? dailySodiumMg,
     GoalUpdate? dailySugarG,

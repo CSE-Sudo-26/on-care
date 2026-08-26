@@ -94,6 +94,8 @@ class _RecordingRepository implements AccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
+    String? conditions,
+    String? goals,
     GoalUpdate? dailyCalories,
     GoalUpdate? dailySodiumMg,
     GoalUpdate? dailySugarG,

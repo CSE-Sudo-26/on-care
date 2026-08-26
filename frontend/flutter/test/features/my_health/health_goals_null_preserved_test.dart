@@ -31,6 +31,8 @@ class _RecordingAccountRepository extends MockAccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
+    String? conditions,
+    String? goals,
     GoalUpdate? dailyCalories,
     GoalUpdate? dailySodiumMg,
     GoalUpdate? dailySugarG,

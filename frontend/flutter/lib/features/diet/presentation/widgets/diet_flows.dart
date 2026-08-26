@@ -294,10 +294,12 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Column(
               children: <Widget>[
+                // 두 갈래 모두 브랜드 파랑의 농담이다 — 촬영이 진한 쪽(주된
+                // 경로), 갤러리가 옅은 쪽이다.
                 _SourceOption(
                   icon: Icons.image_outlined,
-                  iconBg: FigmaColors.primaryA(0.12),
-                  iconColor: FigmaColors.primary,
+                  iconBg: FigmaColors.primaryA(0.10),
+                  iconColor: FigmaColors.primaryA(0.55),
                   title: l.dietPickPhoto,
                   subtitle: l.dietPickPhotoSub,
                   onTap: () => _pickAndAnalyze(MealPhotoSource.gallery),
@@ -305,8 +307,8 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
                 const SizedBox(height: 12),
                 _SourceOption(
                   icon: Icons.photo_camera_outlined,
-                  iconBg: FigmaColors.greenA(0.12),
-                  iconColor: FigmaColors.greenText,
+                  iconBg: FigmaColors.primaryA(0.12),
+                  iconColor: FigmaColors.primary,
                   title: l.dietTakePhoto,
                   subtitle: l.dietTakePhotoSub,
                   onTap: () => _pickAndAnalyze(MealPhotoSource.camera),
@@ -314,6 +316,9 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
               ],
             ),
           ),
+          // 마지막 카드가 화면 끝(홈 인디케이터)에 닿아 잘려 보이던 것을
+          // 띄운다 — 시스템 인셋이 없는 기기에서도 남는 여백이다.
+          const SizedBox(height: 20),
         ],
       ),
       key: const Key('dietAddSheet'),

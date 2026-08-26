@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/core/utils/portrait_date_picker.dart';
+import 'package:oncare/design_system/atoms/app_choice_chip.dart';
 import 'package:oncare/design_system/atoms/app_number_stepper.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
@@ -230,6 +231,15 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   /// 가른다.
   bool get _isStrength => _typeFromIndex(_type) == ExerciseType.strength;
 
+  /// 이름 입력의 예시 문구. 고른 유형을 따라간다 (#1460).
+  String _nameHint(AppLocalizations l) => switch (_typeFromIndex(_type)) {
+    ExerciseType.cardio || ExerciseType.walking => l.exExerciseNameHintCardio,
+    ExerciseType.strength => l.exExerciseNameHintStrength,
+    ExerciseType.stretching ||
+    ExerciseType.yoga => l.exExerciseNameHintFlexibility,
+    ExerciseType.other => l.exExerciseNameHintOther,
+  };
+
   /// 근력 기록의 분. 세트 수에 세트당 벽시계 시간(휴식 포함)을 곱한 값이다 —
   /// 서버는 여전히 분(>0)을 요구하고, 주간 운동 시간도 분으로 센다.
   int get _strengthMinutes =>
@@ -359,14 +369,33 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     ),
                   ),
                 ),
-                TextButton(
+                // 이 시트를 끝내는 동작이다 — 배경 없는 글자 버튼이면 옆의
+                // 보조 버튼과 위계가 같다(#1460). 다른 화면의 주요 확인
+                // 버튼과 같은 파란 배경·흰 글씨를 쓴다. 저장 중에는 비활성
+                // 색으로 바뀌어 두 번 눌리지 않는다.
+                FilledButton(
+                  key: const Key('exerciseSaveButton'),
                   onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: FigmaColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: FigmaColors.primaryA(0.35),
+                    disabledForegroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   child: Text(
                     l.exSave,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: FigmaColors.primary,
                     ),
                   ),
                 ),
@@ -414,7 +443,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   decoration: InputDecoration(
                     isDense: true,
                     counterText: '',
-                    hintText: l.exExerciseNameHint,
+                    // 고른 종류의 예시를 보여 준다 — 근력을 고른 사람에게
+                    // `러닝머신` 을 예로 들면 무엇을 적어야 하는지 되레
+                    // 헷갈린다(#1460). 이미 적은 이름은 건드리지 않는다.
+                    hintText: _nameHint(l),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 14,
@@ -555,37 +587,19 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     return PopScope(canPop: !_saving, child: sheet);
   }
 
+  /// 개인운동 완료창의 강도 선택도 같은 칩을 쓴다 — 모양을 한 벌만 둔다
+  /// (#1457).
   Widget _chip(
     String label,
     bool on,
     VoidCallback onTap, {
     bool center = false,
   }) {
-    return Semantics(
-      button: true,
+    return AppChoiceChip(
+      label: label,
       selected: on,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          alignment: center ? Alignment.center : null,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: on ? FigmaColors.primaryA(0.10) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: on ? FigmaColors.primary : FigmaColors.hairline,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: on ? FigmaColors.primary : AppColors.mutedForeground,
-            ),
-          ),
-        ),
-      ),
+      onTap: onTap,
+      center: center,
     );
   }
 }

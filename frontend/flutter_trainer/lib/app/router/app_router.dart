@@ -194,8 +194,14 @@ GoRouter buildAppRouter({
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutes.reports,
-                builder: (context, state) =>
-                    ReportsPage(clientId: state.uri.queryParameters['client']),
+                builder: (context, state) => ReportsPage(
+                  clientId: state.uri.queryParameters['client'],
+                  // 형식이 깨진 값은 무시하고 이번 주로 연다 — 링크 하나 때문에
+                  // 리포트 화면이 열리지 않는 편이 더 나쁘다.
+                  weekStart: DateTime.tryParse(
+                    state.uri.queryParameters['week'] ?? '',
+                  ),
+                ),
               ),
             ],
           ),
