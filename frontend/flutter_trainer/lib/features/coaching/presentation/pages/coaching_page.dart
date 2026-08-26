@@ -384,6 +384,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             // 회원 기록이 같은 규칙을 쓴다 (#1276).
             duration: exercise.isStrength ? null : exercise.minutes,
             sets: exercise.isStrength ? exercise.sets : null,
+            reps: exercise.isStrength ? exercise.reps : null,
             weight: exercise.isStrength ? exercise.weight : null,
             intensity: exercise.intensity,
             session: multi ? capSessionName(session.name) : '',
