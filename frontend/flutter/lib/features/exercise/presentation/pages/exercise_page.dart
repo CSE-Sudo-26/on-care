@@ -313,22 +313,27 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
               child: ExerciseActivityStatus(week: week),
             ),
             const SizedBox(height: 20),
-            // 1-1) 직접 기록한 운동 — 하단 `+` 로 적었든 아래 `운동 추가` 로
-            // 적었든, 방금 적은 기록이 이 자리에 남는다. 오늘도 예외가 아니다
-            // (#1428). PT 일지·추천 개인운동과 섞이지 않도록 제목과 카드를
-            // 따로 둔다.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: OwnExerciseRecords(week: week, date: today),
-            ),
-            const SizedBox(height: 20),
             // 2) AI 맞춤 조언 — "얼마나 했나" 다음은 "그래서 오늘 뭘 할까" 다.
             //    식단 탭과 같은 카드를 쓴다. (#1021)
+            //
+            // 바로 위 `운동 현황` 의 기간 토글을 그대로 따라간다 (#1574).
+            // 그래프만 갈아 끼우고 조언이 오늘 이야기로 남으면, 이번 주를
+            // 보면서 "오늘은 유산소를 했네요" 를 읽게 된다. 오늘 조언으로
+            // 되돌아가지도 않는다 — 못 받았으면 못 받았다고 말한다.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: AiAdviceCard(
-                title: l.dietAiFeedback,
-                message: week.aiCoachMessage,
+              child: Consumer(
+                builder: (BuildContext context, WidgetRef ref, Widget? _) {
+                  final String period = exerciseAdvicePeriod(
+                    ref.watch(exerciseActivityPeriodProvider),
+                  );
+                  return PeriodAiAdviceCard(
+                    title: l.dietAiFeedback,
+                    advice: ref.watch(exerciseAdviceProvider(period)),
+                    onRetry: () =>
+                        ref.invalidate(exerciseAdviceProvider(period)),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 20),
@@ -347,6 +352,19 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: AiCoachingCard(),
+            ),
+            const SizedBox(height: 20),
+            // 4-1) 직접 기록한 운동 — 하단 `+` 로 적었든 아래 `운동 추가` 로
+            // 적었든, 방금 적은 기록이 이 자리에 남는다. 오늘도 예외가 아니다
+            // (#1428). PT 일지·추천 개인운동과 섞이지 않도록 제목과 카드를
+            // 따로 둔다.
+            //
+            // 코칭이 말하는 것(조언 → PT 일지 → 추천 개인운동)을 먼저 읽고 나서
+            // 내가 스스로 적은 기록을 본다 — 화면 위쪽은 "무엇을 해야 하나",
+            // 아래쪽은 "내가 무엇을 했나" 다. (#1574)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: OwnExerciseRecords(week: week, date: today),
             ),
             const SizedBox(height: 20),
             // 5) 받은 담당 요청. 담당 트레이너 카드는 뺐다 — 이 화면은 기록을

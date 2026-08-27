@@ -26,6 +26,9 @@ class _CapturingRepository implements ExerciseRepository {
   String? updatedId;
 
   @override
+  Future<String> fetchAdvice(String period) async => '조언';
+
+  @override
   Future<ExerciseWeek> fetchThisWeek() async => _emptyWeek;
 
   @override
