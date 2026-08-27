@@ -100,7 +100,7 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
             date="2026-08-27",
         ),
     ]
-    link = pair_rows[0]
+    link_id = pair_rows[0].id
     expected_preserved = [(type(row), row.id) for row in pair_rows[1:]]
     db_session.add_all(pair_rows)
     db_session.commit()
@@ -112,7 +112,7 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
 
         db_session.expire_all()
         assert db_session.get(User, member_id) is not None
-        assert db_session.get(TrainerClient, link.id) is None
+        assert db_session.get(TrainerClient, link_id) is None
         for model, row_id in expected_preserved:
             assert db_session.get(model, row_id) is not None
         roster = client.get("/v1/trainer/clients", headers=_headers(token)).json()
