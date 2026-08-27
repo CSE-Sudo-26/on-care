@@ -53,6 +53,36 @@ class _ReportThreadRepository extends MockMemberCoachRepository {
       Stream<List<CoachMessage>>.value(messages);
 }
 
+/// 리포트 안내가 온 **뒤에도** 대화가 이어진 스레드.
+class _ReportThenChatRepository extends MockMemberCoachRepository {
+  _ReportThenChatRepository();
+
+  static final List<CoachMessage> messages = <CoachMessage>[
+    CoachMessage(
+      id: 'report-1',
+      sender: CoachSender.trainer,
+      body: '이번 주 리포트입니다.',
+      timeLabel: '18:10',
+      createdAt: DateTime(2026, 8, 24, 18, 10),
+      reportWeekStart: _weekStart,
+    ),
+    CoachMessage(
+      id: 'after-1',
+      sender: CoachSender.me,
+      body: '확인했습니다',
+      timeLabel: '18:20',
+      createdAt: DateTime(2026, 8, 24, 18, 20),
+    ),
+  ];
+
+  @override
+  Future<List<CoachMessage>> fetchChat() async => messages;
+
+  @override
+  Stream<List<CoachMessage>> watchChat() =>
+      Stream<List<CoachMessage>>.value(messages);
+}
+
 MemberWeeklyReport _report({
   List<ExerciseSession> sessions = const <ExerciseSession>[],
   List<double> minutes = const <double>[30, 0, 45, 0, 20, 0, 0],
@@ -108,13 +138,16 @@ void main() {
     return l;
   }
 
-  Future<void> pumpChat(WidgetTester tester) async {
+  Future<void> pumpChat(
+    WidgetTester tester, {
+    MockMemberCoachRepository? repository,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
           appConfigProvider.overrideWithValue(_config),
           memberCoachRepositoryProvider.overrideWithValue(
-            _ReportThreadRepository(),
+            repository ?? _ReportThreadRepository(),
           ),
         ],
         child: const MaterialApp(
@@ -145,6 +178,18 @@ void main() {
         (box.center.dx - screen.center.dx).abs(),
         lessThan(1.0),
         reason: '안내는 트레이너 말풍선처럼 한쪽에 붙지 않는다',
+      );
+    });
+
+    testWidgets('뒤에 대화가 이어져도 안내는 맨 아래에 남는다', (WidgetTester tester) async {
+      await pumpChat(tester, repository: _ReportThenChatRepository());
+
+      final Rect card = tester.getRect(find.byType(CoachReportCard));
+      final Rect lastBubble = tester.getRect(find.text('확인했습니다'));
+      expect(
+        card.top,
+        greaterThan(lastBubble.bottom),
+        reason: '리포트를 여는 자리는 대화가 늘어도 같은 곳이어야 한다',
       );
     });
   });
