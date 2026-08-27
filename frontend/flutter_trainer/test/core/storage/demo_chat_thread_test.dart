@@ -53,12 +53,25 @@ const List<(ChatSender, String)> kDemoThread = <(ChatSender, String)>[
   ),
 ];
 
+/// 시드가 "오늘" 로 삼을 시각 — 오늘 날짜의 21시.
+///
+/// 실제 시계를 그대로 쓰면 하루 중 언제 도는지에 따라 결과가 갈린다.
+/// `seedIfEmpty` 는 모든 고객의 스레드를 **한 덩어리로** 뒤로 밀어 가장 늦은
+/// 시드(배준혁 `20:12`)가 `now - 1분` 안에 들어오게 하는데, 김민수의 마지막은
+/// `18:18` 이라 1시간 54분 앞선다. 그래서 KST 00:00~01:55 에 돌면 김민수의
+/// 마지막 메시지가 어제로 밀려난다 — 실제로 그 시간대의 main 실행이 붉어졌다.
+/// `clock` 은 그러라고 있는 손잡이다(#826).
+DateTime _clock() {
+  final DateTime today = nowKst();
+  return DateTime(today.year, today.month, today.day, 21);
+}
+
 void main() {
   late AppDatabase db;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    await seedIfEmpty(db);
+    await seedIfEmpty(db, clock: _clock());
   });
 
   tearDown(() async => db.close());
@@ -83,10 +96,39 @@ void main() {
 
   test('김민수 시드의 마지막 메시지 날짜는 오늘로 계속 갱신된다', () async {
     final rows = await minsuThread();
-    final now = nowKst();
+    final now = _clock();
     final last = rows.last.createdAt;
     expect((last.year, last.month, last.day), (now.year, now.month, now.day));
     expect(last.isBefore(now), isTrue);
+  });
+
+  test('오늘이 아직 이른 시각이어도 시드는 과거에, 하루 안에 남는다', () async {
+    // 자정 직후에는 `18:18` 짜리 메시지를 오늘에 둘 자리가 없다 — 스레드가
+    // 통째로 앞당겨지며 어제로 넘어간다. 그래도 지켜야 하는 두 가지는
+    // 남는다: 실행 중 답장보다 앞서도록 **과거**일 것, 그리고 몇 달 전으로
+    // 떨어지지 않도록 **하루 안**일 것.
+    final DateTime justAfterMidnight = DateTime(
+      _clock().year,
+      _clock().month,
+      _clock().day,
+      0,
+      14,
+    );
+    final AppDatabase fresh = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(fresh.close);
+    await seedIfEmpty(fresh, clock: justAfterMidnight);
+
+    final rows =
+        await (fresh.select(
+          fresh.clientChatMessages,
+        )..where((m) => m.clientId.equals('seed-client-1'))).get();
+    rows.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    expect(rows.last.createdAt.isBefore(justAfterMidnight), isTrue);
+    expect(
+      justAfterMidnight.difference(rows.last.createdAt),
+      lessThan(const Duration(days: 1)),
+    );
   });
 
   test('리포트 등록 안내에는 그 메시지가 속한 주가 표시로 남는다', () async {
