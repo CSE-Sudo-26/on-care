@@ -1034,8 +1034,6 @@
   "myClientRegistered": "Registered",
   "myClientUnregistered": "Unregistered",
   "myClientRestore": "Register again",
-  "myClientRestoreSuccess": "Client registered again",
-  "myClientRestoreFailed": "Couldn't register the client again. Please try again",
   "myStatSessionsDone": "Sessions done",
   "myStatRoutinesSent": "Programs sent",
   "myGymName": "Gym name",
