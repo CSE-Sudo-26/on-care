@@ -526,4 +526,18 @@ void main() {
       expect(emissions, <bool>[true]);
     });
   });
+
+  test('removeClient DELETEs the assignment endpoint', () async {
+    const path = '/trainer/clients/m1';
+    when(() => dio.delete<void>(path)).thenAnswer(
+      (_) async => Response<void>(
+        requestOptions: RequestOptions(path: path),
+        statusCode: 204,
+      ),
+    );
+
+    await repo.removeClient('m1');
+
+    verify(() => dio.delete<void>(path)).called(1);
+  });
 }

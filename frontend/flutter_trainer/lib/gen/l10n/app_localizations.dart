@@ -3602,6 +3602,54 @@ abstract class AppLocalizations {
   /// **'Clients'**
   String get myStatClients;
 
+  /// No description provided for @myClientManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Client management'**
+  String get myClientManagement;
+
+  /// No description provided for @myClientManagementHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove clients whose coaching relationship has ended'**
+  String get myClientManagementHint;
+
+  /// No description provided for @myClientRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove client'**
+  String get myClientRemove;
+
+  /// No description provided for @myClientRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String myClientRemoveTitle(String name);
+
+  /// No description provided for @myClientRemoveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.'**
+  String get myClientRemoveBody;
+
+  /// No description provided for @myClientRemoveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Client removed'**
+  String get myClientRemoveSuccess;
+
+  /// No description provided for @myClientRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove the client. Please try again'**
+  String get myClientRemoveFailed;
+
+  /// No description provided for @myClientManagementEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients assigned'**
+  String get myClientManagementEmpty;
+
   /// No description provided for @myStatSessionsDone.
   ///
   /// In en, this message translates to:

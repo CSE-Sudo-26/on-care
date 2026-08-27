@@ -208,6 +208,14 @@ void main() {
       expect(clients.firstWhere((c) => c.name == '김민수').active, isTrue);
     });
 
+    test('removeClient removes the client from the demo roster', () async {
+      final repo = DriftClientRepository(db);
+      await repo.removeClient('seed-client-1');
+
+      final clients = await repo.watchClients().first;
+      expect(clients.any((c) => c.id == 'seed-client-1'), isFalse);
+    });
+
     // 예약 수는 이제 로스터가 아니라 오늘 스케줄에서 파생된다(#387).
     // 배지 계산은 todayReservationCountProvider 테스트가 덮고, 날짜 필터링은
     // ScheduleRepository.watchToday 테스트(schedule_page_test)가 덮는다.
