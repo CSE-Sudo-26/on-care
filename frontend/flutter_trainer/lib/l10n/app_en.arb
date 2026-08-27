@@ -1281,7 +1281,7 @@
   "aiSendToClient": "Send to client",
   "aiGoToChatHint": "Use the button below to jump into their chat and explain it.",
   "aiApplyToTemplate": "Apply to template",
-  "aiAppliedToTemplate": "Applied the AI routine to the program info",
+  "aiAppliedToTemplate": "The AI suggestion was applied to the program template.",
   "aiStepConditions": "Set up",
   "aiStepReview": "Program selection",
   "aiStepDone": "Final review",

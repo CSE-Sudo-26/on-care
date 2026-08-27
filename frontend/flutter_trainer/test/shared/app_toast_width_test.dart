@@ -172,7 +172,7 @@ void main() {
     final double oneLine = await toastHeight(tester, '저장했어요');
     final double veryLong = await toastHeight(
       tester,
-      'AI 루틴이 프로그램 정보에 반영됐어요. 아래에서 확인하고 필요하면 수정한 뒤 '
+      'AI 추천안이 프로그램 템플릿에 반영됐어요. 아래에서 확인하고 필요하면 수정한 뒤 '
       '보내기로 전달하세요. 이 문구는 한 줄 높이를 훌쩍 넘길 만큼 깁니다.',
     );
 

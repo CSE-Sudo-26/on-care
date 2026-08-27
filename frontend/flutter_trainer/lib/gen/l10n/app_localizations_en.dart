@@ -2464,7 +2464,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiAppliedToTemplate =>
-      'Applied the AI routine to the program info';
+      'The AI suggestion was applied to the program template.';
 
   @override
   String get aiStepConditions => 'Set up';
