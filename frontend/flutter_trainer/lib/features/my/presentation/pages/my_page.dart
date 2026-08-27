@@ -1213,18 +1213,51 @@ class _ClientManagementEntry extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Semantics(
       button: true,
-      child: InkWell(
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        onTap: onTap,
-        child: SectionCard(
-          title: l.myClientManagement,
-          icon: Icons.manage_accounts_outlined,
-          trailing: const Icon(
-            Icons.chevron_right,
-            size: 18,
-            color: AppColors.disabledForeground,
+      child: DecoratedBox(
+        key: const ValueKey<String>('client-management-entry'),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: const BorderRadius.all(AppRadius.card),
+          border: Border.all(color: AppColors.border),
+          boxShadow: kCardShadow,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: const BorderRadius.all(AppRadius.card),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.manage_accounts_outlined,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      l.myClientManagement,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: AppColors.disabledForeground,
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: const SizedBox.shrink(),
         ),
       ),
     );

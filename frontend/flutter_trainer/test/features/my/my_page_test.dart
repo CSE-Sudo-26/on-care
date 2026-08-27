@@ -98,6 +98,14 @@ void main() {
 
       final management = find.text('고객 관리');
       await tester.scrollUntilVisible(management, 200);
+      expect(
+        tester
+            .getSize(
+              find.byKey(const ValueKey<String>('client-management-entry')),
+            )
+            .height,
+        lessThan(80),
+      );
       await tester.tap(management);
       await tester.pumpAndSettle();
       expect(currentLocation(tester), AppRoutes.mySection('clients'));
