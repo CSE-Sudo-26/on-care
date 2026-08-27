@@ -126,14 +126,14 @@ void main() {
     });
   });
 
-  group('데모 대화의 리포트 등록 (#1421)', () {
-    testWidgets('데모 스레드에 카드로 뜨고, 본문은 말풍선으로 겹쳐 그리지 않는다', (
+  group('데모 대화의 리포트 미포함 (#1586)', () {
+    testWidgets('김민수 데모 스레드에는 리포트 등록 카드가 없다', (
       WidgetTester tester,
     ) async {
       await pumpChat(tester);
 
-      expect(find.byType(CoachReportCard), findsOneWidget);
-      expect(find.text('리포트가 등록되었어요'), findsOneWidget);
+      expect(find.byType(CoachReportCard), findsNothing);
+      expect(find.text('리포트가 등록되었어요'), findsNothing);
       expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
     });
 
@@ -145,22 +145,20 @@ void main() {
       expect(find.text('PDF 열기'), findsNothing);
     });
 
-    testWidgets('리포트가 아닌 메시지는 파일명이 무엇이든 카드가 되지 않는다', (
+    testWidgets('데모 메시지는 리포트 표시나 첨부를 갖지 않는다', (
       WidgetTester tester,
     ) async {
-      // 파일명으로 리포트 여부를 추측하면, 트레이너가 보낸 `weekly-report.pdf`
-      // 라는 이름의 사진도 리포트 카드가 된다.
       final List<CoachMessage> chat = await MockMemberCoachRepository()
           .fetchChat();
       final int cards = chat
           .where((CoachMessage m) => m.reportWeekStart != null)
           .length;
 
-      expect(cards, 1);
+      expect(cards, 0);
       expect(
         chat.where((CoachMessage m) => m.attachment != null),
         isEmpty,
-        reason: '데모에는 첨부가 없다 — 카드는 첨부가 아니라 표시로 갈린다',
+        reason: '김민수 데모 스레드에는 리포트 데이터나 첨부가 없어야 한다',
       );
     });
   });
