@@ -43,6 +43,8 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
         hashed_password="unused",
         role="member",
     )
+    db_session.add(member)
+    db_session.commit()
     pair_rows = [
         TrainerClient(
             id=f"link-{uuid4().hex[:12]}",
@@ -99,7 +101,7 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
         ),
     ]
     expected_preserved = [(type(row), row.id) for row in pair_rows]
-    db_session.add_all([member, *pair_rows])
+    db_session.add_all(pair_rows)
     db_session.commit()
     try:
         response = client.delete(
