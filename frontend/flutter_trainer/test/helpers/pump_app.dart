@@ -271,4 +271,8 @@ class _StillClientRepository implements ClientRepository {
   @override
   Future<void> setClientActive(String id, bool active) =>
       throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
+
+  @override
+  Future<void> removeClient(String id) =>
+      throw UnsupportedError('명단을 멈춰 둔 테스트용 저장소다.');
 }

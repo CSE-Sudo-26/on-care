@@ -321,6 +321,19 @@ def trainer_clients(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.delete("/trainer/clients/{member_id}", status_code=204)
+def trainer_remove_client(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """담당 고객 관계만 해제한다. 회원 계정과 원본 기록은 유지한다."""
+    link = _require_client(db, trainer.id, member_id)
+    if not link.active:
+        raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
+    trainer_service.remove_client(db, link)
+
+
 @router.put(
     "/trainer/clients/{member_id}/status",
     response_model=TrainerClientStatusOut,

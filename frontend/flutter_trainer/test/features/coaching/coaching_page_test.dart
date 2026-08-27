@@ -248,6 +248,9 @@ class _FixedClientRepository implements ClientRepository {
 
   @override
   Future<void> setClientActive(String id, bool active) async {}
+
+  @override
+  Future<void> removeClient(String id) async {}
 }
 
 /// Spies on `assignRoutine` (captures the [AssignedRoutine] sent) and can
@@ -1864,9 +1867,9 @@ void main() {
       );
       await settle(tester);
 
-      final repo =
-          container.read(scheduleRepositoryProvider)
-              as _SlowCountingScheduleRepository;
+      final repo = container.read(
+        scheduleRepositoryProvider,
+      ) as _SlowCountingScheduleRepository;
       expect(repo.registerCalls, 1);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
@@ -2006,9 +2009,9 @@ void main() {
       await tapRegister();
       await settle(tester);
 
-      final repo =
-          container.read(scheduleRepositoryProvider)
-              as _SlowCountingScheduleRepository;
+      final repo = container.read(
+        scheduleRepositoryProvider,
+      ) as _SlowCountingScheduleRepository;
       expect(repo.registerCalls, 2);
       // 두 write 모두 흘려보낸다 — 지연을 늘렸으니(30초) 그만큼 더 기다린다.
       await tester.pump(const Duration(seconds: 35));

@@ -31,7 +31,9 @@ void showAppToast(
   AppToastAction? action,
   Duration? duration,
 }) {
-  AppToastHost.of(context).show(message, kind: kind, action: action, duration: duration);
+  AppToastHost.of(
+    context,
+  ).show(message, kind: kind, action: action, duration: duration);
 }
 
 /// 토스트를 띄우는 손잡이. 화면이 사라진 뒤에도 쓸 수 있도록 오버레이를 미리
@@ -203,35 +205,45 @@ class _AppToastState extends State<_AppToast>
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              // 동작 버튼이 없는 토스트는 **내용 너비**로 선다(#1466). `max`
-              // 로 두면 "추천하지 않아요" 한 줄짜리 안내도 최대 너비(560)를
-              // 거의 채워, 짧은 말이 크게 보인다. 동작 버튼이 있는 토스트는
-              // 지금처럼 자리를 다 쓴다 — 메시지 길이에 따라 버튼이 좌우로
-              // 흔들리면 누를 자리가 매번 달라진다.
-              mainAxisSize: widget.action == null
-                  ? MainAxisSize.min
-                  : MainAxisSize.max,
+              // 동작 버튼이 있어도 없어도 **내용 너비**로 선다(#1571). `max`
+              // 로 두면 "리포트를 보냈어요" 처럼 짧은 말도 최대 너비(560)를
+              // 거의 채워, 버튼이 텍스트에서 멀찍이 오른쪽 빈 자리에 걸린다.
+              // `min` 이면 줄이 길지 않은 한 버튼이 자연스레 텍스트 바로
+              // 오른쪽 끝에 붙는다.
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(_icon(widget.kind), size: 20, color: _iconColor(widget.kind)),
+                Icon(
+                  _icon(widget.kind),
+                  size: 20,
+                  color: _iconColor(widget.kind),
+                ),
                 const SizedBox(width: AppSpacing.md),
-                // 긴 메시지는 최대 너비 안에서 줄바꿈한다 — `Flexible` 이라
-                // 짧은 메시지에서는 제 너비만 차지하고, 길면 남은 자리까지
-                // 쓰고 접힌다.
+                // 토스트는 항상 한 줄이다(#1573) — 줄바꿈을 허용하면 두 줄째가
+                // 다음 화면 요소를 가리거나 애니메이션 높이가 들쭉날쭉해진다.
+                // `Flexible` 이라 짧은 메시지에서는 제 너비만 차지하고, 최대
+                // 너비를 넘는 긴 메시지는 말줄임표로 자른다.
                 Flexible(
                   child: Text(
                     widget.message,
                     style: AppToastStyle.contentTextStyle,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (widget.action case final action?) ...[
-                  const SizedBox(width: AppSpacing.md),
+                  // 버튼이 텍스트에 바짝 붙지 않게 `md` 보다 넉넉히 뗀다.
+                  const SizedBox(width: AppSpacing.lg),
                   GestureDetector(
                     key: const ValueKey<String>('app-toast-action'),
                     onTap: _runAction,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Text(action.label, style: AppToastStyle.actionTextStyle),
+                        Text(
+                          action.label,
+                          style: AppToastStyle.actionTextStyle,
+                        ),
                         const Icon(
                           Icons.chevron_right,
                           size: 16,

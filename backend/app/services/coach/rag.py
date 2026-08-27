@@ -119,13 +119,24 @@ def replace_personal_text(
     내용이 비워진 것도 반영해야 할 변화다.
 
     임베딩을 잠금 안에서 돌리므로 그만큼 잠금을 오래 쥔다. 잠금이 기록 하나 단위라
-    경쟁하는 쪽은 **같은 기록을 동시에 고치는 요청**뿐이고, 그건 드물다.
+    경쟁하는 쪽은 **같은 기록을 동시에 고치는 요청**뿐이고, 그건 드물다. 다만 그
+    '오래'는 유한해야 한다 — 임베딩 client 의 HTTP timeout 이 상한이고, 실패하면
+    아래에서 트랜잭션을 끝내 잠금을 즉시 돌려준다(#1545).
     """
     _lock_source_ref(db, user_id, source_ref)
 
-    text = load_text()
-    chunks = chunk_text(text) if text else []
-    vectors = get_embedder().embed(chunks) if chunks else []
+    try:
+        text = load_text()
+        chunks = chunk_text(text) if text else []
+        vectors = get_embedder().embed(chunks) if chunks else []
+    except Exception:
+        # 임베딩은 외부 호출이라 timeout·429 로 실패한다. 그 실패를 그대로 올려
+        # 보내면 잠금을 쥔 트랜잭션이 호출부가 정리해 줄 때까지 열려 있고, 같은
+        # 기록의 다음 교체는 그 잠금을 기다리며 쌓인다. 여기서 끝내면 잠금과
+        # connection 이 즉시 돌아간다 — 아직 아무것도 지우지 않았으므로 기존
+        # 문서도 그대로 남는다(#1545).
+        db.rollback()
+        raise
 
     db.execute(
         delete(CoachDocument).where(
@@ -169,7 +180,11 @@ def ensure_personal_text(
     if not chunks:
         db.commit()
         return 0
-    vectors = get_embedder().embed(chunks)
+    try:
+        vectors = get_embedder().embed(chunks)
+    except Exception:
+        db.rollback()  # 잠금·connection 을 즉시 돌려준다(#1545)
+        raise
     for chunk, vec in zip(chunks, vectors, strict=True):
         db.add(CoachDocument(
             user_id=user_id, domain=domain, source=source,

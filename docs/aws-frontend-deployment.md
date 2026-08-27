@@ -16,6 +16,18 @@ Flutter 회원 앱과 트레이너 웹을 하나의 private S3 버킷에 올리�
 
 AWS CloudShell에서 브랜치를 받은 뒤 템플릿을 먼저 검증합니다.
 
+템플릿은 기본적으로 GitHub의 immutable OIDC subject를 사용합니다. 저장소 설정값은 다음 명령으로
+확인합니다. 응답의 `sub_claim_prefix`에 표시된 owner ID와 repository ID가 템플릿 기본값과 다르면
+배포 시 `GitHubOwnerId`, `GitHubRepositoryId` 파라미터로 전달합니다.
+
+```bash
+gh api repos/CSE-Sudo-26/on-care/actions/oidc/customization/sub
+```
+
+2026년 7월 15일 이전에 생성되어 이름 기반 subject를 계속 사용하는 저장소에서는
+`UseImmutableGitHubOidcSubject=false`를 전달할 수 있습니다. 와일드카드로 권한 범위를 넓히지 않고,
+저장소와 `main` 브랜치가 포함된 정확한 subject를 유지합니다.
+
 ```bash
 git clone https://github.com/CSE-Sudo-26/on-care.git
 cd on-care
@@ -65,7 +77,10 @@ aws cloudformation deploy \
 >   --template-file infra/frontend-hosting.yml \
 >   --stack-name oncare-frontend \
 >   --capabilities CAPABILITY_IAM \
->   --parameter-overrides GitHubRepository=on-care \
+>   --parameter-overrides \
+>     GitHubRepository=on-care \
+>     GitHubOwnerId=265976266 \
+>     GitHubRepositoryId=1174354664 \
 >   --region ap-northeast-2
 > ```
 
@@ -134,6 +149,29 @@ CloudFront 검증이 끝난 뒤 별도 변경으로 진행합니다.
 3. DNS를 GitHub Pages에서 CloudFront로 전환
 4. 전환 후 랜딩페이지, 두 앱, SPA 새로고침, 카카오맵 확인
 5. 롤백 가능 여부를 확인한 뒤 GitHub Pages 배포 중단
+
+## 7. 릴리스 전환과 롤백
+
+배포는 운영 파일을 덮어쓰지 않습니다. 빌드는 커밋 SHA로 격리된 `releases/<SHA>/`에 올라가고, 그 릴리스가 온전한지 확인한 뒤에야 CloudFront distribution의 origin path를 그 prefix로 전환합니다. 전환 전에는 지금 서비스 중인 릴리스의 객체를 하나도 건드리지 않으므로, 업로드나 사전 검증이 실패하면 운영은 직전 빌드를 그대로 계속 서비스합니다.
+
+| 단계 | 실패했을 때 |
+| --- | --- |
+| 빌드 · 업로드 · 릴리스 사전 검증 | 전환하지 않고 종료 — 운영은 직전 릴리스 유지 |
+| origin path 전환 | 롤백 단계가 직전 origin path로 되돌리고 무효화 |
+| 무효화 후 smoke check | 같음 — 자동 롤백 후 워크플로 실패 처리 |
+
+- 릴리스 보관: 최신 5개를 남기고 그보다 오래된 prefix는 배포 성공 시 정리합니다. 현재 릴리스와 직전 릴리스는 개수와 무관하게 항상 보존합니다.
+- 버킷 버전 관리가 켜져 있어 실수로 덮어쓰거나 지운 객체도 30일 안에는 복구할 수 있습니다.
+- 수동 롤백이 필요하면 distribution의 origin path를 되돌릴 릴리스로 바꾸고 `/*`를 무효화합니다.
+
+```bash
+aws cloudfront get-distribution-config --id <DISTRIBUTION_ID> \
+  --query 'DistributionConfig.Origins.Items[0].OriginPath'
+```
+
+> **이 방식은 스택 갱신이 선행되어야 합니다.** 릴리스 전환에는 `cloudfront:GetDistributionConfig`·`cloudfront:UpdateDistribution` 권한이 필요하고, 버전 관리·수명 주기 규칙도 템플릿에 새로 들어갔습니다. 이 변경을 병합한 뒤 배포를 켜기 전에 `aws cloudformation deploy`를 한 번 더 실행해 주세요.
+>
+> 첫 전환 이후에는 버킷 루트에 남아 있는 옛 배포 파일이 더 이상 서비스되지 않습니다. 다만 그 시점의 롤백 대상이 루트이므로, 다음 릴리스가 정상 서비스되는 것을 확인한 뒤에 수동으로 정리하는 편이 안전합니다.
 
 ## 비용 및 삭제 주의사항
 
