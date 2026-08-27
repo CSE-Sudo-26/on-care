@@ -183,11 +183,19 @@ void main() {
 
     test('deleteSession removes it and restores the totals', () async {
       final MockExerciseRepository r = _repo();
-      final ExerciseWeek before = await r.fetchThisWeek();
-      final ExerciseSession target = before.sessions.firstWhere(
-        (ExerciseSession s) => s.type == ExerciseType.cardio,
+      // 지울 수 있는 것은 회원이 적은 기록뿐이다 — 픽스처 기록은 PT·배정
+      // 루틴에서 온 파생 기록이라 이 경로로 사라지지 않는다.
+      final DateTime monday = _friday.subtract(
+        Duration(days: _friday.weekday - 1),
       );
-      final int day = before.dayLabels.indexOf(target.dayLabel);
+      final int day = (await r.fetchThisWeek()).dailyMinutes.indexOf(0);
+      final ExerciseSession target = await r.addSession(
+        type: ExerciseType.cardio,
+        minutes: 30,
+        calories: 200,
+        date: monday.add(Duration(days: day)),
+      );
+      final ExerciseWeek before = await r.fetchThisWeek();
 
       await r.deleteSession(target.id!);
 
@@ -220,15 +228,18 @@ void main() {
 
     test('updateSession edits a session and re-derives totals', () async {
       final MockExerciseRepository r = _repo();
-      final ExerciseWeek before = await r.fetchThisWeek();
-      final ExerciseSession target = before.sessions.firstWhere(
-        (ExerciseSession s) => s.type == ExerciseType.strength,
-      );
-      final int day = before.dayLabels.indexOf(target.dayLabel);
-
       final DateTime monday = _friday.subtract(
         Duration(days: _friday.weekday - 1),
       );
+      final int day = (await r.fetchThisWeek()).dailyMinutes.indexOf(0);
+      final ExerciseSession target = await r.addSession(
+        type: ExerciseType.strength,
+        minutes: 20,
+        calories: 120,
+        date: monday.add(Duration(days: day)),
+      );
+      final ExerciseWeek before = await r.fetchThisWeek();
+
       await r.updateSession(
         id: target.id!,
         type: ExerciseType.strength,
@@ -243,6 +254,58 @@ void main() {
       expect(after.totalCalories, before.totalCalories + 180);
       expect(after.strengthMinutes[day], before.strengthMinutes[day] + 30);
       expect(after.dailyMinutes[day], before.dailyMinutes[day] + 30);
+    });
+  });
+
+  group('픽스처 기록의 출처는 PT·배정 루틴이다 (#499, #638)', () {
+    test('PT 날은 trainer_pt, 나머지 날은 assigned_routine 이다', () async {
+      final ExerciseWeek w = await _repo().fetchThisWeek();
+      for (final FixtureDay day in _weekDays(_friday)) {
+        final Iterable<ExerciseSession> ofDay = w.sessions.where(
+          (ExerciseSession s) => s.dayLabel == day.dayLabel,
+        );
+        expect(ofDay, isNotEmpty, reason: '${day.date} 기록이 통째로 비었다');
+        expect(
+          ofDay.map((ExerciseSession s) => s.source).toSet(),
+          <ExerciseSource>{
+            day.isPt
+                ? ExerciseSource.trainerPt
+                : ExerciseSource.assignedRoutine,
+          },
+        );
+      }
+    });
+
+    test('회원이 직접 적은 기록은 하나도 없다 — `직접 추가한 운동` 은 비어 있다', () async {
+      final ExerciseWeek w = await _repo().fetchThisWeek();
+      expect(
+        w.sessions.where((ExerciseSession s) => s.isEditable),
+        isEmpty,
+      );
+    });
+
+    test('파생 기록은 회원이 고치거나 지우지 못한다 — 서버의 409 와 같다', () async {
+      final MockExerciseRepository r = _repo();
+      final ExerciseWeek before = await r.fetchThisWeek();
+      final ExerciseSession pt = before.sessions.firstWhere(
+        (ExerciseSession s) => s.source == ExerciseSource.trainerPt,
+      );
+
+      await r.deleteSession(pt.id!);
+      await r.updateSession(
+        id: pt.id!,
+        type: ExerciseType.cardio,
+        minutes: 5,
+        calories: 5,
+        date: _friday,
+      );
+
+      final ExerciseWeek after = await r.fetchThisWeek();
+      expect(after.sessions.length, before.sessions.length);
+      expect(after.totalMinutes, before.totalMinutes);
+      expect(after.totalCalories, before.totalCalories);
+      expect(after.strengthSets, before.strengthSets);
+      expect(after.dailyCalories, before.dailyCalories);
     });
   });
 

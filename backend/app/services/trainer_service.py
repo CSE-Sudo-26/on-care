@@ -4204,7 +4204,7 @@ def _skipped_names(report: WeeklyReportOut) -> list[str]:
     return names[:3]
 
 
-#: 운동 이름 뒤에 붙는 그날의 분량(`하체 스트레칭 10분`, `벤치프레스 40kg · 4세트`).
+#: 운동 이름 뒤에 붙는 그날의 분량(`하체 스트레칭 10분`, `벤치프레스 4세트 · 10회 · 40kg`).
 _EXERCISE_AMOUNT_RE = re.compile(r"\s*\d+(?:\.\d+)?\s*(?:분|초|kg|km|회|세트)$")
 
 
