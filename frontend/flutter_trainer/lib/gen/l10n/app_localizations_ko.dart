@@ -2385,8 +2385,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiApplyToTemplate => '템플릿에 반영';
 
   @override
-  String get aiAppliedToTemplate =>
-      'AI 루틴이 프로그램 정보에 반영됐어요. 아래에서 확인하고 필요하면 수정한 뒤 보내기로 전달하세요.';
+  String get aiAppliedToTemplate => 'AI 추천안이 프로그램 템플릿에 반영됐어요.';
 
   @override
   String get aiStepConditions => '조건 설정';
