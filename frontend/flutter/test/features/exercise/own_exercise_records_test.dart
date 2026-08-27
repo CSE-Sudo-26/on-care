@@ -78,6 +78,9 @@ class _RecordingRepository implements ExerciseRepository {
   String? deletedId;
 
   @override
+  Future<String> fetchAdvice(String period) async => '조언';
+
+  @override
   Future<ExerciseWeek> fetchThisWeek() async => _week(sessions: _sessions);
 
   @override

@@ -113,15 +113,18 @@ def _avg(values: list[int]) -> float:
 
 
 def period_coach_message(days: list[DietDayTotals], period: str) -> str:
-    """기간에 맞는 식단 조언. (#1017)
+    """기간에 맞는 식단 조언. (#1017, #1574)
 
     기간을 바꾸는 것은 "무엇을 볼지" 를 바꾸는 일이다. 그래프만 갈아 끼우고
     조언이 오늘 이야기로 남으면, 이번 주를 보고 있는데 "오늘 점심이 짰어요" 를
     읽게 되어 조언이 지금 화면과 무관한 말이 된다.
-    
+
     기간마다 **재료가 다르다.** 오늘은 오늘 먹은 것, 이번 주는 요일별 편차와
     초과한 날 수, 전체는 주 단위 추세다. 말투도 다르다 — 오늘은 다음 끼니를
     제안하고, 이번 주·전체는 되짚어 준다.
+
+    **한 문장 반을 넘기지 않는다.** 좁은 카드 안에서 길어질수록 정작 짚어야 할
+    수치가 묻힌다 — 근거 하나와 다음 행동 하나면 충분하다. (#1574)
     """
     if not days:
         # 없는 기록으로 조언을 지어내지 않는다.
@@ -129,28 +132,19 @@ def period_coach_message(days: list[DietDayTotals], period: str) -> str:
             return "이번 주 식단 기록이 아직 없어요. 한 끼만 남겨도 흐름이 보여요."
         if period == PERIOD_ALL:
             return "기록이 쌓이면 나트륨·칼로리 흐름을 짚어 드릴게요."
-        return "아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?"
+        return "오늘 식단 기록이 아직 없어요. 첫 끼니를 기록해 볼까요?"
 
     over = [d for d in days if d.over_sodium]
 
     if period == PERIOD_WEEK:
         if len(over) >= 3:
-            return (
-                f"이번 주 {len(over)}일이나 나트륨 권장량을 넘었어요. "
-                "국물은 건더기 위주로 먹고 남은 며칠은 담백하게 가요."
-            )
+            return f"이번 주 {len(over)}일이나 나트륨을 넘겼어요. 국물은 건더기 위주로 드세요."
         weekday, weekend = _weekday_split(days)
         if weekend and weekday and _avg(weekend) > _avg(weekday) * 1.3:
-            return (
-                "주중에는 잘 지키다가 주말에 나트륨이 확 올라요. "
-                "주말 외식은 한 끼만 정해 두면 흐름이 유지돼요."
-            )
+            return "주중엔 잘 지키다 주말에 나트륨이 올라요. 주말 외식은 한 끼만 정해요."
         if over:
-            return (
-                f"이번 주 {len(over)}일만 권장량을 넘었어요. "
-                "나머지 날의 균형은 좋았으니 이 흐름을 이어가요."
-            )
-        return "이번 주 내내 나트륨을 권장량 안에서 지켰어요. 아주 좋아요!"
+            return f"이번 주 {len(over)}일만 권장량을 넘었어요. 나머지 날의 균형은 좋았어요."
+        return f"이번 주 {len(days)}일 모두 나트륨을 권장량 안에서 지켰어요!"
 
     if period == PERIOD_ALL:
         # 최근 4주와 그 이전을 견준다 — 나아지는 중인지가 이 화면의 질문이다.
@@ -159,31 +153,22 @@ def period_coach_message(days: list[DietDayTotals], period: str) -> str:
         earlier = [d.sodium_mg for d in days if d.date < recent_from]
         if earlier and recent:
             if _avg(recent) < _avg(earlier) * 0.9:
-                return (
-                    "최근 4주 나트륨이 그 전보다 눈에 띄게 낮아졌어요. "
-                    "지금 방식이 회원님께 맞는 것 같아요."
-                )
+                return "최근 4주 나트륨이 그 전보다 낮아졌어요. 지금 방식이 잘 맞아요."
             if _avg(recent) > _avg(earlier) * 1.1:
-                return (
-                    "최근 4주 들어 나트륨이 다시 올라가고 있어요. "
-                    "무엇이 달라졌는지 한 주만 되짚어 볼까요?"
-                )
+                return "최근 4주 나트륨이 다시 올라가고 있어요. 한 주만 되짚어 볼까요?"
         weekday, weekend = _weekday_split(days)
         if weekend and weekday and _avg(weekend) > _avg(weekday) * 1.3:
-            return (
-                "기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요. "
-                "주말 한 끼만 담백하게 바꿔도 평균이 내려가요."
-            )
+            return "기록을 통틀어 주말마다 나트륨이 올라요. 주말 한 끼만 담백하게 바꿔요."
         ratio = round(len(over) * 100 / len(days))
         if ratio >= 40:
-            return (
-                f"기록한 날의 {ratio}%가 나트륨 권장량을 넘었어요. "
-                "국·찌개 국물을 남기는 것부터 시작해 봐요."
-            )
-        return "기록을 통틀어 나트륨이 대체로 권장량 안이에요. 지금 흐름이 좋아요."
+            return f"기록한 날의 {ratio}%가 나트륨 권장량을 넘었어요. 국물부터 남겨 봐요."
+        return f"기록한 {len(days)}일 대부분이 권장량 안이에요. 지금 흐름이 좋아요."
 
-    # 오늘 — 지금까지와 같은 규칙이다.
-    return coach_message(days[-1].sodium_mg, True)
+    # 오늘 — 그날 합계 하나로 말한다.
+    today = days[-1]
+    if today.over_sodium:
+        return f"오늘 나트륨 {today.sodium_mg}mg 로 권장량을 넘겼어요. 남은 끼니는 담백하게."
+    return f"오늘 나트륨 {today.sodium_mg}mg 로 권장량 안이에요. 이대로 마무리해요."
 
 
 def build_day(db: Session, user_id: str, date: str) -> DietTodayResponse:

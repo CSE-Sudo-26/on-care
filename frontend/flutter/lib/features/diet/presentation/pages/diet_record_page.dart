@@ -318,17 +318,26 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                             // 기간 토글을 따라 조언도 바뀐다 (#1017). 지난
                             // 날짜를 고른 동안에는 그날의 조언이다 — 기간
                             // 토글이 숨겨져 있어 화면이 하루를 말하고 있다.
+                            //
+                            // 오늘 조언으로 **되돌아가지 않는다**(#1574).
+                            // 주간·전체 조언을 기다리는 동안 오늘 조언을 대신
+                            // 그리면, 이번 주를 보고 있는데 "오늘 점심이 짰어요"
+                            // 를 읽게 되고 요청이 실패하면 그 말이 그대로 남는다.
                             _AiFeedback(
-                              message: atToday
-                                  ? ref
-                                            .watch(
-                                              dietAdviceProvider(
-                                                _advicePeriod(selectedPeriod),
-                                              ),
-                                            )
-                                            .valueOrNull ??
-                                        day.aiCoachMessage
-                                  : day.aiCoachMessage,
+                              advice: atToday
+                                  ? ref.watch(
+                                      dietAdviceProvider(
+                                        _advicePeriod(selectedPeriod),
+                                      ),
+                                    )
+                                  : AsyncValue<String>.data(
+                                      day.aiCoachMessage,
+                                    ),
+                              onRetry: () => ref.invalidate(
+                                dietAdviceProvider(
+                                  _advicePeriod(selectedPeriod),
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 20),
                             _MealLog(
@@ -1340,17 +1349,22 @@ class _NutritionProgressBar extends StatelessWidget {
 // ─────────────────────────────────────────────────────── AI feedback ──
 
 class _AiFeedback extends StatelessWidget {
-  const _AiFeedback({required this.message});
+  const _AiFeedback({required this.advice, required this.onRetry});
 
-  final String message;
+  /// 지금 고른 기간의 조언. 로딩·실패도 이 값이 들고 있다 — 카드가 다른 기간의
+  /// 말을 대신 하지 않도록. (#1574)
+  final AsyncValue<String> advice;
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 24),
     // 운동 탭도 같은 카드를 쓴다 — 그림은 공용 위젯에 있다. (#1021)
-    child: AiAdviceCard(
+    child: PeriodAiAdviceCard(
       title: AppLocalizations.of(context).dietAiFeedback,
-      message: message,
+      advice: advice,
+      onRetry: onRetry,
     ),
   );
 }

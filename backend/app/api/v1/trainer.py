@@ -82,9 +82,7 @@ from app.schemas.trainer_api import (
 )
 from app.services import (
     diet_service,
-    exercise_activity,
     exercise_service,
-    period_window,
     chat_image_storage,
     consultation_service,
     trainer_client_invite_service,
@@ -594,34 +592,15 @@ def trainer_client_exercise_advice(
     주를 모두 읽어 온 뒤 실제 날짜로 되돌려 거른다.
     """
     _require_client(db, trainer.id, member_id)
-    start, end = period_window.period_bounds(period)
-    weeks = _week_starts_between(start, end)
-    rows = db.scalars(
-        select(ExerciseSession).where(
-            ExerciseSession.user_id == member_id,
-            ExerciseSession.week_start.in_(weeks),
-        )
-    ).all()
-    days = exercise_service.daily_totals(list(rows), start, end)
+    # 조회·집계는 회원 앱과 **같은 함수**다(#1574) — 규칙이 갈리면 같은 회원의
+    # 같은 기간을 두 화면이 다른 날부터 세게 된다.
+    start, end, days = exercise_service.period_days(db, member_id, period)
     return ExerciseAdviceResponse(
         period=period,
         from_date=start,
         to_date=end,
         days_logged=len(days),
         message=exercise_service.period_coach_message(days, period),
-    )
-
-
-def _week_starts_between(start: str, end: str) -> list[str]:
-    """[start, end] 를 덮는 모든 주의 월요일.
-
-    구간의 첫날이 주 가운데면 그 주 월요일부터 담는다 — 월요일이 구간 밖이어도
-    그 주의 기록은 구간 안에 있을 수 있다. 계산은 논리 운동일 모듈 하나에
-    맡긴다(#1264): 조회 구간을 넓히는 규칙이 갈리면 AI 와 이 화면이 서로 다른
-    주를 읽는다.
-    """
-    return exercise_activity.week_starts_covering(
-        _date.fromisoformat(start), _date.fromisoformat(end)
     )
 
 

@@ -51,6 +51,9 @@ class _FixedWeekRepository implements ExerciseRepository {
   final double minutes;
 
   @override
+  Future<String> fetchAdvice(String period) async => '조언';
+
+  @override
   Future<ExerciseWeek> fetchThisWeek() async => _week(minutes);
 
   @override
