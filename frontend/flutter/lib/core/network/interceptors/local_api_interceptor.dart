@@ -730,6 +730,15 @@ class LocalApiInterceptor extends Interceptor {
     return '균형 잡힌 하루였어요. 내일도 이대로 가요!';
   }
 
+  /// 음식 목록에서 탄·단·지 한 항목의 합. `diet_entries` 에는 탄단지 칼럼이
+  /// 없어(값이 foodsJson 안에 있다) 응답을 만들 때마다 여기서 되짚는다.
+  static double _sumMacro(List<Map<String, Object?>> foods, String key) =>
+      foods.fold<double>(
+        0,
+        (double sum, Map<String, Object?> f) =>
+            sum + ((f[key] as num?)?.toDouble() ?? 0),
+      );
+
   /// POST /diet/analyze — the mock can't see the uploaded image, so it
   /// returns a deterministic "recognized" meal (nutrition from the same
   /// public DB the real backend maps to) and persists a diet entry to
@@ -757,6 +766,11 @@ class LocalApiInterceptor extends Interceptor {
             'total_calories': existing.totalCalories,
             'total_sodium_mg': existing.sodiumMg,
             'total_sugar_g': existing.sugarG,
+            // 탄단지는 행에 칼럼이 없어 음식들에서 되짚는다 — 재시도한
+            // 사용자만 탄단지가 0 인 결과를 보게 두지 않는다(#1564).
+            'total_carbs_g': _sumMacro(storedFoods, 'carbs_g'),
+            'total_protein_g': _sumMacro(storedFoods, 'protein_g'),
+            'total_fat_g': _sumMacro(storedFoods, 'fat_g'),
             // 저장해 둔 코멘트를 그대로 돌려준다. 빈 문자열을 주면 재시도한
             // 사용자만 코멘트 없는 결과를 보게 된다.
             'coach_comment': existing.aiComment,
@@ -765,34 +779,50 @@ class LocalApiInterceptor extends Interceptor {
       }
     }
 
+    // 데모 인식 결과 — 무엇을 찍든 요거트 아이스크림 볼로 읽는다(#1564).
+    // 백엔드 스텁 인식기(`recognizer/stub.py`)·영양 시드와 같은 값이다. 한쪽만
+    // 고치면 로컬 데모와 서버 데모가 다른 수치를 보여 준다.
+    //
+    // 당류는 오늘 시드된 하루(17.8g)에 더해도 목표 50g 을 넘지 않게 잡았다 —
+    // 넘기면 시연 중 식단 탭의 당류 카드가 경고색으로 뒤집힌다.
     final foods = <Map<String, Object?>>[
       <String, Object?>{
-        'name': '비빔밥',
-        'calories': 600,
-        'sodium_mg': 900,
-        'sugar_g': 8,
-        'carbs_g': 91.0,
-        'protein_g': 18.0,
-        'fat_g': 18.0,
+        'name': '요거트 아이스크림',
+        'calories': 135,
+        'sodium_mg': 55,
+        'sugar_g': 14.5,
+        'carbs_g': 26.0,
+        'protein_g': 3.0,
+        'fat_g': 2.0,
         'source': 'db',
       },
       <String, Object?>{
-        'name': '김치',
-        'calories': 15,
-        'sodium_mg': 300,
-        'sugar_g': 1,
-        'carbs_g': 3.0,
+        'name': '과일 토핑',
+        'calories': 55,
+        'sodium_mg': 5,
+        'sugar_g': 9.0,
+        'carbs_g': 13.0,
         'protein_g': 1.0,
-        'fat_g': 0.0,
+        'fat_g': 0.5,
+        'source': 'db',
+      },
+      <String, Object?>{
+        'name': '그래놀라 토핑',
+        'calories': 205,
+        'sodium_mg': 125,
+        'sugar_g': 6.0,
+        'carbs_g': 20.0,
+        'protein_g': 5.0,
+        'fat_g': 11.5,
         'source': 'db',
       },
     ];
-    const int totalCal = 615;
-    const int totalNa = 1200;
-    const double totalSugar = 9;
-    // 데모가 보여 주던 문장 그대로. 식단이 인메모리 목업 저장소에서 이 경로로
-    // 옮겨 오면서 문구가 달라지면 시연 화면이 바뀐다.
-    const String coach = '비빔밥은 채소가 풍부해 좋아요. 나트륨이 다소 높으니 장을 줄여보세요.';
+    const int totalCal = 395;
+    const int totalNa = 185;
+    const double totalSugar = 29.5;
+    const String coach =
+        '나트륨이 185mg으로 낮아 혈압 부담이 적어요. 당류는 하루 목표(50g)의 절반 남짓인데, '
+        '그 절반이 요거트 아이스크림 자체에서 나옵니다. 토핑은 지금처럼 과일·견과 위주로 담아 보세요.';
 
     final now = nowKst();
     final id = 'diet-${now.microsecondsSinceEpoch}';
@@ -825,6 +855,10 @@ class LocalApiInterceptor extends Interceptor {
         'total_calories': totalCal,
         'total_sodium_mg': totalNa,
         'total_sugar_g': totalSugar,
+        // 이 셋이 빠져 있어 결과 화면의 탄·단·지가 늘 0g 이었다(#1564).
+        'total_carbs_g': _sumMacro(foods, 'carbs_g'),
+        'total_protein_g': _sumMacro(foods, 'protein_g'),
+        'total_fat_g': _sumMacro(foods, 'fat_g'),
         'coach_comment': coach,
       },
     });
