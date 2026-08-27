@@ -117,6 +117,27 @@ abstract interface class ClientRepository {
   Future<void> restoreClient(String id);
 }
 
+/// 데모(drift)에서 미등록 상태를 나타내는 키. 트레이너-고객 행 자체는 지우지
+/// 않고 이 id 목록에만 올려 둔다 — 원본 기록을 지우지 않는다는 정책과, 다시
+/// 등록할 때 새 행이 아니라 같은 행을 되살려야 한다는 요구가 같이 걸려 있다.
+///
+/// [DriftClientRepository] 뿐 아니라 [DemoClientInviteRepository]도 이
+/// 목록을 본다 — 고객 탭의 "새 회원 등록" 창으로 미등록 고객을 다시 연결할
+/// 때, 이미 있는 행을 무시하고 새로 넣으면 기본 키 충돌로 "이미 연결됨"
+/// 이라는 잘못된 안내가 뜬다.
+const String demoUnregisteredClientsKey = 'trainer_unregistered_clients';
+
+/// [demoUnregisteredClientsKey] 에 저장된 미등록 고객 id 목록을 읽는다.
+Future<Set<String>> readDemoUnregisteredClientIds(AppDatabase db) async {
+  final raw = await db.readValue(demoUnregisteredClientsKey);
+  if (raw == null || raw.isEmpty) return <String>{};
+  return (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
+}
+
+/// [ids] 를 [demoUnregisteredClientsKey] 에 저장한다.
+Future<void> writeDemoUnregisteredClientIds(AppDatabase db, Set<String> ids) =>
+    db.putValue(demoUnregisteredClientsKey, jsonEncode(ids.toList()..sort()));
+
 /// Reads client + schedule data from the local drift DB for the
 /// 고객 관리 tab. Returns reactive streams so the UI updates if the
 /// underlying rows change (e.g. a routine sent from another tab).
@@ -125,7 +146,6 @@ class DriftClientRepository implements ClientRepository {
   const DriftClientRepository(this._db);
 
   final AppDatabase _db;
-  static const String _unregisteredKey = 'trainer_unregistered_clients';
 
   @override
   Future<RoutineHistoryEntry> updateHistoryFeedback(
@@ -155,21 +175,12 @@ class DriftClientRepository implements ClientRepository {
           (t) => OrderingTerm(expression: t.sortOrder),
         ]);
       final rows = await query.get();
-      final removed = await _unregisteredIds();
+      final removed = await readDemoUnregisteredClientIds(_db);
       return rows
           .map((row) => _toEntity(row, registered: !removed.contains(row.id)))
           .toList();
     });
   }
-
-  Future<Set<String>> _unregisteredIds() async {
-    final raw = await _db.readValue(_unregisteredKey);
-    if (raw == null || raw.isEmpty) return <String>{};
-    return (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
-  }
-
-  Future<void> _saveUnregisteredIds(Set<String> ids) =>
-      _db.putValue(_unregisteredKey, jsonEncode(ids.toList()..sort()));
 
   /// Most recent message time per client.
   ///
@@ -302,15 +313,15 @@ class DriftClientRepository implements ClientRepository {
       await (_db.delete(
         _db.reportFeedbackDrafts,
       )..where((t) => t.clientId.equals(id))).go();
-      final removed = (await _unregisteredIds())..add(id);
-      await _saveUnregisteredIds(removed);
+      final removed = (await readDemoUnregisteredClientIds(_db))..add(id);
+      await writeDemoUnregisteredClientIds(_db, removed);
     });
   }
 
   @override
   Future<void> restoreClient(String id) async {
-    final removed = (await _unregisteredIds())..remove(id);
-    await _saveUnregisteredIds(removed);
+    final removed = (await readDemoUnregisteredClientIds(_db))..remove(id);
+    await writeDemoUnregisteredClientIds(_db, removed);
   }
 
   @override

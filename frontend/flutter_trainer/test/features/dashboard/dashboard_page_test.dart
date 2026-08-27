@@ -413,7 +413,7 @@ void main() {
     await openDashboard(tester);
     await expandTaskCategory(tester, '상담');
 
-    final mission = findMissionRow('consultation');
+    final mission = findMissionRow('consultation').first;
     await tester.ensureVisible(mission);
     await tester.tap(mission);
     await settle(tester);

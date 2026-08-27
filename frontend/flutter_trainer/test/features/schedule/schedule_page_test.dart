@@ -657,10 +657,10 @@ void main() {
       final Badge badge = tester.widget<Badge>(
         find.descendant(of: entry, matching: find.byType(Badge)),
       );
-      expect(badge.isLabelVisible, isTrue, reason: '시드에 대기 1건');
+      expect(badge.isLabelVisible, isTrue, reason: '시드에 대기 2건');
       expect(badge.backgroundColor, AppColors.destructive);
       expect(
-        find.descendant(of: entry, matching: find.text('1')),
+        find.descendant(of: entry, matching: find.text('2')),
         findsOneWidget,
       );
     });
@@ -679,7 +679,7 @@ void main() {
         ),
       );
       final Rect label = tester.getRect(
-        find.descendant(of: entry, matching: find.text('1')),
+        find.descendant(of: entry, matching: find.text('2')),
       );
       // 배지 원(지름 16)은 라벨을 가운데 두므로, 원 전체를 아이콘 오른쪽
       // 바깥에서 재려면 라벨이 아니라 원의 왼쪽 끝을 봐야 한다.

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart'
@@ -15,9 +16,12 @@ import 'package:drift/drift.dart'
 import 'package:logger/logger.dart';
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/demo/period_advice.dart';
+import 'package:oncare/core/network/request_extras.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart' show kDietDayMessagesKey;
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart'
+    show MealImageFormat;
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_load.dart'
     show setsFromStrengthMinutes;
@@ -139,6 +143,7 @@ class LocalApiInterceptor extends Interceptor {
     final (String mealType, String? idempotencyKey) = _analyzeRequestFields(
       options,
     );
+    final Uint8List? photoBytes = _requestPhotoBytes(options);
     final DateTime now = nowKst();
 
     // 서버가 준 id 를 그대로 쓴다 — 이어지는 수정·삭제가 같은 행을 가리킨다.
@@ -161,6 +166,12 @@ class LocalApiInterceptor extends Interceptor {
               (analysis['total_sugar_g'] as num?)?.toDouble() ?? 0.0,
             ),
             aiComment: Value((analysis['coach_comment'] as String?) ?? ''),
+            // 사진 바이트도 로컬에 둔다. 실 서버가 준 `photo_url` 을 쓰지 않는
+            // 이유는 목록을 여전히 여기서 읽기 때문이다 — 그 경로는 이 데모
+            // 백엔드가 답할 수 없다.
+            photoBytes: photoBytes == null
+                ? const Value.absent()
+                : Value(photoBytes),
             idempotencyKey: Value(idempotencyKey),
           ),
         );
@@ -210,6 +221,9 @@ class LocalApiInterceptor extends Interceptor {
   _Handler? _paramRoute(String method, String path) {
     if (method == 'GET' && path.startsWith('/diet/days/')) {
       return _dietByDate;
+    }
+    if (method == 'GET' && path.startsWith('/diet/photos/')) {
+      return _dietPhoto;
     }
     if (method == 'DELETE' && path.startsWith('/diet/entries/')) {
       return _dietDelete;
@@ -397,6 +411,7 @@ class LocalApiInterceptor extends Interceptor {
       // 빼먹으면 수정 직후 목록에서 사진과 코멘트가 사라진다.
       'ai_comment': row.aiComment,
       'photo_asset': row.photoAsset.isEmpty ? null : row.photoAsset,
+      'photo_url': _photoUrl(row),
     });
   }
 
@@ -668,6 +683,7 @@ class LocalApiInterceptor extends Interceptor {
         'sugar_g': r.sugarG,
         'ai_comment': r.aiComment,
         'photo_asset': r.photoAsset.isEmpty ? null : r.photoAsset,
+        'photo_url': _photoUrl(r),
       });
     }
     return _ok(options, <String, Object?>{
@@ -826,6 +842,7 @@ class LocalApiInterceptor extends Interceptor {
     final (String mealType, String? idempotencyKey) = _analyzeRequestFields(
       options,
     );
+    final Uint8List? photoBytes = _requestPhotoBytes(options);
 
     // 같은 멱등키가 이미 저장돼 있으면 새로 저장하지 않고 기존 entry 를 반환(재시도 중복 방지).
     if (idempotencyKey != null) {
@@ -834,6 +851,16 @@ class LocalApiInterceptor extends Interceptor {
                 ..where((t) => t.idempotencyKey.equals(idempotencyKey)))
               .getSingleOrNull();
       if (existing != null) {
+        // 사진이 아직 없는 기록이면(옛 기록·바이트가 빠진 첫 시도) 이번 것으로
+        // 채운다. 이미 있으면 그대로 둔다 — 같은 끼니의 사진이다.
+        if (photoBytes != null &&
+            (existing.photoBytes == null || existing.photoBytes!.isEmpty)) {
+          await (_db.update(
+            _db.dietEntries,
+          )..where((t) => t.id.equals(existing.id))).write(
+            DietEntriesCompanion(photoBytes: Value(photoBytes)),
+          );
+        }
         final storedFoods = (jsonDecode(existing.foodsJson) as List<Object?>)
             .cast<Map<String, Object?>>();
         return _ok(options, <String, Object?>{
@@ -918,9 +945,14 @@ class LocalApiInterceptor extends Interceptor {
             sodiumMg: const Value(totalNa),
             sugarG: const Value(totalSugar),
             // 인식 결과의 코멘트를 행에 남긴다 — 목록으로 돌아갔을 때도 끼니
-            // 카드에 그대로 보인다. 사진은 붙이지 않는다(업로드한 사진을 데모가
-            // 보관하지 않으므로, 남의 사진을 대신 보여 주게 된다).
+            // 카드에 그대로 보인다.
             aiComment: const Value(coach),
+            // 방금 찍은/고른 그 사진을 함께 남긴다. 인식 결과는 데모라 무엇을
+            // 찍든 같지만, 카드에 보이는 사진까지 남의 것이면 자기가 방금
+            // 올린 끼니라는 게 화면에서 사라진다.
+            photoBytes: photoBytes == null
+                ? const Value.absent()
+                : Value(photoBytes),
             idempotencyKey: Value(idempotencyKey),
           ),
         );
@@ -946,6 +978,60 @@ class LocalApiInterceptor extends Interceptor {
   ///
   /// 요청 본문은 실기기에서 multipart([FormData]), 테스트에서 Map 으로 온다.
   /// 로컬 응답과 실 백엔드 응답의 로컬 반영이 같은 값을 봐야 하므로 한곳에 둔다.
+  /// GET /diet/photos/{entry id} — 그 기록에 붙은 사진 원본.
+  ///
+  /// 실서버의 같은 경로와 짝이다(거기서는 사진 id, 여기서는 기록 id). 끼니
+  /// 카드는 어느 쪽인지 모르는 채 `photo_url` 을 그대로 받아 온다.
+  Future<Response<Object?>> _dietPhoto(RequestOptions options) async {
+    final String id = options.path.split('/').last;
+    final row = await (_db.select(
+      _db.dietEntries,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    final Uint8List? bytes = row?.photoBytes;
+    if (bytes == null || bytes.isEmpty) {
+      // 이 경로만 본문이 JSON 이 아니라 바이트다. 못 찾았을 때도 바이트로
+      // 답해야 부르는 쪽(`ResponseType.bytes`)이 404 를 그대로 받는다 —
+      // JSON 오류 본문을 돌려주면 dio 가 형 변환에서 먼저 넘어져 상태 코드가
+      // 묻힌다.
+      return Response<Object?>(
+        requestOptions: options,
+        statusCode: 404,
+        data: Uint8List(0),
+      );
+    }
+    return Response<Object?>(
+      requestOptions: options,
+      statusCode: 200,
+      data: bytes,
+      headers: Headers.fromMap(<String, List<String>>{
+        Headers.contentTypeHeader: <String>[
+          // 바이트에서 되짚는다 — 저장할 때 받은 MIME 을 믿지 않는 것은
+          // 업로드 쪽(`MealPhoto`)과 같은 규칙이다.
+          MealImageFormat.detect(bytes)?.mimeType ?? 'image/jpeg',
+        ],
+      }),
+    );
+  }
+
+  /// 사진이 붙어 있는 기록만 사진 경로를 갖는다. 없으면 null 이라 카드가
+  /// 번들 에셋·이모지로 물러난다(`MealPhotoView`).
+  String? _photoUrl(DietEntryRow row) {
+    final Uint8List? bytes = row.photoBytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    return '/diet/photos/${row.id}';
+  }
+
+  /// 업로드한 사진 원본. multipart 본문이 아니라 [kMealPhotoBytesExtra] 에서
+  /// 꺼낸다 — 이유는 그 상수의 주석에 적어 두었다.
+  Uint8List? _requestPhotoBytes(RequestOptions options) {
+    final Object? bytes = options.extra[kMealPhotoBytesExtra];
+    if (bytes is Uint8List && bytes.isNotEmpty) return bytes;
+    if (bytes is List<int> && bytes.isNotEmpty) {
+      return Uint8List.fromList(bytes);
+    }
+    return null;
+  }
+
   (String, String?) _analyzeRequestFields(RequestOptions options) {
     String mealType = 'lunch';
     String? idempotencyKey;

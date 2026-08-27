@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:oncare/core/errors/app_error.dart';
+import 'package:oncare/core/network/request_extras.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -76,6 +77,12 @@ class DioDietRepository implements DietRepository {
       final res = await _dio.post<Map<String, Object?>>(
         '/diet/analyze',
         data: form,
+        // 데모 백엔드가 이 사진을 기록에 붙여 두었다가 끼니 카드에 그린다.
+        // 서버로 나가는 값이 아니다 — multipart 본문은 한 번만 읽히므로
+        // 인터셉터가 거기서 바이트를 꺼내 갈 수는 없다.
+        options: Options(
+          extra: <String, Object?>{kMealPhotoBytesExtra: photo.bytes},
+        ),
       );
       return DietAnalysisResult.fromResponse(res.data!);
     } on DioException catch (e) {

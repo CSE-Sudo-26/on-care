@@ -34,6 +34,11 @@ class DietEntries extends Table {
   // 끼니 사진 에셋 경로. 예전에는 인터셉터가 시드 id → 에셋 맵을 들고 있어서
   // 새로 추가된 항목에는 사진이 붙지 않았다. 행이 자기 사진을 갖게 한다.
   TextColumn get photoAsset => text().withDefault(const Constant(''))();
+  // 회원이 방금 올린 끼니 사진 원본. 데모 백엔드(`LocalApiInterceptor`)가
+  // `/diet/photos/{entry id}` 로 되돌려 주고, 끼니 카드는 그 경로를 실서버의
+  // 사진 경로와 똑같이 읽는다. 번들 에셋([photoAsset])과 달리 이 사진은 그
+  // 기록에만 속하므로 행에 같이 둔다. 사진 없이 만든 기록은 null.
+  BlobColumn get photoBytes => blob().nullable()();
   // 재시도 중복 저장 방지 멱등키(요청당 1회). 무키 요청은 null.
   TextColumn get idempotencyKey => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -126,7 +131,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -182,6 +187,11 @@ class AppDatabase extends _$AppDatabase {
         // 근력 횟수 컬럼 추가 — 기존 기록은 비어 있다. 세트·중량만으로는
         // 한 세트에 몇 번을 들었는지가 남지 않는다. (#1310)
         await m.addColumn(exerciseSessions, exerciseSessions.reps);
+      }
+      if (from < 11) {
+        // 끼니 사진 원본 컬럼 추가 — 기존 기록은 null 이라 예전처럼 번들
+        // 에셋이나 이모지로 그려진다.
+        await m.addColumn(dietEntries, dietEntries.photoBytes);
       }
     },
   );

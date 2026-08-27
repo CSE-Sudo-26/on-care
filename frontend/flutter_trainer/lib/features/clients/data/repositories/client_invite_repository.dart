@@ -9,6 +9,8 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart'
+    show readDemoUnregisteredClientIds, writeDemoUnregisteredClientIds;
 
 /// 트레이너가 회원 ID로 회원을 찾아 담당으로 연결하는 흐름. (#919)
 ///
@@ -74,23 +76,37 @@ class DemoClientInviteRepository implements ClientInviteRepository {
     if (normalized.isEmpty) throw const NotFoundError();
     final DateTime now = nowKst();
 
-    if (normalized == demoAlreadyLinkedMemberId) {
-      final row =
-          await (_db.select(_db.trainerClients)
-                ..where((t) => t.id.equals(demoAlreadyLinkedClientId)))
-              .getSingleOrNull();
-      if (row != null) return _linkedLookup(normalized, row.name);
+    // demoAlreadyLinkedMemberId 는 seed-client-1(김민수)의 실 계정 id를
+    // 흉내낸 값이라 그 행의 기본 키(demoAlreadyLinkedClientId)와 다르다 —
+    // 여기서만 매핑한다. 다른 고객은 행의 id 자체가 곧 찾는 회원 ID다.
+    final String rowId = normalized == demoAlreadyLinkedMemberId
+        ? demoAlreadyLinkedClientId
+        : normalized;
+
+    final existing = await (_db.select(
+      _db.trainerClients,
+    )..where((t) => t.id.equals(rowId))).getSingleOrNull();
+    if (existing != null) {
+      final unregistered = await readDemoUnregisteredClientIds(_db);
+      if (!unregistered.contains(existing.id)) {
+        return _linkedLookup(normalized, existing.name);
+      }
+      // 담당이 해제된 기존 고객이다 — 트레이너가 신상 정보를 새로 입력하는
+      // 것이 아니라, 그때 등록됐던 값 그대로 다시 등록 후보로 보여준다.
+      return MemberLookup(
+        memberId: normalized,
+        name: existing.name,
+        hasTrainer: false,
+        coachedByMe: false,
+        invitePending: false,
+        gender: existing.gender ?? '',
+        age: existing.age,
+        goal: existing.goal,
+      );
     }
 
     final prospect = findDemoProspectiveMemberById(normalized);
     if (prospect == null) throw const NotFoundError();
-
-    // 이번 데모 세션에서 이미 연결한 적이 있으면(같은 회원 ID를 다시 찾는
-    // 경우) "이미 연결됨" 으로 답한다 — 중복 연결을 여기서부터 막는다.
-    final existing = await (_db.select(
-      _db.trainerClients,
-    )..where((t) => t.id.equals(prospect.id))).getSingleOrNull();
-    if (existing != null) return _linkedLookup(existing.id, existing.name);
 
     return MemberLookup(
       memberId: prospect.id,
@@ -116,7 +132,32 @@ class DemoClientInviteRepository implements ClientInviteRepository {
 
   @override
   Future<ClientInvite> invite(String memberId, {String? message}) async {
-    final prospect = findDemoProspectiveMemberById(memberId);
+    final String normalized = memberId.trim().toLowerCase();
+    final String rowId = normalized == demoAlreadyLinkedMemberId
+        ? demoAlreadyLinkedClientId
+        : normalized;
+    final existing = await (_db.select(
+      _db.trainerClients,
+    )..where((t) => t.id.equals(rowId))).getSingleOrNull();
+    if (existing != null) {
+      // 미등록으로 남아 있던 기존 고객이다 — 새 행을 넣으면 같은 id로
+      // 기본 키가 충돌하고, 지난 루틴·채팅 이력도 새 행과 갈라진다. [lookup]
+      // 이 먼저 "이미 등록됨"을 걸러내므로 여기 오는 것은 항상 미등록
+      // 상태다 — 그 상태만 되돌린다.
+      final unregistered = (await readDemoUnregisteredClientIds(_db))
+        ..remove(existing.id);
+      await writeDemoUnregisteredClientIds(_db, unregistered);
+      return ClientInvite(
+        id: 'demo-link-${existing.id}',
+        memberId: normalized,
+        memberName: existing.name,
+        memberEmail: '',
+        status: ClientInviteStatus.accepted,
+        createdAt: nowKst(),
+      );
+    }
+
+    final prospect = findDemoProspectiveMemberById(normalized);
     if (prospect == null) throw const NotFoundError();
 
     final DateTime now = nowKst();

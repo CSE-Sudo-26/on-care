@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1976,12 +1975,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myClientRestore => '다시 등록';
-
-  @override
-  String get myClientRestoreSuccess => '고객을 다시 등록했어요';
-
-  @override
-  String get myClientRestoreFailed => '고객을 다시 등록하지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
   String get myStatSessionsDone => '완료 세션';

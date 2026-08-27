@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2062,13 +2061,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myClientRestore => 'Register again';
-
-  @override
-  String get myClientRestoreSuccess => 'Client registered again';
-
-  @override
-  String get myClientRestoreFailed =>
-      'Couldn\'t register the client again. Please try again';
 
   @override
   String get myStatSessionsDone => 'Sessions done';

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
@@ -221,6 +222,44 @@ void main() {
         );
       },
     );
+
+    test('미등록 고객은 새 회원 등록과 같은 lookup·invite 로 같은 행을 되살린다', () async {
+      final repo = DriftClientRepository(db);
+      final invites = DemoClientInviteRepository(db);
+      await repo.removeClient('seed-client-1');
+
+      // 실 계정 id(demoAlreadyLinkedMemberId)로 찾아야 한다 — 회원 관리
+      // 화면의 행 id(seed-client-1)를 그대로 입력하는 것이 아니다.
+      final found = await invites.lookup(demoAlreadyLinkedMemberId);
+      expect(found.name, '김민수');
+      expect(found.canInvite, isTrue); // 미등록이라 다시 연결할 수 있다
+
+      await invites.invite(demoAlreadyLinkedMemberId);
+
+      final clients = await repo.watchClients().first;
+      final revived = clients.firstWhere((c) => c.id == 'seed-client-1');
+      expect(revived.registered, isTrue);
+      expect(revived.name, '김민수'); // 새 프로필이 아니라 같은 행이 되살아났다
+      expect(clients.length, 15); // 새 행이 추가되지 않았다
+    });
+
+    test('실 계정 id 매핑이 없는 고객도 행 id 자체로 다시 등록할 수 있다', () async {
+      final repo = DriftClientRepository(db);
+      final invites = DemoClientInviteRepository(db);
+      await repo.removeClient('seed-client-3');
+
+      final found = await invites.lookup('seed-client-3');
+      expect(found.canInvite, isTrue);
+
+      await invites.invite('seed-client-3');
+
+      final clients = await repo.watchClients().first;
+      expect(
+        clients.firstWhere((c) => c.id == 'seed-client-3').registered,
+        isTrue,
+      );
+      expect(clients.length, 15);
+    });
 
     // 예약 수는 이제 로스터가 아니라 오늘 스케줄에서 파생된다(#387).
     // 배지 계산은 todayReservationCountProvider 테스트가 덮고, 날짜 필터링은

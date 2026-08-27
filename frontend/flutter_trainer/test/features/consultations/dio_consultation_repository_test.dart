@@ -338,7 +338,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(await container.read(consultationPendingCountProvider.future), 1);
+      expect(await container.read(consultationPendingCountProvider.future), 2);
     });
 
     test('the pending badge keeps counting so a request that arrives while the '
@@ -409,12 +409,22 @@ void main() {
 
     test('the demo source removes decided requests from pending', () async {
       final repo = DemoConsultationRepository();
-      final request = (await repo.fetch()).single;
+      final request = (await repo.fetch()).firstWhere(
+        (r) => r.id == 'demo-consultation-1',
+      );
 
       await repo.accept(request.id);
 
-      expect(await repo.fetch(), isEmpty);
-      expect((await repo.fetch(status: 'all')).single.status, 'accepted');
+      expect(
+        (await repo.fetch()).map((r) => r.id),
+        isNot(contains(request.id)),
+      );
+      expect(
+        (await repo.fetch(status: 'all'))
+            .firstWhere((r) => r.id == request.id)
+            .status,
+        'accepted',
+      );
     });
 
     test(
@@ -437,7 +447,9 @@ void main() {
         final repo = DemoConsultationRepository(
           scheduleRepository: () => scheduleRepository,
         );
-        final request = (await repo.fetch()).single;
+        final request = (await repo.fetch()).firstWhere(
+          (r) => r.id == 'demo-consultation-1',
+        );
 
         final result = await repo.accept(
           request.id,

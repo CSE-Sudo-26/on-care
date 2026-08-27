@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
 import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
@@ -138,6 +139,19 @@ class DemoConsultationRepository implements ConsultationRepository {
                preferredTimeCode: '19:00-20:00',
                status: 'pending',
                message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
+             ),
+             // 이미 담당 고객인 회원도 재상담을 요청할 수 있다 — 김민수
+             // (`demoAlreadyLinkedMemberId`)로 그 시나리오를 보여준다.
+             ConsultationRequest(
+               id: 'demo-consultation-2',
+               memberId: demoAlreadyLinkedMemberId,
+               memberName: '김민수',
+               goalCode: 'weight_loss',
+               purposeCode: 'chronic',
+               preferredDate: nowKst().add(const Duration(days: 3)),
+               preferredTimeCode: '12:00-13:00',
+               status: 'pending',
+               message: '혈압 관리도 같이 봐주시면 좋겠어요.',
              ),
            ];
 
