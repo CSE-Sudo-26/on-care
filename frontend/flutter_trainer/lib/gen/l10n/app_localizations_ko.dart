@@ -1968,15 +1968,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myClientManagementEmpty => '담당 고객이 없어요';
 
   @override
-  String get myClientRegistered => '등록';
-
-  @override
-  String get myClientUnregistered => '미등록';
-
-  @override
-  String get myClientRestore => '다시 등록';
-
-  @override
   String get myStatSessionsDone => '완료 세션';
 
   @override
