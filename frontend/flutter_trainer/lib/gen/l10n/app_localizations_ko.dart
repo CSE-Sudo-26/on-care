@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -904,7 +903,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatReportRegistered => '리포트가 등록되었어요';
 
   @override
-  String get chatReportOpenInReports => '리포트 탭에서 확인하기';
+  String get chatReportOpenInReports => '리포트 탭으로 가기';
 
   @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';

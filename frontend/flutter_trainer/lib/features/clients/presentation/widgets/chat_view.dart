@@ -239,13 +239,24 @@ class _ChatViewState extends ConsumerState<ChatView> {
             ..add(const SizedBox(height: AppSpacing.md));
         }
       }
+      // 리포트 전송은 말풍선이 아니라 **가운데 안내**다. 누가 무슨 말을 했는가가
+      // 아니라 스레드에 무슨 일이 있었는가를 적는 자리라, 같은 흐름의 다른
+      // 안내("개인 추천운동이 …")와 같은 모양으로 가운데에 둔다(#1600).
+      final DateTime? reportWeek = m.reportWeekStart;
       out
         ..add(
-          _Bubble(
-            message: m,
-            avatar: widget.clientAvatar,
-            clientId: widget.clientId,
-          ),
+          reportWeek == null
+              ? _Bubble(message: m, avatar: widget.clientAvatar)
+              : ReportRegisteredCard(
+                  key: ValueKey<String>('trainer-message-bubble-${m.id}'),
+                  weekStart: reportWeek,
+                  onOpen: () => context.go(
+                    AppRoutes.reportFor(
+                      widget.clientId,
+                      weekStart: reportWeek,
+                    ),
+                  ),
+                ),
         )
         ..add(const SizedBox(height: AppSpacing.md));
       final insight = _insightDetector.detect(m);
@@ -658,11 +669,7 @@ class _DateDivider extends StatelessWidget {
 }
 
 class _Bubble extends ConsumerWidget {
-  const _Bubble({
-    required this.message,
-    required this.avatar,
-    required this.clientId,
-  });
+  const _Bubble({required this.message, required this.avatar});
 
   /// 말풍선이 차지할 수 있는 대화 폭의 최대 비율.
   ///
@@ -678,72 +685,58 @@ class _Bubble extends ConsumerWidget {
 
   final ClientChatMessage message;
   final String avatar;
-  final String clientId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fromTrainer = message.fromTrainer;
-    final Widget bubble;
-    if (message.reportWeekStart case final weekStart?) {
-      // 데모/드리프트는 PDF를 저장하지 못한다(#1378) — 그냥 텍스트 말풍선
-      // 대신, 리포트를 보냈다는 걸 알아볼 수 있는 카드로 구분해 그린다.
-      // 눌러도 파일을 열 수는 없으니, 대신 그 리포트 화면으로 보낸다.
-      bubble = ReportRegisteredCard(
-        key: ValueKey<String>('trainer-message-bubble-${message.id}'),
-        weekStart: weekStart,
-        onOpen: () =>
-            context.go(AppRoutes.reportFor(clientId, weekStart: weekStart)),
-      );
-    } else {
-      bubble = Container(
-        key: ValueKey<String>('trainer-message-bubble-${message.id}'),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+    final Widget bubble = Container(
+      key: ValueKey<String>('trainer-message-bubble-${message.id}'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: fromTrainer ? AppColors.accent : AppColors.card,
+        border: fromTrainer
+            ? null
+            : Border.all(color: AppColors.borderStrong),
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
+          bottomRight: Radius.circular(fromTrainer ? 4 : 16),
         ),
-        decoration: BoxDecoration(
-          color: fromTrainer ? AppColors.accent : AppColors.card,
-          border: fromTrainer
-              ? null
-              : Border.all(color: AppColors.borderStrong),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(fromTrainer ? 16 : 4),
-            bottomRight: Radius.circular(fromTrainer ? 4 : 16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              message.body,
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.4,
-                fontWeight: FontWeight.w500,
-                color: fromTrainer
-                    ? AppColors.accentForeground
-                    : AppColors.foreground,
-              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            message.body,
+            style: TextStyle(
+              fontSize: 13.5,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+              color: fromTrainer
+                  ? AppColors.accentForeground
+                  : AppColors.foreground,
             ),
-            if (message.attachment case final attachment?) ...<Widget>[
-              const SizedBox(height: AppSpacing.sm),
-              // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
-              // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
-              // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
-              if (attachment.isImage)
-                ChatImageAttachment(attachment: attachment)
-              else
-                _ChatPdfCard(
-                  attachment: attachment,
-                  onOpen: () => _openPdf(context, ref, attachment),
-                ),
-            ],
+          ),
+          if (message.attachment case final attachment?) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            // 사진은 대화 안에서 그리고, PDF 는 내려받는 카드로 둔다. 사진을
+            // 카드로 두면 자세를 확인하려고 매번 파일을 열어야 하고, 그건
+            // 채팅에 사진을 붙이는 이유 자체를 없앤다. (#921)
+            if (attachment.isImage)
+              ChatImageAttachment(attachment: attachment)
+            else
+              _ChatPdfCard(
+                attachment: attachment,
+                onOpen: () => _openPdf(context, ref, attachment),
+              ),
           ],
-        ),
-      );
-    }
+        ],
+      ),
+    );
     final time = Text(
       _clockOnly(message.timeLabel),
       key: ValueKey<String>('trainer-message-time-${message.id}'),
@@ -820,14 +813,18 @@ class _Bubble extends ConsumerWidget {
   }
 }
 
-/// 리포트 등록 안내. (#1378, #1421)
+/// 리포트 등록 안내. (#1378, #1421, #1600)
 ///
 /// 회원 앱과 **같은 정보 구조**로 그린다 — 아이콘, `리포트가 등록되었어요`,
 /// 대상 주, 그리고 다음 행동 한 줄. 같은 사건을 두 앱이 다른 모양으로 보여
 /// 주면 회원과 트레이너가 같은 화면을 두고 이야기할 수 없다.
 ///
-/// 색만 각 앱의 메인 색을 쓴다. 구조가 같으면 같은 카드로 읽히고, 색은 어느
-/// 앱을 보고 있는지를 말해 준다.
+/// 자리는 말풍선이 아니라 **대화 가운데**다. 누가 무슨 말을 했는가가 아니라
+/// 스레드에 무슨 일이 있었는가를 적는 자리라, 같은 흐름의 다른 안내(분석했어요·
+/// 개인 추천운동이 전송됐어요)와 같은 모양을 쓴다.
+///
+/// 바탕은 흰색이고 테두리만 각 앱의 메인 색이다. 구조와 바탕이 같으면 같은
+/// 안내로 읽히고, 테두리 색은 어느 앱을 보고 있는지를 말해 준다.
 ///
 /// 다음 행동은 역할마다 다르다. 트레이너 쪽에는 열 PDF 가 없다 — 데모·드리프트
 /// 는 파일을 저장하지 못하므로(#1378), 있지도 않은 파일을 여는 시늉 대신 그
@@ -843,7 +840,7 @@ class ReportRegisteredCard extends StatelessWidget {
   /// 카드가 가리키는 주의 월요일.
   final DateTime weekStart;
 
-  /// 카드를 눌렀을 때 — 리포트 탭으로 이동한다.
+  /// 리포트 탭으로 가기 를 눌렀을 때.
   final VoidCallback onOpen;
 
   @override
@@ -854,70 +851,59 @@ class ReportRegisteredCard extends StatelessWidget {
       l.dateMonthDay(weekStart.month, weekStart.day),
       l.dateMonthDay(weekEnd.month, weekEnd.day),
     );
-    return Material(
-      color: AppColors.secondary,
-      borderRadius: const BorderRadius.all(AppRadius.sm),
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: const BorderRadius.all(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Icon(Icons.description_outlined, color: Colors.white),
-              const SizedBox(width: AppSpacing.sm),
-              // 글자 배율을 키우면 제목·기간·다음 행동이 차례로 길어진다.
-              // 셋을 한 줄에 이어 붙이지 않고 세로로 쌓아 두면, 배율이 커져도
-              // 잘리는 대신 카드가 아래로 자란다.
-              Flexible(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      l.chatReportRegistered,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      range,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 12.5,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Flexible(
-                          child: Text(
-                            l.chatReportOpenInReports,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                      ],
-                    ),
-                  ],
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: const BorderRadius.all(AppRadius.card),
+          border: Border.all(color: AppColors.primary),
+        ),
+        // 글자 배율을 키우면 제목·기간·다음 행동이 차례로 길어진다. 셋을 한
+        // 줄에 이어 붙이지 않고 세로로 쌓아 두면, 배율이 커져도 잘리는 대신
+        // 상자가 아래로 자란다.
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            IconLabel(
+              icon: Icons.description_outlined,
+              label: l.chatReportRegistered,
+              color: AppColors.primary,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              range,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 10.5,
+                color: AppColors.mutedForeground,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            // 테두리 없는 글자 버튼. 안내 상자 안에서 두 번째 테두리를 그리면
+            // 상자가 둘로 보인다 — 여기서 눌릴 것은 하나뿐이라 글자로 충분하다.
+            TextButton(
+              onPressed: onOpen,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
+              child: Text(l.chatReportOpenInReports),
+            ),
+          ],
         ),
       ),
     );

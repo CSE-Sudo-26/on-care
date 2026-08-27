@@ -280,6 +280,10 @@ class ChatMessageOut(BaseModel):
     time_label: str    # "18:10"
     created_at: str    # ISO datetime — 커서/정렬용
     attachment: ChatAttachmentOut | None = None
+    # 주간 리포트 전송 안내라면 그 주 월요일 `YYYY-MM-DD`, 아니면 None. 두 앱은
+    # 이 값으로 대화 가운데 안내 상자를 그린다(#1600). 첨부 유무와는 별개다 —
+    # 리포트는 PDF 없이 본문만으로도 나간다.
+    report_week_start: str | None = None
 
 
 class ChatSendRequest(BaseModel):

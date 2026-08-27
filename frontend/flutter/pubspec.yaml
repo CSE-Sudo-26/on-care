@@ -66,6 +66,9 @@ dependencies:
   url_launcher: ^6.3.1
   # 인증된 API로 받은 리포트 PDF binary를 앱 안에서 미리보기한다(#778).
   printing: ^5.14.2
+  # 첨부가 없는 리포트는 회원 기록으로 문서를 만들어 같은 미리보기로 연다(#1600).
+  # printing 이 전이 의존성으로 끌고 오지만, 직접 import 하므로 명시한다.
+  pdf: ^3.11.3
   image_picker: ^1.2.3
 
   # NOTE: Social-login SDKs (sign_in_with_apple / google_sign_in /

@@ -420,7 +420,7 @@
   "chatSendFailed": "Couldn't send the message. Please try again",
   "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
   "chatReportRegistered": "Weekly report added",
-  "chatReportOpenInReports": "Open in Reports",
+  "chatReportOpenInReports": "Go to Reports",
   "chatLoadFailed": "Couldn't load the conversation",
   "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
   "@chatDemoAnalyzed": {

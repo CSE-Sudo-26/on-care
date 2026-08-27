@@ -19,8 +19,17 @@ ClientChatMessage chatMessageFromJson(Map<String, Object?> json) {
     timeLabel: _requiredString(json, 'time_label'),
     createdAt: _parseTime(json['created_at']),
     attachment: _attachment(json['attachment']),
+    reportWeekStart: _reportWeekStart(json['report_week_start']),
   );
 }
+
+/// 리포트 전송 안내라면 그 주 월요일. (#1600)
+///
+/// 파일명이나 본문으로 추측하지 않는다 — 서버가 실어 보낸 값만 본다. 값이
+/// 날짜가 아니면 표시를 포기하고 일반 메시지로 둔다: 안내 상자 하나 때문에
+/// 스레드 전체가 뜨지 않는 편보다 낫다.
+DateTime? _reportWeekStart(Object? value) =>
+    value is String ? DateTime.tryParse(value) : null;
 
 ChatAttachment? _attachment(Object? value) {
   if (value == null) return null;

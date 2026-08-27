@@ -653,6 +653,7 @@ def chat_message_out(msg: ChatMessage, viewer: str) -> ChatMessageOut:
         time_label=_hhmm(msg.created_at),
         created_at=_iso(msg.created_at),
         attachment=attachment,
+        report_week_start=msg.report_week_start,
     )
 
 
@@ -750,6 +751,7 @@ def send_message(
     attachment_file_name: str | None = None,
     attachment_file_id: str | None = None,
     attachment_file_size: int | None = None,
+    report_week_start: str | None = None,
 ) -> ChatMessageOut:
     """스레드에 메시지 추가(sender: 'trainer'|'member'). 로스터 last_message 는
     build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다.
@@ -783,6 +785,9 @@ def send_message(
         attachment_file_name=attachment_file_name,
         attachment_file_id=attachment_file_id,
         attachment_file_size=attachment_file_size,
+        # 리포트 전송 안내인가 — 호출자가 정한다. 첨부와 마찬가지로 본문만
+        # 보고는 알 수 없고, 리포트는 PDF 없이도 나간다(#1600).
+        report_week_start=report_week_start,
         created_at=datetime.now(timezone.utc),
     )
     db.add(msg)

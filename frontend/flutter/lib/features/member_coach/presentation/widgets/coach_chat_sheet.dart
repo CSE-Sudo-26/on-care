@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,9 +8,12 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/member_coach/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_weekly_report.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_report_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_image_attachment.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_report_card.dart';
+import 'package:oncare/features/member_coach/services/member_report_pdf_generator.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 import 'package:printing/printing.dart';
@@ -79,7 +84,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
           out.add(const SizedBox(height: 16));
         }
       }
-      out.add(_Bubble(message: m));
+      out.add(_threadEntry(m));
       if (i == lastSeeded) {
         out.add(const _ReceivedBanner());
         if (i != messages.length - 1) out.add(const SizedBox(height: 16));
@@ -97,9 +102,23 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
           ..add(_DateDivider(date: message.createdAt))
           ..add(const SizedBox(height: 16));
       }
-      out.add(_Bubble(message: message));
+      out.add(_threadEntry(message));
     }
     return out;
+  }
+
+  /// 스레드 한 줄 — 말풍선이거나, 가운데 안내다.
+  ///
+  /// 리포트 전송은 누가 무슨 말을 했는가가 아니라 스레드에 무슨 일이 있었는가를
+  /// 적는 자리다. 트레이너 앱도 같은 사건을 가운데 안내로 그린다(#1600).
+  Widget _threadEntry(CoachMessage message) {
+    final DateTime? reportWeek = message.reportWeekStart;
+    if (reportWeek == null) return _Bubble(message: message);
+    return _ReportNotice(
+      key: ValueKey<String>('coach-message-bubble-${message.id}'),
+      message: message,
+      weekStart: reportWeek,
+    );
   }
 
   static bool _sameDay(DateTime a, DateTime b) {
@@ -485,26 +504,10 @@ class _Bubble extends ConsumerWidget {
     );
   }
 
-
-  /// 말풍선 — 리포트 등록 안내만 전용 카드로 갈라진다. (#1421)
-  ///
-  /// 트레이너 앱이 같은 사건에 같은 카드를 그린다. 회원 쪽에서만 파일
-  /// 카드로 보이면, 두 사람이 같은 리포트를 두고 다른 것을 본 채로
-  /// 이야기하게 된다.
+  /// 말풍선 하나. 리포트 등록 안내는 여기로 오지 않는다 — 그것은 말풍선이
+  /// 아니라 대화 가운데 안내라, 스레드를 세울 때 갈라진다(#1600).
   Widget _bubble(BuildContext context, WidgetRef ref) {
     final bool fromMe = message.fromMe;
-    if (message.reportWeekStart case final weekStart?) {
-      final CoachAttachment? attachment = message.attachment;
-      return CoachReportCard(
-        key: ValueKey<String>('coach-message-bubble-${message.id}'),
-        weekStart: weekStart,
-        // 열 파일이 있을 때만 `PDF 열기` 를 보여 준다. 데모에는 첨부가
-        // 없으므로, 없는 파일을 여는 시늉을 하지 않는다.
-        onOpenPdf: attachment == null
-            ? null
-            : () => _openPdf(context, ref, attachment),
-      );
-    }
     return Container(
       key: ValueKey<String>('coach-message-bubble-${message.id}'),
       constraints: BoxConstraints(
@@ -563,26 +566,105 @@ class _Bubble extends ConsumerWidget {
           .read(chatPdfRepositoryProvider)
           .download(attachment.downloadPath);
       if (!context.mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (_) => Dialog(
-          child: SizedBox(
-            width: 760,
-            height: 720,
-            child: PdfPreview(
-              build: (_) async => bytes,
-              pdfFileName: attachment.fileName,
-              allowSharing: false,
-            ),
-          ),
-        ),
-      );
+      await showPdfPreviewDialog(context, bytes, attachment.fileName);
     } catch (_) {
-      toast.show(l.coachChatPdfOpenFailed,
-        kind: AppToastKind.error,
-      );
+      toast.show(l.coachChatPdfOpenFailed, kind: AppToastKind.error);
     }
   }
+}
+
+/// PDF 한 부를 미리보기로 연다. 첨부 파일과 회원 기록으로 만든 문서가 같은
+/// 화면으로 열려야, 회원이 무엇을 보고 있는지 헷갈리지 않는다. (#1600)
+Future<void> showPdfPreviewDialog(
+  BuildContext context,
+  Uint8List bytes,
+  String fileName,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => Dialog(
+      child: SizedBox(
+        width: 760,
+        height: 720,
+        child: PdfPreview(
+          build: (_) async => bytes,
+          pdfFileName: fileName,
+          allowSharing: false,
+        ),
+      ),
+    ),
+  );
+}
+
+/// 리포트 등록 안내 — 대화 가운데 상자와 `PDF 미리보기`. (#1600)
+///
+/// 누르면 트레이너가 보낸 파일을 연다. 열 파일이 없으면(데모, 그리고 본문만
+/// 보낸 리포트) 같은 주를 회원 기록으로 정리한 문서를 만들어 같은 미리보기로
+/// 연다 — 리포트 화면이 보여 주는 통계를 회원도 그 자리에서 볼 수 있어야 한다.
+class _ReportNotice extends ConsumerStatefulWidget {
+  const _ReportNotice({
+    required this.message,
+    required this.weekStart,
+    super.key,
+  });
+
+  final CoachMessage message;
+  final DateTime weekStart;
+
+  @override
+  ConsumerState<_ReportNotice> createState() => _ReportNoticeState();
+}
+
+class _ReportNoticeState extends ConsumerState<_ReportNotice> {
+  /// 문서를 만드는 동안 다시 누르지 못하게 한다 — 같은 문서를 두 번 그리면
+  /// 미리보기가 두 겹으로 열린다.
+  bool _opening = false;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: CoachReportCard(
+      weekStart: widget.weekStart,
+      onOpenPdf: _opening ? () {} : _open,
+    ),
+  );
+
+  Future<void> _open() async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AppToastHost toast = AppToastHost.of(context);
+    try {
+      final CoachAttachment? attachment = widget.message.attachment;
+      final Uint8List bytes;
+      final String fileName;
+      if (attachment != null) {
+        bytes = await ref
+            .read(chatPdfRepositoryProvider)
+            .download(attachment.downloadPath);
+        fileName = attachment.fileName;
+      } else {
+        final MemberWeeklyReport report = await ref.read(
+          memberWeeklyReportProvider(widget.weekStart).future,
+        );
+        bytes = await ref
+            .read(memberReportPdfGeneratorProvider)
+            .generate(l: l, report: report);
+        fileName = l.coachReportPdfFileName(_ymd(widget.weekStart));
+      }
+      if (!mounted) return;
+      await showPdfPreviewDialog(context, bytes, fileName);
+    } catch (_) {
+      toast.show(l.coachChatPdfOpenFailed, kind: AppToastKind.error);
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  static String _ymd(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
 }
 
 class _PdfCard extends StatelessWidget {

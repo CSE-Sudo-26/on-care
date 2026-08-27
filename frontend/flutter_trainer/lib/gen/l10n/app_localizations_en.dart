@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -937,7 +936,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatReportRegistered => 'Weekly report added';
 
   @override
-  String get chatReportOpenInReports => 'Open in Reports';
+  String get chatReportOpenInReports => 'Go to Reports';
 
   @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
