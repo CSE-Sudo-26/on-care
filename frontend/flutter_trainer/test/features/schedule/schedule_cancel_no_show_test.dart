@@ -281,7 +281,7 @@ void main() {
       tester,
     ) async {
       await openSchedule(tester);
-      // 김민수(10:00, 완료)는 예정에서만 갈리는 취소·노쇼로 되돌릴 수 없다(#1226).
+      // 김민수(18:00, 완료)는 예정에서만 갈리는 취소·노쇼로 되돌릴 수 없다(#1226).
       await openSession(tester, '김민수');
       final delete = find.byKey(const ValueKey<String>('session-delete-chip'));
       await revealInPanel(tester, delete.first);
@@ -290,7 +290,7 @@ void main() {
 
       expect(find.textContaining('취소·노쇼로 남기세요'), findsNothing);
       expect(
-        find.text('10:00–10:30 김민수님 PT 일정을 삭제할까요?'),
+        find.text('18:00–18:50 김민수님 PT 일정을 삭제할까요?'),
         findsOneWidget,
       );
     });

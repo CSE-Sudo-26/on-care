@@ -68,11 +68,13 @@ void main() {
       final slots = await DriftScheduleRepository(db).watchToday().first;
       expect(slots.length, 6);
       expect(slots.map((s) => s.time).toList(), <String>[
-        '10:00',
         '12:00',
         '14:00',
         '16:00',
         '17:00',
+        // 김민수의 PT 는 공유 픽스처가 정하는 18:00 이다 — 목록은 시각 순이라
+        // 시드 목록에서의 자리와 무관하게 여기에 선다.
+        '18:00',
         '19:00',
       ]);
       expect(slots.where((s) => s.isGap).length, 2);
@@ -133,9 +135,10 @@ void main() {
       final minsu = slots.firstWhere((s) => s.clientName == '김민수');
       expect(minsu.expandable, isTrue); // 완료 + program
       expect(minsu.program.length, 4);
-      expect(minsu.program.first.name, '레그프레스');
-      expect(minsu.program.first.sets, 3);
-      expect(minsu.program.first.weight, 80.0);
+      expect(minsu.program.first.name, '벤치프레스');
+      expect(minsu.program.first.sets, 4);
+      expect(minsu.program.first.reps, 10);
+      expect(minsu.program.first.weight, 40.0);
 
       final seongho = slots.firstWhere((s) => s.clientName == '박성호');
       expect(seongho.expandable, isTrue); // 예정 now opens (plan preview)
@@ -156,11 +159,11 @@ void main() {
       );
       final slots = await repo.watchToday().first;
       expect(slots.length, 7);
-      // Lands right after the 10:00 session (time-ordered).
-      expect(slots[1].time, '10:15');
-      expect(slots[1].clientName, '이지수');
-      expect(slots[1].isUpcoming, isTrue);
-      expect(slots[1].id.startsWith('seed-'), isFalse);
+      // Lands before the 12:00 session (time-ordered).
+      expect(slots[0].time, '10:15');
+      expect(slots[0].clientName, '이지수');
+      expect(slots[0].isUpcoming, isTrue);
+      expect(slots[0].id.startsWith('seed-'), isFalse);
     });
 
     test('updateSession moves a slot to a 15-minute step', () async {
@@ -550,7 +553,7 @@ void main() {
       expect(find.text('22:00'), findsOneWidget);
 
       // 블록은 시간 범위와 종류를 함께 말한다.
-      expect(find.text('10:00\u201310:30'), findsWidgets);
+      expect(find.text('12:00\u201312:50'), findsWidgets);
       expect(find.text('17:00\u201318:00'), findsWidgets);
       expect(find.text('김민수'), findsWidgets);
       expect(find.textContaining('이지수'), findsWidgets);
@@ -585,19 +588,22 @@ void main() {
       expect(find.byKey(const Key('week-detail')), findsOneWidget);
 
       // 세션을 고르면 그 세션의 프로그램이 패널에 실린다.
-      await tester.tap(
-        find
-            .descendant(
-              of: find.byType(ScheduleWeekTimetable),
-              matching: find.textContaining('김민수'),
-            )
-            .first,
-      );
+      final Finder minsuBlock = find
+          .descendant(
+            of: find.byType(ScheduleWeekTimetable),
+            matching: find.textContaining('김민수'),
+          )
+          .first;
+      // 시간축이 08:00~22:00 이라 18:00 블록은 좁은 화면에서 아래로 밀린다 —
+      // 보이는 자리로 올리지 않고 누르면 탭이 허공에 떨어진다.
+      await tester.ensureVisible(minsuBlock);
+      await settle(tester);
+      await tester.tap(minsuBlock);
       await settle(tester);
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('레그프레스'),
+          matching: find.text('벤치프레스'),
         ),
         findsOneWidget,
       );
@@ -613,14 +619,17 @@ void main() {
         at: AppRoutes.scheduleAt(date: ymd(today)),
       );
 
-      await tester.tap(
-        find
-            .descendant(
-              of: find.byType(ScheduleWeekTimetable),
-              matching: find.textContaining('김민수'),
-            )
-            .first,
-      );
+      final Finder minsuBlock = find
+          .descendant(
+            of: find.byType(ScheduleWeekTimetable),
+            matching: find.textContaining('김민수'),
+          )
+          .first;
+      // 시간축이 08:00~22:00 이라 18:00 블록은 좁은 화면에서 아래로 밀린다 —
+      // 보이는 자리로 올리지 않고 누르면 탭이 허공에 떨어진다.
+      await tester.ensureVisible(minsuBlock);
+      await settle(tester);
+      await tester.tap(minsuBlock);
       await settle(tester);
       await goTo(
         tester,
@@ -769,10 +778,13 @@ void main() {
         );
 
         await openSession(tester, '김민수');
-        expect(find.text('레그프레스'), findsOneWidget);
-        expect(find.text('카프레이즈'), findsOneWidget);
+        expect(find.text('벤치프레스'), findsOneWidget);
+        expect(find.text('플랭크 60초'), findsOneWidget);
         expect(find.text('트레이너 메모'), findsOneWidget);
-        expect(find.text('무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.'), findsOneWidget);
+        expect(
+          find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'),
+          findsOneWidget,
+        );
 
         // 예전에는 이 자리가 눌리지 않는 안내였다("전송 API가 아직 없어…").
         expect(find.text('김민수님에게 전송됨'), findsNothing);
@@ -935,8 +947,15 @@ void main() {
       await tester.tap(find.text('추가'));
       await settle(tester);
 
-      // 시간표 블록이 시작·끝을 함께 말한다.
-      expect(find.text('10:15\u201311:15'), findsOneWidget);
+      // 시간표 블록이 시작·끝을 함께 말한다. 상세 패널도 같은 범위를 적는다 —
+      // 이 날의 첫 세션이라 방금 만든 것이 열린다.
+      expect(
+        find.descendant(
+          of: find.byType(ScheduleWeekTimetable),
+          matching: find.text('10:15\u201311:15'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('종료 시간을 직접 옮기면 소요 시간이 바뀐다 (#1090)', (tester) async {
@@ -1366,13 +1385,15 @@ void main() {
       expect(find.text('10:00\u201311:00'), findsWidgets);
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsNothing);
 
-      // 오늘 → 오늘의 세션이 다시 패널에 실리고 버튼은 숨는다.
+      // 오늘 → 오늘의 세션이 다시 패널에 실리고 버튼은 숨는다. 패널은 그 날의
+      // **첫** 세션을 연다 — 김민수의 PT 는 픽스처가 정한 18:00 이라 오늘의
+      // 첫 세션은 12:00 이지수다.
       await tester.tap(find.text('오늘'));
       await settle(tester);
       expect(
         find.descendant(
           of: find.byKey(const Key('week-detail')),
-          matching: find.text('김민수'),
+          matching: find.text('이지수'),
         ),
         findsOneWidget,
       );

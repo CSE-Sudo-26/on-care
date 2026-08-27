@@ -14,10 +14,14 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v29']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v30']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
+///
+/// `_v30` 은 오늘 김민수의 PT 를 공유 픽스처에 맞춘 변경이다 — 시각(18:00)·
+/// 종목·세트·횟수·중량이 사용자앱과 같아졌다. 올리지 않으면 오늘 이미 시드된
+/// 브라우저가 10:00 레그프레스 수업을 그대로 들고 있어 두 앱이 갈린다.
 ///
 /// `_v29` 는 어제에 수행한 스트레칭이 한 건 생긴 변경이다(#1361). `_v28` 은
 /// 과거에 PT·기타 운동이 생기고 근력이 세트를 값으로 들게 된 변경이다(#1265) —
@@ -114,7 +118,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v29') == today) return;
+  if (await db.readValue('trainer_seeded_v30') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final DemoFixture demo = fixture ?? DemoFixture.load();
@@ -474,7 +478,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v29', today);
+    await db.putValue('trainer_seeded_v30', today);
   });
 }
 
@@ -1372,34 +1376,54 @@ const List<_WeekSlot> _weekSchedule = <_WeekSlot>[
 ];
 
 const List<_Slot> _schedule = <_Slot>[
+  // 오늘 김민수의 PT — 시각·종목·세트·횟수·중량은 **공유 픽스처**가 정한다
+  // (#757, #1170). 여기서 다른 수업을 지어내면 같은 날 같은 세션을 두 앱이
+  // 서로 다르게 말한다: 사용자앱은 `18:00 · 벤치프레스 4세트 · 10회 · 40kg …`,
+  // 트레이너 웹은 `10:00 · 레그프레스 3세트 · 12회 · 80kg …` 이었다.
+  //
+  // 목록에서 자리를 옮기지 않는 이유: 하루 목록은 **시각**으로 정렬되고
+  // (`watchDate`) `sortOrder` 는 같은 시각끼리의 순서일 뿐이라, 시각만 고치면
+  // 타임라인의 제자리(17:00 상담 다음)에 선다. 목록 순서를 바꾸면 뒤따르는
+  // 슬롯의 `seed-schedule-N` id 가 통째로 밀린다.
+  //
+  // 길이는 50분이다. 픽스처가 적은 운동 시간의 합이 40분인데 수업이 30분이면
+  // 기록보다 짧은 수업이 된다 — 사용자앱 `운동 현황 · 오늘` 은 근력 40분이라고
+  // 말한다. 40분을 그대로 쓰지 않는 이유는 데모 수업 길이를 {30,45,50,60,90}
+  // 으로 묶어 두었기 때문이다(`schedule_week_seed_test`).
+  //
+  // 플랭크는 버티는 운동이라 횟수·중량이 없다. 얼마나 버텼는지가 값이라
+  // 이름에 남긴다 — `근력` 항목은 세트·횟수·중량만 그려서(`ProgramItem.byType`)
+  // `duration` 을 달면 화면에서 사라진다.
   _Slot(
-    time: '10:00',
+    time: '18:00',
     clientName: '김민수',
     type: SessionType.personalTraining,
-    durationMinutes: 30,
+    durationMinutes: 50,
     status: ScheduleStatus.done,
-    note: '무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.',
+    note: '무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.',
     program: <Map<String, Object?>>[
       <String, Object?>{
-        'name': '레그프레스',
+        'name': '벤치프레스',
         'type': '근력',
-        'sets': 3,
-        'reps': 12,
-        'weight': 80.0,
-      },
-      <String, Object?>{
-        'name': '레그컬',
-        'type': '근력',
-        'sets': 3,
-        'reps': 12,
+        'sets': 4,
+        'reps': 10,
         'weight': 40.0,
       },
-      <String, Object?>{'name': '카프레이즈', 'type': '근력', 'sets': 3, 'reps': 20, 'weight': 0},
       <String, Object?>{
-        'name': '하체 스트레칭',
-        'type': '스트레칭',
-        'duration': 10,
+        'name': '덤벨 숄더프레스',
+        'type': '근력',
+        'sets': 4,
+        'reps': 12,
+        'weight': 10.0,
       },
+      <String, Object?>{
+        'name': '랫풀다운',
+        'type': '근력',
+        'sets': 4,
+        'reps': 12,
+        'weight': 45.0,
+      },
+      <String, Object?>{'name': '플랭크 60초', 'type': '근력', 'sets': 3},
     ],
   ),
   _Slot(

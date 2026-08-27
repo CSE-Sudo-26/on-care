@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
@@ -95,6 +96,19 @@ void main() {
       token: 'demo-trainer-token',
       at: AppRoutes.schedule,
     );
+    await tester.pumpAndSettle();
+
+    // 상세 패널은 그 날의 **첫** 세션을 연다. 김민수의 PT 는 픽스처가 정한
+    // 18:00 이라 그 세션을 직접 골라야 그의 카드가 패널에 실린다.
+    final Finder block = find
+        .descendant(
+          of: find.byType(ScheduleWeekTimetable),
+          matching: find.textContaining('김민수'),
+        )
+        .first;
+    await tester.ensureVisible(block);
+    await tester.pumpAndSettle();
+    await tester.tap(block);
     await tester.pumpAndSettle();
 
     // 이름은 시간표 블록과 상세 패널 양쪽에 있다 — 목표 줄은 카드에만 있다.
