@@ -2647,6 +2647,7 @@ def build_schedule_range(
                 select(TrainerClient.id).where(
                     TrainerClient.trainer_id == trainer_id,
                     TrainerClient.member_id == TrainerSchedule.member_id,
+                    TrainerClient.active.is_(True),
                 )
             ),
         ),
@@ -2683,6 +2684,7 @@ def booked_dates(db: Session, trainer_id: str) -> list[str]:
                     select(TrainerClient.id).where(
                         TrainerClient.trainer_id == trainer_id,
                         TrainerClient.member_id == TrainerSchedule.member_id,
+                        TrainerClient.active.is_(True),
                     )
                 ),
             ),
