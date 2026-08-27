@@ -35,6 +35,23 @@ final exerciseWeekProvider = FutureProvider<ExerciseWeek>((ref) {
   return ref.watch(exerciseRepositoryProvider).fetchThisWeek();
 }, name: 'exerciseWeek');
 
+/// 기간에 맞는 운동 조언 — GET /exercise/advice. (#1574)
+///
+/// 식단 탭이 하는 것(#1017)과 같다. 기간을 바꾸는 것은 "무엇을 볼지" 를 바꾸는
+/// 일이라, 그래프만 갈아 끼우고 조언이 오늘 이야기로 남으면 `이번 주` 를 보면서
+/// "오늘은 유산소를 했네요" 를 읽게 된다.
+///
+/// 기간마다 provider 가 따로 서므로, 토글을 빠르게 옮겨도 이전 기간의 응답이
+/// 지금 보고 있는 기간의 카드를 덮어쓰지 않는다.
+///
+/// 구간 경계는 서버가 정한다 — 앱이 따로 계산해 넘기지 않는다.
+final exerciseAdviceProvider = FutureProvider.family<String, String>((
+  ref,
+  String period,
+) async {
+  return ref.watch(exerciseRepositoryProvider).fetchAdvice(period);
+}, name: 'exerciseAdvice');
+
 /// 그 주의 월요일. 주 단위 조회의 키다.
 DateTime mondayOfWeek(DateTime date) {
   final DateTime d = DateTime(date.year, date.month, date.day);

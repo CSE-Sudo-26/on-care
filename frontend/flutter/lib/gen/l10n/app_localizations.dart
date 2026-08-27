@@ -578,6 +578,18 @@ abstract class AppLocalizations {
   /// **'AI advice'**
   String get dietAiFeedback;
 
+  /// Shown in the AI advice card while the selected period's advice loads (#1574)
+  ///
+  /// In en, this message translates to:
+  /// **'Looking at this period…'**
+  String get aiAdviceLoading;
+
+  /// Shown in the AI advice card when the selected period's advice fails (#1574)
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the advice.'**
+  String get aiAdviceError;
+
   /// No description provided for @dietMealLog.
   ///
   /// In en, this message translates to:

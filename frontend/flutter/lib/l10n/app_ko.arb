@@ -90,6 +90,14 @@
   "dietUnitMg": "mg",
   "dietUnitG": "g",
   "dietAiFeedback": "AI 맞춤 조언",
+  "aiAdviceLoading": "이 기간의 조언을 살펴보는 중이에요…",
+  "@aiAdviceLoading": {
+    "description": "기간별 AI 조언을 불러오는 동안 카드에 남는 문구 (#1574)"
+  },
+  "aiAdviceError": "조언을 불러오지 못했어요.",
+  "@aiAdviceError": {
+    "description": "기간별 AI 조언 요청이 실패했을 때 카드에 남는 문구 (#1574)"
+  },
   "dietMealLog": "식단 기록",
   "dietAddMeal": "식단 추가",
   "dietEmptyLog": "기록된 식단이 없어요.\n사진으로 끼니를 추가해 보세요!",

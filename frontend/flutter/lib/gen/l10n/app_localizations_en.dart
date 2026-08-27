@@ -270,6 +270,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietAiFeedback => 'AI advice';
 
   @override
+  String get aiAdviceLoading => 'Looking at this period…';
+
+  @override
+  String get aiAdviceError => 'Couldn\'t load the advice.';
+
+  @override
   String get dietMealLog => 'Meal Log';
 
   @override

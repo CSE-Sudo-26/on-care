@@ -15,6 +15,7 @@ import 'package:drift/drift.dart'
         Value;
 import 'package:logger/logger.dart';
 import 'package:oncare/core/demo/demo_ai_advice.dart';
+import 'package:oncare/core/demo/period_advice.dart';
 import 'package:oncare/core/network/request_extras.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart' show kDietDayMessagesKey;
@@ -60,9 +61,11 @@ class LocalApiInterceptor extends Interceptor {
     'GET /version': _version,
     'GET /dashboard/summary': _dashboardSummary,
     'GET /diet/days/today': _dietToday,
+    'GET /diet/advice': _dietAdvice,
     'GET /diet/recommendations': _dietRecommendations,
     'POST /diet/analyze': _dietAnalyze,
     'GET /exercise/weeks/current': _exerciseCurrentWeek,
+    'GET /exercise/advice': _exerciseAdvice,
     'POST /exercise/sessions': _exerciseAddSession,
     'GET /schedule/events': _scheduleEvents,
     'POST /schedule/events': _scheduleCreate,
@@ -695,6 +698,81 @@ class LocalApiInterceptor extends Interceptor {
     });
   }
 
+  /// GET /diet/advice — 기간에 맞는 식단 조언. (#1574)
+  ///
+  /// 실 서버(`/diet/advice`)와 **같은 규칙, 같은 문장**이다. 데모에 이 경로가
+  /// 없던 동안에는 요청이 그대로 네트워크로 흘러 실패했고, 화면은 어쩔 수 없이
+  /// 오늘 조언을 대신 그렸다 — `이번 주` 를 보면서 오늘 이야기를 읽게 되는
+  /// 원인이 여기였다.
+  Future<Response<Object?>> _dietAdvice(RequestOptions options) async {
+    final String? period = _advicePeriod(options);
+    if (period == null) {
+      return _unprocessable(options, 'period must be today, week or all');
+    }
+    final (String start, String end) = _periodBounds(period);
+    final rows =
+        await (_db.select(_db.dietEntries)..where(
+              (t) =>
+                  t.date.isBiggerOrEqualValue(start) &
+                  t.date.isSmallerOrEqualValue(end),
+            ))
+            .get();
+
+    // 기록이 없는 날은 만들지 않는다 — 안 먹은 날과 적지 않은 날은 다른 말이고,
+    // 0 으로 채우면 평균과 초과 일수가 사실과 어긋난다(서버와 같은 규칙).
+    final Map<String, int> sodiumByDate = <String, int>{};
+    for (final r in rows) {
+      sodiumByDate[r.date] = (sodiumByDate[r.date] ?? 0) + r.sodiumMg;
+    }
+    final List<String> dates = sodiumByDate.keys.toList()..sort();
+    final List<DietDayTotals> days = <DietDayTotals>[
+      for (final String date in dates)
+        if (DateTime.tryParse(date) case final DateTime parsed)
+          (date: parsed, sodiumMg: sodiumByDate[date]!),
+    ];
+
+    return _ok(options, <String, Object?>{
+      'period': period,
+      'from_date': start,
+      'to_date': end,
+      'days_logged': days.length,
+      'message': dietPeriodAdvice(days, period),
+    });
+  }
+
+  /// 조언 요청의 `period`. 기간 이름이 아니면 null 이다 — 서버가 422 로
+  /// 답하므로 목업이 조용히 오늘로 흘려보내면 두 구현이 갈린다.
+  String? _advicePeriod(RequestOptions options) {
+    final Object? raw = options.queryParameters['period'];
+    final String period = raw is String && raw.isNotEmpty ? raw : kPeriodToday;
+    const Set<String> known = <String>{kPeriodToday, kPeriodWeek, kPeriodAll};
+    return known.contains(period) ? period : null;
+  }
+
+  /// 기간 이름 → [시작, 끝] (양끝 포함). 서버 `period_window.period_bounds` 와
+  /// 같은 규칙이다 — `이번 주` 는 월요일부터 오늘까지, `전체` 는 12주다.
+  (String, String) _periodBounds(String period) {
+    final DateTime now = nowKst();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    if (period == kPeriodToday) {
+      return (_dateString(today), _dateString(today));
+    }
+    if (period == kPeriodWeek) {
+      final DateTime monday = DateTime(
+        today.year,
+        today.month,
+        today.day - (today.weekday - DateTime.monday),
+      );
+      return (_dateString(monday), _dateString(today));
+    }
+    final DateTime from = DateTime(
+      today.year,
+      today.month,
+      today.day - (kAllPeriodWeeks * 7 - 1),
+    );
+    return (_dateString(from), _dateString(today));
+  }
+
   /// GET /diet/recommendations — 홈 "AI 추천 식단".
   ///
   /// 데모에는 개인화 근거가 없다(로그인하지 않은 둘러보기). 그래서 서버가 고르는
@@ -1004,6 +1082,87 @@ class LocalApiInterceptor extends Interceptor {
   /// `week_start` 없이 부르면 이번 주다(예전 동작 그대로). 운동 탭이 주를 뒤로
   /// 넘길 때 그 주의 월요일을 실어 보낸다(#671) — 그 전에는 조회 경로가 이번
   /// 주 하나뿐이라 지난주를 받아올 방법이 없었다.
+  /// GET /exercise/advice — 기간에 맞는 운동 조언. (#1574)
+  ///
+  /// 식단 조언과 같은 규칙이다. 운동 기록은 날짜가 아니라 (그 주 월요일, 요일)
+  /// 로 저장돼 있어, 구간이 걸치는 주를 모두 읽어 실제 날짜로 되돌린 뒤 거른다
+  /// — 서버(`exercise_service.period_days`)가 하는 일과 같다.
+  Future<Response<Object?>> _exerciseAdvice(RequestOptions options) async {
+    final String? period = _advicePeriod(options);
+    if (period == null) {
+      return _unprocessable(options, 'period must be today, week or all');
+    }
+    final (String start, String end) = _periodBounds(period);
+    final List<String> weeks = _weekStartsCovering(start, end);
+    final rows =
+        await (_db.select(
+          _db.exerciseSessions,
+        )..where((t) => t.weekStart.isIn(weeks))).get();
+
+    final Map<String, ({int minutes, int calories, Map<String, int> byType})>
+    perDate = <String, ({int minutes, int calories, Map<String, int> byType})>{};
+    for (final r in rows) {
+      final int index = _weekdayLabels.indexOf(r.dayLabel);
+      if (index < 0) continue;
+      final DateTime monday = DateTime.parse(r.weekStart);
+      final String date = _dateString(
+        DateTime(monday.year, monday.month, monday.day + index),
+      );
+      if (date.compareTo(start) < 0 || date.compareTo(end) > 0) continue;
+      final ({int minutes, int calories, Map<String, int> byType}) day =
+          perDate[date] ??
+          (minutes: 0, calories: 0, byType: <String, int>{});
+      final String kind = switch (r.type) {
+        'cardio' || 'walking' => 'cardio',
+        'strength' => 'strength',
+        'yoga' || 'stretching' || 'flexibility' => 'stretching',
+        _ => 'other',
+      };
+      day.byType[kind] = (day.byType[kind] ?? 0) + r.minutes;
+      perDate[date] = (
+        minutes: day.minutes + r.minutes,
+        calories: day.calories + r.calories,
+        byType: day.byType,
+      );
+    }
+
+    final List<String> dates = perDate.keys.toList()..sort();
+    final List<ExerciseDayTotals> days = <ExerciseDayTotals>[
+      for (final String date in dates)
+        (
+          date: DateTime.parse(date),
+          minutes: perDate[date]!.minutes,
+          calories: perDate[date]!.calories,
+          byType: perDate[date]!.byType,
+        ),
+    ];
+
+    return _ok(options, <String, Object?>{
+      'period': period,
+      'from_date': start,
+      'to_date': end,
+      'days_logged': days.length,
+      'message': exercisePeriodAdvice(days, period),
+    });
+  }
+
+  /// [start, end] 를 덮는 모든 주의 월요일. 구간의 첫날이 주 가운데면 그 주
+  /// 월요일부터 담는다 — 월요일이 구간 밖이어도 그 주의 기록은 구간 안에 있을
+  /// 수 있다.
+  List<String> _weekStartsCovering(String start, String end) {
+    final DateTime from = DateTime.parse(_mondayOfString(start));
+    final DateTime to = DateTime.parse(end);
+    final List<String> weeks = <String>[];
+    for (
+      DateTime week = from;
+      !week.isAfter(to);
+      week = DateTime(week.year, week.month, week.day + 7)
+    ) {
+      weeks.add(_dateString(week));
+    }
+    return weeks;
+  }
+
   Future<Response<Object?>> _exerciseCurrentWeek(RequestOptions options) async {
     // 파라미터가 **있으면** 그 값을 그대로 검사한다. 빈 문자열도 "잘못된 값"이다
     // — 서버(FastAPI)가 그렇게 답하므로 여기서 조용히 이번 주로 흘려보내면 두

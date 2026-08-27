@@ -9,6 +9,13 @@ abstract class ExerciseRepository {
   /// 없었다(#671). 이번 주를 넘겨 부르면 [fetchThisWeek] 과 같은 결과다.
   Future<ExerciseWeek> fetchWeek(DateTime weekStart);
 
+  /// 기간에 맞는 운동 조언 — GET /exercise/advice. (#1574)
+  ///
+  /// [period] 는 화면의 기간 토글과 같은 말이다(`today`·`week`·`all`). 구간
+  /// 경계는 서버가 정한다 — 앱이 따로 계산해 넘기면 같은 회원의 `이번 주` 가
+  /// 화면마다 다른 날부터 시작한다.
+  Future<String> fetchAdvice(String period);
+
   /// Persist a new workout session (POST /exercise/sessions) and return
   /// the created session as the server materialised it.
   ///

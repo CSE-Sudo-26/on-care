@@ -1,4 +1,5 @@
 import 'package:demo_fixture/demo_fixture.dart';
+import 'package:oncare/core/demo/period_advice.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -156,6 +157,70 @@ class MockExerciseRepository implements ExerciseRepository {
     // 이번 주(또는 미래)는 CRUD 가 반영된 살아 있는 주다.
     if (weeksAgo <= 0) return _buildWeek();
     return _pastWeek(weeksAgo);
+  }
+
+  @override
+  Future<String> fetchAdvice(String period) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    // 문장 규칙은 서버(`exercise_service.period_coach_message`)의 것을 그대로
+    // 쓴다 — 데모로 본 화면과 실 연동으로 본 화면이 다른 말을 하면 안 된다.
+    return exercisePeriodAdvice(_dayTotals(period), period);
+  }
+
+  /// 기간이 덮는 날들의 하루 합계. **기록이 있는 날만** 만든다 — 쉰 날과 적지
+  /// 않은 날은 다른 말이라, 0 으로 채우면 조언의 "며칠 움직였다" 가 어긋난다.
+  ///
+  /// 이번 주는 [_sessions](CRUD 가 반영된 살아 있는 주)에서, 지난 주들은
+  /// 픽스처에서 읽는다 — 주간 요약이 읽는 것과 같은 출처다.
+  List<ExerciseDayTotals> _dayTotals(String period) {
+    final int weeksBack = switch (period) {
+      kPeriodAll => kAllPeriodWeeks - 1,
+      _ => 0,
+    };
+    final DateTime thisMonday = _addDays(_today, -_todayIdx);
+    final Map<DateTime, ({int minutes, int calories, Map<String, int> byType})>
+    perDay =
+        <DateTime, ({int minutes, int calories, Map<String, int> byType})>{};
+
+    for (int weeksAgo = weeksBack; weeksAgo >= 0; weeksAgo--) {
+      final DateTime monday = _addDays(thisMonday, -7 * weeksAgo);
+      final List<ExerciseSession> sessions = weeksAgo == 0
+          ? _sessions
+          : _sessionsForWeek(weeksAgo);
+      for (final ExerciseSession s in sessions) {
+        final int index = _dayLabels.indexOf(s.dayLabel);
+        if (index < 0) continue;
+        final DateTime date = _addDays(monday, index);
+        // 오늘 이후는 담지 않는다. `오늘` 은 오늘 하루만 본다.
+        if (date.isAfter(_today)) continue;
+        if (period == kPeriodToday && date != _today) continue;
+        final ({int minutes, int calories, Map<String, int> byType}) day =
+            perDay[date] ?? (minutes: 0, calories: 0, byType: <String, int>{});
+        final String kind = switch (s.type) {
+          ExerciseType.cardio || ExerciseType.walking => 'cardio',
+          ExerciseType.strength => 'strength',
+          ExerciseType.stretching || ExerciseType.yoga => 'stretching',
+          ExerciseType.other => 'other',
+        };
+        day.byType[kind] = (day.byType[kind] ?? 0) + s.minutes;
+        perDay[date] = (
+          minutes: day.minutes + s.minutes,
+          calories: day.calories + s.calories,
+          byType: day.byType,
+        );
+      }
+    }
+
+    final List<DateTime> dates = perDay.keys.toList()..sort();
+    return <ExerciseDayTotals>[
+      for (final DateTime date in dates)
+        (
+          date: date,
+          minutes: perDay[date]!.minutes,
+          calories: perDay[date]!.calories,
+          byType: perDay[date]!.byType,
+        ),
+    ];
   }
 
   /// [weekStart] 가 이번 주에서 몇 주 전인지. 이번 주면 0.

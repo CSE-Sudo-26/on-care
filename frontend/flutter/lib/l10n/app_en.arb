@@ -129,6 +129,14 @@
   "dietUnitMg": "mg",
   "dietUnitG": "g",
   "dietAiFeedback": "AI advice",
+  "aiAdviceLoading": "Looking at this period…",
+  "@aiAdviceLoading": {
+    "description": "Shown in the AI advice card while the selected period's advice loads (#1574)"
+  },
+  "aiAdviceError": "Couldn't load the advice.",
+  "@aiAdviceError": {
+    "description": "Shown in the AI advice card when the selected period's advice fails (#1574)"
+  },
   "dietMealLog": "Meal Log",
   "dietAddMeal": "Add Meal",
   "dietEmptyLog": "No meals logged.\nAdd a meal with a photo!",

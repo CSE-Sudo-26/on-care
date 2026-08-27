@@ -117,6 +117,27 @@ abstract interface class ClientRepository {
   Future<void> restoreClient(String id);
 }
 
+/// 데모(drift)에서 미등록 상태를 나타내는 키. 트레이너-고객 행 자체는 지우지
+/// 않고 이 id 목록에만 올려 둔다 — 원본 기록을 지우지 않는다는 정책과, 다시
+/// 등록할 때 새 행이 아니라 같은 행을 되살려야 한다는 요구가 같이 걸려 있다.
+///
+/// [DriftClientRepository] 뿐 아니라 [DemoClientInviteRepository]도 이
+/// 목록을 본다 — 고객 탭의 "새 회원 등록" 창으로 미등록 고객을 다시 연결할
+/// 때, 이미 있는 행을 무시하고 새로 넣으면 기본 키 충돌로 "이미 연결됨"
+/// 이라는 잘못된 안내가 뜬다.
+const String demoUnregisteredClientsKey = 'trainer_unregistered_clients';
+
+/// [demoUnregisteredClientsKey] 에 저장된 미등록 고객 id 목록을 읽는다.
+Future<Set<String>> readDemoUnregisteredClientIds(AppDatabase db) async {
+  final raw = await db.readValue(demoUnregisteredClientsKey);
+  if (raw == null || raw.isEmpty) return <String>{};
+  return (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
+}
+
+/// [ids] 를 [demoUnregisteredClientsKey] 에 저장한다.
+Future<void> writeDemoUnregisteredClientIds(AppDatabase db, Set<String> ids) =>
+    db.putValue(demoUnregisteredClientsKey, jsonEncode(ids.toList()..sort()));
+
 /// Reads client + schedule data from the local drift DB for the
 /// 고객 관리 tab. Returns reactive streams so the UI updates if the
 /// underlying rows change (e.g. a routine sent from another tab).
@@ -125,7 +146,6 @@ class DriftClientRepository implements ClientRepository {
   const DriftClientRepository(this._db);
 
   final AppDatabase _db;
-  static const String _unregisteredKey = 'trainer_unregistered_clients';
 
   @override
   Future<RoutineHistoryEntry> updateHistoryFeedback(
@@ -155,21 +175,12 @@ class DriftClientRepository implements ClientRepository {
           (t) => OrderingTerm(expression: t.sortOrder),
         ]);
       final rows = await query.get();
-      final removed = await _unregisteredIds();
+      final removed = await readDemoUnregisteredClientIds(_db);
       return rows
           .map((row) => _toEntity(row, registered: !removed.contains(row.id)))
           .toList();
     });
   }
-
-  Future<Set<String>> _unregisteredIds() async {
-    final raw = await _db.readValue(_unregisteredKey);
-    if (raw == null || raw.isEmpty) return <String>{};
-    return (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
-  }
-
-  Future<void> _saveUnregisteredIds(Set<String> ids) =>
-      _db.putValue(_unregisteredKey, jsonEncode(ids.toList()..sort()));
 
   /// Most recent message time per client.
   ///
@@ -302,15 +313,15 @@ class DriftClientRepository implements ClientRepository {
       await (_db.delete(
         _db.reportFeedbackDrafts,
       )..where((t) => t.clientId.equals(id))).go();
-      final removed = (await _unregisteredIds())..add(id);
-      await _saveUnregisteredIds(removed);
+      final removed = (await readDemoUnregisteredClientIds(_db))..add(id);
+      await writeDemoUnregisteredClientIds(_db, removed);
     });
   }
 
   @override
   Future<void> restoreClient(String id) async {
-    final removed = (await _unregisteredIds())..remove(id);
-    await _saveUnregisteredIds(removed);
+    final removed = (await readDemoUnregisteredClientIds(_db))..remove(id);
+    await writeDemoUnregisteredClientIds(_db, removed);
   }
 
   @override
@@ -595,28 +606,24 @@ class DriftClientRepository implements ClientRepository {
     final bool weekendHeavy = _weekendRuns(logged);
     if (period == ClientPeriod.week) {
       if (over >= 3) {
-        return '이번 주 $over일이나 나트륨 권장량을 넘었어요. '
-            '국물은 건더기 위주로 먹고 남은 며칠은 담백하게 가요.';
+        return '이번 주 $over일이나 나트륨을 넘겼어요. 국물은 건더기 위주로 드세요.';
       }
       if (weekendHeavy) {
-        return '주중에는 잘 지키다가 주말에 나트륨이 확 올라요. '
-            '주말 외식은 한 끼만 정해 두면 흐름이 유지돼요.';
+        return '주중엔 잘 지키다 주말에 나트륨이 올라요. 주말 외식은 한 끼만 정해요.';
       }
       if (over > 0) {
-        return '이번 주 $over일만 권장량을 넘었어요. '
-            '나머지 날의 균형은 좋았으니 이 흐름을 이어가요.';
+        return '이번 주 $over일만 권장량을 넘었어요. 나머지 날의 균형은 좋았어요.';
       }
-      return '이번 주 내내 나트륨을 권장량 안에서 지켰어요. 아주 좋아요!';
+      return '이번 주 ${logged.length}일 모두 나트륨을 권장량 안에서 지켰어요!';
     }
     if (weekendHeavy) {
-      return '기록을 통틀어 보면 주말마다 나트륨이 오르는 흐름이에요. '
-          '주말 한 끼만 담백하게 바꿔도 평균이 내려가요.';
+      return '기록을 통틀어 주말마다 나트륨이 올라요. 주말 한 끼만 담백하게 바꿔요.';
     }
     if (over * 10 >= logged.length * 4) {
       return '기록한 날의 ${(over * 100 / logged.length).round()}%가 나트륨 권장량을 넘었어요. '
-          '국·찌개 국물을 남기는 것부터 시작해 봐요.';
+          '국물부터 남겨 봐요.';
     }
-    return '기록을 통틀어 나트륨이 대체로 권장량 안이에요. 지금 흐름이 좋아요.';
+    return '기록한 ${logged.length}일 대부분이 권장량 안이에요. 지금 흐름이 좋아요.';
   }
 
   @override
@@ -635,16 +642,16 @@ class DriftClientRepository implements ClientRepository {
         .toList();
     if (logged.isEmpty) {
       return switch (period) {
-        ClientPeriod.week => '이번 주 운동 기록이 아직 없어요. 가벼운 산책 한 번도 흐름이 됩니다.',
+        ClientPeriod.week => '이번 주 운동 기록이 아직 없어요. 10분 걷기부터 시작해 볼까요?',
         ClientPeriod.month => '기록이 쌓이면 운동량과 유형의 흐름을 짚어 드릴게요.',
-        ClientPeriod.today => '아직 오늘 운동 기록이 없어요. 10분 걷기부터 시작해 볼까요?',
+        ClientPeriod.today => '오늘 운동 기록이 아직 없어요. 10분 걷기부터 시작해 볼까요?',
       };
     }
 
     if (period == ClientPeriod.today) {
       final ClientExerciseDay day = logged.last;
       return '오늘 ${_mainTypeLabel(day)} 위주로 ${day.minutes}분, '
-          '${day.calories}kcal 를 썼어요. 마무리로 가볍게 스트레칭하면 회복이 빨라져요.';
+          '${day.calories}kcal 썼어요. 스트레칭으로 마무리해요.';
     }
 
     final int totalMinutes = logged.fold<int>(
@@ -653,7 +660,7 @@ class DriftClientRepository implements ClientRepository {
     );
     if (period == ClientPeriod.week) {
       if (logged.length <= 1) {
-        return '이번 주는 ${logged.length}일 움직였어요. 한 번 더 나가면 흐름이 끊기지 않아요.';
+        return '이번 주는 $totalMinutes분 하루뿐이에요. 한 번 더 나가면 흐름이 이어져요.';
       }
       final int cardio = logged.fold<int>(
         0,
@@ -665,15 +672,14 @@ class DriftClientRepository implements ClientRepository {
       );
       // 서버와 같은 8할 기준 — 한 유형에 쏠렸는지가 코칭의 첫 질문이다.
       if (totalMinutes > 0 && cardio * 10 >= totalMinutes * 8) {
-        return '이번 주 ${logged.length}일 $totalMinutes분을 채웠는데 유산소에 몰려 있어요. '
-            '근력을 한 번 섞어 볼까요?';
+        return '이번 주 ${logged.length}일 $totalMinutes분이 유산소에 몰렸어요. '
+            '근력도 섞어 볼까요?';
       }
       if (totalMinutes > 0 && strength * 10 >= totalMinutes * 8) {
-        return '이번 주 ${logged.length}일 $totalMinutes분을 채웠는데 근력에 몰려 있어요. '
-            '유산소를 한 번 섞어 볼까요?';
+        return '이번 주 ${logged.length}일 $totalMinutes분이 근력에 몰렸어요. '
+            '유산소도 섞어 볼까요?';
       }
-      return '이번 주 ${logged.length}일 동안 $totalMinutes분 운동했어요. '
-          '유형도 고르게 섞였네요. 이 흐름을 이어가요.';
+      return '이번 주 ${logged.length}일 $totalMinutes분, 유형도 고르게 섞였어요.';
     }
 
     // 전체 — 최근 4주와 그 이전을 견준다.
@@ -692,14 +698,13 @@ class DriftClientRepository implements ClientRepository {
         xs.isEmpty ? 0 : xs.fold<int>(0, (int a, int b) => a + b) / xs.length;
     if (recent.isNotEmpty && earlier.isNotEmpty) {
       if (mean(recent) > mean(earlier) * 1.1) {
-        return '최근 4주 운동량이 그 전보다 늘었어요. 지금 방식이 회원님께 맞는 것 같아요.';
+        return '최근 4주 운동량이 그 전보다 늘었어요. 지금 방식이 잘 맞아요.';
       }
       if (mean(recent) < mean(earlier) * 0.9) {
-        return '최근 4주 들어 운동량이 줄고 있어요. 무엇이 달라졌는지 한 주만 되짚어 볼까요?';
+        return '최근 4주 운동량이 줄고 있어요. 짧게라도 주 3일을 지켜 봐요.';
       }
     }
-    return '기록을 통틀어 ${logged.length}일 $totalMinutes분을 움직였어요. '
-        '큰 기복 없이 이어가고 있어요.';
+    return '12주 동안 ${logged.length}일 $totalMinutes분, 기복 없이 이어가고 있어요.';
   }
 
   /// [period] 가 덮는 구간의 일별 운동 집계.

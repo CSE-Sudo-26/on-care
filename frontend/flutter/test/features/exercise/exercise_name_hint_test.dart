@@ -32,6 +32,9 @@ const ExerciseWeek _emptyWeek = ExerciseWeek(
 
 class _StubRepository implements ExerciseRepository {
   @override
+  Future<String> fetchAdvice(String period) async => '조언';
+
+  @override
   Future<ExerciseWeek> fetchThisWeek() async => _emptyWeek;
 
   @override

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -19,9 +19,10 @@ from app.core import clock
 from app.db.session import get_db
 from app.models.models import ExerciseSession, HealthProfile
 from app.schemas.exercise_api import (
-    ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
+    ExerciseAdviceResponse, ExerciseSessionCreate, ExerciseSessionOut,
+    ExerciseWeekResponse,
 )
-from app.services import exercise_activity, exercise_types
+from app.services import exercise_activity, exercise_service, exercise_types
 from app.services.coach import personal_ingest
 from app.services.exercise_service import (
     weekly_goals,
@@ -95,6 +96,36 @@ def current_week(
         weekly_goal_minutes=goal_minutes,
         weekly_goal_calories=goal_calories,
         **data,
+    )
+
+
+@router.get("/exercise/advice", response_model=ExerciseAdviceResponse)
+def exercise_advice(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+    period: Annotated[
+        Literal["today", "week", "all"],
+        Query(description="조언이 다룰 구간 — 화면의 기간 토글과 같은 이름"),
+    ] = "today",
+) -> ExerciseAdviceResponse:
+    """기간에 맞는 운동 조언. (#1574)
+
+    식단 조언(`/diet/advice`, #1017)과 같은 규칙이다 — 두 카드가 같은 자리에서
+    같은 토글을 따라가므로, 한쪽만 오늘 이야기로 남으면 회원은 `이번 주` 를 보며
+    "오늘은 유산소를 했네요" 를 읽게 된다.
+
+    조언 문장은 트레이너웹이 보는 것과 **같다**(#1025) — 회원과 코치가 같은
+    회원의 같은 기간을 두고 다른 이야기를 들고 앉으면 안 된다.
+
+    경계도 앱이 아니라 서버가 정한다.
+    """
+    start, end, days = exercise_service.period_days(db, current_user.id, period)
+    return ExerciseAdviceResponse(
+        period=period,
+        from_date=start,
+        to_date=end,
+        days_logged=len(days),
+        message=exercise_service.period_coach_message(days, period),
     )
 
 

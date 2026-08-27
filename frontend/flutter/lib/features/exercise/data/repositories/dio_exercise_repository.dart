@@ -24,6 +24,15 @@ class DioExerciseRepository implements ExerciseRepository {
     return ExerciseWeek.fromJson(res.data!);
   }
 
+  @override
+  Future<String> fetchAdvice(String period) async {
+    final res = await _dio.get<Map<String, Object?>>(
+      '/exercise/advice',
+      queryParameters: <String, Object?>{'period': period},
+    );
+    return (res.data?['message'] as String?) ?? '';
+  }
+
   static String _dateString(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'

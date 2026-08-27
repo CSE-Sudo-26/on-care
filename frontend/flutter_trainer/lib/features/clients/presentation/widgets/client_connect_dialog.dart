@@ -10,6 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -108,6 +109,10 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
     try {
       await repository.invite(found.memberId, message: _message.text);
       ref.invalidate(pendingClientInvitesProvider);
+      // 데모(즉시 연결)와 미등록 고객을 되살리는 경로 모두, 고객 탭과
+      // 고객 관리가 같은 목록을 보므로 두 provider 를 함께 새로고침한다.
+      ref.invalidate(clientsProvider);
+      ref.invalidate(managedClientsProvider);
       if (!mounted) return;
       navigator.pop();
       showAppToast(

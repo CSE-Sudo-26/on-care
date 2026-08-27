@@ -16,6 +16,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
@@ -275,23 +276,6 @@ class _MyPageState extends ConsumerState<MyPage> {
     }
   }
 
-  Future<void> _restoreClient(TrainerClient client) async {
-    final l = AppLocalizations.of(context);
-    setState(() => _removingClients.add(client.id));
-    try {
-      await ref.read(clientRepositoryProvider).restoreClient(client.id);
-      ref.invalidate(clientsProvider);
-      ref.invalidate(managedClientsProvider);
-      if (!mounted) return;
-      showAppToast(context, l.myClientRestoreSuccess);
-    } catch (_) {
-      if (!mounted) return;
-      showAppToast(context, l.myClientRestoreFailed, kind: AppToastKind.error);
-    } finally {
-      if (mounted) setState(() => _removingClients.remove(client.id));
-    }
-  }
-
   /// 계정 탈퇴. 이름 확인을 받은 뒤에만 나가고, 성공하면 로그아웃과 같은 경로로
   /// 로그인 화면에 도달한다(라우터의 인증 게이트). (#505)
   Future<void> _deleteAccount() async {
@@ -468,10 +452,12 @@ class _MyPageState extends ConsumerState<MyPage> {
   }
 
   Widget _buildClientManagement() => _ClientManagementCard(
-    clients: ref.watch(managedClientsProvider),
+    // 담당을 종료한 고객은 여기서도 완전히 사라진다 — 미등록 고객을 다시
+    // 잡는 지름길을 두지 않는다. 다시 잡으려면 고객 탭의 "신규 고객 등록"
+    // 에서 회원 ID로 새로 찾아 연결해야 한다(신규 등록과 같은 절차).
+    clients: ref.watch(clientsProvider),
     removing: _removingClients,
     onRemove: _removeClient,
-    onRestore: _restoreClient,
   );
 
   /// Applies a settings change and tells the trainer if it didn't stick.
@@ -1252,67 +1238,92 @@ class _ClientManagementCard extends StatelessWidget {
     required this.clients,
     required this.removing,
     required this.onRemove,
-    required this.onRestore,
   });
 
   final AsyncValue<List<TrainerClient>> clients;
   final Set<String> removing;
   final ValueChanged<TrainerClient> onRemove;
-  final ValueChanged<TrainerClient> onRestore;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return SectionCard(
-      title: l.myStatClients,
-      icon: Icons.manage_accounts_outlined,
-      child: clients.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Text(l.clientsLoadFailed),
-        data: (allItems) {
-          final items = allItems;
-          if (items.isEmpty) return Text(l.myClientManagementEmpty);
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              for (var i = 0; i < items.length; i++) ...<Widget>[
-                if (i > 0)
-                  const Divider(height: 1, color: AppColors.borderStrong),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(child: Text(items[i].avatar)),
-                  title: Text(items[i].name),
-                  subtitle: Text(
-                    '${items[i].registered ? l.myClientRegistered : l.myClientUnregistered} · ${items[i].goal}',
-                  ),
-                  trailing: Tooltip(
-                    message: items[i].registered
-                        ? l.myClientRemove
-                        : l.myClientRestore,
-                    child: TextButton(
-                      onPressed: removing.contains(items[i].id)
-                          ? null
-                          : () => items[i].registered
-                                ? onRemove(items[i])
-                                : onRestore(items[i]),
-                      child: removing.contains(items[i].id)
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              items[i].registered
-                                  ? l.myClientRemove
-                                  : l.myClientRestore,
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+    return clients.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Text(l.clientsLoadFailed),
+      data: (items) {
+        if (items.isEmpty) {
+          return EmptyHint(
+            message: l.myClientManagementEmpty,
+            icon: Icons.people_outline,
           );
-        },
-      ),
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (final client in items) ...<Widget>[
+              _ManagedClientRow(
+                client: client,
+                busy: removing.contains(client.id),
+                onRemove: () => onRemove(client),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 고객 관리의 한 줄 — 고객 탭 로스터와 같은 [ClientCard] 위에 삭제 동작만
+/// 덧붙인다. 목록 UI가 갈리면 같은 회원이 탭마다 다른 사람처럼 보이므로,
+/// 두 화면이 카드를 공유한다.
+///
+/// 담당을 종료한 고객은 이 목록에 아예 뜨지 않는다 — [clientsProvider] 가
+/// 이미 등록 고객만 준다. 다시 담당하려면 고객 탭의 "신규 고객 등록"에서
+/// 회원 ID로 새로 찾아 연결해야 한다. 여기서 미등록 고객을 계속 보여주고
+/// 한 번의 탭으로 되살리는 지름길을 두면, 회원 ID를 확인하는 신규 등록의
+/// 안전장치를 다시 등록만 비켜 가게 된다.
+class _ManagedClientRow extends StatelessWidget {
+  const _ManagedClientRow({
+    required this.client,
+    required this.busy,
+    required this.onRemove,
+  });
+
+  final TrainerClient client;
+  final bool busy;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        ClientCard(
+          key: ValueKey<String>('managed-client-${client.id}'),
+          client: client,
+          compact: true,
+          onTap: () => context.go(AppRoutes.clientDetail(client.id)),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Tooltip(
+            message: l.myClientRemove,
+            child: TextButton(
+              onPressed: busy ? null : onRemove,
+              child: busy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l.myClientRemove),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

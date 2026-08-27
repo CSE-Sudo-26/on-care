@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
@@ -221,6 +222,44 @@ void main() {
         );
       },
     );
+
+    test('미등록 고객은 새 회원 등록과 같은 lookup·invite 로 같은 행을 되살린다', () async {
+      final repo = DriftClientRepository(db);
+      final invites = DemoClientInviteRepository(db);
+      await repo.removeClient('seed-client-1');
+
+      // 실 계정 id(demoAlreadyLinkedMemberId)로 찾아야 한다 — 회원 관리
+      // 화면의 행 id(seed-client-1)를 그대로 입력하는 것이 아니다.
+      final found = await invites.lookup(demoAlreadyLinkedMemberId);
+      expect(found.name, '김민수');
+      expect(found.canInvite, isTrue); // 미등록이라 다시 연결할 수 있다
+
+      await invites.invite(demoAlreadyLinkedMemberId);
+
+      final clients = await repo.watchClients().first;
+      final revived = clients.firstWhere((c) => c.id == 'seed-client-1');
+      expect(revived.registered, isTrue);
+      expect(revived.name, '김민수'); // 새 프로필이 아니라 같은 행이 되살아났다
+      expect(clients.length, 15); // 새 행이 추가되지 않았다
+    });
+
+    test('실 계정 id 매핑이 없는 고객도 행 id 자체로 다시 등록할 수 있다', () async {
+      final repo = DriftClientRepository(db);
+      final invites = DemoClientInviteRepository(db);
+      await repo.removeClient('seed-client-3');
+
+      final found = await invites.lookup('seed-client-3');
+      expect(found.canInvite, isTrue);
+
+      await invites.invite('seed-client-3');
+
+      final clients = await repo.watchClients().first;
+      expect(
+        clients.firstWhere((c) => c.id == 'seed-client-3').registered,
+        isTrue,
+      );
+      expect(clients.length, 15);
+    });
 
     // 예약 수는 이제 로스터가 아니라 오늘 스케줄에서 파생된다(#387).
     // 배지 계산은 todayReservationCountProvider 테스트가 덮고, 날짜 필터링은
@@ -527,6 +566,59 @@ void main() {
         find.descendant(of: card, matching: find.textContaining('여성')),
         findsOneWidget,
       );
+    });
+
+    testWidgets('담당 종료한 고객도 신규 고객 등록에서 회원 ID로 다시 연결한다', (tester) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
+      // 고객 관리에서 담당을 종료한 것과 같다 — 명단에서 사라지고,
+      // 다시 잡으려면 여기(고객 탭)에서 회원 ID로 새로 찾아야 한다.
+      await container
+          .read(clientRepositoryProvider)
+          .removeClient('seed-client-1');
+      await settle(tester);
+      expect(find.text('김민수'), findsNothing);
+
+      await tester.tap(find.text('신규 고객 등록'));
+      await settle(tester);
+
+      // 회원 앱 MY 탭이 보여주는 것과 같은 실 계정 id — 트레이너 화면의
+      // 행 id(seed-client-1)가 아니다.
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-member-id')),
+        'user-7d4e9a2c5f18',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-lookup')),
+      );
+      await settle(tester);
+
+      // 신규 등록과 같은 확인 절차를 거친다 — "이미 담당 중" 안내가
+      // 아니라 이름을 확인하고 누르는 등록 버튼이 뜬다.
+      expect(find.text('김민수'), findsWidgets);
+      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
+      expect(find.text('이미 담당하고 있는 회원이에요'), findsNothing);
+
+      await tester.ensureVisible(find.text('고객 등록'));
+      await tester.tap(find.text('고객 등록'));
+      await settle(tester);
+
+      // 새 행이 아니라 같은 고객(seed-client-1)이 되살아난다 — 지난
+      // 스케줄·기록이 새 카드로 갈라지지 않는다.
+      final card = find.byKey(const ValueKey<String>('client-seed-client-1'));
+      await scrollToClient(tester, card);
+      expect(
+        find.descendant(of: card, matching: find.text('김민수')),
+        findsOneWidget,
+      );
+      final roster = await container
+          .read(clientRepositoryProvider)
+          .watchClients()
+          .first;
+      expect(roster.length, 15);
     });
 
     testWidgets('이미 연결된 회원 ID를 입력하면 중복 안내가 뜬다', (tester) async {

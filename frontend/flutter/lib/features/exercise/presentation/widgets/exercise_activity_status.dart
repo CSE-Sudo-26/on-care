@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
+import 'package:oncare/core/demo/period_advice.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/charts/goal_line.dart';
@@ -26,6 +27,15 @@ final exerciseActivityPeriodProvider = StateProvider<int>(
   (ref) => kExerciseActivityPeriodDefault,
   name: 'exerciseActivityPeriod',
 );
+
+/// 기간 토글의 칸(0·1·2) → 서버가 아는 기간 이름. 식단 탭과 같은 말을 쓴다
+/// (`today`·`week`·`all`). 토글이 정수인 것은 화면 사정이고, 서버·조언이 아는
+/// 것은 이름이다 — 그 사이를 여기 한 곳에서만 옮긴다. (#1574)
+String exerciseAdvicePeriod(int tab) => switch (tab) {
+  1 => kPeriodWeek,
+  2 => kPeriodAll,
+  _ => kPeriodToday,
+};
 
 /// 세 기간 카드의 **공통 높이**. 토글을 눌러도 카드가 커졌다 작아졌다 하지
 /// 않도록 셋을 같은 높이로 고정한다.
