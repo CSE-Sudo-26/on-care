@@ -455,7 +455,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietSaved => 'Meal saved';
 
   @override
-  String get dietDone => 'Done';
+  String get dietSaveEntry => 'Save';
 
   @override
   String get dietSaveFailed => 'Couldn\'t save. Please try again in a moment.';

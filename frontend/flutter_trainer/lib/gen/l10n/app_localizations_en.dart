@@ -2033,10 +2033,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myClientManagement => 'Client management';
 
   @override
-  String get myClientManagementHint =>
-      'Remove clients whose coaching relationship has ended';
-
-  @override
   String get myClientRemove => 'Remove client';
 
   @override
@@ -2046,7 +2042,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myClientRemoveBody =>
-      'The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.';
+      'This client\'s schedules, programs and routines, reports, messages, and notes will all disappear from the trainer app. Existing data in the client app is not deleted.';
 
   @override
   String get myClientRemoveSuccess => 'Client removed';

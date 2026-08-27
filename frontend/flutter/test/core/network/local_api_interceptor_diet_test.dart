@@ -109,13 +109,13 @@ void main() {
       final entries = (today.data!['entries']! as List<Object?>);
       expect(entries, isNotEmpty);
       final entry = entries.single as Map<String, Object?>;
-      expect(entry['carbs_g'], 94.0);
-      expect(entry['protein_g'], 19.0);
-      expect(entry['fat_g'], 18.0);
+      expect(entry['carbs_g'], 59.0);
+      expect(entry['protein_g'], 9.0);
+      expect(entry['fat_g'], 14.0);
       final macros = today.data!['macros']! as Map<String, Object?>;
-      expect(macros['carbs_g'], 94.0);
-      expect(macros['protein_g'], 19.0);
-      expect(macros['fat_g'], 18.0);
+      expect(macros['carbs_g'], 59.0);
+      expect(macros['protein_g'], 9.0);
+      expect(macros['fat_g'], 14.0);
     },
   );
 

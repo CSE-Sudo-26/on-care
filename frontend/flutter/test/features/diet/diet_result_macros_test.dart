@@ -129,18 +129,17 @@ void main() {
         findsOneWidget,
       );
     }
-    // 대역이 준 값 그대로 — 화면에서 다시 계산하지 않는다.
+    // 대역이 준 값 그대로 — 화면에서 다시 계산하지 않는다. 숫자와 단위는
+    // 칼로리·나트륨·당류 행처럼 따로 선다(#1564).
+    for (final String grams in <String>['92.5', '21', '14']) {
+      expect(
+        find.descendant(of: macros, matching: find.text(grams)),
+        findsOneWidget,
+      );
+    }
     expect(
-      find.descendant(of: macros, matching: find.text('92.5${l.dietUnitG}')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: macros, matching: find.text('21${l.dietUnitG}')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: macros, matching: find.text('14${l.dietUnitG}')),
-      findsOneWidget,
+      find.descendant(of: macros, matching: find.text(l.dietUnitG)),
+      findsNWidgets(3),
     );
     // 나트륨·당류와 날짜 수정은 그대로다.
     expect(find.text(l.dietSodium), findsOneWidget);

@@ -154,8 +154,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // 달력은 오늘(20일)까지만 열려 있다 — 먹지 않은 식사를 기록할 수는 없다.
-    // 내일을 눌러도 고른 날은 그대로다.
-    await tester.tap(find.text('21'));
+    // 내일을 눌러도 고른 날은 그대로다. 달력 안으로 좁혀 찾는다 — 뒤에 남아
+    // 있는 결과 시트의 탄·단·지도 단위 없는 숫자를 쓴다(#1564).
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CalendarDatePicker),
+        matching: find.text('21'),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();

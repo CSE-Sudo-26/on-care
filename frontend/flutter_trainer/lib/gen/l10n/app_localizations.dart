@@ -3608,12 +3608,6 @@ abstract class AppLocalizations {
   /// **'Client management'**
   String get myClientManagement;
 
-  /// No description provided for @myClientManagementHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove clients whose coaching relationship has ended'**
-  String get myClientManagementHint;
-
   /// No description provided for @myClientRemove.
   ///
   /// In en, this message translates to:
@@ -3629,7 +3623,7 @@ abstract class AppLocalizations {
   /// No description provided for @myClientRemoveBody.
   ///
   /// In en, this message translates to:
-  /// **'The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.'**
+  /// **'This client\'s schedules, programs and routines, reports, messages, and notes will all disappear from the trainer app. Existing data in the client app is not deleted.'**
   String get myClientRemoveBody;
 
   /// No description provided for @myClientRemoveSuccess.

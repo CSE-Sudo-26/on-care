@@ -259,20 +259,16 @@ def test_entry_update_rejects_non_finite_macros(field, value):
 def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
     from app.services.diet_service import today_str as _today_str
     from app.db.init_db import DEMO_USER_ID
-    from app.models.models import DietEntry, FoodNutrient
+    from app.models.models import DietEntry
 
-    # Isolate exact daily totals, then give the two stub-recognized foods DB macros.
+    # Isolate exact daily totals. 스텁이 읽는 세 메뉴는 시드가 탄단지까지
+    # 들고 있으므로 여기서 따로 채워 줄 것이 없다(#1564).
     db_session.execute(
         delete(DietEntry).where(
             DietEntry.user_id == DEMO_USER_ID,
             DietEntry.date == _today_str(),
         )
     )
-    bibimbap = db_session.scalar(select(FoodNutrient).where(FoodNutrient.name == "비빔밥"))
-    kimchi = db_session.scalar(select(FoodNutrient).where(FoodNutrient.name == "김치"))
-    assert bibimbap is not None and kimchi is not None
-    bibimbap.carbs_g, bibimbap.protein_g, bibimbap.fat_g = 40.0, 20.0, 8.0
-    kimchi.carbs_g, kimchi.protein_g, kimchi.fat_g = 5.0, 2.5, 2.0
     db_session.commit()
 
     r = client.post(
@@ -286,21 +282,22 @@ def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
     foods = body["analysis"]["foods"]
     assert foods  # 인식된 음식이 있어야
     # 공공 영양 DB 매핑으로 신뢰 수치가 채워짐(비빔밥/김치는 시드에 존재)
-    assert body["analysis"]["total_calories"] > 0
-    assert any(f["source"] == "db" for f in foods)
-    # 값은 100g 기준이고 인식기가 양을 안 주면 알려진 1회 섭취량으로 환산된다.
-    # 예전 45.0 은 1인분 절대값을 그대로 쓰던 시절의 기대치다.
-    assert body["analysis"]["total_carbs_g"] == 202.5
-    assert body["analysis"]["total_protein_g"] == 101.25
-    # 지방만 배율이 다르다 — DB 에 지방이 없는 항목은 인식기 값이 환산 없이
-    # 남는다(source="mixed"). 그 혼합이 그대로 드러나는 값이다.
-    assert body["analysis"]["total_fat_g"] == 41.0
+    assert body["analysis"]["total_calories"] == 395
+    # 세 메뉴가 모두 시드에 있으므로 값은 전부 공공 DB 쪽에서 온다.
+    assert all(f["source"] == "db" for f in foods)
+    # 값은 100g 기준이고 인식기가 양을 안 주면 알려진 1회 섭취량으로 환산된다 —
+    # 시드가 1인분으로 적어 둔 값이 그 왕복을 거쳐 돌아온다.
+    assert body["analysis"]["total_carbs_g"] == pytest.approx(59.0, abs=0.05)
+    assert body["analysis"]["total_protein_g"] == pytest.approx(9.0, abs=0.05)
+    assert body["analysis"]["total_fat_g"] == pytest.approx(14.0, abs=0.05)
     assert all({"carbs_g", "protein_g", "fat_g"} <= f.keys() for f in foods)
 
     stored = db_session.get(DietEntry, body["entry_id"])
     assert stored is not None
     # 저장값도 환산 후 값이어야 한다(응답과 어긋나면 화면·DB 가 갈린다).
-    assert (stored.carbs_g, stored.protein_g, stored.fat_g) == (202.5, 101.25, 41.0)
+    assert stored.carbs_g == pytest.approx(59.0, abs=0.05)
+    assert stored.protein_g == pytest.approx(9.0, abs=0.05)
+    assert stored.fat_g == pytest.approx(14.0, abs=0.05)
     stored_foods = json.loads(stored.foods_json)
     assert all(not {"carbs_g", "protein_g", "fat_g"} & food.keys() for food in stored_foods)
 
@@ -316,22 +313,33 @@ def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
     today_body = today.json()
     assert today_body["total_calories"] > 0
     assert len(today_body["entries"]) == 2
-    assert all(entry["carbs_g"] == 202.5 for entry in today_body["entries"])
-    assert all(entry["protein_g"] == 101.25 for entry in today_body["entries"])
-    assert all(entry["fat_g"] == 41.0 for entry in today_body["entries"])
+    assert all(
+        entry["carbs_g"] == pytest.approx(59.0, abs=0.05)
+        for entry in today_body["entries"]
+    )
+    assert all(
+        entry["protein_g"] == pytest.approx(9.0, abs=0.05)
+        for entry in today_body["entries"]
+    )
+    assert all(
+        entry["fat_g"] == pytest.approx(14.0, abs=0.05)
+        for entry in today_body["entries"]
+    )
     assert all(
         not {"carbs_g", "protein_g", "fat_g"} & food.keys()
         for entry in today_body["entries"]
         for food in entry["foods"]
     )
-    assert today_body["macros"] == {
-        "carbs_g": 405.0,
-        "protein_g": 202.5,
-        "fat_g": 82.0,
-        "carbs_pct": 51,
-        "protein_pct": 26,
-        "fat_pct": 23,
-    }
+    macros = today_body["macros"]
+    # 같은 끼니를 두 번 저장했으므로 하루 합계는 한 끼의 두 배다.
+    assert macros["carbs_g"] == pytest.approx(118.0, abs=0.1)
+    assert macros["protein_g"] == pytest.approx(18.0, abs=0.1)
+    assert macros["fat_g"] == pytest.approx(28.0, abs=0.1)
+    assert (macros["carbs_pct"], macros["protein_pct"], macros["fat_pct"]) == (
+        59,
+        9,
+        32,
+    )
 
 
 def test_analyze_succeeds_when_personal_rag_ingest_fails(
