@@ -528,3 +528,70 @@ def test_editing_without_a_date_keeps_the_record_where_it_was(client):
     assert client.get(
         "/v1/exercise/weeks/current", headers=h
     ).json()["total_minutes"] == 0
+
+
+def test_exercise_advice_changes_with_the_period(client):
+    """회원 앱의 `오늘 / 이번 주 / 전체` 가 각각 다른 조언을 받는다. (#1574)
+
+    식단 조언(#1017)과 같은 규칙이다 — 그래프만 갈아 끼우고 조언이 오늘 이야기로
+    남으면, 이번 주를 보면서 "오늘은 유산소를 했네요" 를 읽게 된다.
+    """
+    h = _login(client)
+    today = clock.today()
+    monday = today - timedelta(days=today.weekday())
+
+    # 이번 주 월요일부터 오늘까지 유산소만 채운다 — 하루 조언과 주간 조언이
+    # 서로 다른 재료를 보는지 확인할 수 있는 가장 단순한 모양이다.
+    for back in range(today.weekday() + 1):
+        day = monday + timedelta(days=back)
+        created = client.post(
+            "/v1/exercise/sessions",
+            json={
+                "type": "cardio",
+                "minutes": 30,
+                "calories": 270,
+                "date": day.isoformat(),
+            },
+            headers=h,
+        )
+        assert created.status_code == 201, created.text
+
+    week = client.get("/v1/exercise/advice?period=week", headers=h)
+    assert week.status_code == 200, week.text
+    body = week.json()
+    assert body["period"] == "week"
+    assert body["from_date"] == monday.isoformat()
+    assert body["to_date"] == today.isoformat()
+    assert body["days_logged"] == today.weekday() + 1
+    assert "이번 주" in body["message"]
+
+    day_view = client.get("/v1/exercise/advice?period=today", headers=h).json()
+    assert day_view["from_date"] == today.isoformat()
+    assert day_view["days_logged"] == 1
+    assert "오늘" in day_view["message"]
+    assert day_view["message"] != body["message"]
+
+    every = client.get("/v1/exercise/advice?period=all", headers=h).json()
+    # 전체는 12주를 거슬러 본다 — 이번 주와 시작일이 다르다.
+    assert every["from_date"] < body["from_date"]
+    assert every["to_date"] == today.isoformat()
+
+
+def test_exercise_advice_says_nothing_when_there_is_nothing(client):
+    """없는 기록으로 조언을 지어내지 않는다. 기간별 안내는 남는다. (#1574)"""
+    h = _login(client)
+    messages = set()
+    for period in ("today", "week", "all"):
+        response = client.get(f"/v1/exercise/advice?period={period}", headers=h)
+        assert response.status_code == 200, response.text
+        assert response.json()["days_logged"] == 0
+        assert response.json()["message"]
+        messages.add(response.json()["message"])
+    # 세 기간이 같은 문장을 쓰면 토글이 아무 일도 하지 않는 것처럼 보인다.
+    assert len(messages) == 3
+
+
+def test_exercise_advice_rejects_an_unknown_period(client):
+    """기간 이름이 아니면 422 다 — 조용히 오늘로 흘려보내지 않는다. (#1574)"""
+    h = _login(client)
+    assert client.get("/v1/exercise/advice?period=month", headers=h).status_code == 422

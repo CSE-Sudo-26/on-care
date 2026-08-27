@@ -17,7 +17,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.core import clock
+from app.models.models import ExerciseSession
 from app.services import exercise_activity, exercise_types, period_window
 
 #: 요일 라벨(월=0 … 일=6). 순서를 두 벌 두지 않으려고 논리 운동일 모듈의 정의를
@@ -330,25 +334,29 @@ def _avg(values: list[int]) -> float:
 
 
 def period_coach_message(days: list[ExerciseDayTotals], period: str) -> str:
-    """기간에 맞는 운동 조언. (#1025)
+    """기간에 맞는 운동 조언. (#1025, #1574)
 
     기간마다 **재료가 다르다.** 오늘은 오늘 한 운동, 이번 주는 며칠 움직였고
     무엇에 치우쳤는지, 전체는 최근 4주와 그 이전의 추세다. 말투도 다르다 —
     오늘은 다음 한 걸음을 제안하고, 이번 주·전체는 되짚어 준다.
+
+    **한 문장 반을 넘기지 않는다.** 카드가 회원 앱·트레이너웹 양쪽에서 좁은 폭에
+    들어가고, 길어질수록 정작 숫자가 묻힌다 — 짚어 주는 수치 하나와 다음 행동
+    하나면 충분하다. (#1574)
     """
     if not days:
         if period == period_window.PERIOD_WEEK:
-            return "이번 주 운동 기록이 아직 없어요. 가벼운 산책 한 번도 흐름이 됩니다."
+            return "이번 주 운동 기록이 아직 없어요. 10분 걷기부터 시작해 볼까요?"
         if period == period_window.PERIOD_ALL:
             return "기록이 쌓이면 운동량과 유형의 흐름을 짚어 드릴게요."
-        return "아직 오늘 운동 기록이 없어요. 10분 걷기부터 시작해 볼까요?"
+        return "오늘 운동 기록이 아직 없어요. 10분 걷기부터 시작해 볼까요?"
 
     if period == period_window.PERIOD_TODAY:
         today = days[-1]
         label = exercise_types.label_for(today.main_type)
         return (
-            f"오늘 {label} 위주로 {today.minutes}분, {today.calories}kcal 를 썼어요. "
-            "마무리로 가볍게 스트레칭하면 회복이 빨라져요."
+            f"오늘 {label} 위주로 {today.minutes}분, {today.calories}kcal 썼어요. "
+            "스트레칭으로 마무리해요."
         )
 
     total_minutes = sum(d.minutes for d in days)
@@ -356,10 +364,7 @@ def period_coach_message(days: list[ExerciseDayTotals], period: str) -> str:
 
     if period == period_window.PERIOD_WEEK:
         if active_days <= 1:
-            return (
-                f"이번 주는 {active_days}일 움직였어요. "
-                "한 번 더 나가면 흐름이 끊기지 않아요."
-            )
+            return f"이번 주는 {total_minutes}분 하루뿐이에요. 한 번 더 나가면 흐름이 이어져요."
         # 한 유형에 쏠렸는지 — 코칭에서 가장 먼저 짚는 지점이다.
         by_type: dict[str, int] = {}
         for d in days:
@@ -373,14 +378,11 @@ def period_coach_message(days: list[ExerciseDayTotals], period: str) -> str:
                 else exercise_types.CARDIO
             )
             return (
-                f"이번 주 {active_days}일 {total_minutes}분을 채웠는데 "
-                f"{exercise_types.label_for(top)} 에 몰려 있어요. "
-                f"{exercise_types.label_for(missing)} 를 한 번 섞어 볼까요?"
+                f"이번 주 {active_days}일 {total_minutes}분이 "
+                f"{exercise_types.label_for(top)}에 몰렸어요. "
+                f"{exercise_types.label_for(missing)}도 섞어 볼까요?"
             )
-        return (
-            f"이번 주 {active_days}일 동안 {total_minutes}분 운동했어요. "
-            "유형도 고르게 섞였네요. 이 흐름을 이어가요."
-        )
+        return f"이번 주 {active_days}일 {total_minutes}분, 유형도 고르게 섞였어요."
 
     # 전체 — 최근 4주와 그 이전을 견준다. "나아지는 중인가" 가 이 화면의 질문이다.
     recent_from = days[-1].date - timedelta(days=27)
@@ -388,16 +390,31 @@ def period_coach_message(days: list[ExerciseDayTotals], period: str) -> str:
     earlier = [d.minutes for d in days if d.date < recent_from]
     if earlier and recent:
         if _avg(recent) > _avg(earlier) * 1.1:
-            return (
-                "최근 4주 운동량이 그 전보다 늘었어요. "
-                "지금 방식이 회원님께 맞는 것 같아요."
-            )
+            return "최근 4주 운동량이 그 전보다 늘었어요. 지금 방식이 잘 맞아요."
         if _avg(recent) < _avg(earlier) * 0.9:
-            return (
-                "최근 4주 들어 운동량이 줄고 있어요. "
-                "무엇이 달라졌는지 한 주만 되짚어 볼까요?"
-            )
-    return (
-        f"기록을 통틀어 {active_days}일 {total_minutes}분을 움직였어요. "
-        "큰 기복 없이 이어가고 있어요."
+            return "최근 4주 운동량이 줄고 있어요. 짧게라도 주 3일을 지켜 봐요."
+    weeks = round(period_window.ALL_PERIOD_DAYS / 7)
+    return f"{weeks}주 동안 {active_days}일 {total_minutes}분, 기복 없이 이어가고 있어요."
+
+
+def period_days(
+    db: Session, user_id: str, period: str
+) -> tuple[str, str, list[ExerciseDayTotals]]:
+    """기간 이름 → (시작, 끝, 그 구간의 하루별 합계). (#1574)
+
+    운동 기록은 날짜가 아니라 (그 주 월요일, 요일) 로 저장되므로, 구간이 걸치는
+    주를 모두 읽어 온 뒤 실제 날짜로 되돌려 거른다. 회원 앱과 트레이너웹이 이
+    함수 하나를 함께 쓴다 — 조회 규칙이 갈리면 같은 회원의 `이번 주` 를 두 화면이
+    다른 날부터 세게 된다.
+    """
+    start, end = period_window.period_bounds(period)
+    weeks = exercise_activity.week_starts_covering(
+        date.fromisoformat(start), date.fromisoformat(end)
     )
+    rows = db.scalars(
+        select(ExerciseSession).where(
+            ExerciseSession.user_id == user_id,
+            ExerciseSession.week_start.in_(weeks),
+        )
+    ).all()
+    return start, end, daily_totals(list(rows), start, end)
