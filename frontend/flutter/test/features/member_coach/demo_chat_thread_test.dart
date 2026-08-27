@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 
@@ -40,33 +41,10 @@ const List<(CoachSender, String)> kDemoThread = <(CoachSender, String)>[
   (CoachSender.me, '찌개 먹을 때 국물을 많이 마셨나봐요 😅'),
   (CoachSender.trainer, '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?'),
   (CoachSender.me, '무릎이 가볍게 당기긴 했는데 괜찮아요'),
-  (CoachSender.trainer, '이번 주 리포트 등록해 뒀어요. 확인해 보세요'),
   (
     CoachSender.trainer,
     '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
   ),
-];
-
-final List<DateTime> kDemoCreatedAt = <DateTime>[
-  DateTime(2026, 1, 1, 10, 2),
-  DateTime(2026, 1, 1, 10, 15),
-  DateTime(2026, 1, 1, 10, 21),
-  DateTime(2026, 1, 1, 10, 24),
-  DateTime(2026, 1, 1, 10, 26),
-  DateTime(2026, 1, 1, 10, 29),
-  DateTime(2026, 1, 1, 10, 34),
-  DateTime(2026, 1, 2, 9, 30),
-  DateTime(2026, 1, 2, 12, 40),
-  DateTime(2026, 1, 2, 12, 52),
-  DateTime(2026, 1, 2, 19, 5),
-  DateTime(2026, 1, 2, 19, 20),
-  DateTime(2026, 1, 2, 19, 22),
-  DateTime(2026, 1, 3, 18, 10),
-  DateTime(2026, 1, 3, 18, 13),
-  DateTime(2026, 1, 3, 18, 14),
-  DateTime(2026, 1, 3, 18, 16),
-  DateTime(2026, 1, 3, 18, 17),
-  DateTime(2026, 1, 3, 18, 18),
 ];
 
 void main() {
@@ -92,20 +70,19 @@ void main() {
     }
   });
 
-  test('메시지는 트레이너 웹과 공유하는 실제 날짜·시각 데이터를 쓴다', () async {
+  test('마지막 메시지 날짜는 오늘로 계속 갱신된다', () async {
     final chat = await MockMemberCoachRepository().fetchChat();
-
-    expect(<DateTime>[
-      for (final message in chat) message.createdAt,
-    ], kDemoCreatedAt);
+    final now = nowKst();
+    final last = chat.last.createdAt;
+    expect((last.year, last.month, last.day), (now.year, now.month, now.day));
+    expect(last.isBefore(now), isTrue);
   });
 
   test('미읽음은 마지막으로 내가 보낸 뒤에 온 것만 센다', () async {
-    // 스레드 전체의 트레이너 메시지를 세면 배지가 9가 된다 — 이미 주고받은
-    // 대화까지 안 읽은 것으로 치는 셈이다. 내가 마지막으로 보낸 뒤에 온 것은
-    // 리포트 등록 안내와 마무리 인사 둘뿐이다.
+    // 스레드 전체의 트레이너 메시지를 세면 이미 주고받은 대화까지 안 읽은
+    // 것으로 치게 된다. 내가 마지막으로 보낸 뒤에 온 것은 마무리 인사뿐이다.
     final repo = MockMemberCoachRepository();
-    expect(await repo.unreadCount(), 2);
+    expect(await repo.unreadCount(), 1);
 
     await repo.markRead();
     expect(await repo.unreadCount(), 0);

@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v29']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v30']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -114,7 +114,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v29') == today) return;
+  if (await db.readValue('trainer_seeded_v30') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final DemoFixture demo = fixture ?? DemoFixture.load();
@@ -124,13 +124,41 @@ Future<void> seedIfEmpty(
     todayIndex,
   );
 
-  // A fixed anchor for seed chat timestamps. The 40-day spread ends on
-  // 2026-01-03, matching the member app's shared Kim Minsu thread. Using
-  // a constant (not nowKst()) keeps seed messages ordered before ANY reply
-  // added at runtime — including after a later-day re-seed, where a fresh
-  // `now()` base would otherwise sort new seed rows *after* a preserved
-  // runtime reply.
-  final chatEpoch = DateTime(2025, 11, 24);
+  // 김민수의 사흘치 공유 스레드는 마지막 날이 항상 오늘이 되게 둔다. 다른 고객의
+  // `daysAgo` 오프셋도 같은 기준점을 사용하므로 채팅 목록 전체가 현재 주로 이동한다.
+  final chatEpoch = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(const Duration(days: _chatSpreadDays));
+
+  DateTime desiredChatAt(_Client client, int i, int lastDayIndex) =>
+      chatEpoch.add(
+        Duration(
+          days:
+              _chatSpreadDays -
+              client.daysAgo -
+              (lastDayIndex - client.chat[i].dayIndex),
+          minutes: _minutesOfDay(client.chat[i].timeLabel),
+          seconds: client.id == 1 ? 0 : i,
+        ),
+      );
+
+  final latestSafeChatAt = now.subtract(const Duration(minutes: 1));
+  final latestDesiredChatAt = _clients
+      .where((client) => client.chat.isNotEmpty)
+      .map((client) {
+        final lastDayIndex = _lastChat(client.chat).dayIndex;
+        return desiredChatAt(
+          client,
+          client.chat.length - 1,
+          lastDayIndex,
+        );
+      })
+      .reduce((a, b) => a.isAfter(b) ? a : b);
+  final chatTimeShift = latestDesiredChatAt.isAfter(latestSafeChatAt)
+      ? latestDesiredChatAt.difference(latestSafeChatAt)
+      : Duration.zero;
 
   // Anchored at the fixed ancient epoch (oldest first) so any
   // runtime reply — and any preserved reply from a previous
@@ -167,18 +195,9 @@ Future<void> seedIfEmpty(
   // 시간순으로 적혀 있어 순서가 그대로 유지된다.
   /// 시드 메시지 하나의 실제 시각. 넣을 때와 리포트 표시를 남길 때가 같은
   /// 값을 봐야 해서 한 곳에 둔다 — 두 벌로 두면 한쪽만 고쳐진다.
-  DateTime chatCreatedAt(_Client client, int i, int lastDayIndex) =>
-      chatEpoch.add(
-        Duration(
-          days:
-              _chatSpreadDays -
-              client.daysAgo -
-              (lastDayIndex - client.chat[i].dayIndex),
-          minutes: _minutesOfDay(client.chat[i].timeLabel),
-          // 공유 스레드는 회원 앱과 DateTime까지 정확히 같아야 한다.
-          seconds: client.id == 1 ? 0 : i,
-        ),
-      );
+  DateTime chatCreatedAt(_Client client, int i, int lastDayIndex) {
+    return desiredChatAt(client, i, lastDayIndex).subtract(chatTimeShift);
+  }
 
   // First boot, or the date rolled over. Wipe + re-insert + flag all run
   // in ONE transaction: if any insert fails, the whole thing rolls back
@@ -474,7 +493,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v29', today);
+    await db.putValue('trainer_seeded_v30', today);
   });
 }
 
