@@ -2,10 +2,18 @@
 
 from uuid import uuid4
 
-from sqlalchemy import select
-
 from app.core.security import create_access_token
-from app.models.models import TrainerClient, User
+from app.models.models import (
+    ChatMessage,
+    RoutineHistory,
+    TrainerClient,
+    TrainerClientMemo,
+    TrainerFollowUpTask,
+    TrainerReportFeedback,
+    TrainerRoutine,
+    TrainerSchedule,
+    User,
+)
 
 
 TRAINER_ID = "trainer-demo"
@@ -27,66 +35,94 @@ def _login(client, email: str) -> str:
 
 def test_trainer_removes_assignment_but_keeps_member(client, db_session):
     token = _login(client, "trainer@oncare.com")
-    link = db_session.scalar(
-        select(TrainerClient).where(
-            TrainerClient.trainer_id == TRAINER_ID,
-            TrainerClient.member_id == MEMBER_ID,
-        )
+    member_id = f"remove-member-{uuid4().hex[:10]}"
+    member = User(
+        id=member_id,
+        email=f"{member_id}@oncare.com",
+        name="삭제 확인 고객",
+        hashed_password="unused",
+        role="member",
     )
-    assert link is not None
-    original = {
-        "id": link.id,
-        "goal": link.goal,
-        "active": link.active,
-        "dormant": link.dormant,
-        "sort_order": link.sort_order,
-        "data_consent_at": link.data_consent_at,
-    }
-    link.active = True
+    pair_rows = [
+        TrainerClient(
+            id=f"link-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            active=True,
+        ),
+        TrainerSchedule(
+            id=f"schedule-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            date="2026-08-27",
+            time="10:00",
+        ),
+        TrainerRoutine(
+            id=f"routine-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            name="삭제할 프로그램",
+            type="근력",
+        ),
+        TrainerReportFeedback(
+            id=f"report-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            week_start="2026-08-24",
+            body="삭제할 리포트",
+        ),
+        TrainerClientMemo(
+            id=f"memo-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            body="삭제할 메모",
+        ),
+        TrainerFollowUpTask(
+            id=f"follow-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            title="삭제할 후속 관리",
+            due_date="2026-08-28",
+        ),
+        ChatMessage(
+            id=f"chat-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            sender="trainer",
+            body="삭제할 메시지",
+        ),
+        RoutineHistory(
+            id=f"history-{uuid4().hex[:12]}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            date="2026-08-27",
+        ),
+    ]
+    expected_deleted = [(type(row), row.id) for row in pair_rows]
+    db_session.add_all([member, *pair_rows])
     db_session.commit()
     try:
         response = client.delete(
-            f"/v1/trainer/clients/{MEMBER_ID}", headers=_headers(token)
+            f"/v1/trainer/clients/{member_id}", headers=_headers(token)
         )
         assert response.status_code == 204, response.text
 
         db_session.expire_all()
-        saved = db_session.get(User, MEMBER_ID)
-        detached = db_session.scalar(
-            select(TrainerClient).where(TrainerClient.id == original["id"])
-        )
-        assert saved is not None
-        assert detached is None
+        assert db_session.get(User, member_id) is not None
+        for model, row_id in expected_deleted:
+            assert db_session.get(model, row_id) is None
         roster = client.get("/v1/trainer/clients", headers=_headers(token)).json()
-        assert MEMBER_ID not in {row["id"] for row in roster}
+        assert member_id not in {row["id"] for row in roster}
         repeated = client.delete(
-            f"/v1/trainer/clients/{MEMBER_ID}", headers=_headers(token)
+            f"/v1/trainer/clients/{member_id}", headers=_headers(token)
         )
         assert repeated.status_code == 404
     finally:
         db_session.expire_all()
-        link = db_session.scalar(
-            select(TrainerClient).where(
-                TrainerClient.trainer_id == TRAINER_ID,
-                TrainerClient.member_id == MEMBER_ID,
-            )
-        )
-        if link is None:
-            db_session.add(
-                TrainerClient(
-                    id=original["id"],
-                    trainer_id=TRAINER_ID,
-                    member_id=MEMBER_ID,
-                    goal=original["goal"],
-                    active=original["active"],
-                    dormant=original["dormant"],
-                    sort_order=original["sort_order"],
-                    data_consent_at=original["data_consent_at"],
-                )
-            )
-        else:
-            link.active = original["active"]
-        db_session.commit()
+        saved = db_session.get(User, member_id)
+        if saved is not None:
+            db_session.delete(saved)
+            db_session.commit()
 
 
 def test_another_trainer_cannot_remove_client(client, db_session):

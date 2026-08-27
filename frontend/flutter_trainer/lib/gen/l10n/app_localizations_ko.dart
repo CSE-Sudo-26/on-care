@@ -1959,7 +1959,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myClientRemoveBody =>
-      '담당 관계가 해제되어 고객 정보에 더 이상 접근할 수 없어요. 고객 계정과 기록은 삭제되지 않아요.';
+      '이 고객의 스케줄, 프로그램·루틴, 리포트, 메시지, 메모 등 모든 고객 관리 데이터가 삭제되며 복구할 수 없어요. 고객 계정과 고객이 직접 기록한 원본 데이터는 삭제되지 않아요.';
 
   @override
   String get myClientRemoveSuccess => '고객을 삭제했어요';

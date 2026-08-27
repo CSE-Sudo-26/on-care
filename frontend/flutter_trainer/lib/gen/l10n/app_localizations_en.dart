@@ -2046,7 +2046,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myClientRemoveBody =>
-      'The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.';
+      'All management data for this client—including schedules, programs and routines, reports, messages, and notes—will be permanently deleted. The client\'s account and source data they recorded themselves are not deleted.';
 
   @override
   String get myClientRemoveSuccess => 'Client removed';

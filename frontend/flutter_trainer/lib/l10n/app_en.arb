@@ -1028,7 +1028,7 @@
   "myClientRemove": "Remove client",
   "myClientRemoveTitle": "Remove {name}?",
   "@myClientRemoveTitle": {"placeholders": {"name": {"type": "String"}}},
-  "myClientRemoveBody": "The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.",
+  "myClientRemoveBody": "All management data for this client—including schedules, programs and routines, reports, messages, and notes—will be permanently deleted. The client's account and source data they recorded themselves are not deleted.",
   "myClientRemoveSuccess": "Client removed",
   "myClientRemoveFailed": "Couldn't remove the client. Please try again",
   "myClientManagementEmpty": "No clients assigned",

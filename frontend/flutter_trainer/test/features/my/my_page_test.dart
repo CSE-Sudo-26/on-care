@@ -107,7 +107,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('고객을 삭제할까요?'), findsOneWidget);
-      expect(find.textContaining('고객 계정과 기록은 삭제되지 않아요'), findsOneWidget);
+      expect(find.textContaining('스케줄, 프로그램·루틴, 리포트, 메시지, 메모'), findsOneWidget);
+      expect(find.textContaining('복구할 수 없어요'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       expect(find.textContaining('고객을 삭제할까요?'), findsNothing);

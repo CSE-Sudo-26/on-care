@@ -16,7 +16,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, or_, select, tuple_, update
+from sqlalchemy import delete, func, or_, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
@@ -880,12 +880,71 @@ class ClientLinkDetached(Exception):
 
 
 def remove_client(db: Session, link: TrainerClient) -> None:
-    """트레이너의 담당 고객 관계를 해제한다.
+    """담당 관계와 이 트레이너가 만든 고객 관리 데이터를 함께 삭제한다.
 
-    로스터는 해제된 링크도 과거 고객으로 보여 주므로 관계 행을 삭제해야 고객 관리
-    명단에서 실제로 사라진다. 대화·일정·기록은 링크 id가 아니라 trainer/member id를
-    직접 참조하므로 그대로 보존되며, 회원 계정과 회원 원본 데이터도 건드리지 않는다.
+    회원 계정·식단·신체 정보처럼 회원이 소유한 원본은 유지한다. 반면 이 트레이너와
+    회원 쌍에 속한 스케줄, 배정 프로그램, 리포트 초안, PT 이력, 대화, 메모와 후속
+    할 일은 담당 종료 뒤 남겨 두지 않는다. 예약은 RESTRICT FK가 있으므로 먼저
+    지우고 좌석을 복구한 뒤 스케줄을 삭제한다. 전부 한 트랜잭션으로 커밋한다.
     """
+    trainer_id = link.trainer_id
+    member_id = link.member_id
+
+    schedules = db.scalars(
+        select(TrainerSchedule).where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+        )
+    ).all()
+    schedule_ids = [schedule.id for schedule in schedules]
+    reservations = (
+        db.scalars(
+            select(TrainerReservation)
+            .where(TrainerReservation.schedule_id.in_(schedule_ids))
+            .order_by(TrainerReservation.id)
+            .with_for_update()
+        ).all()
+        if schedule_ids
+        else []
+    )
+    booked_slot_ids = sorted(
+        {reservation.slot_id for reservation in reservations if reservation.status == "booked"}
+    )
+    slots = (
+        db.scalars(
+            select(TrainerReservationSlot)
+            .where(TrainerReservationSlot.id.in_(booked_slot_ids))
+            .order_by(TrainerReservationSlot.id)
+            .with_for_update()
+        ).all()
+        if booked_slot_ids
+        else []
+    )
+    slots_by_id = {slot.id: slot for slot in slots}
+    for reservation in reservations:
+        if reservation.status == "booked":
+            slot = slots_by_id.get(reservation.slot_id)
+            if slot is not None:
+                slot.remaining = min(slot.capacity, slot.remaining + 1)
+        db.delete(reservation)
+    db.flush()
+
+    pair_models = (
+        TrainerSchedule,
+        TrainerRoutine,
+        TrainerReportFeedback,
+        TrainerClientMemo,
+        TrainerFollowUpTask,
+        ChatMessage,
+        RoutineHistory,
+    )
+    for model in pair_models:
+        db.execute(
+            delete(model).where(
+                model.trainer_id == trainer_id,
+                model.member_id == member_id,
+            )
+        )
     db.delete(link)
     db.commit()
 

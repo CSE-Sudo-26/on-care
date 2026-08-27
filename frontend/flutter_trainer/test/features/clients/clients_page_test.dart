@@ -214,6 +214,30 @@ void main() {
 
       final clients = await repo.watchClients().first;
       expect(clients.any((c) => c.id == 'seed-client-1'), isFalse);
+      expect(
+        await (db.select(
+          db.trainerScheduleEntries,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get(),
+        isEmpty,
+      );
+      expect(
+        await (db.select(
+          db.clientAiRoutines,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get(),
+        isEmpty,
+      );
+      expect(
+        await (db.select(
+          db.reportFeedbackDrafts,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get(),
+        isEmpty,
+      );
+      expect(
+        await (db.select(
+          db.clientChatMessages,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get(),
+        isEmpty,
+      );
     });
 
     // 예약 수는 이제 로스터가 아니라 오늘 스케줄에서 파생된다(#387).

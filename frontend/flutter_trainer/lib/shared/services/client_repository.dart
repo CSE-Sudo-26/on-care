@@ -259,7 +259,32 @@ class DriftClientRepository implements ClientRepository {
 
   @override
   Future<void> removeClient(String id) async {
-    await (_db.delete(_db.trainerClients)..where((t) => t.id.equals(id))).go();
+    await _db.transaction(() async {
+      await (_db.delete(
+        _db.trainerScheduleEntries,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.clientAiRoutines,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.clientRoutineHistory,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.clientChatMessages,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.clientDietEntries,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.clientDailyMetrics,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.reportFeedbackDrafts,
+      )..where((t) => t.clientId.equals(id))).go();
+      await (_db.delete(
+        _db.trainerClients,
+      )..where((t) => t.id.equals(id))).go();
+    });
   }
 
   @override
@@ -666,12 +691,11 @@ class DriftClientRepository implements ClientRepository {
     int weeklyGoalCalories = 0;
     // 주를 한꺼번에 읽는다 — 위 provider 와 같은 이유다 (#1170).
     final List<DateTime> mondays = clientRangeWeekStarts(range);
-    final List<ClientExerciseWeek> weeks = await Future.wait(
-      <Future<ClientExerciseWeek>>[
-        for (final DateTime monday in mondays)
-          fetchExerciseWeek(clientId, weekStart: monday),
-      ],
-    );
+    final List<ClientExerciseWeek> weeks =
+        await Future.wait(<Future<ClientExerciseWeek>>[
+          for (final DateTime monday in mondays)
+            fetchExerciseWeek(clientId, weekStart: monday),
+        ]);
     for (int w = 0; w < mondays.length; w++) {
       final DateTime monday = mondays[w];
       final ClientExerciseWeek week = weeks[w];
@@ -1134,12 +1158,11 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
       // 주를 **한꺼번에** 읽는다 (#1170). `전체` 가 서른다섯 주라, 하나씩
       // 기다리면 왕복이 그만큼 줄줄이 이어져 그래프가 늦게 선다.
       final List<DateTime> mondays = clientRangeWeekStarts(range);
-      final List<ClientExerciseWeek> weeks = await Future.wait(
-        <Future<ClientExerciseWeek>>[
-          for (final DateTime monday in mondays)
-            repository.fetchExerciseWeek(key.clientId, weekStart: monday),
-        ],
-      );
+      final List<ClientExerciseWeek> weeks =
+          await Future.wait(<Future<ClientExerciseWeek>>[
+            for (final DateTime monday in mondays)
+              repository.fetchExerciseWeek(key.clientId, weekStart: monday),
+          ]);
       for (int w = 0; w < mondays.length; w++) {
         final DateTime monday = mondays[w];
         final ClientExerciseWeek week = weeks[w];
