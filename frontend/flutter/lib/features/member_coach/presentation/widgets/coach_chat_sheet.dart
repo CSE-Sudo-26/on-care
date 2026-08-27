@@ -48,6 +48,33 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
   int _lastCount = -1;
   bool _sending = false;
 
+  /// 대화 목록 전체 — 말풍선 스레드 뒤에 리포트 안내를 붙인다.
+  ///
+  /// 리포트 안내는 온 시각 자리에 끼우지 않고 **항상 맨 아래**에 둔다. 대화가
+  /// 이어지면 안내가 위로 밀려 올라가 버리는데, 회원이 리포트를 여는 자리는
+  /// 대화를 새로 열 때마다 같은 곳이어야 찾을 수 있다.
+  List<Widget> _chatChildren(
+    List<CoachMessage> messages, {
+    required bool showDemoBanners,
+  }) {
+    final List<CoachMessage> thread = <CoachMessage>[];
+    final List<CoachMessage> reports = <CoachMessage>[];
+    for (final CoachMessage message in messages) {
+      (message.reportWeekStart == null ? thread : reports).add(message);
+    }
+    return <Widget>[
+      ...showDemoBanners
+          ? _withDemoBanners(thread)
+          : _withoutDemoBanners(thread),
+      for (final CoachMessage message in reports)
+        _ReportNotice(
+          key: ValueKey<String>('coach-message-bubble-${message.id}'),
+          message: message,
+          weekStart: message.reportWeekStart!,
+        ),
+    ];
+  }
+
   /// 데모 안내 배너를 **하루 단위로** 끼워 넣은 목록을 만든다.
   ///
   /// 배너가 스레드 맨 앞·맨 뒤에 하나씩만 있으면, 사흘치 대화에서 "분석은 이
@@ -84,7 +111,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
           out.add(const SizedBox(height: 16));
         }
       }
-      out.add(_threadEntry(m));
+      out.add(_Bubble(message: m));
       if (i == lastSeeded) {
         out.add(const _ReceivedBanner());
         if (i != messages.length - 1) out.add(const SizedBox(height: 16));
@@ -102,23 +129,9 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
           ..add(_DateDivider(date: message.createdAt))
           ..add(const SizedBox(height: 16));
       }
-      out.add(_threadEntry(message));
+      out.add(_Bubble(message: message));
     }
     return out;
-  }
-
-  /// 스레드 한 줄 — 말풍선이거나, 가운데 안내다.
-  ///
-  /// 리포트 전송은 누가 무슨 말을 했는가가 아니라 스레드에 무슨 일이 있었는가를
-  /// 적는 자리다. 트레이너 앱도 같은 사건을 가운데 안내로 그린다(#1600).
-  Widget _threadEntry(CoachMessage message) {
-    final DateTime? reportWeek = message.reportWeekStart;
-    if (reportWeek == null) return _Bubble(message: message);
-    return _ReportNotice(
-      key: ValueKey<String>('coach-message-bubble-${message.id}'),
-      message: message,
-      weekStart: reportWeek,
-    );
   }
 
   static bool _sameDay(DateTime a, DateTime b) {
@@ -288,9 +301,10 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                     return ListView(
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-                      children: showDemoBanners
-                          ? _withDemoBanners(messages)
-                          : _withoutDemoBanners(messages),
+                      children: _chatChildren(
+                        messages,
+                        showDemoBanners: showDemoBanners,
+                      ),
                     );
                   },
                 ),
@@ -575,11 +589,18 @@ class _Bubble extends ConsumerWidget {
 
 /// PDF 한 부를 미리보기로 연다. 첨부 파일과 회원 기록으로 만든 문서가 같은
 /// 화면으로 열려야, 회원이 무엇을 보고 있는지 헷갈리지 않는다. (#1600)
+///
+/// `build` 는 **부를 때마다 복사본**을 준다. 웹에서 미리보기는 pdf.js 로 그리는데,
+/// pdf.js 는 받은 바이트의 버퍼를 워커로 넘기면서(transfer) 원본을 비워 버린다.
+/// 같은 바이트를 그대로 다시 주면 두 번째 렌더가 `ArrayBuffer ... is already
+/// detached` 로 죽고, 그리다 만 미리보기가 스피너만 도는 채로 남는다. 미리보기는
+/// 화면 크기·용지 설정이 바뀔 때마다 다시 그리므로 두 번째 호출은 반드시 온다.
 Future<void> showPdfPreviewDialog(
   BuildContext context,
   Uint8List bytes,
   String fileName,
 ) {
+  final AppLocalizations l = AppLocalizations.of(context);
   return showDialog<void>(
     context: context,
     builder: (_) => Dialog(
@@ -587,9 +608,21 @@ Future<void> showPdfPreviewDialog(
         width: 760,
         height: 720,
         child: PdfPreview(
-          build: (_) async => bytes,
+          build: (_) async => Uint8List.fromList(bytes),
           pdfFileName: fileName,
           allowSharing: false,
+          // 미리보기가 실패했을 때 스피너를 계속 돌리면 회원은 느린 것과
+          // 안 되는 것을 구별할 수 없다.
+          onError: (_, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                l.coachChatPdfOpenFailed,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.mutedForeground),
+              ),
+            ),
+          ),
         ),
       ),
     ),
