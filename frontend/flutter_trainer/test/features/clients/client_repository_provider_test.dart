@@ -43,6 +43,8 @@ TrainerClient _client(String id, {required int sodiumMg}) => TrainerClient(
 /// is one-shot) — used to prove [prioritizedClientsProvider] keeps up with
 /// every emission, not just the first.
 class _StreamingClientRepository implements ClientRepository {
+  @override
+  Future<void> restoreClient(String id) async {}
   _StreamingClientRepository(this._controller);
   final StreamController<List<TrainerClient>> _controller;
 

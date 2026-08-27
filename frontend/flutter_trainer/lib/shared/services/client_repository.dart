@@ -113,6 +113,8 @@ abstract interface class ClientRepository {
 
   /// Removes the trainer-client assignment without deleting member data.
   Future<void> removeClient(String id);
+
+  Future<void> restoreClient(String id);
 }
 
 /// Reads client + schedule data from the local drift DB for the
@@ -123,6 +125,7 @@ class DriftClientRepository implements ClientRepository {
   const DriftClientRepository(this._db);
 
   final AppDatabase _db;
+  static const String _unregisteredKey = 'trainer_unregistered_clients';
 
   @override
   Future<RoutineHistoryEntry> updateHistoryFeedback(
@@ -139,12 +142,34 @@ class DriftClientRepository implements ClientRepository {
   /// All clients, ordered as seeded (sortOrder).
   @override
   Stream<List<TrainerClient>> watchClients() {
-    final query = _db.select(_db.trainerClients)
-      ..orderBy(<OrderingTerm Function($TrainerClientsTable)>[
-        (t) => OrderingTerm(expression: t.sortOrder),
-      ]);
-    return query.watch().map((rows) => rows.map(_toEntity).toList());
+    final trigger = _db.customSelect(
+      'SELECT 1',
+      readsFrom: <ResultSetImplementation<Object?, Object?>>{
+        _db.trainerClients,
+        _db.appKeyValues,
+      },
+    );
+    return trigger.watch().asyncMap((_) async {
+      final query = _db.select(_db.trainerClients)
+        ..orderBy(<OrderingTerm Function($TrainerClientsTable)>[
+          (t) => OrderingTerm(expression: t.sortOrder),
+        ]);
+      final rows = await query.get();
+      final removed = await _unregisteredIds();
+      return rows
+          .map((row) => _toEntity(row, registered: !removed.contains(row.id)))
+          .toList();
+    });
   }
+
+  Future<Set<String>> _unregisteredIds() async {
+    final raw = await _db.readValue(_unregisteredKey);
+    if (raw == null || raw.isEmpty) return <String>{};
+    return (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
+  }
+
+  Future<void> _saveUnregisteredIds(Set<String> ids) =>
+      _db.putValue(_unregisteredKey, jsonEncode(ids.toList()..sort()));
 
   /// Most recent message time per client.
   ///
@@ -277,10 +302,15 @@ class DriftClientRepository implements ClientRepository {
       await (_db.delete(
         _db.reportFeedbackDrafts,
       )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.trainerClients,
-      )..where((t) => t.id.equals(id))).go();
+      final removed = (await _unregisteredIds())..add(id);
+      await _saveUnregisteredIds(removed);
     });
+  }
+
+  @override
+  Future<void> restoreClient(String id) async {
+    final removed = (await _unregisteredIds())..remove(id);
+    await _saveUnregisteredIds(removed);
   }
 
   @override
@@ -543,8 +573,8 @@ class DriftClientRepository implements ClientRepository {
       );
       return sodium > sodiumTargetMg
           ? '나트륨이 목표치를 ${sodium - sodiumTargetMg}mg 초과했어요. '
-                '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
-          : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+                '오늘 운동 프로그램에 유산소를 추가하면 도움이 돼요.'
+          : '오늘 식단은 균형이 잘 맞아요. 현재 프로그램을 유지하세요.';
     }
 
     final ClientDietPeriod window = await fetchDietPeriod(
@@ -895,7 +925,7 @@ class DriftClientRepository implements ClientRepository {
     );
   }
 
-  TrainerClient _toEntity(TrainerClientRow row) {
+  TrainerClient _toEntity(TrainerClientRow row, {bool registered = true}) {
     final week = (jsonDecode(row.weekCompletionJson) as List<Object?>)
         .map((e) => e as int)
         .toList();
@@ -919,6 +949,7 @@ class DriftClientRepository implements ClientRepository {
       lastMessage: row.lastMessage,
       lastTime: row.lastTime,
       active: row.active,
+      registered: registered,
       calories: row.caloriesToday,
       sodiumMg: row.sodiumMg,
       sugarG: row.sugarG,
@@ -950,8 +981,15 @@ final clientRepositoryProvider = Provider<ClientRepository>((ref) {
 });
 
 /// Streams the client list for the 고객 관리 tab.
-final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
+final managedClientsProvider = StreamProvider<List<TrainerClient>>((ref) {
   return ref.watch(clientRepositoryProvider).watchClients();
+});
+
+final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
+  return ref
+      .watch(clientRepositoryProvider)
+      .watchClients()
+      .map((clients) => clients.where((client) => client.registered).toList());
 });
 
 /// Streams the coaching-priority ordering of the client list.

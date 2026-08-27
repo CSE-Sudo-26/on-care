@@ -107,7 +107,7 @@ const TrainerProfile seedTrainerProfile = TrainerProfile(
   // 같게 읽혀야 하고, 회원앱 테스트가 이 값을 그대로 비교한다.
   intro:
       '혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다. 고객 상태에 맞춘 '
-      'AI 루틴을 활용해 안전한 강도부터 시작합니다.',
+      'AI 추천 프로그램을 활용해 안전한 강도부터 시작합니다.',
   certifications: <String>['생활스포츠지도사 2급', '퍼스널트레이닝 CPT', '스포츠 영양사'],
   gym: TrainerGym(
     name: '온케어짐 신촌점',

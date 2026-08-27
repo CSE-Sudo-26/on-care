@@ -67,7 +67,6 @@ class _MyPageState extends ConsumerState<MyPage> {
   bool _saving = false;
   bool _saveFlash = false;
   final Set<String> _removingClients = <String>{};
-  final Set<String> _removedClientIds = <String>{};
   Timer? _flashTimer;
 
   // The "saved" profile (in-memory mock; starts from the seed/session).
@@ -264,13 +263,30 @@ class _MyPageState extends ConsumerState<MyPage> {
     setState(() => _removingClients.add(client.id));
     try {
       await ref.read(clientRepositoryProvider).removeClient(client.id);
-      _removedClientIds.add(client.id);
       ref.invalidate(clientsProvider);
+      ref.invalidate(managedClientsProvider);
       if (!mounted) return;
       showAppToast(context, l.myClientRemoveSuccess);
     } catch (_) {
       if (!mounted) return;
       showAppToast(context, l.myClientRemoveFailed, kind: AppToastKind.error);
+    } finally {
+      if (mounted) setState(() => _removingClients.remove(client.id));
+    }
+  }
+
+  Future<void> _restoreClient(TrainerClient client) async {
+    final l = AppLocalizations.of(context);
+    setState(() => _removingClients.add(client.id));
+    try {
+      await ref.read(clientRepositoryProvider).restoreClient(client.id);
+      ref.invalidate(clientsProvider);
+      ref.invalidate(managedClientsProvider);
+      if (!mounted) return;
+      showAppToast(context, l.myClientRestoreSuccess);
+    } catch (_) {
+      if (!mounted) return;
+      showAppToast(context, l.myClientRestoreFailed, kind: AppToastKind.error);
     } finally {
       if (mounted) setState(() => _removingClients.remove(client.id));
     }
@@ -452,10 +468,10 @@ class _MyPageState extends ConsumerState<MyPage> {
   }
 
   Widget _buildClientManagement() => _ClientManagementCard(
-    clients: ref.watch(clientsProvider),
+    clients: ref.watch(managedClientsProvider),
     removing: _removingClients,
-    removed: _removedClientIds,
     onRemove: _removeClient,
+    onRestore: _restoreClient,
   );
 
   /// Applies a settings change and tells the trainer if it didn't stick.
@@ -1235,14 +1251,14 @@ class _ClientManagementCard extends StatelessWidget {
   const _ClientManagementCard({
     required this.clients,
     required this.removing,
-    required this.removed,
     required this.onRemove,
+    required this.onRestore,
   });
 
   final AsyncValue<List<TrainerClient>> clients;
   final Set<String> removing;
-  final Set<String> removed;
   final ValueChanged<TrainerClient> onRemove;
+  final ValueChanged<TrainerClient> onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -1254,9 +1270,7 @@ class _ClientManagementCard extends StatelessWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Text(l.clientsLoadFailed),
         data: (allItems) {
-          final items = allItems
-              .where((client) => !removed.contains(client.id))
-              .toList(growable: false);
+          final items = allItems;
           if (items.isEmpty) return Text(l.myClientManagementEmpty);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1268,18 +1282,30 @@ class _ClientManagementCard extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(child: Text(items[i].avatar)),
                   title: Text(items[i].name),
-                  subtitle: Text(items[i].goal),
-                  trailing: IconButton(
-                    tooltip: l.myClientRemove,
-                    onPressed: removing.contains(items[i].id)
-                        ? null
-                        : () => onRemove(items[i]),
-                    icon: removing.contains(items[i].id)
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.person_remove_outlined),
+                  subtitle: Text(
+                    '${items[i].registered ? l.myClientRegistered : l.myClientUnregistered} · ${items[i].goal}',
+                  ),
+                  trailing: Tooltip(
+                    message: items[i].registered
+                        ? l.myClientRemove
+                        : l.myClientRestore,
+                    child: TextButton(
+                      onPressed: removing.contains(items[i].id)
+                          ? null
+                          : () => items[i].registered
+                                ? onRemove(items[i])
+                                : onRestore(items[i]),
+                      child: removing.contains(items[i].id)
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              items[i].registered
+                                  ? l.myClientRemove
+                                  : l.myClientRestore,
+                            ),
+                    ),
                   ),
                 ),
               ],

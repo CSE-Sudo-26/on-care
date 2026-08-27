@@ -328,10 +328,38 @@ def trainer_remove_client(
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """담당 고객 관계만 해제한다. 회원 계정과 원본 기록은 유지한다."""
-    link = _require_client(db, trainer.id, member_id)
+    link = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.trainer_id == trainer.id,
+            TrainerClient.member_id == member_id,
+        )
+    )
+    if link is None:
+        raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
     if not link.active:
         raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
     trainer_service.remove_client(db, link)
+
+
+@router.put("/trainer/clients/{member_id}/registration", status_code=204)
+def trainer_restore_client(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """고객 관리에 남아 있는 미등록 고객을 다시 담당으로 등록한다."""
+    link = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.trainer_id == trainer.id,
+            TrainerClient.member_id == member_id,
+        )
+    )
+    if link is None:
+        raise HTTPException(status_code=404, detail="고객을 찾을 수 없습니다.")
+    try:
+        trainer_service.restore_client(db, link)
+    except trainer_service.ClientLinkDetached as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.put(
@@ -352,7 +380,14 @@ def trainer_set_client_status(
 
     같은 값을 다시 보내도 200 이고 상태가 흔들리지 않는다.
     """
-    link = _require_client(db, trainer.id, member_id)
+    link = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.trainer_id == trainer.id,
+            TrainerClient.member_id == member_id,
+        )
+    )
+    if link is None:
+        raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
     try:
         return trainer_service.set_client_active(db, link, payload.active)
     except trainer_service.ClientLinkDetached as exc:

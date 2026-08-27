@@ -105,7 +105,7 @@
   "authErrInviteCodeRequired": "Enter the invite code you received from your gym",
   "authErrSignUpFailed": "Sign-up failed. Please try again in a moment.",
   "dashTitle": "Dashboard",
-  "dashActivityRecommendRoutine": "Try adjusting the routine in Program.",
+  "dashActivityRecommendRoutine": "Try adjusting the program setup.",
   "dashActivityRecommendChat": "Try checking in over Messages.",
   "dashActivityRecommendDiet": "Try leaving feedback in Diet.",
   "dashActivityTabProgram": "Program",
@@ -446,7 +446,7 @@
   "chatInsightBodyPartGeneral": "Physical",
   "chatInsightNegativeTitle": "Negative feedback detected",
   "chatInsightDiscomfortDescription": "AI detected a report of discomfort. Check the symptoms and consider adjusting the next workout's intensity.",
-  "chatInsightNegativeDescription": "AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the routine.",
+  "chatInsightNegativeDescription": "AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the program.",
   "chatInsightAddMemo": "Add to memo",
   "chatInsightMemoAdded": "Added to memo",
   "chatInsightMemoSaved": "The AI insight was added to the trainer memo.",
@@ -539,10 +539,10 @@
   "workoutRecordsShowLess": "Show less",
   "workoutLoadFailed": "Couldn't load the workout log",
   "workoutEmpty": "No workouts logged yet",
-  "routinesAssigned": "Assigned routines",
-  "routineNew": "New routine",
-  "routinesLoadFailed": "Couldn't load routines",
-  "routinesEmpty": "No routines assigned to this client yet",
+  "routinesAssigned": "Assigned programs",
+  "routineNew": "New program",
+  "routinesLoadFailed": "Couldn't load programs",
+  "routinesEmpty": "No programs assigned to this client yet",
   "minutesShort": "{minutes} min",
   "@minutesShort": {
     "placeholders": {
@@ -609,7 +609,7 @@
   "aiAnalysis": "AI analysis",
   "aiPeriodAnalysis": "AI period analysis",
   "aiAllAnalysis": "AI all-time analysis",
-  "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's routine would help.",
+  "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's program would help.",
   "@dietAiOverSodium": {
     "placeholders": {
       "over": {
@@ -617,7 +617,7 @@
       }
     }
   },
-  "dietAiBalanced": "Today's meals are well balanced. Keep the current routine.",
+  "dietAiBalanced": "Today's meals are well balanced. Keep the current program.",
   "consultStatusRejected": "Declined",
   "dateToday": "Today",
   "dateTomorrow": "Tomorrow",
@@ -805,7 +805,7 @@
   "reportBodyCalories": "Calories averaged {avg}kcal a day.",
   "@reportBodyCalories": {"placeholders": {"avg": {"type": "String"}}},
   "reportBodyPraise": "Great work — let's keep this pace next week!",
-  "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your routine and send it over.",
+  "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your program and send it over.",
   "reportBodyNoRecords": "There's nothing logged for this week, so nothing to sum up. Let's plan next week's start together.",
   "schedTitle": "Schedule",
   "schedDetailTitle": "Session detail",
@@ -929,7 +929,7 @@
     }
   },
   "progEmpty": "No program planned yet",
-  "progEmptyHint": "Build one in the AI routine tab, or agree on it over chat first.",
+  "progEmptyHint": "Build one in the AI suggestions tab, or agree on it over chat first.",
   "schedSentTo": "Sent to {name}",
   "@schedSentTo": {
     "placeholders": {
@@ -999,7 +999,7 @@
   "myLegalPrivacyTitle": "Privacy Policy",
   "myLegalPrivacyHint": "How member records and sent reports are handled",
   "myLegalEffectiveDate": "Effective Jan 1, 2026",
-  "myLegalTermsBody": "This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching routines, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member's consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.",
+  "myLegalTermsBody": "This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching programs, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member's consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.",
   "myLegalPrivacyBody": "This English text is provided for convenience; the Korean original governs.\n\n1. Information collected\nFor trainer sign-up and service delivery, On-Care (the \"Company\") collects name, email and phone number, along with gym affiliation, certifications, career, speciality and service access logs.\n\n2. Purpose of collection and use\nThe information is used only to identify trainers and verify their credentials, to connect them with assigned members, to provide scheduling, messaging and reports, and to improve the service and answer enquiries.\n\n3. Access to and processing of member information\nA trainer may open the diet, workout and body-weight records of members they are assigned to, inside the Service. The Company is the controller of those records; the trainer processes them only for coaching and reports, within the scope the Company sets. Reports and messages a trainer sends are delivered to that member and kept in the Service as a record. When an assignment ends, the trainer's access is revoked immediately, and a member may withdraw consent to share their information at any time.\n\n4. Retention\nA trainer's personal information is destroyed without delay on account deletion, unless the law requires it to be kept, in which case it is stored securely for that period. Reports and messages already delivered belong to the member's record and follow the member's retention period.\n\n5. Provision to third parties\nThe Company does not provide personal information to outside parties without consent, except where the law specifically requires it.\n\n6. Safeguards\nAccess to member information is limited by assignment, traffic is encrypted in transit, and access logs are retained.\n\n7. Your rights\nA trainer may review or correct their personal information, or request that its processing stop and that it be deleted, at any time.\n\n8. Privacy officer\nFor privacy enquiries, contact customer support (support@oncare.com).\n\nEffective: January 1, 2026",
   "myAppInfo": "About",
   "myService": "Service",
@@ -1031,8 +1031,13 @@
   "myClientRemoveSuccess": "Client removed",
   "myClientRemoveFailed": "Couldn't remove the client. Please try again",
   "myClientManagementEmpty": "No clients assigned",
+  "myClientRegistered": "Registered",
+  "myClientUnregistered": "Unregistered",
+  "myClientRestore": "Register again",
+  "myClientRestoreSuccess": "Client registered again",
+  "myClientRestoreFailed": "Couldn't register the client again. Please try again",
   "myStatSessionsDone": "Sessions done",
-  "myStatRoutinesSent": "Routines sent",
+  "myStatRoutinesSent": "Programs sent",
   "myGymName": "Gym name",
   "myGymAddress": "Address",
   "myGymHours": "Hours",
@@ -1141,7 +1146,7 @@
   "coachRegisterAction": "Add to PT schedule",
   "coachGoToSchedule": "Go to schedule",
   "labelTomorrow": "Tomorrow",
-  "coachRequestCustom": "Ask AI for a custom routine",
+  "coachRequestCustom": "Ask AI for a custom suggestion",
   "coachRequestBlurb": "We'll analyse {name}'s data, draft a recovery and a push option, and let you compare and edit them here.",
   "@coachRequestBlurb": {
     "placeholders": {
@@ -1198,7 +1203,7 @@
   "aiGenerateRateLimited": "Too many generation requests. Please try again shortly",
   "aiExerciseNameRequired": "Enter an exercise name",
   "aiKeepOneExercise": "Keep at least one exercise",
-  "aiRoutineSent": "Routine sent to {name}",
+  "aiRoutineSent": "Program sent to {name}",
   "@aiRoutineSent": {
     "placeholders": {
       "name": {
@@ -1217,7 +1222,7 @@
       }
     }
   },
-  "aiCustomRoutineNamed": "AI custom routine ({option})",
+  "aiCustomRoutineNamed": "AI custom suggestion ({option})",
   "@aiCustomRoutineNamed": {
     "placeholders": {
       "option": {
@@ -1228,7 +1233,7 @@
   "aiAnalysing": "AI is analysing…",
   "aiGenerateCandidates": "Generate candidates",
   "aiReviewDone": "Reviewed",
-  "aiRoutineFor": "AI routine · {name}",
+  "aiRoutineFor": "AI suggestion · {name}",
   "@aiRoutineFor": {
     "placeholders": {
       "name": {
@@ -1293,7 +1298,7 @@
   "aiStepConditions": "Set up",
   "aiStepReview": "Program selection",
   "aiStepDone": "Final review",
-  "aiStepperLabel": "Custom routine progress",
+  "aiStepperLabel": "Custom suggestion progress",
   "coachTemplateSummaryWithGoal": "{goal} · {count} exercises · {minutes} min",
   "@coachTemplateSummaryWithGoal": {
     "placeholders": {
@@ -1319,8 +1324,8 @@
   "aiPromptLabel": "Your request",
   "aiPromptHint": "e.g. Build a 40-minute program that goes easy on the legs and leans on cardio",
   "aiPromptBlurb": "Your request goes to the AI with the member's data (up to 500 characters). Write the member note in the next step.",
-  "aiGenerateGoalBased": "Generate goal-based routine",
-  "aiStatusTemplateTitle": "Goal-based starter routine",
+  "aiGenerateGoalBased": "Generate goal-based suggestion",
+  "aiStatusTemplateTitle": "Goal-based starter suggestion",
   "aiStatusTemplateBody": "Not enough workout history yet to personalize — this starts from a goal-based default.",
   "aiStatusLearningTitle": "Personalizing (learning)",
   "aiStatusLearningBody": "Recent workouts were used, but there isn't a clear repeated pattern yet.",
@@ -1352,7 +1357,7 @@
   "alertSugarOver": "Sugar over target",
   "alertLowCompletion": "Low completion",
   "alertAwaitingReply": "Awaiting reply",
-  "clientLastRoutine": "Last routine",
+  "clientLastRoutine": "Last program",
   "metricOverBy": "{unit} over",
   "@metricOverBy": {
     "placeholders": {
@@ -1469,22 +1474,22 @@
       }
     }
   },
-  "routineAlreadyGone": "That routine is already gone",
+  "routineAlreadyGone": "That program is already gone",
   "workoutPendingTitle": "Not done yet",
   "workoutUndatedTitle": "Records without a date",
   "workoutPendingCancel": "Cancel assignment",
-  "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
-  "routineUpdated": "Routine updated",
-  "routineDeleteTitle": "Delete this routine?",
-  "routineDeleteFailed": "Couldn't delete the routine. Please try again in a moment",
-  "routineDeleted": "Routine deleted",
-  "routineEdit": "Edit routine",
-  "routineDelete": "Delete routine",
-  "routineNameRequired": "Enter a routine name",
+  "routineUpdateFailed": "Couldn't update the program. Please try again in a moment",
+  "routineUpdated": "Program updated",
+  "routineDeleteTitle": "Delete this program?",
+  "routineDeleteFailed": "Couldn't delete the program. Please try again in a moment",
+  "routineDeleted": "Program deleted",
+  "routineEdit": "Edit program",
+  "routineDelete": "Delete program",
+  "routineNameRequired": "Enter a program name",
   "routineNameTooLong": "Keep the name to 100 characters or fewer",
   "routineMinutesRange": "Duration must be between 0 and 600 minutes",
   "routineReasonTooLong": "Keep the reason to 200 characters or fewer",
-  "routineFieldName": "Routine name",
+  "routineFieldName": "Program name",
   "routineFieldMinutesLabel": "Duration (min)",
   "routineFieldReason": "Reason (optional)",
   "routineDeleteBody": "{name} disappears from the client's app too.",
@@ -1499,7 +1504,7 @@
   "@searchClients": {
     "description": "Label/tooltip of the console header's client search."
   },
-  "searchClientsHint": "Clients, goals, recent messages, last routine sent date",
+  "searchClientsHint": "Clients, goals, recent messages, last program sent date",
   "searchClear": "Clear search",
   "searchQuickActions": "Open in another tab",
   "searchNoResults": "No client matches “{query}”",
@@ -1548,7 +1553,7 @@
     }
   },
   "searchDetailNoUpcoming": "Nothing booked",
-  "searchDetailLastRoutine": "Last routine {when}",
+  "searchDetailLastRoutine": "Last program {when}",
   "@searchDetailLastRoutine": {
     "placeholders": {
       "when": {
@@ -1731,7 +1736,7 @@
   "programDraftLoadFailed": "Couldn't open the saved program. Please try again.",
   "programDraftDeleteFailed": "Couldn't delete the program. Please try again.",
   "programDraftDeleteTitle": "Delete this saved program?",
-  "programDraftDeleteBody": "Routines you already assigned and sessions you scheduled stay as they are.",
+  "programDraftDeleteBody": "Programs you already assigned and sessions you scheduled stay as they are.",
   "programEditorAssignUnsupported": "Check each exercise's name and set count.",
   "programAssignConfirmTitle": "Add to the schedule?",
   "programAssignConfirmBody": "This program will be added to {name}'s PT schedule on {date} at {time}.",
@@ -1821,7 +1826,7 @@
   "reportsActionSodium": "Ask them to leave half the broth and the pickled sides.",
   "reportsActionSugar": "Some days went over the {target}g sugar target. Start with drinks and snacks.",
   "@reportsActionSugar": {"placeholders": {"target": {"type": "String"}}},
-  "reportsActionLowCompletion": "Drop the routine a notch so they finish it first.",
+  "reportsActionLowCompletion": "Drop the program a notch so they finish it first.",
   "reportsActionHighCompletion": "Good pace. Add a set or a little weight next week.",
   "reportsActionSkipped": "Prepare alternatives for {names} for the next session.",
   "@reportsActionSkipped": {"placeholders": {"names": {"type": "String"}}},

@@ -323,12 +323,12 @@ void main() {
       await generate(tester);
 
       expect(find.text('목표 기반 기본 추천'), findsNothing);
-      expect(find.text('목표 기반 루틴 생성'), findsNothing);
+      expect(find.text('목표 기반 추천안 생성'), findsNothing);
 
       // 데이터 기반 흐름의 문구만 남는다.
       await tester.tap(find.byKey(const ValueKey<String>('routine-stage-0')));
       await tester.pumpAndSettle();
-      expect(find.text('맞춤 루틴 후보 생성'), findsOneWidget);
+      expect(find.text('맞춤 추천안 후보 생성'), findsOneWidget);
     });
 
     testWidgets('실 API 모드에서는 기록이 적은 회원에게 그 사실을 그대로 말한다', (tester) async {

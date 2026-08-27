@@ -103,7 +103,7 @@ class MockTrainerRoutineOptionsRepository
             type: '스트레칭',
           ),
         ],
-        reason: '짧고 지속하기 쉬운 회복 중심 루틴',
+        reason: '짧고 지속하기 쉬운 회복 중심 프로그램',
         rationale:
             '오늘 나트륨 ${sodium}mg (목표 초과), 최근 운동 완료율 $completion% → '
             '부담이 적은 유산소·스트레칭으로 지속 가능성에 집중.$noteSuffix',
@@ -122,7 +122,7 @@ class MockTrainerRoutineOptionsRepository
           RoutineExercise(name: '스쿼트', minutes: squatMinutes, type: '근력'),
           RoutineExercise(name: '플랭크', minutes: plankMinutes, type: '근력'),
         ],
-        reason: '운동량과 강도를 높인 루틴',
+        reason: '운동량과 강도를 높인 프로그램',
         rationale:
             "목표 '$goal' 기준, 완료율 $completion%로 점진적으로 근력·유산소를 더해 "
             '운동량을 높임.$noteSuffix',

@@ -713,7 +713,7 @@
   "coachRoutineAiChecked": "AI 추천 · {name} 확인",
   "coachRoutineAiAuto": "AI 자동 추천",
   "coachRoutineLogged": "운동 기록에 반영했어요",
-  "coachRoutineGone": "이 루틴은 더 이상 없어요. 목록을 새로 불러와 주세요",
+  "coachRoutineGone": "이 프로그램은 더 이상 없어요. 목록을 새로 불러와 주세요",
   "coachRoutineNetworkError": "네트워크 연결을 확인하고 다시 시도해 주세요",
   "coachRoutineLogFailed": "완료 기록에 실패했어요.",
   "coachRoutineDone": "수행 완료",

@@ -128,13 +128,41 @@ Future<void> seedIfEmpty(
     todayIndex,
   );
 
-  // A fixed anchor for seed chat timestamps. The 40-day spread ends on
-  // 2026-01-03, matching the member app's shared Kim Minsu thread. Using
-  // a constant (not nowKst()) keeps seed messages ordered before ANY reply
-  // added at runtime — including after a later-day re-seed, where a fresh
-  // `now()` base would otherwise sort new seed rows *after* a preserved
-  // runtime reply.
-  final chatEpoch = DateTime(2025, 11, 24);
+  // 김민수의 사흘치 공유 스레드는 마지막 날이 항상 오늘이 되게 둔다. 다른 고객의
+  // `daysAgo` 오프셋도 같은 기준점을 사용하므로 채팅 목록 전체가 현재 주로 이동한다.
+  final chatEpoch = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(const Duration(days: _chatSpreadDays));
+
+  DateTime desiredChatAt(_Client client, int i, int lastDayIndex) =>
+      chatEpoch.add(
+        Duration(
+          days:
+              _chatSpreadDays -
+              client.daysAgo -
+              (lastDayIndex - client.chat[i].dayIndex),
+          minutes: _minutesOfDay(client.chat[i].timeLabel),
+          seconds: client.id == 1 ? 0 : i,
+        ),
+      );
+
+  final latestSafeChatAt = now.subtract(const Duration(minutes: 1));
+  final latestDesiredChatAt = _clients
+      .where((client) => client.chat.isNotEmpty)
+      .map((client) {
+        final lastDayIndex = _lastChat(client.chat).dayIndex;
+        return desiredChatAt(
+          client,
+          client.chat.length - 1,
+          lastDayIndex,
+        );
+      })
+      .reduce((a, b) => a.isAfter(b) ? a : b);
+  final chatTimeShift = latestDesiredChatAt.isAfter(latestSafeChatAt)
+      ? latestDesiredChatAt.difference(latestSafeChatAt)
+      : Duration.zero;
 
   // Anchored at the fixed ancient epoch (oldest first) so any
   // runtime reply — and any preserved reply from a previous
@@ -171,18 +199,9 @@ Future<void> seedIfEmpty(
   // 시간순으로 적혀 있어 순서가 그대로 유지된다.
   /// 시드 메시지 하나의 실제 시각. 넣을 때와 리포트 표시를 남길 때가 같은
   /// 값을 봐야 해서 한 곳에 둔다 — 두 벌로 두면 한쪽만 고쳐진다.
-  DateTime chatCreatedAt(_Client client, int i, int lastDayIndex) =>
-      chatEpoch.add(
-        Duration(
-          days:
-              _chatSpreadDays -
-              client.daysAgo -
-              (lastDayIndex - client.chat[i].dayIndex),
-          minutes: _minutesOfDay(client.chat[i].timeLabel),
-          // 공유 스레드는 회원 앱과 DateTime까지 정확히 같아야 한다.
-          seconds: client.id == 1 ? 0 : i,
-        ),
-      );
+  DateTime chatCreatedAt(_Client client, int i, int lastDayIndex) {
+    return desiredChatAt(client, i, lastDayIndex).subtract(chatTimeShift);
+  }
 
   // First boot, or the date rolled over. Wipe + re-insert + flag all run
   // in ONE transaction: if any insert fails, the whole thing rolls back
@@ -368,23 +387,12 @@ Future<void> seedIfEmpty(
               sender: client.chat[i].sender,
               body: client.chat[i].text,
               timeLabel: client.chat[i].timeLabel,
-              // 시각 계산은 [chatCreatedAt] 에 있다 — 리포트 표시도 같은 값을 쓴다.
+              // 시각 계산은 [chatCreatedAt] 한 곳에서 맡는다.
               createdAt: chatCreatedAt(client, i, lastDayIndex),
             ),
         ]);
       });
 
-      // 리포트 등록 안내는 본문이 아니라 이 표시로 구분한다(#1421). 채팅
-      // 화면이 파일명을 보고 리포트인지 짐작하지 않게 하기 위해서다. 실행 중에
-      // 보내는 리포트도 같은 키에 같은 값을 쓴다.
-      for (var i = 0; i < client.chat.length; i++) {
-        if (!client.chat[i].report) continue;
-        final DateTime at = chatCreatedAt(client, i, lastDayIndex);
-        await db.putValue(
-          'report_msg_seed-chat-${client.id}-$i',
-          ymd(DateTime(at.year, at.month, at.day - (at.weekday - 1))),
-        );
-      }
     }
 
     // ---- Read markers for threads that start answered ----
@@ -569,24 +577,10 @@ class _History {
 }
 
 class _Chat {
-  const _Chat(
-    this.sender,
-    this.text,
-    this.timeLabel, {
-    this.dayIndex = 0,
-    this.report = false,
-  });
+  const _Chat(this.sender, this.text, this.timeLabel, {this.dayIndex = 0});
   final String sender; // trainer|client
   final String text;
   final String timeLabel;
-
-  /// 주간 리포트 등록 안내인가. (#1421)
-  ///
-  /// 시드에서 지나간 리포트를 심는 유일한 방법이다 — 실행 중에 보내는
-  /// 리포트는 `ReportRepository.sendPdf` 가 같은 표시를 남긴다. 어느 주인지는
-  /// 이 메시지 자신의 `createdAt` 이 속한 주로 잡는다. 회원 앱 시드도 같은
-  /// 규칙이라, 두 앱이 같은 사건을 같은 주로 가리킨다.
-  final bool report;
 
   /// 며칠째 대화인가 (0 = 스레드의 첫 날). 여러 날에 걸친 스레드에서만 쓴다.
   ///

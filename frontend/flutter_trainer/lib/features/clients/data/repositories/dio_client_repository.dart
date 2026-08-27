@@ -397,4 +397,16 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
     }
     _refreshes.add(null);
   }
+
+  @override
+  Future<void> restoreClient(String id) async {
+    try {
+      await _dio.put<void>(
+        '/trainer/clients/${Uri.encodeComponent(id)}/registration',
+      );
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+    _refreshes.add(null);
+  }
 }
