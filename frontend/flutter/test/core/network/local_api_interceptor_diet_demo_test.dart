@@ -158,7 +158,7 @@ void main() {
           .cast<Map<String, Object?>>()
           .firstWhere((Map<String, Object?> e) => e['meal_type'] == 'dinner');
 
-      expect(dinner['ai_comment'], contains('비빔밥'));
+      expect(dinner['ai_comment'], contains('요거트 아이스크림'));
       // 업로드한 사진을 데모가 보관하지 않으므로 사진은 비워 둔다 — 남의 사진을
       // 대신 보여 주는 것보다 없는 편이 정직하다.
       expect(dinner['photo_asset'], isNull);

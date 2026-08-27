@@ -167,7 +167,9 @@ def diet_text(
     ) or "식단"
     return (
         f"{date} 식단 기록: {names}. "
-        f"총 {total_calories}kcal, 나트륨 {sodium_mg}mg, 당류 {sugar_g}g."
+        # 당류는 float 이라 그대로 찍으면 29.497999999999998 이 근거 문장에
+        # 들어간다 — 소수 한 자리로 끊는다(#1564).
+        f"총 {total_calories}kcal, 나트륨 {sodium_mg}mg, 당류 {sugar_g:.1f}g."
     )
 
 

@@ -222,7 +222,7 @@
   "dietNoRecognizedFood": "No food recognized",
   "dietNutritionResult": "Nutrition Result",
   "dietSaved": "Meal saved",
-  "dietDone": "Done",
+  "dietSaveEntry": "Save",
   "dietSaveFailed": "Couldn't save. Please try again in a moment.",
   "dietDeleteTitle": "Delete Meal Record",
   "dietDeleteConfirm": "Delete this meal record?",

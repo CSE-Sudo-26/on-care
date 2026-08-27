@@ -143,7 +143,7 @@
   "dietNoRecognizedFood": "인식된 음식이 없어요",
   "dietNutritionResult": "영양 분석 결과",
   "dietSaved": "식단이 저장되었어요",
-  "dietDone": "완료",
+  "dietSaveEntry": "저장하기",
   "dietSaveFailed": "저장에 실패했어요. 잠시 후 다시 시도해 주세요",
   "dietDeleteTitle": "식단 기록 삭제",
   "dietDeleteConfirm": "이 식단 기록을 삭제할까요?",

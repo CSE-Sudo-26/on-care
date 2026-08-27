@@ -446,7 +446,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietSaved => '식단이 저장되었어요';
 
   @override
-  String get dietDone => '완료';
+  String get dietSaveEntry => '저장하기';
 
   @override
   String get dietSaveFailed => '저장에 실패했어요. 잠시 후 다시 시도해 주세요';
