@@ -93,6 +93,21 @@ void main() {
       expect(find.textContaining('역할 전환'), findsNothing);
     });
 
+    testWidgets('고객 삭제 전 이름과 데이터 보존 범위를 확인한다', (tester) async {
+      await openTab(tester);
+
+      final remove = find.byTooltip('고객 삭제').first;
+      await tester.scrollUntilVisible(remove, 200);
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('고객을 삭제할까요?'), findsOneWidget);
+      expect(find.textContaining('고객 계정과 기록은 삭제되지 않아요'), findsOneWidget);
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('고객을 삭제할까요?'), findsNothing);
+    });
+
     testWidgets('로그아웃 returns to the login screen', (tester) async {
       await openSettings(tester);
 

@@ -879,6 +879,17 @@ class ClientLinkDetached(Exception):
     """담당 관계가 이미 해제된 회원이다(라우터가 409 로 변환)."""
 
 
+def remove_client(db: Session, link: TrainerClient) -> None:
+    """트레이너의 담당 고객 관계를 해제한다.
+
+    로스터는 해제된 링크도 과거 고객으로 보여 주므로 관계 행을 삭제해야 고객 관리
+    명단에서 실제로 사라진다. 대화·일정·기록은 링크 id가 아니라 trainer/member id를
+    직접 참조하므로 그대로 보존되며, 회원 계정과 회원 원본 데이터도 건드리지 않는다.
+    """
+    db.delete(link)
+    db.commit()
+
+
 def set_client_active(
     db: Session, link: TrainerClient, active: bool
 ) -> TrainerClientStatusOut:

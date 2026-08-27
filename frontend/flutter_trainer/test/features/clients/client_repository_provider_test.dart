@@ -117,6 +117,9 @@ class _StreamingClientRepository implements ClientRepository {
       false;
   @override
   Future<void> setClientActive(String id, bool active) async {}
+
+  @override
+  Future<void> removeClient(String id) async {}
 }
 
 ProviderContainer _containerFor({

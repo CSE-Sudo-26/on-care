@@ -20,6 +20,7 @@ import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart'
 import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -65,6 +66,7 @@ class _MyPageState extends ConsumerState<MyPage> {
   bool _editing = false;
   bool _saving = false;
   bool _saveFlash = false;
+  final Set<String> _removingClients = <String>{};
   Timer? _flashTimer;
 
   // The "saved" profile (in-memory mock; starts from the seed/session).
@@ -238,6 +240,40 @@ class _MyPageState extends ConsumerState<MyPage> {
     await ref.read(sessionControllerProvider.notifier).signOut();
   }
 
+  Future<void> _removeClient(TrainerClient client) async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.myClientRemoveTitle(client.name)),
+        content: Text(l.myClientRemoveBody),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.myClientRemove),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _removingClients.add(client.id));
+    try {
+      await ref.read(clientRepositoryProvider).removeClient(client.id);
+      ref.invalidate(clientsProvider);
+      if (!mounted) return;
+      showAppToast(context, l.myClientRemoveSuccess);
+    } catch (_) {
+      if (!mounted) return;
+      showAppToast(context, l.myClientRemoveFailed, kind: AppToastKind.error);
+    } finally {
+      if (mounted) setState(() => _removingClients.remove(client.id));
+    }
+  }
+
   /// 계정 탈퇴. 이름 확인을 받은 뒤에만 나가고, 성공하면 로그아웃과 같은 경로로
   /// 로그인 화면에 도달한다(라우터의 인증 게이트). (#505)
   Future<void> _deleteAccount() async {
@@ -378,6 +414,14 @@ class _MyPageState extends ConsumerState<MyPage> {
         _sectionLabel(l.myMonthStats),
         const SizedBox(height: AppSpacing.sm),
         _StatsCard(clientCount: clientCount),
+        const SizedBox(height: AppSpacing.lg),
+        _sectionLabel(l.myClientManagement),
+        const SizedBox(height: AppSpacing.sm),
+        _ClientManagementCard(
+          clients: ref.watch(clientsProvider),
+          removing: _removingClients,
+          onRemove: _removeClient,
+        ),
         const SizedBox(height: AppSpacing.lg),
         _sectionLabel(l.myGym),
         const SizedBox(height: AppSpacing.sm),
@@ -1133,6 +1177,69 @@ class _CertsCard extends StatelessWidget {
               ],
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ClientManagementCard extends StatelessWidget {
+  const _ClientManagementCard({
+    required this.clients,
+    required this.removing,
+    required this.onRemove,
+  });
+
+  final AsyncValue<List<TrainerClient>> clients;
+  final Set<String> removing;
+  final ValueChanged<TrainerClient> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return SectionCard(
+      title: l.myClientManagement,
+      icon: Icons.manage_accounts_outlined,
+      child: clients.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => Text(l.clientsLoadFailed),
+        data: (items) {
+          if (items.isEmpty) return Text(l.myClientManagementEmpty);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                l.myClientManagementHint,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.subtleForeground,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              for (var i = 0; i < items.length; i++) ...<Widget>[
+                if (i > 0)
+                  const Divider(height: 1, color: AppColors.borderStrong),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(child: Text(items[i].avatar)),
+                  title: Text(items[i].name),
+                  subtitle: Text(items[i].goal),
+                  trailing: IconButton(
+                    tooltip: l.myClientRemove,
+                    onPressed: removing.contains(items[i].id)
+                        ? null
+                        : () => onRemove(items[i]),
+                    icon: removing.contains(items[i].id)
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.person_remove_outlined),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
