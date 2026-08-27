@@ -383,23 +383,12 @@ Future<void> seedIfEmpty(
               sender: client.chat[i].sender,
               body: client.chat[i].text,
               timeLabel: client.chat[i].timeLabel,
-              // 시각 계산은 [chatCreatedAt] 에 있다 — 리포트 표시도 같은 값을 쓴다.
+              // 시각 계산은 [chatCreatedAt] 한 곳에서 맡는다.
               createdAt: chatCreatedAt(client, i, lastDayIndex),
             ),
         ]);
       });
 
-      // 리포트 등록 안내는 본문이 아니라 이 표시로 구분한다(#1421). 채팅
-      // 화면이 파일명을 보고 리포트인지 짐작하지 않게 하기 위해서다. 실행 중에
-      // 보내는 리포트도 같은 키에 같은 값을 쓴다.
-      for (var i = 0; i < client.chat.length; i++) {
-        if (!client.chat[i].report) continue;
-        final DateTime at = chatCreatedAt(client, i, lastDayIndex);
-        await db.putValue(
-          'report_msg_seed-chat-${client.id}-$i',
-          ymd(DateTime(at.year, at.month, at.day - (at.weekday - 1))),
-        );
-      }
     }
 
     // ---- Read markers for threads that start answered ----
@@ -584,24 +573,10 @@ class _History {
 }
 
 class _Chat {
-  const _Chat(
-    this.sender,
-    this.text,
-    this.timeLabel, {
-    this.dayIndex = 0,
-    this.report = false,
-  });
+  const _Chat(this.sender, this.text, this.timeLabel, {this.dayIndex = 0});
   final String sender; // trainer|client
   final String text;
   final String timeLabel;
-
-  /// 주간 리포트 등록 안내인가. (#1421)
-  ///
-  /// 시드에서 지나간 리포트를 심는 유일한 방법이다 — 실행 중에 보내는
-  /// 리포트는 `ReportRepository.sendPdf` 가 같은 표시를 남긴다. 어느 주인지는
-  /// 이 메시지 자신의 `createdAt` 이 속한 주로 잡는다. 회원 앱 시드도 같은
-  /// 규칙이라, 두 앱이 같은 사건을 같은 주로 가리킨다.
-  final bool report;
 
   /// 며칠째 대화인가 (0 = 스레드의 첫 날). 여러 날에 걸친 스레드에서만 쓴다.
   ///

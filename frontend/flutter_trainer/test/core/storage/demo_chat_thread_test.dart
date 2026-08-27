@@ -13,9 +13,9 @@ library;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 /// (보낸 쪽, 본문) — 회원 앱 시드와 글자까지 같아야 한다. 트레이너 시점이므로
