@@ -697,6 +697,82 @@
     }
   },
   "coachChatReportOpenPdf": "Open PDF",
+  "coachChatReportPreviewPdf": "Preview PDF",
+  "coachReportPdfDocTitle": "Weekly report",
+  "coachReportPdfDocTitleContinued": "Weekly report (cont.)",
+  "coachReportPdfPeriod": "Period {from} – {to}",
+  "@coachReportPdfPeriod": {
+    "description": "Week the previewed report covers, printed under the title.",
+    "placeholders": {
+      "from": {"type": "String"},
+      "to": {"type": "String"}
+    }
+  },
+  "coachReportPdfSectionMetrics": "Key metrics",
+  "coachReportPdfSectionTrend": "Daily trend",
+  "coachReportPdfSectionDaily": "Day by day",
+  "coachReportPdfBullet": "· {label}: {value}",
+  "@coachReportPdfBullet": {
+    "description": "One metric line in the previewed report.",
+    "placeholders": {
+      "label": {"type": "String"},
+      "value": {"type": "String"}
+    }
+  },
+  "coachReportPdfLabelWorkoutDays": "Days trained",
+  "coachReportPdfLabelWorkoutMinutes": "Total workout time",
+  "coachReportPdfLabelBurned": "Calories burned",
+  "coachReportPdfLabelSessions": "PT sessions",
+  "coachReportPdfLabelCalories": "Average intake",
+  "coachReportPdfLabelSodium": "Average sodium",
+  "coachReportPdfLabelSugar": "Average sugar",
+  "coachReportPdfLabelMinutesShort": "Workout time",
+  "coachReportPdfLabelCaloriesShort": "Intake",
+  "coachReportPdfLabelSodiumShort": "Sodium",
+  "coachReportPdfLabelSugarShort": "Sugar",
+  "coachReportPdfValueDays": "{value} days",
+  "@coachReportPdfValueDays": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "coachReportPdfValueMinutes": "{value} min",
+  "@coachReportPdfValueMinutes": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "coachReportPdfValueKcal": "{value} kcal",
+  "@coachReportPdfValueKcal": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "coachReportPdfValueMg": "{value} mg",
+  "@coachReportPdfValueMg": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "coachReportPdfValueGram": "{value} g",
+  "@coachReportPdfValueGram": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "coachReportPdfAttendance": "{done} of {booked}",
+  "@coachReportPdfAttendance": {
+    "description": "PT sessions completed out of the ones booked that week.",
+    "placeholders": {
+      "done": {"type": "String"},
+      "booked": {"type": "String"}
+    }
+  },
+  "coachReportPdfNoData": "No data",
+  "coachReportPdfDay": "{weekday} — workout {exercise}, intake {intake}",
+  "@coachReportPdfDay": {
+    "description": "One weekday line in the previewed report.",
+    "placeholders": {
+      "weekday": {"type": "String"},
+      "exercise": {"type": "String"},
+      "intake": {"type": "String"}
+    }
+  },
+  "coachReportPdfPreviewNote": "Built from your own records for the week the trainer's report covers.",
+  "coachReportPdfFileName": "weekly-report_{date}.pdf",
+  "@coachReportPdfFileName": {
+    "placeholders": {"date": {"type": "String"}}
+  },
   "coachChatInputHint": "Message your trainer...",
   "coachChatDemoAnalyzed": "AI analyzed your diet and exercise data",
   "coachChatDemoReportSent": "A summary report was sent to {trainer}",

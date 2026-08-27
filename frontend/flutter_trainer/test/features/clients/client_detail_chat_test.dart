@@ -511,7 +511,7 @@ void main() {
       await openMessages(tester);
 
       expect(find.text('리포트가 등록되었어요'), findsNothing);
-      expect(find.text('리포트 탭에서 확인하기'), findsNothing);
+      expect(find.text('리포트 탭으로 가기'), findsNothing);
       expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
     });
 
@@ -536,16 +536,27 @@ void main() {
 
         // 회원 앱과 같은 정보 구조 — 상태 문구, 대상 주, 다음 행동.
         final notice = find.text('리포트가 등록되었어요');
+        final goToReports = find.text('리포트 탭으로 가기');
         expect(notice, findsOneWidget);
         expect(find.text('8월 18일 – 8월 24일'), findsOneWidget);
-        expect(find.text('리포트 탭에서 확인하기'), findsOneWidget);
+        expect(goToReports, findsOneWidget);
         // 본문 그대로의 일반 말풍선은 그려지지 않는다.
         expect(
           find.text('김민수님, 8월 18일 – 8월 24일 주간 리포트 정리해서 보내드려요.'),
           findsNothing,
         );
 
-        await tester.tap(notice);
+        // 안내는 대화 가운데에 선다 — 트레이너가 보낸 말풍선처럼 오른쪽에
+        // 붙지 않는다(#1600). 왼쪽 여백과 오른쪽 여백이 같은지로 본다.
+        final card = find.byType(ReportRegisteredCard);
+        final Rect box = tester.getRect(card);
+        final Rect thread = tester.getRect(find.byType(ListView).last);
+        expect(
+          (box.left - thread.left - (thread.right - box.right)).abs(),
+          lessThan(1.0),
+        );
+
+        await tester.tap(goToReports);
         await settle(tester);
 
         final ctx = tester.element(find.byType(Navigator).first);

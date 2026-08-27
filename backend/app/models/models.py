@@ -1220,6 +1220,13 @@ class ChatMessage(Base):
         String(64), nullable=True, unique=True, index=True
     )
     attachment_file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 이 메시지가 주간 리포트 전송 안내라면 그 주 월요일 `YYYY-MM-DD`. (#1600)
+    #
+    # 첨부만으로는 판단할 수 없다 — 리포트는 PDF 없이 본문으로도 나가고(`/report/send`),
+    # 파일명에서 주차를 파내면 표시용 문자열이 곧 로직이 된다. 그래서 보내는 쪽이
+    # 실어 보낸 값을 그대로 들고 있는다. 일반 대화는 NULL 이라 예전 행과 조회
+    # 흐름은 그대로다.
+    report_week_start: Mapped[str | None] = mapped_column(String(10), nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

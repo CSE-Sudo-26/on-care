@@ -1310,6 +1310,114 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachChatReportOpenPdf => 'Open PDF';
 
   @override
+  String get coachChatReportPreviewPdf => 'Preview PDF';
+
+  @override
+  String get coachReportPdfDocTitle => 'Weekly report';
+
+  @override
+  String get coachReportPdfDocTitleContinued => 'Weekly report (cont.)';
+
+  @override
+  String coachReportPdfPeriod(String from, String to) {
+    return 'Period $from – $to';
+  }
+
+  @override
+  String get coachReportPdfSectionMetrics => 'Key metrics';
+
+  @override
+  String get coachReportPdfSectionTrend => 'Daily trend';
+
+  @override
+  String get coachReportPdfSectionDaily => 'Day by day';
+
+  @override
+  String coachReportPdfBullet(String label, String value) {
+    return '· $label: $value';
+  }
+
+  @override
+  String get coachReportPdfLabelWorkoutDays => 'Days trained';
+
+  @override
+  String get coachReportPdfLabelWorkoutMinutes => 'Total workout time';
+
+  @override
+  String get coachReportPdfLabelBurned => 'Calories burned';
+
+  @override
+  String get coachReportPdfLabelSessions => 'PT sessions';
+
+  @override
+  String get coachReportPdfLabelCalories => 'Average intake';
+
+  @override
+  String get coachReportPdfLabelSodium => 'Average sodium';
+
+  @override
+  String get coachReportPdfLabelSugar => 'Average sugar';
+
+  @override
+  String get coachReportPdfLabelMinutesShort => 'Workout time';
+
+  @override
+  String get coachReportPdfLabelCaloriesShort => 'Intake';
+
+  @override
+  String get coachReportPdfLabelSodiumShort => 'Sodium';
+
+  @override
+  String get coachReportPdfLabelSugarShort => 'Sugar';
+
+  @override
+  String coachReportPdfValueDays(String value) {
+    return '$value days';
+  }
+
+  @override
+  String coachReportPdfValueMinutes(String value) {
+    return '$value min';
+  }
+
+  @override
+  String coachReportPdfValueKcal(String value) {
+    return '$value kcal';
+  }
+
+  @override
+  String coachReportPdfValueMg(String value) {
+    return '$value mg';
+  }
+
+  @override
+  String coachReportPdfValueGram(String value) {
+    return '$value g';
+  }
+
+  @override
+  String coachReportPdfAttendance(String done, String booked) {
+    return '$done of $booked';
+  }
+
+  @override
+  String get coachReportPdfNoData => 'No data';
+
+  @override
+  String coachReportPdfDay(String weekday, String exercise, String intake) {
+    return '$weekday — workout $exercise, intake $intake';
+  }
+
+  @override
+  String get coachReportPdfPreviewNote =>
+      'Built from your own records for the week the trainer\'s report covers.';
+
+  @override
+  String coachReportPdfFileName(String date) {
+    return 'weekly-report_$date.pdf';
+  }
+
+  @override
   String get coachChatInputHint => 'Message your trainer...';
 
   @override

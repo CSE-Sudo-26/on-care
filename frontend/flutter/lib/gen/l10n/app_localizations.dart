@@ -2438,6 +2438,180 @@ abstract class AppLocalizations {
   /// **'Open PDF'**
   String get coachChatReportOpenPdf;
 
+  /// No description provided for @coachChatReportPreviewPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview PDF'**
+  String get coachChatReportPreviewPdf;
+
+  /// No description provided for @coachReportPdfDocTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report'**
+  String get coachReportPdfDocTitle;
+
+  /// No description provided for @coachReportPdfDocTitleContinued.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report (cont.)'**
+  String get coachReportPdfDocTitleContinued;
+
+  /// Week the previewed report covers, printed under the title.
+  ///
+  /// In en, this message translates to:
+  /// **'Period {from} – {to}'**
+  String coachReportPdfPeriod(String from, String to);
+
+  /// No description provided for @coachReportPdfSectionMetrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Key metrics'**
+  String get coachReportPdfSectionMetrics;
+
+  /// No description provided for @coachReportPdfSectionTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily trend'**
+  String get coachReportPdfSectionTrend;
+
+  /// No description provided for @coachReportPdfSectionDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Day by day'**
+  String get coachReportPdfSectionDaily;
+
+  /// One metric line in the previewed report.
+  ///
+  /// In en, this message translates to:
+  /// **'· {label}: {value}'**
+  String coachReportPdfBullet(String label, String value);
+
+  /// No description provided for @coachReportPdfLabelWorkoutDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days trained'**
+  String get coachReportPdfLabelWorkoutDays;
+
+  /// No description provided for @coachReportPdfLabelWorkoutMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Total workout time'**
+  String get coachReportPdfLabelWorkoutMinutes;
+
+  /// No description provided for @coachReportPdfLabelBurned.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories burned'**
+  String get coachReportPdfLabelBurned;
+
+  /// No description provided for @coachReportPdfLabelSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions'**
+  String get coachReportPdfLabelSessions;
+
+  /// No description provided for @coachReportPdfLabelCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Average intake'**
+  String get coachReportPdfLabelCalories;
+
+  /// No description provided for @coachReportPdfLabelSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Average sodium'**
+  String get coachReportPdfLabelSodium;
+
+  /// No description provided for @coachReportPdfLabelSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Average sugar'**
+  String get coachReportPdfLabelSugar;
+
+  /// No description provided for @coachReportPdfLabelMinutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout time'**
+  String get coachReportPdfLabelMinutesShort;
+
+  /// No description provided for @coachReportPdfLabelCaloriesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Intake'**
+  String get coachReportPdfLabelCaloriesShort;
+
+  /// No description provided for @coachReportPdfLabelSodiumShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium'**
+  String get coachReportPdfLabelSodiumShort;
+
+  /// No description provided for @coachReportPdfLabelSugarShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar'**
+  String get coachReportPdfLabelSugarShort;
+
+  /// No description provided for @coachReportPdfValueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} days'**
+  String coachReportPdfValueDays(String value);
+
+  /// No description provided for @coachReportPdfValueMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} min'**
+  String coachReportPdfValueMinutes(String value);
+
+  /// No description provided for @coachReportPdfValueKcal.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} kcal'**
+  String coachReportPdfValueKcal(String value);
+
+  /// No description provided for @coachReportPdfValueMg.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} mg'**
+  String coachReportPdfValueMg(String value);
+
+  /// No description provided for @coachReportPdfValueGram.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} g'**
+  String coachReportPdfValueGram(String value);
+
+  /// PT sessions completed out of the ones booked that week.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {booked}'**
+  String coachReportPdfAttendance(String done, String booked);
+
+  /// No description provided for @coachReportPdfNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No data'**
+  String get coachReportPdfNoData;
+
+  /// One weekday line in the previewed report.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday} — workout {exercise}, intake {intake}'**
+  String coachReportPdfDay(String weekday, String exercise, String intake);
+
+  /// No description provided for @coachReportPdfPreviewNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Built from your own records for the week the trainer\'s report covers.'**
+  String get coachReportPdfPreviewNote;
+
+  /// No description provided for @coachReportPdfFileName.
+  ///
+  /// In en, this message translates to:
+  /// **'weekly-report_{date}.pdf'**
+  String coachReportPdfFileName(String date);
+
   /// No description provided for @coachChatInputHint.
   ///
   /// In en, this message translates to:

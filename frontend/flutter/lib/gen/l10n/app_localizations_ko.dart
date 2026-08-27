@@ -1283,6 +1283,114 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachChatReportOpenPdf => 'PDF 열기';
 
   @override
+  String get coachChatReportPreviewPdf => 'PDF 미리보기';
+
+  @override
+  String get coachReportPdfDocTitle => '주간 리포트';
+
+  @override
+  String get coachReportPdfDocTitleContinued => '주간 리포트 (계속)';
+
+  @override
+  String coachReportPdfPeriod(String from, String to) {
+    return '기간 $from ~ $to';
+  }
+
+  @override
+  String get coachReportPdfSectionMetrics => '주요 지표';
+
+  @override
+  String get coachReportPdfSectionTrend => '요일별 추이';
+
+  @override
+  String get coachReportPdfSectionDaily => '요일별 상세';
+
+  @override
+  String coachReportPdfBullet(String label, String value) {
+    return '· $label: $value';
+  }
+
+  @override
+  String get coachReportPdfLabelWorkoutDays => '운동한 날';
+
+  @override
+  String get coachReportPdfLabelWorkoutMinutes => '총 운동 시간';
+
+  @override
+  String get coachReportPdfLabelBurned => '소모 칼로리';
+
+  @override
+  String get coachReportPdfLabelSessions => 'PT 세션';
+
+  @override
+  String get coachReportPdfLabelCalories => '평균 섭취 칼로리';
+
+  @override
+  String get coachReportPdfLabelSodium => '평균 나트륨';
+
+  @override
+  String get coachReportPdfLabelSugar => '평균 당류';
+
+  @override
+  String get coachReportPdfLabelMinutesShort => '운동 시간';
+
+  @override
+  String get coachReportPdfLabelCaloriesShort => '섭취 칼로리';
+
+  @override
+  String get coachReportPdfLabelSodiumShort => '나트륨';
+
+  @override
+  String get coachReportPdfLabelSugarShort => '당류';
+
+  @override
+  String coachReportPdfValueDays(String value) {
+    return '$value일';
+  }
+
+  @override
+  String coachReportPdfValueMinutes(String value) {
+    return '$value분';
+  }
+
+  @override
+  String coachReportPdfValueKcal(String value) {
+    return '${value}kcal';
+  }
+
+  @override
+  String coachReportPdfValueMg(String value) {
+    return '${value}mg';
+  }
+
+  @override
+  String coachReportPdfValueGram(String value) {
+    return '${value}g';
+  }
+
+  @override
+  String coachReportPdfAttendance(String done, String booked) {
+    return '$booked회 중 $done회';
+  }
+
+  @override
+  String get coachReportPdfNoData => '기록 없음';
+
+  @override
+  String coachReportPdfDay(String weekday, String exercise, String intake) {
+    return '$weekday요일 — 운동 $exercise, 섭취 $intake';
+  }
+
+  @override
+  String get coachReportPdfPreviewNote =>
+      '트레이너 리포트가 보는 주를 회원님 기록으로 정리한 미리보기예요.';
+
+  @override
+  String coachReportPdfFileName(String date) {
+    return '주간리포트_$date.pdf';
+  }
+
+  @override
   String get coachChatInputHint => '트레이너에게 메시지 보내기...';
 
   @override

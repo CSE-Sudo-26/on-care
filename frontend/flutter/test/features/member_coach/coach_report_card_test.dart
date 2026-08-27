@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -61,8 +62,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('리포트 등록 카드 (#1421)', () {
-    testWidgets('상태 문구·대상 주·다음 행동을 한 카드에 담는다', (WidgetTester tester) async {
+  group('리포트 등록 카드 (#1421, #1600)', () {
+    testWidgets('상태 문구·대상 주·다음 행동을 한 상자에 담는다', (WidgetTester tester) async {
       var opened = 0;
       await pumpCard(
         tester,
@@ -74,20 +75,38 @@ void main() {
 
       expect(find.text('리포트가 등록되었어요'), findsOneWidget);
       expect(find.text('8월 17일 – 8월 23일'), findsOneWidget);
-      expect(find.text('PDF 열기'), findsOneWidget);
+      expect(find.text('PDF 미리보기'), findsOneWidget);
 
-      await tester.tap(find.text('PDF 열기'));
+      await tester.tap(find.text('PDF 미리보기'));
       await tester.pumpAndSettle();
       expect(opened, 1);
     });
 
-    testWidgets('열 파일이 없으면 `PDF 열기` 를 그리지 않는다', (WidgetTester tester) async {
-      await pumpCard(tester, child: CoachReportCard(weekStart: DateTime(2026, 8, 17)));
+    testWidgets('흰 바탕에 메인 색 테두리, 그리고 테두리 없는 글자 버튼', (
+      WidgetTester tester,
+    ) async {
+      await pumpCard(
+        tester,
+        child: CoachReportCard(
+          weekStart: DateTime(2026, 8, 17),
+          onOpenPdf: () {},
+        ),
+      );
 
-      // 상태와 주는 그대로 알려 준다 — 사라지는 것은 동작뿐이다.
-      expect(find.text('리포트가 등록되었어요'), findsOneWidget);
-      expect(find.text('8월 17일 – 8월 23일'), findsOneWidget);
-      expect(find.text('PDF 열기'), findsNothing);
+      final Container box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(CoachReportCard),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final BoxDecoration decoration = box.decoration! as BoxDecoration;
+      expect(decoration.color, Colors.white);
+      expect(decoration.border, Border.all(color: FigmaColors.primary));
+      // 안내 상자 안에서 두 번째 테두리를 그리면 상자가 둘로 보인다.
+      expect(find.byType(TextButton), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNothing);
     });
 
     testWidgets('영어 로케일도 같은 정보 구조다', (WidgetTester tester) async {
@@ -102,7 +121,7 @@ void main() {
 
       expect(find.text('Weekly report added'), findsOneWidget);
       expect(find.text('8/17 – 8/23'), findsOneWidget);
-      expect(find.text('Open PDF'), findsOneWidget);
+      expect(find.text('Preview PDF'), findsOneWidget);
     });
 
     testWidgets('좁은 화면에서 글자를 키워도 넘치지 않는다', (WidgetTester tester) async {
@@ -137,12 +156,12 @@ void main() {
       expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
     });
 
-    testWidgets('데모에는 내려받을 파일이 없어 `PDF 열기` 를 보여 주지 않는다', (
+    testWidgets('데모 대화에는 리포트 안내가 없으니 미리보기 버튼도 없다', (
       WidgetTester tester,
     ) async {
       await pumpChat(tester);
 
-      expect(find.text('PDF 열기'), findsNothing);
+      expect(find.text('PDF 미리보기'), findsNothing);
     });
 
     testWidgets('데모 메시지는 리포트 표시나 첨부를 갖지 않는다', (

@@ -79,6 +79,25 @@ void main() {
       expect(m.attachment?.fileSize, 4096);
     });
 
+    test('리포트 안내는 그 주 월요일을 싣고 오고, 날짜가 아니면 일반 메시지다 (#1600)', () {
+      Map<String, Object?> message(Object? week) => <String, Object?>{
+        'id': 'report-1',
+        'sender': 'trainer',
+        'body': '이번 주 리포트입니다.',
+        'time_label': '18:10',
+        'created_at': '2026-08-24T18:10:00Z',
+        'report_week_start': ?week,
+      };
+      expect(
+        coachMessageFromJson(message('2026-08-17')).reportWeekStart,
+        DateTime(2026, 8, 17),
+      );
+      // 파일명이나 본문으로 추측하지 않는다. 그리고 안내 상자 하나 때문에
+      // 대화 전체가 뜨지 않는 편보다, 일반 대화로 그리는 편이 낫다.
+      expect(coachMessageFromJson(message(null)).reportWeekStart, isNull);
+      expect(coachMessageFromJson(message('지난주')).reportWeekStart, isNull);
+    });
+
     test('maps my own message', () {
       final m = coachMessageFromJson(<String, Object?>{
         'id': 'm2',

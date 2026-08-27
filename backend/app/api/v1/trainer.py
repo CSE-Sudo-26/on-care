@@ -1860,6 +1860,7 @@ def trainer_send_report(
     return trainer_service.send_message(
         db, trainer.id, member_id, "trainer", text,
         notify=notification_service.WEEKLY_REPORT,
+        report_week_start=week.isoformat(),
     )
 
 
@@ -1881,7 +1882,7 @@ async def trainer_send_report_pdf(
     link = _require_client(db, trainer.id, member_id)
     if not link.active:
         raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
-    _report_week(week_start)
+    week = _report_week(week_start)
     text = message.strip() or "이번 주 리포트입니다."
 
     # 재시도는 기존 메시지를 바로 돌려줘 파일을 다시 쓰지 않는다.
@@ -1928,6 +1929,7 @@ async def trainer_send_report_pdf(
             attachment_file_name=display_name,
             attachment_file_id=file_id,
             attachment_file_size=len(data),
+            report_week_start=week.isoformat(),
         )
         # 동시 재시도 두 건이 모두 사전 조회를 통과할 수 있다. DB 멱등키에서
         # 진 요청이 기존 메시지를 반환했다면, 그 요청이 쓴 여분 파일을 지운다.

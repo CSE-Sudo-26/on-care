@@ -1751,7 +1751,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatReportOpenInReports.
   ///
   /// In en, this message translates to:
-  /// **'Open in Reports'**
+  /// **'Go to Reports'**
   String get chatReportOpenInReports;
 
   /// No description provided for @chatLoadFailed.
