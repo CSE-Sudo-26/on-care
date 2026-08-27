@@ -4355,7 +4355,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiAppliedToTemplate.
   ///
   /// In en, this message translates to:
-  /// **'The AI routine was applied to the program info. Review it below, edit if needed, then send it.'**
+  /// **'Applied the AI routine to the program info'**
   String get aiAppliedToTemplate;
 
   /// No description provided for @aiStepConditions.

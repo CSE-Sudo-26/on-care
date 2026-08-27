@@ -1,9 +1,12 @@
-/// 토스트 너비 규칙. (#1466, #1571)
+/// 토스트 너비 규칙. (#1466, #1571, #1573)
 ///
 /// 동작 버튼이 있든 없든 토스트는 내용만큼만 넓다 — `추천하지 않아요` 한 줄짜리
 /// 말이나 `리포트를 보냈어요` + `채팅으로 이동` 조합이나 최대 너비(560)를
 /// 고정으로 채우면 짧은 말이 크게 보이고, 버튼이 텍스트에서 멀리 떨어진
 /// 오른쪽 빈 자리에 걸린다. 버튼은 텍스트 바로 오른쪽 끝에 간격을 두고 붙는다.
+///
+/// 메시지가 최대 너비를 넘어도 두 번째 줄로 넘어가지 않는다 — 항상 한 줄로
+/// 서고, 넘치는 부분은 말줄임표로 자른다.
 library;
 
 import 'package:flutter/material.dart';
@@ -44,6 +47,29 @@ void main() {
       matching: find.byType(Material),
     );
     return tester.getSize(pill.first).width;
+  }
+
+  /// 토스트를 띄우고 그 알약(Material)의 높이를 잰다.
+  Future<double> toastHeight(WidgetTester tester, String message) async {
+    late BuildContext ctx;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (BuildContext context) {
+            ctx = context;
+            return const Scaffold(body: SizedBox.expand());
+          },
+        ),
+      ),
+    );
+    AppToastHost.of(ctx).show(message);
+    await tester.pumpAndSettle();
+
+    final Finder pill = find.ancestor(
+      of: find.text(message),
+      matching: find.byType(Material),
+    );
+    return tester.getSize(pill.first).height;
   }
 
   testWidgets('동작 버튼이 없는 짧은 토스트는 내용 너비로 선다', (tester) async {
@@ -140,5 +166,16 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('아무리 길어도 두 줄로 넘어가지 않는다', (tester) async {
+    final double oneLine = await toastHeight(tester, '저장했어요');
+    final double veryLong = await toastHeight(
+      tester,
+      'AI 루틴이 프로그램 정보에 반영됐어요. 아래에서 확인하고 필요하면 수정한 뒤 '
+      '보내기로 전달하세요. 이 문구는 한 줄 높이를 훌쩍 넘길 만큼 깁니다.',
+    );
+
+    expect(veryLong, oneLine);
   });
 }
