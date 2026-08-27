@@ -156,6 +156,16 @@ Widget _sheetHandle() => Container(
   ),
 );
 
+/// 시트 바닥의 동작 버튼 높이. `저장하기`·`취소` 가 폭만 다르고 세로는 같아야
+/// 한 행으로 읽힌다(#1564).
+const double _actionHeight = 48;
+
+/// 그램 수치 한 줄. 소수 첫째 자리까지만, 정수는 콤마만 — 칼로리·나트륨 행과
+/// 같은 서식이다. 당류와 탄·단·지가 이 함수를 같이 쓴다(#1564).
+String _gramsText(double grams) => grams == grams.roundToDouble()
+    ? NumberFormat('#,###').format(grams)
+    : NumberFormat('#,##0.#').format(grams);
+
 // ─────────────────────────────────────────────────── 식단 추가하기 ──
 
 /// 고른 사진과 끼니. 사진 선택 시트가 닫히면서 부르는 쪽에 넘긴다.
@@ -601,11 +611,20 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
     _run();
   }
 
+  /// 분석 중 화면을 최소한 이만큼은 보여 준다.
+  ///
+  /// 데모(로컬 인터셉터)와 캐시된 재시도는 응답이 즉시 온다. 그대로 두면
+  /// 결과가 촬영 직후 튀어나와 AI 가 무엇을 했는지 보이지 않는다(#1564).
+  /// 실제 분석이 더 걸리면 기다린 만큼이 그대로 노출 시간이라 이 값은
+  /// 아무 일도 하지 않는다 — 늦추는 것이 아니라 바닥을 깔아 두는 값이다.
+  static const Duration _minAnalyzing = Duration(milliseconds: 2200);
+
   Future<void> _run() async {
     setState(() {
       _loading = true;
       _failure = null;
     });
+    final Stopwatch elapsed = Stopwatch()..start();
     try {
       final DietAnalysisResult result = await ref
           .read(dietRepositoryProvider)
@@ -620,17 +639,43 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
       ref.invalidate(dietByDateProvider(nowKst()));
+      await _holdAnalyzing(elapsed);
+      if (!mounted) return;
       setState(() {
         _result = result;
         _loading = false;
       });
     } on Object catch (error) {
       if (!mounted) return;
+      // 실패도 같은 바닥을 쓴다 — 즉시 튀어나오는 실패 문구는 사진을 보지도
+      // 않고 거절한 것처럼 읽힌다.
+      await _holdAnalyzing(elapsed);
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _failure = DietAnalysisFailure.fromError(error);
       });
     }
+  }
+
+  /// [_minAnalyzing] 에서 이미 지난 만큼을 뺀 나머지를 기다린다.
+  Future<void> _holdAnalyzing(Stopwatch elapsed) {
+    final Duration left = _minAnalyzing - elapsed.elapsed;
+    if (left <= Duration.zero) return Future<void>.value();
+    return Future<void>.delayed(left);
+  }
+
+  /// 인식 결과를 고치러 그 기록의 수정 화면으로 간다. (#1564)
+  ///
+  /// 분석이 끝난 시점에 기록은 이미 저장돼 있으므로 여기서 새로 저장할 것은
+  /// 없다. 시트는 `false` 로 닫는다 — `true` 는 부르는 쪽에 "식단 탭으로
+  /// 옮겨 가라" 는 뜻이라, 수정 화면을 여는 것과 탭 이동이 겹친다.
+  void _openEdit() {
+    final DietAnalysisResult? result = _result;
+    if (result == null || result.entryId.isEmpty) return;
+    final GoRouter router = GoRouter.of(context);
+    Navigator.of(context).pop(false);
+    unawaited(router.push<void>(AppRoutes.dietEntryDetailPath(result.entryId)));
   }
 
   /// 기록 날짜를 고쳐 그 날의 식단으로 옮긴다. (#1241)
@@ -792,7 +837,8 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                     ],
                   ),
                 ),
-                _CircleClose(onTap: () => Navigator.of(context).pop()),
+                // 닫기는 아래 `취소` 버튼 하나로 모은다 — 머리의 X 와 둘이
+                // 있으면 같은 일을 하는 자리가 화면에 둘이다(#1564).
               ],
             ),
           ),
@@ -800,7 +846,8 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           // 작은 화면에서는 버튼이 시트 밖으로 밀렸다(#1432).
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              // 아래 여백이 없으면 버튼이 시트 끝에 붙는다(#1564).
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
               child: _body(),
             ),
           ),
@@ -815,17 +862,16 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Column(
+          key: const Key('diet-result-analyzing'),
           children: <Widget>[
-            const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(strokeWidth: 3),
-            ),
-            const SizedBox(height: 14),
+            const _AnalyzingPulse(),
+            const SizedBox(height: 18),
             Text(
               l.dietAnalyzingBody,
               style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
+            const SizedBox(height: 10),
+            const _AnalyzingDots(),
           ],
         ),
       );
@@ -884,29 +930,54 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       children: <Widget>[
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
           decoration: BoxDecoration(
             color: FigmaColors.softBlue,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: <Widget>[
-              Text(
-                l.dietRecognizedFood,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.primary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l.dietRecognizedFood,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      recognized.isEmpty ? l.dietNoRecognizedFood : recognized,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                recognized.isEmpty ? l.dietNoRecognizedFood : recognized,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
+              // 잘못 읽은 메뉴를 그 자리에서 고치러 간다(#1564). 인식 결과 옆이
+              // 아니면 저장한 뒤 목록에서 다시 찾아 들어가야 한다.
+              TextButton(
+                key: const Key('diet-result-edit'),
+                onPressed: r.entryId.isEmpty ? null : _openEdit,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  l.actionEdit,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.primary,
+                  ),
                 ),
               ),
             ],
@@ -989,7 +1060,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
         const SizedBox(height: 8),
         _ResultRow(
           label: l.dietSugar,
-          value: '${r.totalSugarG}',
+          // 서버가 준 double 을 그대로 문자열로 만들면 29.497999999999998 이
+          // 찍힌다 — 칼로리·나트륨과 같은 서식으로 맞춘다(#1564).
+          value: _gramsText(r.totalSugarG),
           unit: l.dietUnitG,
         ),
         const SizedBox(height: 8),
@@ -1041,26 +1114,68 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           ),
         ],
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop(true);
-              showAppToast(context, l.dietSaved, kind: AppToastKind.success);
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: FigmaColors.primary,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+        // 저장하기가 넓고 취소가 좁다 — 둘이 같은 폭이면 무엇이 기본 동작인지
+        // 사라진다. 세로는 같게 맞춘다(#1564).
+        Row(
+          children: <Widget>[
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: _actionHeight,
+                child: FilledButton(
+                  key: const Key('diet-result-save'),
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                    showAppToast(
+                      context,
+                      l.dietSaved,
+                      kind: AppToastKind.success,
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: FigmaColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    l.dietSaveEntry,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
             ),
-            icon: const Icon(Icons.check, size: 16),
-            label: Text(
-              l.dietDone,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: _actionHeight,
+                child: OutlinedButton(
+                  key: const Key('diet-result-cancel'),
+                  // 머리에 있던 X 와 같은 동작 — 저장은 이미 끝났고, 이 버튼은
+                  // 시트를 닫기만 한다.
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: FigmaColors.primary,
+                    side: const BorderSide(color: FigmaColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    l.dietCancel,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -1069,9 +1184,12 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
 
 /// 탄·단·지 한 줄. 값 셋이 한 칼로리를 나눈 것이라 한 상자 안에 나란히 선다.
 ///
-/// 색은 기간 그래프가 쓰는 브랜드 색의 농담 셋이다 — 같은 세 값이 화면마다
-/// 다른 색이면 색이 뜻을 잃는다. 서버가 0 을 주면 0 을 적는다: 값을 감추면
-/// 분석이 그 영양소를 재지 못한 것인지 정말 0 인지 알 수 없다.
+/// 색 네모(그래프 범례)는 두지 않는다 — 이 줄에는 대응하는 그래프가 없어
+/// 색이 가리킬 곳이 없고, 라벨만 오른쪽으로 밀어냈다(#1564). 수치는 칼로리·
+/// 나트륨·당류 행과 같은 규칙이다: 숫자는 파랑 볼드, 단위는 회색.
+///
+/// 서버가 0 을 주면 0 을 적는다: 값을 감추면 분석이 그 영양소를 재지 못한
+/// 것인지 정말 0 인지 알 수 없다.
 class _MacroRow extends StatelessWidget {
   const _MacroRow({
     super.key,
@@ -1087,15 +1205,11 @@ class _MacroRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final List<({String label, double grams, Color color})> parts =
-        <({String label, double grams, Color color})>[
-          (label: l.homeMacroCarbs, grams: carbsG, color: FigmaColors.macroCarbs),
-          (
-            label: l.homeMacroProtein,
-            grams: proteinG,
-            color: FigmaColors.macroProtein,
-          ),
-          (label: l.homeMacroFat, grams: fatG, color: FigmaColors.macroFat),
+    final List<({String label, double grams})> parts =
+        <({String label, double grams})>[
+          (label: l.homeMacroCarbs, grams: carbsG),
+          (label: l.homeMacroProtein, grams: proteinG),
+          (label: l.homeMacroFat, grams: fatG),
         ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1110,41 +1224,42 @@ class _MacroRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 5),
-                        decoration: BoxDecoration(
-                          color: part.color,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      Flexible(
-                        child: Text(
-                          part.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
                   Text(
-                    '${_macroText(part.grams)}${l.dietUnitG}',
+                    part.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: FigmaColors.ink,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
                     ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          _gramsText(part.grams),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        l.dietUnitG,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1153,11 +1268,122 @@ class _MacroRow extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// 소수 첫째 자리까지만. 정수는 콤마만 — 식단 탭의 다른 수치와 같은 서식이다.
-  static String _macroText(double grams) => grams == grams.roundToDouble()
-      ? NumberFormat('#,###').format(grams)
-      : NumberFormat('#,##0.#').format(grams);
+/// 분석 중 링. 브랜드 색 링이 돌면서 옅은 원이 함께 숨을 쉰다 — 멈춘 그림이
+/// 아니라 지금 무언가 돌아가고 있다는 신호다(#1564).
+class _AnalyzingPulse extends StatefulWidget {
+  const _AnalyzingPulse();
+
+  @override
+  State<_AnalyzingPulse> createState() => _AnalyzingPulseState();
+}
+
+class _AnalyzingPulseState extends State<_AnalyzingPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 64,
+      height: 64,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          AnimatedBuilder(
+            animation: _c,
+            builder: (BuildContext context, Widget? child) {
+              final double t = Curves.easeInOut.transform(_c.value);
+              return Container(
+                width: 40 + 20 * t,
+                height: 40 + 20 * t,
+                decoration: BoxDecoration(
+                  color: FigmaColors.softBlue.withValues(alpha: 1 - 0.7 * t),
+                  shape: BoxShape.circle,
+                ),
+              );
+            },
+          ),
+          const SizedBox(
+            width: 30,
+            height: 30,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: FigmaColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 분석 중 점 셋. 차례로 밝아지며 흐른다.
+class _AnalyzingDots extends StatefulWidget {
+  const _AnalyzingDots();
+
+  @override
+  State<_AnalyzingDots> createState() => _AnalyzingDotsState();
+}
+
+class _AnalyzingDotsState extends State<_AnalyzingDots>
+    with SingleTickerProviderStateMixin {
+  static const int _count = 3;
+
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1050),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (BuildContext context, Widget? child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            for (int i = 0; i < _count; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Opacity(
+                  // 점마다 위상을 어긋내 한 방향으로 흐르게 한다.
+                  opacity: 0.25 + 0.75 * _wave((_c.value + i / _count) % 1.0),
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: FigmaColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 0→1→0 한 번. 앞뒤가 이어져야 매 바퀴 눈에 띄는 끊김이 없다.
+  static double _wave(double t) =>
+      Curves.easeInOut.transform(t < 0.5 ? t * 2 : (1 - t) * 2);
 }
 
 class _ResultRow extends StatelessWidget {
