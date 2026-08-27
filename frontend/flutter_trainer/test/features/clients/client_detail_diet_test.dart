@@ -481,10 +481,10 @@ void main() {
           .firstWhere((c) => c.id == 'seed-client-1');
       final over = minsu.sodiumOverDays;
       final expectedText = over >= 3
-          ? '이번 주 $over일이나 나트륨 권장량을 넘었어요'
+          ? '이번 주 $over일이나 나트륨을 넘겼어요'
           : over > 0
           ? '이번 주 $over일만 권장량을 넘었어요'
-          : '이번 주 내내 나트륨을 권장량 안에서 지켰어요';
+          : '나트륨을 권장량 안에서 지켰어요';
 
       // 오늘 문장은 사라지고, 그 자리에 이번 주를 읽은 문장이 온다.
       expect(find.textContaining('나트륨이 목표치를'), findsNothing);
