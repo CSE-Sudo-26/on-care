@@ -114,7 +114,7 @@ void main() {
       expect(find.textContaining('고객을 삭제할까요?'), findsNothing);
     });
 
-    testWidgets('확인한 고객은 관리 화면에서 즉시 사라진다', (tester) async {
+    testWidgets('담당 종료한 고객은 관리 화면에 미등록으로 남는다', (tester) async {
       await openTab(tester);
 
       final management = find.text('고객 관리');
@@ -126,11 +126,18 @@ void main() {
       expect(before, greaterThan(0));
       await tester.tap(find.byTooltip('고객 삭제').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('고객 삭제'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('고객 삭제'),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('고객을 삭제했어요'), findsOneWidget);
       expect(find.byTooltip('고객 삭제'), findsNWidgets(before - 1));
+      expect(find.textContaining('미등록'), findsWidgets);
+      expect(find.byTooltip('다시 등록'), findsOneWidget);
     });
 
     testWidgets('로그아웃 returns to the login screen', (tester) async {

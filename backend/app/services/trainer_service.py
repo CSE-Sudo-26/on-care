@@ -376,12 +376,14 @@ def build_roster(
         member = members.get(link.member_id)
         if member is None:
             continue
-        diet_rows = diet_by_member.get(link.member_id, [])
+        # 미등록 관계는 고객 관리의 이름·상태만 남긴다. 회원 원본 데이터는
+        # 보존하되 트레이너에게 다시 노출하지 않는다.
+        diet_rows = diet_by_member.get(link.member_id, []) if link.active else []
         calories, sodium_mg, sugar_g, carbs_g, protein_g, fat_g = _today_totals(
             diet_rows, today_str
         )
-        last_msg = last_msg_by.get(link.member_id)
-        last_rt = last_rt_by.get(link.member_id)
+        last_msg = last_msg_by.get(link.member_id) if link.active else None
+        last_rt = last_rt_by.get(link.member_id) if link.active else None
 
         out.append(TrainerClientOut(
             id=link.member_id,
@@ -393,6 +395,7 @@ def build_roster(
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
             last_message_at=last_msg.created_at if last_msg else None,
             active=_roster_active(link),
+            registered=link.active,
             calories=calories,
             sodium_mg=sodium_mg,
             sugar_g=sugar_g,
@@ -403,7 +406,9 @@ def build_roster(
                 relative_day_label(_local_date_iso(last_rt.created_at))
                 if last_rt else "-"
             ),
-            week_completion=_week_completion(hist_by_member.get(link.member_id, []), monday),
+            week_completion=_week_completion(
+                hist_by_member.get(link.member_id, []) if link.active else [], monday
+            ),
             sodium_week=_sodium_week(diet_rows, monday),
             calories_week=_calories_week(diet_rows, monday),
             sugar_week=_sugar_week(diet_rows, monday),
@@ -886,7 +891,24 @@ def remove_client(db: Session, link: TrainerClient) -> None:
     프로그램·루틴, 리포트, PT 이력과 대화 원본은 삭제하지 않으므로 회원 앱에서는
     기존 기록을 계속 볼 수 있다.
     """
-    db.delete(link)
+    link.active = False
+    db.commit()
+
+
+def restore_client(db: Session, link: TrainerClient) -> None:
+    """과거 담당 관계를 다시 등록 상태로 전환한다."""
+    if link.active:
+        return
+    occupied = db.scalar(
+        select(TrainerClient.id).where(
+            TrainerClient.member_id == link.member_id,
+            TrainerClient.active.is_(True),
+        )
+    )
+    if occupied is not None:
+        raise ClientLinkDetached("이미 다른 트레이너가 담당 중인 회원입니다.")
+    link.active = True
+    link.dormant = False
     db.commit()
 
 
@@ -2625,6 +2647,7 @@ def build_schedule_range(
                 select(TrainerClient.id).where(
                     TrainerClient.trainer_id == trainer_id,
                     TrainerClient.member_id == TrainerSchedule.member_id,
+                    TrainerClient.active.is_(True),
                 )
             ),
         ),
@@ -2661,6 +2684,7 @@ def booked_dates(db: Session, trainer_id: str) -> list[str]:
                     select(TrainerClient.id).where(
                         TrainerClient.trainer_id == trainer_id,
                         TrainerClient.member_id == TrainerSchedule.member_id,
+                        TrainerClient.active.is_(True),
                     )
                 ),
             ),

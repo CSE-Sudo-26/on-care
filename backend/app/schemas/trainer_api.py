@@ -81,6 +81,8 @@ class TrainerClientOut(BaseModel):
     #: 트레이너 화면의 활성/휴면 배지. 담당 관계가 살아 있고(`TrainerClient.active`)
     #: 트레이너가 휴면으로 내리지 않은(`dormant=False`) 회원만 True 다. (#707)
     active: bool
+    #: 현재 담당 관계가 등록 상태인지. `active`(활성/휴면 관리 표시)와 별개다.
+    registered: bool = True
     calories: int                # 오늘 총 칼로리(회원 실데이터)
     sodium_mg: int               # 오늘 총 나트륨
     sugar_g: float               # 오늘 총 당류(소수)

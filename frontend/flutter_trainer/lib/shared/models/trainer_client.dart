@@ -37,6 +37,7 @@ class TrainerClient {
     required this.lastTime,
     this.lastMessageAt,
     required this.active,
+    this.registered = true,
     required this.calories,
     required this.sodiumMg,
     required this.sugarG,
@@ -83,6 +84,9 @@ class TrainerClient {
 
   /// Whether the client is currently active.
   final bool active;
+
+  /// Whether this trainer currently has an assigned relationship.
+  final bool registered;
 
   /// Today's total calories (kcal).
   final int calories;

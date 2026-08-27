@@ -194,6 +194,8 @@ Override stillRoster() =>
 
 /// 아무것도 돌려주지 않고 아무 타이머도 걸지 않는 명단 저장소.
 class _StillClientRepository implements ClientRepository {
+  @override
+  Future<void> restoreClient(String id) async {}
   const _StillClientRepository();
 
   @override

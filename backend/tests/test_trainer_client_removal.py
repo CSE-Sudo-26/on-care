@@ -112,11 +112,14 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
 
         db_session.expire_all()
         assert db_session.get(User, member_id) is not None
-        assert db_session.get(TrainerClient, link_id) is None
+        detached = db_session.get(TrainerClient, link_id)
+        assert detached is not None
+        assert detached.active is False
         for model, row_id in expected_preserved:
             assert db_session.get(model, row_id) is not None
         roster = client.get("/v1/trainer/clients", headers=_headers(token)).json()
-        assert member_id not in {row["id"] for row in roster}
+        roster_row = next(row for row in roster if row["id"] == member_id)
+        assert roster_row["registered"] is False
         schedule = client.get(
             "/v1/trainer/schedule",
             params={"date": "2026-08-27"},
@@ -127,8 +130,19 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
             f"/v1/trainer/clients/{member_id}", headers=_headers(token)
         )
         assert repeated.status_code == 404
+
+        restored = client.put(
+            f"/v1/trainer/clients/{member_id}/registration", headers=_headers(token)
+        )
+        assert restored.status_code == 204
+        roster = client.get("/v1/trainer/clients", headers=_headers(token)).json()
+        roster_row = next(row for row in roster if row["id"] == member_id)
+        assert roster_row["registered"] is True
     finally:
         db_session.expire_all()
+        saved_link = db_session.get(TrainerClient, link_id)
+        if saved_link is not None:
+            db_session.delete(saved_link)
         for model, row_id in reversed(expected_preserved):
             row = db_session.get(model, row_id)
             if row is not None:

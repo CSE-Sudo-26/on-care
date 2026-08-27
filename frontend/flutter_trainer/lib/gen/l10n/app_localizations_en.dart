@@ -2055,6 +2055,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myClientManagementEmpty => 'No clients assigned';
 
   @override
+  String get myClientRegistered => 'Registered';
+
+  @override
+  String get myClientUnregistered => 'Unregistered';
+
+  @override
+  String get myClientRestore => 'Register again';
+
+  @override
+  String get myClientRestoreSuccess => 'Client registered again';
+
+  @override
+  String get myClientRestoreFailed =>
+      'Couldn\'t register the client again. Please try again';
+
+  @override
   String get myStatSessionsDone => 'Sessions done';
 
   @override
