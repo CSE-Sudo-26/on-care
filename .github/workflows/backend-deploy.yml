@@ -29,7 +29,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ap-northeast-2
+  # Keep App Runner and the Neon database in Singapore to avoid cross-region
+  # latency and data transfer for the demo environment.
+  AWS_REGION: ${{ vars.AWS_BACKEND_REGION || 'ap-southeast-1' }}
   ECR_REPOSITORY: oncare-backend
 
 jobs:

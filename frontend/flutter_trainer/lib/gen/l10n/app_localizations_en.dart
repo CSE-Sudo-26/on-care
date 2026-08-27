@@ -2030,6 +2030,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myStatClients => 'Clients';
 
   @override
+  String get myClientManagement => 'Client management';
+
+  @override
+  String get myClientManagementHint =>
+      'Remove clients whose coaching relationship has ended';
+
+  @override
+  String get myClientRemove => 'Remove client';
+
+  @override
+  String myClientRemoveTitle(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get myClientRemoveBody =>
+      'The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.';
+
+  @override
+  String get myClientRemoveSuccess => 'Client removed';
+
+  @override
+  String get myClientRemoveFailed =>
+      'Couldn\'t remove the client. Please try again';
+
+  @override
+  String get myClientManagementEmpty => 'No clients assigned';
+
+  @override
   String get myStatSessionsDone => 'Sessions done';
 
   @override

@@ -1944,6 +1944,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myStatClients => '담당 고객';
 
   @override
+  String get myClientManagement => '고객 관리';
+
+  @override
+  String get myClientManagementHint => '담당이 끝난 고객을 명단에서 삭제할 수 있어요';
+
+  @override
+  String get myClientRemove => '고객 삭제';
+
+  @override
+  String myClientRemoveTitle(String name) {
+    return '$name 고객을 삭제할까요?';
+  }
+
+  @override
+  String get myClientRemoveBody =>
+      '담당 관계가 해제되어 고객 정보에 더 이상 접근할 수 없어요. 고객 계정과 기록은 삭제되지 않아요.';
+
+  @override
+  String get myClientRemoveSuccess => '고객을 삭제했어요';
+
+  @override
+  String get myClientRemoveFailed => '고객을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get myClientManagementEmpty => '담당 고객이 없어요';
+
+  @override
   String get myStatSessionsDone => '완료 세션';
 
   @override

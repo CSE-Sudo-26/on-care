@@ -110,6 +110,9 @@ abstract interface class ClientRepository {
   /// **not** an unassignment — the member keeps their coach and every record
   /// behind the link (#707).
   Future<void> setClientActive(String id, bool active);
+
+  /// Removes the trainer-client assignment without deleting member data.
+  Future<void> removeClient(String id);
 }
 
 /// Reads client + schedule data from the local drift DB for the
@@ -252,6 +255,11 @@ class DriftClientRepository implements ClientRepository {
     await (_db.update(_db.trainerClients)..where((t) => t.id.equals(id))).write(
       TrainerClientsCompanion(active: Value(active)),
     );
+  }
+
+  @override
+  Future<void> removeClient(String id) async {
+    await (_db.delete(_db.trainerClients)..where((t) => t.id.equals(id))).go();
   }
 
   @override
