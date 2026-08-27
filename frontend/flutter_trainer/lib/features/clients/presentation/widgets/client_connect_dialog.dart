@@ -37,15 +37,7 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 /// 같은 형식을 쓴다. 바닥에서 올라오는 시트로 두면 같은 성격의 두 진입점이
 /// 서로 다른 화면처럼 읽힌다.
 class ClientConnectDialog extends ConsumerStatefulWidget {
-  const ClientConnectDialog({super.key, this.initialMemberId});
-
-  /// Pre-fills the 회원 ID field and runs the lookup immediately — used
-  /// when 고객 관리 reopens this same "새 회원 등록" flow for a client whose
-  /// 담당 관계 was removed. 미등록 고객을 되살리는 지름길 버튼을 따로 두지
-  /// 않는 것은 의도다: 다시 등록도 회원 ID를 확인하고 눌러야 하는 신규
-  /// 등록과 같은 절차를 거쳐야, 다른 사람의 계정을 잘못 연결하는 사고를
-  /// 신규 등록과 똑같이 막을 수 있다.
-  final String? initialMemberId;
+  const ClientConnectDialog({super.key});
 
   @override
   ConsumerState<ClientConnectDialog> createState() =>
@@ -59,18 +51,6 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
   MemberLookup? _found;
   String? _error;
   bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final initial = widget.initialMemberId;
-    if (initial != null && initial.isNotEmpty) {
-      _memberId.text = initial;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _lookup();
-      });
-    }
-  }
 
   @override
   void dispose() {

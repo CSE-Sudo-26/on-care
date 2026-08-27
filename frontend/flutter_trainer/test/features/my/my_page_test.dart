@@ -114,7 +114,7 @@ void main() {
       expect(find.textContaining('고객을 삭제할까요?'), findsNothing);
     });
 
-    testWidgets('담당 종료한 고객은 관리 화면에 미등록으로 남는다', (tester) async {
+    testWidgets('담당 종료한 고객은 관리 화면에서 완전히 사라진다', (tester) async {
       await openTab(tester);
 
       final management = find.text('고객 관리');
@@ -124,6 +124,8 @@ void main() {
 
       final before = find.byTooltip('고객 삭제').evaluate().length;
       expect(before, greaterThan(0));
+      expect(find.text('김민수'), findsWidgets);
+
       await tester.tap(find.byTooltip('고객 삭제').first);
       await tester.pumpAndSettle();
       await tester.tap(
@@ -135,48 +137,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('고객을 삭제했어요'), findsOneWidget);
+      // 미등록 상태로 목록에 남지 않는다 — 다시 잡으려면 고객 탭의
+      // "신규 고객 등록"에서 회원 ID로 새로 찾아야 한다. 여기에는 그
+      // 지름길(다시 등록 버튼, 미등록 표시)이 아예 없다.
       expect(find.byTooltip('고객 삭제'), findsNWidgets(before - 1));
-      expect(find.textContaining('미등록'), findsWidgets);
-      expect(find.byTooltip('다시 등록'), findsOneWidget);
-    });
-
-    testWidgets('미등록 고객의 다시 등록은 새 회원 등록과 같은 창을 연다', (tester) async {
-      await openTab(tester);
-
-      final management = find.text('고객 관리');
-      await tester.scrollUntilVisible(management, 200);
-      await tester.tap(management);
-      await tester.pumpAndSettle();
-
-      // 김민수(seed-client-1)를 삭제한다 — 실 계정 id로 조회되는 유일한
-      // 데모 고객이라 재등록 시나리오를 여기로 고정한다.
-      await tester.tap(find.byTooltip('고객 삭제').first);
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.text('고객 삭제'),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byTooltip('다시 등록'));
-      await tester.pumpAndSettle();
-
-      // 회원 ID가 이미 채워져 조회까지 자동으로 끝난 상태다 — 그래도
-      // 신규 등록과 똑같이 이름을 확인하는 카드를 거친 뒤에만 등록된다.
-      expect(find.text('신규 고객 등록'), findsOneWidget);
-      expect(find.text('김민수'), findsWidgets);
-      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
-      final registerButton = find.text('고객 등록');
-      expect(registerButton, findsOneWidget);
-
-      await tester.tap(registerButton);
-      await tester.pumpAndSettle();
-
-      expect(find.text('김민수님을 고객으로 등록했어요'), findsOneWidget);
-      // 새 행이 아니라 같은 고객이 되살아나 다시 등록 상태로 돌아온다.
+      expect(find.textContaining('미등록'), findsNothing);
       expect(find.byTooltip('다시 등록'), findsNothing);
+      expect(find.text('김민수'), findsNothing);
     });
 
     testWidgets('로그아웃 returns to the login screen', (tester) async {

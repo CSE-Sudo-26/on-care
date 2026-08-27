@@ -3644,24 +3644,6 @@ abstract class AppLocalizations {
   /// **'No clients assigned'**
   String get myClientManagementEmpty;
 
-  /// No description provided for @myClientRegistered.
-  ///
-  /// In en, this message translates to:
-  /// **'Registered'**
-  String get myClientRegistered;
-
-  /// No description provided for @myClientUnregistered.
-  ///
-  /// In en, this message translates to:
-  /// **'Unregistered'**
-  String get myClientUnregistered;
-
-  /// No description provided for @myClientRestore.
-  ///
-  /// In en, this message translates to:
-  /// **'Register again'**
-  String get myClientRestore;
-
   /// No description provided for @myStatSessionsDone.
   ///
   /// In en, this message translates to:
