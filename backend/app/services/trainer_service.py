@@ -16,7 +16,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, or_, select, tuple_, update
+from sqlalchemy import exists, func, or_, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
@@ -880,11 +880,11 @@ class ClientLinkDetached(Exception):
 
 
 def remove_client(db: Session, link: TrainerClient) -> None:
-    """트레이너의 담당 고객 관계를 해제한다.
+    """담당 목록에서만 제거하고 회원이 보는 공유 데이터는 보존한다.
 
-    로스터는 해제된 링크도 과거 고객으로 보여 주므로 관계 행을 삭제해야 고객 관리
-    명단에서 실제로 사라진다. 대화·일정·기록은 링크 id가 아니라 trainer/member id를
-    직접 참조하므로 그대로 보존되며, 회원 계정과 회원 원본 데이터도 건드리지 않는다.
+    관계 행이 사라지면 트레이너의 고객 기반 화면과 권한에서 제외된다. 스케줄,
+    프로그램·루틴, 리포트, PT 이력과 대화 원본은 삭제하지 않으므로 회원 앱에서는
+    기존 기록을 계속 볼 수 있다.
     """
     db.delete(link)
     db.commit()
@@ -2619,6 +2619,15 @@ def build_schedule_range(
         TrainerSchedule.trainer_id == trainer_id,
         TrainerSchedule.date >= from_day,
         TrainerSchedule.date <= to_day,
+        or_(
+            TrainerSchedule.member_id.is_(None),
+            exists(
+                select(TrainerClient.id).where(
+                    TrainerClient.trainer_id == trainer_id,
+                    TrainerClient.member_id == TrainerSchedule.member_id,
+                )
+            ),
+        ),
     ]
     if member_id is not None:
         conditions.append(TrainerSchedule.member_id == member_id)
@@ -2646,6 +2655,15 @@ def booked_dates(db: Session, trainer_id: str) -> list[str]:
             TrainerSchedule.trainer_id == trainer_id,
             TrainerSchedule.status != "공백",
             TrainerSchedule.date >= cutoff,
+            or_(
+                TrainerSchedule.member_id.is_(None),
+                exists(
+                    select(TrainerClient.id).where(
+                        TrainerClient.trainer_id == trainer_id,
+                        TrainerClient.member_id == TrainerSchedule.member_id,
+                    )
+                ),
+            ),
         )
         .distinct()
     ).all()

@@ -96,16 +96,41 @@ void main() {
     testWidgets('고객 삭제 전 이름과 데이터 보존 범위를 확인한다', (tester) async {
       await openTab(tester);
 
+      final management = find.text('고객 관리');
+      await tester.scrollUntilVisible(management, 200);
+      await tester.tap(management);
+      await tester.pumpAndSettle();
+      expect(currentLocation(tester), AppRoutes.mySection('clients'));
+
       final remove = find.byTooltip('고객 삭제').first;
-      await tester.scrollUntilVisible(remove, 200);
       await tester.tap(remove);
       await tester.pumpAndSettle();
 
       expect(find.textContaining('고객을 삭제할까요?'), findsOneWidget);
-      expect(find.textContaining('고객 계정과 기록은 삭제되지 않아요'), findsOneWidget);
+      expect(find.textContaining('스케줄, 프로그램·루틴, 리포트, 메시지, 메모'), findsOneWidget);
+      expect(find.textContaining('고객 앱의 기존 데이터는 삭제되지 않아요'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       expect(find.textContaining('고객을 삭제할까요?'), findsNothing);
+    });
+
+    testWidgets('확인한 고객은 관리 화면에서 즉시 사라진다', (tester) async {
+      await openTab(tester);
+
+      final management = find.text('고객 관리');
+      await tester.scrollUntilVisible(management, 200);
+      await tester.tap(management);
+      await tester.pumpAndSettle();
+
+      final before = find.byTooltip('고객 삭제').evaluate().length;
+      expect(before, greaterThan(0));
+      await tester.tap(find.byTooltip('고객 삭제').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('고객 삭제'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('고객을 삭제했어요'), findsOneWidget);
+      expect(find.byTooltip('고객 삭제'), findsNWidgets(before - 1));
     });
 
     testWidgets('로그아웃 returns to the login screen', (tester) async {

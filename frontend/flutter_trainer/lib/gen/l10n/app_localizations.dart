@@ -521,7 +521,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashActivityRecommendRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Try adjusting the routine in Program.'**
+  /// **'Try adjusting the program setup.'**
   String get dashActivityRecommendRoutine;
 
   /// No description provided for @dashActivityRecommendChat.
@@ -1817,7 +1817,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatInsightNegativeDescription.
   ///
   /// In en, this message translates to:
-  /// **'AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the routine.'**
+  /// **'AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the program.'**
   String get chatInsightNegativeDescription;
 
   /// No description provided for @chatInsightAddMemo.
@@ -2105,25 +2105,25 @@ abstract class AppLocalizations {
   /// No description provided for @routinesAssigned.
   ///
   /// In en, this message translates to:
-  /// **'Assigned routines'**
+  /// **'Assigned programs'**
   String get routinesAssigned;
 
   /// No description provided for @routineNew.
   ///
   /// In en, this message translates to:
-  /// **'New routine'**
+  /// **'New program'**
   String get routineNew;
 
   /// No description provided for @routinesLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t load routines'**
+  /// **'Couldn\'t load programs'**
   String get routinesLoadFailed;
 
   /// No description provided for @routinesEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No routines assigned to this client yet'**
+  /// **'No programs assigned to this client yet'**
   String get routinesEmpty;
 
   /// No description provided for @minutesShort.
@@ -2291,13 +2291,13 @@ abstract class AppLocalizations {
   /// No description provided for @dietAiOverSodium.
   ///
   /// In en, this message translates to:
-  /// **'Sodium is {over}mg over target. Adding cardio to today\'s routine would help.'**
+  /// **'Sodium is {over}mg over target. Adding cardio to today\'s program would help.'**
   String dietAiOverSodium(int over);
 
   /// No description provided for @dietAiBalanced.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s meals are well balanced. Keep the current routine.'**
+  /// **'Today\'s meals are well balanced. Keep the current program.'**
   String get dietAiBalanced;
 
   /// No description provided for @consultStatusRejected.
@@ -2771,7 +2771,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportBodyEncourage.
   ///
   /// In en, this message translates to:
-  /// **'Let\'s focus on just that one thing next week. I\'ll adjust your routine and send it over.'**
+  /// **'Let\'s focus on just that one thing next week. I\'ll adjust your program and send it over.'**
   String get reportBodyEncourage;
 
   /// No description provided for @reportBodyNoRecords.
@@ -3227,7 +3227,7 @@ abstract class AppLocalizations {
   /// No description provided for @progEmptyHint.
   ///
   /// In en, this message translates to:
-  /// **'Build one in the AI routine tab, or agree on it over chat first.'**
+  /// **'Build one in the AI suggestions tab, or agree on it over chat first.'**
   String get progEmptyHint;
 
   /// No description provided for @schedSentTo.
@@ -3503,7 +3503,7 @@ abstract class AppLocalizations {
   /// No description provided for @myLegalTermsBody.
   ///
   /// In en, this message translates to:
-  /// **'This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching routines, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member\'s consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.'**
+  /// **'This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching programs, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member\'s consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.'**
   String get myLegalTermsBody;
 
   /// No description provided for @myLegalPrivacyBody.
@@ -3608,12 +3608,6 @@ abstract class AppLocalizations {
   /// **'Client management'**
   String get myClientManagement;
 
-  /// No description provided for @myClientManagementHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove clients whose coaching relationship has ended'**
-  String get myClientManagementHint;
-
   /// No description provided for @myClientRemove.
   ///
   /// In en, this message translates to:
@@ -3629,7 +3623,7 @@ abstract class AppLocalizations {
   /// No description provided for @myClientRemoveBody.
   ///
   /// In en, this message translates to:
-  /// **'The coaching relationship ends and you will lose access to this client. Their account and records are not deleted.'**
+  /// **'This client\'s schedules, programs and routines, reports, messages, and notes will all disappear from the trainer app. Existing data in the client app is not deleted.'**
   String get myClientRemoveBody;
 
   /// No description provided for @myClientRemoveSuccess.
@@ -3659,7 +3653,7 @@ abstract class AppLocalizations {
   /// No description provided for @myStatRoutinesSent.
   ///
   /// In en, this message translates to:
-  /// **'Routines sent'**
+  /// **'Programs sent'**
   String get myStatRoutinesSent;
 
   /// No description provided for @myGymName.
@@ -4067,7 +4061,7 @@ abstract class AppLocalizations {
   /// No description provided for @coachRequestCustom.
   ///
   /// In en, this message translates to:
-  /// **'Ask AI for a custom routine'**
+  /// **'Ask AI for a custom suggestion'**
   String get coachRequestCustom;
 
   /// No description provided for @coachRequestBlurb.
@@ -4211,7 +4205,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiRoutineSent.
   ///
   /// In en, this message translates to:
-  /// **'Routine sent to {name}'**
+  /// **'Program sent to {name}'**
   String aiRoutineSent(String name);
 
   /// No description provided for @aiExerciseWithMinutes.
@@ -4223,7 +4217,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiCustomRoutineNamed.
   ///
   /// In en, this message translates to:
-  /// **'AI custom routine ({option})'**
+  /// **'AI custom suggestion ({option})'**
   String aiCustomRoutineNamed(String option);
 
   /// No description provided for @aiAnalysing.
@@ -4247,7 +4241,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiRoutineFor.
   ///
   /// In en, this message translates to:
-  /// **'AI routine · {name}'**
+  /// **'AI suggestion · {name}'**
   String aiRoutineFor(String name);
 
   /// No description provided for @aiAnalysedData.
@@ -4427,7 +4421,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiStepperLabel.
   ///
   /// In en, this message translates to:
-  /// **'Custom routine progress'**
+  /// **'Custom suggestion progress'**
   String get aiStepperLabel;
 
   /// No description provided for @coachTemplateSummaryWithGoal.
@@ -4505,13 +4499,13 @@ abstract class AppLocalizations {
   /// No description provided for @aiGenerateGoalBased.
   ///
   /// In en, this message translates to:
-  /// **'Generate goal-based routine'**
+  /// **'Generate goal-based suggestion'**
   String get aiGenerateGoalBased;
 
   /// No description provided for @aiStatusTemplateTitle.
   ///
   /// In en, this message translates to:
-  /// **'Goal-based starter routine'**
+  /// **'Goal-based starter suggestion'**
   String get aiStatusTemplateTitle;
 
   /// No description provided for @aiStatusTemplateBody.
@@ -4643,7 +4637,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientLastRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Last routine'**
+  /// **'Last program'**
   String get clientLastRoutine;
 
   /// No description provided for @metricOverBy.
@@ -4895,7 +4889,7 @@ abstract class AppLocalizations {
   /// No description provided for @routineAlreadyGone.
   ///
   /// In en, this message translates to:
-  /// **'That routine is already gone'**
+  /// **'That program is already gone'**
   String get routineAlreadyGone;
 
   /// No description provided for @workoutPendingTitle.
@@ -4919,49 +4913,49 @@ abstract class AppLocalizations {
   /// No description provided for @routineUpdateFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t update the routine. Please try again in a moment'**
+  /// **'Couldn\'t update the program. Please try again in a moment'**
   String get routineUpdateFailed;
 
   /// No description provided for @routineUpdated.
   ///
   /// In en, this message translates to:
-  /// **'Routine updated'**
+  /// **'Program updated'**
   String get routineUpdated;
 
   /// No description provided for @routineDeleteTitle.
   ///
   /// In en, this message translates to:
-  /// **'Delete this routine?'**
+  /// **'Delete this program?'**
   String get routineDeleteTitle;
 
   /// No description provided for @routineDeleteFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t delete the routine. Please try again in a moment'**
+  /// **'Couldn\'t delete the program. Please try again in a moment'**
   String get routineDeleteFailed;
 
   /// No description provided for @routineDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Routine deleted'**
+  /// **'Program deleted'**
   String get routineDeleted;
 
   /// No description provided for @routineEdit.
   ///
   /// In en, this message translates to:
-  /// **'Edit routine'**
+  /// **'Edit program'**
   String get routineEdit;
 
   /// No description provided for @routineDelete.
   ///
   /// In en, this message translates to:
-  /// **'Delete routine'**
+  /// **'Delete program'**
   String get routineDelete;
 
   /// No description provided for @routineNameRequired.
   ///
   /// In en, this message translates to:
-  /// **'Enter a routine name'**
+  /// **'Enter a program name'**
   String get routineNameRequired;
 
   /// No description provided for @routineNameTooLong.
@@ -4985,7 +4979,7 @@ abstract class AppLocalizations {
   /// No description provided for @routineFieldName.
   ///
   /// In en, this message translates to:
-  /// **'Routine name'**
+  /// **'Program name'**
   String get routineFieldName;
 
   /// No description provided for @routineFieldMinutesLabel.
@@ -5015,7 +5009,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchClientsHint.
   ///
   /// In en, this message translates to:
-  /// **'Clients, goals, recent messages, last routine sent date'**
+  /// **'Clients, goals, recent messages, last program sent date'**
   String get searchClientsHint;
 
   /// No description provided for @searchClear.
@@ -5087,7 +5081,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchDetailLastRoutine.
   ///
   /// In en, this message translates to:
-  /// **'Last routine {when}'**
+  /// **'Last program {when}'**
   String searchDetailLastRoutine(String when);
 
   /// No description provided for @searchDetailCompletion.
@@ -5813,7 +5807,7 @@ abstract class AppLocalizations {
   /// No description provided for @programDraftDeleteBody.
   ///
   /// In en, this message translates to:
-  /// **'Routines you already assigned and sessions you scheduled stay as they are.'**
+  /// **'Programs you already assigned and sessions you scheduled stay as they are.'**
   String get programDraftDeleteBody;
 
   /// No description provided for @programEditorAssignUnsupported.
@@ -6245,7 +6239,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportsActionLowCompletion.
   ///
   /// In en, this message translates to:
-  /// **'Drop the routine a notch so they finish it first.'**
+  /// **'Drop the program a notch so they finish it first.'**
   String get reportsActionLowCompletion;
 
   /// No description provided for @reportsActionHighCompletion.

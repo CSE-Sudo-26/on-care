@@ -106,7 +106,7 @@ void main() {
       // 자를 때는 위험도 순으로 남긴다 — 입력 순서로 자르면 이행률처럼 무거운
       // 항목이 조용히 빠진다(#1430).
       expect(actions.length, 2);
-      expect(actions.first, contains('루틴 난이도'));
+      expect(actions.first, contains('프로그램 난이도'));
       expect(actions.last, contains('국물'));
     });
 

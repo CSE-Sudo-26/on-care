@@ -26,7 +26,7 @@ const List<(ChatSender, String)> kDemoThread = <(ChatSender, String)>[
     '민수님, 지난주 기록 정리해 봤는데 요일마다 이행률이 들쭉날쭉하네요. 바쁜 요일이 정해져 있나요?',
   ),
   (ChatSender.client, '화요일이랑 목요일이 야근이 많아요 😥'),
-  (ChatSender.trainer, '그럼 그 이틀은 15분짜리 짧은 루틴으로 바꿔 둘게요. 안 하는 것보다 훨씬 낫습니다'),
+  (ChatSender.trainer, '그럼 그 이틀은 15분짜리 짧은 프로그램으로 바꿔 둘게요. 안 하는 것보다 훨씬 낫습니다'),
   (ChatSender.client, '그 정도면 퇴근하고도 할 수 있을 것 같아요'),
   (ChatSender.trainer, '혈압약 드시는 시간은 그대로시죠? 유산소가 그 시간과 겹치지 않게 잡을게요'),
   (ChatSender.client, '네, 아침 8시 그대로예요'),
@@ -39,14 +39,14 @@ const List<(ChatSender, String)> kDemoThread = <(ChatSender, String)>[
   (ChatSender.trainer, '국물만 절반 남기셔도 400~500mg은 빠져요. 그거 하나만 먼저 해보죠'),
   (ChatSender.client, '오늘은 국물 안 마셨어요! 걷기도 25분 했습니다'),
   (ChatSender.trainer, '좋아요 👏 그 한 가지만 지켜도 추이가 달라져요'),
-  (ChatSender.trainer, '내일 루틴은 걷기 20분으로 조금 늘려서 보냈어요. 주말까지 이 페이스로 가봐요'),
+  (ChatSender.trainer, '내일 프로그램은 걷기 20분으로 조금 늘려서 보냈어요. 주말까지 이 페이스로 가봐요'),
   (ChatSender.trainer, '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?'),
   (ChatSender.client, '찌개 먹을 때 국물을 많이 마셨나봐요 😅'),
   (ChatSender.trainer, '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?'),
   (ChatSender.client, '무릎이 가볍게 당기긴 했는데 괜찮아요'),
   (
     ChatSender.trainer,
-    '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
+    '확인했어요. AI가 오늘 식단 기반으로 유산소 프로그램을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
   ),
 ];
 

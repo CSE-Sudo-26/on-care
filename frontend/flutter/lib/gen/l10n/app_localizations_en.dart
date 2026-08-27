@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -454,7 +455,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietSaved => 'Meal saved';
 
   @override
-  String get dietDone => 'Done';
+  String get dietSaveEntry => 'Save';
 
   @override
   String get dietSaveFailed => 'Couldn\'t save. Please try again in a moment.';
@@ -1233,7 +1234,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachCardExerciseBody =>
-      'Nice work finishing PT session 12 — keeping up a steady routine is what counts. As your coach advised, take your time with the rotator-cuff shoulder stretches and wind down with light cardio. Afterwards, rest and rehydrate rather than pushing on.';
+      'Nice work finishing PT session 12 — staying consistent is what counts. As your coach advised, take your time with the rotator-cuff shoulder stretches and wind down with light cardio. Afterwards, rest and rehydrate rather than pushing on.';
 
   @override
   String get coachCardWaterTag => 'Hydration';
@@ -2106,7 +2107,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachRoutineGone =>
-      'This routine no longer exists. Please refresh the list';
+      'This program no longer exists. Please refresh the list';
 
   @override
   String get coachRoutineNetworkError => 'Check your connection and try again';

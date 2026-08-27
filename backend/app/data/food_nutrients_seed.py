@@ -1,7 +1,7 @@
 """공공 식품영양성분 DB 큐레이션 시드.
 
 식약처(MFDS) 식품영양성분 데이터베이스 / 국가표준식품성분표를 참고해,
-국내에서 가장 자주 촬영되는 한식·외식 메뉴 40종을 **1회 제공량(1인분) 기준**으로
+국내에서 가장 자주 촬영되는 한식·외식·디저트 메뉴 43종을 **1회 제공량(1인분) 기준**으로
 정리한 대표값이다. 운영에서는 공식 CSV 전체 임포트로 대체(스크립트 예정).
 
 고혈압·당뇨 위험군 특화 서비스이므로 나트륨(sodium_mg)·당류(sugar_g)를 특히 신중히 채웠다.
@@ -9,7 +9,7 @@
 """
 from __future__ import annotations
 
-# name, category, serving_g, kcal, sodium_mg, sugar_g
+# name, category, serving_g, kcal, sodium_mg, sugar_g (+ 탄단지는 있는 항목만)
 FOOD_NUTRIENTS: list[dict] = [
     # --- 밥·분식 ---
     {"name": "공기밥", "category": "밥류", "serving_size_g": 210, "calories": 310, "sodium_mg": 3, "sugar_g": 0},
@@ -58,4 +58,16 @@ FOOD_NUTRIENTS: list[dict] = [
     {"name": "사과", "category": "과일", "serving_size_g": 200, "calories": 100, "sodium_mg": 2, "sugar_g": 20},
     {"name": "바나나", "category": "과일", "serving_size_g": 120, "calories": 105, "sodium_mg": 1, "sugar_g": 14},
     {"name": "식빵", "category": "빵류", "serving_size_g": 70, "calories": 200, "sodium_mg": 380, "sugar_g": 4},
+    # --- 디저트 ---
+    # 요거트 아이스크림 볼은 컵 하나가 베이스 + 과일 + 그래놀라로 갈리므로 세 줄로 둔다.
+    # 한 줄로 묶으면 토핑을 바꾼 컵이 전부 같은 값이 된다.
+    {"name": "요거트 아이스크림", "category": "디저트", "serving_size_g": 110,
+     "calories": 135, "sodium_mg": 55, "sugar_g": 14.5,
+     "carbs_g": 26.0, "protein_g": 3.0, "fat_g": 2.0},
+    {"name": "과일 토핑", "category": "디저트", "serving_size_g": 90,
+     "calories": 55, "sodium_mg": 5, "sugar_g": 9.0,
+     "carbs_g": 13.0, "protein_g": 1.0, "fat_g": 0.5},
+    {"name": "그래놀라 토핑", "category": "디저트", "serving_size_g": 50,
+     "calories": 205, "sodium_mg": 125, "sugar_g": 6.0,
+     "carbs_g": 20.0, "protein_g": 5.0, "fat_g": 11.5},
 ]

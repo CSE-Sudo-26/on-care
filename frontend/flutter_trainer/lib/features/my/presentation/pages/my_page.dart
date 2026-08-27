@@ -67,6 +67,7 @@ class _MyPageState extends ConsumerState<MyPage> {
   bool _saving = false;
   bool _saveFlash = false;
   final Set<String> _removingClients = <String>{};
+  final Set<String> _removedClientIds = <String>{};
   Timer? _flashTimer;
 
   // The "saved" profile (in-memory mock; starts from the seed/session).
@@ -263,6 +264,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     setState(() => _removingClients.add(client.id));
     try {
       await ref.read(clientRepositoryProvider).removeClient(client.id);
+      _removedClientIds.add(client.id);
       ref.invalidate(clientsProvider);
       if (!mounted) return;
       showAppToast(context, l.myClientRemoveSuccess);
@@ -311,20 +313,32 @@ class _MyPageState extends ConsumerState<MyPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final managingClients = widget.tab == 'clients';
     return PageScaffold(
-      title: _tab == 0 ? l.myTabProfile : l.myTabSettings,
+      title: managingClients
+          ? l.myClientManagement
+          : _tab == 0
+          ? l.myTabProfile
+          : l.myTabSettings,
       subtitle: _profile.name,
       maxWidth: AppLayout.contentMaxWidth,
       actions: <Widget>[
-        SegmentedSwitch(
-          labels: <String>[l.myTabProfile, l.myTabSettings],
-          selected: _tab,
-          onChanged: (i) {
-            setState(() => _tab = i);
-            context.go(AppRoutes.mySection(i == 0 ? 'profile' : 'settings'));
-          },
-        ),
-        if (_tab == 0)
+        if (managingClients)
+          ActionButton(
+            label: l.clientBackToList,
+            icon: Icons.arrow_back,
+            onPressed: () => context.go(AppRoutes.mySection('profile')),
+          )
+        else
+          SegmentedSwitch(
+            labels: <String>[l.myTabProfile, l.myTabSettings],
+            selected: _tab,
+            onChanged: (i) {
+              setState(() => _tab = i);
+              context.go(AppRoutes.mySection(i == 0 ? 'profile' : 'settings'));
+            },
+          ),
+        if (!managingClients && _tab == 0)
           if (_editing)
             ActionButton(
               label: _saving ? l.mySaving : l.actionSave,
@@ -339,7 +353,11 @@ class _MyPageState extends ConsumerState<MyPage> {
               onPressed: _saving ? null : _startEdit,
             ),
       ],
-      child: _tab == 0 ? _buildProfile() : _buildSettings(),
+      child: managingClients
+          ? _buildClientManagement()
+          : _tab == 0
+          ? _buildProfile()
+          : _buildSettings(),
     );
   }
 
@@ -415,14 +433,6 @@ class _MyPageState extends ConsumerState<MyPage> {
         const SizedBox(height: AppSpacing.sm),
         _StatsCard(clientCount: clientCount),
         const SizedBox(height: AppSpacing.lg),
-        _sectionLabel(l.myClientManagement),
-        const SizedBox(height: AppSpacing.sm),
-        _ClientManagementCard(
-          clients: ref.watch(clientsProvider),
-          removing: _removingClients,
-          onRemove: _removeClient,
-        ),
-        const SizedBox(height: AppSpacing.lg),
         _sectionLabel(l.myGym),
         const SizedBox(height: AppSpacing.sm),
         _GymCard(
@@ -433,9 +443,20 @@ class _MyPageState extends ConsumerState<MyPage> {
           selectedGymId: _draftGymId,
           onGymChanged: (value) => setState(() => _draftGymId = value),
         ),
+        const SizedBox(height: AppSpacing.lg),
+        _ClientManagementEntry(
+          onTap: () => context.go(AppRoutes.mySection('clients')),
+        ),
       ],
     );
   }
+
+  Widget _buildClientManagement() => _ClientManagementCard(
+    clients: ref.watch(clientsProvider),
+    removing: _removingClients,
+    removed: _removedClientIds,
+    onRemove: _removeClient,
+  );
 
   /// Applies a settings change and tells the trainer if it didn't stick.
   ///
@@ -923,7 +944,7 @@ class _ProfileCard extends StatelessWidget {
                       spacing: AppSpacing.xs,
                       runSpacing: AppSpacing.xs,
                       children: <Widget>[
-                        _Tag(text: profile.specialty, color: AppColors.success),
+                        _Tag(text: profile.specialty, color: AppColors.primary),
                         _Tag(
                           text: l.myCareerYears(profile.career),
                           color: AppColors.accent,
@@ -1182,39 +1203,64 @@ class _CertsCard extends StatelessWidget {
   }
 }
 
+class _ClientManagementEntry extends StatelessWidget {
+  const _ClientManagementEntry({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Semantics(
+      button: true,
+      child: InkWell(
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        onTap: onTap,
+        child: SectionCard(
+          title: l.myClientManagement,
+          icon: Icons.manage_accounts_outlined,
+          trailing: const Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: AppColors.disabledForeground,
+          ),
+          child: const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+}
+
 class _ClientManagementCard extends StatelessWidget {
   const _ClientManagementCard({
     required this.clients,
     required this.removing,
+    required this.removed,
     required this.onRemove,
   });
 
   final AsyncValue<List<TrainerClient>> clients;
   final Set<String> removing;
+  final Set<String> removed;
   final ValueChanged<TrainerClient> onRemove;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SectionCard(
-      title: l.myClientManagement,
+      title: l.myStatClients,
       icon: Icons.manage_accounts_outlined,
       child: clients.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Text(l.clientsLoadFailed),
-        data: (items) {
+        data: (allItems) {
+          final items = allItems
+              .where((client) => !removed.contains(client.id))
+              .toList(growable: false);
           if (items.isEmpty) return Text(l.myClientManagementEmpty);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text(
-                l.myClientManagementHint,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
               for (var i = 0; i < items.length; i++) ...<Widget>[
                 if (i > 0)
                   const Divider(height: 1, color: AppColors.borderStrong),

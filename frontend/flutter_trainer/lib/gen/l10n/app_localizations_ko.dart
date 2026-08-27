@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -228,7 +229,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashTitle => '대시보드';
 
   @override
-  String get dashActivityRecommendRoutine => '프로그램에서 루틴을 조정해보세요.';
+  String get dashActivityRecommendRoutine => '프로그램 구성을 조정해보세요.';
 
   @override
   String get dashActivityRecommendChat => '메시지에서 안부를 물어보세요.';
@@ -944,7 +945,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatInsightNegativeDescription =>
-      'AI가 운동 부담 또는 수행 어려움을 감지했어요. 원인을 확인하고 루틴 조정을 고려해 보세요.';
+      'AI가 운동 부담 또는 수행 어려움을 감지했어요. 원인을 확인하고 프로그램 조정을 고려해 보세요.';
 
   @override
   String get chatInsightAddMemo => '메모에 추가';
@@ -1100,16 +1101,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get workoutEmpty => '아직 운동 기록이 없어요';
 
   @override
-  String get routinesAssigned => '배정된 루틴';
+  String get routinesAssigned => '배정된 프로그램';
 
   @override
-  String get routineNew => '새 루틴';
+  String get routineNew => '새 프로그램';
 
   @override
-  String get routinesLoadFailed => '루틴을 불러오지 못했어요';
+  String get routinesLoadFailed => '프로그램을 불러오지 못했어요';
 
   @override
-  String get routinesEmpty => '아직 이 고객에게 배정된 루틴이 없어요';
+  String get routinesEmpty => '아직 이 고객에게 배정된 프로그램이 없어요';
 
   @override
   String minutesShort(int minutes) {
@@ -1206,11 +1207,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String dietAiOverSodium(int over) {
-    return '나트륨이 목표치를 ${over}mg 초과했어요. 오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.';
+    return '나트륨이 목표치를 ${over}mg 초과했어요. 오늘 운동 프로그램에 유산소를 추가하면 도움이 돼요.';
   }
 
   @override
-  String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+  String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 프로그램을 유지하세요.';
 
   @override
   String get consultStatusRejected => '거절됨';
@@ -1496,7 +1497,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportBodyEncourage =>
-      '다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요.';
+      '다음 주에는 이 부분만 같이 신경 써 봐요. 프로그램은 제가 조정해서 올려둘게요.';
 
   @override
   String get reportBodyNoRecords =>
@@ -1745,7 +1746,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get progEmpty => '아직 계획된 프로그램이 없어요';
 
   @override
-  String get progEmptyHint => 'AI 루틴 탭에서 프로그램을 만들어 보내거나, 채팅으로 미리 조율해 보세요.';
+  String get progEmptyHint => 'AI 추천 탭에서 프로그램을 만들어 보내거나, 채팅으로 미리 조율해 보세요.';
 
   @override
   String schedSentTo(String name) {
@@ -1890,7 +1891,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myLegalTermsBody =>
-      '제1조 (목적)\n이 약관은 On-Care(이하 \"회사\")가 제공하는 트레이너 콘솔(이하 \"서비스\")의 이용과 관련하여 회사와 트레이너 회원(이하 \"트레이너\") 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.\n\n제2조 (약관의 효력 및 변경)\n① 이 약관은 서비스를 이용하는 모든 트레이너에게 효력이 발생합니다.\n② 회사는 관련 법령을 위반하지 않는 범위에서 이 약관을 변경할 수 있으며, 변경 시 적용일자와 변경 사유를 명시하여 서비스 내에 공지합니다.\n\n제3조 (서비스의 제공)\n회사는 담당 회원 관리, 식단·운동 기록 열람, 일정 관리, 메시지, AI 코칭 루틴 생성, 리포트 작성 및 전송 등 트레이너의 지도 업무를 돕는 기능을 제공합니다. 서비스의 구체적인 내용은 회사의 정책에 따라 변경될 수 있습니다.\n\n제4조 (계정)\n① 트레이너 계정과 회원 계정은 분리되어 있으며, 하나의 계정으로 두 서비스를 함께 이용할 수 없습니다.\n② 트레이너는 자격증·경력 등 프로필 정보를 사실대로 입력하여야 하며, 계정 정보의 관리 책임은 트레이너에게 있습니다.\n\n제5조 (회원 정보 취급 의무)\n① 트레이너는 담당 관계가 성립한 회원의 식단·운동·건강 기록에 한하여 열람할 수 있습니다.\n② 열람한 정보는 상담·코칭·리포트 작성 목적으로만 이용하여야 하며, 이를 외부에 게시하거나 제3자에게 제공·유출해서는 안 됩니다.\n③ 담당 관계가 종료되면 해당 회원 정보에 대한 열람 권한도 함께 종료됩니다.\n\n제6조 (금지 행위)\n트레이너는 의료 행위에 해당하는 진단·처방을 하거나, 회원의 동의 없이 회원 정보를 서비스 밖으로 옮기는 행위를 하여서는 안 됩니다.\n\n제7조 (책임의 제한)\n서비스가 제공하는 AI 코칭 결과와 통계는 지도를 돕기 위한 참고 자료입니다. 회원에게 전달하는 지도 내용에 대한 최종 판단과 책임은 트레이너에게 있으며, 회사는 법령이 허용하는 범위 내에서 그 결과에 대하여 책임을 부담하지 않습니다.\n\n제8조 (이용 계약의 해지)\n트레이너는 언제든지 탈퇴할 수 있습니다. 탈퇴 시 담당 회원과의 연결과 예정된 일정이 함께 종료되며, 해당 회원에게 그 사실이 안내됩니다.\n\n부칙\n이 약관은 2026년 1월 1일부터 시행합니다.';
+      '제1조 (목적)\n이 약관은 On-Care(이하 \"회사\")가 제공하는 트레이너 콘솔(이하 \"서비스\")의 이용과 관련하여 회사와 트레이너 회원(이하 \"트레이너\") 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.\n\n제2조 (약관의 효력 및 변경)\n① 이 약관은 서비스를 이용하는 모든 트레이너에게 효력이 발생합니다.\n② 회사는 관련 법령을 위반하지 않는 범위에서 이 약관을 변경할 수 있으며, 변경 시 적용일자와 변경 사유를 명시하여 서비스 내에 공지합니다.\n\n제3조 (서비스의 제공)\n회사는 담당 회원 관리, 식단·운동 기록 열람, 일정 관리, 메시지, AI 코칭 프로그램 생성, 리포트 작성 및 전송 등 트레이너의 지도 업무를 돕는 기능을 제공합니다. 서비스의 구체적인 내용은 회사의 정책에 따라 변경될 수 있습니다.\n\n제4조 (계정)\n① 트레이너 계정과 회원 계정은 분리되어 있으며, 하나의 계정으로 두 서비스를 함께 이용할 수 없습니다.\n② 트레이너는 자격증·경력 등 프로필 정보를 사실대로 입력하여야 하며, 계정 정보의 관리 책임은 트레이너에게 있습니다.\n\n제5조 (회원 정보 취급 의무)\n① 트레이너는 담당 관계가 성립한 회원의 식단·운동·건강 기록에 한하여 열람할 수 있습니다.\n② 열람한 정보는 상담·코칭·리포트 작성 목적으로만 이용하여야 하며, 이를 외부에 게시하거나 제3자에게 제공·유출해서는 안 됩니다.\n③ 담당 관계가 종료되면 해당 회원 정보에 대한 열람 권한도 함께 종료됩니다.\n\n제6조 (금지 행위)\n트레이너는 의료 행위에 해당하는 진단·처방을 하거나, 회원의 동의 없이 회원 정보를 서비스 밖으로 옮기는 행위를 하여서는 안 됩니다.\n\n제7조 (책임의 제한)\n서비스가 제공하는 AI 코칭 결과와 통계는 지도를 돕기 위한 참고 자료입니다. 회원에게 전달하는 지도 내용에 대한 최종 판단과 책임은 트레이너에게 있으며, 회사는 법령이 허용하는 범위 내에서 그 결과에 대하여 책임을 부담하지 않습니다.\n\n제8조 (이용 계약의 해지)\n트레이너는 언제든지 탈퇴할 수 있습니다. 탈퇴 시 담당 회원과의 연결과 예정된 일정이 함께 종료되며, 해당 회원에게 그 사실이 안내됩니다.\n\n부칙\n이 약관은 2026년 1월 1일부터 시행합니다.';
 
   @override
   String get myLegalPrivacyBody =>
@@ -1947,9 +1948,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myClientManagement => '고객 관리';
 
   @override
-  String get myClientManagementHint => '담당이 끝난 고객을 명단에서 삭제할 수 있어요';
-
-  @override
   String get myClientRemove => '고객 삭제';
 
   @override
@@ -1959,7 +1957,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myClientRemoveBody =>
-      '담당 관계가 해제되어 고객 정보에 더 이상 접근할 수 없어요. 고객 계정과 기록은 삭제되지 않아요.';
+      '이 고객의 스케줄, 프로그램·루틴, 리포트, 메시지, 메모 등이 트레이너 화면에서 모두 사라져요. 고객 앱의 기존 데이터는 삭제되지 않아요.';
 
   @override
   String get myClientRemoveSuccess => '고객을 삭제했어요';
@@ -1974,7 +1972,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myStatSessionsDone => '완료 세션';
 
   @override
-  String get myStatRoutinesSent => '루틴 전송';
+  String get myStatRoutinesSent => '프로그램 전송';
 
   @override
   String get myGymName => '헬스장 이름';
@@ -2155,7 +2153,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachNoClients => '등록된 고객이 없어요';
 
   @override
-  String get coachRecommended => 'AI 추천 루틴';
+  String get coachRecommended => 'AI 추천안';
 
   @override
   String get coachBackToList => '추천 목록으로';
@@ -2196,7 +2194,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get labelTomorrow => '내일';
 
   @override
-  String get coachRequestCustom => 'AI에게 맞춤 루틴 요청하기';
+  String get coachRequestCustom => 'AI에게 맞춤 추천 요청하기';
 
   @override
   String coachRequestBlurb(String name) {
@@ -2277,7 +2275,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String aiRoutineSent(String name) {
-    return '$name님에게 루틴을 전송했어요';
+    return '$name님에게 프로그램을 전송했어요';
   }
 
   @override
@@ -2287,21 +2285,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String aiCustomRoutineNamed(String option) {
-    return 'AI 맞춤 루틴 ($option)';
+    return 'AI 맞춤 추천안 ($option)';
   }
 
   @override
   String get aiAnalysing => 'AI가 분석 중…';
 
   @override
-  String get aiGenerateCandidates => '맞춤 루틴 후보 생성';
+  String get aiGenerateCandidates => '맞춤 추천안 후보 생성';
 
   @override
   String get aiReviewDone => '검토 완료';
 
   @override
   String aiRoutineFor(String name) {
-    return 'AI 루틴 · $name';
+    return 'AI 추천안 · $name';
   }
 
   @override
@@ -2364,7 +2362,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String aiReviewedSuggestion(String option) {
-    return '검토 완료 · AI 추천 루틴 ($option)';
+    return '검토 완료 · AI 추천안 ($option)';
   }
 
   @override
@@ -2400,7 +2398,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiStepDone => '최종 검토';
 
   @override
-  String get aiStepperLabel => '맞춤 루틴 생성 진행 단계';
+  String get aiStepperLabel => '맞춤 추천안 생성 진행 단계';
 
   @override
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
@@ -2421,7 +2419,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiGenerateConditions => '생성 조건';
 
   @override
-  String get aiCompareCandidates => '맞춤 루틴 후보를 비교해 보세요';
+  String get aiCompareCandidates => '맞춤 추천안 후보를 비교해 보세요';
 
   @override
   String get aiConditionsAutoHint => '비워두면 최근 기록이나 목표를 기준으로 자동 설정돼요.';
@@ -2443,7 +2441,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '요청은 고객 데이터와 함께 AI에 전달돼요(최대 500자). 고객용 메모는 다음 단계에서 작성해요.';
 
   @override
-  String get aiGenerateGoalBased => '목표 기반 루틴 생성';
+  String get aiGenerateGoalBased => '목표 기반 추천안 생성';
 
   @override
   String get aiStatusTemplateTitle => '목표 기반 기본 추천';
@@ -2514,7 +2512,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get alertAwaitingReply => '답장 대기';
 
   @override
-  String get clientLastRoutine => '마지막 루틴';
+  String get clientLastRoutine => '마지막 프로그램';
 
   @override
   String metricOverBy(String unit) {
@@ -2659,7 +2657,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get routineAlreadyGone => '이미 삭제된 루틴이에요';
+  String get routineAlreadyGone => '이미 삭제된 프로그램이에요';
 
   @override
   String get workoutPendingTitle => '아직 하지 않은 개인 운동';
@@ -2671,31 +2669,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get workoutPendingCancel => '배정 취소';
 
   @override
-  String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';
+  String get routineUpdateFailed => '프로그램을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
-  String get routineUpdated => '루틴을 수정했어요';
+  String get routineUpdated => '프로그램을 수정했어요';
 
   @override
-  String get routineDeleteTitle => '루틴을 삭제할까요?';
+  String get routineDeleteTitle => '프로그램을 삭제할까요?';
 
   @override
-  String get routineDeleteFailed => '루틴을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
+  String get routineDeleteFailed => '프로그램을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
-  String get routineDeleted => '루틴을 삭제했어요';
+  String get routineDeleted => '프로그램을 삭제했어요';
 
   @override
-  String get routineEdit => '루틴 수정';
+  String get routineEdit => '프로그램 수정';
 
   @override
-  String get routineDelete => '루틴 삭제';
+  String get routineDelete => '프로그램 삭제';
 
   @override
-  String get routineNameRequired => '루틴 이름을 입력해 주세요';
+  String get routineNameRequired => '프로그램 이름을 입력해 주세요';
 
   @override
-  String get routineNameTooLong => '루틴 이름은 100자 이내로 입력해 주세요';
+  String get routineNameTooLong => '프로그램 이름은 100자 이내로 입력해 주세요';
 
   @override
   String get routineMinutesRange => '시간은 0~600분 사이로 입력해 주세요';
@@ -2704,7 +2702,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineReasonTooLong => '사유는 200자 이내로 입력해 주세요';
 
   @override
-  String get routineFieldName => '루틴 이름';
+  String get routineFieldName => '프로그램 이름';
 
   @override
   String get routineFieldMinutesLabel => '시간(분)';
@@ -2721,7 +2719,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchClients => '고객 검색';
 
   @override
-  String get searchClientsHint => '고객·목표·최근 메시지·마지막 루틴 전송일 검색';
+  String get searchClientsHint => '고객·목표·최근 메시지·마지막 프로그램 전송일 검색';
 
   @override
   String get searchClear => '검색어 지우기';
@@ -2766,7 +2764,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String searchDetailLastRoutine(String when) {
-    return '마지막 루틴 $when';
+    return '마지막 프로그램 $when';
   }
 
   @override
@@ -3169,7 +3167,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programDraftDeleteTitle => '저장한 프로그램을 삭제할까요?';
 
   @override
-  String get programDraftDeleteBody => '이미 배정한 루틴과 등록한 일정은 그대로 남아요.';
+  String get programDraftDeleteBody => '이미 배정한 프로그램과 등록한 일정은 그대로 남아요.';
 
   @override
   String get programEditorAssignUnsupported => '운동 이름과 세트 수를 확인해 주세요';
@@ -3417,7 +3415,8 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get reportsActionLowCompletion => '루틴 난이도를 한 단계 낮춰 완수 경험을 먼저 만들어 주세요.';
+  String get reportsActionLowCompletion =>
+      '프로그램 난이도를 한 단계 낮춰 완수 경험을 먼저 만들어 주세요.';
 
   @override
   String get reportsActionHighCompletion =>

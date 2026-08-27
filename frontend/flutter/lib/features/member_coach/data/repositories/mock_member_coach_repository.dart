@@ -101,7 +101,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     _seed(
       3,
       CoachSender.trainer,
-      '그럼 그 이틀은 15분짜리 짧은 루틴으로 바꿔 둘게요. 안 하는 것보다 훨씬 낫습니다',
+      '그럼 그 이틀은 15분짜리 짧은 프로그램으로 바꿔 둘게요. 안 하는 것보다 훨씬 낫습니다',
       '화 10:21',
       day: 0,
     ),
@@ -148,7 +148,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     _seed(
       13,
       CoachSender.trainer,
-      '내일 루틴은 걷기 20분으로 조금 늘려서 보냈어요. 주말까지 이 페이스로 가봐요',
+      '내일 프로그램은 걷기 20분으로 조금 늘려서 보냈어요. 주말까지 이 페이스로 가봐요',
       '수 19:22',
       day: 1,
     ),
@@ -172,7 +172,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     _seed(
       18,
       CoachSender.trainer,
-      '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
+      '확인했어요. AI가 오늘 식단 기반으로 유산소 프로그램을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
       '18:18',
       day: 2,
     ),
