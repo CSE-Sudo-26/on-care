@@ -325,6 +325,17 @@ class $DietEntriesTable extends DietEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _photoBytesMeta = const VerificationMeta(
+    'photoBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> photoBytes = GeneratedColumn<Uint8List>(
+    'photo_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
     'idempotencyKey',
   );
@@ -360,6 +371,7 @@ class $DietEntriesTable extends DietEntries
     sugarG,
     aiComment,
     photoAsset,
+    photoBytes,
     idempotencyKey,
     createdAt,
   ];
@@ -447,6 +459,12 @@ class $DietEntriesTable extends DietEntries
         photoAsset.isAcceptableOrUnknown(data['photo_asset']!, _photoAssetMeta),
       );
     }
+    if (data.containsKey('photo_bytes')) {
+      context.handle(
+        _photoBytesMeta,
+        photoBytes.isAcceptableOrUnknown(data['photo_bytes']!, _photoBytesMeta),
+      );
+    }
     if (data.containsKey('idempotency_key')) {
       context.handle(
         _idempotencyKeyMeta,
@@ -511,6 +529,10 @@ class $DietEntriesTable extends DietEntries
         DriftSqlType.string,
         data['${effectivePrefix}photo_asset'],
       )!,
+      photoBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}photo_bytes'],
+      ),
       idempotencyKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}idempotency_key'],
@@ -539,6 +561,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
   final double sugarG;
   final String aiComment;
   final String photoAsset;
+  final Uint8List? photoBytes;
   final String? idempotencyKey;
   final DateTime createdAt;
   const DietEntryRow({
@@ -552,6 +575,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     required this.sugarG,
     required this.aiComment,
     required this.photoAsset,
+    this.photoBytes,
     this.idempotencyKey,
     required this.createdAt,
   });
@@ -568,6 +592,9 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     map['sugar_g'] = Variable<double>(sugarG);
     map['ai_comment'] = Variable<String>(aiComment);
     map['photo_asset'] = Variable<String>(photoAsset);
+    if (!nullToAbsent || photoBytes != null) {
+      map['photo_bytes'] = Variable<Uint8List>(photoBytes);
+    }
     if (!nullToAbsent || idempotencyKey != null) {
       map['idempotency_key'] = Variable<String>(idempotencyKey);
     }
@@ -587,6 +614,9 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       sugarG: Value(sugarG),
       aiComment: Value(aiComment),
       photoAsset: Value(photoAsset),
+      photoBytes: photoBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoBytes),
       idempotencyKey: idempotencyKey == null && nullToAbsent
           ? const Value.absent()
           : Value(idempotencyKey),
@@ -610,6 +640,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       sugarG: serializer.fromJson<double>(json['sugarG']),
       aiComment: serializer.fromJson<String>(json['aiComment']),
       photoAsset: serializer.fromJson<String>(json['photoAsset']),
+      photoBytes: serializer.fromJson<Uint8List?>(json['photoBytes']),
       idempotencyKey: serializer.fromJson<String?>(json['idempotencyKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -628,6 +659,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       'sugarG': serializer.toJson<double>(sugarG),
       'aiComment': serializer.toJson<String>(aiComment),
       'photoAsset': serializer.toJson<String>(photoAsset),
+      'photoBytes': serializer.toJson<Uint8List?>(photoBytes),
       'idempotencyKey': serializer.toJson<String?>(idempotencyKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -644,6 +676,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     double? sugarG,
     String? aiComment,
     String? photoAsset,
+    Value<Uint8List?> photoBytes = const Value.absent(),
     Value<String?> idempotencyKey = const Value.absent(),
     DateTime? createdAt,
   }) => DietEntryRow(
@@ -657,6 +690,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     sugarG: sugarG ?? this.sugarG,
     aiComment: aiComment ?? this.aiComment,
     photoAsset: photoAsset ?? this.photoAsset,
+    photoBytes: photoBytes.present ? photoBytes.value : this.photoBytes,
     idempotencyKey: idempotencyKey.present
         ? idempotencyKey.value
         : this.idempotencyKey,
@@ -678,6 +712,9 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       photoAsset: data.photoAsset.present
           ? data.photoAsset.value
           : this.photoAsset,
+      photoBytes: data.photoBytes.present
+          ? data.photoBytes.value
+          : this.photoBytes,
       idempotencyKey: data.idempotencyKey.present
           ? data.idempotencyKey.value
           : this.idempotencyKey,
@@ -698,6 +735,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
           ..write('sugarG: $sugarG, ')
           ..write('aiComment: $aiComment, ')
           ..write('photoAsset: $photoAsset, ')
+          ..write('photoBytes: $photoBytes, ')
           ..write('idempotencyKey: $idempotencyKey, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -716,6 +754,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     sugarG,
     aiComment,
     photoAsset,
+    $driftBlobEquality.hash(photoBytes),
     idempotencyKey,
     createdAt,
   );
@@ -733,6 +772,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
           other.sugarG == this.sugarG &&
           other.aiComment == this.aiComment &&
           other.photoAsset == this.photoAsset &&
+          $driftBlobEquality.equals(other.photoBytes, this.photoBytes) &&
           other.idempotencyKey == this.idempotencyKey &&
           other.createdAt == this.createdAt);
 }
@@ -748,6 +788,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
   final Value<double> sugarG;
   final Value<String> aiComment;
   final Value<String> photoAsset;
+  final Value<Uint8List?> photoBytes;
   final Value<String?> idempotencyKey;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -762,6 +803,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     this.sugarG = const Value.absent(),
     this.aiComment = const Value.absent(),
     this.photoAsset = const Value.absent(),
+    this.photoBytes = const Value.absent(),
     this.idempotencyKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -777,6 +819,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     this.sugarG = const Value.absent(),
     this.aiComment = const Value.absent(),
     this.photoAsset = const Value.absent(),
+    this.photoBytes = const Value.absent(),
     this.idempotencyKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -797,6 +840,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     Expression<double>? sugarG,
     Expression<String>? aiComment,
     Expression<String>? photoAsset,
+    Expression<Uint8List>? photoBytes,
     Expression<String>? idempotencyKey,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -812,6 +856,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
       if (sugarG != null) 'sugar_g': sugarG,
       if (aiComment != null) 'ai_comment': aiComment,
       if (photoAsset != null) 'photo_asset': photoAsset,
+      if (photoBytes != null) 'photo_bytes': photoBytes,
       if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -829,6 +874,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     Value<double>? sugarG,
     Value<String>? aiComment,
     Value<String>? photoAsset,
+    Value<Uint8List?>? photoBytes,
     Value<String?>? idempotencyKey,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -844,6 +890,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
       sugarG: sugarG ?? this.sugarG,
       aiComment: aiComment ?? this.aiComment,
       photoAsset: photoAsset ?? this.photoAsset,
+      photoBytes: photoBytes ?? this.photoBytes,
       idempotencyKey: idempotencyKey ?? this.idempotencyKey,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -883,6 +930,9 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     if (photoAsset.present) {
       map['photo_asset'] = Variable<String>(photoAsset.value);
     }
+    if (photoBytes.present) {
+      map['photo_bytes'] = Variable<Uint8List>(photoBytes.value);
+    }
     if (idempotencyKey.present) {
       map['idempotency_key'] = Variable<String>(idempotencyKey.value);
     }
@@ -908,6 +958,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
           ..write('sugarG: $sugarG, ')
           ..write('aiComment: $aiComment, ')
           ..write('photoAsset: $photoAsset, ')
+          ..write('photoBytes: $photoBytes, ')
           ..write('idempotencyKey: $idempotencyKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -2639,6 +2690,7 @@ typedef $$DietEntriesTableCreateCompanionBuilder =
       Value<double> sugarG,
       Value<String> aiComment,
       Value<String> photoAsset,
+      Value<Uint8List?> photoBytes,
       Value<String?> idempotencyKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -2655,6 +2707,7 @@ typedef $$DietEntriesTableUpdateCompanionBuilder =
       Value<double> sugarG,
       Value<String> aiComment,
       Value<String> photoAsset,
+      Value<Uint8List?> photoBytes,
       Value<String?> idempotencyKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -2716,6 +2769,11 @@ class $$DietEntriesTableFilterComposer
 
   ColumnFilters<String> get photoAsset => $composableBuilder(
     column: $table.photoAsset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get photoBytes => $composableBuilder(
+    column: $table.photoBytes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2789,6 +2847,11 @@ class $$DietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get photoBytes => $composableBuilder(
+    column: $table.photoBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get idempotencyKey => $composableBuilder(
     column: $table.idempotencyKey,
     builder: (column) => ColumnOrderings(column),
@@ -2843,6 +2906,11 @@ class $$DietEntriesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<Uint8List> get photoBytes => $composableBuilder(
+    column: $table.photoBytes,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get idempotencyKey => $composableBuilder(
     column: $table.idempotencyKey,
     builder: (column) => column,
@@ -2893,6 +2961,7 @@ class $$DietEntriesTableTableManager
                 Value<double> sugarG = const Value.absent(),
                 Value<String> aiComment = const Value.absent(),
                 Value<String> photoAsset = const Value.absent(),
+                Value<Uint8List?> photoBytes = const Value.absent(),
                 Value<String?> idempotencyKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2907,6 +2976,7 @@ class $$DietEntriesTableTableManager
                 sugarG: sugarG,
                 aiComment: aiComment,
                 photoAsset: photoAsset,
+                photoBytes: photoBytes,
                 idempotencyKey: idempotencyKey,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -2923,6 +2993,7 @@ class $$DietEntriesTableTableManager
                 Value<double> sugarG = const Value.absent(),
                 Value<String> aiComment = const Value.absent(),
                 Value<String> photoAsset = const Value.absent(),
+                Value<Uint8List?> photoBytes = const Value.absent(),
                 Value<String?> idempotencyKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2937,6 +3008,7 @@ class $$DietEntriesTableTableManager
                 sugarG: sugarG,
                 aiComment: aiComment,
                 photoAsset: photoAsset,
+                photoBytes: photoBytes,
                 idempotencyKey: idempotencyKey,
                 createdAt: createdAt,
                 rowid: rowid,
