@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2049,7 +2050,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachRoutineLogged => '운동 기록에 반영했어요';
 
   @override
-  String get coachRoutineGone => '이 루틴은 더 이상 없어요. 목록을 새로 불러와 주세요';
+  String get coachRoutineGone => '이 프로그램은 더 이상 없어요. 목록을 새로 불러와 주세요';
 
   @override
   String get coachRoutineNetworkError => '네트워크 연결을 확인하고 다시 시도해 주세요';

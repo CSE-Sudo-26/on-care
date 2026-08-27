@@ -73,7 +73,7 @@ class MockGymRepository implements GymRepository {
     career: '7년',
     intro:
         '혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다. 회원 상태에 맞춘 '
-        'AI 루틴을 활용해 안전한 강도부터 시작합니다.',
+        'AI 추천 프로그램을 활용해 안전한 강도부터 시작합니다.',
     certifications: <String>['생활스포츠지도사 2급', '퍼스널트레이닝 CPT', '스포츠 영양사'],
   );
 
@@ -133,7 +133,7 @@ class MockGymRepository implements GymRepository {
       gymId: 'gym-bodyandsoul',
       name: '이트레이너',
       role: '퍼스널 트레이너',
-      reason: '초심자용 간단 루틴 구성',
+      reason: '초심자용 간단 프로그램 구성',
       career: '9년',
       intro:
           '운동을 처음 시작하는 회원을 오래 지도했습니다. 식단 상담을 함께 진행해 '
