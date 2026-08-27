@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
+import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
+import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/dio_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
@@ -16,8 +18,12 @@ final memberCoachRepositoryProvider = Provider<MemberCoachRepository>((ref) {
     // 데모에는 서버가 없다. 실서버는 루틴 완료를 받으면 회원 운동 기록 한 건을
     // 함께 만들고 취소하면 지우는데(#1131), 그 일을 이 대역이 대신하도록 운동
     // 저장소를 건네준다 — 그러지 않으면 체크해도 `운동 현황` 이 꿈쩍하지 않는다.
+    // 파생 기록(출처 `assigned_routine`)을 만들고 지우는 일은 목업 저장소만
+    // 할 수 있다. 테스트가 운동 저장소를 다른 대역으로 갈아 끼우면 루틴 상태만
+    // 바뀌는 예전 동작으로 떨어진다 — 화면이 죽는 것보다 낫다.
+    final ExerciseRepository exercise = ref.watch(exerciseRepositoryProvider);
     return MockMemberCoachRepository(
-      exercise: ref.watch(exerciseRepositoryProvider),
+      exercise: exercise is MockExerciseRepository ? exercise : null,
     );
   }
   return DioMemberCoachRepository(ref.watch(dioProvider));

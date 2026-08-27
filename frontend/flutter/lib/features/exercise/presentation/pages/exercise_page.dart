@@ -874,6 +874,10 @@ class _PtLogCard extends ConsumerWidget {
     if (ref.watch(appConfigProvider).useMockApi) {
       // 종목·세트는 픽스처가 정한다 — 카드가 제 목록을 따로 들면 같은 세션을
       // 운동 현황과 다르게 말한다.
+      //
+      // 고르는 기준은 **출처**다. `근력이면 PT` 로 세면, 오늘 회원이 직접 적은
+      // 근력 한 줄이 PT 일지 안으로 딸려 들어가 하지 않은 종목이 트레이너
+      // 세션에 적힌다.
       final List<String> items =
           ref
               .watch(exerciseWeekViewProvider)
@@ -882,7 +886,7 @@ class _PtLogCard extends ConsumerWidget {
               .where(
                 (ExerciseSession s) =>
                     s.dayLabel == _todayLabel() &&
-                    s.type == ExerciseType.strength,
+                    s.source == ExerciseSource.trainerPt,
               )
               .expand((ExerciseSession s) => s.items)
               .toList() ??
@@ -1166,9 +1170,9 @@ class _DemoPtLogCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // 말줄임이 아니라 줄바꿈이다. `벤치프레스 40kg · 4세트` 가
-                  // `벤치프레스 40k…` 가 되면 몇 세트인지가 사라진다 — 접혀도
-                  // 뜻이 남아야 한다(#766).
+                  // 말줄임이 아니라 줄바꿈이다. `벤치프레스 4세트 · 10회 ·
+                  // 40kg` 이 `벤치프레스 4세트 …` 가 되면 몇 회를 몇 kg 로
+                  // 했는지가 사라진다 — 접혀도 뜻이 남아야 한다(#766).
                   Expanded(
                     child: Text(
                       it,

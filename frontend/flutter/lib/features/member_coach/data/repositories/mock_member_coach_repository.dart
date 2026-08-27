@@ -1,9 +1,9 @@
 import 'package:demo_fixture/demo_fixture.dart';
 
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
-import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 
@@ -14,10 +14,10 @@ class MockMemberCoachRepository implements MemberCoachRepository {
   /// [exercise] 를 주면 루틴 완료가 **운동 기록으로도 남는다** — 실서버가 하는
   /// 일(`assigned_routine_id` 로 세션 한 건 생성)을 데모에서 대신한다. 없으면
   /// 예전처럼 루틴 상태만 바뀐다(테스트·단독 사용). (#1131)
-  MockMemberCoachRepository({ExerciseRepository? exercise})
+  MockMemberCoachRepository({MockExerciseRepository? exercise})
     : _exercise = exercise;
 
-  final ExerciseRepository? _exercise;
+  final MockExerciseRepository? _exercise;
 
   /// 완료로 만들어 둔 운동 기록 — `루틴 id → 세션 id`. 되돌릴 때 무엇을 지울지
   /// 알아야 한다.
@@ -274,7 +274,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     _routines[index] = reverted;
     final String? sessionId = _completionSessions.remove(routineId);
     if (sessionId != null) {
-      await _exercise?.deleteSession(sessionId);
+      await _exercise?.removeAssignedRoutineSession(sessionId);
     }
     return reverted;
   }
@@ -286,14 +286,18 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     required int minutes,
     required String intensity,
   }) async {
-    final ExerciseRepository? exercise = _exercise;
+    final MockExerciseRepository? exercise = _exercise;
     if (exercise == null) return;
     final ExerciseType type = exerciseTypeFromLabel(routine.type);
     final ExerciseIntensity level = exerciseIntensityFromLabel(intensity);
-    final ExerciseSession session = await exercise.addSession(
+    // 배정 루틴에서 파생된 기록이다 — 회원 수기 기록으로 남기면 `직접 추가한
+    // 운동` 목록에 서서 고치고 지울 수 있게 된다. 실서버는 이 기록을
+    // `assigned_routine` 으로 만들고 수정·삭제를 막는다. (#499, #638, #1131)
+    final ExerciseSession session = await exercise.addAssignedRoutineSession(
       type: type,
       // 배정 이름이 곧 이 운동의 이름이다 — 회원이 따로 적지 않는다. (#1276)
       name: routine.name,
+      routineId: routine.id,
       minutes: minutes,
       calories: estimateExerciseCalories(type, minutes, intensity: level),
       date: nowKst(),
