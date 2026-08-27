@@ -1,9 +1,9 @@
-/// 토스트 너비 규칙. (#1466)
+/// 토스트 너비 규칙. (#1466, #1571)
 ///
-/// 동작 버튼이 없는 안내는 내용만큼만 넓다 — `추천하지 않아요` 한 줄짜리 말이
-/// 최대 너비(560)를 거의 채우면 짧은 말이 크게 보인다. 동작 버튼이 있는
-/// 토스트(리포트 전송 완료의 `채팅으로 이동`)는 고정 너비를 지킨다: 메시지
-/// 길이에 따라 버튼이 좌우로 흔들리면 누를 자리가 매번 달라진다.
+/// 동작 버튼이 있든 없든 토스트는 내용만큼만 넓다 — `추천하지 않아요` 한 줄짜리
+/// 말이나 `리포트를 보냈어요` + `채팅으로 이동` 조합이나 최대 너비(560)를
+/// 고정으로 채우면 짧은 말이 크게 보이고, 버튼이 텍스트에서 멀리 떨어진
+/// 오른쪽 빈 자리에 걸린다. 버튼은 텍스트 바로 오른쪽 끝에 간격을 두고 붙는다.
 library;
 
 import 'package:flutter/material.dart';
@@ -71,14 +71,52 @@ void main() {
     expect(info, error);
   });
 
-  testWidgets('동작 버튼이 있는 토스트는 고정 너비를 지킨다', (tester) async {
+  testWidgets('동작 버튼이 있어도 내용 너비로 선다', (tester) async {
     final double withAction = await toastWidth(
       tester,
       '리포트를 보냈어요',
       action: AppToastAction(label: '채팅으로 이동', onTap: () {}),
     );
 
-    expect(withAction, AppToastStyle.maxWidth);
+    expect(withAction, lessThan(AppToastStyle.maxWidth));
+  });
+
+  testWidgets('동작 버튼은 텍스트 오른쪽 끝에 간격을 두고 붙는다', (tester) async {
+    const String message = '리포트를 보냈어요';
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    late BuildContext ctx;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (BuildContext context) {
+            ctx = context;
+            return const Scaffold(body: SizedBox.expand());
+          },
+        ),
+      ),
+    );
+    AppToastHost.of(ctx).show(
+      message,
+      action: AppToastAction(label: '채팅으로 이동', onTap: () {}),
+    );
+    await tester.pumpAndSettle();
+
+    final Rect pill = tester.getRect(
+      find
+          .ancestor(of: find.text(message), matching: find.byType(Material))
+          .first,
+    );
+    final Rect text = tester.getRect(find.text(message));
+    final Rect action = tester.getRect(
+      find.byKey(const ValueKey<String>('app-toast-action')),
+    );
+
+    // 버튼이 알약의 오른쪽 끝(안쪽 여백만큼 안쪽)에 붙는다.
+    expect(pill.right - action.right, closeTo(16, 1));
+    // 텍스트와 버튼 사이에 눈에 띄는 간격이 있다.
+    expect(action.left - text.right, greaterThan(8));
   });
 
   testWidgets('좁은 화면에서는 좌우 여백 안으로 줄어든다', (tester) async {
