@@ -20,6 +20,7 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
     lastTime: _str(json['last_time']),
     lastMessageAt: DateTime.tryParse(_str(json['last_message_at'])),
     active: json['active'] == true,
+    registered: json['registered'] != false,
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
     sugarG: _double(json['sugar_g']),
@@ -45,7 +46,8 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
     timeLabel: _str(json['time_label']),
     // 음식별 영양. 옛 서버는 주지 않으므로 비어 있으면 `items` 한 줄로 떨어진다.
     foods: <ClientDietFood>[
-      for (final Object? food in (json['foods'] as List<Object?>?) ?? const <Object?>[])
+      for (final Object? food
+          in (json['foods'] as List<Object?>?) ?? const <Object?>[])
         if (food is Map<String, Object?>) ClientDietFood.fromJson(food),
     ],
     sugarG: _double(json['sugar_g']),

@@ -163,6 +163,8 @@ class _FixedAiRoutineRepository implements AiRoutineRepository {
 /// `ClientRepository` has no roster mutations and a single fetch, unlike
 /// the reactive drift source).
 class _FixedClientRepository implements ClientRepository {
+  @override
+  Future<void> restoreClient(String id) async {}
   const _FixedClientRepository(this._clients);
 
   final List<TrainerClient> _clients;
