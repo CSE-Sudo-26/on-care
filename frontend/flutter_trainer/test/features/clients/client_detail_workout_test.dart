@@ -501,7 +501,7 @@ void main() {
       // 확인 없이 지우지 않는다.
       await tester.tap(cancel);
       await settle(tester);
-      expect(find.text('루틴을 삭제할까요?'), findsOneWidget);
+      expect(find.text('프로그램을 삭제할까요?'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await settle(tester);
       expect(find.textContaining('저강도 유산소 (걷기)'), findsOneWidget);

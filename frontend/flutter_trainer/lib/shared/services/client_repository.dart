@@ -522,8 +522,8 @@ class DriftClientRepository implements ClientRepository {
       );
       return sodium > sodiumTargetMg
           ? '나트륨이 목표치를 ${sodium - sodiumTargetMg}mg 초과했어요. '
-                '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
-          : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+                '오늘 운동 프로그램에 유산소를 추가하면 도움이 돼요.'
+          : '오늘 식단은 균형이 잘 맞아요. 현재 프로그램을 유지하세요.';
     }
 
     final ClientDietPeriod window = await fetchDietPeriod(
@@ -666,12 +666,11 @@ class DriftClientRepository implements ClientRepository {
     int weeklyGoalCalories = 0;
     // 주를 한꺼번에 읽는다 — 위 provider 와 같은 이유다 (#1170).
     final List<DateTime> mondays = clientRangeWeekStarts(range);
-    final List<ClientExerciseWeek> weeks = await Future.wait(
-      <Future<ClientExerciseWeek>>[
-        for (final DateTime monday in mondays)
-          fetchExerciseWeek(clientId, weekStart: monday),
-      ],
-    );
+    final List<ClientExerciseWeek> weeks =
+        await Future.wait(<Future<ClientExerciseWeek>>[
+          for (final DateTime monday in mondays)
+            fetchExerciseWeek(clientId, weekStart: monday),
+        ]);
     for (int w = 0; w < mondays.length; w++) {
       final DateTime monday = mondays[w];
       final ClientExerciseWeek week = weeks[w];
@@ -1134,12 +1133,11 @@ final clientExercisePeriodProvider = FutureProvider.autoDispose
       // 주를 **한꺼번에** 읽는다 (#1170). `전체` 가 서른다섯 주라, 하나씩
       // 기다리면 왕복이 그만큼 줄줄이 이어져 그래프가 늦게 선다.
       final List<DateTime> mondays = clientRangeWeekStarts(range);
-      final List<ClientExerciseWeek> weeks = await Future.wait(
-        <Future<ClientExerciseWeek>>[
-          for (final DateTime monday in mondays)
-            repository.fetchExerciseWeek(key.clientId, weekStart: monday),
-        ],
-      );
+      final List<ClientExerciseWeek> weeks =
+          await Future.wait(<Future<ClientExerciseWeek>>[
+            for (final DateTime monday in mondays)
+              repository.fetchExerciseWeek(key.clientId, weekStart: monday),
+          ]);
       for (int w = 0; w < mondays.length; w++) {
         final DateTime monday = mondays[w];
         final ClientExerciseWeek week = weeks[w];

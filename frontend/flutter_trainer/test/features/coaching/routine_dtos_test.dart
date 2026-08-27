@@ -4,7 +4,7 @@ import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 
 AssignedRoutine _routine({
-  String name = 'AI 맞춤 루틴',
+  String name = 'AI 맞춤 추천안',
   int minutes = 30,
   String type = '유산소',
   String reason = '걷기',
@@ -59,7 +59,7 @@ void main() {
     });
 
     test('defaults a blank name and truncates a long reason', () {
-      expect(assignRoutineToJson(_routine(name: '   '))['name'], 'AI 맞춤 루틴');
+      expect(assignRoutineToJson(_routine(name: '   '))['name'], 'AI 맞춤 추천안');
       final longReason = 'x' * 250;
       expect(
         (assignRoutineToJson(_routine(reason: longReason))['reason']! as String)
