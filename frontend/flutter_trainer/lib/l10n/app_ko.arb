@@ -637,8 +637,6 @@
   "myClientRegistered": "등록",
   "myClientUnregistered": "미등록",
   "myClientRestore": "다시 등록",
-  "myClientRestoreSuccess": "고객을 다시 등록했어요",
-  "myClientRestoreFailed": "고객을 다시 등록하지 못했어요. 잠시 후 다시 시도해 주세요",
   "myStatSessionsDone": "완료 세션",
   "myStatRoutinesSent": "프로그램 전송",
   "myGymName": "헬스장 이름",

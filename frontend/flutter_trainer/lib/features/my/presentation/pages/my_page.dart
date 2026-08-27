@@ -16,6 +16,8 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/design_system/tokens/toast.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_connect_dialog.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
@@ -275,21 +277,16 @@ class _MyPageState extends ConsumerState<MyPage> {
     }
   }
 
-  Future<void> _restoreClient(TrainerClient client) async {
-    final l = AppLocalizations.of(context);
-    setState(() => _removingClients.add(client.id));
-    try {
-      await ref.read(clientRepositoryProvider).restoreClient(client.id);
-      ref.invalidate(clientsProvider);
-      ref.invalidate(managedClientsProvider);
-      if (!mounted) return;
-      showAppToast(context, l.myClientRestoreSuccess);
-    } catch (_) {
-      if (!mounted) return;
-      showAppToast(context, l.myClientRestoreFailed, kind: AppToastKind.error);
-    } finally {
-      if (mounted) setState(() => _removingClients.remove(client.id));
-    }
+  /// 미등록 고객을 되살리는 전용 API 대신, 고객 탭의 "새 회원 등록" 창을
+  /// 그 고객의 회원 ID로 미리 채워 그대로 연다. 한 번의 탭으로 조용히
+  /// 복원하던 이전 방식은 회원 ID 확인 절차를 건너뛰어, 신규 등록과
+  /// 다른 특별 취급처럼 보였다(#1591 피드백). 같은 창을 쓰면 다시 등록도
+  /// 새 회원을 등록하는 것과 완전히 같은 화면·절차로 보인다.
+  Future<void> _openReRegisterDialog(TrainerClient client) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => ClientConnectDialog(initialMemberId: client.id),
+    );
   }
 
   /// 계정 탈퇴. 이름 확인을 받은 뒤에만 나가고, 성공하면 로그아웃과 같은 경로로
@@ -471,7 +468,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     clients: ref.watch(managedClientsProvider),
     removing: _removingClients,
     onRemove: _removeClient,
-    onRestore: _restoreClient,
+    onRestore: _openReRegisterDialog,
   );
 
   /// Applies a settings change and tells the trainer if it didn't stick.
@@ -1263,56 +1260,101 @@ class _ClientManagementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return SectionCard(
-      title: l.myStatClients,
-      icon: Icons.manage_accounts_outlined,
-      child: clients.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Text(l.clientsLoadFailed),
-        data: (allItems) {
-          final items = allItems;
-          if (items.isEmpty) return Text(l.myClientManagementEmpty);
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              for (var i = 0; i < items.length; i++) ...<Widget>[
-                if (i > 0)
-                  const Divider(height: 1, color: AppColors.borderStrong),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(child: Text(items[i].avatar)),
-                  title: Text(items[i].name),
-                  subtitle: Text(
-                    '${items[i].registered ? l.myClientRegistered : l.myClientUnregistered} · ${items[i].goal}',
-                  ),
-                  trailing: Tooltip(
-                    message: items[i].registered
-                        ? l.myClientRemove
-                        : l.myClientRestore,
-                    child: TextButton(
-                      onPressed: removing.contains(items[i].id)
-                          ? null
-                          : () => items[i].registered
-                                ? onRemove(items[i])
-                                : onRestore(items[i]),
-                      child: removing.contains(items[i].id)
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              items[i].registered
-                                  ? l.myClientRemove
-                                  : l.myClientRestore,
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+    return clients.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Text(l.clientsLoadFailed),
+      data: (items) {
+        if (items.isEmpty) {
+          return EmptyHint(
+            message: l.myClientManagementEmpty,
+            icon: Icons.people_outline,
           );
-        },
-      ),
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (final client in items) ...<Widget>[
+              _ManagedClientRow(
+                client: client,
+                busy: removing.contains(client.id),
+                onRemove: () => onRemove(client),
+                onRestore: () => onRestore(client),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 고객 관리의 한 줄 — 고객 탭 로스터와 같은 [ClientCard] 위에 등록 상태와
+/// 삭제/재등록 동작만 덧붙인다. 목록 UI가 갈리면 같은 회원이 탭마다 다른
+/// 사람처럼 보이므로, 두 화면이 카드를 공유한다.
+class _ManagedClientRow extends StatelessWidget {
+  const _ManagedClientRow({
+    required this.client,
+    required this.busy,
+    required this.onRemove,
+    required this.onRestore,
+  });
+
+  final TrainerClient client;
+  final bool busy;
+  final VoidCallback onRemove;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        ClientCard(
+          key: ValueKey<String>('managed-client-${client.id}'),
+          client: client,
+          compact: true,
+          // 미등록 고객은 일반 고객 상세에서 제외되므로(요구사항) 탭해도
+          // 열 화면이 없다 — 등록 고객만 상세로 보낸다.
+          onTap: client.registered
+              ? () => context.go(AppRoutes.clientDetail(client.id))
+              : () {},
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: <Widget>[
+            StatusDotLabel(
+              label: client.registered
+                  ? l.myClientRegistered
+                  : l.myClientUnregistered,
+              color: client.registered
+                  ? AppColors.success
+                  : AppColors.mutedForeground,
+              filled: client.registered,
+            ),
+            const Spacer(),
+            Tooltip(
+              message: client.registered ? l.myClientRemove : l.myClientRestore,
+              child: TextButton(
+                onPressed: busy
+                    ? null
+                    : (client.registered ? onRemove : onRestore),
+                child: busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        client.registered
+                            ? l.myClientRemove
+                            : l.myClientRestore,
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
