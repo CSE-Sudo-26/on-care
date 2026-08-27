@@ -485,11 +485,13 @@ void main() {
         findsAtLeastNWidgets(1),
       );
 
+      // 스레드의 마지막 메시지(트레이너 발신). 17번은 리포트 등록 안내라
+      // 말풍선이 아니다 — 시각도 붙지 않는다(#1605).
       final sentBubble = find.byKey(
-        const ValueKey<String>('trainer-message-bubble-seed-chat-1-17'),
+        const ValueKey<String>('trainer-message-bubble-seed-chat-1-18'),
       );
       final sentTime = find.byKey(
-        const ValueKey<String>('trainer-message-time-seed-chat-1-17'),
+        const ValueKey<String>('trainer-message-time-seed-chat-1-18'),
       );
       expect(
         tester.getTopLeft(sentTime).dx,
@@ -507,11 +509,12 @@ void main() {
       expect(find.text('다음 세션 때 봐요!'), findsWidgets);
     });
 
-    testWidgets('김민수 데모 시드에는 리포트 등록 카드가 없다 (#1586)', (tester) async {
+    testWidgets('김민수 데모 시드에 리포트 등록 카드가 있다 (#1605)', (tester) async {
       await openMessages(tester);
 
-      expect(find.text('리포트가 등록되었어요'), findsNothing);
-      expect(find.text('리포트 탭으로 가기'), findsNothing);
+      expect(find.text('리포트가 등록되었어요'), findsOneWidget);
+      expect(find.text('리포트 탭으로 가기'), findsOneWidget);
+      // 카드로 그리므로 본문은 말풍선으로 나타나지 않는다.
       expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
     });
 
@@ -534,11 +537,24 @@ void main() {
             );
         await settle(tester);
 
+        // 시드에도 리포트 등록 안내가 하나 있다(#1605). 방금 보낸 것은 대상
+        // 주로 갈라 짚는다 — 시드가 가리키는 주는 언제나 이번 주라, 지나간
+        // 이 주와 겹치지 않는다.
+        final card = find.ancestor(
+          of: find.text('8월 18일 – 8월 24일'),
+          matching: find.byType(ReportRegisteredCard),
+        );
+        expect(card, findsOneWidget);
         // 회원 앱과 같은 정보 구조 — 상태 문구, 대상 주, 다음 행동.
-        final notice = find.text('리포트가 등록되었어요');
-        final goToReports = find.text('리포트 탭으로 가기');
+        final notice = find.descendant(
+          of: card,
+          matching: find.text('리포트가 등록되었어요'),
+        );
+        final goToReports = find.descendant(
+          of: card,
+          matching: find.text('리포트 탭으로 가기'),
+        );
         expect(notice, findsOneWidget);
-        expect(find.text('8월 18일 – 8월 24일'), findsOneWidget);
         expect(goToReports, findsOneWidget);
         // 본문 그대로의 일반 말풍선은 그려지지 않는다.
         expect(
@@ -548,7 +564,6 @@ void main() {
 
         // 안내는 대화 가운데에 선다 — 트레이너가 보낸 말풍선처럼 오른쪽에
         // 붙지 않는다(#1600). 왼쪽 여백과 오른쪽 여백이 같은지로 본다.
-        final card = find.byType(ReportRegisteredCard);
         final Rect box = tester.getRect(card);
         final Rect thread = tester.getRect(find.byType(ListView).last);
         expect(

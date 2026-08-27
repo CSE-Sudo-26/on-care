@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v30']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v31']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -118,7 +118,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v30') == today) return;
+  if (await db.readValue('trainer_seeded_v31') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final DemoFixture demo = fixture ?? DemoFixture.load();
@@ -393,6 +393,17 @@ Future<void> seedIfEmpty(
         ]);
       });
 
+      // 리포트 등록 안내는 본문이 아니라 이 표시로 구분한다(#1421). 채팅
+      // 화면이 파일명을 보고 리포트인지 짐작하지 않게 하기 위해서다. 실행 중에
+      // 보내는 리포트도 같은 키에 같은 값을 쓴다.
+      for (var i = 0; i < client.chat.length; i++) {
+        if (!client.chat[i].report) continue;
+        final DateTime at = chatCreatedAt(client, i, lastDayIndex);
+        await db.putValue(
+          'report_msg_seed-chat-${client.id}-$i',
+          ymd(DateTime(at.year, at.month, at.day - (at.weekday - 1))),
+        );
+      }
     }
 
     // ---- Read markers for threads that start answered ----
@@ -486,7 +497,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v30', today);
+    await db.putValue('trainer_seeded_v31', today);
   });
 }
 
@@ -577,10 +588,24 @@ class _History {
 }
 
 class _Chat {
-  const _Chat(this.sender, this.text, this.timeLabel, {this.dayIndex = 0});
+  const _Chat(
+    this.sender,
+    this.text,
+    this.timeLabel, {
+    this.dayIndex = 0,
+    this.report = false,
+  });
   final String sender; // trainer|client
   final String text;
   final String timeLabel;
+
+  /// 주간 리포트 등록 안내인가. (#1421)
+  ///
+  /// 시드에서 지나간 리포트를 심는 유일한 방법이다 — 실행 중에 보내는
+  /// 리포트는 `ReportRepository.sendPdf` 가 같은 표시를 남긴다. 어느 주인지는
+  /// 이 메시지 자신의 `createdAt` 이 속한 주로 잡는다. 회원 앱 시드도 같은
+  /// 규칙이라, 두 앱이 같은 사건을 같은 주로 가리킨다.
+  final bool report;
 
   /// 며칠째 대화인가 (0 = 스레드의 첫 날). 여러 날에 걸친 스레드에서만 쓴다.
   ///

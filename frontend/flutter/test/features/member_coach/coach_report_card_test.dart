@@ -145,39 +145,41 @@ void main() {
     });
   });
 
-  group('데모 대화의 리포트 미포함 (#1586)', () {
-    testWidgets('김민수 데모 스레드에는 리포트 등록 카드가 없다', (
+  /// 데모에서 두 앱은 저장소를 공유하지 않는다(`oncare` vs `oncare_trainer`).
+  /// 트레이너가 데모 중에 보낸 리포트는 트레이너 쪽 로컬 DB 에만 남으므로,
+  /// 회원 쪽에서 이 안내가 보이려면 시드가 들고 있어야 한다. (#1605)
+  group('데모 대화의 리포트 등록 안내 (#1605)', () {
+    testWidgets('김민수 데모 스레드에 리포트 등록 카드가 있다', (
       WidgetTester tester,
     ) async {
       await pumpChat(tester);
 
-      expect(find.byType(CoachReportCard), findsNothing);
-      expect(find.text('리포트가 등록되었어요'), findsNothing);
+      expect(find.byType(CoachReportCard), findsOneWidget);
+      expect(find.text('리포트가 등록되었어요'), findsOneWidget);
+      // 안내로 그리므로 본문은 말풍선으로 나타나지 않는다.
       expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
     });
 
-    testWidgets('데모 대화에는 리포트 안내가 없으니 미리보기 버튼도 없다', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('안내에는 미리보기 버튼이 있다', (WidgetTester tester) async {
       await pumpChat(tester);
 
-      expect(find.text('PDF 미리보기'), findsNothing);
+      expect(find.text('PDF 미리보기'), findsOneWidget);
     });
 
-    testWidgets('데모 메시지는 리포트 표시나 첨부를 갖지 않는다', (
+    testWidgets('데모 리포트 메시지는 표시만 갖고 첨부는 없다', (
       WidgetTester tester,
     ) async {
       final List<CoachMessage> chat = await MockMemberCoachRepository()
           .fetchChat();
-      final int cards = chat
-          .where((CoachMessage m) => m.reportWeekStart != null)
-          .length;
+      final Iterable<CoachMessage> reports = chat.where(
+        (CoachMessage m) => m.reportWeekStart != null,
+      );
 
-      expect(cards, 0);
+      expect(reports.length, 1);
       expect(
         chat.where((CoachMessage m) => m.attachment != null),
         isEmpty,
-        reason: '김민수 데모 스레드에는 리포트 데이터나 첨부가 없어야 한다',
+        reason: '데모에는 첨부 저장소가 없다 — 미리보기는 회원 기록으로 만든다',
       );
     });
   });

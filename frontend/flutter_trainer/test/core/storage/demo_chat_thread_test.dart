@@ -7,7 +7,9 @@
 ///
 /// 같은 목록을 고정하는 짝:
 ///  * `frontend/flutter/test/features/member_coach/demo_chat_thread_test.dart`
-///  * `backend/tests/test_seed_demo_chat.py`
+///  * `backend/tests/test_seed_demo_chat.py` — 리포트 등록 안내 **한 줄만
+///    빠진다**(#1605). 데모 두 앱은 서버 없이 이 사건을 보여 줘야 하지만,
+///    실서버 스레드는 트레이너가 실제로 리포트를 보낼 때 그 메시지를 만든다.
 library;
 
 import 'package:drift/native.dart';
@@ -44,6 +46,7 @@ const List<(ChatSender, String)> kDemoThread = <(ChatSender, String)>[
   (ChatSender.client, '찌개 먹을 때 국물을 많이 마셨나봐요 😅'),
   (ChatSender.trainer, '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?'),
   (ChatSender.client, '무릎이 가볍게 당기긴 했는데 괜찮아요'),
+  (ChatSender.trainer, '이번 주 리포트 등록해 뒀어요. 확인해 보세요'),
   (
     ChatSender.trainer,
     '확인했어요. AI가 오늘 식단 기반으로 유산소 프로그램을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
@@ -84,6 +87,30 @@ void main() {
     final last = rows.last.createdAt;
     expect((last.year, last.month, last.day), (now.year, now.month, now.day));
     expect(last.isBefore(now), isTrue);
+  });
+
+  test('리포트 등록 안내에는 그 메시지가 속한 주가 표시로 남는다', () async {
+    // 이 표시가 채팅 화면이 리포트를 알아보는 유일한 근거다 — 없으면 같은
+    // 메시지가 평범한 말풍선으로 그려진다(#1421, #1605).
+    final List<ClientChatMessageRow> rows = await minsuThread();
+    final ClientChatMessageRow report = rows.singleWhere(
+      (r) => r.body == '이번 주 리포트 등록해 뒀어요. 확인해 보세요',
+    );
+    final String? week = await db.readValue('report_msg_${report.id}');
+
+    expect(week, isNotNull);
+    final DateTime monday = DateTime.parse(week!);
+    expect(monday.weekday, DateTime.monday);
+    expect(
+      monday.isAfter(
+        DateTime(
+          report.createdAt.year,
+          report.createdAt.month,
+          report.createdAt.day,
+        ).subtract(const Duration(days: 7)),
+      ),
+      isTrue,
+    );
   });
 
   test('고객 목록 미리보기는 스레드의 마지막 메시지와 같다', () async {
