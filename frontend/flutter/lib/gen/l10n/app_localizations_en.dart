@@ -1409,6 +1409,84 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get coachReportPdfSectionTrainerNote => 'From your trainer';
+
+  @override
+  String get coachReportPdfNoTrainerNote => 'No message came with this report.';
+
+  @override
+  String get coachReportPdfSectionChange => 'Change from last week';
+
+  @override
+  String get coachReportPdfSectionMacros => 'Average macros';
+
+  @override
+  String get coachReportPdfLabelLoggedDays => 'Days with meals logged';
+
+  @override
+  String get coachReportPdfLabelSodiumOver => 'Days over the sodium goal';
+
+  @override
+  String get coachReportPdfLabelPtDone => 'PT sessions done';
+
+  @override
+  String coachReportPdfValueSessions(String value) {
+    return '$value sessions';
+  }
+
+  @override
+  String get coachReportPdfLabelCardio => 'Cardio';
+
+  @override
+  String get coachReportPdfLabelStrength => 'Strength';
+
+  @override
+  String get coachReportPdfLabelStretching => 'Stretching';
+
+  @override
+  String get coachReportPdfSectionTypes => 'Minutes by workout type';
+
+  @override
+  String get coachReportPdfNoSessions => 'None booked';
+
+  @override
+  String coachReportPdfDayUpcoming(String weekday) {
+    return '$weekday — still to come';
+  }
+
+  @override
+  String coachReportPdfChange(
+    String label,
+    String current,
+    String previous,
+    String delta,
+  ) {
+    return '· $label: $current (last week $previous, $delta)';
+  }
+
+  @override
+  String coachReportPdfDeltaUp(String value) {
+    return '+$value';
+  }
+
+  @override
+  String coachReportPdfDeltaDown(String value) {
+    return '-$value';
+  }
+
+  @override
+  String get coachReportPdfDeltaSame => 'no change';
+
+  @override
+  String get coachReportPdfNoPreviousWeek =>
+      'There are no records from last week to compare with.';
+
+  @override
+  String coachReportPdfSodiumTargetNote(String target) {
+    return 'The sodium goal is the ${target}mg daily target you set on the MY screen.';
+  }
+
+  @override
   String get coachReportPdfPreviewNote =>
       'Built from your own records for the week the trainer\'s report covers.';
 

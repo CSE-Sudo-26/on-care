@@ -32,8 +32,9 @@ class MemberReportPdfGenerator {
   Future<Uint8List> generate({
     required AppLocalizations l,
     required MemberWeeklyReport report,
+    String trainerNote = '',
   }) async {
-    final List<_Block> blocks = _blocks(l, report);
+    final List<_Block> blocks = _blocks(l, report, trainerNote);
     final List<Uint8List> pageImages = <Uint8List>[];
     ui.PictureRecorder recorder = ui.PictureRecorder();
     Canvas canvas = Canvas(recorder);
@@ -80,9 +81,12 @@ class MemberReportPdfGenerator {
   List<String> textContent({
     required AppLocalizations l,
     required MemberWeeklyReport report,
-  }) => _blocks(l, report).map((_Block block) => block.text).toList(
-    growable: false,
-  );
+    String trainerNote = '',
+  }) => _blocks(
+    l,
+    report,
+    trainerNote,
+  ).map((_Block block) => block.text).toList(growable: false);
 
   double _beginPage(Canvas canvas, AppLocalizations l, int pageNumber) {
     canvas.drawColor(Colors.white, BlendMode.src);
@@ -122,7 +126,11 @@ class MemberReportPdfGenerator {
     return data.buffer.asUint8List();
   }
 
-  List<_Block> _blocks(AppLocalizations l, MemberWeeklyReport report) {
+  List<_Block> _blocks(
+    AppLocalizations l,
+    MemberWeeklyReport report,
+    String trainerNote,
+  ) {
     final List<String> weekdays = <String>[
       l.dietWeekdayMon,
       l.dietWeekdayTue,
@@ -136,6 +144,14 @@ class MemberReportPdfGenerator {
     final List<_Block> blocks = <_Block>[
       _Block.body(
         l.coachReportPdfPeriod(_date(report.weekStart), _date(report.weekEnd)),
+      ),
+      // 트레이너가 리포트와 함께 보낸 글을 맨 앞에 둔다 — 트레이너 화면도
+      // 지표보다 먼저 `트레이너 피드백` 을 읽게 되어 있다(#1613).
+      _Block.section(l.coachReportPdfSectionTrainerNote),
+      _Block.body(
+        trainerNote.trim().isEmpty
+            ? l.coachReportPdfNoTrainerNote
+            : trainerNote.trim(),
       ),
       _Block.section(l.coachReportPdfSectionMetrics),
       _bullet(
@@ -153,15 +169,32 @@ class MemberReportPdfGenerator {
         l.coachReportPdfLabelBurned,
         _value(l, report.exercise.totalCalories, l.coachReportPdfValueKcal),
       ),
+      // PT 는 트레이너가 잡는 일정이라 회원 앱이 목록을 못 받는 경로가 있다.
+      // 그때 `기록 없음` 이라고만 적으면, 그 주에 PT 로 기록된 운동이 있는데도
+      // 아무 일도 없었던 주로 읽힌다(#1613).
+      if (report.sessionsBooked > 0)
+        _bullet(
+          l,
+          l.coachReportPdfLabelSessions,
+          l.coachReportPdfAttendance(
+            '${report.sessionsDone}',
+            '${report.sessionsBooked}',
+          ),
+        )
+      else
+        _bullet(
+          l,
+          report.sessionsDone > 0
+              ? l.coachReportPdfLabelPtDone
+              : l.coachReportPdfLabelSessions,
+          report.sessionsDone > 0
+              ? l.coachReportPdfValueSessions('${report.sessionsDone}')
+              : l.coachReportPdfNoSessions,
+        ),
       _bullet(
         l,
-        l.coachReportPdfLabelSessions,
-        report.sessionsBooked == 0
-            ? l.coachReportPdfNoData
-            : l.coachReportPdfAttendance(
-                '${report.sessionsDone}',
-                '${report.sessionsBooked}',
-              ),
+        l.coachReportPdfLabelLoggedDays,
+        l.coachReportPdfValueDays('$loggedDays'),
       ),
       _bullet(
         l,
@@ -177,6 +210,15 @@ class MemberReportPdfGenerator {
             ? l.coachReportPdfNoData
             : l.coachReportPdfValueMg('${report.diet.avgSodiumMg.round()}'),
       ),
+      // 트레이너 화면은 서버가 세어 준 `나트륨 초과 일수` 를 읽는다. 회원 앱에는
+      // 그 값이 없어 회원 자신의 하루 목표로 다시 센다 — 아래 각주가 어느 기준을
+      // 썼는지 밝힌다.
+      if (report.sodiumOverDays case final int over when loggedDays > 0)
+        _bullet(
+          l,
+          l.coachReportPdfLabelSodiumOver,
+          l.coachReportPdfValueDays('$over'),
+        ),
       _bullet(
         l,
         l.coachReportPdfLabelSugar,
@@ -186,6 +228,32 @@ class MemberReportPdfGenerator {
                 report.diet.avgSugarG.toStringAsFixed(1),
               ),
       ),
+      _Block.section(l.coachReportPdfSectionTypes),
+      _bullet(
+        l,
+        l.coachReportPdfLabelCardio,
+        _sum(l, report.exercise.cardioMinutes, l.coachReportPdfValueMinutes),
+      ),
+      _bullet(
+        l,
+        l.coachReportPdfLabelStrength,
+        _sum(l, report.exercise.strengthMinutes, l.coachReportPdfValueMinutes),
+      ),
+      _bullet(
+        l,
+        l.coachReportPdfLabelStretching,
+        _sum(
+          l,
+          report.exercise.stretchingMinutes,
+          l.coachReportPdfValueMinutes,
+        ),
+      ),
+      _Block.section(l.coachReportPdfSectionMacros),
+      _bullet(l, l.homeMacroCarbs, _gram(l, report.avgCarbsG)),
+      _bullet(l, l.homeMacroProtein, _gram(l, report.avgProteinG)),
+      _bullet(l, l.homeMacroFat, _gram(l, report.avgFatG)),
+      _Block.section(l.coachReportPdfSectionChange),
+      ..._changes(l, report),
       _Block.section(l.coachReportPdfSectionTrend),
       _bullet(
         l,
@@ -211,6 +279,12 @@ class MemberReportPdfGenerator {
     ];
 
     for (int i = 0; i < weekdays.length; i++) {
+      // 아직 오지 않은 요일은 `기록 없음` 이 아니다 — 그렇게 적으면 지키지 못한
+      // 날처럼 읽힌다. 이번 주 리포트는 늘 뒷날이 비어 있어 절반이 그랬다(#1613).
+      if (report.isUpcoming(i)) {
+        blocks.add(_Block.body(l.coachReportPdfDayUpcoming(weekdays[i])));
+        continue;
+      }
       final List<String> done = report.exercisesOn(i, weekdays);
       final int intake = i < report.caloriesByDay.length
           ? report.caloriesByDay[i]
@@ -227,6 +301,11 @@ class MemberReportPdfGenerator {
         ),
       );
     }
+    // 나트륨 초과를 셌다면 어느 기준으로 셌는지 밝힌다 — 기준을 적지 않으면
+    // 트레이너가 보는 초과 일수와 숫자가 달라도 왜 다른지 알 수 없다.
+    if (report.sodiumTarget case final int target when loggedDays > 0) {
+      blocks.add(_Block.body(l.coachReportPdfSodiumTargetNote('$target')));
+    }
     // 이 문서가 어디서 온 값인지 마지막에 한 줄로 밝힌다 — 트레이너가 보낸
     // 파일과 같은 자리에서 열리므로, 같은 것으로 오해하지 않도록.
     blocks.add(_Block.body(l.coachReportPdfPreviewNote, after: 12));
@@ -235,6 +314,82 @@ class MemberReportPdfGenerator {
 
   static _Block _bullet(AppLocalizations l, String label, String value) =>
       _Block.body(l.coachReportPdfBullet(label, value));
+
+  /// `지난주 대비` 줄들. 견줄 주가 없으면 그 사실을 한 줄로 적는다 — 항목만
+  /// 빠지면 문서가 그 주에 아무 변화도 없었던 것처럼 읽힌다.
+  static List<_Block> _changes(AppLocalizations l, MemberWeeklyReport report) {
+    final MemberWeeklyReport? last = report.previous;
+    if (last == null ||
+        (last.exercise.totalMinutes == 0 && last.loggedDays == 0)) {
+      return <_Block>[_Block.body(l.coachReportPdfNoPreviousWeek)];
+    }
+    return <_Block>[
+      _change(
+        l,
+        l.coachReportPdfLabelWorkoutMinutes,
+        report.exercise.totalMinutes,
+        last.exercise.totalMinutes,
+        l.coachReportPdfValueMinutes,
+      ),
+      _change(
+        l,
+        l.coachReportPdfLabelBurned,
+        report.exercise.totalCalories,
+        last.exercise.totalCalories,
+        l.coachReportPdfValueKcal,
+      ),
+      if (report.loggedDays > 0 && last.loggedDays > 0) ...<_Block>[
+        _change(
+          l,
+          l.coachReportPdfLabelCalories,
+          report.diet.avgCalories.round(),
+          last.diet.avgCalories.round(),
+          l.coachReportPdfValueKcal,
+        ),
+        _change(
+          l,
+          l.coachReportPdfLabelSodium,
+          report.diet.avgSodiumMg.round(),
+          last.diet.avgSodiumMg.round(),
+          l.coachReportPdfValueMg,
+        ),
+      ],
+    ];
+  }
+
+  static _Block _change(
+    AppLocalizations l,
+    String label,
+    int current,
+    int previous,
+    _Unit unit,
+  ) {
+    final int delta = current - previous;
+    final String deltaText = delta == 0
+        ? l.coachReportPdfDeltaSame
+        : delta > 0
+        ? l.coachReportPdfDeltaUp(unit('$delta'))
+        : l.coachReportPdfDeltaDown(unit('${-delta}'));
+    return _Block.body(
+      l.coachReportPdfChange(
+        label,
+        unit('$current'),
+        unit('$previous'),
+        deltaText,
+      ),
+    );
+  }
+
+  /// 요일별 계열의 합. 유형별 시간처럼 계열만 있는 값을 한 줄로 적을 때 쓴다.
+  static String _sum(AppLocalizations l, List<double> values, _Unit unit) {
+    if (values.isEmpty) return l.coachReportPdfNoData;
+    final double total = values.fold<double>(0, (double a, double b) => a + b);
+    return total == 0 ? l.coachReportPdfNoData : unit(_trim(total));
+  }
+
+  static String _gram(AppLocalizations l, double? value) => value == null
+      ? l.coachReportPdfNoData
+      : l.coachReportPdfValueGram(value.toStringAsFixed(1));
 
   /// 문서에 남는 날짜는 두 로케일 모두 `YYYY-MM-DD` 다. 회원이 저장해 두고 나중에
   /// 다시 여는 파일이라 연도가 필요하고, `08/05` 처럼 월·일 순서를 두고 헷갈릴
@@ -254,8 +409,9 @@ class MemberReportPdfGenerator {
     }
     return values
         .map(
-          (num value) =>
-              value == 0 ? '-' : unit(value is double ? _trim(value) : '$value'),
+          (num value) => value == 0
+              ? '-'
+              : unit(value is double ? _trim(value) : '$value'),
         )
         .join(' / ');
   }

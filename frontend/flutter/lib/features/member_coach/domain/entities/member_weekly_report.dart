@@ -16,6 +16,9 @@ class MemberWeeklyReport {
     required this.diet,
     required this.sessionsBooked,
     required this.sessionsDone,
+    this.sodiumTarget,
+    this.previous,
+    this.asOf,
   });
 
   /// 리포트가 가리키는 주의 월요일.
@@ -33,12 +36,73 @@ class MemberWeeklyReport {
   /// 그중 진행된 PT.
   final int sessionsDone;
 
+  /// 회원이 정해 둔 하루 나트륨 목표(mg). 트레이너 화면은 서버가 세어 준
+  /// `나트륨 초과 일수` 를 읽지만, 회원 앱에는 그 값이 없고 대신 **회원 자신의
+  /// 목표**가 있다 — 같은 지표를 자기 기준으로 다시 센다.
+  final int? sodiumTarget;
+
+  /// 이 문서를 세운 날. 그 주에서 **아직 오지 않은 요일**을 가리기 위해 든다 —
+  /// 오지 않은 날을 `기록 없음` 이라고 적으면 지키지 못한 날처럼 읽힌다(#1613).
+  final DateTime? asOf;
+
+  /// [weekdayIndex] 요일이 아직 오지 않았는가. 세운 날을 모르면 늘 false 다.
+  bool isUpcoming(int weekdayIndex) {
+    final DateTime? today = asOf;
+    if (today == null) return false;
+    final DateTime day = DateTime(
+      weekStart.year,
+      weekStart.month,
+      weekStart.day + weekdayIndex,
+    );
+    return day.isAfter(DateTime(today.year, today.month, today.day));
+  }
+
+  /// 바로 앞 주. 트레이너 화면의 첫 카드가 `지난주 대비` 비교라 문서도 그 자리를
+  /// 갖는다. 앞 주의 앞 주까지는 세지 않으므로 이 값의 [previous] 는 늘 null 이다.
+  final MemberWeeklyReport? previous;
+
+  /// 같은 주에 [previous] 만 갈아 끼운다. 앞 주 자신은 비교 상대를 갖지 않는다.
+  MemberWeeklyReport copyWithPrevious(MemberWeeklyReport? last) =>
+      MemberWeeklyReport(
+        weekStart: weekStart,
+        exercise: exercise,
+        diet: diet,
+        sessionsBooked: sessionsBooked,
+        sessionsDone: sessionsDone,
+        sodiumTarget: sodiumTarget,
+        previous: last,
+        asOf: asOf,
+      );
+
+  /// 식단을 기록한 날 수.
+  int get loggedDays => diet.loggedDays;
+
+  /// 하루 나트륨 목표를 넘긴 날 수. 목표를 모르면 null 이다 — 기준 없이 센
+  /// `초과 3일` 은 무엇을 넘었다는 말인지 알 수 없다.
+  int? get sodiumOverDays {
+    final int? target = sodiumTarget;
+    if (target == null) return null;
+    return diet.logged.where((DietPeriodDay d) => d.sodiumMg > target).length;
+  }
+
+  /// 기록한 날의 평균 탄·단·지(g). 기록이 없으면 null 이다.
+  double? get avgCarbsG => _loggedMean((DietPeriodDay d) => d.carbsG);
+  double? get avgProteinG => _loggedMean((DietPeriodDay d) => d.proteinG);
+  double? get avgFatG => _loggedMean((DietPeriodDay d) => d.fatG);
+
+  double? _loggedMean(double Function(DietPeriodDay day) pick) {
+    final List<DietPeriodDay> days = diet.logged;
+    if (days.isEmpty) return null;
+    return days.fold<double>(
+          0,
+          (double sum, DietPeriodDay d) => sum + pick(d),
+        ) /
+        days.length;
+  }
+
   /// 리포트가 가리키는 주의 일요일.
-  DateTime get weekEnd => DateTime(
-    weekStart.year,
-    weekStart.month,
-    weekStart.day + 6,
-  );
+  DateTime get weekEnd =>
+      DateTime(weekStart.year, weekStart.month, weekStart.day + 6);
 
   /// 운동한 날 수.
   int get workoutDays => exercise.workoutCount;
