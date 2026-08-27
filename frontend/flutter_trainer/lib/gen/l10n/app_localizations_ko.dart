@@ -1947,9 +1947,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myClientManagement => '고객 관리';
 
   @override
-  String get myClientManagementHint => '담당이 끝난 고객을 명단에서 삭제할 수 있어요';
-
-  @override
   String get myClientRemove => '고객 삭제';
 
   @override
@@ -1959,7 +1956,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myClientRemoveBody =>
-      '이 고객의 스케줄, 프로그램·루틴, 리포트, 메시지, 메모 등 모든 고객 관리 데이터가 삭제되며 복구할 수 없어요. 고객 계정과 고객이 직접 기록한 원본 데이터는 삭제되지 않아요.';
+      '이 고객의 스케줄, 프로그램·루틴, 리포트, 메시지, 메모 등이 트레이너 화면에서 모두 사라져요. 고객 앱의 기존 데이터는 삭제되지 않아요.';
 
   @override
   String get myClientRemoveSuccess => '고객을 삭제했어요';

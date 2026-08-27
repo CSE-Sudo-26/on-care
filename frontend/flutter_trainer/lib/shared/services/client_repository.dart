@@ -260,6 +260,8 @@ class DriftClientRepository implements ClientRepository {
   @override
   Future<void> removeClient(String id) async {
     await _db.transaction(() async {
+      // Demo DB에는 회원 앱 저장소가 없으므로 트레이너 화면용 투영만 정리한다.
+      // 식단·일별 지표처럼 회원이 만든 원본은 남긴다.
       await (_db.delete(
         _db.trainerScheduleEntries,
       )..where((t) => t.clientId.equals(id))).go();
@@ -271,12 +273,6 @@ class DriftClientRepository implements ClientRepository {
       )..where((t) => t.clientId.equals(id))).go();
       await (_db.delete(
         _db.clientChatMessages,
-      )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.clientDietEntries,
-      )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.clientDailyMetrics,
       )..where((t) => t.clientId.equals(id))).go();
       await (_db.delete(
         _db.reportFeedbackDrafts,

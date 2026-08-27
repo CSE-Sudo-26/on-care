@@ -944,7 +944,7 @@ class _ProfileCard extends StatelessWidget {
                       spacing: AppSpacing.xs,
                       runSpacing: AppSpacing.xs,
                       children: <Widget>[
-                        _Tag(text: profile.specialty, color: AppColors.success),
+                        _Tag(text: profile.specialty, color: AppColors.primary),
                         _Tag(
                           text: l.myCareerYears(profile.career),
                           color: AppColors.accent,
@@ -1211,33 +1211,20 @@ class _ClientManagementEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return SectionCard(
-      title: l.myClientManagement,
-      icon: Icons.manage_accounts_outlined,
+    return Semantics(
+      button: true,
       child: InkWell(
-        borderRadius: const BorderRadius.all(AppRadius.md),
+        borderRadius: const BorderRadius.all(AppRadius.card),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  l.myClientManagementHint,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: AppColors.disabledForeground,
-              ),
-            ],
+        child: SectionCard(
+          title: l.myClientManagement,
+          icon: Icons.manage_accounts_outlined,
+          trailing: const Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: AppColors.disabledForeground,
           ),
+          child: const SizedBox.shrink(),
         ),
       ),
     );
@@ -1274,14 +1261,6 @@ class _ClientManagementCard extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text(
-                l.myClientManagementHint,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
               for (var i = 0; i < items.length; i++) ...<Widget>[
                 if (i > 0)
                   const Divider(height: 1, color: AppColors.borderStrong),

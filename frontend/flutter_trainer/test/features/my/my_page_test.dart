@@ -96,7 +96,7 @@ void main() {
     testWidgets('고객 삭제 전 이름과 데이터 보존 범위를 확인한다', (tester) async {
       await openTab(tester);
 
-      final management = find.text('담당이 끝난 고객을 명단에서 삭제할 수 있어요');
+      final management = find.text('고객 관리');
       await tester.scrollUntilVisible(management, 200);
       await tester.tap(management);
       await tester.pumpAndSettle();
@@ -108,7 +108,7 @@ void main() {
 
       expect(find.textContaining('고객을 삭제할까요?'), findsOneWidget);
       expect(find.textContaining('스케줄, 프로그램·루틴, 리포트, 메시지, 메모'), findsOneWidget);
-      expect(find.textContaining('복구할 수 없어요'), findsOneWidget);
+      expect(find.textContaining('고객 앱의 기존 데이터는 삭제되지 않아요'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       expect(find.textContaining('고객을 삭제할까요?'), findsNothing);
@@ -117,7 +117,7 @@ void main() {
     testWidgets('확인한 고객은 관리 화면에서 즉시 사라진다', (tester) async {
       await openTab(tester);
 
-      final management = find.text('담당이 끝난 고객을 명단에서 삭제할 수 있어요');
+      final management = find.text('고객 관리');
       await tester.scrollUntilVisible(management, 200);
       await tester.tap(management);
       await tester.pumpAndSettle();

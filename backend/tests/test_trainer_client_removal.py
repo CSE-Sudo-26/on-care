@@ -98,7 +98,7 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
             date="2026-08-27",
         ),
     ]
-    expected_deleted = [(type(row), row.id) for row in pair_rows]
+    expected_preserved = [(type(row), row.id) for row in pair_rows]
     db_session.add_all([member, *pair_rows])
     db_session.commit()
     try:
@@ -109,16 +109,26 @@ def test_trainer_removes_assignment_but_keeps_member(client, db_session):
 
         db_session.expire_all()
         assert db_session.get(User, member_id) is not None
-        for model, row_id in expected_deleted:
-            assert db_session.get(model, row_id) is None
+        for model, row_id in expected_preserved:
+            assert db_session.get(model, row_id) is not None
         roster = client.get("/v1/trainer/clients", headers=_headers(token)).json()
         assert member_id not in {row["id"] for row in roster}
+        schedule = client.get(
+            "/v1/trainer/schedule",
+            params={"date": "2026-08-27"},
+            headers=_headers(token),
+        ).json()
+        assert not any(row["id"] == expected_preserved[1][1] for row in schedule)
         repeated = client.delete(
             f"/v1/trainer/clients/{member_id}", headers=_headers(token)
         )
         assert repeated.status_code == 404
     finally:
         db_session.expire_all()
+        for model, row_id in reversed(expected_preserved):
+            row = db_session.get(model, row_id)
+            if row is not None:
+                db_session.delete(row)
         saved = db_session.get(User, member_id)
         if saved is not None:
             db_session.delete(saved)
