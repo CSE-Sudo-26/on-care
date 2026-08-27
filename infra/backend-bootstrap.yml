@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cost-safe bootstrap resources for the OnCare App Runner backend
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Default: CSE-Sudo-26
+  GitHubRepository:
+    Type: String
+    Default: on-care
+  GitHubOwnerId:
+    Type: String
+    Default: '265976266'
+    AllowedPattern: '^[0-9]+$'
+  GitHubRepositoryId:
+    Type: String
+    Default: '1174354664'
+    AllowedPattern: '^[0-9]+$'
+  GitHubBranch:
+    Type: String
+    Default: main
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Description: ARN of the account's token.actions.githubusercontent.com OIDC provider
+
+Resources:
+  BackendRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: oncare-backend
+      EmptyOnDelete: false
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep only the ten newest backend images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {"type": "expire"}
+              }
+            ]
+          }
+  AppRunnerEcrAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Allow App Runner to pull the private OnCare backend image
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: pull-oncare-backend
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !GetAtt BackendRepository.Arn
+
+  GitHubBackendDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Deploy the main branch backend to ECR and App Runner from GitHub Actions
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref ExistingGitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}'
+      Policies:
+        - PolicyName: deploy-oncare-backend
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: EcrAuthorization
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Sid: ManageBackendImages
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:CompleteLayerUpload
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: !GetAtt BackendRepository.Arn
+              - Sid: UpdateBackendService
+                Effect: Allow
+                Action:
+                  - apprunner:DescribeService
+                  - apprunner:ListOperations
+                  - apprunner:UpdateService
+                Resource: !Sub 'arn:${AWS::Partition}:apprunner:${AWS::Region}:${AWS::AccountId}:service/oncare-backend/*'
+
+Outputs:
+  EcrRepositoryUri:
+    Value: !GetAtt BackendRepository.RepositoryUri
+  GitHubDeployRoleArn:
+    Description: GitHub secret AWS_DEPLOY_ROLE_ARN
+    Value: !GetAtt GitHubBackendDeployRole.Arn
+  AppRunnerEcrAccessRoleArn:
+    Description: Access role used when the App Runner service is created
+    Value: !GetAtt AppRunnerEcrAccessRole.Arn
