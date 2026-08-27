@@ -98,7 +98,7 @@ Map<String, Object?> assignRoutineToJson(
   final String type = normaliseRoutineType(r.type);
   final bool strength = type == '근력';
   return <String, Object?>{
-    'name': r.name.trim().isEmpty ? 'AI 맞춤 루틴' : _truncate(r.name.trim(), 100),
+    'name': r.name.trim().isEmpty ? 'AI 맞춤 추천안' : _truncate(r.name.trim(), 100),
     'minutes': r.minutes.clamp(0, 600),
     'type': type,
     'exercise_date': r.date == null ? null : _ymd(r.date!),

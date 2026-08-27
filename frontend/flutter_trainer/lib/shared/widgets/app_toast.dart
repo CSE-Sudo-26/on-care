@@ -218,13 +218,17 @@ class _AppToastState extends State<_AppToast>
                   color: _iconColor(widget.kind),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                // 긴 메시지는 최대 너비 안에서 줄바꿈한다 — `Flexible` 이라
-                // 짧은 메시지에서는 제 너비만 차지하고, 길면 남은 자리까지
-                // 쓰고 접힌다.
+                // 토스트는 항상 한 줄이다(#1573) — 줄바꿈을 허용하면 두 줄째가
+                // 다음 화면 요소를 가리거나 애니메이션 높이가 들쭉날쭉해진다.
+                // `Flexible` 이라 짧은 메시지에서는 제 너비만 차지하고, 최대
+                // 너비를 넘는 긴 메시지는 말줄임표로 자른다.
                 Flexible(
                   child: Text(
                     widget.message,
                     style: AppToastStyle.contentTextStyle,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (widget.action case final action?) ...[

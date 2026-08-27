@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -238,8 +239,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashTitle => 'Dashboard';
 
   @override
-  String get dashActivityRecommendRoutine =>
-      'Try adjusting the routine in Program.';
+  String get dashActivityRecommendRoutine => 'Try adjusting the program setup.';
 
   @override
   String get dashActivityRecommendChat => 'Try checking in over Messages.';
@@ -978,7 +978,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInsightNegativeDescription =>
-      'AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the routine.';
+      'AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the program.';
 
   @override
   String get chatInsightAddMemo => 'Add to memo';
@@ -1141,16 +1141,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutEmpty => 'No workouts logged yet';
 
   @override
-  String get routinesAssigned => 'Assigned routines';
+  String get routinesAssigned => 'Assigned programs';
 
   @override
-  String get routineNew => 'New routine';
+  String get routineNew => 'New program';
 
   @override
-  String get routinesLoadFailed => 'Couldn\'t load routines';
+  String get routinesLoadFailed => 'Couldn\'t load programs';
 
   @override
-  String get routinesEmpty => 'No routines assigned to this client yet';
+  String get routinesEmpty => 'No programs assigned to this client yet';
 
   @override
   String minutesShort(int minutes) {
@@ -1248,12 +1248,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dietAiOverSodium(int over) {
-    return 'Sodium is ${over}mg over target. Adding cardio to today\'s routine would help.';
+    return 'Sodium is ${over}mg over target. Adding cardio to today\'s program would help.';
   }
 
   @override
   String get dietAiBalanced =>
-      'Today\'s meals are well balanced. Keep the current routine.';
+      'Today\'s meals are well balanced. Keep the current program.';
 
   @override
   String get consultStatusRejected => 'Declined';
@@ -1568,7 +1568,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportBodyEncourage =>
-      'Let\'s focus on just that one thing next week. I\'ll adjust your routine and send it over.';
+      'Let\'s focus on just that one thing next week. I\'ll adjust your program and send it over.';
 
   @override
   String get reportBodyNoRecords =>
@@ -1823,7 +1823,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progEmptyHint =>
-      'Build one in the AI routine tab, or agree on it over chat first.';
+      'Build one in the AI suggestions tab, or agree on it over chat first.';
 
   @override
   String schedSentTo(String name) {
@@ -1976,7 +1976,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myLegalTermsBody =>
-      'This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching routines, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member\'s consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.';
+      'This English text is provided for convenience; the Korean original governs.\n\n1. Purpose\nThese terms govern the rights, obligations and responsibilities between On-Care (the \"Company\") and trainers using the On-Care trainer console (the \"Service\").\n\n2. Effect and amendment\nThese terms apply to every trainer using the Service. The Company may amend them within the limits of applicable law, announcing the effective date and the reason inside the Service.\n\n3. The Service\nThe Company provides client management, access to diet and workout records, scheduling, messaging, AI coaching programs, and report writing and delivery. The details may change with Company policy.\n\n4. Accounts\nTrainer accounts and member accounts are separate; one account cannot be used for both. Trainers must enter certification and career details truthfully and are responsible for keeping their credentials safe.\n\n5. Handling member information\nTrainers may open the diet, workout and health records only of members they are assigned to. Those records may be used solely for coaching, consultation and reports, and must never be published or handed to a third party. When an assignment ends, the access ends with it.\n\n6. Prohibited conduct\nTrainers must not make medical diagnoses or prescriptions, and must not move member information outside the Service without that member\'s consent.\n\n7. Limitation of liability\nAI coaching output and statistics are reference material. The final judgement about the guidance given to a member rests with the trainer, and the Company bears no liability for that outcome to the extent permitted by law.\n\n8. Termination\nA trainer may delete their account at any time. Doing so ends their client assignments and upcoming sessions, and the affected members are notified.\n\nAddendum\nThese terms take effect on January 1, 2026.';
 
   @override
   String get myLegalPrivacyBody =>
@@ -2074,7 +2074,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myStatSessionsDone => 'Sessions done';
 
   @override
-  String get myStatRoutinesSent => 'Routines sent';
+  String get myStatRoutinesSent => 'Programs sent';
 
   @override
   String get myGymName => 'Gym name';
@@ -2303,7 +2303,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelTomorrow => 'Tomorrow';
 
   @override
-  String get coachRequestCustom => 'Ask AI for a custom routine';
+  String get coachRequestCustom => 'Ask AI for a custom suggestion';
 
   @override
   String coachRequestBlurb(String name) {
@@ -2389,7 +2389,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String aiRoutineSent(String name) {
-    return 'Routine sent to $name';
+    return 'Program sent to $name';
   }
 
   @override
@@ -2399,7 +2399,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String aiCustomRoutineNamed(String option) {
-    return 'AI custom routine ($option)';
+    return 'AI custom suggestion ($option)';
   }
 
   @override
@@ -2413,7 +2413,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String aiRoutineFor(String name) {
-    return 'AI routine · $name';
+    return 'AI suggestion · $name';
   }
 
   @override
@@ -2505,7 +2505,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiAppliedToTemplate =>
-      'The AI routine was applied to the program info. Review it below, edit if needed, then send it.';
+      'The AI suggestion was applied to the program template.';
 
   @override
   String get aiStepConditions => 'Set up';
@@ -2517,7 +2517,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiStepDone => 'Final review';
 
   @override
-  String get aiStepperLabel => 'Custom routine progress';
+  String get aiStepperLabel => 'Custom suggestion progress';
 
   @override
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
@@ -2562,10 +2562,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your request goes to the AI with the member\'s data (up to 500 characters). Write the member note in the next step.';
 
   @override
-  String get aiGenerateGoalBased => 'Generate goal-based routine';
+  String get aiGenerateGoalBased => 'Generate goal-based suggestion';
 
   @override
-  String get aiStatusTemplateTitle => 'Goal-based starter routine';
+  String get aiStatusTemplateTitle => 'Goal-based starter suggestion';
 
   @override
   String get aiStatusTemplateBody =>
@@ -2635,7 +2635,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alertAwaitingReply => 'Awaiting reply';
 
   @override
-  String get clientLastRoutine => 'Last routine';
+  String get clientLastRoutine => 'Last program';
 
   @override
   String metricOverBy(String unit) {
@@ -2789,7 +2789,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get routineAlreadyGone => 'That routine is already gone';
+  String get routineAlreadyGone => 'That program is already gone';
 
   @override
   String get workoutPendingTitle => 'Not done yet';
@@ -2802,29 +2802,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineUpdateFailed =>
-      'Couldn\'t update the routine. Please try again in a moment';
+      'Couldn\'t update the program. Please try again in a moment';
 
   @override
-  String get routineUpdated => 'Routine updated';
+  String get routineUpdated => 'Program updated';
 
   @override
-  String get routineDeleteTitle => 'Delete this routine?';
+  String get routineDeleteTitle => 'Delete this program?';
 
   @override
   String get routineDeleteFailed =>
-      'Couldn\'t delete the routine. Please try again in a moment';
+      'Couldn\'t delete the program. Please try again in a moment';
 
   @override
-  String get routineDeleted => 'Routine deleted';
+  String get routineDeleted => 'Program deleted';
 
   @override
-  String get routineEdit => 'Edit routine';
+  String get routineEdit => 'Edit program';
 
   @override
-  String get routineDelete => 'Delete routine';
+  String get routineDelete => 'Delete program';
 
   @override
-  String get routineNameRequired => 'Enter a routine name';
+  String get routineNameRequired => 'Enter a program name';
 
   @override
   String get routineNameTooLong => 'Keep the name to 100 characters or fewer';
@@ -2838,7 +2838,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep the reason to 200 characters or fewer';
 
   @override
-  String get routineFieldName => 'Routine name';
+  String get routineFieldName => 'Program name';
 
   @override
   String get routineFieldMinutesLabel => 'Duration (min)';
@@ -2856,7 +2856,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchClientsHint =>
-      'Clients, goals, recent messages, last routine sent date';
+      'Clients, goals, recent messages, last program sent date';
 
   @override
   String get searchClear => 'Clear search';
@@ -2901,7 +2901,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String searchDetailLastRoutine(String when) {
-    return 'Last routine $when';
+    return 'Last program $when';
   }
 
   @override
@@ -3325,7 +3325,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programDraftDeleteBody =>
-      'Routines you already assigned and sessions you scheduled stay as they are.';
+      'Programs you already assigned and sessions you scheduled stay as they are.';
 
   @override
   String get programEditorAssignUnsupported =>
@@ -3580,7 +3580,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsActionLowCompletion =>
-      'Drop the routine a notch so they finish it first.';
+      'Drop the program a notch so they finish it first.';
 
   @override
   String get reportsActionHighCompletion =>

@@ -5,9 +5,9 @@
     POST /diet/analyze  →  diet_entries 저장  →  record_diet 로 개인 RAG 문서 적재
                         →  retrieve 가 그 문서를 찾음  →  채팅 프롬프트에 실림
 
-마지막 단계를 **모델의 말투가 아니라 프롬프트 내용**으로 검증한다. "답변에 '비빔밥'
-이 나오는지"로 확인하면 LLM 이 그 단어를 안 쓰기만 해도 깨지는, 실패를 신뢰할 수 없는
-테스트가 된다. 프롬프트에 근거가 실렸는지는 결정론적이다.
+마지막 단계를 **모델의 말투가 아니라 프롬프트 내용**으로 검증한다. "답변에 스텁이
+낸 음식 이름이 나오는지"로 확인하면 LLM 이 그 단어를 안 쓰기만 해도 깨지는, 실패를
+신뢰할 수 없는 테스트가 된다. 프롬프트에 근거가 실렸는지는 결정론적이다.
 
 임베딩은 키가 없으면 해시 임베더로 폴백하므로(embedder/factory) CI 에서도 돈다.
 """
@@ -104,7 +104,7 @@ def test_saved_diet_becomes_a_personal_rag_document(client, db_session, member):
     ).all()
     assert docs, "식단 저장이 개인 RAG 문서를 만들지 않았다"
     joined = " ".join(d.content for d in docs)
-    assert "비빔밥" in joined          # 스텁 인식기가 낸 음식
+    assert "요거트 아이스크림" in joined  # 스텁 인식기가 낸 음식
     assert "나트륨" in joined
 
 
@@ -132,7 +132,7 @@ def test_recent_diet_is_grounded_into_the_chat_prompt(
 
     prompt = recording_llm.user_prompt
     assert "[내 건강 기록]" in prompt
-    assert "비빔밥" in prompt, "개인 식단 기록이 프롬프트 근거로 실리지 않았다"
+    assert "요거트 아이스크림" in prompt, "개인 식단 기록이 프롬프트 근거로 실리지 않았다"
 
 
 def test_other_users_diet_never_reaches_my_prompt(

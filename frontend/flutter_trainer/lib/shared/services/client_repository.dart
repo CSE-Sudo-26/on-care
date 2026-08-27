@@ -573,8 +573,8 @@ class DriftClientRepository implements ClientRepository {
       );
       return sodium > sodiumTargetMg
           ? '나트륨이 목표치를 ${sodium - sodiumTargetMg}mg 초과했어요. '
-                '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
-          : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+                '오늘 운동 프로그램에 유산소를 추가하면 도움이 돼요.'
+          : '오늘 식단은 균형이 잘 맞아요. 현재 프로그램을 유지하세요.';
     }
 
     final ClientDietPeriod window = await fetchDietPeriod(

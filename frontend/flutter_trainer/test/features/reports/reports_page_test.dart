@@ -528,9 +528,7 @@ void main() {
     expect(currentWeek, findsNothing);
   });
 
-  testWidgets('채팅의 리포트 카드가 가리킨 주로 열린다 (#1421)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('채팅의 리포트 카드가 가리킨 주로 열린다 (#1421)', (WidgetTester tester) async {
     tester.view.devicePixelRatio = 1.0;
     tester.view.physicalSize = const Size(1600, 1200);
     addTearDown(tester.view.reset);
@@ -598,7 +596,7 @@ void main() {
     final double reportsWidth = tester
         .getSize(find.byKey(clientSearchFieldKey))
         .width;
-    expect(find.text('고객·목표·최근 메시지·마지막 루틴 전송일 검색'), findsOneWidget);
+    expect(find.text('고객·목표·최근 메시지·마지막 프로그램 전송일 검색'), findsOneWidget);
 
     await goTo(tester, AppRoutes.dashboard);
     expect(

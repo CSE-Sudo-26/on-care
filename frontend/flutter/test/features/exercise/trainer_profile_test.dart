@@ -141,7 +141,7 @@ void main() {
       expect(trainer.career, '7년');
       expect(
         trainer.intro,
-        '혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다. 회원 상태에 맞춘 AI 루틴을 활용해 안전한 강도부터 시작합니다.',
+        '혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다. 회원 상태에 맞춘 AI 추천 프로그램을 활용해 안전한 강도부터 시작합니다.',
       );
       expect(trainer.certifications, <String>[
         '생활스포츠지도사 2급',
@@ -162,10 +162,7 @@ void main() {
         isTrue,
       );
       // id 는 서로 겹치지 않아야 상세 라우팅이 정확히 한 명을 가리킨다.
-      expect(
-        sinchon.map((Trainer t) => t.id).toSet().length,
-        sinchon.length,
-      );
+      expect(sinchon.map((Trainer t) => t.id).toSet().length, sinchon.length);
     });
 
     test('트레이너를 id 로 조회하고, 없으면 null 이다', () async {

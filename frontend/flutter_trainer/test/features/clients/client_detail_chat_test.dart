@@ -507,14 +507,11 @@ void main() {
       expect(find.text('다음 세션 때 봐요!'), findsWidgets);
     });
 
-    testWidgets('데모 시드의 리포트 등록도 같은 카드로 뜬다 (#1421)', (tester) async {
-      // 회원 앱 데모 스레드에도 같은 자리에 같은 메시지가 있다. 한쪽만 카드로
-      // 보이면 두 사람이 같은 리포트를 두고 다른 것을 본다.
+    testWidgets('김민수 데모 시드에는 리포트 등록 카드가 없다 (#1586)', (tester) async {
       await openMessages(tester);
 
-      expect(find.text('리포트가 등록되었어요'), findsOneWidget);
-      expect(find.text('리포트 탭에서 확인하기'), findsOneWidget);
-      // 표시가 붙은 메시지는 본문 말풍선으로 겹쳐 그리지 않는다.
+      expect(find.text('리포트가 등록되었어요'), findsNothing);
+      expect(find.text('리포트 탭에서 확인하기'), findsNothing);
       expect(find.text('이번 주 리포트 등록해 뒀어요. 확인해 보세요'), findsNothing);
     });
 
