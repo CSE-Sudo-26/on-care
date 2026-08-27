@@ -169,6 +169,18 @@ class MockMemberCoachRepository implements MemberCoachRepository {
       day: 2,
     ),
     _seed(17, CoachSender.me, '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16', day: 2),
+    // 트레이너 앱 시드와 같은 자리에 같은 문구로 둔다. 마지막 인사 **앞**이다 —
+    // 스레드 맨 끝은 `추천운동을 받았어요` 안내가 붙는 자리다. 데모에서 두 앱은
+    // 저장소를 공유하지 않아, 이 시드가 없으면 회원 쪽에서는 리포트 등록이라는
+    // 사건 자체가 일어나지 않는다(#1605).
+    _seed(
+      19,
+      CoachSender.trainer,
+      '이번 주 리포트 등록해 뒀어요. 확인해 보세요',
+      '18:17',
+      day: 2,
+      reportWeekStart: _reportWeekStart,
+    ),
     _seed(
       18,
       CoachSender.trainer,
@@ -195,11 +207,25 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     sender: sender,
     body: body,
     timeLabel: timeLabel,
-    createdAt: _seedEpoch
-        .add(Duration(days: day, minutes: _minutesOfDay(timeLabel)))
-        .subtract(_seedTimeShift),
+    createdAt: _seedAt(day, timeLabel),
     reportWeekStart: reportWeekStart,
   );
+
+  /// 시드 메시지 하나의 실제 시각. 넣을 때와 리포트 주차를 잡을 때가 같은 값을
+  /// 봐야 해서 한 곳에 둔다 — 두 벌로 두면 한쪽만 고쳐진다. 트레이너 앱 시드도
+  /// 같은 방식이다(`seedIfEmpty` 의 `chatCreatedAt`).
+  static DateTime _seedAt(int day, String timeLabel) => _seedEpoch
+      .add(Duration(days: day, minutes: _minutesOfDay(timeLabel)))
+      .subtract(_seedTimeShift);
+
+  /// 리포트가 다루는 주 — 안내 메시지 **자신이 속한 주**의 월요일. (#1605)
+  ///
+  /// 스레드 날짜는 실행할 때마다 오늘로 옮겨진다. 여기에 고정된 주를 적으면
+  /// 대화는 이번 주인데 안내 상자만 지난 주를 가리키게 된다.
+  static final DateTime _reportWeekStart = _mondayOf(_seedAt(2, '18:17'));
+
+  static DateTime _mondayOf(DateTime day) =>
+      DateTime(day.year, day.month, day.day - (day.weekday - DateTime.monday));
 
   static int _minutesOfDay(String timeLabel) {
     final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeLabel);
