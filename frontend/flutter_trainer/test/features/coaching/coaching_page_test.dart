@@ -865,7 +865,7 @@ void main() {
         expect(personalBadge, findsOneWidget);
         expect(ptBadge, findsOneWidget);
         expect(tester.getSize(personalBadge), tester.getSize(ptBadge));
-        expect(find.text('레그프레스 외 3개'), findsOneWidget);
+        expect(find.text('벤치프레스 외 3개'), findsOneWidget);
         expect(find.text('1:1 PT · 운동 4개'), findsNothing);
         expect(
           tester.getBottomRight(sugar).dy,
@@ -1114,7 +1114,10 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(of: detail, matching: find.text('벤치프레스 40kg · 4세트')),
+        find.descendant(
+          of: detail,
+          matching: find.text('벤치프레스 4세트 · 10회 · 40kg'),
+        ),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
