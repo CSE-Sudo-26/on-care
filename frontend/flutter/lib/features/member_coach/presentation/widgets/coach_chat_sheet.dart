@@ -575,11 +575,18 @@ class _Bubble extends ConsumerWidget {
 
 /// PDF 한 부를 미리보기로 연다. 첨부 파일과 회원 기록으로 만든 문서가 같은
 /// 화면으로 열려야, 회원이 무엇을 보고 있는지 헷갈리지 않는다. (#1600)
+///
+/// `build` 는 **부를 때마다 복사본**을 준다. 웹에서 미리보기는 pdf.js 로 그리는데,
+/// pdf.js 는 받은 바이트의 버퍼를 워커로 넘기면서(transfer) 원본을 비워 버린다.
+/// 같은 바이트를 그대로 다시 주면 두 번째 렌더가 `ArrayBuffer ... is already
+/// detached` 로 죽고, 그리다 만 미리보기가 스피너만 도는 채로 남는다. 미리보기는
+/// 화면 크기·용지 설정이 바뀔 때마다 다시 그리므로 두 번째 호출은 반드시 온다.
 Future<void> showPdfPreviewDialog(
   BuildContext context,
   Uint8List bytes,
   String fileName,
 ) {
+  final AppLocalizations l = AppLocalizations.of(context);
   return showDialog<void>(
     context: context,
     builder: (_) => Dialog(
@@ -587,9 +594,21 @@ Future<void> showPdfPreviewDialog(
         width: 760,
         height: 720,
         child: PdfPreview(
-          build: (_) async => bytes,
+          build: (_) async => Uint8List.fromList(bytes),
           pdfFileName: fileName,
           allowSharing: false,
+          // 미리보기가 실패했을 때 스피너를 계속 돌리면 회원은 느린 것과
+          // 안 되는 것을 구별할 수 없다.
+          onError: (_, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                l.coachChatPdfOpenFailed,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.mutedForeground),
+              ),
+            ),
+          ),
         ),
       ),
     ),

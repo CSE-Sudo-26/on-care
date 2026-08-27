@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -781,6 +783,13 @@ class _Bubble extends ConsumerWidget {
   static String _clockOnly(String label) =>
       RegExp(r'\d{1,2}:\d{2}').firstMatch(label)?.group(0) ?? label;
 
+  /// 채팅에 붙은 PDF 한 부를 미리보기로 연다.
+  ///
+  /// `build` 는 **부를 때마다 복사본**을 준다. 웹에서 미리보기는 pdf.js 로 그리는데,
+  /// pdf.js 는 받은 바이트의 버퍼를 워커로 넘기면서(transfer) 원본을 비워 버린다.
+  /// 같은 바이트를 그대로 다시 주면 두 번째 렌더가 `ArrayBuffer ... is already
+  /// detached` 로 죽고, 그리다 만 미리보기가 스피너만 도는 채로 남는다. 미리보기는
+  /// 화면 크기·용지 설정이 바뀔 때마다 다시 그리므로 두 번째 호출은 반드시 온다.
   Future<void> _openPdf(
     BuildContext context,
     WidgetRef ref,
@@ -799,9 +808,21 @@ class _Bubble extends ConsumerWidget {
             width: 760,
             height: 720,
             child: PdfPreview(
-              build: (_) async => bytes,
+              build: (_) async => Uint8List.fromList(bytes),
               pdfFileName: attachment.fileName,
               allowSharing: false,
+              // 미리보기가 실패했을 때 스피너를 계속 돌리면 느린 것과 안 되는
+              // 것을 구별할 수 없다.
+              onError: (_, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Text(
+                    l.chatPdfOpenFailed,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.mutedForeground),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
