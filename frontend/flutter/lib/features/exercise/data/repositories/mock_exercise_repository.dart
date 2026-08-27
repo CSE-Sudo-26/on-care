@@ -83,6 +83,15 @@ class MockExerciseRepository implements ExerciseRepository {
             dateLabel: _dateLabel(day.date),
             // PT 날만 시각이 있다. 자율 운동은 픽스처가 시각을 갖지 않는다.
             timeLabel: day.isPt ? '18:00' : null,
+            // 픽스처에는 회원이 손으로 적은 기록이 없다 — PT 날은 트레이너
+            // 지도 세션이고, 나머지 날은 배정받은 개인운동을 수행한 기록이다.
+            // 출처를 비워 두면 전부 `member` 로 떨어져(기본값), 헬스장에서 한
+            // PT 가 `직접 추가한 운동` 목록에 회원 기록처럼 서고 연필까지 붙어
+            // 고칠 수 있었다. 서버는 이 둘을 `trainer_pt`·`assigned_routine`
+            // 로 내려 주고 수정·삭제를 409 로 막는다(#499, #638).
+            source: day.isPt
+                ? ExerciseSource.trainerPt
+                : ExerciseSource.assignedRoutine,
             type: entry.key,
             minutes: entry.value.fold<int>(
               0,
@@ -216,6 +225,55 @@ class MockExerciseRepository implements ExerciseRepository {
     return session;
   }
 
+  /// 배정 루틴을 수행한 기록. 서버의 `complete_assigned_routine` 대역이라,
+  /// 회원이 손으로 적은 기록과 **출처가 다르다**(`assigned_routine`).
+  ///
+  /// [addSession] 으로 남기면 회원 수기 기록이 되어 `직접 추가한 운동` 목록에
+  /// 서고 연필·삭제까지 붙는다 — 실서버에서는 409 로 막히는 동작이다.
+  /// 되돌리기는 [removeAssignedRoutineSession] 이 맡는다.
+  Future<ExerciseSession> addAssignedRoutineSession({
+    required ExerciseType type,
+    required int minutes,
+    required int calories,
+    required DateTime date,
+    required String routineId,
+    required String name,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    final session = ExerciseSession(
+      id: 'mock-ex-${++_seq}',
+      dayLabel: _dayLabels[date.weekday - 1],
+      type: type,
+      minutes: minutes,
+      calories: calories,
+      intensity: intensity,
+      dateLabel: _dateLabel(_ymd(date)),
+      name: name,
+      date: date,
+      source: ExerciseSource.assignedRoutine,
+      assignedRoutineId: routineId,
+      assignedRoutineName: name,
+    );
+    _sessions.add(session);
+    _totalCalories += calories;
+    return session;
+  }
+
+  /// 배정 루틴 완료를 되돌릴 때 그 수행 기록도 지운다. 서버의
+  /// `uncomplete_assigned_routine` 대역 — 회원 수기 기록을 지우는
+  /// [deleteSession] 과 달리 파생 기록만 지운다.
+  Future<void> removeAssignedRoutineSession(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    final int idx = _sessions.indexWhere(
+      (ExerciseSession s) =>
+          s.id == id && s.source == ExerciseSource.assignedRoutine,
+    );
+    if (idx < 0) return;
+    _totalCalories = _nonNeg(_totalCalories - _sessions[idx].calories);
+    _sessions.removeAt(idx);
+  }
+
   /// 근력에서만 의미 있는 값(세트·횟수·중량). 다른 유형에서 온 값은 버린다 —
   /// 서버(`_strength_only`)와 같은 규칙이라야 데모와 실 API 가 같은 기록을
   /// 남긴다. (#1262, #1276, #1310)
@@ -227,6 +285,7 @@ class MockExerciseRepository implements ExerciseRepository {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     final int idx = _sessions.indexWhere((ExerciseSession s) => s.id == id);
     if (idx < 0) return;
+    if (!_sessions[idx].isEditable) return;
     _totalCalories = _nonNeg(_totalCalories - _sessions[idx].calories);
     _sessions.removeAt(idx);
   }
@@ -247,6 +306,10 @@ class MockExerciseRepository implements ExerciseRepository {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     final int idx = _sessions.indexWhere((ExerciseSession s) => s.id == id);
     final ExerciseSession? old = idx >= 0 ? _sessions[idx] : null;
+    // 코칭에서 파생된 기록(PT·배정 루틴)은 회원이 고치지 못한다 — 서버가 409
+    // 로 막는 자리다. 여기서 덮어쓰면 그 기록이 회원 수기 기록으로 바뀌어
+    // 헬스장에서 한 PT 가 `직접 추가한 운동` 으로 옮겨 앉는다.
+    if (old != null && !old.isEditable) return old;
     final ExerciseSession updated = ExerciseSession(
       id: id,
       dayLabel: _dayLabels[date.weekday - 1],
