@@ -89,6 +89,9 @@ MemberWeeklyReport _report({
   List<DietPeriodDay> days = const <DietPeriodDay>[],
   int booked = 2,
   int done = 1,
+  int? sodiumTarget,
+  MemberWeeklyReport? previous,
+  DateTime? asOf,
 }) => MemberWeeklyReport(
   weekStart: _weekStart,
   exercise: ExerciseWeek(
@@ -103,6 +106,9 @@ MemberWeeklyReport _report({
   diet: DietPeriod(days: days),
   sessionsBooked: booked,
   sessionsDone: done,
+  sodiumTarget: sodiumTarget,
+  previous: previous,
+  asOf: asOf,
 );
 
 List<DietPeriodDay> _week() => <DietPeriodDay>[
@@ -195,9 +201,7 @@ void main() {
   });
 
   group('리포트 미리보기 문서 (#1600)', () {
-    testWidgets('트레이너 리포트와 같은 지표를 회원 기록으로 적는다', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('트레이너 리포트와 같은 지표를 회원 기록으로 적는다', (WidgetTester tester) async {
       final AppLocalizations l = await localizations(tester);
       final List<String> lines = const MemberReportPdfGenerator().textContent(
         l: l,
@@ -236,5 +240,102 @@ void main() {
       expect(lines.last, contains('회원님 기록으로 정리한 미리보기'));
     });
 
+    testWidgets('아직 오지 않은 요일은 기록 없음이라고 적지 않는다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        // 그 주의 수요일에 세운 문서 — 목·금·토·일은 아직 오지 않았다.
+        report: _report(days: _week(), asOf: DateTime(2026, 8, 19)),
+      );
+
+      expect(lines, contains('목요일 — 아직 지나지 않았어요'));
+      expect(lines, contains('일요일 — 아직 지나지 않았어요'));
+      expect(lines, isNot(contains('일요일 — 운동 기록 없음, 섭취 기록 없음')));
+      // 지나간 날은 그대로 센다.
+      expect(lines, contains(contains('화요일 — ')));
+    });
+
+    testWidgets('트레이너가 함께 보낸 글을 문서 안에서 읽는다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week()),
+        trainerNote: '이번 주는 나트륨을 조금만 줄여 봐요.',
+      );
+
+      expect(lines, contains('트레이너 메시지'));
+      expect(lines, contains('이번 주는 나트륨을 조금만 줄여 봐요.'));
+    });
+
+    testWidgets('함께 온 글이 없으면 그 사실을 적는다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week()),
+      );
+
+      expect(lines, contains('함께 온 메시지가 없어요.'));
+    });
+
+    testWidgets('잡힌 일정을 못 받아도 진행한 PT 는 기록에서 센다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week(), booked: 0, done: 2),
+      );
+
+      // 예전에는 잡힌 일정이 없으면 `PT 세션: 기록 없음` 이었다 — 그 주에 PT 를
+      // 두 번 했는데도 아무 일 없던 주로 읽혔다.
+      expect(lines, contains('· 진행한 PT: 2회'));
+      expect(lines, isNot(contains('· PT 세션: 기록 없음')));
+    });
+
+    testWidgets('잡힌 일정도 진행한 PT 도 없으면 일정이 없다고 적는다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week(), booked: 0, done: 0),
+      );
+
+      expect(lines, contains('· PT 세션: 잡힌 일정 없음'));
+    });
+
+    testWidgets('나트륨 초과 일수는 회원 자신의 목표로 세고 기준을 밝힌다', (
+      WidgetTester tester,
+    ) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week(), sodiumTarget: 2000),
+      );
+
+      // `_week()` 는 기록한 여섯 날 모두 2100mg 이다.
+      expect(lines, contains('· 나트륨 목표 초과: 6일'));
+      expect(lines, contains(contains('하루 2000mg 기준')));
+    });
+
+    testWidgets('지난주가 있으면 견주고, 없으면 없다고 적는다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> withLast = const MemberReportPdfGenerator()
+          .textContent(
+            l: l,
+            report: _report(
+              days: _week(),
+              previous: _report(
+                days: _week(),
+                minutes: const <double>[20, 0, 0, 0, 0, 0, 0],
+              ),
+            ),
+          );
+
+      expect(withLast, contains('지난주 대비'));
+      expect(withLast, contains('· 총 운동 시간: 95분 (지난주 95분, 변화 없음)'));
+
+      final List<String> alone = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week()),
+      );
+      expect(alone, contains('지난주 기록이 없어 견줄 값이 없어요.'));
+    });
   });
 }

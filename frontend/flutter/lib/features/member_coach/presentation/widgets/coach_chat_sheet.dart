@@ -66,6 +66,10 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
       ...showDemoBanners
           ? _withDemoBanners(thread)
           : _withoutDemoBanners(thread),
+      // 스레드의 마지막 요소는 아래 여백을 달지 않는다 — 원래 목록의 끝이라서다.
+      // 그 뒤에 안내를 붙이면 `개인 추천운동을 받았어요` 배너와 맞붙으므로,
+      // 스레드가 비어 있지 않을 때만 한 칸 띄운다.
+      if (thread.isNotEmpty && reports.isNotEmpty) const SizedBox(height: 16),
       for (final CoachMessage message in reports)
         _ReportNotice(
           key: ValueKey<String>('coach-message-bubble-${message.id}'),
@@ -194,9 +198,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
       await ref.read(memberCoachRepositoryProvider).sendMessage(text);
     } catch (_) {
       if (!mounted) return;
-      toast.show(l.coachChatSendFailed,
-        kind: AppToastKind.error,
-      );
+      toast.show(l.coachChatSendFailed, kind: AppToastKind.error);
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -682,7 +684,13 @@ class _ReportNoticeState extends ConsumerState<_ReportNotice> {
         );
         bytes = await ref
             .read(memberReportPdfGeneratorProvider)
-            .generate(l: l, report: report);
+            .generate(
+              l: l,
+              report: report,
+              // 안내 상자가 본문을 감추므로, 트레이너가 리포트와 함께 보낸 글은
+              // 문서 안에서 읽게 한다 — 트레이너 화면의 `트레이너 피드백` 자리다.
+              trainerNote: widget.message.body,
+            );
         fileName = l.coachReportPdfFileName(_ymd(widget.weekStart));
       }
       if (!mounted) return;

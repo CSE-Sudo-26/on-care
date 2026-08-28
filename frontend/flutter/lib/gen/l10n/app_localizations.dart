@@ -2600,6 +2600,131 @@ abstract class AppLocalizations {
   /// **'{weekday} — workout {exercise}, intake {intake}'**
   String coachReportPdfDay(String weekday, String exercise, String intake);
 
+  /// Section heading for the message the trainer sent with the report.
+  ///
+  /// In en, this message translates to:
+  /// **'From your trainer'**
+  String get coachReportPdfSectionTrainerNote;
+
+  /// Shown under the trainer-message heading when the report arrived without a note.
+  ///
+  /// In en, this message translates to:
+  /// **'No message came with this report.'**
+  String get coachReportPdfNoTrainerNote;
+
+  /// Section heading comparing this week with the previous one.
+  ///
+  /// In en, this message translates to:
+  /// **'Change from last week'**
+  String get coachReportPdfSectionChange;
+
+  /// Section heading for average carbs / protein / fat.
+  ///
+  /// In en, this message translates to:
+  /// **'Average macros'**
+  String get coachReportPdfSectionMacros;
+
+  /// Metric label: how many days of the week have diet records.
+  ///
+  /// In en, this message translates to:
+  /// **'Days with meals logged'**
+  String get coachReportPdfLabelLoggedDays;
+
+  /// Metric label: days whose sodium exceeded the member's daily goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Days over the sodium goal'**
+  String get coachReportPdfLabelSodiumOver;
+
+  /// Metric label used when only completed PT sessions are known.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions done'**
+  String get coachReportPdfLabelPtDone;
+
+  /// A count of PT sessions with its unit.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} sessions'**
+  String coachReportPdfValueSessions(String value);
+
+  /// Metric label for cardio minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardio'**
+  String get coachReportPdfLabelCardio;
+
+  /// Metric label for strength minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength'**
+  String get coachReportPdfLabelStrength;
+
+  /// Metric label for stretching minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Stretching'**
+  String get coachReportPdfLabelStretching;
+
+  /// Section heading breaking the week's minutes down by workout type.
+  ///
+  /// In en, this message translates to:
+  /// **'Minutes by workout type'**
+  String get coachReportPdfSectionTypes;
+
+  /// Shown for PT when nothing was booked and nothing was recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'None booked'**
+  String get coachReportPdfNoSessions;
+
+  /// Daily line for a weekday that has not happened yet.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday} — still to come'**
+  String coachReportPdfDayUpcoming(String weekday);
+
+  /// One comparison line: this week's value, last week's, and the difference.
+  ///
+  /// In en, this message translates to:
+  /// **'· {label}: {current} (last week {previous}, {delta})'**
+  String coachReportPdfChange(
+    String label,
+    String current,
+    String previous,
+    String delta,
+  );
+
+  /// Difference when this week is higher.
+  ///
+  /// In en, this message translates to:
+  /// **'+{value}'**
+  String coachReportPdfDeltaUp(String value);
+
+  /// Difference when this week is lower.
+  ///
+  /// In en, this message translates to:
+  /// **'-{value}'**
+  String coachReportPdfDeltaDown(String value);
+
+  /// Difference when both weeks are equal.
+  ///
+  /// In en, this message translates to:
+  /// **'no change'**
+  String get coachReportPdfDeltaSame;
+
+  /// Shown under the comparison heading when the previous week has nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no records from last week to compare with.'**
+  String get coachReportPdfNoPreviousWeek;
+
+  /// Footnote naming the sodium goal the over-days count was measured against.
+  ///
+  /// In en, this message translates to:
+  /// **'The sodium goal is the {target}mg daily target you set on the MY screen.'**
+  String coachReportPdfSodiumTargetNote(String target);
+
   /// No description provided for @coachReportPdfPreviewNote.
   ///
   /// In en, this message translates to:

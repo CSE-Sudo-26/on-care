@@ -1382,6 +1382,83 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get coachReportPdfSectionTrainerNote => '트레이너 메시지';
+
+  @override
+  String get coachReportPdfNoTrainerNote => '함께 온 메시지가 없어요.';
+
+  @override
+  String get coachReportPdfSectionChange => '지난주 대비';
+
+  @override
+  String get coachReportPdfSectionMacros => '평균 탄단지';
+
+  @override
+  String get coachReportPdfLabelLoggedDays => '식단 기록한 날';
+
+  @override
+  String get coachReportPdfLabelSodiumOver => '나트륨 목표 초과';
+
+  @override
+  String get coachReportPdfLabelPtDone => '진행한 PT';
+
+  @override
+  String coachReportPdfValueSessions(String value) {
+    return '$value회';
+  }
+
+  @override
+  String get coachReportPdfLabelCardio => '유산소';
+
+  @override
+  String get coachReportPdfLabelStrength => '근력';
+
+  @override
+  String get coachReportPdfLabelStretching => '스트레칭';
+
+  @override
+  String get coachReportPdfSectionTypes => '운동 유형별 시간';
+
+  @override
+  String get coachReportPdfNoSessions => '잡힌 일정 없음';
+
+  @override
+  String coachReportPdfDayUpcoming(String weekday) {
+    return '$weekday요일 — 아직 지나지 않았어요';
+  }
+
+  @override
+  String coachReportPdfChange(
+    String label,
+    String current,
+    String previous,
+    String delta,
+  ) {
+    return '· $label: $current (지난주 $previous, $delta)';
+  }
+
+  @override
+  String coachReportPdfDeltaUp(String value) {
+    return '+$value';
+  }
+
+  @override
+  String coachReportPdfDeltaDown(String value) {
+    return '-$value';
+  }
+
+  @override
+  String get coachReportPdfDeltaSame => '변화 없음';
+
+  @override
+  String get coachReportPdfNoPreviousWeek => '지난주 기록이 없어 견줄 값이 없어요.';
+
+  @override
+  String coachReportPdfSodiumTargetNote(String target) {
+    return '나트륨 목표는 회원님이 MY 화면에 적어 둔 하루 ${target}mg 기준이에요.';
+  }
+
+  @override
   String get coachReportPdfPreviewNote =>
       '트레이너 리포트가 보는 주를 회원님 기록으로 정리한 미리보기예요.';
 
