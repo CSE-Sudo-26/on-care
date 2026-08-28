@@ -11,8 +11,11 @@
 /// 만드는 규칙은 맞았고 들어오는 값만 비어 있었다.
 library;
 
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
@@ -39,8 +42,29 @@ const AppConfig _config = AppConfig(
 
 const List<String> _weekdays = <String>['월', '화', '수', '목', '금', '토', '일'];
 
+/// 문서가 실제로 쓰는 서체를 테스트에도 올린다. (#1621)
+///
+/// 올리지 않으면 대체 서체로 재게 되는데, 그 글자 높이가 실기기와 달라 한 장에
+/// 들어가는지를 여기서 잘못 판정한다 — 실제로 테스트는 한 장, 기기는 두 장이었다.
+Future<void> _loadReportFont() async {
+  for (final String weight in <String>[
+    'Regular',
+    'Medium',
+    'SemiBold',
+    'Bold',
+  ]) {
+    final File file = File('assets/fonts/Pretendard-$weight.otf');
+    if (!file.existsSync()) continue;
+    await (FontLoader('Pretendard')..addFont(
+          Future<ByteData>.value(ByteData.sublistView(file.readAsBytesSync())),
+        ))
+        .load();
+  }
+}
+
 void main() {
   testWidgets('데모 리포트는 운동한 날마다 그날 한 운동을 적는다', (WidgetTester tester) async {
+    await _loadReportFont();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -129,5 +153,17 @@ void main() {
       }
     }
     expect(checkedAny, isTrue, reason: '운동한 날이 하나도 없으면 이 테스트가 아무것도 못 지킨다');
+
+    // 한 장에 담기로 한 문서다(#1619). 넘치면 마지막 한 줄만 든 빈 종이가 한 장
+    // 더 생긴다 — 실기기에서 실제로 그랬다(#1621).
+    expect(
+      const MemberReportPdfGenerator().pageCount(
+        l: l,
+        report: report,
+        trainerNote: notice.body,
+      ),
+      1,
+      reason: '리포트 문서는 한 장이어야 한다',
+    );
   });
 }
