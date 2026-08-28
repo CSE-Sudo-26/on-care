@@ -223,7 +223,7 @@ void main() {
       );
 
       expect(lines.first, '기간 2026-08-17 ~ 2026-08-23');
-      expect(lines, contains('주요 지표'));
+      // 지표는 절 제목 아래 글줄이 아니라 머리띠와 상자로 선다(#1619).
       expect(lines, contains('· 운동한 날: 3일'));
       expect(lines, contains('· 총 운동 시간: 95분'));
       expect(lines, contains('· 소모 칼로리: 620kcal'));
@@ -233,9 +233,7 @@ void main() {
       expect(lines, contains('· 평균 섭취 칼로리: 1925kcal'));
       expect(lines, contains('· 평균 나트륨: 2100mg'));
       expect(lines, contains('· 평균 당류: 24.5g'));
-      expect(lines, contains('요일별 추이'));
       expect(lines, contains('· 운동 시간: 30분 / - / 45분 / - / 20분 / - / -'));
-      expect(lines, contains('요일별 상세'));
       expect(lines, contains('월요일 — 운동 걷기, 섭취 1800kcal'));
       // 기록이 없는 날은 0 을 적지 않는다.
       expect(lines, contains('일요일 — 운동 기록 없음, 섭취 기록 없음'));

@@ -139,15 +139,19 @@ class MemberReportPdfGenerator {
     ];
     final int loggedDays = report.diet.loggedDays;
     final MemberWeeklyReport? last = report.previous;
+    final bool hasLast =
+        last != null && (last.exercise.totalMinutes > 0 || last.loggedDays > 0);
+    final bool bothLogged = loggedDays > 0 && (last?.loggedDays ?? 0) > 0;
+    final int? over = loggedDays > 0 ? report.sodiumOverDays : null;
 
+    // 한 장에 담는다. 열두 줄짜리 표가 한 페이지를 혼자 먹고 있었고, 회원이
+    // 실제로 보는 것은 그중 서너 개와 그래프였다(#1619).
     return <_Block>[
-      // 머리띠 — 언제, 얼마나. 아래 표와 그래프를 무엇에 견줄지가 여기서 정해진다.
       _BandBlock(
         text: l.coachReportPdfPeriod(
           _date(report.weekStart),
           _date(report.weekEnd),
         ),
-        // 띠가 말하는 값도 글로 남긴다 — 표·그래프와 같은 규칙이다.
         textLines: <String>[
           l.coachReportPdfPeriod(
             _date(report.weekStart),
@@ -157,13 +161,25 @@ class MemberReportPdfGenerator {
             l.coachReportPdfLabelWorkoutDays,
             l.coachReportPdfValueDays('${report.workoutDays}'),
           ),
-          l.coachReportPdfBullet(
+          _metricLine(
+            l,
             l.coachReportPdfLabelWorkoutMinutes,
             _value(
               l,
               report.exercise.totalMinutes,
               l.coachReportPdfValueMinutes,
             ),
+            hasLast ? report.exercise.totalMinutes : null,
+            hasLast ? last.exercise.totalMinutes : null,
+            l.coachReportPdfValueMinutes,
+          ),
+          _metricLine(
+            l,
+            l.coachReportPdfLabelBurned,
+            _value(l, report.exercise.totalCalories, l.coachReportPdfValueKcal),
+            hasLast ? report.exercise.totalCalories : null,
+            hasLast ? last.exercise.totalCalories : null,
+            l.coachReportPdfValueKcal,
           ),
           l.coachReportPdfBullet(
             report.sessionsBooked == 0 && report.sessionsDone > 0
@@ -172,15 +188,17 @@ class MemberReportPdfGenerator {
             _sessions(l, report),
           ),
         ],
-        cells: <(String, String, double)>[
+        cells: <(String, String, String, double)>[
           (
             l.coachReportPdfBandPeriod,
             '${_date(report.weekStart)} ~ ${_date(report.weekEnd)}',
-            1.8,
+            '',
+            2,
           ),
           (
             l.coachReportPdfLabelWorkoutDays,
             l.coachReportPdfValueDays('${report.workoutDays}'),
+            '',
             1,
           ),
           (
@@ -190,9 +208,26 @@ class MemberReportPdfGenerator {
               report.exercise.totalMinutes,
               l.coachReportPdfValueMinutes,
             ),
+            _delta(
+              l,
+              hasLast ? report.exercise.totalMinutes : null,
+              hasLast ? last.exercise.totalMinutes : null,
+              l.coachReportPdfValueMinutes,
+            ),
             1,
           ),
-          (l.coachReportPdfLabelSessions, _sessions(l, report), 1.1),
+          (
+            l.coachReportPdfLabelBurned,
+            _value(l, report.exercise.totalCalories, l.coachReportPdfValueKcal),
+            _delta(
+              l,
+              hasLast ? report.exercise.totalCalories : null,
+              hasLast ? last.exercise.totalCalories : null,
+              l.coachReportPdfValueKcal,
+            ),
+            1.1,
+          ),
+          (l.coachReportPdfLabelSessions, _sessions(l, report), '', 1.1),
         ],
       ),
 
@@ -203,49 +238,103 @@ class MemberReportPdfGenerator {
             : trainerNote.trim(),
       ),
 
-      // 같은 지표의 이번 주·지난주·변화가 한 줄에 선다. 예전에는 `주요 지표` 와
-      // `지난주 대비` 로 나뉘어 있어, 같은 값을 두 곳에서 찾아 견줘야 했다.
-      _TextBlock.section(l.coachReportPdfSectionMetrics),
-      () {
-        final List<List<String>> rows = _metricRows(
-          l,
-          report,
-          last,
-          loggedDays,
-        );
-        return _TableBlock(
-          text: l.coachReportPdfSectionMetrics,
-          header: <String>[
-            l.coachReportPdfColumnMetric,
-            l.coachReportPdfColumnThisWeek,
-            l.coachReportPdfColumnLastWeek,
-            l.coachReportPdfColumnChange,
-          ],
-          weights: const <double>[0.4, 0.2, 0.2, 0.2],
-          rows: rows,
-          textLines: <String>[
-            for (final List<String> row in rows)
-              row[2].isEmpty
-                  ? l.coachReportPdfBullet(row[0], row[1])
-                  : l.coachReportPdfChange(row[0], row[1], row[2], row[3]),
-          ],
-        );
-      }(),
+      // 식단 쪽 지표는 상자 넷으로. 지난주 대비를 상자 안에 적어, 표 하나를
+      // 통째로 덜어 낸다.
+      _TileRowBlock(
+        textLines: <String>[
+          l.coachReportPdfBullet(
+            l.coachReportPdfLabelLoggedDays,
+            l.coachReportPdfValueDays('$loggedDays'),
+          ),
+          _metricLine(
+            l,
+            l.coachReportPdfLabelCalories,
+            loggedDays == 0
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueKcal(
+                    '${report.diet.avgCalories.round()}',
+                  ),
+            bothLogged ? report.diet.avgCalories.round() : null,
+            bothLogged ? last!.diet.avgCalories.round() : null,
+            l.coachReportPdfValueKcal,
+          ),
+          _metricLine(
+            l,
+            l.coachReportPdfLabelSodium,
+            loggedDays == 0
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueMg('${report.diet.avgSodiumMg.round()}'),
+            bothLogged ? report.diet.avgSodiumMg.round() : null,
+            bothLogged ? last!.diet.avgSodiumMg.round() : null,
+            l.coachReportPdfValueMg,
+          ),
+          l.coachReportPdfBullet(
+            l.coachReportPdfLabelSugar,
+            loggedDays == 0
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueGram(
+                    report.diet.avgSugarG.toStringAsFixed(1),
+                  ),
+          ),
+          if (over != null)
+            l.coachReportPdfBullet(
+              l.coachReportPdfLabelSodiumOver,
+              l.coachReportPdfValueDays('$over'),
+            ),
+          if (!hasLast) l.coachReportPdfNoPreviousWeek,
+        ],
+        tiles: <(String, String, String)>[
+          (
+            l.coachReportPdfLabelLoggedDays,
+            l.coachReportPdfValueDays('$loggedDays'),
+            '',
+          ),
+          (
+            l.coachReportPdfLabelCalories,
+            loggedDays == 0
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueKcal(
+                    '${report.diet.avgCalories.round()}',
+                  ),
+            _delta(
+              l,
+              bothLogged ? report.diet.avgCalories.round() : null,
+              bothLogged ? last!.diet.avgCalories.round() : null,
+              l.coachReportPdfValueKcal,
+            ),
+          ),
+          (
+            l.coachReportPdfLabelSodium,
+            loggedDays == 0
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueMg('${report.diet.avgSodiumMg.round()}'),
+            _delta(
+              l,
+              bothLogged ? report.diet.avgSodiumMg.round() : null,
+              bothLogged ? last!.diet.avgSodiumMg.round() : null,
+              l.coachReportPdfValueMg,
+            ),
+          ),
+          (
+            l.coachReportPdfLabelSugar,
+            loggedDays == 0
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueGram(
+                    report.diet.avgSugarG.toStringAsFixed(1),
+                  ),
+            '',
+          ),
+          (
+            l.coachReportPdfLabelSodiumOver,
+            over == null
+                ? l.coachReportPdfNoData
+                : l.coachReportPdfValueDays('$over'),
+            '',
+          ),
+        ],
+      ),
 
-      // 지난주 칸이 통째로 비면 왜 비었는지 말해 준다 — 빈 칸만 남기면 그 주에
-      // 아무 일도 없었던 것으로 읽힌다.
-      if (last == null ||
-          (last.exercise.totalMinutes == 0 && last.loggedDays == 0))
-        _TextBlock.body(l.coachReportPdfNoPreviousWeek),
-
-      // 평균 하나를 숫자로만 적으면 그것이 회원 목표에 견줘 어디쯤인지 읽는
-      // 사람이 계산해야 한다.
-      if (loggedDays > 0) ...<_Block>[
-        _TextBlock.section(l.coachReportPdfSectionGoals),
-        ..._gauges(l, report),
-      ],
-
-      _TextBlock.section(l.coachReportPdfSectionTrend),
+      // 운동은 하루의 크기가 할 말이라 막대, 식단은 오르내림이 할 말이라 꺾은선.
       _chart(
         l,
         report,
@@ -261,6 +350,8 @@ class MemberReportPdfGenerator {
         title: l.coachReportPdfLabelCaloriesShort,
         values: report.caloriesByDay.map((int v) => v.toDouble()).toList(),
         unit: l.coachReportPdfValueKcal,
+        target: report.calorieTarget?.toDouble(),
+        asLine: true,
       ),
       _chart(
         l,
@@ -270,9 +361,11 @@ class MemberReportPdfGenerator {
         values: report.sodiumByDay.map((int v) => v.toDouble()).toList(),
         unit: l.coachReportPdfValueMg,
         target: report.sodiumTarget?.toDouble(),
+        asLine: true,
       ),
 
-      _TextBlock.section(l.coachReportPdfSectionDaily),
+      // 남기는 표는 이것 하나다 — 그날 무슨 운동을 했는지는 그래프로 옮길 수
+      // 없는 값이다.
       _TableBlock(
         text: l.coachReportPdfSectionDaily,
         header: <String>[
@@ -280,14 +373,12 @@ class MemberReportPdfGenerator {
           l.coachReportPdfColumnWorkout,
           l.coachReportPdfColumnIntake,
         ],
-        weights: const <double>[0.12, 0.66, 0.22],
+        weights: const <double>[0.1, 0.68, 0.22],
         alignRightFrom: 2,
         rows: <List<String>>[
           for (int i = 0; i < weekdays.length; i++)
             _dailyRow(l, report, weekdays, i),
         ],
-        // 표가 아니라 글이던 시절의 줄과 같은 문장이다 — 문서가 말하는 값이
-        // 배치를 바꿨다고 달라지지는 않는다.
         textLines: <String>[
           for (int i = 0; i < weekdays.length; i++)
             if (report.isUpcoming(i))
@@ -310,155 +401,38 @@ class MemberReportPdfGenerator {
 
       if (report.sodiumTarget case final int target when loggedDays > 0)
         _TextBlock.body(l.coachReportPdfSodiumTargetNote('$target')),
-      _TextBlock.body(l.coachReportPdfPreviewNote, after: 12),
+      _TextBlock.body(l.coachReportPdfPreviewNote, after: 8),
     ];
   }
 
-  /// 주간 요약 표의 본문. 지난주가 없으면 그 두 칸을 비운다 — 0 으로 적으면
-  /// 아무것도 안 한 주가 된다.
-  List<List<String>> _metricRows(
+  /// 지난주 대비 한 조각. 견줄 값이 없으면 빈 문자열이다.
+  static String _delta(AppLocalizations l, num? now, num? then, _Unit unit) {
+    if (now == null || then == null) return '';
+    final num diff = now - then;
+    if (diff == 0) return l.coachReportPdfDeltaSame;
+    return diff > 0
+        ? l.coachReportPdfDeltaUp(unit(_trim(diff.toDouble())))
+        : l.coachReportPdfDeltaDown(unit(_trim(-diff.toDouble())));
+  }
+
+  /// 상자가 말하는 값을 글로. 견줄 값이 있으면 지난주와 변화까지 한 줄에 담는다.
+  static String _metricLine(
     AppLocalizations l,
-    MemberWeeklyReport report,
-    MemberWeeklyReport? last,
-    int loggedDays,
+    String label,
+    String value,
+    num? now,
+    num? then,
+    _Unit unit,
   ) {
-    final bool hasLast =
-        last != null && (last.exercise.totalMinutes > 0 || last.loggedDays > 0);
-    final bool bothLogged = loggedDays > 0 && (last?.loggedDays ?? 0) > 0;
-
-    List<String> row(
-      String label,
-      String current, {
-      num? now,
-      num? then,
-      _Unit? unit,
-    }) {
-      if (now == null || then == null || unit == null) {
-        return <String>[label, current, '', ''];
-      }
-      final num delta = now - then;
-      final String change = delta == 0
-          ? l.coachReportPdfDeltaSame
-          : delta > 0
-          ? l.coachReportPdfDeltaUp(unit(_trim(delta.toDouble())))
-          : l.coachReportPdfDeltaDown(unit(_trim(-delta.toDouble())));
-      return <String>[label, current, unit(_trim(then.toDouble())), change];
+    if (now == null || then == null) {
+      return l.coachReportPdfBullet(label, value);
     }
-
-    return <List<String>>[
-      row(
-        l.coachReportPdfLabelWorkoutMinutes,
-        _value(l, report.exercise.totalMinutes, l.coachReportPdfValueMinutes),
-        now: hasLast ? report.exercise.totalMinutes : null,
-        then: hasLast ? last.exercise.totalMinutes : null,
-        unit: l.coachReportPdfValueMinutes,
-      ),
-      row(
-        l.coachReportPdfLabelBurned,
-        _value(l, report.exercise.totalCalories, l.coachReportPdfValueKcal),
-        now: hasLast ? report.exercise.totalCalories : null,
-        then: hasLast ? last.exercise.totalCalories : null,
-        unit: l.coachReportPdfValueKcal,
-      ),
-      row(
-        l.coachReportPdfLabelCardio,
-        _sum(l, report.exercise.cardioMinutes, l.coachReportPdfValueMinutes),
-      ),
-      row(
-        l.coachReportPdfLabelStrength,
-        _sum(l, report.exercise.strengthMinutes, l.coachReportPdfValueMinutes),
-      ),
-      row(
-        l.coachReportPdfLabelStretching,
-        _sum(
-          l,
-          report.exercise.stretchingMinutes,
-          l.coachReportPdfValueMinutes,
-        ),
-      ),
-      row(
-        l.coachReportPdfLabelLoggedDays,
-        l.coachReportPdfValueDays('$loggedDays'),
-      ),
-      row(
-        l.coachReportPdfLabelCalories,
-        loggedDays == 0
-            ? l.coachReportPdfNoData
-            : l.coachReportPdfValueKcal('${report.diet.avgCalories.round()}'),
-        now: bothLogged ? report.diet.avgCalories.round() : null,
-        then: bothLogged ? last!.diet.avgCalories.round() : null,
-        unit: l.coachReportPdfValueKcal,
-      ),
-      row(
-        l.coachReportPdfLabelSodium,
-        loggedDays == 0
-            ? l.coachReportPdfNoData
-            : l.coachReportPdfValueMg('${report.diet.avgSodiumMg.round()}'),
-        now: bothLogged ? report.diet.avgSodiumMg.round() : null,
-        then: bothLogged ? last!.diet.avgSodiumMg.round() : null,
-        unit: l.coachReportPdfValueMg,
-      ),
-      // 트레이너 화면이 세는 `나트륨 초과 일수` 와 같은 자리. 표에서 빠지면
-      // 아래 게이지의 빨강이 무엇을 뜻하는지 숫자로 답할 데가 없다.
-      if (report.sodiumOverDays case final int over when loggedDays > 0)
-        row(
-          l.coachReportPdfLabelSodiumOver,
-          l.coachReportPdfValueDays('$over'),
-        ),
-      row(
-        l.coachReportPdfLabelSugar,
-        loggedDays == 0
-            ? l.coachReportPdfNoData
-            : l.coachReportPdfValueGram(
-                report.diet.avgSugarG.toStringAsFixed(1),
-              ),
-      ),
-      row(l.homeMacroCarbs, _gram(l, report.avgCarbsG)),
-      row(l.homeMacroProtein, _gram(l, report.avgProteinG)),
-      row(l.homeMacroFat, _gram(l, report.avgFatG)),
-    ];
-  }
-
-  /// 회원 목표가 있는 지표만 게이지로 그린다. 기준이 없는 값에 눈금을 그리면
-  /// 그 눈금이 어디서 온 것인지 말할 수 없다.
-  List<_Block> _gauges(AppLocalizations l, MemberWeeklyReport report) {
-    final List<_Block> out = <_Block>[];
-    void add(String label, double value, int? target, _Unit unit) {
-      if (target == null || target <= 0) return;
-      out.add(
-        _GaugeBlock(
-          text: l.coachReportPdfBullet(
-            label,
-            l.coachReportPdfGoalOf(unit(_trim(value)), unit('$target')),
-          ),
-          label: label,
-          value: value,
-          target: target.toDouble(),
-          valueLabel: unit(_trim(value)),
-          targetLabel: l.coachReportPdfChartTarget(unit('$target')),
-        ),
-      );
-    }
-
-    add(
-      l.coachReportPdfLabelCalories,
-      report.diet.avgCalories,
-      report.calorieTarget,
-      l.coachReportPdfValueKcal,
+    return l.coachReportPdfChange(
+      label,
+      value,
+      unit(_trim(then.toDouble())),
+      _delta(l, now, then, unit),
     );
-    add(
-      l.coachReportPdfLabelSodium,
-      report.diet.avgSodiumMg,
-      report.sodiumTarget,
-      l.coachReportPdfValueMg,
-    );
-    add(
-      l.coachReportPdfLabelSugar,
-      report.diet.avgSugarG,
-      report.sugarTarget,
-      l.coachReportPdfValueGram,
-    );
-    return out;
   }
 
   List<String> _dailyRow(
@@ -507,7 +481,9 @@ class MemberReportPdfGenerator {
     required List<double> values,
     required _Unit unit,
     double? target,
+    bool asLine = false,
   }) => _ChartBlock(
+    asLine: asLine,
     title: title,
     text: l.coachReportPdfBullet(title, _series(l, values, unit)),
     values: values,
@@ -521,17 +497,6 @@ class MemberReportPdfGenerator {
         ? null
         : l.coachReportPdfChartTarget(unit(_trim(target))),
   );
-
-  /// 요일별 계열의 합. 유형별 시간처럼 계열만 있는 값을 한 줄로 적을 때 쓴다.
-  static String _sum(AppLocalizations l, List<double> values, _Unit unit) {
-    if (values.isEmpty) return l.coachReportPdfNoData;
-    final double total = values.fold<double>(0, (double a, double b) => a + b);
-    return total == 0 ? l.coachReportPdfNoData : unit(_trim(total));
-  }
-
-  static String _gram(AppLocalizations l, double? value) => value == null
-      ? l.coachReportPdfNoData
-      : l.coachReportPdfValueGram(value.toStringAsFixed(1));
 
   /// 문서에 남는 날짜는 두 로케일 모두 `YYYY-MM-DD` 다. 회원이 저장해 두고 나중에
   /// 다시 여는 파일이라 연도가 필요하고, `08/05` 처럼 월·일 순서를 두고 헷갈릴
@@ -637,7 +602,7 @@ class _BandBlock extends _Block {
     required this.textLines,
   }) : super(20);
 
-  static const double _height = 92;
+  static const double _height = 118;
 
   @override
   final String text;
@@ -645,8 +610,8 @@ class _BandBlock extends _Block {
   @override
   final List<String> textLines;
 
-  /// (제목, 값, 너비 비율) 칸들. 기간처럼 긴 값은 넓은 칸을 준다.
-  final List<(String, String, double)> cells;
+  /// (제목, 값, 지난주 대비, 너비 비율) 칸들. 지난주 대비는 비어 있을 수 있다. 기간처럼 긴 값은 넓은 칸을 준다.
+  final List<(String, String, String, double)> cells;
 
   @override
   double height(double width) => _height;
@@ -665,11 +630,11 @@ class _BandBlock extends _Block {
 
     final double total = cells.fold<double>(
       0,
-      (double a, (String, String, double) c) => a + c.$3,
+      (double a, (String, String, String, double) c) => a + c.$4,
     );
     double left = offset.dx;
     for (int i = 0; i < cells.length; i++) {
-      final double slot = width * cells[i].$3 / total;
+      final double slot = width * cells[i].$4 / total;
       if (i > 0) {
         canvas.drawLine(
           Offset(left, offset.dy + 14),
@@ -679,9 +644,12 @@ class _BandBlock extends _Block {
             ..strokeWidth = 2,
         );
       }
-      final (String title, String value, _) = cells[i];
-      _paintCentred(canvas, title, _bandTitle, left, slot, offset.dy + 18);
-      _paintCentred(canvas, value, _bandValue, left, slot, offset.dy + 46);
+      final (String title, String value, String delta, _) = cells[i];
+      _paintCentred(canvas, title, _bandTitle, left, slot, offset.dy + 16);
+      _paintCentred(canvas, value, _bandValue, left, slot, offset.dy + 44);
+      if (delta.isNotEmpty) {
+        _paintCentred(canvas, delta, _bandDelta, left, slot, offset.dy + 84);
+      }
       left += slot;
     }
   }
@@ -718,6 +686,10 @@ class _BandBlock extends _Block {
     color: Color(0xff5b6b76),
     fontSize: 17,
   );
+  static const TextStyle _bandDelta = TextStyle(
+    color: Color(0xff5b6b76),
+    fontSize: 16,
+  );
   static const TextStyle _bandValue = TextStyle(
     color: Color(0xff10384a),
     fontSize: 24,
@@ -739,7 +711,7 @@ class _TableBlock extends _Block {
     this.alignRightFrom = 1,
   }) : super(20);
 
-  static const double _rowHeight = 40;
+  static const double _rowHeight = 32;
   static const double _pad = 12;
 
   @override
@@ -830,111 +802,84 @@ class _TableBlock extends _Block {
   );
 }
 
-/// 목표를 눈금으로 둔 가로 게이지. (#1619)
+/// 지표 상자 한 줄. 제목·큰 값·지난주 대비를 담은 칸을 나란히 놓는다. (#1619)
 ///
-/// 인바디의 `표준이하 / 표준 / 표준이상` 자리다. 평균값 하나를 숫자로만 적으면
-/// 그것이 회원 목표에 견줘 어디쯤인지 읽는 사람이 계산해야 한다.
-class _GaugeBlock extends _Block {
-  const _GaugeBlock({
-    required this.text,
-    required this.label,
-    required this.value,
-    required this.target,
-    required this.valueLabel,
-    required this.targetLabel,
-  }) : super(16);
+/// 표를 한 장 통째로 쓰던 자리다. 열두 줄짜리 표는 한 페이지를 혼자 먹었고,
+/// 정작 눈에 남는 것은 그중 서너 개였다. 볼 값만 상자로 세운다.
+class _TileRowBlock extends _Block {
+  const _TileRowBlock({required this.tiles, required this.textLines})
+    : super(18);
 
-  static const double _height = 62;
-  static const double _barHeight = 22;
-  static const double _labelWidth = 250;
+  static const double _height = 104;
+
+  /// (제목, 값, 지난주 대비). 마지막은 비어 있을 수 있다.
+  final List<(String, String, String)> tiles;
 
   @override
-  final String text;
+  String get text => textLines.first;
 
-  final String label;
-  final double value;
-  final double target;
-  final String valueLabel;
-  final String targetLabel;
+  @override
+  final List<String> textLines;
 
   @override
   double height(double width) => _height;
 
   @override
   void paint(Canvas canvas, Offset offset, double width) {
-    _paint(canvas, label, _labelStyle, Offset(offset.dx, offset.dy + 6));
-
-    final double left = offset.dx + _labelWidth;
-    final double barWidth = width - _labelWidth;
-    final double top = offset.dy + 4;
-    // 눈금은 목표의 1.5 배까지 — 목표가 가운데 조금 왼쪽에 서서, 넘긴 정도가
-    // 눈에 들어온다.
-    final double span = target * 1.5;
-    final double fill = (value / span).clamp(0.0, 1.0) * barWidth;
-    final double mark = (target / span).clamp(0.0, 1.0) * barWidth;
-    final bool over = value > target;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(left, top, barWidth, _barHeight),
-        const Radius.circular(11),
-      ),
-      Paint()..color = const Color(0xffe9f0f4),
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(left, top, fill, _barHeight),
-        const Radius.circular(11),
-      ),
-      Paint()..color = over ? const Color(0xffb3261e) : const Color(0xff3eafdf),
-    );
-    // 목표 눈금. 막대 위아래로 조금 넘겨 그어, 채워진 색과 섞이지 않는다.
-    canvas.drawLine(
-      Offset(left + mark, top - 6),
-      Offset(left + mark, top + _barHeight + 6),
-      Paint()
-        ..color = const Color(0xff10384a)
-        ..strokeWidth = 3,
-    );
-    _paint(
-      canvas,
-      targetLabel,
-      _targetStyle,
-      Offset(left + mark + 6, top + _barHeight + 8),
-    );
-    _paint(
-      canvas,
-      valueLabel,
-      over ? _overStyle : _valueStyle,
-      Offset(left, top + _barHeight + 8),
-    );
+    const double gap = 14;
+    final double slot = (width - gap * (tiles.length - 1)) / tiles.length;
+    for (int i = 0; i < tiles.length; i++) {
+      final double left = offset.dx + (slot + gap) * i;
+      final Rect box = Rect.fromLTWH(left, offset.dy, slot, _height);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(box, const Radius.circular(10)),
+        Paint()..color = const Color(0xfff2f7fa),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(box, const Radius.circular(10)),
+        Paint()
+          ..color = const Color(0xffcfdde6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      final (String title, String value, String delta) = tiles[i];
+      _put(canvas, title, _tileTitle, left + 16, offset.dy + 14, slot - 32);
+      _put(canvas, value, _tileValue, left + 16, offset.dy + 40, slot - 32);
+      if (delta.isNotEmpty) {
+        _put(canvas, delta, _tileDelta, left + 16, offset.dy + 76, slot - 32);
+      }
+    }
   }
 
-  static void _paint(Canvas canvas, String value, TextStyle style, Offset at) {
+  static void _put(
+    Canvas canvas,
+    String value,
+    TextStyle style,
+    double x,
+    double y,
+    double room,
+  ) {
     TextPainter(
         text: TextSpan(text: value, style: style),
         textDirection: TextDirection.ltr,
         textScaler: TextScaler.noScaling,
+        maxLines: 1,
+        ellipsis: '…',
       )
-      ..layout()
-      ..paint(canvas, at);
+      ..layout(maxWidth: room)
+      ..paint(canvas, Offset(x, y));
   }
 
-  static const TextStyle _labelStyle = TextStyle(
-    color: Color(0xff26333a),
-    fontSize: 19,
-    fontWeight: FontWeight.w600,
-  );
-  static const TextStyle _valueStyle = TextStyle(
-    color: Color(0xff26333a),
+  static const TextStyle _tileTitle = TextStyle(
+    color: Color(0xff5b6b76),
     fontSize: 17,
   );
-  static const TextStyle _overStyle = TextStyle(
-    color: Color(0xffb3261e),
-    fontSize: 17,
+  static const TextStyle _tileValue = TextStyle(
+    color: Color(0xff10384a),
+    fontSize: 28,
     fontWeight: FontWeight.w700,
   );
-  static const TextStyle _targetStyle = TextStyle(
+  static const TextStyle _tileDelta = TextStyle(
     color: Color(0xff5b6b76),
     fontSize: 16,
   );
@@ -955,7 +900,8 @@ class _ChartBlock extends _Block {
     required this.format,
     this.target,
     this.targetLabel,
-  }) : super(22);
+    this.asLine = false,
+  }) : super(18);
 
   static const double _barsHeight = 190;
   static const double _titleHeight = 30;
@@ -980,9 +926,14 @@ class _ChartBlock extends _Block {
   /// 막대 위에 적는 값. 단위를 붙이는 자리는 로케일이 정한다.
   final String Function(double value) format;
 
-  /// 하루 목표. 있으면 가로선으로 얹고, 넘긴 날의 막대를 달리 칠한다.
+  /// 하루 목표. 있으면 가로선으로 얹고, 넘긴 날을 달리 칠한다.
   final double? target;
   final String? targetLabel;
+
+  /// 막대 대신 꺾은선으로 그린다. 하루하루의 크기보다 **오르내림**이 할 말인
+  /// 값(섭취 칼로리·나트륨)이 그렇다 — 막대 일곱 개는 높이를 견주게 하지만
+  /// 꺾은선은 흐름을 보여 준다.
+  final bool asLine;
 
   @override
   double height(double width) => _titleHeight + _barsHeight + _labelHeight;
@@ -1020,6 +971,12 @@ class _ChartBlock extends _Block {
     final int count = labels.length;
     final double slot = width / count;
     final double barWidth = slot * 0.46;
+
+    if (asLine) {
+      _paintLine(canvas, offset, width, bottom, scale, slot);
+      return;
+    }
+
     for (int i = 0; i < count; i++) {
       final double centre = offset.dx + slot * i + slot / 2;
       _text(labels[i], _labelStyle).paint(
@@ -1076,6 +1033,94 @@ class _ChartBlock extends _Block {
         Offset(offset.dx + width - targetText.width, bottom - t * scale - 26),
       );
     }
+  }
+
+  /// 꺾은선. 값이 있는 날만 잇고, 아직 오지 않은 날에서는 끊는다 — 이어 버리면
+  /// 오지 않은 날까지 흐름이 있었던 것처럼 읽힌다.
+  void _paintLine(
+    Canvas canvas,
+    Offset offset,
+    double width,
+    double bottom,
+    double scale,
+    double slot,
+  ) {
+    final List<Offset?> points = <Offset?>[
+      for (int i = 0; i < labels.length; i++)
+        if ((i < upcoming.length && upcoming[i]) ||
+            i >= values.length ||
+            values[i] <= 0)
+          null
+        else
+          Offset(offset.dx + slot * i + slot / 2, bottom - values[i] * scale),
+    ];
+
+    final Path path = Path();
+    bool open = false;
+    for (final Offset? point in points) {
+      if (point == null) {
+        open = false;
+        continue;
+      }
+      if (open) {
+        path.lineTo(point.dx, point.dy);
+      } else {
+        path.moveTo(point.dx, point.dy);
+        open = true;
+      }
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xff3eafdf)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    for (int i = 0; i < points.length; i++) {
+      final Offset? point = points[i];
+      _paintDayLabel(canvas, i, offset, slot, bottom);
+      if (point == null) continue;
+      final bool over = target != null && values[i] > target!;
+      final Color colour = over
+          ? const Color(0xffb3261e)
+          : const Color(0xff3eafdf);
+      canvas.drawCircle(point, 8, Paint()..color = const Color(0xffffffff));
+      canvas.drawCircle(
+        point,
+        8,
+        Paint()
+          ..color = colour
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4,
+      );
+      final TextPainter valueText = _text(
+        format(values[i]),
+        over ? _overValueStyle : _valueStyle,
+      );
+      // 점 위에 적되 그림 밖으로 나가지 않게 잡는다 — 가장 높은 점의 숫자가
+      // 제목 줄로 올라가면 어느 점의 값인지 알 수 없다.
+      final double labelTop = (point.dy - 34).clamp(
+        bottom - _barsHeight,
+        bottom - 24,
+      );
+      valueText.paint(canvas, Offset(point.dx - valueText.width / 2, labelTop));
+    }
+  }
+
+  void _paintDayLabel(
+    Canvas canvas,
+    int i,
+    Offset offset,
+    double slot,
+    double bottom,
+  ) {
+    final TextPainter label = _text(labels[i], _labelStyle);
+    label.paint(
+      canvas,
+      Offset(offset.dx + slot * i + (slot - label.width) / 2, bottom + 6),
+    );
   }
 
   /// 목표선은 점선이다 — 실선으로 그으면 막대와 같은 무게로 읽힌다.
