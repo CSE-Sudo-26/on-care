@@ -126,6 +126,12 @@ class MemberWeeklyReport {
   ///
   /// 세션은 요일 표시(`dayLabel`)를 들고 있다 — 날짜가 비어 있는 경로(데모)도
   /// 있어서, 날짜가 있으면 날짜로 판정하고 없으면 표시를 쓴다.
+  ///
+  /// 이름은 [ExerciseSession.items] 를 먼저 본다. 두 경로가 이름을 담는 자리가
+  /// 다르기 때문이다 — 실 API·drift 는 그날 그 종류의 운동을 `name` 한 줄로 이어
+  /// 붙이고 `items` 에도 그 한 줄을 담지만, 데모 경로는 `items` 에 운동을 하나씩
+  /// 담고 `name` 을 비워 둔다. `name` 만 읽으면 데모에서 이름이 전부 걸러져,
+  /// 5일을 운동한 주의 요일별 상세가 이레 내내 `기록 없음` 이 됐다(#1617).
   List<String> exercisesOn(int weekdayIndex, List<String> weekdayLabels) {
     final DateTime day = DateTime(
       weekStart.year,
@@ -146,8 +152,12 @@ class MemberWeeklyReport {
           }
           return label.isNotEmpty && s.dayLabel == label;
         })
-        .map((ExerciseSession s) => s.name)
-        .where((String name) => name.trim().isNotEmpty)
+        .expand(
+          (ExerciseSession s) =>
+              s.items.isNotEmpty ? s.items : <String>[s.name],
+        )
+        .map((String name) => name.trim())
+        .where((String name) => name.isNotEmpty)
         .toList(growable: false);
   }
 }
