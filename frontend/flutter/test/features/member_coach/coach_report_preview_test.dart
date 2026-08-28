@@ -242,6 +242,32 @@ void main() {
       expect(lines.last, contains('회원님 기록으로 정리한 미리보기'));
     });
 
+    testWidgets('운동 이름이 items 에만 있어도 요일별 상세에 적힌다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(
+          days: _week(),
+          sessions: <ExerciseSession>[
+            // 데모 경로가 주는 모양 — 이름은 `items` 에 하나씩, `name` 은 비어
+            // 있고 날짜도 없다. 예전에는 `name` 만 읽어 전부 걸러졌다.
+            const ExerciseSession(
+              dayLabel: '월',
+              type: ExerciseType.cardio,
+              minutes: 30,
+              calories: 210,
+              items: <String>['저강도 유산소 (걷기) 30분', '코어 강화 10분'],
+            ),
+          ],
+        ),
+      );
+
+      expect(
+        lines,
+        contains('월요일 — 운동 저강도 유산소 (걷기) 30분, 코어 강화 10분, 섭취 1800kcal'),
+      );
+    });
+
     testWidgets('아직 오지 않은 요일은 기록 없음이라고 적지 않는다', (WidgetTester tester) async {
       final AppLocalizations l = await localizations(tester);
       final List<String> lines = const MemberReportPdfGenerator().textContent(
