@@ -12,6 +12,8 @@ import 'package:oncare_trainer/features/schedule/data/repositories/dio_schedule_
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurrence.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart'
+    show demoUnregisteredClientIdsSnapshot;
 
 /// Identifies a client for [ScheduleRepository.watchClientSessions].
 ///
@@ -182,6 +184,9 @@ class DriftScheduleRepository implements ScheduleRepository {
   Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(nowKst()));
 
   /// The timeline for one calendar [date] (`YYYY-MM-DD`).
+  ///
+  /// 미등록(담당 종료) 고객의 슬롯은 원본 행을 지우지 않고 걸러낸다(#1623)
+  /// — 트레이너 화면에서만 빠지고, 다시 등록하면 그대로 돌아온다.
   @override
   Stream<List<ScheduleSession>> watchDate(String date) {
     final query = _db.select(_db.trainerScheduleEntries)
@@ -193,21 +198,32 @@ class DriftScheduleRepository implements ScheduleRepository {
         (t) => OrderingTerm(expression: t.time),
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
-    return query.watch().map((rows) => rows.map(_toEntity).toList());
+    return _watchExcludingUnregistered(
+      query,
+      (rows) => rows.map(_toEntity).toList(),
+      keyOf: (s) => s.clientId,
+    );
   }
 
   /// Dates (`YYYY-MM-DD`) that have at least one booked (non-공백)
-  /// session — drives the week strip's dot markers.
+  /// session — drives the week strip's dot markers. 미등록 고객의 슬롯만
+  /// 있는 날은 점을 찍지 않는다(#1623).
   @override
   Stream<Set<String>> watchBookedDates() {
     final t = _db.trainerScheduleEntries;
-    final query = _db.selectOnly(t, distinct: true)
-      ..addColumns(<Expression<Object>>[t.date])
+    final query = _db.selectOnly(t)
+      ..addColumns(<Expression<Object>>[t.date, t.clientId])
       ..where(t.status.equals(ScheduleStatus.gap).not());
-    return query
-        .map((row) => row.read(t.date)!)
-        .watch()
-        .map((rows) => rows.toSet());
+    return query.watch().map((rows) {
+      final unregistered = demoUnregisteredClientIdsSnapshot(_db);
+      final dates = <String>{};
+      for (final row in rows) {
+        final clientId = row.read(t.clientId);
+        if (clientId != null && unregistered.contains(clientId)) continue;
+        dates.add(row.read(t.date)!);
+      }
+      return dates;
+    });
   }
 
   /// Every slot between [fromDate] and [toDate] inclusive (`YYYY-MM-DD`),
@@ -228,7 +244,27 @@ class DriftScheduleRepository implements ScheduleRepository {
         (t) => OrderingTerm(expression: t.time),
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
-    return query.watch().map((rows) => rows.map(_toEntity).toList());
+    return _watchExcludingUnregistered(
+      query,
+      (rows) => rows.map(_toEntity).toList(),
+      keyOf: (s) => s.clientId,
+    );
+  }
+
+  /// Re-runs [query] whenever the table it reads from changes, then drops
+  /// entries whose [keyOf] id is currently unregistered. `null` ids
+  /// (공백 슬롯 등, 특정 고객에 속하지 않는 행) always pass through.
+  Stream<List<T>> _watchExcludingUnregistered<Row extends Object, T>(
+    Selectable<Row> query,
+    List<T> Function(List<Row> rows) toEntities, {
+    required String? Function(T entity) keyOf,
+  }) {
+    return query.watch().map((rows) {
+      final unregistered = demoUnregisteredClientIdsSnapshot(_db);
+      return toEntities(rows)
+          .where((e) => keyOf(e) == null || !unregistered.contains(keyOf(e)))
+          .toList();
+    });
   }
 
   /// A client's booked sessions, newest first. Drives the 고객 상세 루틴

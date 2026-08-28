@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
@@ -16,6 +17,7 @@ import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -222,6 +224,99 @@ void main() {
         );
       },
     );
+
+    test(
+      'removeClient keeps 운동 기록·채팅·스케줄 원본 — 트레이너 화면에서만 사라진다 (#1623)',
+      () async {
+        final repo = DriftClientRepository(db);
+        final schedule = DriftScheduleRepository(db);
+        final chat = DriftChatRepository(db);
+
+        final histBefore = await (db.select(
+          db.clientRoutineHistory,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get();
+        expect(histBefore, isNotEmpty); // seed fixture keeps this honest
+
+        await repo.removeClient('seed-client-1');
+
+        // 원본 행은 그대로다 — 지워지지 않는다.
+        final histAfter = await (db.select(
+          db.clientRoutineHistory,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get();
+        expect(histAfter.length, histBefore.length);
+
+        // 카드의 캐시된 주간 이행률도 그 원본과 여전히 맞아떨어진다 — 지워진
+        // 기록을 근거로 한 숫자를 보여주지 않는다.
+        final client = (await repo.watchClients().first).firstWhere(
+          (c) => c.id == 'seed-client-1',
+        );
+        expect(client.weekCompletion, isNotEmpty);
+
+        // 채팅 원본도 지워지지 않지만, 안읽음 배지·오늘 일정에는 더는
+        // 잡히지 않는다 — 트레이너 화면에서만 사라진다는 약속.
+        final thread = await chat.watchThread('seed-client-1').first;
+        expect(thread, isNotEmpty);
+        final counts = await chat.watchUnreadCounts().first;
+        expect(counts.containsKey('seed-client-1'), isFalse);
+
+        final range = await schedule
+            .watchRange('2000-01-01', '2099-12-31')
+            .first;
+        expect(range.any((s) => s.clientId == 'seed-client-1'), isFalse);
+        // 원본 슬롯은 지워지지 않았다 — 걸러졌을 뿐이다.
+        final rowsAfter = await (db.select(
+          db.trainerScheduleEntries,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get();
+        expect(rowsAfter, isNotEmpty);
+      },
+    );
+
+    test('재등록하면 걸러졌던 채팅·일정 노출이 그대로 돌아온다 (#1623)', () async {
+      final repo = DriftClientRepository(db);
+      final invites = DemoClientInviteRepository(db);
+      final chat = DriftChatRepository(db);
+      final schedule = DriftScheduleRepository(db);
+
+      // 미읽은 회원 메시지를 하나 만들어 둔다 — 삭제 중 사라지지 않고,
+      // 재등록 후 다시 배지에 잡히는지까지 확인한다.
+      await db
+          .into(db.clientChatMessages)
+          .insert(
+            ClientChatMessagesCompanion.insert(
+              id: 'chat-1623-check',
+              clientId: 'seed-client-1',
+              sender: 'client',
+              body: '다음 세션 언제예요?',
+              timeLabel: '09:00',
+              createdAt: nowKst(),
+            ),
+          );
+
+      await repo.removeClient('seed-client-1');
+      expect(
+        (await chat.watchUnreadCounts().first).containsKey('seed-client-1'),
+        isFalse,
+      );
+      expect(
+        (await schedule.watchRange('2000-01-01', '2099-12-31').first).any(
+          (s) => s.clientId == 'seed-client-1',
+        ),
+        isFalse,
+      );
+
+      await invites.invite(demoAlreadyLinkedMemberId);
+
+      expect(
+        (await chat.watchUnreadCounts().first)['seed-client-1'],
+        greaterThan(0),
+      );
+      expect(
+        (await schedule.watchRange('2000-01-01', '2099-12-31').first).any(
+          (s) => s.clientId == 'seed-client-1',
+        ),
+        isTrue,
+      );
+    });
 
     test('미등록 고객은 새 회원 등록과 같은 lookup·invite 로 같은 행을 되살린다', () async {
       final repo = DriftClientRepository(db);
