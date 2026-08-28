@@ -513,6 +513,7 @@
   "coachReportPdfLabelStretching": "스트레칭",
   "coachReportPdfSectionTypes": "운동 유형별 시간",
   "coachReportPdfNoSessions": "잡힌 일정 없음",
+  "coachReportPdfChartTarget": "목표 {value}",
   "coachReportPdfDayUpcoming": "{weekday}요일 — 아직 지나지 않았어요",
   "coachReportPdfChange": "· {label}: {current} (지난주 {previous}, {delta})",
   "coachReportPdfDeltaUp": "+{value}",
