@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_weekly_report.dart';
@@ -11,6 +11,17 @@ import 'package:pdf/widgets.dart' as pw;
 /// 값에 단위를 붙이는 arb 패턴. `l.coachReportPdfValueMg` 처럼 tear-off 로 넘긴다
 /// — `1890mg` 와 `2 days` 처럼 단위가 붙는 자리와 띄어쓰기가 언어마다 다르다.
 typedef _Unit = String Function(String value);
+
+/// 문서에 쓰는 서체. 앱이 번들에 담고 있는 것을 **명시해서** 쓴다. (#1621)
+///
+/// 지정하지 않으면 `TextPainter` 가 플랫폼 기본 서체로 그리는데, 그 서체가 덮지
+/// 못하는 한글 음절이 네모(두부)로 나왔다 — `뒀`·`숄` 이 그랬다. 화면 쪽은 예전에
+/// 같은 증상을 CSS 로 고쳤지만(`web/index.html`), 문서는 캔버스에 직접 그리는
+/// 경로라 그 수정이 닿지 않는다.
+///
+/// 덤으로 지면 계산이 어디서나 같아진다. 대체 서체는 글자 높이가 달라, 테스트에서
+/// 한 장에 들어간 문서가 실기기에서는 한 줄 밀려 두 장이 됐다.
+const String _kFont = 'Pretendard';
 
 /// [MemberWeeklyReport] 를 A4 문서로 만든다. (#1600)
 ///
@@ -74,6 +85,30 @@ class MemberReportPdfGenerator {
     return document.save();
   }
 
+  /// 이 문서가 몇 장이 되는가. 그리지 않고 배치만 돌려 센다.
+  ///
+  /// 한 장에 담기로 한 문서다(#1619). 넘치면 마지막 한 줄만 든 빈 종이가 한 장
+  /// 더 생기는데, 실제로 그랬다 — 지면을 늘리거나 서체를 바꿀 때 이 값을 지킨다.
+  @visibleForTesting
+  int pageCount({
+    required AppLocalizations l,
+    required MemberWeeklyReport report,
+    String trainerNote = '',
+  }) {
+    const double contentWidth = _pageWidth - (_margin * 2);
+    int pages = 1;
+    double y = _headerHeight;
+    for (final _Block block in _blocks(l, report, trainerNote)) {
+      final double height = block.height(contentWidth);
+      if (y + height + block.after > _pageHeight - _margin) {
+        pages++;
+        y = _headerHeight;
+      }
+      y += height + block.after;
+    }
+    return pages;
+  }
+
   /// 문서에 적히는 문구. 렌더러와 테스트가 같은 소스를 쓴다.
   List<String> textContent({
     required AppLocalizations l,
@@ -94,9 +129,10 @@ class MemberReportPdfGenerator {
       text: TextSpan(
         text: title,
         style: const TextStyle(
+          fontFamily: _kFont,
           color: Color(0xff10384a),
           fontSize: 38,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -106,8 +142,11 @@ class MemberReportPdfGenerator {
       const Rect.fromLTWH(_margin, 132, _pageWidth - _margin * 2, 4),
       Paint()..color = const Color(0xff3eafdf),
     );
-    return 166;
+    return _headerHeight;
   }
+
+  /// 제목과 밑줄이 차지하는 높이. 그리는 쪽과 세는 쪽이 같은 값을 봐야 한다.
+  static const double _headerHeight = 166;
 
   Future<Uint8List> _finishPage(ui.PictureRecorder recorder) async {
     final ui.Picture picture = recorder.endRecording();
@@ -400,8 +439,8 @@ class MemberReportPdfGenerator {
       ),
 
       if (report.sodiumTarget case final int target when loggedDays > 0)
-        _TextBlock.body(l.coachReportPdfSodiumTargetNote('$target')),
-      _TextBlock.body(l.coachReportPdfPreviewNote, after: 8),
+        _TextBlock.note(l.coachReportPdfSodiumTargetNote('$target')),
+      _TextBlock.note(l.coachReportPdfPreviewNote),
     ];
   }
 
@@ -559,17 +598,36 @@ class _TextBlock extends _Block {
   factory _TextBlock.section(String text) => _TextBlock(
     text,
     const TextStyle(
+      fontFamily: _kFont,
       color: Color(0xff10384a),
       fontSize: 25,
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w700,
       height: 1.35,
     ),
     16,
   );
 
+  /// 문서 맨 아래의 단서. 본문보다 작게 적는다 — 값을 읽고 난 뒤 무엇을 기준으로
+  /// 셌는지 확인하는 줄이라, 본문과 같은 크기로 두면 지면을 두 줄만큼 먹는다.
+  factory _TextBlock.note(String text) => _TextBlock(
+    text,
+    const TextStyle(
+      fontFamily: _kFont,
+      color: Color(0xff5b6b76),
+      fontSize: 17,
+      height: 1.4,
+    ),
+    6,
+  );
+
   factory _TextBlock.body(String text, {double after = 9}) => _TextBlock(
     text,
-    const TextStyle(color: Color(0xff26333a), fontSize: 20, height: 1.5),
+    const TextStyle(
+      fontFamily: _kFont,
+      color: Color(0xff26333a),
+      fontSize: 20,
+      height: 1.5,
+    ),
     after,
   );
 
@@ -683,14 +741,17 @@ class _BandBlock extends _Block {
       )..layout(maxWidth: room);
 
   static const TextStyle _bandTitle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff5b6b76),
     fontSize: 17,
   );
   static const TextStyle _bandDelta = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff5b6b76),
     fontSize: 16,
   );
   static const TextStyle _bandValue = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff10384a),
     fontSize: 24,
     fontWeight: FontWeight.w700,
@@ -711,7 +772,7 @@ class _TableBlock extends _Block {
     this.alignRightFrom = 1,
   }) : super(20);
 
-  static const double _rowHeight = 32;
+  static const double _rowHeight = 30;
   static const double _pad = 12;
 
   @override
@@ -792,11 +853,13 @@ class _TableBlock extends _Block {
   }
 
   static const TextStyle _headerStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff10384a),
     fontSize: 18,
     fontWeight: FontWeight.w700,
   );
   static const TextStyle _cellStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff26333a),
     fontSize: 18,
   );
@@ -871,15 +934,18 @@ class _TileRowBlock extends _Block {
   }
 
   static const TextStyle _tileTitle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff5b6b76),
     fontSize: 17,
   );
   static const TextStyle _tileValue = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff10384a),
     fontSize: 28,
     fontWeight: FontWeight.w700,
   );
   static const TextStyle _tileDelta = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff5b6b76),
     fontSize: 16,
   );
@@ -903,7 +969,7 @@ class _ChartBlock extends _Block {
     this.asLine = false,
   }) : super(18);
 
-  static const double _barsHeight = 190;
+  static const double _barsHeight = 172;
   static const double _titleHeight = 30;
   static const double _labelHeight = 30;
 
@@ -1140,29 +1206,35 @@ class _ChartBlock extends _Block {
   )..layout();
 
   static const TextStyle _titleStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff26333a),
     fontSize: 20,
     fontWeight: FontWeight.w700,
   );
   static const TextStyle _labelStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff5b6b76),
     fontSize: 18,
   );
   static const TextStyle _insideValueStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xffffffff),
     fontSize: 17,
     fontWeight: FontWeight.w700,
   );
   static const TextStyle _valueStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff26333a),
     fontSize: 17,
   );
   static const TextStyle _overValueStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xffb3261e),
     fontSize: 17,
     fontWeight: FontWeight.w700,
   );
   static const TextStyle _targetStyle = TextStyle(
+    fontFamily: _kFont,
     color: Color(0xff5b6b76),
     fontSize: 17,
   );
