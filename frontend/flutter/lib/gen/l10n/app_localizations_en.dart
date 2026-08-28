@@ -1450,6 +1450,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachReportPdfNoSessions => 'None booked';
 
   @override
+  String get coachReportPdfBandPeriod => 'Period';
+
+  @override
+  String get coachReportPdfSectionGoals => 'Against your goals';
+
+  @override
+  String get coachReportPdfColumnMetric => 'Metric';
+
+  @override
+  String get coachReportPdfColumnThisWeek => 'This week';
+
+  @override
+  String get coachReportPdfColumnLastWeek => 'Last week';
+
+  @override
+  String get coachReportPdfColumnChange => 'Change';
+
+  @override
+  String get coachReportPdfColumnWeekday => 'Day';
+
+  @override
+  String get coachReportPdfColumnWorkout => 'Workout';
+
+  @override
+  String get coachReportPdfColumnIntake => 'Intake';
+
+  @override
+  String get coachReportPdfUpcoming => 'Still to come';
+
+  @override
+  String coachReportPdfGoalOf(String value, String target) {
+    return '$value (goal $target)';
+  }
+
+  @override
   String coachReportPdfChartTarget(String value) {
     return 'goal $value';
   }

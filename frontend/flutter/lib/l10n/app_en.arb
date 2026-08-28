@@ -821,6 +821,37 @@
   "@coachReportPdfNoSessions": {
     "description": "Shown for PT when nothing was booked and nothing was recorded."
   },
+  "coachReportPdfBandPeriod": "Period",
+  "@coachReportPdfBandPeriod": {
+    "description": "Header band cell title for the reported week."
+  },
+  "coachReportPdfSectionGoals": "Against your goals",
+  "@coachReportPdfSectionGoals": {
+    "description": "Section heading for the goal gauges."
+  },
+  "coachReportPdfColumnMetric": "Metric",
+  "@coachReportPdfColumnMetric": {"description": "Summary table column: the metric name."},
+  "coachReportPdfColumnThisWeek": "This week",
+  "@coachReportPdfColumnThisWeek": {"description": "Summary table column: this week's value."},
+  "coachReportPdfColumnLastWeek": "Last week",
+  "@coachReportPdfColumnLastWeek": {"description": "Summary table column: last week's value."},
+  "coachReportPdfColumnChange": "Change",
+  "@coachReportPdfColumnChange": {"description": "Summary table column: the difference between the two weeks."},
+  "coachReportPdfColumnWeekday": "Day",
+  "@coachReportPdfColumnWeekday": {"description": "Daily table column: the weekday."},
+  "coachReportPdfColumnWorkout": "Workout",
+  "@coachReportPdfColumnWorkout": {"description": "Daily table column: what was done that day."},
+  "coachReportPdfColumnIntake": "Intake",
+  "@coachReportPdfColumnIntake": {"description": "Daily table column: calories eaten that day."},
+  "coachReportPdfUpcoming": "Still to come",
+  "@coachReportPdfUpcoming": {
+    "description": "Daily table cell for a weekday that has not happened yet."
+  },
+  "coachReportPdfGoalOf": "{value} (goal {target})",
+  "@coachReportPdfGoalOf": {
+    "description": "Text form of a gauge: the value and the goal it is measured against.",
+    "placeholders": {"value": {"type": "String"}, "target": {"type": "String"}}
+  },
   "coachReportPdfChartTarget": "goal {value}",
   "@coachReportPdfChartTarget": {
     "description": "Label on a chart's dashed goal line.",

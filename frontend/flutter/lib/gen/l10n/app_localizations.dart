@@ -2678,6 +2678,72 @@ abstract class AppLocalizations {
   /// **'None booked'**
   String get coachReportPdfNoSessions;
 
+  /// Header band cell title for the reported week.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get coachReportPdfBandPeriod;
+
+  /// Section heading for the goal gauges.
+  ///
+  /// In en, this message translates to:
+  /// **'Against your goals'**
+  String get coachReportPdfSectionGoals;
+
+  /// Summary table column: the metric name.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric'**
+  String get coachReportPdfColumnMetric;
+
+  /// Summary table column: this week's value.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get coachReportPdfColumnThisWeek;
+
+  /// Summary table column: last week's value.
+  ///
+  /// In en, this message translates to:
+  /// **'Last week'**
+  String get coachReportPdfColumnLastWeek;
+
+  /// Summary table column: the difference between the two weeks.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get coachReportPdfColumnChange;
+
+  /// Daily table column: the weekday.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get coachReportPdfColumnWeekday;
+
+  /// Daily table column: what was done that day.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get coachReportPdfColumnWorkout;
+
+  /// Daily table column: calories eaten that day.
+  ///
+  /// In en, this message translates to:
+  /// **'Intake'**
+  String get coachReportPdfColumnIntake;
+
+  /// Daily table cell for a weekday that has not happened yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Still to come'**
+  String get coachReportPdfUpcoming;
+
+  /// Text form of a gauge: the value and the goal it is measured against.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} (goal {target})'**
+  String coachReportPdfGoalOf(String value, String target);
+
   /// Label on a chart's dashed goal line.
   ///
   /// In en, this message translates to:
