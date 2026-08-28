@@ -113,6 +113,8 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
       // 고객 관리가 같은 목록을 보므로 두 provider 를 함께 새로고침한다.
       ref.invalidate(clientsProvider);
       ref.invalidate(managedClientsProvider);
+      // 미등록 동안 걸러졌던 오늘 일정·안읽음 배지도 다시 보인다(#1623).
+      invalidateClientVisibilityDependentViews(ref);
       if (!mounted) return;
       navigator.pop();
       showAppToast(

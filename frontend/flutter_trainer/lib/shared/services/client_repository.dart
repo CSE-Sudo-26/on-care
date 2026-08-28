@@ -19,6 +19,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/routine_history_
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/exercise_burn_goals.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
 ///
@@ -127,16 +128,65 @@ abstract interface class ClientRepository {
 /// 이라는 잘못된 안내가 뜬다.
 const String demoUnregisteredClientsKey = 'trainer_unregistered_clients';
 
-/// [demoUnregisteredClientsKey] 에 저장된 미등록 고객 id 목록을 읽는다.
+/// [readDemoUnregisteredClientIds] 가 채워 둔, db 인스턴스별 동기 스냅샷.
+///
+/// 오늘 일정·주간 캘린더·안읽음 배지처럼 여러 고객을 한 번에 훑는 조회는
+/// 매 emission 마다 이 목록을 다시 읽으면(비동기 라운드트립) 이미 초 단위로
+/// 고정된 pump 예산으로 검증하는 다른 위젯 테스트들의 타이밍을 밀어낸다
+/// (#1623 구현 중 `client_status_toggle_test`·`dashboard_page_test` 에서
+/// 실제로 깨졌다). 그 조회들은 이 동기 스냅샷으로 거른다.
+///
+/// db 를 연 직후, 아무 조회도 [readDemoUnregisteredClientIds] 를 부르기
+/// 전에는 비어 있다 — 실제로는 앱 부팅 직후 사이드바·대시보드가 고객
+/// 목록([DriftClientRepository.watchClients], 매 emission 마다 이 목록을
+/// 새로 읽는다)을 거의 즉시 구독하므로 그 창은 실질적으로 없다. 그 뒤로는
+/// [writeDemoUnregisteredClientIds] 가 (고객 삭제·(재)등록에서) 즉시
+/// 갱신한다.
+final Expando<Set<String>> _unregisteredSnapshots = Expando<Set<String>>();
+
+/// [db] 의 현재 미등록 고객 id 스냅샷 — DB를 읽지 않는다.
+Set<String> demoUnregisteredClientIdsSnapshot(AppDatabase db) =>
+    _unregisteredSnapshots[db] ?? const <String>{};
+
+/// [demoUnregisteredClientsKey] 에 저장된 미등록 고객 id 목록을 읽고,
+/// [demoUnregisteredClientIdsSnapshot] 도 함께 갱신한다.
 Future<Set<String>> readDemoUnregisteredClientIds(AppDatabase db) async {
   final raw = await db.readValue(demoUnregisteredClientsKey);
-  if (raw == null || raw.isEmpty) return <String>{};
-  return (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
+  final ids = raw == null || raw.isEmpty
+      ? <String>{}
+      : (jsonDecode(raw) as List<Object?>).whereType<String>().toSet();
+  _unregisteredSnapshots[db] = ids;
+  return ids;
 }
 
 /// [ids] 를 [demoUnregisteredClientsKey] 에 저장한다.
-Future<void> writeDemoUnregisteredClientIds(AppDatabase db, Set<String> ids) =>
-    db.putValue(demoUnregisteredClientsKey, jsonEncode(ids.toList()..sort()));
+Future<void> writeDemoUnregisteredClientIds(
+  AppDatabase db,
+  Set<String> ids,
+) async {
+  _unregisteredSnapshots[db] = ids;
+  await db.putValue(
+    demoUnregisteredClientsKey,
+    jsonEncode(ids.toList()..sort()),
+  );
+}
+
+/// 고객을 삭제하거나(재)등록한 뒤, 그 결과로 노출이 바뀌는 여러 고객을
+/// 한꺼번에 보여주는 조회들을 새로고침한다 — 오늘 일정, 주간 캘린더, 예약
+/// 날짜 점, 사이드바 안읽음 배지.
+///
+/// 이 provider 들의 스트림은 [demoUnregisteredClientsKey] 변화를 직접 듣지
+/// 않는다(#1623) — 앱 전체가 쓰는 키-값 테이블이라 거기 걸면 무관한 값 하나가
+/// 바뀔 때마다 다시 돈다. 대신 미등록 상태를 바꾸는 이 두 호출부
+/// (`MyPage._removeClient`, `ClientConnectDialog._send`)가 명시적으로
+/// 무효화한다.
+void invalidateClientVisibilityDependentViews(WidgetRef ref) {
+  ref.invalidate(todayScheduleProvider);
+  ref.invalidate(scheduleForDateProvider);
+  ref.invalidate(bookedDatesProvider);
+  ref.invalidate(scheduleRangeProvider);
+  ref.invalidate(unreadCountsProvider);
+}
 
 /// Reads client + schedule data from the local drift DB for the
 /// 고객 관리 tab. Returns reactive streams so the UI updates if the
@@ -295,27 +345,20 @@ class DriftClientRepository implements ClientRepository {
 
   @override
   Future<void> removeClient(String id) async {
-    await _db.transaction(() async {
-      // Demo DB에는 회원 앱 저장소가 없으므로 트레이너 화면용 투영만 정리한다.
-      // 식단·일별 지표처럼 회원이 만든 원본은 남긴다.
-      await (_db.delete(
-        _db.trainerScheduleEntries,
-      )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.clientAiRoutines,
-      )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.clientRoutineHistory,
-      )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.clientChatMessages,
-      )..where((t) => t.clientId.equals(id))).go();
-      await (_db.delete(
-        _db.reportFeedbackDrafts,
-      )..where((t) => t.clientId.equals(id))).go();
-      final removed = (await readDemoUnregisteredClientIds(_db))..add(id);
-      await writeDemoUnregisteredClientIds(_db, removed);
-    });
+    // 삭제 확인창이 트레이너에게 하는 약속(스케줄·루틴·리포트·메시지가
+    // **트레이너 화면에서만** 사라지고, 원본은 지워지지 않는다)은 실
+    // 백엔드(`trainer_service.remove_client`)와 같아야 한다. 예전에는 여기서
+    // 스케줄·AI 루틴·운동 기록·채팅·리포트 피드백 행을 실제로 지웠는데, 그
+    // 대가가 재등록 때 드러났다 — 카드의 주간 이행률(`weekCompletionJson`)은
+    // 캐시라 손대지 않은 채 남는데 근거가 되는 `clientRoutineHistory` 는 이미
+    // 사라져, 되살린 고객의 카드와 상세 화면이 서로 다른 값을 보여줬다(#1623).
+    //
+    // 이제는 행을 지우지 않고 미등록 id 목록에만 올린다. 여러 고객을 한 번에
+    // 보여주는 조회(오늘 일정·전체 안읽음 배지)만 이 목록으로 걸러 낸다 — 특정
+    // 고객 하나를 이미 알고 여는 조회(상세 화면 등)는 애초에 등록 고객만 그
+    // 화면으로 갈 수 있어 걸러낼 필요가 없다.
+    final removed = (await readDemoUnregisteredClientIds(_db))..add(id);
+    await writeDemoUnregisteredClientIds(_db, removed);
   }
 
   @override
