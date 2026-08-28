@@ -1423,6 +1423,41 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachReportPdfNoSessions => '잡힌 일정 없음';
 
   @override
+  String get coachReportPdfBandPeriod => '기간';
+
+  @override
+  String get coachReportPdfSectionGoals => '목표 대비';
+
+  @override
+  String get coachReportPdfColumnMetric => '지표';
+
+  @override
+  String get coachReportPdfColumnThisWeek => '이번 주';
+
+  @override
+  String get coachReportPdfColumnLastWeek => '지난주';
+
+  @override
+  String get coachReportPdfColumnChange => '변화';
+
+  @override
+  String get coachReportPdfColumnWeekday => '요일';
+
+  @override
+  String get coachReportPdfColumnWorkout => '운동';
+
+  @override
+  String get coachReportPdfColumnIntake => '섭취';
+
+  @override
+  String get coachReportPdfUpcoming => '아직 지나지 않았어요';
+
+  @override
+  String coachReportPdfGoalOf(String value, String target) {
+    return '$value (목표 $target)';
+  }
+
+  @override
   String coachReportPdfChartTarget(String value) {
     return '목표 $value';
   }

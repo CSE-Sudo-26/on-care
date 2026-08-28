@@ -108,6 +108,8 @@ final _memberWeekProvider = FutureProvider.family<MemberWeeklyReport, DateTime>(
                 .length
           : inWeek.where((CoachSession s) => s.isDone).length,
       sodiumTarget: (await profile).effectiveDailySodiumMg,
+      calorieTarget: (await profile).effectiveDailyCalories,
+      sugarTarget: (await profile).effectiveDailySugarG,
       // 세운 날. 그 주에서 아직 오지 않은 요일을 가리는 데 쓴다(#1613) — 넘기지
       // 않으면 오지 않은 날이 다시 `기록 없음` 으로 적힌다.
       asOf: today,

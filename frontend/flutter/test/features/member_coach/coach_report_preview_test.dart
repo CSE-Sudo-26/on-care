@@ -394,8 +394,10 @@ void main() {
             ),
           );
 
-      expect(withLast, contains('지난주 대비'));
+      // 같은 지표의 이번 주·지난주·변화가 한 줄에 선다(#1619) — 예전에는
+      // `지난주 대비` 라는 절이 따로 있었다.
       expect(withLast, contains('· 총 운동 시간: 95분 (지난주 95분, 변화 없음)'));
+      expect(withLast, isNot(contains('지난주 기록이 없어 견줄 값이 없어요.')));
 
       final List<String> alone = const MemberReportPdfGenerator().textContent(
         l: l,

@@ -17,6 +17,8 @@ class MemberWeeklyReport {
     required this.sessionsBooked,
     required this.sessionsDone,
     this.sodiumTarget,
+    this.calorieTarget,
+    this.sugarTarget,
     this.previous,
     this.asOf,
   });
@@ -40,6 +42,10 @@ class MemberWeeklyReport {
   /// `나트륨 초과 일수` 를 읽지만, 회원 앱에는 그 값이 없고 대신 **회원 자신의
   /// 목표**가 있다 — 같은 지표를 자기 기준으로 다시 센다.
   final int? sodiumTarget;
+
+  /// 같은 규칙의 하루 섭취 칼로리·당류 목표. 목표 대비 게이지가 읽는다(#1619).
+  final int? calorieTarget;
+  final int? sugarTarget;
 
   /// 이 문서를 세운 날. 그 주에서 **아직 오지 않은 요일**을 가리기 위해 든다 —
   /// 오지 않은 날을 `기록 없음` 이라고 적으면 지키지 못한 날처럼 읽힌다(#1613).
@@ -70,6 +76,8 @@ class MemberWeeklyReport {
         sessionsBooked: sessionsBooked,
         sessionsDone: sessionsDone,
         sodiumTarget: sodiumTarget,
+        calorieTarget: calorieTarget,
+        sugarTarget: sugarTarget,
         previous: last,
         asOf: asOf,
       );
