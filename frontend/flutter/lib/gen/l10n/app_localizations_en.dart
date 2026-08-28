@@ -1450,6 +1450,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachReportPdfNoSessions => 'None booked';
 
   @override
+  String coachReportPdfChartTarget(String value) {
+    return 'goal $value';
+  }
+
+  @override
   String coachReportPdfDayUpcoming(String weekday) {
     return '$weekday — still to come';
   }

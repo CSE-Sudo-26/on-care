@@ -6,6 +6,8 @@
 /// 그린다. 한쪽 문구만 고치면 여기서 깨진다.
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -312,6 +314,44 @@ void main() {
       // `_week()` 는 기록한 여섯 날 모두 2100mg 이다.
       expect(lines, contains('· 나트륨 목표 초과: 6일'));
       expect(lines, contains(contains('하루 2000mg 기준')));
+    });
+
+    testWidgets('요일별 값은 그래프로 그려도 같은 값을 말한다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      final List<String> lines = const MemberReportPdfGenerator().textContent(
+        l: l,
+        report: _report(days: _week(), asOf: DateTime(2026, 8, 23)),
+      );
+
+      // 그래프 블록도 자기 값을 글로 든다 — 그림만 남으면 문서가 무엇을 말하는지
+      // 확인할 길이 없다.
+      expect(lines, contains('· 운동 시간: 30분 / - / 45분 / - / 20분 / - / -'));
+      expect(lines, contains(startsWith('· 섭취 칼로리: ')));
+      expect(lines, contains(startsWith('· 나트륨: ')));
+    });
+
+    testWidgets('값이 없거나 목표가 있어도 문서가 만들어진다', (WidgetTester tester) async {
+      final AppLocalizations l = await localizations(tester);
+      const MemberReportPdfGenerator generator = MemberReportPdfGenerator();
+
+      // 막대 높이를 나누는 자리가 0 이 되는 주 — 눈금이 무너지면 여기서 터진다.
+      Uint8List? empty;
+      Uint8List? withTarget;
+      await tester.runAsync(() async {
+        empty = await generator.generate(
+          l: l,
+          report: _report(minutes: const <double>[0, 0, 0, 0, 0, 0, 0]),
+        );
+        withTarget = await generator.generate(
+          l: l,
+          report: _report(days: _week(), sodiumTarget: 2000),
+        );
+      });
+
+      expect(empty, isNotNull);
+      expect(empty!.length, greaterThan(0));
+      expect(withTarget, isNotNull);
+      expect(withTarget!.length, greaterThan(0));
     });
 
     testWidgets('지난주가 있으면 견주고, 없으면 없다고 적는다', (WidgetTester tester) async {

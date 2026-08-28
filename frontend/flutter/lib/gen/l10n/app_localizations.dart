@@ -2678,6 +2678,12 @@ abstract class AppLocalizations {
   /// **'None booked'**
   String get coachReportPdfNoSessions;
 
+  /// Label on a chart's dashed goal line.
+  ///
+  /// In en, this message translates to:
+  /// **'goal {value}'**
+  String coachReportPdfChartTarget(String value);
+
   /// Daily line for a weekday that has not happened yet.
   ///
   /// In en, this message translates to:

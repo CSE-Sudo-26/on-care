@@ -1423,6 +1423,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachReportPdfNoSessions => '잡힌 일정 없음';
 
   @override
+  String coachReportPdfChartTarget(String value) {
+    return '목표 $value';
+  }
+
+  @override
   String coachReportPdfDayUpcoming(String weekday) {
     return '$weekday요일 — 아직 지나지 않았어요';
   }
