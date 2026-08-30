@@ -21,6 +21,10 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 Future<void> showTrainerSyncSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // 탭 페이지마다 Navigator 가 있고 MainShell 은 `extendBody` 라, 기본값으로
+    // 열면 시트가 브랜치 Navigator 안에 뜬다 — 하단 바와 + 버튼이 시트 위에
+    // 그려지고 스크림도 걸리지 않은 채 눌린다(#791).
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(

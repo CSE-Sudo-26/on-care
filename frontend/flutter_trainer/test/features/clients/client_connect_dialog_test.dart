@@ -14,12 +14,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// 연결했다. 지금은 코드를 발급해 불러 준 것이 회원 본인이라 한 번에
 /// 연결되고, 결과 카드가 "이 사람이 맞나요"를 대신한다.
 class _FakeInviteRepository implements ClientInviteRepository {
-  _FakeInviteRepository({
-    this.paired,
-    this.failure,
-    this.pending = const <ClientInvite>[],
-    this.connectsImmediately = false,
-  });
+  _FakeInviteRepository({this.paired, this.failure});
 
   /// 연결에 성공하면 돌려줄 회원.
   PairedMember? paired;
@@ -27,10 +22,9 @@ class _FakeInviteRepository implements ClientInviteRepository {
   /// 있으면 연결이 이 오류로 끝난다.
   AppError? failure;
 
-  List<ClientInvite> pending;
-
+  // 이 창은 코드로 그 자리에서 연결한다 — 기다릴 답이 없다.
   @override
-  final bool connectsImmediately;
+  bool get connectsImmediately => true;
 
   /// 실제로 서버에 넘어간 코드들 — 공백·하이픈을 그대로 흘려보내지 않는지 본다.
   final List<String> redeemed = <String>[];
@@ -57,15 +51,15 @@ class _FakeInviteRepository implements ClientInviteRepository {
 
   @override
   Future<List<ClientInvite>> listSent({String status = 'pending'}) async =>
-      pending;
+      const <ClientInvite>[];
 
   @override
   Future<void> cancel(String inviteId) async {}
 }
 
-PairedMember _paired({String name = '이수아'}) => PairedMember(
+PairedMember _paired() => const PairedMember(
   memberId: 'user-8f2a41c9d6e3',
-  name: name,
+  name: '이수아',
   gender: 'female',
   age: 29,
   goal: '체지방 감량',
