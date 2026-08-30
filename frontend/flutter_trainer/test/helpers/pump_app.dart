@@ -22,6 +22,8 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fixed_clock.dart';
+
 /// Mock-mode config so widget tests resolve the in-memory repositories
 /// (no real backend). Individual tests can override with [extraOverrides].
 const AppConfig kTestAppConfig = AppConfig(
@@ -54,12 +56,17 @@ const AppConfig kTestAppConfigWithDemoEntry = AppConfig(
 /// the widget-test stand-in for opening the console on a deep link (a
 /// browser refresh or a shared URL). It differs from [at], which
 /// navigates *after* the app is up and so never exercises the boot path.
-/// [seedClock] 을 주면 데모 시딩이 그 날짜를 '오늘' 로 삼는다.
+/// [seedClock] 을 주면 데모 시딩과 **화면이 보는 '지금'** 이 함께 그 시각으로
+/// 고정된다.
 ///
 /// 시드는 주간 계열을 **오늘까지만** 채운다(`_upToToday`). 그래서 요일에 따라
 /// 그 주에 기록된 날의 수가 달라지고, 이행률 평균이 달라지고, 배지의 우선순위가
 /// 뒤집힌다. 특정 배지를 검증하는 테스트는 요일을 고정해야 어느 날 돌려도 같은
 /// 값을 본다.
+///
+/// 시드만 고정하고 `nowKst()` 를 두면 둘이 어긋난다 — 시드는 목요일 기준으로
+/// 수업을 놓는데 화면은 실제 오늘로 완료·예정을 가른다. 한쪽만 고정하는 것은
+/// 고정하지 않은 것과 다를 바 없어, 여기서 함께 묶는다.
 Future<ProviderContainer> pumpTrainerApp(
   WidgetTester tester, {
   String? token,
@@ -82,6 +89,7 @@ Future<ProviderContainer> pumpTrainerApp(
   final prefs = await SharedPreferences.getInstance();
 
   final db = AppDatabase.forTesting(NativeDatabase.memory());
+  if (seedClock != null) useFixedKstDate(seedClock);
   if (seed) await seedIfEmpty(db, clock: seedClock);
   addTearDown(() async => db.close());
 

@@ -11,8 +11,12 @@ import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/app_toast.dart';
 
-/// 회원가입 화면 — 이름/이메일/비밀번호로 계정을 만들고, 성공 시 자동
+/// 회원가입 화면 — 이름/이메일/전화번호/비밀번호로 계정을 만들고, 성공 시 자동
 /// 로그인해 대시보드로 진입한다(라우터 가드가 인증 상태를 감지).
+///
+/// 전화번호를 여기서 받는 이유는 가입 직후부터 연락처가 있어야 하기
+/// 때문이다 (#1634). 예전처럼 MY 탭 프로필 편집에서만 받으면, 트레이너와
+/// 연결된 뒤에도 회원의 연락처가 비어 있는 기간이 생긴다.
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
 
@@ -23,6 +27,7 @@ class SignUpPage extends ConsumerStatefulWidget {
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _email = TextEditingController();
+  final TextEditingController _phone = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _passwordConfirm = TextEditingController();
   bool _obscure = true;
@@ -32,10 +37,17 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   void dispose() {
     _name.dispose();
     _email.dispose();
+    _phone.dispose();
     _password.dispose();
     _passwordConfirm.dispose();
     super.dispose();
   }
+
+  /// 표기(하이픈·국번·공백)는 사람마다 달라 숫자만 세고, 그 이상은 여기서
+  /// 따지지 않는다 — 가입을 막을 만큼 확실한 규칙이 아니고 회원은 MY 탭에서
+  /// 언제든 고칠 수 있다.
+  static bool _hasEnoughDigits(String phone) =>
+      phone.replaceAll(RegExp(r'\D'), '').length >= 4;
 
   void _backToSignIn() {
     if (context.canPop()) {
@@ -51,10 +63,17 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     final AppToastHost toast = AppToastHost.of(context);
     final name = _name.text.trim();
     final email = _email.text.trim();
+    final phone = _phone.text.trim();
     final password = _password.text;
     final confirm = _passwordConfirm.text;
     if (email.isEmpty || password.isEmpty) {
       toast.show(l.authMissingCredentials,
+        kind: AppToastKind.error,
+      );
+      return;
+    }
+    if (!_hasEnoughDigits(phone)) {
+      toast.show(l.signUpPhoneInvalid,
         kind: AppToastKind.error,
       );
       return;
@@ -75,7 +94,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     try {
       await ref
           .read(sessionControllerProvider.notifier)
-          .register(email: email, password: password, name: name);
+          .register(email: email, password: password, name: name, phone: phone);
       if (!mounted) return;
       // New accounts land in first-run onboarding; the guard keeps the
       // (now authenticated) user on this protected route.
@@ -151,6 +170,27 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         hint: l.authEmailHint,
                         icon: Icons.mail_outline,
                         keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AuthField(
+                        controller: _phone,
+                        hint: l.signUpPhoneHint,
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 6),
+                      // 왜 전화번호를 받는지 그 자리에서 말해 준다. 건강 앱이
+                      // 이유 없이 번호를 물으면 가입을 그만두는 쪽이 자연스럽다.
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: Text(
+                          l.signUpPhoneHelper,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(

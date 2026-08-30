@@ -47,6 +47,16 @@ abstract interface class ClientInviteRepository {
   /// [ValidationError](서버 문구를 그대로 싣는다 — 어느 쪽인지는 서버만 안다).
   Future<ClientInvite> invite(String memberId, {String? message});
 
+  /// 회원이 자기 앱에 띄운 6자리 동기화 코드로 **바로** 담당이 된다. (#1634)
+  ///
+  /// [invite] 와 달리 회원의 수락을 기다리지 않는다 — 코드를 발급해 불러 준
+  /// 것이 회원 본인이고 그 화면이 공유 범위를 말한다. 이미 받은 동의를 한 번
+  /// 더 받을 이유가 없다.
+  ///
+  /// 코드가 틀렸거나 만료됐거나 이미 쓰였으면 [NotFoundError] — 셋을 갈라
+  /// 알려 주지 않는다. 이미 담당이 있는 회원이면 [ValidationError].
+  Future<PairedMember> redeemPairingCode(String code);
+
   /// 내가 보낸 요청. `status` 는 `pending` 또는 `all`. [connectsImmediately] 가
   /// `true` 인 소스는 대기할 요청이 없으므로 항상 빈 목록이다.
   Future<List<ClientInvite>> listSent({String status = 'pending'});
@@ -203,6 +213,31 @@ class DemoClientInviteRepository implements ClientInviteRepository {
   }
 
   @override
+  Future<PairedMember> redeemPairingCode(String code) async {
+    // 데모에는 코드를 발급하는 회원 백엔드가 없다. 명부에 박아 둔 고정 코드로
+    // 같은 흐름을 시연한다 — 화면이 실 API 와 같은 길을 지나야 한다.
+    final String normalized = code.replaceAll(RegExp(r'\D'), '');
+    final String? memberId = resolveDemoPairingCode(normalized);
+    if (memberId == null) throw const NotFoundError();
+
+    // 조회 규칙을 그대로 태운다 — 이미 담당 중인지, 담당이 해제된 기존
+    // 고객인지 판단하는 자리가 둘이 되면 한쪽만 고쳐지는 날이 온다.
+    final MemberLookup found = await lookup(memberId);
+    if (!found.canInvite) {
+      throw const ValidationError(message: '이미 담당하고 있는 회원이에요.');
+    }
+
+    final invite = await this.invite(memberId);
+    return PairedMember(
+      memberId: invite.memberId,
+      name: found.name,
+      gender: found.gender ?? '',
+      age: found.age,
+      goal: found.goal ?? '',
+    );
+  }
+
+  @override
   Future<List<ClientInvite>> listSent({String status = 'pending'}) async =>
       const <ClientInvite>[];
 
@@ -263,6 +298,28 @@ class DioClientInviteRepository implements ClientInviteRepository {
       if (status == 404) throw const NotFoundError();
       // 409(이미 담당 중·이미 보냄)와 422(트레이너 계정)는 서버가 이유를 문장으로
       // 돌려준다. 그 문장이 트레이너가 다음에 할 일을 정하는 근거라 그대로 싣는다.
+      if (status == 409 || status == 422 || status == 400) {
+        throw ValidationError(message: _detail(e));
+      }
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
+  Future<PairedMember> redeemPairingCode(String code) async {
+    try {
+      final res = await _dio.post<Map<String, Object?>>(
+        '/trainer/pairing-code',
+        data: <String, Object?>{'code': code.trim()},
+      );
+      final data = res.data;
+      if (data == null) throw const ServerError();
+      return PairedMember.fromJson(data);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      // 404 는 틀렸거나·만료됐거나·이미 쓰였거나 — 서버가 갈라 주지 않는다.
+      if (status == 404) throw const NotFoundError();
+      // 409(이미 담당 중)와 422 는 서버 문장이 트레이너가 할 일을 정한다.
       if (status == 409 || status == 422 || status == 400) {
         throw ValidationError(message: _detail(e));
       }

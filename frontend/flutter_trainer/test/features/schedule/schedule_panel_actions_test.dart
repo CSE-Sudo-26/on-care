@@ -13,6 +13,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_manage_row.dart';
 
+import '../../helpers/fixed_clock.dart';
 import '../../helpers/pump_app.dart';
 
 void main() {
@@ -25,6 +26,7 @@ void main() {
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.schedule,
+      seedClock: kMidWeekKst,
     );
   }
 

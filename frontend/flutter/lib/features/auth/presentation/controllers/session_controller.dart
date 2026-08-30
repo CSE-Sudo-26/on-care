@@ -252,10 +252,15 @@ class SessionController extends StateNotifier<SessionState> {
   /// Register a new account → POST /auth/register (returns the created
   /// user, not a token), then log in with the same credentials so the
   /// user lands authenticated. Throws on failure (e.g. 409 duplicate).
+  ///
+  /// [phone] 은 가입 시점에 프로필을 채우기 위해 함께 보낸다 (#1634). 예전에는
+  /// MY 탭 프로필 편집에서만 넣을 수 있어 가입 직후에는 연락처가 비어 있었다.
+  /// 비워 보내도 계정은 만들어지고, 회원이 MY 탭에서 언제든 넣을 수 있다.
   Future<void> register({
     required String email,
     required String password,
     String name = '',
+    String phone = '',
   }) async {
     _userActionStarted = true;
     final dio = _ref.read(dioProvider);
@@ -265,6 +270,7 @@ class SessionController extends StateNotifier<SessionState> {
         'email': email,
         'password': password,
         'name': name,
+        'phone': phone,
       },
     );
     await login(email: email, password: password);

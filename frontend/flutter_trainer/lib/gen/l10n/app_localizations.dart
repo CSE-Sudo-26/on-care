@@ -1379,14 +1379,38 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteIntro.
   ///
   /// In en, this message translates to:
-  /// **'Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.'**
+  /// **'Enter the 6-digit sync code from the member\'s MY tab to connect right away.'**
   String get clientInviteIntro;
 
   /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Find a client by member ID and register them right away.'**
+  /// **'Enter the 6-digit sync code from the member\'s MY tab to connect right away.'**
   String get clientInviteIntroImmediate;
+
+  /// No description provided for @clientConnectCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Member sync code'**
+  String get clientConnectCodeLabel;
+
+  /// No description provided for @clientConnectDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get clientConnectDone;
+
+  /// No description provided for @clientConnectCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter all six digits'**
+  String get clientConnectCodeRequired;
+
+  /// No description provided for @clientConnectCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That code is wrong or expired. Ask the member for a new one'**
+  String get clientConnectCodeInvalid;
 
   /// No description provided for @clientInviteMemberIdLabel.
   ///

@@ -178,7 +178,7 @@ Future<void> writeDemoUnregisteredClientIds(
 /// 이 provider 들의 스트림은 [demoUnregisteredClientsKey] 변화를 직접 듣지
 /// 않는다(#1623) — 앱 전체가 쓰는 키-값 테이블이라 거기 걸면 무관한 값 하나가
 /// 바뀔 때마다 다시 돈다. 대신 미등록 상태를 바꾸는 이 두 호출부
-/// (`MyPage._removeClient`, `ClientConnectDialog._send`)가 명시적으로
+/// (`MyPage._removeClient`, `ClientConnectDialog._connect`)가 명시적으로
 /// 무효화한다.
 void invalidateClientVisibilityDependentViews(WidgetRef ref) {
   ref.invalidate(todayScheduleProvider);

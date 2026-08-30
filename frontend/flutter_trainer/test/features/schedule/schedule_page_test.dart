@@ -17,6 +17,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
+import '../../helpers/fixed_clock.dart';
 import '../../helpers/pump_app.dart';
 
 /// A chat repository whose sends always fail.
@@ -433,6 +434,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
+        seedClock: kMidWeekKst,
       );
     }
 
@@ -578,10 +580,14 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      // URL 에 실을 날짜를 인자에서 계산하면 고정 **전** 의 오늘이 들어가,
+      // 앱이 보는 오늘과 하루가 어긋난다. 먼저 고정하고 나서 읽는다.
+      useFixedKstDate();
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.scheduleAt(date: ymd(todayKst())),
+        seedClock: kMidWeekKst,
       );
 
       // 넓은 화면에서 쓰는 패널과 같은 위젯이 그리드 아래에 쌓인다.
@@ -612,11 +618,14 @@ void main() {
     testWidgets('week detail follows the URL date after selecting a session', (
       tester,
     ) async {
+      // 고정 뒤에 읽어야 URL 날짜와 앱의 오늘이 같다.
+      useFixedKstDate();
       final today = nowKst();
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.scheduleAt(date: ymd(today)),
+        seedClock: kMidWeekKst,
       );
 
       final Finder minsuBlock = find
@@ -712,6 +721,7 @@ void main() {
             DemoConsultationRepository(requests: <ConsultationRequest>[]),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
 
       final Finder entry = find.byKey(const Key('consult-inbox-entry'));
@@ -775,6 +785,7 @@ void main() {
           tester,
           token: 'demo-trainer-token',
           at: AppRoutes.schedule,
+          seedClock: kMidWeekKst,
         );
 
         await openSession(tester, '김민수');
@@ -913,6 +924,7 @@ void main() {
           tester,
           token: 'demo-trainer-token',
           at: AppRoutes.schedule,
+          seedClock: kMidWeekKst,
         );
 
         await openSession(tester, '김민수');
@@ -1410,6 +1422,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
+        seedClock: kMidWeekKst,
       );
 
       final today = todayKst();
@@ -1452,6 +1465,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
+        seedClock: kMidWeekKst,
       );
 
       expect(find.byIcon(Icons.chevron_left), findsOneWidget);
@@ -1521,6 +1535,7 @@ void main() {
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.schedule);
 
@@ -1576,6 +1591,7 @@ void main() {
             (ref) => _FailingChatRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.schedule);
 
@@ -1598,6 +1614,7 @@ void main() {
                 _ThrowingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.schedule);
 
@@ -1618,6 +1635,9 @@ void main() {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
+        // 완료 동작은 지나간 약속에만 열린다 — 박성호의 토요일 수업이 오늘이
+        // 되는 시각으로 고정한다.
+        seedClock: kSaturdayKst,
         extraOverrides: <Override>[
           scheduleRepositoryProvider.overrideWith(
             (ref) =>
@@ -1659,6 +1679,7 @@ void main() {
                 _ThrowingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.schedule);
 

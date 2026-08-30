@@ -1922,18 +1922,6 @@ abstract class AppLocalizations {
   /// **'User'**
   String get myDefaultUserName;
 
-  /// No description provided for @myMemberIdLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'My member ID'**
-  String get myMemberIdLabel;
-
-  /// No description provided for @myMemberIdCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Member ID copied'**
-  String get myMemberIdCopied;
-
   /// No description provided for @mySettingsTitle.
   ///
   /// In en, this message translates to:
@@ -3469,6 +3457,18 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get signUpNameHint;
 
+  /// No description provided for @signUpPhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get signUpPhoneHint;
+
+  /// No description provided for @signUpPhoneHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trainer uses this to confirm who you are.'**
+  String get signUpPhoneHelper;
+
   /// No description provided for @signUpPasswordHint.
   ///
   /// In en, this message translates to:
@@ -3504,6 +3504,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Passwords do not match'**
   String get signUpPasswordMismatch;
+
+  /// No description provided for @signUpPhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a phone number with at least 4 digits'**
+  String get signUpPhoneInvalid;
+
+  /// No description provided for @trainerSyncEntryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync data with a trainer'**
+  String get trainerSyncEntryLabel;
+
+  /// No description provided for @trainerSyncEntryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect with your trainer using a 6-digit code'**
+  String get trainerSyncEntryHint;
+
+  /// No description provided for @trainerSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync data with a trainer'**
+  String get trainerSyncTitle;
+
+  /// No description provided for @trainerSyncConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'The trainer who enters this code becomes your coach and can see your meals, workouts, and health records.'**
+  String get trainerSyncConsent;
+
+  /// No description provided for @trainerSyncHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Read these six digits out to your trainer.'**
+  String get trainerSyncHint;
+
+  /// No description provided for @trainerSyncCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires in {remaining}'**
+  String trainerSyncCountdown(String remaining);
+
+  /// No description provided for @trainerSyncExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This code has expired.'**
+  String get trainerSyncExpired;
+
+  /// No description provided for @trainerSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get a code.'**
+  String get trainerSyncFailed;
+
+  /// No description provided for @trainerSyncRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a new code'**
+  String get trainerSyncRetry;
+
+  /// No description provided for @trainerSyncCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync code copied'**
+  String get trainerSyncCopied;
 
   /// No description provided for @signUpEmailTaken.
   ///

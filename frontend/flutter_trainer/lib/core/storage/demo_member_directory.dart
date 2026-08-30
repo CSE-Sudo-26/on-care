@@ -8,11 +8,18 @@
 class DemoProspectiveMember {
   const DemoProspectiveMember({
     required this.id,
+    required this.pairingCode,
     required this.name,
     required this.gender,
     required this.birthDate,
     required this.goal,
   });
+
+  /// 이 회원이 자기 앱에 띄웠다고 가정하는 6자리 동기화 코드. (#1634)
+  ///
+  /// 실서비스에서는 회원이 누를 때마다 새로 발급되고 5분 뒤 만료된다. 데모에는
+  /// 발급할 회원 백엔드가 없어 고정해 둔다 — 시연 중에 만료되면 곤란하다.
+  final String pairingCode;
 
   /// 회원이 자기 앱 MY 탭에서 확인해 트레이너에게 알려주는 회원 ID이자,
   /// 연결 뒤 고객 행의 id가 되는 값 — 실 서비스의 `User.id` 형식
@@ -48,6 +55,7 @@ final List<DemoProspectiveMember> demoProspectiveMembers =
     <DemoProspectiveMember>[
       DemoProspectiveMember(
         id: 'user-8f2a41c9d6e3',
+        pairingCode: '308214',
         name: '이수아',
         gender: 'female',
         birthDate: DateTime(1996, 4, 12),
@@ -55,6 +63,7 @@ final List<DemoProspectiveMember> demoProspectiveMembers =
       ),
       DemoProspectiveMember(
         id: 'user-1c7b93f04a58',
+        pairingCode: '741503',
         name: '박준서',
         gender: 'male',
         birthDate: DateTime(1990, 11, 3),
@@ -73,6 +82,23 @@ DemoProspectiveMember? findDemoProspectiveMemberById(String id) {
   return null;
 }
 
+/// 6자리 동기화 코드로 찾는다 — 트레이너가 실제로 입력하는 값이다. (#1634)
+DemoProspectiveMember? findDemoProspectiveMemberByCode(String code) {
+  for (final DemoProspectiveMember member in demoProspectiveMembers) {
+    if (member.pairingCode == code) return member;
+  }
+  return null;
+}
+
+/// 데모 동기화 코드를 회원 id 로 옮긴다. 모르는 코드면 `null`.
+///
+/// 실서비스에서는 서버가 코드를 소비하며 회원을 찾는다. 데모에는 코드를
+/// 발급하는 회원 백엔드가 없어, 명부에 박아 둔 고정 코드로 같은 자리를 채운다.
+String? resolveDemoPairingCode(String code) {
+  if (code == demoAlreadyLinkedPairingCode) return demoAlreadyLinkedMemberId;
+  return findDemoProspectiveMemberByCode(code)?.id;
+}
+
 /// "이미 연결된 회원" 데모 시나리오 — 새 픽스처를 또 만들지 않고 트레이너의
 /// 대표 고객 김민수(`seed-client-1`)를 그대로 쓴다. 실제로 로스터에 있는
 /// 행이라야 "이미 연결됨" 이라는 응답이 거짓 없이 나온다.
@@ -89,4 +115,12 @@ DemoProspectiveMember? findDemoProspectiveMemberById(String id) {
 /// 않았기 때문이다. 계정 id 자체를 그 형태로 바꾸면서 둘이 다시 하나가 됐다
 /// (#1279).
 const String demoAlreadyLinkedMemberId = 'user-7d4e9a2c5f18';
+
+/// 김민수가 자기 앱에 띄웠다고 가정하는 6자리 동기화 코드. (#1634)
+///
+/// 회원 앱 데모의 목업 인터셉터는 코드를 무작위로 만들지만, 트레이너 데모는
+/// 답할 회원 백엔드가 없어 고정 값이 필요하다 — 시연 중에 두 앱이 서로 다른
+/// 값을 들고 있으면 흐름이 끊긴다. 실서비스에서는 서버가 발급한 한 값을 두
+/// 화면이 함께 본다.
+const String demoAlreadyLinkedPairingCode = '567812';
 const String demoAlreadyLinkedClientId = 'seed-client-1';

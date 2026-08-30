@@ -84,6 +84,8 @@ class LocalApiInterceptor extends Interceptor {
     'POST /users/me/onboarding': _usersMeOnboarding,
     'PUT /users/me/health-goals': _usersMeHealthGoals,
     'GET /users/me/health': _usersMeHealth,
+    'POST /users/me/pairing-code': _pairingCodeIssue,
+    'DELETE /users/me/pairing-code': _pairingCodeRevoke,
     'GET /places/nearby': _placesNearby,
   };
 
@@ -2040,6 +2042,30 @@ class LocalApiInterceptor extends Interceptor {
     patch['onboarded'] = true;
     await _mergeProfileOverlay(patch);
     return _ok(options, await _mergedProfile());
+  }
+
+  /// 데모의 동기화 코드. 실서버처럼 **한 번 뽑으면 유지된다** — 시트를 다시
+  /// 열 때마다 새 코드가 나오면 트레이너 데모에 받아 적은 값이 무효가 된다.
+  ///
+  /// 데모에는 이 코드를 소비할 트레이너 백엔드가 없다. 트레이너 앱 데모는
+  /// 자기 쪽 고정 코드로 연결을 시연하므로, 여기서는 값을 만들어 화면이
+  /// 도는 것까지만 맞춘다. (#1634)
+  static String? _demoPairingCode;
+
+  Future<Response<Object?>> _pairingCodeIssue(RequestOptions options) async {
+    _demoPairingCode ??= (100000 + math.Random().nextInt(900000)).toString();
+    return _ok(options, <String, Object?>{
+      'code': _demoPairingCode,
+      'expires_at': nowKst()
+          .add(const Duration(minutes: 5))
+          .toIso8601String(),
+      'expires_in_seconds': 5 * 60,
+    });
+  }
+
+  Future<Response<Object?>> _pairingCodeRevoke(RequestOptions options) async {
+    _demoPairingCode = null;
+    return Response<Object?>(requestOptions: options, statusCode: 204);
   }
 
   Future<Response<Object?>> _usersMeHealth(RequestOptions options) async {
