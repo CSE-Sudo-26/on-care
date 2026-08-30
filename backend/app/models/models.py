@@ -811,6 +811,40 @@ class TrainerClientInvite(Base):
     )
 
 
+class MemberPairingCode(Base):
+    """회원이 트레이너에게 불러 주는 6자리 일회용 동기화 코드. (#1634)
+
+    예전에는 회원 앱 MY 탭이 `User.id`(`user-<12자리 hex>`)를 "내 회원 ID"로
+    보여 주고 트레이너가 그것을 완전 일치로 입력했다. 마주 앉아 불러 주기에는
+    12자리 hex 가 옮겨 적을 수 있는 형태가 아니었다.
+
+    **코드를 발급하는 행위가 곧 데이터 공유 동의다** (#1022). 담당 관계는 상대의
+    식단·건강 기록을 여는 권한이라 동의 없이 열 수 없는데, 회원이 코드를 띄운
+    화면이 공유 범위를 말하고 그 코드를 직접 불러 준다. 그래서 [created_at] 이
+    동의 시각이 되고, 트레이너가 코드를 쓰는 순간 담당이 바로 성립한다.
+
+    **회원당 한 행이다.** 코드가 여러 개 살아 있으면 회원이 자기가 무엇을 줬는지
+    모른다. 시트를 다시 열어도 유효한 코드는 그대로 나와야, 트레이너가 이미
+    받아 적은 값이 말없이 무효가 되지 않는다.
+
+    쓰면 행을 지운다 — 1회용이다. 만료된 행은 다음 발급·사용 때 정리한다.
+    """
+
+    __tablename__ = "member_pairing_codes"
+
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: 사람이 불러 주고 받아 적는 값이라 숫자 6자리다. 만료된 뒤에도 행이 남아
+    #: 있는 동안은 같은 코드가 두 번 발급되지 않도록 유일하게 둔다.
+    code: Mapped[str] = mapped_column(String(6), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    #: 발급 시각 = 데이터 공유 동의 시각. 담당 링크의 `data_consent_at` 이 된다.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class TrainerClientMemo(Base):
     """트레이너가 담당 회원에 대해 남긴 메모. 회원에게는 보이지 않는다.
 

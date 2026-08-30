@@ -17,13 +17,15 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import (
+    HealthProfile,
     Notification,
     TrainerClient,
     TrainerClientInvite,
@@ -32,10 +34,15 @@ from app.models.models import (
 )
 from app.schemas.trainer_api import (
     MemberLookupOut,
+    PairedMemberOut,
     TrainerClientInviteOut,
     MemberClientInviteOut,
 )
-from app.services import consultation_service, notification_service
+from app.services import (
+    consultation_service,
+    member_pairing_service,
+    notification_service,
+)
 
 
 class InviteError(Exception):
@@ -121,6 +128,116 @@ def lookup_member(db: Session, trainer_id: str, member_id: str) -> MemberLookupO
         has_trainer=current is not None,
         coached_by_me=current == trainer_id,
         invite_pending=pending is not None,
+    )
+
+
+def _age_on(birth_date: str, today: date) -> int | None:
+    """`YYYY-MM-DD` 로 만 나이. 형식이 아니면 `None`.
+
+    생일이 지났는지까지 본다 — 연도 차만 빼면 생일 전 몇 달이 한 살 많게 나온다.
+    """
+    try:
+        born = date.fromisoformat(birth_date)
+    except (TypeError, ValueError):
+        return None
+    age = today.year - born.year
+    if (today.month, today.day) < (born.month, born.day):
+        age -= 1
+    return age if 0 <= age < 150 else None
+
+
+def redeem_pairing_code(
+    db: Session, trainer_id: str, code: str
+) -> PairedMemberOut:
+    """회원이 띄운 6자리 코드로 담당 관계를 **바로** 만든다. (#1634)
+
+    담당 요청(`invite`)과 달리 회원의 수락을 기다리지 않는다. 코드를 발급해
+    불러 준 것이 회원 본인이고, 그 화면이 공유 범위를 말한다 — 이미 받은 동의를
+    한 번 더 받을 이유가 없다. 동의 시각은 코드 발급 시각이다 (#1022).
+
+    코드 소비와 링크 생성이 **한 트랜잭션**이다. 나눠 커밋하면 코드만 사라지고
+    담당은 안 생긴 상태가 되어, 회원은 코드를 다시 받아야 하는데 트레이너
+    화면에는 성공한 것처럼 보인다. 실패하면 통째로 되돌려 코드가 살아남는다.
+
+    수락 뒷정리(휴면 링크 되살리기·헬스장 연결·회원당 활성 담당 1명)는 상담
+    수락·담당 요청 수락과 같은 규칙을 쓴다 — `consultation_service` 의 판단을
+    그대로 가져온다. 규칙을 복사하면 한쪽만 고쳐지는 날이 온다.
+
+    이력을 위해 **수락된 담당 요청 행을 함께 남긴다.** 어느 경로로 담당이
+    생겼는지 남지 않으면 나중에 되짚을 수 없다.
+    """
+    try:
+        used = member_pairing_service.consume(db, code)
+
+        member = db.get(User, used.member_id)
+        if member is None or member.role != "member":
+            # 코드를 발급한 뒤 탈퇴했거나 역할이 바뀐 경우다.
+            raise MemberNotFound("회원을 찾지 못했어요.")
+
+        current = _active_trainer_id(db, member.id)
+        if current == trainer_id:
+            raise MemberAlreadyCoached("이미 담당하고 있는 회원이에요.")
+        if current is not None:
+            raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중인 회원이에요.")
+
+        row = TrainerClientInvite(
+            id=f"tci-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member.id,
+            message=None,
+            status="accepted",
+            decided_at=_now(),
+        )
+        db.add(row)
+
+        consultation_service.attach_member_to_trainer(
+            db, trainer_id, member.id, consented_at=used.consented_at
+        )
+        consultation_service.link_member_gym(
+            db, member.id, consultation_service.trainer_gym_id(db, trainer_id)
+        )
+        _notify_member_paired(db, trainer_id, member.id)
+
+        db.commit()
+    except Exception:
+        # 실패했으면 코드도 되살아나야 한다 — 회원이 다시 띄우게 만들지 않는다.
+        db.rollback()
+        raise
+
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == member.id)
+    )
+    return PairedMemberOut(
+        member_id=member.id,
+        name=member.name,
+        gender=profile.gender if profile is not None else "",
+        age=(
+            _age_on(profile.birth_date, clock.today())
+            if profile is not None
+            else None
+        ),
+        goal=profile.goals if profile is not None else "",
+    )
+
+
+def _notify_member_paired(db: Session, trainer_id: str, member_id: str) -> None:
+    """담당이 생겼다고 회원에게 남긴다(커밋은 호출자가 한다).
+
+    회원이 코드를 불러 준 뒤 트레이너가 언제 입력했는지는 회원 화면에 드러나지
+    않는다. 알림이 없으면 자기 기록이 언제부터 공유됐는지 알 길이 없다.
+    """
+    trainer_name = (
+        db.scalar(select(User.name).where(User.id == trainer_id)) or "트레이너"
+    )
+    db.add(
+        Notification(
+            id=f"noti-{uuid.uuid4().hex[:12]}",
+            user_id=member_id,
+            title="트레이너와 연결됐어요",
+            body=f"{trainer_name} 트레이너가 담당 코치가 됐어요. 식단·운동 기록이 공유돼요.",
+            category=notification_service.MEMBER_CONSULTATION,
+            read=False,
+        )
     )
 
 

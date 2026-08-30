@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, ClassVar, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -23,9 +24,25 @@ class UserMe(BaseModel):
 class HealthProfileBrief(BaseModel):
     name: str
     email: str
-    #: 회원 ID(`User.id`) — MY 탭이 "내 회원 ID"로 보여주는 값이다.
-    #: 트레이너웹의 신규 고객 등록(회원 ID로 찾아 연결)이 이 값을 그대로 쓴다.
+    #: 회원 ID(`User.id`).
+    #:
+    #: MY 탭은 이 값을 더 이상 보여주지 않는다 (#1634) — 트레이너와의 연결은
+    #: 그 자리에서 발급하는 6자리 동기화 코드로 한다. 화면이 쓰지 않게 됐지만
+    #: 응답에서 빼지는 않는다. 옛 버전 앱이 아직 읽는 자리다.
     id: str = ""
+
+
+class PairingCodeOut(BaseModel):
+    """회원이 트레이너에게 불러 주는 6자리 동기화 코드. (#1634)
+
+    남은 시간을 초로 함께 주는 이유는 만료 시각만으로는 화면이 기기 시계에
+    기대게 되기 때문이다 — 시계가 어긋난 기기에서 카운트다운이 엉뚱해진다.
+    """
+
+    code: str
+    expires_at: datetime
+    #: 지금부터 만료까지 남은 초. 0 이하로는 내려가지 않는다.
+    expires_in_seconds: int
 
 
 class RiskInfo(BaseModel):
@@ -96,6 +113,13 @@ class UserRegister(BaseModel):
     email: str
     password: str
     name: str = ""
+    #: 가입 시점에 프로필을 채우기 위해 받는다 (#1634). 예전에는 MY 탭 프로필
+    #: 편집에서만 넣을 수 있어 가입 직후에는 연락처가 비어 있었다.
+    #:
+    #: 회원 앱 가입 화면은 필수로 받지만 스키마에서는 선택이다 — 트레이너 가입
+    #: (`TrainerRegister`)은 이 값을 쓰지 않고, 없어도 회원은 MY 탭에서 언제든
+    #: 넣을 수 있다.
+    phone: str = ""
 
 
 class TrainerRegister(UserRegister):

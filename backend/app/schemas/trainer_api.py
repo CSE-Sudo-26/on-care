@@ -1384,6 +1384,39 @@ class MemberLookupOut(BaseModel):
     invite_pending: bool
 
 
+class PairingCodeRedeem(BaseModel):
+    """트레이너가 입력한 6자리 동기화 코드. (#1634)
+
+    자릿수만 서버가 못 박고, 공백·하이픈 같은 표기는 서비스가 걷어낸다 —
+    사람이 받아 적는 값이라 표기 차이를 오류로 돌려주면 무엇이 틀렸는지 알 수
+    없다.
+    """
+
+    code: str = Field(min_length=1, max_length=16)
+
+
+class PairedMemberOut(BaseModel):
+    """동기화가 끝난 회원. 화면이 "이 사람이 맞나요" 를 보여 줄 만큼만 담는다.
+
+    코드를 준 것이 회원 본인이라 신원 확인은 이미 끝났다. 그래도 이름만
+    돌려주지 않는 것은, 트레이너가 여섯 자리를 잘못 눌렀을 때 **연결된 뒤에라도**
+    그 사실을 알아볼 수 있어야 하기 때문이다.
+
+    키·몸무게·질환 같은 값은 여기 없다. 그것들은 담당 화면의 건강 프로필에서
+    조회한다.
+    """
+
+    #: 내부 식별자(`User.id`) — 고객 상세로 넘어갈 때 쓴다.
+    member_id: str
+    name: str
+    #: `male`/`female`/`other`. 회원이 자기 앱에 등록해 둔 값이고, 비어 있을 수 있다.
+    gender: str = ""
+    #: 생년월일로 계산한 만 나이. 회원이 넣지 않았으면 `None`.
+    age: int | None = None
+    #: 회원이 적어 둔 운동 목표. 비어 있을 수 있다.
+    goal: str = ""
+
+
 class TrainerClientInviteCreate(BaseModel):
     member_id: str = Field(min_length=1, max_length=64)
     #: 회원에게 함께 보이는 한마디. 비워도 된다.
