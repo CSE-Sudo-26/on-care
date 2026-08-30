@@ -92,10 +92,23 @@ class _PairingCodeInputState extends State<PairingCodeInput> {
             style: const TextStyle(color: Colors.transparent),
             cursorColor: Colors.transparent,
             showCursor: false,
+            // 테마(`AppTheme.inputDecorationTheme`)가 모든 입력에 회색 채움과
+            // 둥근 테두리를 주므로 [InputDecoration.border] 하나만 지워서는
+            // 지워지지 않는다 — `enabledBorder`·`focusedBorder` 가 그대로
+            // 남아 상자들 위에 가로로 긴 입력창이 겹쳐 그려진다(#1636).
+            // 여기서 보여야 하는 것은 자리 상자뿐이므로 채움·테두리를 모두
+            // 끄고, 높이도 상자 줄에 맡긴다.
             decoration: const InputDecoration(
               counterText: '',
-              border: InputBorder.none,
+              filled: false,
+              isCollapsed: true,
               contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
             ),
             onChanged: widget.onChanged,
             onTap: () => setState(() {}),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/design_system/theme/app_theme.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_connect_dialog.dart';
@@ -79,6 +80,9 @@ void main() {
           clientInviteRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
+          // 실제 앱 테마로 띄운다 — 기본 테마에는 없는 입력 채움·테두리가
+          // 코드 상자 위에 겹쳐 그려진 적이 있다(#1636).
+          theme: AppTheme.light(),
           locale: const Locale('ko'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -174,6 +178,27 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('이미 다른 트레이너가 담당 중인 회원이에요.'), findsOneWidget);
+  });
+
+  testWidgets('코드 상자 위에 입력창이 겹쳐 그려지지 않는다', (tester) async {
+    // 상자 위에 겹쳐 둔 입력은 탭만 받고 아무것도 그리지 않아야 한다.
+    // 앱 테마가 모든 입력에 주는 회색 채움·둥근 테두리를 이 입력이 그대로
+    // 받으면, 가로로 긴 입력창이 여섯 상자를 덮어 숫자가 보이지 않는다.
+    await pumpDialog(tester, _FakeInviteRepository(paired: _paired()));
+
+    final InputDecorator decorator = tester.widget<InputDecorator>(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('client-connect-code')),
+        matching: find.byType(InputDecorator),
+      ),
+    );
+    final InputDecoration decoration = decorator.decoration;
+    expect(decoration.filled, isFalse);
+    expect(decoration.border, InputBorder.none);
+    expect(decoration.enabledBorder, InputBorder.none);
+    expect(decoration.focusedBorder, InputBorder.none);
+    expect(decoration.disabledBorder, InputBorder.none);
+    expect(decoration.errorBorder, InputBorder.none);
   });
 
   testWidgets('입력 칸은 여섯 자리를 한 상자씩 보여준다', (tester) async {
