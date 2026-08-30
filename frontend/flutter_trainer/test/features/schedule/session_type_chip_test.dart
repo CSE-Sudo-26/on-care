@@ -6,6 +6,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/session_chips.dart';
 
+import '../../helpers/fixed_clock.dart';
 import '../../helpers/pump_app.dart';
 
 /// 일정 카드의 `1:1 PT` 알약은 **이 약속이 무엇인가**를 말한다. (#938)
@@ -24,6 +25,7 @@ void main() {
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.schedule,
+      seedClock: kMidWeekKst,
     );
     await tester.pumpAndSettle();
   }

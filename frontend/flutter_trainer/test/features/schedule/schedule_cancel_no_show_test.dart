@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status
 import 'package:oncare_trainer/features/schedule/presentation/widgets/schedule_week_timetable.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
+import '../../helpers/fixed_clock.dart';
 import '../../helpers/pump_app.dart';
 
 /// 취소·노쇼 — 삭제와 갈라진 동작과 그 기록. (#871)
@@ -154,6 +155,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
+        seedClock: kMidWeekKst,
       );
     }
 

@@ -43,6 +43,7 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
+import '../../helpers/fixed_clock.dart';
 import '../../helpers/pump_app.dart';
 
 /// A chat repository whose sends always fail.
@@ -736,6 +737,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.coaching,
+        seedClock: kMidWeekKst,
       );
     }
 
@@ -927,6 +929,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.coaching,
+        seedClock: kMidWeekKst,
       );
 
       final listFinder = find.byKey(
@@ -969,6 +972,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.coaching,
+        seedClock: kMidWeekKst,
       );
 
       final repo = container.read(trainerProgramTemplateRepositoryProvider);
@@ -1023,6 +1027,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.coaching,
+        seedClock: kMidWeekKst,
       );
 
       // 나누지 않고 예전처럼 열 전체를 한 스크롤로 묶은 경로로
@@ -1231,6 +1236,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.coaching,
+        seedClock: kMidWeekKst,
       );
 
       final minsuIdentity = find.byWidgetPredicate(
@@ -1674,6 +1680,7 @@ void main() {
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -1728,6 +1735,7 @@ void main() {
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -1851,6 +1859,7 @@ void main() {
                 _SlowCountingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -1891,6 +1900,7 @@ void main() {
                 _SlowCountingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -1930,6 +1940,7 @@ void main() {
             (ref) => _FailingChatRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -1958,6 +1969,7 @@ void main() {
             ),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -2033,6 +2045,7 @@ void main() {
             (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
 
@@ -2126,6 +2139,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.coaching,
+        seedClock: kMidWeekKst,
       );
     }
 
@@ -2295,6 +2309,7 @@ void main() {
             _FakeRealChatRepository(failSend: chatFails),
           ),
         ],
+        seedClock: kMidWeekKst,
       );
       await goTo(tester, AppRoutes.coaching);
       return routineRepo;
