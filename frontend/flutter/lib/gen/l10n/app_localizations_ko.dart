@@ -1003,12 +1003,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myDefaultUserName => '사용자';
 
   @override
-  String get myMemberIdLabel => '내 회원 ID';
-
-  @override
-  String get myMemberIdCopied => '회원 ID를 복사했어요';
-
-  @override
   String get mySettingsTitle => '설정';
 
   @override
@@ -1850,6 +1844,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get signUpNameHint => '이름';
 
   @override
+  String get signUpPhoneHint => '전화번호';
+
+  @override
+  String get signUpPhoneHelper => '트레이너가 회원님을 확인할 때 쓰는 연락처예요';
+
+  @override
   String get signUpPasswordHint => '비밀번호 (8자 이상)';
 
   @override
@@ -1866,6 +1866,41 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get signUpPasswordMismatch => '비밀번호가 일치하지 않아요';
+
+  @override
+  String get signUpPhoneInvalid => '전화번호를 4자리 이상 입력해 주세요';
+
+  @override
+  String get trainerSyncEntryLabel => '트레이너와 데이터 동기화';
+
+  @override
+  String get trainerSyncEntryHint => '6자리 코드로 담당 트레이너와 연결해요';
+
+  @override
+  String get trainerSyncTitle => '트레이너와 데이터 동기화';
+
+  @override
+  String get trainerSyncConsent => '이 코드를 입력한 트레이너가 담당이 되고, 식단·운동·건강 기록이 공유돼요.';
+
+  @override
+  String get trainerSyncHint => '트레이너에게 이 6자리를 불러 주세요.';
+
+  @override
+  String trainerSyncCountdown(String remaining) {
+    return '$remaining 뒤에 만료돼요';
+  }
+
+  @override
+  String get trainerSyncExpired => '코드가 만료됐어요.';
+
+  @override
+  String get trainerSyncFailed => '코드를 받지 못했어요.';
+
+  @override
+  String get trainerSyncRetry => '새 코드 받기';
+
+  @override
+  String get trainerSyncCopied => '동기화 코드를 복사했어요';
 
   @override
   String get signUpEmailTaken => '이미 가입된 이메일이에요. 로그인해 주세요.';

@@ -1027,12 +1027,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myDefaultUserName => 'User';
 
   @override
-  String get myMemberIdLabel => 'My member ID';
-
-  @override
-  String get myMemberIdCopied => 'Member ID copied';
-
-  @override
   String get mySettingsTitle => 'Settings';
 
   @override
@@ -1893,6 +1887,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signUpNameHint => 'Name';
 
   @override
+  String get signUpPhoneHint => 'Phone number';
+
+  @override
+  String get signUpPhoneHelper =>
+      'Your trainer uses this to confirm who you are.';
+
+  @override
   String get signUpPasswordHint => 'Password (8+ characters)';
 
   @override
@@ -1909,6 +1910,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signUpPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get signUpPhoneInvalid =>
+      'Enter a phone number with at least 4 digits';
+
+  @override
+  String get trainerSyncEntryLabel => 'Sync data with a trainer';
+
+  @override
+  String get trainerSyncEntryHint =>
+      'Connect with your trainer using a 6-digit code';
+
+  @override
+  String get trainerSyncTitle => 'Sync data with a trainer';
+
+  @override
+  String get trainerSyncConsent =>
+      'The trainer who enters this code becomes your coach and can see your meals, workouts, and health records.';
+
+  @override
+  String get trainerSyncHint => 'Read these six digits out to your trainer.';
+
+  @override
+  String trainerSyncCountdown(String remaining) {
+    return 'Expires in $remaining';
+  }
+
+  @override
+  String get trainerSyncExpired => 'This code has expired.';
+
+  @override
+  String get trainerSyncFailed => 'Could not get a code.';
+
+  @override
+  String get trainerSyncRetry => 'Get a new code';
+
+  @override
+  String get trainerSyncCopied => 'Sync code copied';
 
   @override
   String get signUpEmailTaken =>
