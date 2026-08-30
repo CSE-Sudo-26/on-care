@@ -38,6 +38,10 @@ class _NoInviteClientInviteRepository implements ClientInviteRepository {
       throw const NotFoundError();
 
   @override
+  Future<PairedMember> previewPairingCode(String code) async =>
+      throw const NotFoundError();
+
+  @override
   Future<PairedMember> redeemPairingCode(String code) async =>
       throw const NotFoundError();
 
@@ -648,8 +652,10 @@ void main() {
       expect(find.text('이수아'), findsWidgets);
       expect(find.textContaining('여성'), findsWidgets);
 
+      // 바로 잇지 않는다 — 이름·성별·나이를 확인하고 누른다.
+      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
       await tester.tap(
-        find.byKey(const ValueKey<String>('client-connect-done')),
+        find.byKey(const ValueKey<String>('client-connect-register')),
       );
       await settle(tester);
 
@@ -693,8 +699,10 @@ void main() {
       expect(find.text('김민수'), findsWidgets);
       expect(find.text('이미 담당하고 있는 회원이에요.'), findsNothing);
 
+      // 바로 잇지 않는다 — 이름·성별·나이를 확인하고 누른다.
+      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
       await tester.tap(
-        find.byKey(const ValueKey<String>('client-connect-done')),
+        find.byKey(const ValueKey<String>('client-connect-register')),
       );
       await settle(tester);
 

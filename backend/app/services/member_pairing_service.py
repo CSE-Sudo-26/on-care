@@ -16,9 +16,14 @@
 트레이너가 코드를 쓰는 순간 담당이 바로 성립한다 — 회원에게 한 번 더
 수락받을 이유가 없다.
 
-**소비하지 않는 조회는 두지 않는다.** 코드가 맞는지만 물어볼 수 있으면 100만
-조합을 훑을 수 있다. 확인과 소비가 한 번의 호출이어야 실패가 곧 시도 소모다.
-그 위에 엔드포인트 rate limit 이 얹힌다.
+**쓰기 전에 한 번 확인시킨다.** 여섯 자리를 잘못 누르면 남의 식단·건강 기록이
+열린다 — 되돌릴 수 없는 사고다. 그래서 [peek] 으로 누구인지 보여 준 뒤
+[consume] 으로 잇는다. 확인만으로 코드를 태우지 않는 이유는, 확인하고 그만두는
+것이 정상 흐름이기 때문이다.
+
+그 대가로 확인 자리가 열거에 열린다. 다만 100만 가지에 5분 만료, 분당 10회
+제한이면 한 코드가 살아 있는 동안 시도할 수 있는 것은 쉰 번 남짓이라, 오입력
+쪽이 훨씬 무겁다.
 """
 
 from __future__ import annotations
@@ -136,15 +141,8 @@ class ConsumedCode(NamedTuple):
     consented_at: datetime
 
 
-def consume(db: Session, code: str) -> ConsumedCode:
-    """코드를 쓰고 누구의 것이었는지 돌려준다. **커밋하지 않는다.**
-
-    커밋을 부르는 쪽에 맡기는 것은 담당 링크 생성과 같은 트랜잭션이어야 하기
-    때문이다. 코드만 지워지고 링크는 안 생긴 상태가 되면 회원은 코드를 다시
-    받아야 하고, 그 사이 트레이너에게는 성공한 것처럼 보인다.
-    """
-    purge_expired(db)
-
+def _find(db: Session, code: str) -> MemberPairingCode:
+    """유효한 코드 행. 없으면 [CodeNotFound]."""
     normalized = "".join(ch for ch in code if ch.isdigit())
     if len(normalized) != CODE_LENGTH:
         raise CodeNotFound("동기화 코드가 맞지 않아요. 회원 화면의 6자리를 확인해 주세요.")
@@ -157,7 +155,29 @@ def consume(db: Session, code: str) -> ConsumedCode:
     )
     if row is None:
         raise CodeNotFound("동기화 코드가 맞지 않아요. 회원 화면의 6자리를 확인해 주세요.")
+    return row
 
+
+def peek(db: Session, code: str) -> ConsumedCode:
+    """코드가 누구의 것인지 보되 **쓰지 않는다.** 커밋하지 않는다.
+
+    트레이너가 연결 전에 "이 고객이 맞나요?" 를 확인하는 자리다. 확인만으로
+    코드가 사라지면, 확인하고 그만둔 회원이 아무 잘못 없이 다시 띄워야 한다.
+    """
+    purge_expired(db)
+    row = _find(db, code)
+    return ConsumedCode(member_id=row.member_id, consented_at=row.created_at)
+
+
+def consume(db: Session, code: str) -> ConsumedCode:
+    """코드를 쓰고 누구의 것이었는지 돌려준다. **커밋하지 않는다.**
+
+    커밋을 부르는 쪽에 맡기는 것은 담당 링크 생성과 같은 트랜잭션이어야 하기
+    때문이다. 코드만 지워지고 링크는 안 생긴 상태가 되면 회원은 코드를 다시
+    받아야 하고, 그 사이 트레이너에게는 성공한 것처럼 보인다.
+    """
+    purge_expired(db)
+    row = _find(db, code)
     used = ConsumedCode(member_id=row.member_id, consented_at=row.created_at)
     db.delete(row)
     return used
