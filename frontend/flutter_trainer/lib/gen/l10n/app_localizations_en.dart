@@ -734,11 +734,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteIntro =>
-      'Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.';
+      'Enter the 6-digit sync code from the member\'s MY tab to connect right away.';
 
   @override
   String get clientInviteIntroImmediate =>
-      'Find a client by member ID and register them right away.';
+      'Enter the 6-digit sync code from the member\'s MY tab to connect right away.';
+
+  @override
+  String get clientConnectCodeLabel => 'Member sync code';
+
+  @override
+  String get clientConnectDone => 'Done';
+
+  @override
+  String get clientConnectCodeRequired => 'Enter all six digits';
+
+  @override
+  String get clientConnectCodeInvalid =>
+      'That code is wrong or expired. Ask the member for a new one';
 
   @override
   String get clientInviteMemberIdLabel => 'Member ID';
