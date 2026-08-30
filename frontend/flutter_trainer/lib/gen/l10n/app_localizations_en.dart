@@ -744,9 +744,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientConnectCodeLabel => 'Member sync code';
 
   @override
-  String get clientConnectDone => 'Done';
-
-  @override
   String get clientConnectCodeRequired => 'Enter all six digits';
 
   @override

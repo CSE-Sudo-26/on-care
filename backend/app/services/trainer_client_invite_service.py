@@ -146,6 +146,57 @@ def _age_on(birth_date: str, today: date) -> int | None:
     return age if 0 <= age < 150 else None
 
 
+def _paired_out(db: Session, member: User) -> PairedMemberOut:
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == member.id)
+    )
+    return PairedMemberOut(
+        member_id=member.id,
+        name=member.name,
+        gender=profile.gender if profile is not None else "",
+        age=(
+            _age_on(profile.birth_date, clock.today())
+            if profile is not None
+            else None
+        ),
+        goal=profile.goals if profile is not None else "",
+    )
+
+
+def preview_pairing_code(
+    db: Session, trainer_id: str, code: str
+) -> PairedMemberOut:
+    """코드가 가리키는 회원을 **쓰지 않고** 보여 준다. (#1634)
+
+    여섯 자리를 잘못 누르면 남의 식단·건강 기록이 이 트레이너에게 열린다.
+    100만분의 1이라도 그 사고는 되돌릴 수 없으므로, 연결 전에 이름·성별·나이·
+    목표를 눈으로 확인시킨다 — 회원 ID로 찾던 시절의 "이 고객이 맞나요?" 와
+    같은 자리다.
+
+    조회만으로 코드를 태우지 않는 이유는, 확인하고 그만두는 것이 정상 흐름이기
+    때문이다. 확인만으로 코드가 사라지면 회원은 아무 잘못 없이 다시 띄워야 한다.
+
+    그래서 이 자리가 열거에 열린다 — 다만 여섯 자리(100만 가지)에 5분 만료,
+    분당 10회 제한이면 한 코드가 살아 있는 동안 시도할 수 있는 것은 쉰 번
+    남짓이다. 오입력으로 남의 기록이 열리는 쪽이 훨씬 무겁다.
+
+    이미 담당이 있는 회원이면 여기서 막는다. 확인 화면까지 갔다가 마지막에
+    거절당하면 트레이너는 무엇이 잘못됐는지 알 수 없다.
+    """
+    used = member_pairing_service.peek(db, code)
+    member = db.get(User, used.member_id)
+    if member is None or member.role != "member":
+        raise MemberNotFound("회원을 찾지 못했어요.")
+
+    current = _active_trainer_id(db, member.id)
+    if current == trainer_id:
+        raise MemberAlreadyCoached("이미 담당하고 있는 회원이에요.")
+    if current is not None:
+        raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중인 회원이에요.")
+
+    return _paired_out(db, member)
+
+
 def redeem_pairing_code(
     db: Session, trainer_id: str, code: str
 ) -> PairedMemberOut:
@@ -204,20 +255,7 @@ def redeem_pairing_code(
         db.rollback()
         raise
 
-    profile = db.scalar(
-        select(HealthProfile).where(HealthProfile.user_id == member.id)
-    )
-    return PairedMemberOut(
-        member_id=member.id,
-        name=member.name,
-        gender=profile.gender if profile is not None else "",
-        age=(
-            _age_on(profile.birth_date, clock.today())
-            if profile is not None
-            else None
-        ),
-        goal=profile.goals if profile is not None else "",
-    )
+    return _paired_out(db, member)
 
 
 def _notify_member_paired(db: Session, trainer_id: str, member_id: str) -> None:

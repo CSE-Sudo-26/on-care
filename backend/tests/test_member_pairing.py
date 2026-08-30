@@ -140,6 +140,14 @@ def _issue(client, member_token: str) -> str:
     return response.json()["code"]
 
 
+def _preview(client, trainer_token: str, code: str):
+    return client.post(
+        "/v1/trainer/pairing-code/preview",
+        json={"code": code},
+        headers=_auth(trainer_token),
+    )
+
+
 def _redeem(client, trainer_token: str, code: str):
     return client.post(
         "/v1/trainer/pairing-code",
@@ -279,6 +287,42 @@ def test_redeeming_tells_the_member_their_records_are_now_shared(
         .count()
         >= 1
     )
+
+
+def test_previewing_shows_who_it_is_without_using_the_code(client, db_session):
+    """여섯 자리가 하나만 틀려도 남의 식단·건강 기록이 열린다. 잇기 전에
+    누구인지 보여 주고, 그 확인만으로 코드를 태우지는 않는다."""
+    member_id, member_token = _member(client, name="확인대상")
+    _, trainer_token = _trainer(client, db_session)
+    code = _issue(client, member_token)
+
+    response = _preview(client, trainer_token, code)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["member_id"] == member_id
+    assert response.json()["name"] == "확인대상"
+    # 담당은 아직 생기지 않았다.
+    assert member_id not in _roster_ids(client, trainer_token)
+    # 코드도 그대로다 — 확인하고 그만두는 것이 정상 흐름이다.
+    assert _redeem(client, trainer_token, code).status_code == 200
+
+
+def test_previewing_stops_a_member_who_already_has_a_coach(client, db_session):
+    """확인 화면까지 갔다가 마지막에 거절당하면 무엇이 잘못됐는지 알 수 없다."""
+    _, member_token = _member(client)
+    _, first_token = _trainer(client, db_session)
+    _, second_token = _trainer(client, db_session)
+    assert _redeem(client, first_token, _issue(client, member_token)).status_code == 200
+
+    response = _preview(client, second_token, _issue(client, member_token))
+
+    assert response.status_code == 409, response.text
+
+
+def test_previewing_an_unknown_code_is_not_found(client, db_session):
+    _, trainer_token = _trainer(client, db_session)
+
+    assert _preview(client, trainer_token, "000000").status_code == 404
 
 
 def test_a_code_works_only_once(client, db_session):

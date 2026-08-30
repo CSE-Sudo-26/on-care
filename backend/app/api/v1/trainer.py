@@ -2168,6 +2168,39 @@ def trainer_member_lookup(
 
 
 @router.post(
+    "/trainer/pairing-code/preview",
+    response_model=PairedMemberOut,
+    dependencies=[Depends(rate_limit("pairing-redeem"))],
+)
+def trainer_preview_pairing_code(
+    payload: PairingCodeRedeem,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> PairedMemberOut:
+    """코드가 가리키는 회원을 **연결하지 않고** 보여 준다. (#1634)
+
+    여섯 자리를 잘못 누르면 남의 식단·건강 기록이 열린다. 되돌릴 수 없는
+    사고라, 연결 전에 이름·성별·나이·목표를 눈으로 확인시킨다.
+
+    코드를 태우지 않는다 — 확인하고 그만두는 것이 정상 흐름이고, 그때마다
+    회원이 코드를 다시 띄워야 할 이유가 없다. 연결(`POST /trainer/pairing-code`)
+    이 쓰는 순간에만 사라진다.
+
+    소비와 같은 rate limit 버킷을 쓴다. 확인도 코드를 맞혀 보는 시도다.
+    """
+    try:
+        return trainer_client_invite_service.preview_pairing_code(
+            db, trainer.id, payload.code
+        )
+    except member_pairing_service.CodeNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_client_invite_service.MemberNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_client_invite_service.MemberAlreadyCoached as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
     "/trainer/pairing-code",
     response_model=PairedMemberOut,
     dependencies=[Depends(rate_limit("pairing-redeem"))],

@@ -23,6 +23,32 @@ const Map<String, String> _rosterGenderByName = <String, String>{
   '오세라': 'female',
 };
 
+/// 로스터가 보여 주는 성별 — 저장된 값이 있으면 그것, 없으면 고정된 폴백.
+///
+/// [TrainerClient.rosterGender] 의 알맹이를 밖으로 꺼낸 것이다. 신규 고객
+/// 등록의 확인 카드도 같은 값을 보여야 하기 때문이다 (#1634) — 목록은
+/// `남성 · 23세` 라고 하는데 확인 카드가 아무 말도 없으면, 트레이너가 지금
+/// 잇는 사람이 목록의 그 사람인지 견줄 수가 없다.
+String rosterGenderFor({
+  required String id,
+  required String name,
+  String gender = '',
+}) {
+  if (gender == 'male' || gender == 'female' || gender == 'other') {
+    return gender;
+  }
+  final fixed = _rosterGenderByName[name];
+  if (fixed != null) return fixed;
+  return _demographicSeedOf(id).isEven ? 'female' : 'male';
+}
+
+/// 로스터가 보여 주는 나이 — 저장된 값이 있으면 그것, 없으면 고정된 폴백.
+int rosterAgeFor({required String id, int? age}) =>
+    age ?? 20 + (_demographicSeedOf(id) % 20);
+
+int _demographicSeedOf(String id) =>
+    id.runes.fold<int>(0, (sum, rune) => sum + rune);
+
 /// A trainer's client, as shown on the 고객 관리 list and detail screens.
 /// Decoded from the drift `TrainerClients` row (the `weekCompletionJson`
 /// column becomes a `List<int>` here).
@@ -133,20 +159,12 @@ class TrainerClient {
   /// 적어 둔다 — 로스터가 데모 fixture 라 이름이 곧 그 회원이고, id 는 데모
   /// (`seed-client-8`)와 실 API(`user-sera`)가 서로 달라 한쪽만 고치면 두 모드가
   /// 갈린다.
-  String get rosterGender {
-    if (gender == 'male' || gender == 'female' || gender == 'other') {
-      return gender;
-    }
-    final fixed = _rosterGenderByName[name];
-    if (fixed != null) return fixed;
-    return _demographicSeed.isEven ? 'female' : 'male';
-  }
+  String get rosterGender =>
+      rosterGenderFor(id: id, name: name, gender: gender);
 
   /// Roster age, constrained to the requested twenties/thirties fixture range
   /// when the source does not provide one.
-  int get rosterAge => age ?? 20 + (_demographicSeed % 20);
-
-  int get _demographicSeed => id.runes.fold<int>(0, (sum, rune) => sum + rune);
+  int get rosterAge => rosterAgeFor(id: id, age: age);
 
   /// Sodium exceeds the [sodiumTargetMg] daily target — surfaced as a
   /// warning on the list card and counted by the AI summary.

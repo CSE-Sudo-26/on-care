@@ -1,3 +1,5 @@
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+
 /// 이메일 완전 일치로 찾은 회원 한 명.
 ///
 /// 요청을 보낼지 판단할 만큼만 담는다 — 이름, 이미 담당이 있는지, 내가 보낸
@@ -85,6 +87,16 @@ class PairedMember {
 
   /// 회원이 적어 둔 운동 목표. 비어 있을 수 있다.
   final String goal;
+
+  /// 화면에 쓸 성별·나이 — 고객 목록과 **같은 규칙**이다 (#1634).
+  ///
+  /// 회원이 프로필에 성별·생년월일을 넣지 않았으면 목록과 마찬가지로 id 에서
+  /// 만든 고정 값이 선다. 목록은 `남성 · 23세` 라고 하는데 확인 카드만 아무
+  /// 말이 없으면, 트레이너가 지금 잇는 사람이 목록의 그 사람인지 견줄 수 없다.
+  String get rosterGender =>
+      rosterGenderFor(id: memberId, name: name, gender: gender);
+
+  int get rosterAge => rosterAgeFor(id: memberId, age: age);
 
   factory PairedMember.fromJson(Map<String, Object?> json) => PairedMember(
     memberId: (json['member_id'] as String?) ?? '',

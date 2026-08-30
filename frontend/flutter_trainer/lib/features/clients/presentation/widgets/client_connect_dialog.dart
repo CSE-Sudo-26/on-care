@@ -14,6 +14,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 
 /// 회원이 자기 앱에 띄운 6자리 동기화 코드로 연결하는 신규 고객 등록 창.
 /// (#919·#1634)
@@ -21,10 +22,13 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 /// 예전에는 회원 ID(`User.id`)를 완전 일치로 받았다. `user-<12자리 hex>` 는
 /// 마주 앉아 불러 주거나 받아 적을 수 있는 형태가 아니었다.
 ///
-/// **한 번에 연결된다.** 코드를 발급해 불러 준 것이 회원 본인이고 그 화면이
-/// 공유 범위를 말한다 — 이미 받은 동의를 한 번 더 받을 이유가 없다. 여섯
-/// 자리를 잘못 눌러도 100만분의 1 로 남에게 닿을 뿐이고, 연결된 뒤 결과
-/// 카드의 이름·성별·나이·목표로 곧바로 알아볼 수 있다.
+/// 두 단계다 — 코드로 **찾고**, 찾은 사람과 **연결한다**. 회원이 코드를
+/// 불러 준 것 자체가 동의라 회원에게 한 번 더 물을 일은 없지만, 여섯 자리를
+/// 잘못 누르면 **남의** 식단·건강 기록이 열린다. 되돌릴 수 없는 사고라
+/// 이름·성별·나이·목표를 눈으로 확인하고 나서 누르게 한다.
+///
+/// 확인만으로 코드가 사라지지는 않는다 — 확인하고 그만두는 것이 정상
+/// 흐름이고, 그때마다 회원이 다시 띄워야 할 이유가 없다.
 ///
 /// 성별·나이·신체 정보는 여기서 입력받지 않는다 — 연결되면 회원이 이미 자기
 /// 앱에 등록해 둔 값을 그대로 쓴다.
@@ -50,8 +54,8 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
   final TextEditingController _code = TextEditingController();
   final FocusNode _codeFocus = FocusNode();
 
-  /// 연결이 끝난 회원. 결과 카드가 이 값을 보여 준다.
-  PairedMember? _paired;
+  /// 코드로 찾은 회원. 아직 연결하지 않았다 — 확인 카드가 이 값을 보여 준다.
+  PairedMember? _found;
   String? _error;
   bool _busy = false;
 
@@ -71,13 +75,19 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
     super.dispose();
   }
 
-  /// 여섯 자리가 다 차면 곧바로 보낸다 — 따로 누를 버튼을 두지 않는다.
+  /// 여섯 자리가 다 차면 곧바로 찾는다 — 따로 누를 버튼을 두지 않는다.
+  /// 찾기만 하고 연결은 트레이너가 확인한 뒤에 한다.
   void _onCodeChanged(String value) {
-    if (_error != null) setState(() => _error = null);
-    if (value.length == PairingCodeInput.length) _connect();
+    if (_error != null || _found != null) {
+      setState(() {
+        _error = null;
+        _found = null;
+      });
+    }
+    if (value.length == PairingCodeInput.length) _lookup();
   }
 
-  Future<void> _connect() async {
+  Future<void> _lookup() async {
     if (_busy) return;
     final AppLocalizations l = AppLocalizations.of(context);
     final String code = _code.text.trim();
@@ -85,13 +95,35 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
       setState(() => _error = l.clientConnectCodeRequired);
       return;
     }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final found = await ref
+          .read(clientInviteRepositoryProvider)
+          .previewPairingCode(code);
+      if (!mounted || _code.text.trim() != code) return;
+      setState(() => _found = found);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = _messageFor(l, error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _connect(PairedMember found) async {
+    if (_busy) return;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
     final repository = ref.read(clientInviteRepositoryProvider);
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final paired = await repository.redeemPairingCode(code);
+      await repository.redeemPairingCode(_code.text.trim());
       ref.invalidate(pendingClientInvitesProvider);
       // 데모(즉시 연결)와 실 API 모두 고객 탭과 고객 관리가 같은 목록을 보므로
       // 두 provider 를 함께 새로고침한다.
@@ -100,34 +132,37 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
       // 미등록 동안 걸러졌던 오늘 일정·안읽음 배지도 다시 보인다(#1623).
       invalidateClientVisibilityDependentViews(ref);
       if (!mounted) return;
-      // 창을 곧바로 닫지 않는다 — 여섯 자리를 잘못 눌렀다면 여기서
-      // 이름·성별·나이·목표로 알아봐야 한다. 닫는 것은 트레이너가 정한다.
-      setState(() => _paired = paired);
-    } on NotFoundError {
-      if (!mounted) return;
-      setState(() => _error = l.clientConnectCodeInvalid);
-    } on AppError catch (error) {
-      if (!mounted) return;
-      // 서버가 이유를 문장으로 준 경우에는 그 문장이 다음에 할 일을 정한다.
-      // (한국어 로케일에서만 — 영어 화면에 한국어가 새지 않게 한다.)
-      setState(
-        () => _error = serverDetailOr(l, error.message, l.clientInviteFailed),
+      navigator.pop();
+      showAppToast(
+        context,
+        l.clientInviteConnected(found.name),
+        kind: AppToastKind.success,
       );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        // 확인과 연결 사이에 코드가 만료됐거나 남이 먼저 썼을 수 있다.
+        // 그러면 확인 카드도 거둔다 — 누를 수 없는 버튼을 남기지 않는다.
+        _found = null;
+        _error = _messageFor(l, error);
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  /// 결과를 확인했다 — 창을 닫는다.
-  void _done(PairedMember paired) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    Navigator.of(context).pop();
-    showAppToast(
-      context,
-      l.clientInviteConnected(paired.name),
-      kind: AppToastKind.success,
-    );
-  }
+  /// 실패를 화면 문구로 옮긴다. 서버가 이유를 문장으로 준 경우에는 그 문장이
+  /// 트레이너가 다음에 할 일을 정한다(한국어 로케일에서만 — 영어 화면에
+  /// 한국어가 새지 않게 한다).
+  String _messageFor(AppLocalizations l, Object error) => switch (error) {
+    NotFoundError() => l.clientConnectCodeInvalid,
+    AppError(:final String? message) => serverDetailOr(
+      l,
+      message,
+      l.clientInviteFailed,
+    ),
+    _ => l.clientInviteFailed,
+  };
 
   Future<void> _cancel(ClientInvite invite) async {
     if (_busy) return;
@@ -231,7 +266,7 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
                 PairingCodeInput(
                   controller: _code,
                   focusNode: _codeFocus,
-                  enabled: !_busy && _paired == null,
+                  enabled: !_busy,
                   onChanged: _onCodeChanged,
                 ),
                 if (_error case final String error) ...<Widget>[
@@ -255,15 +290,28 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
                     ),
                   ),
                 ],
-                if (_paired case final PairedMember paired) ...<Widget>[
+                if (_found case final PairedMember found) ...<Widget>[
                   const SizedBox(height: AppSpacing.lg),
-                  _PairedMemberCard(paired: paired),
+                  // 바로 잇지 않고 한 번 더 확인시킨다 — 여섯 자리가 하나만
+                  // 틀려도 남의 식단·건강 기록이 열린다.
+                  Text(
+                    l.clientInviteConfirmPrompt,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _PairedMemberCard(paired: found),
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(
                     height: 44,
-                    child: FilledButton(
-                      key: const ValueKey<String>('client-connect-done'),
-                      onPressed: () => _done(paired),
+                    child: FilledButton.icon(
+                      key: const ValueKey<String>('client-connect-register'),
+                      onPressed: _busy ? null : () => _connect(found),
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                      label: Text(l.clientInviteConnectAction),
                       style: FilledButton.styleFrom(
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(AppRadius.md),
@@ -273,7 +321,6 @@ class _ClientConnectDialogState extends ConsumerState<ClientConnectDialog> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: Text(l.clientConnectDone),
                     ),
                   ),
                 ],
@@ -376,11 +423,10 @@ class _PendingInvitesList extends ConsumerWidget {
   }
 }
 
-/// 방금 연결된 회원 — 아바타·이름·성별/나이·목표. (#1634)
+/// 코드로 찾은 회원 — 아바타·이름·성별/나이·목표. (#1634)
 ///
-/// 코드를 발급해 불러 준 것이 회원 본인이라 신원 확인은 이미 끝났다. 그래도
-/// 이름만 보여 주지 않는 것은, 트레이너가 여섯 자리를 잘못 눌렀을 때 **연결된
-/// 뒤에라도** 그 사실을 알아볼 수 있어야 하기 때문이다.
+/// 이름만 보여 주지 않는 것은, 여섯 자리가 하나만 틀려도 **다른 사람**이
+/// 나오기 때문이다. 이름 하나로는 "이 고객이 맞나요?" 에 답할 수 없다.
 ///
 /// 여기 있는 값은 모두 회원이 자기 앱에 등록해 둔 것이다 — 트레이너가 지금
 /// 입력하는 값이 아니다. 키·몸무게·질환은 고객 상세의 건강 프로필에서 본다.
@@ -391,18 +437,12 @@ class _PairedMemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool korean = Localizations.localeOf(context).languageCode == 'ko';
-    String? demographics;
-    if (paired.gender.isNotEmpty && paired.age != null) {
-      final String genderLabel = switch (paired.gender) {
-        'female' => korean ? '여성' : 'Female',
-        'male' => korean ? '남성' : 'Male',
-        _ => korean ? '기타' : 'Other',
-      };
-      demographics = korean
-          ? '$genderLabel · ${paired.age}세'
-          : '$genderLabel · Age ${paired.age}';
-    }
+    // 고객 목록과 같은 함수로 적는다 — 표기가 갈리면 견주기 어렵다.
+    final String demographics = demographicsLabel(
+      context,
+      gender: paired.rosterGender,
+      age: paired.rosterAge,
+    );
     final String initial = paired.name.isEmpty
         ? '?'
         : String.fromCharCode(paired.name.runes.first);
@@ -437,20 +477,18 @@ class _PairedMemberCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (demographics != null) ...<Widget>[
-                      const SizedBox(width: AppSpacing.xs),
-                      Flexible(
-                        child: Text(
-                          demographics,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.subtleForeground,
-                          ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: Text(
+                        demographics,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.subtleForeground,
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
                 if (paired.goal.isNotEmpty) ...<Widget>[

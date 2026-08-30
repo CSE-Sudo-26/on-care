@@ -6,15 +6,30 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Returns the localized demographic label used to distinguish clients who
 /// share a name.
-String clientDemographicsLabel(BuildContext context, TrainerClient client) {
+String clientDemographicsLabel(BuildContext context, TrainerClient client) =>
+    demographicsLabel(
+      context,
+      gender: client.rosterGender,
+      age: client.rosterAge,
+    );
+
+/// 로스터 행이 아닌 값으로도 같은 문구를 만든다 — `여성 · 29세`.
+///
+/// 신규 고객 등록의 확인 카드가 쓴다 (#1634). 목록과 다른 모양으로 적으면,
+/// 트레이너가 지금 잇는 사람이 목록의 그 사람인지 견줄 때 한 번 더 생각해야
+/// 한다.
+String demographicsLabel(
+  BuildContext context, {
+  required String gender,
+  required int age,
+}) {
   final korean = Localizations.localeOf(context).languageCode == 'ko';
-  final gender = switch (client.rosterGender) {
+  final genderLabel = switch (gender) {
     'female' => korean ? '여성' : 'Female',
     'male' => korean ? '남성' : 'Male',
     _ => korean ? '기타' : 'Other',
   };
-  final age = korean ? '${client.rosterAge}세' : 'Age ${client.rosterAge}';
-  return '$gender · $age';
+  return '$genderLabel · ${korean ? '$age세' : 'Age $age'}';
 }
 
 /// Returns a plain-text identity for places that cannot compose text styles.

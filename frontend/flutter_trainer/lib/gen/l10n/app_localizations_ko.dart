@@ -720,9 +720,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientConnectCodeLabel => '회원 동기화 코드';
 
   @override
-  String get clientConnectDone => '확인';
-
-  @override
   String get clientConnectCodeRequired => '6자리를 모두 입력해 주세요';
 
   @override

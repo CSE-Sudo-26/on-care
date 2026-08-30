@@ -2044,16 +2044,17 @@ class LocalApiInterceptor extends Interceptor {
     return _ok(options, await _mergedProfile());
   }
 
-  /// 데모의 동기화 코드. 실서버처럼 **한 번 뽑으면 유지된다** — 시트를 다시
-  /// 열 때마다 새 코드가 나오면 트레이너 데모에 받아 적은 값이 무효가 된다.
+  /// 데모 모드의 동기화 코드 — 김민수(데모 회원)의 고정 값이다. (#1634)
   ///
-  /// 데모에는 이 코드를 소비할 트레이너 백엔드가 없다. 트레이너 앱 데모는
-  /// 자기 쪽 고정 코드로 연결을 시연하므로, 여기서는 값을 만들어 화면이
-  /// 도는 것까지만 맞춘다. (#1634)
-  static String? _demoPairingCode;
+  /// **트레이너 앱의 `demoAlreadyLinkedPairingCode` 와 같은 값이어야 한다.**
+  /// 두 앱은 서로 다른 패키지라 상수를 나눠 가질 수 없고, 데모에는 코드를
+  /// 발급·소비할 서버도 없다. 여기서 무작위로 뽑으면 회원 화면이 보여 준
+  /// 여섯 자리를 트레이너 데모가 영영 알아보지 못한다.
+  ///
+  /// 실서비스에서는 서버가 발급한 한 값을 두 화면이 함께 본다.
+  static const String _demoPairingCode = '567812';
 
   Future<Response<Object?>> _pairingCodeIssue(RequestOptions options) async {
-    _demoPairingCode ??= (100000 + math.Random().nextInt(900000)).toString();
     return _ok(options, <String, Object?>{
       'code': _demoPairingCode,
       'expires_at': nowKst()
@@ -2064,7 +2065,8 @@ class LocalApiInterceptor extends Interceptor {
   }
 
   Future<Response<Object?>> _pairingCodeRevoke(RequestOptions options) async {
-    _demoPairingCode = null;
+    // 데모의 코드는 고정이라 버릴 것이 없다. 그래도 받아 주지 않으면 시트를
+    // 닫을 때마다 실 네트워크로 새어 나간다.
     return Response<Object?>(requestOptions: options, statusCode: 204);
   }
 

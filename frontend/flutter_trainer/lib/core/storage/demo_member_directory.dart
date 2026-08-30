@@ -118,9 +118,11 @@ const String demoAlreadyLinkedMemberId = 'user-7d4e9a2c5f18';
 
 /// 김민수가 자기 앱에 띄웠다고 가정하는 6자리 동기화 코드. (#1634)
 ///
-/// 회원 앱 데모의 목업 인터셉터는 코드를 무작위로 만들지만, 트레이너 데모는
-/// 답할 회원 백엔드가 없어 고정 값이 필요하다 — 시연 중에 두 앱이 서로 다른
-/// 값을 들고 있으면 흐름이 끊긴다. 실서비스에서는 서버가 발급한 한 값을 두
-/// 화면이 함께 본다.
+/// **회원 앱 `LocalApiInterceptor._demoPairingCode` 와 같은 값이어야 한다.**
+/// 두 앱은 서로 다른 패키지라 상수를 나눠 가질 수 없고, 데모에는 코드를
+/// 발급·소비할 서버도 없다. 값이 갈리면 회원 화면이 보여 준 여섯 자리를
+/// 트레이너 데모가 영영 알아보지 못한다.
+///
+/// 실서비스에서는 서버가 발급한 한 값을 두 화면이 함께 본다.
 const String demoAlreadyLinkedPairingCode = '567812';
 const String demoAlreadyLinkedClientId = 'seed-client-1';
