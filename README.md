@@ -7,7 +7,7 @@
 
 # On-care <img src="docs/assets/oncare-logo-name.png" alt="On-Care Logo" width="150" align="left"/>
 
-***HealthMate AI: 트레이너 연동<br> 식단·운동 관리 서비스***
+***HealthMate AI: 트레이너 연동 식단·운동 관리 서비스***
 
 <br/><br/>
 
