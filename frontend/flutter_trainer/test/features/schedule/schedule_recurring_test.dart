@@ -194,10 +194,25 @@ void main() {
 
       final preview = find.byKey(const ValueKey<String>('repeat-preview'));
       expect(preview, findsOneWidget);
-      // 기본 종료 기준은 8회다.
+
+      // 회차 수는 **시작~종료일 기간에서 나오는 값**이다. 여기에 숫자를 따로 적어
+      // 두면 기본 종료일이 바뀔 때 이 단언만 홀로 틀린다 — 실제로 그랬다(#1647).
+      // 미리보기가 말한 기간을 그대로 되짚어 견준다.
+      final String summary = tester
+          .widget<Text>(find.descendant(of: preview, matching: find.byType(Text)))
+          .data!;
+      final RegExpMatch? shown = RegExp(
+        r'(\d+).*?(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})',
+      ).firstMatch(summary);
+      expect(shown, isNotNull, reason: '미리보기 문구: $summary');
+
+      final DateTime first = DateTime.parse(shown!.group(2)!);
+      final DateTime last = DateTime.parse(shown.group(3)!);
+      // 주 1회 반복이라 첫 회차와 마지막 회차는 같은 요일이다.
+      expect(last.weekday, first.weekday);
       expect(
-        find.descendant(of: preview, matching: find.textContaining('8')),
-        findsOneWidget,
+        int.parse(shown.group(1)!),
+        last.difference(first).inDays ~/ 7 + 1,
       );
 
       // 다시 끄면 미리보기도 사라진다 — `매주` 는 토글이라 한 번 더 누르면
