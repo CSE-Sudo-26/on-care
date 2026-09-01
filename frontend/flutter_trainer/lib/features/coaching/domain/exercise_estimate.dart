@@ -2,7 +2,10 @@ import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 
 /// 유형·시간·강도로 소모 칼로리를 어림한다.
 ///
-/// 백엔드 `exercise_service.estimate_calories` 와 같은 표다(#1276). 트레이너가
+/// 백엔드 `exercise_catalog.energy.fallback` 과 같은 표다(#1276) — 운동 이름이
+/// 종목 참조표에 붙지 않을 때의 **폴백**이고, 붙으면 서버가 종목 계수와 회원
+/// 체중으로 계산한다(#1312). 트레이너 폼은 아직 수행할 회원이 정해지지 않은
+/// 자리라 여기서는 늘 이 표를 쓴다. 트레이너가
 /// 프로그램을 짜는 동안 화면이 보여 주는 값과 회원이 그 운동을 마친 뒤 기록에
 /// 남는 값이 갈리면, 같은 운동을 두 사람이 다른 수로 이야기하게 된다.
 ///
@@ -31,16 +34,39 @@ const double kStrengthMinutesPerSet = 3;
 /// 세므로, 세트로 받은 값을 저장 전에 여기서 환산한다.
 int minutesFromSets(int sets) => (sets * kStrengthMinutesPerSet).round();
 
-/// 이 운동의 예상 소모 칼로리. [minutes] 는 근력이면 [minutesFromSets] 로
-/// 환산한 값이다 — 중량은 계산에 쓰지 않는다(같은 무게라도 사람마다 소모가
-/// 달라, 추정식에 넣으면 근거 없는 정밀도가 된다).
-int estimateRoutineCalories({
+/// 예상 소모 칼로리 한 건과 그 근거. (#1312)
+class RoutineCalorieEstimate {
+  const RoutineCalorieEstimate({required this.calories, this.isRough = true});
+
+  final int calories;
+
+  /// 유형 평균으로 낸 어림값인가. 트레이너가 프로그램을 짜는 동안에는 아직
+  /// 어느 회원이 수행할지·그 회원의 체중이 얼마인지가 계산에 들어가지 않으므로
+  /// 늘 참이다 — 회원이 그 운동을 마치면 서버가 종목 참조표와 회원 체중으로
+  /// 다시 계산한 값이 기록에 남는다(#1312).
+  final bool isRough;
+}
+
+/// 이 운동의 예상 소모 칼로리. **이름이 비어 있으면 null 이다.**
+///
+/// 이름 없이 확정된 듯한 숫자를 띄우지 않는 것이 회원 앱과 같은 규약이다
+/// (#1312). 이름 칸이 계산에 아무 영향이 없던 때에는, 폼을 여는 순간 기본값만
+/// 으로 값이 떠 있어 그 숫자가 무엇의 값인지 읽히지 않았다.
+///
+/// [minutes] 는 근력이면 [minutesFromSets] 로 환산한 값이다 — 중량은 계산에
+/// 쓰지 않는다(같은 무게라도 사람마다 소모가 달라, 추정식에 넣으면 근거 없는
+/// 정밀도가 된다).
+RoutineCalorieEstimate? estimateRoutineCalories({
+  required String name,
   required String type,
   required int minutes,
   required String intensity,
 }) {
+  if (name.trim().isEmpty) return null;
   final double perMinute = _kcalPerMinute[normaliseRoutineType(type)] ?? 5;
   final double factor =
       _intensityFactor[normaliseRoutineIntensity(intensity)] ?? 1.0;
-  return (perMinute * (minutes < 0 ? 0 : minutes) * factor).round();
+  return RoutineCalorieEstimate(
+    calories: (perMinute * (minutes < 0 ? 0 : minutes) * factor).round(),
+  );
 }

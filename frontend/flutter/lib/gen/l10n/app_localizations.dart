@@ -1526,6 +1526,30 @@ abstract class AppLocalizations {
   /// **'Estimated Calories'**
   String get exEstimatedCalories;
 
+  /// No description provided for @exCaloriesNeedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an exercise name'**
+  String get exCaloriesNeedName;
+
+  /// No description provided for @exCaloriesCalculating.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating…'**
+  String get exCaloriesCalculating;
+
+  /// No description provided for @exCaloriesFromCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on {activity} · uses your weight'**
+  String exCaloriesFromCatalog(String activity);
+
+  /// No description provided for @exCaloriesRoughEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'A rough average for this exercise type'**
+  String get exCaloriesRoughEstimate;
+
   /// No description provided for @exEnterDuration.
   ///
   /// In en, this message translates to:

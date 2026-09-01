@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 
@@ -37,6 +38,25 @@ class DioExerciseRepository implements ExerciseRepository {
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Future<ExerciseCalorieEstimate> previewCalories({
+    required ExerciseType type,
+    required String name,
+    required int minutes,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
+  }) async {
+    final res = await _dio.post<Map<String, Object?>>(
+      '/exercise/calories',
+      data: <String, Object?>{
+        'type': type.name,
+        'name': name,
+        'minutes': minutes,
+        'intensity': intensity.name,
+      },
+    );
+    return ExerciseCalorieEstimate.fromJson(res.data!);
+  }
 
   @override
   Future<ExerciseSession> addSession({

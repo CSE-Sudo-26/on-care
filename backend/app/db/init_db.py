@@ -38,6 +38,10 @@ def init_db() -> None:
 
     # 참조 데이터: 공공 식품영양성분 DB(데모/운영 무관, 멱등)
     _seed_food_nutrients()
+    # 참조 데이터: 운동 종목별 단위체중당 소모 계수(멱등). 식단과 같은 자리다 —
+    # 이 표가 비어 있으면 운동 이름이 칼로리에 반영되지 못하고 유형 평균으로
+    # 떨어진다(#1312).
+    _seed_exercise_catalog()
     # 참조 데이터: 공공 코칭 가이드라인(RAG 공공 문서, 멱등·best-effort)
     _seed_public_coach_docs()
 
@@ -208,6 +212,99 @@ def _seed_food_nutrients() -> None:
                 carbs_g=item.get("carbs_g"),
                 protein_g=item.get("protein_g"),
                 fat_g=item.get("fat_g"),
+            ))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _public_exercise_rows() -> list[dict]:
+    """공공 운동 MET 집계본(scripts/import_exercise_catalog.py 산출물)을 읽는다.
+
+    파일이 없으면 빈 목록 — 큐레이션 목록만으로도 서비스는 돈다. 원본 공공데이터는
+    이용허락범위(KOGL 제4유형)상 저장소에 담지 않으므로, 이 파일은 받아서 넣는
+    사람만 갖고 있다.
+    """
+    import csv
+
+    path = Path(__file__).resolve().parent.parent / "data" / "exercise_catalog_public.csv"
+    if not path.exists():
+        return []
+
+    def num(value: str) -> float | None:
+        value = (value or "").strip()
+        if not value:
+            return None
+        try:
+            return float(value)
+        except ValueError:
+            return None
+
+    with path.open(encoding="utf-8", newline="") as fh:
+        rows = []
+        for row in csv.DictReader(fh):
+            met = num(row.get("met", ""))
+            if not met or met <= 0:
+                # 계수가 없으면 이 표에 있을 이유가 없다 — 칼로리가 0 이 된다.
+                continue
+            rows.append(
+                {
+                    "name": row["name"],
+                    "type": row.get("type", ""),
+                    "met": met,
+                    "aliases": [
+                        a for a in (row.get("aliases", "") or "").split("|") if a
+                    ],
+                    "source": row.get("source", "khpi"),
+                }
+            )
+        return rows
+
+
+def _seed_exercise_catalog() -> None:
+    """운동 종목 참조표 시드(멱등). name_norm 은 매칭기와 동일 규칙으로 생성.
+
+    큐레이션 목록을 **먼저** 넣고, 공공 집계본에서 이름·별칭이 겹치는 것은
+    건너뛴다. 식단 시드와 같은 우선순위다 — 큐레이션 쪽은 회원이 실제로 적는
+    말(별칭 포함)로 손질한 것이라, 원본의 긴 항목명보다 이름 매칭이 잘 붙는다.
+
+    정규화 이름이 겹치면 뒤엣것을 버린다. 매칭은 정규화 이름으로 하므로 중복이
+    있으면 조회가 모호해진다 — 같은 이름에 계수가 둘이면 값이 흔들린다.
+    """
+    from app.data.exercise_catalog_seed import EXERCISE_CATALOG
+    from app.services import exercise_types
+    from app.services.exercise_catalog.matcher import normalize
+
+    db: Session = SessionLocal()
+    try:
+        if db.scalar(select(models.ExerciseCatalogItem).limit(1)):
+            return
+        items = [*EXERCISE_CATALOG, *_public_exercise_rows()]
+        # 대표 이름을 먼저 전부 잡아 둔다. 별칭이 뒤 항목의 대표 이름을 막으면
+        # 목록에 적은 순서가 어느 종목이 살아남는지를 정하게 된다.
+        seen: set[str] = set()
+        kept: list[tuple[dict, str]] = []
+        for item in items:
+            norm = normalize(item["name"])
+            if not norm or norm in seen:
+                continue
+            seen.add(norm)
+            kept.append((item, norm))
+
+        for item, norm in kept:
+            aliases = []
+            for alias in item.get("aliases", []):
+                alias_norm = normalize(alias)
+                if alias_norm and alias_norm not in seen:
+                    seen.add(alias_norm)
+                    aliases.append(alias_norm)
+            db.add(models.ExerciseCatalogItem(
+                name=item["name"],
+                name_norm=norm,
+                aliases_norm="|".join(aliases),
+                type=exercise_types.normalize(item.get("type")),
+                met=float(item["met"]),
+                source=item.get("source", "khpi"),
             ))
         db.commit()
     finally:

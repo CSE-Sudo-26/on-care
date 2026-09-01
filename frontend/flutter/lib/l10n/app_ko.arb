@@ -265,6 +265,24 @@
   "exEnterSets": "세트 수를 입력해주세요",
   "exExerciseIntensity": "운동 강도",
   "exEstimatedCalories": "예상 소모 칼로리",
+  "exCaloriesNeedName": "운동 이름을 적어주세요",
+  "@exCaloriesNeedName": {
+    "description": "이름을 적기 전에는 확정된 소모 칼로리를 띄우지 않는다 (#1312)"
+  },
+  "exCaloriesCalculating": "계산 중…",
+  "exCaloriesFromCatalog": "{activity} 기준 · 체중 반영",
+  "@exCaloriesFromCatalog": {
+    "description": "종목 참조표와 회원 체중으로 계산한 값의 근거 표시 (#1312)",
+    "placeholders": {
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "exCaloriesRoughEstimate": "운동 종류 평균으로 낸 어림값이에요",
+  "@exCaloriesRoughEstimate": {
+    "description": "이름이 종목으로 접히지 않아 유형 평균으로 때운 값 (#1312)"
+  },
   "exEnterDuration": "운동 시간을 입력해주세요",
   "exCannotEdit": "이 기록은 수정할 수 없어요",
   "exUpdated": "운동 기록이 수정됐어요",

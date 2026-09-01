@@ -679,6 +679,14 @@
   "routineFieldReps": "횟수",
   "routineFieldWeight": "중량",
   "routineFieldCalories": "예상 소모 칼로리",
+  "routineCaloriesNeedName": "운동 이름을 적어주세요",
+  "@routineCaloriesNeedName": {
+    "description": "이름을 적기 전에는 확정된 소모 칼로리를 띄우지 않는다 (#1312)"
+  },
+  "routineCaloriesRoughEstimate": "운동 종류 평균으로 낸 어림값 · 회원이 수행하면 체중까지 반영된 값이 기록됩니다",
+  "@routineCaloriesRoughEstimate": {
+    "description": "트레이너 폼은 수행할 회원의 체중을 모르므로 늘 어림값이다 (#1312)"
+  },
   "routineUnitMinutes": "분",
   "routineUnitSets": "세트",
   "routineUnitReps": "회",

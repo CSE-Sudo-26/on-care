@@ -67,7 +67,16 @@ void main() {
     expect(cardio.effectiveMinutes, 40);
 
     // 유형을 한 축에서 견주는 값은 칼로리 하나다.
-    expect(strength.calories, 72); // 12분 × 6kcal × 보통(1.0)
-    expect(cardio.calories, 360); // 40분 × 9kcal × 보통(1.0)
+    expect(strength.calories?.calories, 72); // 12분 × 6kcal × 보통(1.0)
+    expect(cardio.calories?.calories, 360); // 40분 × 9kcal × 보통(1.0)
+    // 트레이너 폼은 수행할 회원의 체중을 모르므로 늘 어림값이다 (#1312).
+    expect(strength.calories?.isRough, isTrue);
+  });
+
+  test('운동 이름이 비면 예상 소모 칼로리가 없다 (#1312)', () {
+    const unnamed = ProgramExerciseDraft(id: 'e3', name: '   ');
+
+    // 이름 없이 확정된 듯한 숫자를 띄우지 않는다 — 회원 앱과 같은 규약이다.
+    expect(unnamed.calories, isNull);
   });
 }

@@ -785,6 +785,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exEstimatedCalories => '예상 소모 칼로리';
 
   @override
+  String get exCaloriesNeedName => '운동 이름을 적어주세요';
+
+  @override
+  String get exCaloriesCalculating => '계산 중…';
+
+  @override
+  String exCaloriesFromCatalog(String activity) {
+    return '$activity 기준 · 체중 반영';
+  }
+
+  @override
+  String get exCaloriesRoughEstimate => '운동 종류 평균으로 낸 어림값이에요';
+
+  @override
   String get exEnterDuration => '운동 시간을 입력해주세요';
 
   @override
