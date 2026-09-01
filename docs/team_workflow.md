@@ -6,7 +6,7 @@
 
 ## 1. 시작하기 전에
 
-1. 작업할 이슈가 없다면 먼저 [Issues](https://github.com/CSE-Sudo-26/on-care/issues) 에 새 이슈를 등록하고, 작업 내용·기대 결과를 명시합니다.
+1. 작업할 이슈가 없다면 먼저 [Issues](https://github.com/CSE-Sudo/on-care/issues) 에 새 이슈를 등록하고, 작업 내용·기대 결과를 명시합니다.
 2. 모든 작업은 main 브랜치에서 분기한 별도 브랜치에서 진행합니다.
 
 ---
@@ -126,4 +126,4 @@ gh api repos/actions/checkout/git/ref/tags/v4 --jq .object.sha
 
 ## 8. 질문이 있다면
 
-- 협업 규약 관련: [Issues](https://github.com/CSE-Sudo-26/on-care/issues) 에 `question` 라벨로 등록
+- 협업 규약 관련: [Issues](https://github.com/CSE-Sudo/on-care/issues) 에 `question` 라벨로 등록
