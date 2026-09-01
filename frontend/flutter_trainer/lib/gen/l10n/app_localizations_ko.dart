@@ -962,6 +962,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatInsightMemoAdded => '메모 추가됨';
 
   @override
+  String chatInsightMemoSummaryDiscomfort(String part) {
+    return '$part 불편 감지';
+  }
+
+  @override
+  String get chatInsightMemoSummaryNegative => '운동 부담 감지';
+
+  @override
   String get chatInsightMemoSaved => 'AI 감지 내용을 트레이너 메모에 추가했어요.';
 
   @override
@@ -2419,6 +2427,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count개 · $minutes분';
   }
+
+  @override
+  String get aiInsightMemoTitle => '최근 7일 AI 감지 메모';
+
+  @override
+  String get aiInsightMemoEmpty => '최근 7일간 감지된 메모가 없어요';
+
+  @override
+  String get aiInsightMemoFailed => '감지 메모를 불러오지 못했어요';
+
+  @override
+  String aiRecentRoutineMore(String name, int count) {
+    return '$name 외 $count개';
+  }
+
+  @override
+  String get aiNoRecentRoutine => '기록 없음';
 
   @override
   String get aiRecentRoutine => '최근 운동';
