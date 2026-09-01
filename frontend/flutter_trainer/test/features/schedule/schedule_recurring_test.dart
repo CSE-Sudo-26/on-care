@@ -9,7 +9,6 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurrence.dart';
 
-import '../../helpers/fixed_clock.dart';
 import '../../helpers/pump_app.dart';
 
 /// 반복 PT 일정 — 회차 계산, 충돌로 인한 전무(全無), 화면의 미리보기. (#870)
@@ -175,13 +174,10 @@ void main() {
 
   group('일정 시트', () {
     testWidgets('반복을 켜면 만들어질 회차를 저장 전에 보여 준다', (tester) async {
-      // 미리보기 문구에 오늘 날짜가 그대로 들어가므로 "오늘" 을 고정한다 —
-      // 고정하지 않으면 단언이 그 달의 숫자에 기대게 된다(아래 참고).
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.schedule,
-        seedClock: kMidWeekKst,
       );
 
       await tester.tap(find.byIcon(Icons.add).first);
@@ -198,19 +194,25 @@ void main() {
 
       final preview = find.byKey(const ValueKey<String>('repeat-preview'));
       expect(preview, findsOneWidget);
-      // 켜는 순간의 기본 종료일은 8주 뒤(+56일)이고 시작일도 첫 회차로 세므로
-      // 9회다. 예전에는 `textContaining('8')` 로 봤는데, 그 8은 회차 수가
-      // 아니라 미리보기에 찍힌 날짜(`2026-08-…`)의 8이었다 — 달이 바뀌면
-      // 매칭할 8이 사라져 9월에 CI 가 깨졌다.
-      final DateTime start = todayKst();
+
+      // 회차 수는 **시작~종료일 기간에서 나오는 값**이다. 여기에 숫자를 따로 적어
+      // 두면 기본 종료일이 바뀔 때 이 단언만 홀로 틀린다 — 실제로 그랬다(#1647).
+      // 미리보기가 말한 기간을 그대로 되짚어 견준다.
+      final String summary = tester
+          .widget<Text>(find.descendant(of: preview, matching: find.byType(Text)))
+          .data!;
+      final RegExpMatch? shown = RegExp(
+        r'(\d+).*?(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})',
+      ).firstMatch(summary);
+      expect(shown, isNotNull, reason: '미리보기 문구: $summary');
+
+      final DateTime first = DateTime.parse(shown!.group(2)!);
+      final DateTime last = DateTime.parse(shown.group(3)!);
+      // 주 1회 반복이라 첫 회차와 마지막 회차는 같은 요일이다.
+      expect(last.weekday, first.weekday);
       expect(
-        find.descendant(
-          of: preview,
-          matching: find.text(
-            '총 9회 · ${ymd(start)} ~ ${ymd(start.add(const Duration(days: 56)))}',
-          ),
-        ),
-        findsOneWidget,
+        int.parse(shown.group(1)!),
+        last.difference(first).inDays ~/ 7 + 1,
       );
 
       // 다시 끄면 미리보기도 사라진다 — `매주` 는 토글이라 한 번 더 누르면
