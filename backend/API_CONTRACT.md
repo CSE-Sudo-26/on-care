@@ -79,10 +79,14 @@
 | GET | `/exercise/weeks/current` | 질의 `?week_start=YYYY-MM-DD`(생략 시 이번 주) → `{ sessions[], daily_minutes[7], daily_calories[7], cardio_minutes[7], strength_minutes[7], stretching_minutes[7], day_labels[7], total_minutes, total_calories, streak_days, ai_coach_message }` |
 | POST | `/exercise/sessions` | 입력 `{ type, minutes(>0), calories, intensity(light\|moderate\|high), day_label? }` → 생성된 `sessions[]` 항목 |
 | PUT | `/exercise/sessions/{id}` | 입력 동일(부분 갱신) → 갱신된 항목 |
+| POST | `/exercise/calories` | 입력 `{ type, name(필수), minutes(>0), intensity }` → `{ calories, source, matched_name }` |
 
-`sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, intensity(light|moderate|high), source(member|trainer_pt), date_label, time_label, items[str] }`
+`sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, calorie_source, intensity(light|moderate|high), source(member|trainer_pt), date_label, time_label, items[str] }`
 `week_start`: 그 주의 월요일. 월요일이 아닌 날짜를 줘도 그 날이 속한 주로 맞춘다. 형식이 깨지면 422. 회원 앱이 지난 날짜를 골랐을 때 그 주를 받는다. (#671)
 `intensity`: 생략 시 `moderate`. 수정 시트가 저장된 강도로 복원되고 칼로리 추정 배수(0.85/1.0/1.2)의 근거가 된다.
+`calories`(입력): **서버가 다시 계산하므로 쓰이지 않는다.** 이 필드를 채워 보내는 옛 클라이언트를 422 로 막지 않으려고 받아만 둔다. 앱이 화면에 띄우는 미리보기는 `POST /exercise/calories` 로 같은 계산을 받아 오므로, 저장 뒤 숫자가 달라지지 않는다. (#1312)
+`calorie_source`: 그 칼로리가 어디서 나왔나 — `db`(운동 이름이 종목 참조표에 붙고 회원 체중 반영) · `mixed`(수치는 참조표, 이름 해석만 AI) · `estimate`(유형 평균 어림값). 식단(`RecognizedFood.source`)과 같은 어휘다. 이 필드가 생기기 전 기록은 전부 `estimate` 다. (#1312)
+`POST /exercise/calories`: 운동 이름이 **비어 있으면 400**. 이름 없이 확정된 숫자를 내주지 않는 것이 이 계산의 요점이다. 폼이 조작될 때마다가 아니라 이름 입력이 끝난 시점에 부른다 — 이름 해석이 외부 호출을 탈 수 있고, 해석 결과는 서버가 캐시해 같은 이름을 두 번 묻지 않는다. 참조 데이터도 자격증명도 없는 환경에서는 유형 평균(`estimate`)으로 떨어지고, 저장은 어느 경우에도 실패하지 않는다. (#1312)
 `source`: 생략 시 `member`. `trainer_pt` 는 트레이너가 PT 세션을 완료 처리해 서버가 파생시킨 기록(id 는 `sched-ex-{session_id}`)으로, 근거가 트레이너에게 있어 **회원의 PUT/DELETE 는 409** 로 거절된다. 지우려면 트레이너가 그 세션을 삭제해야 하고 그러면 이 기록도 함께 사라진다. (#499)
 `day_labels`: `["월","화","수","목","금","토","일"]`
 `daily_calories`: 요일별 소모 칼로리(합 = `total_calories`). 홈 '주간 추이' 차트가 이 시리즈를 읽으며, 비어 있으면 클라이언트가 데모 상수로 폴백한다.

@@ -3914,6 +3914,18 @@ abstract class AppLocalizations {
   /// **'Estimated calories'**
   String get routineFieldCalories;
 
+  /// No description provided for @routineCaloriesNeedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an exercise name'**
+  String get routineCaloriesNeedName;
+
+  /// No description provided for @routineCaloriesRoughEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'A rough average for this exercise type · the saved record will also use the member\'s weight'**
+  String get routineCaloriesRoughEstimate;
+
   /// No description provided for @routineUnitMinutes.
   ///
   /// In en, this message translates to:

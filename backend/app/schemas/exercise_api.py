@@ -32,6 +32,10 @@ class ExerciseSessionOut(BaseModel):
     #: 근력 기록의 중량(kg). 세트와 짝이라 근력에만 있다. (#1276)
     weight: float | None = None
     calories: int
+    #: 이 칼로리의 근거 — db=종목 참조표+체중, mixed=이름 해석만 AI, estimate=유형
+    #: 평균 어림값. 식단(`RecognizedFood.source`)과 같은 어휘다(#1312). 기본값이
+    #: 있어야 이 필드를 모르는 기존 클라이언트가 깨지지 않는다.
+    calorie_source: str = "estimate"
     intensity: str  # light|moderate|high
     date_label: str
     time_label: str
@@ -115,11 +119,42 @@ class ExerciseSessionCreate(BaseModel):
     reps: int | None = Field(None, gt=0, le=999)
     #: 근력이면 중량(kg). 세트와 같은 규칙으로, 다른 유형에서 와도 버린다.
     weight: float | None = Field(None, ge=0, le=1000)
+    #: **서버가 다시 계산한다.** 받아 두는 이유는 이 필드를 채워 보내는 옛
+    #: 클라이언트를 422 로 막지 않기 위해서다 — 값은 쓰지 않는다(#1312).
+    #: 앱이 화면에 띄우는 미리보기는 `POST /exercise/calories` 로 같은 계산을
+    #: 받아 오므로, 저장 뒤 숫자가 달라지지 않는다.
     calories: int = Field(0, ge=0)
     intensity: ExerciseIntensityIn = "moderate"
     #: 이 운동을 한 날. 생략하면 오늘이다. 예전 `day_label`(요일 문자열)은 어느
     #: 주인지를 담지 못해, 지난 날짜를 골라도 늘 이번 주로 저장됐다.
     date: date_ | None = None
+
+
+class ExerciseCalorieRequest(BaseModel):
+    """소모 칼로리 미리보기 입력. (#1312)
+
+    폼이 조작될 때마다가 아니라 **이름 입력이 끝난 시점**에 부른다 — 이름 해석이
+    외부 호출을 탈 수 있어서다. 해석 결과는 서버가 캐시하므로 같은 이름을 두 번
+    묻지 않는다.
+    """
+
+    type: ExerciseTypeIn | LegacyExerciseTypeIn
+    #: 운동 이름. 비어 있으면 400 이다 — 이름 없이 확정된 숫자를 내주지 않는 것이
+    #: 이 계산의 요점이라, 빈 이름으로 부르는 것은 호출하는 쪽의 실수다.
+    name: str = Field(..., max_length=100)
+    minutes: int = Field(..., gt=0, le=600)
+    intensity: ExerciseIntensityIn = "moderate"
+
+
+class ExerciseCalorieResponse(BaseModel):
+    """소모 칼로리 한 건과 그 근거."""
+
+    calories: int
+    #: db | mixed | estimate — `ExerciseSessionOut.calorie_source` 와 같은 어휘.
+    source: str
+    #: 값을 계산한 종목의 대표 이름("런닝머신" → "러닝머신"). 폴백이면 빈 문자열.
+    #: 회원이 적은 말과 다를 수 있어, 화면이 무엇으로 계산했는지 보여 준다.
+    matched_name: str = ""
 
 
 class AssignedRoutineCompleteRequest(BaseModel):

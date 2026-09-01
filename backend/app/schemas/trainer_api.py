@@ -434,10 +434,14 @@ class RoutineOut(BaseModel):
     id: str
     name: str
     minutes: int
-    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 유형·시간·강도에서 계산한 값이라
-    #: 따로 저장하지 않는다 — 운동을 시간과 칼로리 두 축으로 보여 주기로 한
-    #: 뒤(#996) 배정 카드에도 이 값이 필요해졌다.
+    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 루틴 이름·유형·시간·강도와 **그
+    #: 회원의 체중**에서 계산한 값이라 따로 저장하지 않는다 — 운동을 시간과 칼로리
+    #: 두 축으로 보여 주기로 한 뒤(#996) 배정 카드에도 이 값이 필요해졌다.
     calories: int = 0
+    #: 위 값의 근거 — db=종목 참조표+체중, mixed=이름 해석만 AI, estimate=유형
+    #: 평균 어림값. 회원 앱(`ExerciseSessionOut.calorie_source`)과 같은 어휘라
+    #: 두 앱이 같은 기록을 같은 굵기로 보여 준다(#1312).
+    calorie_source: str = "estimate"
     type: RoutineType
     #: 트레이너가 언제 하라고 보낸 배정인가. 날짜를 정하지 않았으면 비어 있다.
     exercise_date: _date | None = None

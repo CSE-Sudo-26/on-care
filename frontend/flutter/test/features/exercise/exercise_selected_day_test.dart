@@ -5,6 +5,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -71,6 +72,18 @@ class _FixedWeekRepository implements ExerciseRepository {
     int? reps,
     double? weight,
   }) async => throw UnimplementedError();
+
+  /// 시트가 여는 순간 부르지 않는다 — 이름이 찬 뒤에만 온다(#1312). 여기서는
+  /// 앱이 아는 유형 평균을 그대로 돌려준다.
+  @override
+  Future<ExerciseCalorieEstimate> previewCalories({
+    required ExerciseType type,
+    required String name,
+    required int minutes,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
+  }) async => ExerciseCalorieEstimate(
+    calories: estimateExerciseCalories(type, minutes, intensity: intensity),
+  );
 
   @override
   Future<void> deleteSession(String id) async => throw UnimplementedError();

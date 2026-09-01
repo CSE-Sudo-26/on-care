@@ -6,6 +6,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/features/coaching/domain/exercise_estimate.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/number_stepper.dart';
 
@@ -405,15 +406,21 @@ class RoutineDateField extends StatelessWidget {
   }
 }
 
-/// 예상 소모 칼로리 — 읽기 전용. 유형·시간(또는 세트)·강도에서 나온다.
+/// 예상 소모 칼로리 — 읽기 전용. 운동 이름·유형·시간(또는 세트)·강도에서 나온다.
+///
+/// [estimate] 가 null 이면 **숫자를 띄우지 않는다.** 이름을 적기 전에는 확정된
+/// 값이 없다는 것이 회원 앱과 같은 규약이다(#1312) — 폼을 여는 순간 기본값만으로
+/// 값이 떠 있으면, 그 숫자가 무엇의 값인지도 이름 칸이 왜 필요한지도 읽히지
+/// 않는다.
 class RoutineCaloriesLine extends StatelessWidget {
-  const RoutineCaloriesLine({required this.calories, super.key});
+  const RoutineCaloriesLine({required this.estimate, super.key});
 
-  final int calories;
+  final RoutineCalorieEstimate? estimate;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final RoutineCalorieEstimate? value = estimate;
     return Container(
       key: const ValueKey<String>('routine-calories'),
       padding: const EdgeInsets.symmetric(
@@ -424,32 +431,57 @@ class RoutineCaloriesLine extends StatelessWidget {
         color: AppColors.accentSurface,
         borderRadius: BorderRadius.all(AppRadius.md),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(
-            Icons.local_fire_department,
-            size: 16,
-            color: AppColors.brandOrange,
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.local_fire_department,
+                size: 16,
+                color: AppColors.brandOrange,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  l.routineFieldCalories,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              if (value == null)
+                Text(
+                  l.routineCaloriesNeedName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.subtleForeground,
+                  ),
+                )
+              else
+                Text(
+                  l.routineKcalValue(value.calories),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.accent,
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              l.routineFieldCalories,
+          if (value != null && value.isRough) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              l.routineCaloriesRoughEstimate,
               style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.foreground,
+                fontSize: 11,
+                color: AppColors.subtleForeground,
               ),
             ),
-          ),
-          Text(
-            l.routineKcalValue(calories),
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: AppColors.accent,
-            ),
-          ),
+          ],
         ],
       ),
     );

@@ -85,6 +85,10 @@ class Settings(BaseSettings):
     recognizer: str = "gemini"        # gemini | claude(litellm) | yolo
     # 인식 후 공공 식품영양성분 DB 로 영양 수치 보강(정확도↑). 순수 LLM 비교실험 시 false.
     nutrition_db_enrich: bool = True
+    #: 참조표에 바로 붙지 않는 운동 이름을 AI 로 종목에 접는다(#1312). 끄면 표
+    #: 매칭만 쓰고, 안 붙는 이름은 유형 평균으로 떨어진다 — 인식기와 같은 규약이라
+    #: 키가 없으면 이 값과 무관하게 조용히 폴백한다.
+    exercise_name_ai: bool = True
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-latest"  # 챗·인식 공용. 핀 버전은 은퇴로 404 → latest 별칭 사용
     # Gemini HTTP 타임아웃(초). 걸지 않으면 무응답 시 호출 스레드가 무기한 묶여

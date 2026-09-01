@@ -411,6 +411,17 @@
   "exEnterSets": "Enter the number of sets",
   "exExerciseIntensity": "Intensity",
   "exEstimatedCalories": "Estimated Calories",
+  "exCaloriesNeedName": "Enter an exercise name",
+  "exCaloriesCalculating": "Calculating…",
+  "exCaloriesFromCatalog": "Based on {activity} · uses your weight",
+  "@exCaloriesFromCatalog": {
+    "placeholders": {
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "exCaloriesRoughEstimate": "A rough average for this exercise type",
   "exEnterDuration": "Please enter a duration",
   "exCannotEdit": "This record can't be edited",
   "exUpdated": "Exercise record updated",
