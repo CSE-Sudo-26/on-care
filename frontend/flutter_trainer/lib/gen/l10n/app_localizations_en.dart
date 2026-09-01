@@ -2199,6 +2199,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldCalories => 'Estimated calories';
 
   @override
+  String get routineCaloriesNeedName => 'Enter an exercise name';
+
+  @override
+  String get routineCaloriesRoughEstimate =>
+      'A rough average for this exercise type · the saved record will also use the member\'s weight';
+
+  @override
   String get routineUnitMinutes => 'min';
 
   @override

@@ -27,9 +27,35 @@ const Map<ExerciseIntensity, double> kIntensityFactor =
       ExerciseIntensity.high: 1.2,
     };
 
-/// 유형별 분당 칼로리. 백엔드 `exercise_service.estimate_calories` 와 같은 뜻의
-/// 어림값이다 — 데모(서버 없는 경로)에서만 쓰이므로 정확도가 아니라 **일관성**이
-/// 목적이다.
+/// 소모 칼로리 한 건과 그 근거. (#1312)
+class ExerciseCalorieEstimate {
+  const ExerciseCalorieEstimate({
+    required this.calories,
+    this.source = ExerciseCalorieSource.estimate,
+    this.matchedName = '',
+  });
+
+  factory ExerciseCalorieEstimate.fromJson(Map<String, Object?> json) =>
+      ExerciseCalorieEstimate(
+        calories: (json['calories'] as num?)?.toInt() ?? 0,
+        source: ExerciseCalorieSource.fromJson(json['source']),
+        matchedName: (json['matched_name'] as String?) ?? '',
+      );
+
+  final int calories;
+  final ExerciseCalorieSource source;
+
+  /// 값을 계산한 종목의 대표 이름. 회원이 적은 말과 다를 수 있어("런닝머신" →
+  /// "러닝머신") 무엇으로 계산했는지 화면이 보여 준다. 폴백이면 비어 있다.
+  final String matchedName;
+}
+
+/// 유형별 분당 칼로리 — **이름이 붙지 않을 때의 폴백**이다. 백엔드
+/// `exercise_catalog.energy.fallback` 과 같은 값이어야 한다(#1312).
+///
+/// 이름이 있으면 서버가 종목 참조표와 회원 체중으로 계산한다. 이 표는 서버에
+/// 닿지 못하는 경로(데모)와 이름이 종목으로 접히지 않는 기록에 남는다 —
+/// 정확도가 아니라 화면 간 **일관성**이 목적이다(#1131).
 int estimateExerciseCalories(
   ExerciseType type,
   int minutes, {

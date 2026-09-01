@@ -83,7 +83,10 @@ class ProgramDraft {
   /// 여전히 분을 요구하고 주간 운동 시간도 분으로 센다.
   int get effectiveMinutes => isStrength ? minutesFromSets(sets) : minutes;
 
-  int get calories => estimateRoutineCalories(
+  /// 예상 소모 칼로리. 운동 이름이 비어 있으면 null 이다 — 이름 없이 확정된
+  /// 숫자를 띄우지 않는다(#1312).
+  RoutineCalorieEstimate? get calories => estimateRoutineCalories(
+    name: name.text,
     type: type,
     minutes: effectiveMinutes,
     intensity: intensity,
