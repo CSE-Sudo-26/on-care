@@ -98,7 +98,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             durationMinutes: _duration(_time, _endTime),
             sessionType: _type,
           );
-      ref.invalidate(reservationSlotsProvider);
+      // 목록을 직접 무효화하지 않는다 — 리포지토리가 변경을 알리면 스트림이
+      // 이어서 새 목록을 낸다(#1590). 무효화하면 구독이 처음부터 다시 서서
+      // 방금 만든 자리 대신 로딩 표시가 한 번 스쳐 지나간다.
       _showMessage(l.slotOpened, kind: AppToastKind.success);
     } catch (error) {
       _showMessage(_errorMessage(l, error), kind: AppToastKind.error);
@@ -133,7 +135,6 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     setState(() => _saving = true);
     try {
       await ref.read(reservationSlotRepositoryProvider).close(slot.id);
-      ref.invalidate(reservationSlotsProvider);
       _showMessage(l.slotClosed, kind: AppToastKind.success);
     } catch (error) {
       _showMessage(_errorMessage(l, error), kind: AppToastKind.error);
