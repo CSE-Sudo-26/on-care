@@ -125,8 +125,8 @@ void main() {
         final String email = state.require('acceptEmail');
         final E2eApi api = await E2eApi.login(email);
 
-        // 승인은 상담 상태와 담당 연결을 함께 남긴다. 정확한 상담 시각과
-        // 일정 생성은 후속 이슈에서 별도로 다룬다.
+        // 승인은 상담 상태와 담당 연결을 함께 남긴다. 승인이 만드는 상담
+        // 일정은 트레이너의 달력이라 `trainer-accept` 단계가 확인한다(#1587).
         final List<Map<String, dynamic>> rows = await api.myConsultations();
         expect(rows.single['status'], 'accepted');
         final Map<String, dynamic>? coach = await api.myCoach();

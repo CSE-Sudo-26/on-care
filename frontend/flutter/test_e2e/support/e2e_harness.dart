@@ -731,10 +731,17 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
 /// [submitConsultation] 이 넣는 희망 시각. 서버에 남는 값
 /// (`preferred_time_slot`)이 `$consultStartTime-$consultEndTime` 이라,
 /// 시나리오가 그대로 단언할 수 있다.
-const String consultStartTime = '10:00';
+///
+/// **저녁 시각인 이유**: 승인은 이 시각에 상담 일정을 만드는데, 겹침 판정이
+/// (날짜, 시각) 정확히 같은 자리를 본다. 데모 시드가 오늘 트레이너 타임라인에
+/// 놓는 10:00·12:00·15:00·17:00 을 쓰면 승인이 409 로 막힌다.
+///
+/// 트레이너 앱 쪽 하네스의 같은 이름 상수와 **값이 같아야 한다** — 두 앱은
+/// 서로 다른 패키지라 공유할 수 없고, 트레이너 단계가 이 값을 그대로 단언한다.
+const String consultStartTime = '21:00';
 
 /// [consultStartTime] 의 종료 시각.
-const String consultEndTime = '11:00';
+const String consultEndTime = '22:00';
 
 /// [submitConsultation] 이 서버에 남기는 `preferred_time_slot` 값.
 const String consultPreferredTimeSlot = '$consultStartTime-$consultEndTime';
@@ -811,6 +818,10 @@ Future<void> submitConsultation(
     find.byKey(const ValueKey<String>('consult-time-range-end-input')),
     consultEndTime,
   );
+  await tester.pump();
+  // 선택기(시계 다이얼)가 테스트 창보다 길다 — 확인 버튼은 다이얼로그 안에서
+  // 스크롤해 올려야 탭이 닿는다.
+  await tester.ensureVisible(timeDialog);
   await tester.pump();
   await tester.tap(timeDialog);
   await tester.pump();
