@@ -1093,6 +1093,8 @@
   "routineFieldReps": "Reps",
   "routineFieldWeight": "Weight",
   "routineFieldCalories": "Estimated calories",
+  "routineCaloriesNeedName": "Enter an exercise name",
+  "routineCaloriesRoughEstimate": "A rough average for this exercise type · the saved record will also use the member's weight",
   "routineUnitMinutes": "min",
   "routineUnitSets": "sets",
   "routineUnitReps": "reps",

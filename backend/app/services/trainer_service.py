@@ -1067,7 +1067,7 @@ def build_routines(
         }
     return [
         _routine_out(
-            row, completed.get(row.id), include_evidence=not for_member
+            db, row, completed.get(row.id), include_evidence=not for_member
         )
         for row in rows
     ]
@@ -1134,7 +1134,7 @@ def update_routine(
             ExerciseSession.assigned_routine_id == routine.id
         )
     )
-    return _routine_out(routine, completion)
+    return _routine_out(db, routine, completion)
 
 
 def delete_routine(
@@ -1186,6 +1186,7 @@ def delete_own_routine(db: Session, member_id: str, routine_id: str) -> None:
 
 
 def _routine_out(
+    db: Session,
     rt: TrainerRoutine,
     completion: ExerciseSession | None = None,
     *,
@@ -1197,8 +1198,25 @@ def _routine_out(
     근거(`최근 근력운동 비중 높음`)는 트레이너가 승인 여부를 판단하는 재료이지
     회원이 읽을 문구가 아니다. 화면이 감추는 것과 응답에 담지 않는 것은 다르다
     (#790).
+
+    `db` 를 받는 이유는 예상 소모 칼로리 때문이다(#1312). 이 값은 루틴 이름과
+    **그 회원의 체중**에서 나오므로, 유형·시간만 보던 때와 달리 조회가 필요하다.
+    트레이너 화면의 읽기 전용 미리보기와 회원 화면의 값이 같아야 하니 계산은
+    회원 앱과 같은 한 곳(`exercise_service.estimate`)을 쓴다.
     """
     intensity = getattr(rt, "intensity", None) or "moderate"
+    estimated = exercise_service.estimate(
+        db,
+        name=rt.name,
+        type_=rt.type,
+        minutes=rt.minutes,
+        intensity=intensity,
+        weight_kg=exercise_service.member_weight_kg(db, rt.member_id),
+        # 목록을 그릴 때마다 루틴 수만큼 외부 호출이 일어나면 트레이너 화면이
+        # 멈춘다. 이름 해석은 회원이 저장할 때 이미 캐시에 들어가므로, 여기서는
+        # 표 매칭과 캐시까지만 본다.
+        use_ai=False,
+    )
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         exercise_date=getattr(rt, "exercise_date", None),
@@ -1208,7 +1226,8 @@ def _routine_out(
         weight=getattr(rt, "weight", None),
         # 예상 소모 칼로리 — 트레이너가 고른 강도로 계산한다. 회원이 수행을
         # 마치면 그때의 강도로 다시 계산한 값이 운동 기록에 남는다. (#996)
-        calories=exercise_service.estimate_calories(rt.type, rt.minutes, intensity),
+        calories=estimated.calories,
+        calorie_source=estimated.source,
         reason=rt.reason, source=rt.source,
         program_name=rt.program_name,
         session_name=rt.session_name,
@@ -1265,7 +1284,7 @@ def create_routine_suggestion(
             db, trainer_id, member_id, client_request_id
         )
         if existing is not None:
-            return _routine_out(existing)
+            return _routine_out(db, existing)
 
     max_order = db.scalar(
         select(func.max(TrainerRoutine.sort_order)).where(
@@ -1304,11 +1323,11 @@ def create_routine_suggestion(
                 db, trainer_id, member_id, client_request_id
             )
             if existing is not None:
-                return _routine_out(existing)
+                return _routine_out(db, existing)
         raise
     db.commit()
     db.refresh(rt)
-    return _routine_out(rt)
+    return _routine_out(db, rt)
 
 
 def list_routine_suggestions(
@@ -1331,7 +1350,7 @@ def list_routine_suggestions(
         )
         .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
     ).all()
-    return [_routine_out(row) for row in rows]
+    return [_routine_out(db, row) for row in rows]
 
 
 def _pending_suggestion(
@@ -1413,7 +1432,7 @@ def approve_routine_suggestion(
     )
     db.commit()
     db.refresh(row)
-    return _routine_out(row)
+    return _routine_out(db, row)
 
 
 def dismiss_routine_suggestion(
@@ -1426,7 +1445,7 @@ def dismiss_routine_suggestion(
     row.reviewed_by = trainer_id
     db.commit()
     db.refresh(row)
-    return _routine_out(row)
+    return _routine_out(db, row)
 
 
 def complete_assigned_routine(
@@ -1458,7 +1477,7 @@ def complete_assigned_routine(
         )
     )
     if existing is not None:
-        return _routine_out(routine, existing)
+        return _routine_out(db, routine, existing)
 
     completed_at = clock.now()
     exercise_type = _ROUTINE_EXERCISE_TYPES(routine.type)
@@ -1468,6 +1487,14 @@ def complete_assigned_routine(
     sets = sets if sets is not None else getattr(routine, "sets", None)
     reps = reps if reps is not None else getattr(routine, "reps", None)
     weight = weight if weight is not None else getattr(routine, "weight", None)
+    assigned_estimate = exercise_service.estimate(
+        db,
+        name=routine.name,
+        type_=exercise_type,
+        minutes=minutes,
+        intensity=intensity,
+        weight_kg=exercise_service.member_weight_kg(db, member_id),
+    )
     row = ExerciseSession(
         id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
         user_id=member_id,
@@ -1486,9 +1513,10 @@ def complete_assigned_routine(
             if weight is not None and exercise_type == exercise_types.STRENGTH
             else None
         ),
-        calories=exercise_service.estimate_calories(
-            exercise_type, minutes, intensity
-        ),
+        # 이름·체중이 반영된 값이다. 회원이 수기로 적은 기록과 같은 계산을 써야
+        # 같은 운동이 두 경로에서 다른 칼로리로 적히지 않는다(#1312).
+        calories=assigned_estimate.calories,
+        calorie_source=assigned_estimate.source,
         intensity=intensity,
         source="assigned_routine",
         assigned_routine_id=routine.id,
@@ -1509,10 +1537,10 @@ def complete_assigned_routine(
         )
         if existing is None:
             raise
-        return _routine_out(routine, existing)
+        return _routine_out(db, routine, existing)
     db.refresh(row)
     personal_ingest.refresh_exercise(db, member_id, session_id=row.id)
-    return _routine_out(routine, row)
+    return _routine_out(db, routine, row)
 
 
 def uncomplete_assigned_routine(
@@ -1538,13 +1566,13 @@ def uncomplete_assigned_routine(
         )
     )
     if row is None:
-        return _routine_out(routine, None)
+        return _routine_out(db, routine, None)
     session_id = row.id
     db.delete(row)
     db.commit()
     # 근거 문서도 함께 지운다 — 행이 사라지면 `_load` 가 None 을 돌려준다.
     personal_ingest.refresh_exercise(db, member_id, session_id=session_id)
-    return _routine_out(routine, None)
+    return _routine_out(db, routine, None)
 
 
 def update_assigned_routine_feedback(
@@ -1637,7 +1665,7 @@ def assign_routine(
             db, trainer_id, member_id, client_request_id
         )
         if existing is not None:
-            return _routine_out(existing)
+            return _routine_out(db, existing)
 
     # 이 회원 루틴들의 현재 최대 sort_order + 1 로 끝에 붙인다. timestamp 방식은 시드(0..n)와
     # 의미가 섞이고, 같은 초에 배정된 둘은 순서가 비결정적이었다(리뷰 #279).
@@ -1679,7 +1707,7 @@ def assign_routine(
                 db, trainer_id, member_id, client_request_id
             )
             if existing is not None:
-                return _routine_out(existing)
+                return _routine_out(db, existing)
         raise
 
     # 배정은 회원이 앱을 열기 전에는 알 수 없는 변화다(#489).
@@ -1695,7 +1723,7 @@ def assign_routine(
     )
     db.commit()
     db.refresh(rt)
-    return _routine_out(rt)
+    return _routine_out(db, rt)
 
 
 def _session_summary(
@@ -1772,7 +1800,7 @@ def assign_program(
             .order_by(TrainerRoutine.session_order)
         ).all()
         if existing:
-            return [_routine_out(rt) for rt in existing]
+            return [_routine_out(db, rt) for rt in existing]
 
     multi = len(sessions) > 1
     max_order = db.scalar(
@@ -1834,7 +1862,7 @@ def assign_program(
                 .order_by(TrainerRoutine.session_order)
             ).all()
             if existing:
-                return [_routine_out(rt) for rt in existing]
+                return [_routine_out(db, rt) for rt in existing]
         raise
 
     total_minutes = sum(rt.minutes for rt in created)
@@ -1853,7 +1881,7 @@ def assign_program(
     db.commit()
     for rt in created:
         db.refresh(rt)
-    return [_routine_out(rt) for rt in created]
+    return [_routine_out(db, rt) for rt in created]
 
 
 # ---- 회원별 트레이너 메모 (#706) ----
@@ -3392,6 +3420,17 @@ def _add_member_exercise_log(
     # 계산하면 주차는 이번 주, 요일은 오늘 요일로 각각 흘러 서로 다른 날을
     # 가리킨다. (#1264)
     session_day = _schedule_day(s.date)
+    # 한 세션에 여러 종목이면 이름 하나로 접히지 않는다. 그때 이름 해석을 태우면
+    # `스쿼트, 데드리프트` 가 둘 중 하나로 붙어, 세션 전체의 칼로리가 한 종목의
+    # 계수로 계산된다 — 종목이 하나일 때만 이름을 본다. (#1312)
+    pt_estimate = exercise_service.estimate(
+        db,
+        name=items[0].name if len(items) == 1 else "",
+        type_=ex_type,
+        minutes=minutes,
+        intensity=intensity,
+        weight_kg=exercise_service.member_weight_kg(db, s.member_id),
+    )
     row = ExerciseSession(
         id=_derived_exercise_id(s.id),
         user_id=s.member_id,
@@ -3409,7 +3448,8 @@ def _add_member_exercise_log(
         # 여러 운동을 한 세션이면 가장 무거웠던 무게가 그날의 기록이다 —
         # 평균은 실제로 든 적 없는 값이라 다음 무게를 정할 근거가 못 된다.
         weight=max(weights) if weights and ex_type == exercise_types.STRENGTH else None,
-        calories=exercise_service.estimate_calories(ex_type, minutes, intensity),
+        calories=pt_estimate.calories,
+        calorie_source=pt_estimate.source,
         intensity=intensity,
         source="trainer_pt",
         completed_at=exercise_activity.noon(session_day),

@@ -339,7 +339,13 @@ class _ProgramDraftFields extends StatelessWidget {
             },
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineCaloriesLine(calories: draft.calories),
+          // 이름 칸은 `onChanged` 없이 컨트롤러만 들고 있다 — 글자를 적는 동안
+          // 이 줄이 따라 그려지려면 컨트롤러를 직접 들어야 한다(#1312).
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: draft.name,
+            builder: (BuildContext context, TextEditingValue _, _) =>
+                RoutineCaloriesLine(estimate: draft.calories),
+          ),
         ],
       ),
     );

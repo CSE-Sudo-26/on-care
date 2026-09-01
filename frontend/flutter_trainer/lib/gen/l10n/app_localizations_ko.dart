@@ -2107,6 +2107,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineFieldCalories => '예상 소모 칼로리';
 
   @override
+  String get routineCaloriesNeedName => '운동 이름을 적어주세요';
+
+  @override
+  String get routineCaloriesRoughEstimate =>
+      '운동 종류 평균으로 낸 어림값 · 회원이 수행하면 체중까지 반영된 값이 기록됩니다';
+
+  @override
   String get routineUnitMinutes => '분';
 
   @override

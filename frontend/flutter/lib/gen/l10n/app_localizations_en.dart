@@ -802,6 +802,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exEstimatedCalories => 'Estimated Calories';
 
   @override
+  String get exCaloriesNeedName => 'Enter an exercise name';
+
+  @override
+  String get exCaloriesCalculating => 'Calculating…';
+
+  @override
+  String exCaloriesFromCatalog(String activity) {
+    return 'Based on $activity · uses your weight';
+  }
+
+  @override
+  String get exCaloriesRoughEstimate =>
+      'A rough average for this exercise type';
+
+  @override
   String get exEnterDuration => 'Please enter a duration';
 
   @override
