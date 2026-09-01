@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
@@ -13,6 +16,8 @@ import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_fo
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/app_toast.dart';
 import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 
@@ -382,21 +387,31 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
+  /// 분석 박스 오른쪽 칸(최근 감지 메모)의 **고정 높이**(#1655).
+  ///
+  /// 메모가 늘어도 카드가 아래로 자라면 안 된다 — 프로그램 탭은 이 박스 아래에
+  /// 생성 조건과 버튼을 두고 있어, 박스가 자랄 때마다 트레이너가 누르던 자리가
+  /// 밀린다. 왼쪽 네 줄과 같은 키를 못 박고, 넘치는 메모는 칸 안에서 스크롤한다.
+  static const double _analysisPanelHeight = 96;
+
+  /// 이 폭 아래에서는 두 칸을 위아래로 쌓는다.
+  static const double _analysisSplitWidth = 520;
+
   Widget _assistantAnalysis() {
     final AppLocalizations l = AppLocalizations.of(context);
     final client = widget.client;
     // 주의 배지·주간 리포트와 같은 정의([recordedCompletionMean]) — 이 박스만
     // 다른 계산으로 "완료율"을 말하면 트레이너가 같은 값을 두 번 다르게 읽는다.
     final completionMean = recordedCompletionMean(client);
-    return _surfaceCard(
-      accent: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _AssistantLabel(text: l.aiAnalysedData),
-          const SizedBox(height: AppSpacing.md),
+    final Widget facts = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
           _analysisRow(l.aiGoal, client.goal),
-          _analysisRow(l.aiRecentRoutine, client.lastRoutine),
+          // "오늘"·"어제" 같은 날짜가 아니라 **무엇을 했는지**를 적는다 —
+          // 프로그램을 짜는 자리에서 알아야 하는 것은 마지막 기록이 언제였나가
+          // 아니라 어떤 운동을 마쳤나다 (#1655).
+          _analysisRow(l.aiRecentRoutine, _recentRoutineLabel(l)),
           _analysisRow(
             l.aiRecentCompletion,
             completionMean == null
@@ -422,9 +437,209 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             '${client.sugarOverBudget ? l.aiSugarAlsoOver : ''}',
             warn: client.sodiumOverBudget || client.sugarOverBudget,
           ),
+      ],
+    );
+    return _surfaceCard(
+      key: const ValueKey<String>('ai-analysis-card'),
+      accent: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _AssistantLabel(text: l.aiAnalysedData),
+          const SizedBox(height: AppSpacing.md),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final Widget memos = _chatInsightMemoPanel();
+              if (constraints.maxWidth < _analysisSplitWidth) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    facts,
+                    const SizedBox(height: AppSpacing.md),
+                    memos,
+                  ],
+                );
+              }
+              // 왼쪽이 넓다. 반씩 나눴더니 식단 주의 한 줄이 두 줄로 접히면서
+              // 카드 전체가 아래로 자랐다 — 이 카드는 크기가 고정이라야 한다.
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(flex: 5, child: facts),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(flex: 3, child: memos),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
+  }
+
+  /// 분석 박스 오른쪽 — 오늘을 포함한 최근 7일(KST)의 채팅 감지 메모.
+  ///
+  /// 채팅 배너와 같은 붉은 계열을 쓴다. 같은 감지가 채팅에서는 붉고 여기서는
+  /// 회색이면, 트레이너가 두 화면에서 같은 신호를 같은 것으로 알아보지 못한다.
+  /// 손으로 쓴 트레이너 메모(`source=trainer`)는 여기 넣지 않는다 — 이 칸은
+  /// AI 가 대화에서 집어낸 것만 모으는 자리다.
+  Widget _chatInsightMemoPanel() {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AsyncValue<List<TrainerMemo>> memos = ref.watch(
+      trainerMemosProvider(widget.client.id),
+    );
+    return Container(
+      key: const ValueKey<String>('ai-chat-insight-memos'),
+      height: _analysisPanelHeight,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.10),
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 14,
+                color: AppColors.warning,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  l.aiInsightMemoTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          // 메모를 못 읽어도 이 칸만 조용히 비운다 — 생성 버튼까지 막으면
+          // 참고 자료 하나 때문에 프로그램을 못 만든다 (#1655).
+          Expanded(
+            child: memos.when(
+              loading: () => const SizedBox.shrink(),
+              error: (Object _, StackTrace _) =>
+                  _insightMemoNote(l.aiInsightMemoFailed),
+              data: (List<TrainerMemo> list) {
+                final List<TrainerMemo> recent = _recentChatInsights(list);
+                if (recent.isEmpty) {
+                  return _insightMemoNote(l.aiInsightMemoEmpty);
+                }
+                return ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: recent.length,
+                  itemBuilder: (BuildContext context, int index) =>
+                      _insightMemoLine(recent[index]),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _insightMemoNote(String text) => Text(
+    text,
+    style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
+  );
+
+  /// `08.31  무릎 불편감이 …` — 날짜와 요약을 한 줄에 둔다.
+  Widget _insightMemoLine(TrainerMemo memo) {
+    final DateTime date = _kstDateOf(memo.createdAt);
+    final String day =
+        '${date.month.toString().padLeft(2, '0')}.'
+        '${date.day.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            day,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.warning,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              memo.body,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.foreground,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 오늘을 포함한 최근 7일(KST)의 채팅 감지 메모, 최신순.
+  /// 같은 날짜 안에서는 목록 계약과 같게 `created_at DESC, id DESC` 다.
+  List<TrainerMemo> _recentChatInsights(List<TrainerMemo> memos) {
+    final DateTime today = nowKst();
+    final DateTime from = DateTime(today.year, today.month, today.day - 6);
+    final List<TrainerMemo> recent = <TrainerMemo>[
+      for (final TrainerMemo memo in memos)
+        if (memo.source == TrainerMemoSource.chatInsight &&
+            !_kstDateOf(memo.createdAt).isBefore(from))
+          memo,
+    ];
+    recent.sort((TrainerMemo a, TrainerMemo b) {
+      final int byDate = b.createdAt.compareTo(a.createdAt);
+      return byDate != 0 ? byDate : b.id.compareTo(a.id);
+    });
+    return recent;
+  }
+
+  /// 저장 시각을 **KST 달력일**로 옮긴다. 기기 타임존이 KST 가 아니면 자정
+  /// 언저리의 메모가 하루씩 밀린다 — `nowKst` 와 같은 기준을 쓴다.
+  static DateTime _kstDateOf(DateTime at) {
+    final DateTime kst = at.toUtc().add(kstOffset);
+    return DateTime(kst.year, kst.month, kst.day);
+  }
+
+  /// 최근 기록에서 **마친 운동 이름**을 만든다.
+  ///
+  /// 이력은 최신순이고 항목 이름은 `스쿼트 ✓` / `레그프레스 ✗` 꼴이라
+  /// (`FixtureExercise.label`), 마친 것(✓)만 남겨 이름을 읽는다. 마친 운동이
+  /// 하나도 없는 날은 건너뛴다 — "최근 운동" 자리에 하지 않은 운동을 적을 수는
+  /// 없다.
+  String _recentRoutineLabel(AppLocalizations l) {
+    final List<RoutineHistoryEntry> history =
+        ref.watch(clientHistoryProvider(widget.client.id)).valueOrNull ??
+        const <RoutineHistoryEntry>[];
+    for (final RoutineHistoryEntry entry in history) {
+      final List<String> done = <String>[
+        for (final String exercise in entry.exercises)
+          if (exercise.trim().endsWith('✓'))
+            exercise.trim().substring(0, exercise.trim().length - 1).trim(),
+      ];
+      if (done.isEmpty) continue;
+      return done.length == 1
+          ? done.first
+          : l.aiRecentRoutineMore(done.first, done.length - 1);
+    }
+    return l.aiNoRecentRoutine;
   }
 
   /// 조건 설정 단계의 자연어 요청 칸 (#1028).
@@ -1200,6 +1415,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           Expanded(
             child: Text(
               value,
+              // 네 줄짜리 카드다. 한 줄이 접히면 아래 생성 조건·버튼이 통째로
+              // 밀리므로, 좁아지면 줄을 늘리는 대신 말줄임한다 (#1655).
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,

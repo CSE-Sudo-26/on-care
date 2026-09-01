@@ -294,12 +294,19 @@ class _ChatViewState extends ConsumerState<ChatView> {
   /// dropped response does not add a second memo.
   Future<void> _addInsightMemo(ChatContextInsight insight) async {
     if (!_savingInsights.add(insight.id)) return;
+    // 원문이 아니라 감지 요약을 남긴다 — 프로그램 탭이 이 메모를 그대로
+    // 읽으므로([chatInsightMemoSummary]), 그날의 말투가 아니라 조치할 내용이
+    // 남아야 한다 (#1655).
+    final String body = chatInsightMemoSummary(
+      AppLocalizations.of(context),
+      insight,
+    );
     try {
       await ref
           .read(trainerMemoRepositoryProvider)
           .create(
             widget.clientId,
-            body: insight.evidence,
+            body: body,
             source: TrainerMemoSource.chatInsight,
             insightId: insight.id,
             insightKind: insight.kind.name,
