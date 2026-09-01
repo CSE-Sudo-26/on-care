@@ -235,6 +235,8 @@ def test_past_preferred_date_is_rejected(client, db_session):
         ("exercise_goal", "bulk"),
         ("health_purpose_type", "sleep"),
         ("preferred_time_slot", "night"),
+        # 시각 없는 요청은 승인해도 잡을 시간이 없다 — 입력에서 막는다(#1587).
+        ("preferred_time_slot", "flexible"),
     ],
 )
 def test_invalid_limited_value_is_rejected(
@@ -603,7 +605,7 @@ def test_consultation_out_carries_target_names(client, db_session):
 def test_legacy_preferred_time_slot_values_still_read(client, db_session):
     """예전 morning/afternoon/evening 값으로 저장된 행도 조회는 그대로 된다(#1256).
 
-    입력(`ConsultationCreate`)만 `flexible`/`HH:MM` 로 좁혔다 — 이미 저장된 행까지
+    입력(`ConsultationCreate`)만 `HH:MM` 으로 좁혔다(#1587) — 이미 저장된 행까지
     좁히면 목록·상세 조회가 그 행에서 500 으로 죽는다. 컬럼이 `String(20)` 그대로라
     마이그레이션 없이 값 형식만 바뀌었으므로, 과거 값이 여전히 읽혀야 한다.
     """

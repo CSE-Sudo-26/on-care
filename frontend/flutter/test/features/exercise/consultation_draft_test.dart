@@ -34,9 +34,23 @@ void main() {
     expect(json['preferred_date'], '2026-08-20');
   });
 
-  test('시간 협의는 flexible 로 나간다 (#1256)', () {
-    final json = _draft(preferredTime: const PreferredTime.flexible()).toJson();
-    expect(json['preferred_time_slot'], 'flexible');
+  test('시작–종료 범위는 HH:MM-HH:MM 으로 나간다 (#1256)', () {
+    final json = _draft(
+      preferredTime: const PreferredTime.range(
+        TimeOfDay(hour: 9, minute: 30),
+        TimeOfDay(hour: 10, minute: 30),
+      ),
+    ).toJson();
+    expect(json['preferred_time_slot'], '09:30-10:30');
+  });
+
+  test('시각 없는 요청은 직렬화 전에 막는다 (#1587)', () {
+    // 서버도 422 로 막지만, 여기서 먼저 막지 않으면 원인을 찾기 어려운 422 로
+    // 돌아온다. 시각 없는 상담은 승인해도 일정을 잡을 수 없다.
+    expect(
+      () => _draft(preferredTime: const PreferredTime.flexible()).toJson(),
+      throwsArgumentError,
+    );
   });
 
   test('폐지된 헬스장 대상 필드는 아예 싣지 않는다', () {

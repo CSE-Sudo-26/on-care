@@ -104,7 +104,8 @@ void main() {
         expect(saved['exercise_goal'], 'strength');
         // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
         expect(saved['health_purpose_type'], 'general');
-        expect(saved['preferred_time_slot'], 'flexible');
+        // 희망 시각은 필수라 UI 가 넣은 값이 그대로 남는다(#1587).
+        expect(saved['preferred_time_slot'], consultPreferredTimeSlot);
         expect(saved['message'], _acceptMessage);
         E2eState.merge(<String, Object?>{'acceptConsultationId': saved['id']});
 
