@@ -6,7 +6,8 @@ import threading
 import time
 from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import time as time_of_day
 from uuid import uuid4
 
 import pytest
@@ -20,7 +21,12 @@ from app.schemas.trainer_api import (
 from app.core import clock, metrics
 from app.db.seed_trainer import TRAINER_ID
 from app.db.session import SessionLocal
-from app.models.models import RoutineHistory, TrainerClient, TrainerRoutine
+from app.models.models import (
+    RoutineHistory,
+    TrainerClient,
+    TrainerClientMemo,
+    TrainerRoutine,
+)
 from app.services import trainer_routine_options_service
 from app.services.coach.llm import DEFAULT_THINKING_BUDGET
 
@@ -156,9 +162,48 @@ def _six_weeks_of_squats_with_a_varying_extra() -> list[list[str]]:
     return [[f"스쿼트 3세트", f"{name} 2세트"] for name in fillers]
 
 
+def _seed_memo(
+    member_id: str,
+    *,
+    suffix: str,
+    body: str,
+    days_ago: int,
+    source: str = "chat_insight",
+) -> None:
+    """`days_ago` 일 전 KST 정오에 남긴 메모 한 건(#1655)."""
+    db = SessionLocal()
+    try:
+        db.add(
+            TrainerClientMemo(
+                id=f"memo-{member_id}-{suffix}",
+                trainer_id=TRAINER_ID,
+                member_id=member_id,
+                body=body,
+                source=source,
+                insight_id=(
+                    f"seed-chat-{member_id}-{suffix}:discomfort"
+                    if source == "chat_insight"
+                    else None
+                ),
+                insight_kind="discomfort" if source == "chat_insight" else "",
+                created_at=datetime.combine(
+                    clock.today() - timedelta(days=days_ago),
+                    time_of_day(12, 0),
+                    tzinfo=clock.SEOUL,
+                ),
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
 def _cleanup_member(member_id: str) -> None:
     db = SessionLocal()
     try:
+        db.query(TrainerClientMemo).filter(
+            TrainerClientMemo.member_id == member_id
+        ).delete()
         db.query(RoutineHistory).filter(
             RoutineHistory.member_id == member_id
         ).delete()
@@ -924,3 +969,75 @@ def test_rule_fallback_drops_a_repeated_exercise_that_now_hurts():
     ]
     assert not any("러닝" in name for name in names)
     assert any("스트레칭" in name for name in names)
+
+
+# ---- 채팅 감지 메모가 프로그램 생성에 닿는다 (#1655) ----
+
+
+def test_analysis_carries_the_last_seven_days_of_chat_insight_memos(client):
+    """분석은 최근 7일(KST)의 채팅 감지 메모만, 최신 먼저, 날짜와 함께 싣는다."""
+    member_id = _register_and_link_member(client)
+    try:
+        _seed_memo(member_id, suffix="today", body="무릎 불편 감지", days_ago=0)
+        _seed_memo(member_id, suffix="d3", body="운동 부담 감지", days_ago=3)
+        # 창 밖(8일 전)과 손으로 쓴 메모는 이 자리의 자료가 아니다.
+        _seed_memo(member_id, suffix="d8", body="어깨 불편 감지", days_ago=8)
+        _seed_memo(
+            member_id,
+            suffix="manual",
+            body="수업 시간 조정 요청",
+            days_ago=0,
+            source="trainer",
+        )
+
+        db = SessionLocal()
+        try:
+            analysis = trainer_routine_options_service.build_member_analysis(
+                db, TRAINER_ID, member_id, RoutineOptionsRequest(),
+            )
+        finally:
+            db.close()
+
+        today = clock.today()
+        assert analysis.insight_memos == [
+            f"{today:%m.%d} 무릎 불편 감지",
+            f"{today - timedelta(days=3):%m.%d} 운동 부담 감지",
+        ]
+    finally:
+        _cleanup_member(member_id)
+
+
+def test_prompt_tells_the_model_to_use_insight_memos():
+    """프롬프트가 감지 메모를 안전 순서 안에서 어떻게 쓸지 명시한다."""
+    prompt = trainer_routine_options_service._SYSTEM_PROMPT
+
+    assert "insight_memos" in prompt
+    # 반복되는 부위는 일회성 컨디션이 아니라 이어지는 신호로 본다.
+    assert "부하" in prompt
+
+
+def test_rule_fallback_avoids_the_part_named_by_an_insight_memo():
+    """LLM 이 죽어도 감지 메모의 부위는 피한다 — 프로필·대화가 비어 있어도."""
+    analysis = _analysis().model_copy(
+        update={
+            "conditions": "",
+            "note": "",
+            "recent_messages": [],
+            "insight_memos": ["09.01 무릎 불편 감지"],
+        }
+    )
+
+    options = trainer_routine_options_service.build_rule_options(
+        analysis,
+        RoutineOptionsRequest(available_minutes=40, intensity_preference="high"),
+    )
+
+    names = [
+        exercise.name
+        for plan in (options.plan_a, options.plan_b)
+        for exercise in plan.exercises
+    ]
+    assert not any("러닝" in name for name in names)
+    assert not any("스쿼트" in name for name in names)
+    assert names, "대안까지 사라져 빈 루틴이 되면 안 된다"
+    assert "무릎" in options.plan_b.rationale

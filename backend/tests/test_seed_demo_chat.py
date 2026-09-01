@@ -109,3 +109,28 @@ def test_reseeding_overwrites_an_older_thread(client, db_session):
     rows = _seeded_thread(db_session)
     assert [(r.sender, r.body) for r in rows] == _EXPECTED
     assert db_session.get(ChatMessage, stray_id) is None
+
+
+def test_knee_message_is_seeded_as_a_chat_insight_memo(client, db_session):
+    """무릎 불편을 말한 대화가 감지 메모로도 남는다 (#1655).
+
+    데모 계정이 실 API 로 프로그램 탭을 열었을 때 `최근 7일 AI 감지 메모` 칸이
+    비어 있으면, 트레이너 웹 로컬 데모와 같은 화면이 아니다. `insight_id` 가 앱이
+    만드는 값과 같은 규칙이라, 채팅에서 그 배너를 눌러도 메모가 두 번 쌓이지 않는다.
+    """
+    from app.models.models import TrainerClientMemo
+
+    memos = db_session.scalars(
+        select(TrainerClientMemo)
+        .where(
+            TrainerClientMemo.member_id == _MEMBER_ID,
+            TrainerClientMemo.source == "chat_insight",
+        )
+        .order_by(TrainerClientMemo.created_at.desc())
+    ).all()
+
+    assert [m.body for m in memos] == ["무릎 불편 감지"]
+    knee = memos[0]
+    assert knee.insight_kind == "discomfort"
+    # `"{메시지 id}:discomfort"` — 앱의 ChatContextInsight.id 와 같은 규칙.
+    assert knee.insight_id == f"seed-chat-{_MEMBER_ID}-16:discomfort"
