@@ -452,6 +452,9 @@
   "chatInsightNegativeDescription": "AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the program.",
   "chatInsightAddMemo": "Add to memo",
   "chatInsightMemoAdded": "Added to memo",
+  "chatInsightMemoSummaryDiscomfort": "{part} discomfort detected",
+  "@chatInsightMemoSummaryDiscomfort": {"placeholders": {"part": {"type": "String"}}},
+  "chatInsightMemoSummaryNegative": "Workout strain detected",
   "chatInsightMemoSaved": "The AI insight was added to the trainer memo.",
   "chatInsightMemoSaveFailed": "Couldn't add the memo. Please try again.",
   "coachSheetTitle": "Coaching for {name}",
@@ -1313,6 +1316,12 @@
       }
     }
   },
+  "aiInsightMemoTitle": "AI insights (last 7 days)",
+  "aiInsightMemoEmpty": "No insights detected in the last 7 days",
+  "aiInsightMemoFailed": "Couldn't load the detected memos",
+  "aiRecentRoutineMore": "{name} and {count} more",
+  "@aiRecentRoutineMore": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}},
+  "aiNoRecentRoutine": "No record",
   "aiRecentRoutine": "Recent activity",
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",

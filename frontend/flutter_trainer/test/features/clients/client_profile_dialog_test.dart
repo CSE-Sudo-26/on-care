@@ -321,7 +321,7 @@ void main() {
       );
       await settle(tester);
 
-      expect(find.text('무릎이 가볍게 당기긴 했는데 괜찮아요'), findsOneWidget);
+      expect(find.text('무릎 불편 감지'), findsOneWidget);
       expect(find.text('신체 불편 표현 감지'), findsOneWidget);
     });
   });
