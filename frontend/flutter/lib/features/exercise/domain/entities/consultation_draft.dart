@@ -10,15 +10,20 @@ enum ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 
 enum HealthPurposeType { weight, chronic, rehab, general, none, other }
 
-/// 상담 희망 시각. 오전/오후/저녁 카테고리 대신 정확한 시각 또는 "시간 협의"만
-/// 남긴다(#1256) — 과거 `PreferredTimeSlot{morning,afternoon,evening,flexible}`
-/// enum을 대체한다.
+/// 상담 희망 시각. 오전/오후/저녁 카테고리 대신 정확한 시각만 남긴다(#1256)
+/// — 과거 `PreferredTimeSlot{morning,afternoon,evening,flexible}` enum을
+/// 대체한다.
+///
+/// 신청 화면에서는 반드시 시작–종료가 채워진다(#1587). [PreferredTime.flexible]
+/// 은 **복원 전용**이다 — 이미 저장된 `flexible`·레거시 값을 화면에 그릴 때만
+/// 쓰고, 그 값으로 새 신청을 보내면 [ConsultationDraft.toJson] 이 막는다.
 class PreferredTime {
+  /// 시각을 알 수 없는 과거 요청. 새 신청에는 쓰지 않는다(#1587).
   const PreferredTime.flexible() : start = null, end = null;
   const PreferredTime.at(TimeOfDay time) : start = time, end = time;
   const PreferredTime.range(this.start, this.end);
 
-  /// null 이면 "시간 협의".
+  /// null 이면 시각을 알 수 없는 과거 요청("시간 협의")이다.
   final TimeOfDay? start;
   final TimeOfDay? end;
   TimeOfDay? get timeOfDay => start;
@@ -66,10 +71,14 @@ HealthPurposeType healthPurposeFromExerciseGoal(ExerciseGoal goal) =>
       ExerciseGoal.other => HealthPurposeType.other,
     };
 
+/// `HH:MM` 또는 `HH:MM-HH:MM`. 시각이 없는 값은 서버가 더는 받지 않으므로
+/// (#1587) 여기까지 오기 전에 [ConsultationDraft.toJson] 이 막는다 — 남겨 둔
+/// `flexible` 은 이미 저장된 요청을 다시 직렬화하는 경로를 위한 것이다.
 String preferredTimeSlotToWire(PreferredTime t) {
   final TimeOfDay? start = t.start;
   if (start == null) return 'flexible';
-  String hm(TimeOfDay value) => '${value.hour.toString().padLeft(2, '0')}:'
+  String hm(TimeOfDay value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
       '${value.minute.toString().padLeft(2, '0')}';
   final TimeOfDay end = t.end ?? start;
   return start == end ? hm(start) : '${hm(start)}-${hm(end)}';
@@ -117,6 +126,12 @@ class ConsultationDraft {
         (healthPurposeDetail == null || healthPurposeDetail!.trim().isEmpty)) {
       throw ArgumentError('기타 건강관리 목적에는 상세 내용이 필요합니다.');
     }
+    if (preferredTimeSlot.isFlexible) {
+      // 서버도 막지만(422) 여기서 먼저 막는다 — 시각 없는 요청은 트레이너가
+      // 승인해도 잡을 시간이 없어, 승인만 되고 상담 일정은 만들어지지 않는다.
+      // (#1587)
+      throw ArgumentError('상담 희망 시각을 골라야 신청할 수 있습니다.');
+    }
     if (!dataSharingConsent) {
       // 서버도 막지만(400) 여기서 먼저 막는다 — 동의 없이 보낸 요청이 트레이너
       // 인박스에 남았다가 수락되면, 회원이 동의한 적 없는 기록이 넘어간다.
@@ -162,8 +177,11 @@ HealthPurposeType healthPurposeFromWire(String? s) => switch (s) {
   _ => HealthPurposeType.other,
 };
 
-/// `HH:MM` 이면 그 시각으로, 그 외(과거 `morning`/`afternoon`/`evening`
-/// 값이나 알 수 없는 값 포함)는 전부 "시간 협의"로 떨어뜨린다(#1256).
+/// `HH:MM` 이면 그 시각으로, 그 외(과거 `flexible`·`morning`/`afternoon`/
+/// `evening` 값이나 알 수 없는 값 포함)는 전부 "시간 협의"로 떨어뜨린다(#1256).
+///
+/// 새 신청은 항상 정확한 시각을 담지만(#1587), 이미 저장된 요청은 그대로
+/// 남아 있어 이 폴백이 계속 필요하다 — 걷어내면 그 행에서 화면이 깨진다.
 final RegExp _kTimePattern = RegExp(
   r'^([01]\d|2[0-3]):([0-5]\d)(?:-([01]\d|2[0-3]):([0-5]\d))?$',
 );

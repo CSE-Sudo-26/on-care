@@ -196,7 +196,8 @@ class E2eApi {
     'exercise_goal': 'strength',
     'health_purpose_type': 'rehab',
     'preferred_date': DateTime.now().toIso8601String().substring(0, 10),
-    'preferred_time_slot': 'flexible',
+    // 시각 없는 `flexible` 은 서버가 422 로 막는다(#1587).
+    'preferred_time_slot': consultPreferredTimeSlot,
     'message': 'E2E 예외 케이스',
     // 동의 없이는 서버가 422 다 (#1022).
     'data_sharing_consent': true,
@@ -713,10 +714,12 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
     await tester.scrollUntilVisible(
       target,
       160,
-      scrollable: find.descendant(
-        of: find.byKey(const Key('consult-form')),
-        matching: find.byType(Scrollable),
-      ).first,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('consult-form')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
       maxScrolls: 40,
     );
   }
@@ -724,6 +727,24 @@ Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
   await tester.pump();
   return target;
 }
+
+/// [submitConsultation] 이 넣는 희망 시각. 서버에 남는 값
+/// (`preferred_time_slot`)이 `$consultStartTime-$consultEndTime` 이라,
+/// 시나리오가 그대로 단언할 수 있다.
+///
+/// **저녁 시각인 이유**: 승인은 이 시각에 상담 일정을 만드는데, 겹침 판정이
+/// (날짜, 시각) 정확히 같은 자리를 본다. 데모 시드가 오늘 트레이너 타임라인에
+/// 놓는 10:00·12:00·15:00·17:00 을 쓰면 승인이 409 로 막힌다.
+///
+/// 트레이너 앱 쪽 하네스의 같은 이름 상수와 **값이 같아야 한다** — 두 앱은
+/// 서로 다른 패키지라 공유할 수 없고, 트레이너 단계가 이 값을 그대로 단언한다.
+const String consultStartTime = '21:00';
+
+/// [consultStartTime] 의 종료 시각.
+const String consultEndTime = '22:00';
+
+/// [submitConsultation] 이 서버에 남기는 `preferred_time_slot` 값.
+const String consultPreferredTimeSlot = '$consultStartTime-$consultEndTime';
 
 /// 상담 신청 폼을 채우고 제출한다. 선택지는 **문구가 아니라 자리**로 고른다 —
 /// 문구는 번역이 바뀌면 흔들린다.
@@ -773,14 +794,38 @@ Future<void> submitConsultation(
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 
-  // 실 시간 선택기(키보드 입력)는 흔들리기 쉬우므로 E2E 는 "시간 협의"만
-  // 고른다(#1256) — 정확한 시각 입력 자체는 위젯 테스트가 다룬다.
-  final Finder timeFlexible = await _revealInForm(
+  // "시간 협의"는 없앴다(#1587) — 희망 시각은 필수다. 다이얼을 돌리는 대신
+  // 범위 선택기의 텍스트 필드에 `HH:mm` 을 직접 넣는다: 제스처보다 흔들리지
+  // 않고, 값도 아래 단언과 맞춰 고정할 수 있다.
+  final Finder time = await _revealInForm(
     tester,
-    find.byKey(const Key('consult-time-flexible')),
+    find.byKey(const Key('consult-time')),
   );
-  await tester.tap(timeFlexible);
+  await tester.tap(time);
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+
+  final Finder timeDialog = find.byKey(
+    const ValueKey<String>('consult-time-range-confirm'),
+  );
+  await pumpUntil(tester, timeDialog, step: '희망 시각 선택기');
+  await tester.enterText(
+    find.byKey(const ValueKey<String>('consult-time-range-start-input')),
+    consultStartTime,
+  );
+  await tester.pump();
+  await tester.enterText(
+    find.byKey(const ValueKey<String>('consult-time-range-end-input')),
+    consultEndTime,
+  );
+  await tester.pump();
+  // 선택기(시계 다이얼)가 테스트 창보다 길다 — 확인 버튼은 다이얼로그 안에서
+  // 스크롤해 올려야 탭이 닿는다.
+  await tester.ensureVisible(timeDialog);
+  await tester.pump();
+  await tester.tap(timeDialog);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 
   final Finder box = await _revealInForm(
     tester,

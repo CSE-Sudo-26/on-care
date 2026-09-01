@@ -247,9 +247,12 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 - 같은 트레이너에게 **대기 중인 요청은 한 건**입니다(`uq_consultation_requests_pending_trainer`,
   중복은 409). 그래서 목록이 자라는 쪽은 처리된 지난 요청입니다 — 상태 필터가 없어
   그대로 함께 쌓이고, 그 때문에 상한이 필요합니다. (#980)
-- `preferred_time_slot` 입력은 `"flexible"`, 기존 단일 `"HH:MM"`, 또는 `"HH:MM-HH:MM"` 시작–종료 범위를 허용합니다.
-  과거 `morning`/`afternoon`/`evening` 값은 이미 저장된 행에 남아 있을 수 있어 **응답**에서는
-  그대로 내려줍니다 — 컬럼이 `String(20)` 이라 마이그레이션 없이 값 형식만 바뀐 것입니다.
+- `preferred_time_slot` 입력은 단일 `"HH:MM"` 또는 `"HH:MM-HH:MM"` 시작–종료 범위만 허용합니다.
+  시각 없는 `"flexible"` 은 더 이상 받지 않습니다(422) — 승인해도 잡을 시각이 없어 상담이
+  승인만 되고 일정은 만들어지지 않았습니다. (#1587)
+  과거 `flexible`·`morning`/`afternoon`/`evening` 값은 이미 저장된 행에 남아 있을 수 있어
+  **응답**에서는 그대로 내려줍니다 — 컬럼이 `String(20)` 이라 마이그레이션 없이 값 형식만
+  바뀐 것입니다.
 - 커서는 `(created_at, id)` 로 알림과 같은 모양입니다(`before`·`before_id`).
 - 트레이너 인박스(`GET /trainer/consultations`)도 같은 파라미터를 받습니다. 기본값인
   `status=pending` 은 처리하는 만큼 줄지만 `status=all` 은 그 트레이너에게 들어온 요청
