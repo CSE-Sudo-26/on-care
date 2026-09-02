@@ -58,6 +58,30 @@ ExerciseSource _exerciseSourceFromString(String? s) => switch (s) {
   _ => ExerciseSource.member,
 };
 
+/// 소모 칼로리 한 건이 **어디서 나왔나**. 서버 `calorie_source` 와 같은 어휘다
+/// (#1312). 식단이 공공 DB 값과 인식기 추정값을 나눠 표시하는 것과 같은 규약 —
+/// 근거가 다른 숫자가 같은 굵기로 적혀 있으면 회원은 전부 확정값으로 읽는다.
+enum ExerciseCalorieSource {
+  /// 운동 이름이 종목 참조표에 붙었고 회원 체중이 반영됐다.
+  db,
+
+  /// 수치는 참조표, 이름 해석만 AI 가 했다. 근거는 같고 붙인 경로만 다르다.
+  mixed,
+
+  /// 폴백 — 이름이 안 붙었거나 체중을 모른다. 유형 평균의 어림값이다.
+  estimate;
+
+  static ExerciseCalorieSource fromJson(Object? value) =>
+      switch ((value as String?)?.trim()) {
+        'db' => ExerciseCalorieSource.db,
+        'mixed' => ExerciseCalorieSource.mixed,
+        _ => ExerciseCalorieSource.estimate,
+      };
+
+  /// 이름·체중이 실제로 반영된 값인가. 화면이 어림값 표시를 붙일지 가른다.
+  bool get isGrounded => this != ExerciseCalorieSource.estimate;
+}
+
 class ExerciseSession {
   const ExerciseSession({
     this.id,
@@ -65,6 +89,7 @@ class ExerciseSession {
     required this.type,
     required this.minutes,
     required this.calories,
+    this.calorieSource = ExerciseCalorieSource.estimate,
     this.intensity = ExerciseIntensity.moderate,
     this.dateLabel,
     this.timeLabel,
@@ -87,6 +112,10 @@ class ExerciseSession {
   final ExerciseType type;
   final int minutes;
   final int calories;
+
+  /// [calories] 가 어디서 나왔나 — 종목 참조표+체중인지, 유형 평균의 어림값인지.
+  /// 이 필드가 생기기 전 기록은 전부 어림값이다(#1312).
+  final ExerciseCalorieSource calorieSource;
 
   /// 회원이 적은 운동 이름. 유형은 집계 축이라 넷뿐이라, 무슨 운동을 했는지는
   /// 이 칸에만 남는다. 이 필드가 생기기 전 기록은 비어 있다. (#1276)
@@ -141,6 +170,7 @@ class ExerciseSession {
         type: _exerciseTypeFromString(json['type']! as String),
         minutes: (json['minutes']! as num).toInt(),
         calories: (json['calories']! as num).toInt(),
+        calorieSource: ExerciseCalorieSource.fromJson(json['calorie_source']),
         intensity: _exerciseIntensityFromString(json['intensity'] as String?),
         dateLabel: json['date_label'] as String?,
         timeLabel: json['time_label'] as String?,

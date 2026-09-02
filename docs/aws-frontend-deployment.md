@@ -21,7 +21,7 @@ AWS CloudShell에서 브랜치를 받은 뒤 템플릿을 먼저 검증합니다
 배포 시 `GitHubOwnerId`, `GitHubRepositoryId` 파라미터로 전달합니다.
 
 ```bash
-gh api repos/CSE-Sudo-26/on-care/actions/oidc/customization/sub
+gh api repos/CSE-Sudo/on-care/actions/oidc/customization/sub
 ```
 
 2026년 7월 15일 이전에 생성되어 이름 기반 subject를 계속 사용하는 저장소에서는
@@ -29,7 +29,7 @@ gh api repos/CSE-Sudo-26/on-care/actions/oidc/customization/sub
 저장소와 `main` 브랜치가 포함된 정확한 subject를 유지합니다.
 
 ```bash
-git clone https://github.com/CSE-Sudo-26/on-care.git
+git clone https://github.com/CSE-Sudo/on-care.git
 cd on-care
 git switch feat/aws-frontend-deployment
 

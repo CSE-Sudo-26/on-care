@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/utils/clock.dart';
@@ -208,6 +210,25 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   );
   bool _saving = false;
 
+  /// 지금 화면이 보여 줄 소모 칼로리. **이름이 차기 전에는 null 이다.**
+  ///
+  /// 예전에는 시트를 여는 순간 기본값(유산소·30분·보통)만으로 숫자가 떠 있었다 —
+  /// 이름 칸은 계산에 아무 영향이 없었으므로, 확정된 듯한 값이 무엇을 근거로
+  /// 나왔는지도 이름 칸이 왜 필수인지도 화면에서 읽히지 않았다(#1312).
+  ExerciseCalorieEstimate? _estimate;
+
+  /// 마지막으로 계산을 요청한 입력. 늦게 도착한 응답이 새 입력의 값을 덮지
+  /// 않도록, 응답을 쓸 때 이 값과 견준다.
+  String? _requestedKey;
+
+  /// 계산이 도는 중. 이름을 막 적은 직후의 빈 칸을 "값이 없다" 로 읽히지 않게
+  /// 한다 — 곧 채워질 자리다.
+  bool _estimating = false;
+
+  /// 조작이 멎은 뒤에 부른다. 스테퍼 한 칸마다 요청을 보내면 이름 하나 적는
+  /// 동안 수십 번이 나간다.
+  Timer? _estimateDebounce;
+
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   /// 편집 시트가 열릴 세트 수. 기록이 세트를 들고 있으면 그 값, 세트를 모르는
@@ -222,9 +243,87 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // 수정 시트는 이름이 이미 차 있다 — 열자마자 그 이름의 값을 보여 준다.
+    if (_name.text.trim().isNotEmpty) _scheduleEstimate(immediate: true);
+  }
+
+  @override
   void dispose() {
+    _estimateDebounce?.cancel();
     _name.dispose();
     super.dispose();
+  }
+
+  /// 계산을 가르는 입력 전부. 하나라도 달라지면 값이 달라진다.
+  String get _estimateKey =>
+      '${_name.text.trim()}|${_typeFromIndex(_type).name}|'
+      '$_effectiveMinutes|$_level';
+
+  /// 소모 칼로리를 다시 받아 온다. 이름이 비어 있으면 값을 지운다 —
+  /// 이름을 지웠는데 아까 숫자가 남아 있으면 그 값이 무엇의 값인지 알 수 없다.
+  void _scheduleEstimate({bool immediate = false}) {
+    _estimateDebounce?.cancel();
+    if (_name.text.trim().isEmpty) {
+      if (_estimate != null || _estimating) {
+        setState(() {
+          _estimate = null;
+          _estimating = false;
+          _requestedKey = null;
+        });
+      }
+      return;
+    }
+    if (_estimateKey == _requestedKey) return;
+    if (immediate) {
+      unawaited(_fetchEstimate());
+      return;
+    }
+    _estimateDebounce = Timer(
+      const Duration(milliseconds: 400),
+      () => unawaited(_fetchEstimate()),
+    );
+  }
+
+  Future<void> _fetchEstimate() async {
+    final String key = _estimateKey;
+    final String name = _name.text.trim();
+    if (name.isEmpty) return;
+    setState(() {
+      _requestedKey = key;
+      _estimating = true;
+    });
+    try {
+      final ExerciseCalorieEstimate result = await ref
+          .read(exerciseRepositoryProvider)
+          .previewCalories(
+            type: _typeFromIndex(_type),
+            name: name,
+            minutes: _effectiveMinutes,
+            intensity: _intensityFromIndex(_level),
+          );
+      // 그 사이 입력이 또 바뀌었으면 이 응답은 낡은 값이다.
+      if (!mounted || key != _requestedKey) return;
+      setState(() {
+        _estimate = result;
+        _estimating = false;
+      });
+    } on Object {
+      // 미리보기가 실패해도 기록은 적을 수 있어야 한다 — 서버가 저장할 때 다시
+      // 계산하므로, 여기서 막을 이유가 없다. 앱이 아는 유형 평균으로 채운다.
+      if (!mounted || key != _requestedKey) return;
+      setState(() {
+        _estimate = ExerciseCalorieEstimate(
+          calories: _estimateCalories(
+            _typeFromIndex(_type),
+            _effectiveMinutes,
+            _level,
+          ),
+        );
+        _estimating = false;
+      });
+    }
   }
 
   /// 지금 고른 유형이 근력인가 — 세트·횟수·중량으로 묻고 그렇게 저장할지
@@ -308,7 +407,11 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     // Intensity is persisted now, so always recompute calories from the
     // (restored or edited) level — no more preserving stale values.
     final ExerciseIntensity intensity = ExerciseIntensity.values[_level];
-    final int calories = _estimateCalories(type, minutes, _level);
+    // 화면이 보여 준 값을 그대로 싣는다 — 서버는 이 값을 쓰지 않고 같은 계산을
+    // 다시 하지만(#1312), 서버가 없는 경로(목업 저장소)는 이 값을 기록에 남긴다.
+    // 미리보기가 아직 안 돌아왔으면 앱이 아는 유형 평균으로 채운다.
+    final int calories =
+        _estimate?.calories ?? _estimateCalories(type, minutes, _level);
 
     setState(() => _saving = true);
     try {
@@ -439,11 +542,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   runSpacing: 8,
                   children: <Widget>[
                     for (int i = 0; i < types.length; i++)
-                      _chip(
-                        types[i],
-                        _type == i,
-                        () => setState(() => _type = i),
-                      ),
+                      _chip(types[i], _type == i, () {
+                        setState(() => _type = i);
+                        _scheduleEstimate();
+                      }),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -454,6 +556,15 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   controller: _name,
                   textInputAction: TextInputAction.done,
                   maxLength: 100,
+                  // 글자마다 부르지 않는다 — 이름 해석이 외부 호출을 탈 수 있어,
+                  // 조작이 멎은 뒤 한 번이면 된다(#1312). 비우면 그 자리에서
+                  // 숫자를 지운다.
+                  onChanged: (String _) => _scheduleEstimate(),
+                  onSubmitted: (String _) => _scheduleEstimate(immediate: true),
+                  onTapOutside: (PointerDownEvent _) {
+                    FocusScope.of(context).unfocus();
+                    _scheduleEstimate(immediate: true);
+                  },
                   decoration: InputDecoration(
                     isDense: true,
                     counterText: '',
@@ -493,7 +604,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     min: 1,
                     max: 40,
                     suffix: l.exUnitSets,
-                    onChanged: (double v) => setState(() => _sets = v),
+                    onChanged: (double v) {
+                      setState(() => _sets = v);
+                      _scheduleEstimate();
+                    },
                   ),
                   const SizedBox(height: 20),
                   _Label(l.exExerciseReps),
@@ -529,7 +643,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     min: 1,
                     max: 600,
                     suffix: l.exUnitMinutes,
-                    onChanged: (double v) => setState(() => _minutes = v),
+                    onChanged: (double v) {
+                      setState(() => _minutes = v);
+                      _scheduleEstimate();
+                    },
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -539,58 +656,20 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   children: <Widget>[
                     for (int i = 0; i < levels.length; i++) ...<Widget>[
                       Expanded(
-                        child: _chip(
-                          levels[i],
-                          _level == i,
-                          () => setState(() => _level = i),
-                          center: true,
-                        ),
+                        child: _chip(levels[i], _level == i, () {
+                          setState(() => _level = i);
+                          _scheduleEstimate();
+                        }, center: true),
                       ),
                       if (i < levels.length - 1) const SizedBox(width: 8),
                     ],
                   ],
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: FigmaColors.softBlue,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      const Icon(
-                        Icons.local_fire_department,
-                        color: FigmaColors.heartOrange,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          l.exEstimatedCalories,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.foreground,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        l.unitKcalValue(
-                          _estimateCalories(
-                            _typeFromIndex(_type),
-                            _effectiveMinutes,
-                            _level,
-                          ),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
+                _CalorieBox(
+                  key: const Key('exerciseCalorieBox'),
+                  estimate: _estimate,
+                  loading: _estimating,
                 ),
                 // 지우기는 고치는 화면 맨 아래에서만 한다 — 목록 줄의 휴지통은
                 // 없앴다. 새로 적는 시트에는(수정이 아니면) 지울 기록 자체가
@@ -650,6 +729,96 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
 }
 
 /// 날짜 한 칸 — 눌러서 달력을 연다. 기본값은 오늘이다.
+/// 예상 소모 칼로리 상자. (#1312)
+///
+/// 이름이 차기 전에는 **숫자를 띄우지 않는다.** 예전에는 시트를 여는 순간
+/// 기본값만으로 확정된 듯한 값이 떠 있었고, 이름 칸은 계산에 아무 영향이
+/// 없었다 — 그 숫자가 무엇을 근거로 나왔는지도 이름이 왜 필수인지도 화면에서
+/// 읽히지 않았다.
+///
+/// 값이 있을 때는 근거를 함께 적는다. 종목 참조표와 회원 체중에서 나온 값과,
+/// 이름이 종목으로 접히지 않아 유형 평균으로 때운 값은 같은 굵기로 적혀서는
+/// 안 된다 — 식단이 공공 DB 값과 추정값을 나눠 보여 주는 것과 같은 규약이다.
+class _CalorieBox extends StatelessWidget {
+  const _CalorieBox({super.key, required this.estimate, required this.loading});
+
+  final ExerciseCalorieEstimate? estimate;
+
+  /// 계산이 도는 중. 이름을 막 적은 직후의 빈 칸을 "값이 없다" 로 읽히지 않게
+  /// 한다 — 곧 채워질 자리다.
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final ExerciseCalorieEstimate? value = estimate;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: FigmaColors.softBlue,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.local_fire_department,
+                color: FigmaColors.heartOrange,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l.exEstimatedCalories,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              if (value == null)
+                Text(
+                  loading ? l.exCaloriesCalculating : l.exCaloriesNeedName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mutedForeground,
+                  ),
+                )
+              else
+                Text(
+                  l.unitKcalValue(value.calories),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.primary,
+                  ),
+                ),
+            ],
+          ),
+          if (value != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              // 참조표로 계산했으면 무엇으로 계산했는지까지 말한다 — 회원이 적은
+              // 말과 종목 이름이 다를 수 있다("런닝머신" → "러닝머신").
+              value.source.isGrounded && value.matchedName.isNotEmpty
+                  ? l.exCaloriesFromCatalog(value.matchedName)
+                  : l.exCaloriesRoughEstimate,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _DateField extends StatelessWidget {
   const _DateField({required this.date, required this.onTap, super.key});
 

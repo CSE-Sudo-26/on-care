@@ -1,3 +1,4 @@
+import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 
 abstract class ExerciseRepository {
@@ -15,6 +16,22 @@ abstract class ExerciseRepository {
   /// 경계는 서버가 정한다 — 앱이 따로 계산해 넘기면 같은 회원의 `이번 주` 가
   /// 화면마다 다른 날부터 시작한다.
   Future<String> fetchAdvice(String period);
+
+  /// POST /exercise/calories — 운동 이름·시간·강도로 예상 소모 칼로리. (#1312)
+  ///
+  /// 저장 경로와 **같은 계산**이라, 폼이 보여 준 숫자와 저장된 기록의 숫자가
+  /// 갈리지 않는다. 이름이 종목 참조표에 붙고 회원 체중을 알면 그 둘에서 나온
+  /// 값이고, 아니면 유형 평균의 어림값이다 — 어느 쪽인지는
+  /// [ExerciseCalorieEstimate.source] 가 말한다.
+  ///
+  /// [name] 은 비어 있으면 안 된다. 이름 없이 확정된 숫자를 내주지 않는 것이 이
+  /// 계산의 요점이라, 부르는 쪽이 이름이 찬 뒤에 부른다.
+  Future<ExerciseCalorieEstimate> previewCalories({
+    required ExerciseType type,
+    required String name,
+    required int minutes,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
+  });
 
   /// Persist a new workout session (POST /exercise/sessions) and return
   /// the created session as the server materialised it.

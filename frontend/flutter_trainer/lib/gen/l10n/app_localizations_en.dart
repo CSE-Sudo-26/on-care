@@ -996,6 +996,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInsightMemoAdded => 'Added to memo';
 
   @override
+  String chatInsightMemoSummaryDiscomfort(String part) {
+    return '$part discomfort detected';
+  }
+
+  @override
+  String get chatInsightMemoSummaryNegative => 'Workout strain detected';
+
+  @override
   String get chatInsightMemoSaved =>
       'The AI insight was added to the trainer memo.';
 
@@ -2199,6 +2207,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldCalories => 'Estimated calories';
 
   @override
+  String get routineCaloriesNeedName => 'Enter an exercise name';
+
+  @override
+  String get routineCaloriesRoughEstimate =>
+      'A rough average for this exercise type · the saved record will also use the member\'s weight';
+
+  @override
   String get routineUnitMinutes => 'min';
 
   @override
@@ -2516,6 +2531,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count exercises · $minutes min';
   }
+
+  @override
+  String get aiInsightMemoTitle => 'AI insights (last 7 days)';
+
+  @override
+  String get aiInsightMemoEmpty => 'No insights detected in the last 7 days';
+
+  @override
+  String get aiInsightMemoFailed => 'Couldn\'t load the detected memos';
+
+  @override
+  String aiRecentRoutineMore(String name, int count) {
+    return '$name and $count more';
+  }
+
+  @override
+  String get aiNoRecentRoutine => 'No record';
 
   @override
   String get aiRecentRoutine => 'Recent activity';

@@ -3,6 +3,7 @@
 
   GET  /exercise/weeks/current   -> 이번 주 운동 집계(요일별/타입별 + streak + 코칭)
   POST /exercise/sessions        -> 운동 기록 추가 (집계에 반영)
+  POST /exercise/calories        -> 운동 이름·시간·강도로 소모 칼로리 미리보기
 """
 from __future__ import annotations
 
@@ -19,8 +20,8 @@ from app.core import clock
 from app.db.session import get_db
 from app.models.models import ExerciseSession, HealthProfile
 from app.schemas.exercise_api import (
-    ExerciseAdviceResponse, ExerciseSessionCreate, ExerciseSessionOut,
-    ExerciseWeekResponse,
+    ExerciseAdviceResponse, ExerciseCalorieRequest, ExerciseCalorieResponse,
+    ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
 )
 from app.services import exercise_activity, exercise_service, exercise_types
 from app.services.coach import personal_ingest
@@ -165,6 +166,62 @@ def _placement(day: date | None) -> tuple[str, str, datetime]:
     )
 
 
+def _calories_for(
+    db: Session,
+    user_id: str,
+    payload: ExerciseSessionCreate,
+    exercise_type: str,
+):
+    """저장할 소모 칼로리와 그 근거. **클라이언트가 보낸 값은 쓰지 않는다.**
+
+    수기 기록의 칼로리는 오랫동안 앱이 계산해 보낸 값이었다. 그래서 같은 운동이
+    앱과 서버에서 다른 값으로 적힐 수 있었고, 이름·체중을 반영하려면 두 곳을
+    같이 고쳐야 했다. 이제 계산은 서버 하나다(#1312) — 앱이 화면에 띄우는
+    미리보기도 `POST /exercise/calories` 로 같은 계산을 받아 오므로, 저장 뒤에
+    숫자가 달라지지 않는다.
+    """
+    return exercise_service.estimate(
+        db,
+        name=payload.name,
+        type_=exercise_type,
+        minutes=payload.minutes,
+        intensity=payload.intensity,
+        weight_kg=exercise_service.member_weight_kg(db, user_id),
+    )
+
+
+@router.post("/exercise/calories", response_model=ExerciseCalorieResponse)
+def preview_calories(
+    payload: ExerciseCalorieRequest,
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> ExerciseCalorieResponse:
+    """운동 이름·시간·강도로 소모 칼로리 미리보기. (#1312)
+
+    저장 경로와 **같은 계산**이다. 폼이 이 값을 그대로 보여 주고 서버가 저장할 때
+    다시 계산하므로, 화면의 숫자와 기록의 숫자가 갈리지 않는다.
+
+    이름이 비어 있으면 400 이다 — 이름 없이 확정된 숫자를 내주지 않는 것이 이
+    계산의 요점이다. 이름이 있어도 종목표에 붙지 않으면 유형 평균이 나오고,
+    그때는 `source` 가 `estimate` 라 화면이 어림값으로 표시할 수 있다.
+    """
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="운동 이름을 입력해 주세요.")
+    result = exercise_service.estimate(
+        db,
+        name=payload.name,
+        type_=payload.type,
+        minutes=payload.minutes,
+        intensity=payload.intensity,
+        weight_kg=exercise_service.member_weight_kg(db, current_user.id),
+    )
+    return ExerciseCalorieResponse(
+        calories=result.calories,
+        source=result.source,
+        matched_name=result.matched_name,
+    )
+
+
 @router.post("/exercise/sessions", response_model=ExerciseSessionOut, status_code=201)
 def add_session(
     payload: ExerciseSessionCreate,
@@ -175,6 +232,7 @@ def add_session(
     # 타입·Field 제약에서 422 로 걸린다.
     week_start, day_label, completed_at = _placement(payload.date)
     normalized = exercise_types.normalize(payload.type)
+    estimated = _calories_for(db, current_user.id, payload, normalized)
     row = ExerciseSession(
         id=f"ex-{uuid.uuid4().hex[:12]}",
         user_id=current_user.id,
@@ -186,7 +244,8 @@ def add_session(
         sets=_strength_only(normalized, payload.sets),
         reps=_strength_only(normalized, payload.reps),
         weight=_weight_for(normalized, payload.weight),
-        calories=payload.calories,
+        calories=estimated.calories,
+        calorie_source=estimated.source,
         intensity=payload.intensity,
         # 세 날짜 필드가 같은 날을 가리킨다 — 하나만 채우면 읽는 자리마다 다른
         # 날짜를 본다. (#1264)
@@ -239,7 +298,9 @@ def update_session(
     row.sets = _strength_only(row.type, payload.sets)
     row.reps = _strength_only(row.type, payload.reps)
     row.weight = _weight_for(row.type, payload.weight)
-    row.calories = payload.calories
+    estimated = _calories_for(db, current_user.id, payload, row.type)
+    row.calories = estimated.calories
+    row.calorie_source = estimated.source
     row.intensity = payload.intensity
     db.commit()
     db.refresh(row)

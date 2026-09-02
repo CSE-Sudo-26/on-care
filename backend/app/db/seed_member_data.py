@@ -559,6 +559,64 @@ def _seed_chat(db: Session, member_id: str) -> None:
         if row.id not in keep:
             db.delete(row)
     _safe_commit(db)
+    _seed_insight_memos(db, member_id, thread, base)
+
+
+#: 시드 대화에서 감지 메모로 옮길 부위와, 그 부위를 불편하다고 말한 표현.
+#: (#1655) 트레이너 웹의 `ChatContextInsightDetector` 가 배너를 띄우는 것과 같은
+#: 문장을 고르기 위한 **시드 전용** 축약본이다 — 감지 자체는 앱이 하고, 여기서는
+#: 데모 계정이 처음부터 화면과 같은 메모를 갖고 있게 하는 것이 목적이다.
+_INSIGHT_BODY_PARTS = ("무릎", "허리", "어깨", "발목", "손목", "목")
+_INSIGHT_DISCOMFORT = ("아프", "아파", "불편", "시큰", "당기", "결리", "뻐근", "쑤시")
+
+#: 감지 메모를 심는 창(일). 프로그램 탭 분석 박스가 읽는 창과 같다.
+_INSIGHT_MEMO_DAYS = 7
+
+
+def _seed_insight_memos(
+    db: Session,
+    member_id: str,
+    thread: list[tuple[str, str, int]],
+    base: datetime,
+) -> None:
+    """시드 대화의 불편 호소를 채팅 감지 메모로 남긴다(멱등). (#1655)
+
+    데모 계정이 실 API 로 프로그램 탭을 열었을 때, 트레이너 웹 로컬 데모와 같은
+    `최근 7일 AI 감지 메모` 를 보게 하려는 것이다. `insight_id` 는 앱이 만드는
+    값(`"{메시지 id}:discomfort"`)과 같은 규칙이라, 데모에서 그 배너의
+    `메모에 추가` 를 눌러도 메모가 두 번 쌓이지 않고 `메모 추가됨` 으로 뜬다.
+
+    본문은 앱이 저장하는 요약과 같은 문구(`"무릎 불편 감지"`)다.
+    """
+    for i, (sender, text, days_ago) in enumerate(thread):
+        if sender != "client" or days_ago >= _INSIGHT_MEMO_DAYS:
+            continue
+        if not any(word in text for word in _INSIGHT_DISCOMFORT):
+            continue
+        part = next((p for p in _INSIGHT_BODY_PARTS if p in text), None)
+        if part is None:
+            continue
+        insight_id = f"seed-chat-{member_id}-{i}:discomfort"
+        memo_id = f"seed-memo-{member_id}-{i}"
+        created_at = base - timedelta(days=days_ago) + timedelta(minutes=i * 2)
+        row = db.get(models.TrainerClientMemo, memo_id)
+        if row is None:
+            db.add(models.TrainerClientMemo(
+                id=memo_id,
+                trainer_id=TRAINER_ID,
+                member_id=member_id,
+                body=f"{part} 불편 감지",
+                source="chat_insight",
+                insight_id=insight_id,
+                insight_kind="discomfort",
+                created_at=created_at,
+            ))
+            continue
+        # 대화가 바뀌면 메모도 따라간다 — 시드 행은 늘 지금 대화의 것이다.
+        row.body = f"{part} 불편 감지"
+        row.insight_id = insight_id
+        row.created_at = created_at
+    _safe_commit(db)
 
 
 def _routine_rows(member_id: str) -> list[FixtureRoutine]:

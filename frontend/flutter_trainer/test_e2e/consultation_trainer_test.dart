@@ -78,9 +78,17 @@ void main() {
         expect(row['exercise_goal'], 'strength');
         // 운동 목표에서 자동 매핑된 값이다(#1112) — strength → general.
         expect(row['health_purpose_type'], 'general');
-        // 회원 단계에서 선택한 "시간 협의" 값이 그대로 도착한다(#1256).
-        expect(row['preferred_time_slot'], 'flexible');
+        // 회원 단계에서 고른 희망 시각이 그대로 도착한다(#1256, #1587) —
+        // 시각 없는 요청은 더 이상 만들어지지 않는다.
+        expect(row['preferred_time_slot'], consultPreferredTimeSlot);
         expect(row['status'], 'pending');
+
+        // 승인이 잡을 자리를 비워 둔다 — 앞선 실행이 승인까지 하고 정리 전에
+        // 죽었으면 같은 자리에 일정이 남아 이번 승인이 409 로 막힌다.
+        await api.clearSessionsAt(
+          date: row['preferred_date'] as String,
+          time: consultStartTime,
+        );
 
         await bootSignedOut(tester);
         await loginAsTrainer(tester);
@@ -116,6 +124,29 @@ void main() {
           isTrue,
           reason: '승인했는데 담당 연결이 생기지 않았습니다.',
         );
+
+        // 희망 시각이 필수가 된 뒤로(#1587) 승인은 그 시각에 상담 일정까지
+        // 만든다. 담당만 생기고 일정이 없으면 트레이너가 스케줄 탭에서 다시
+        // 잡아야 하는 예전 상태로 돌아간 것이다.
+        final List<Map<String, dynamic>> sessions = await api.scheduleFor(
+          memberId,
+        );
+        final Map<String, dynamic> session = sessions.firstWhere(
+          (Map<String, dynamic> s) =>
+              s['date'] == row['preferred_date'] &&
+              s['time'] == consultStartTime,
+          orElse: () => <String, dynamic>{},
+        );
+        expect(
+          session,
+          isNotEmpty,
+          reason:
+              '승인이 ${row['preferred_date']} $consultStartTime 상담 일정을 만들지 않았습니다.',
+        );
+        expect(session['type'], '상담');
+        // 정리 단계가 지울 수 있게 남긴다 — 회원 계정을 지워도
+        // `trainer_schedule.member_id` 는 SET NULL 이라 일정은 그대로 남는다.
+        E2eState.merge(<String, Object?>{'sessionId': session['id']});
 
       case 'trainer-reject':
         final String consultationId = state.require('rejectConsultationId');

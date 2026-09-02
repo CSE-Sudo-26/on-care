@@ -15,13 +15,14 @@ ExerciseGoal = Literal[
 HealthPurposeType = Literal[
     "weight", "chronic", "rehab", "general", "none", "other"
 ]
-#: "flexible" 이거나 "HH:MM" 정확한 시각. 예전 morning/afternoon/evening 시간대
-#: 값이 이미 저장된 행에 남아 있을 수 있어 **응답**은 `str` 로 느슨하게 받고
-#: **입력**만 이 패턴으로 좁힌다(#1256). 컬럼이 `String(20)` 그대로라 마이그레이션은
-#: 필요 없다.
-PREFERRED_TIME_PATTERN = (
-    r"^flexible$|^([01]\d|2[0-3]):[0-5]\d(?:-([01]\d|2[0-3]):[0-5]\d)?$"
-)
+#: "HH:MM" 정확한 시각이거나 "HH:MM-HH:MM" 시작–종료 범위. 시각 없는
+#: "flexible" 은 더 이상 받지 않는다(#1587) — 승인해도 잡을 시간이 없어,
+#: 상담이 승인만 되고 일정은 만들어지지 않는 반쪽 상태가 남았다.
+#:
+#: 예전 flexible/morning/afternoon/evening 값이 이미 저장된 행에 남아 있어
+#: **응답**은 `str` 로 느슨하게 받고 **입력**만 이 패턴으로 좁힌다(#1256).
+#: 컬럼이 `String(20)` 그대로라 마이그레이션은 필요 없다.
+PREFERRED_TIME_PATTERN = r"^([01]\d|2[0-3]):[0-5]\d(?:-([01]\d|2[0-3]):[0-5]\d)?$"
 
 
 class ConsultationCreate(BaseModel):

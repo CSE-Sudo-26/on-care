@@ -101,6 +101,26 @@ Future<void> _revealInForm(
   await tester.pump();
 }
 
+/// 희망 시각을 범위 선택기 기본값(10:00–11:00)으로 확정한다.
+///
+/// "시간 협의"가 없어진 뒤(#1587) 폼을 끝까지 채우려면 이 단계가 반드시
+/// 필요하다 — 선택기 내부 조작은 `consult_time_range_picker_test.dart` 의
+/// 몫이라 여기서는 열고 확인만 누른다.
+Future<void> _pickPreferredTime(WidgetTester tester) async {
+  await _revealInForm(tester, find.byKey(const Key('consult-time')), 180);
+  await tester.tap(find.byKey(const Key('consult-time')));
+  await tester.pumpAndSettle();
+  // 선택기(시계 다이얼)가 테스트 뷰포트보다 길다 — 확인 버튼은 다이얼로그
+  // 안에서 스크롤해 올려야 눌린다.
+  final Finder confirm = find.byKey(
+    const ValueKey<String>('consult-time-range-confirm'),
+  );
+  await tester.ensureVisible(confirm);
+  await tester.pumpAndSettle();
+  await tester.tap(confirm);
+  await tester.pumpAndSettle();
+}
+
 AppLocalizations _localizations(WidgetTester tester) {
   return AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 }
@@ -269,35 +289,35 @@ void main() {
     },
   );
 
-  testWidgets(
-    'time is required unless "시간 협의" is picked, and no enum text leaks (#1256)',
-    (WidgetTester tester) async {
-      await pumpRoute(
-        tester,
-        AppRoutes.consultationRequestPath(
-          gymId: _gym.id,
-          trainerId: _trainer.id,
-        ),
-      );
-      final AppLocalizations l = _localizations(tester);
+  testWidgets('time is always required and no enum text leaks (#1256, #1587)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRoute(
+      tester,
+      AppRoutes.consultationRequestPath(gymId: _gym.id, trainerId: _trainer.id),
+    );
+    final AppLocalizations l = _localizations(tester);
 
-      await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
-      await tester.tap(find.text(l.exSendConsultRequest));
-      await tester.pump();
-      await _revealInForm(tester, find.text(l.exTimeRequired), -100);
-      expect(find.text(l.exTimeRequired), findsOneWidget);
-      // 정확한 시각 대신 코드 원문(`PreferredTimeSlot.flexible` 같은)이 화면에
-      // 새어 나오면 안 된다.
-      expect(find.textContaining('PreferredTimeSlot'), findsNothing);
+    await _revealInForm(tester, find.text(l.exSendConsultRequest), 250);
+    await tester.tap(find.text(l.exSendConsultRequest));
+    await tester.pump();
+    await _revealInForm(tester, find.text(l.exTimeRequired), -100);
+    expect(find.text(l.exTimeRequired), findsOneWidget);
+    // 정확한 시각 대신 코드 원문(`PreferredTimeSlot.flexible` 같은)이 화면에
+    // 새어 나오면 안 된다.
+    expect(find.textContaining('PreferredTimeSlot'), findsNothing);
 
-      await tester.tap(find.byKey(const Key('consult-time-flexible')));
-      await tester.pump();
-      expect(find.text(l.exTimeRequired), findsNothing);
-      // 시간 선택을 먼저, 시간 협의를 같은 줄에 유지한다. 협의 중에는 필드만
-      // 비활성화하고 레이아웃은 움직이지 않는다.
-      expect(find.byKey(const Key('consult-time')), findsOneWidget);
-    },
-  );
+    // "시간 협의"는 없앴다(#1587) — 시각을 채우는 길은 범위 선택기뿐이다.
+    expect(find.byKey(const Key('consult-time-flexible')), findsNothing);
+    expect(find.text(l.exTimeFlexible), findsNothing);
+
+    await _pickPreferredTime(tester);
+    await _revealInForm(tester, find.byKey(const Key('consult-time')), -100);
+    expect(find.text(l.exTimeRequired), findsNothing);
+    expect(find.byKey(const Key('consult-time')), findsOneWidget);
+    // 고른 값이 필드에 그대로 보인다(선택기 기본값 10:00–11:00).
+    expect(find.text('10:00–11:00'), findsOneWidget);
+  });
 
   testWidgets('valid submission stores pending and history shows status', (
     WidgetTester tester,
@@ -339,14 +359,10 @@ void main() {
         )
         .first;
     expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
-    // "시간 협의"를 고른다 — 정확한 시각 입력(키보드 다이얼로그)은 별도
-    // 위젯 테스트에서 다룬다(#1256).
-    await _revealInForm(
-      tester,
-      find.byKey(const Key('consult-time-flexible')),
-      180,
-    );
-    await tester.tap(find.byKey(const Key('consult-time-flexible')));
+    // 희망 시각은 필수다(#1587). 선택기 자체의 조작(다이얼·직접 입력)은
+    // `consult_time_range_picker_test.dart` 가 따로 다루므로, 여기서는 기본값
+    // (10:00–11:00)을 그대로 확정한다.
+    await _pickPreferredTime(tester);
 
     await _revealInForm(tester, find.text(l.exSendConsultRequest), 220);
     await tester.tap(find.text(l.exSendConsultRequest));

@@ -434,10 +434,14 @@ class RoutineOut(BaseModel):
     id: str
     name: str
     minutes: int
-    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 유형·시간·강도에서 계산한 값이라
-    #: 따로 저장하지 않는다 — 운동을 시간과 칼로리 두 축으로 보여 주기로 한
-    #: 뒤(#996) 배정 카드에도 이 값이 필요해졌다.
+    #: 이 루틴을 수행하면 예상되는 소모 칼로리. 루틴 이름·유형·시간·강도와 **그
+    #: 회원의 체중**에서 계산한 값이라 따로 저장하지 않는다 — 운동을 시간과 칼로리
+    #: 두 축으로 보여 주기로 한 뒤(#996) 배정 카드에도 이 값이 필요해졌다.
     calories: int = 0
+    #: 위 값의 근거 — db=종목 참조표+체중, mixed=이름 해석만 AI, estimate=유형
+    #: 평균 어림값. 회원 앱(`ExerciseSessionOut.calorie_source`)과 같은 어휘라
+    #: 두 앱이 같은 기록을 같은 굵기로 보여 준다(#1312).
+    calorie_source: str = "estimate"
     type: RoutineType
     #: 트레이너가 언제 하라고 보낸 배정인가. 날짜를 정하지 않았으면 비어 있다.
     exercise_date: _date | None = None
@@ -808,6 +812,16 @@ class RoutineOptionsRequest(BaseModel):
 #: LLM 폴백 try 블록 밖이라 500 이 된다.
 ROUTINE_CHAT_MAX_MESSAGES = 10
 
+#: 분석에 싣는 채팅 감지 메모 최대 건수(#1655). 최근 7일치라 실제로는 이보다
+#: 적지만, 상한을 스키마에 두는 이유는 [ROUTINE_CHAT_MAX_MESSAGES] 와 같다 —
+#: 서비스의 limit 만 올리면 여기서 검증이 터지고, 그 생성은 폴백 밖이라 500 이다.
+ROUTINE_INSIGHT_MEMO_MAX = 10
+
+#: 감지 메모를 읽는 기간(일, KST 달력일). 오늘과 이전 6일이다. 프로그램 탭
+#: 분석 박스가 보여 주는 창과 같아야 한다 — 화면에 없는 메모가 생성에만
+#: 반영되면 트레이너는 왜 그렇게 나왔는지 알 길이 없다.
+ROUTINE_INSIGHT_MEMO_DAYS = 7
+
 
 #: 고객의 운동 데이터 축적도에 따른 추천 방식(#776).
 #:
@@ -837,6 +851,16 @@ class RoutineOptionAnalysisOut(BaseModel):
     #: 트레이너가 어떤 발화가 반영됐는지 확인할 수 있도록 응답에도 함께 내보낸다.
     recent_messages: list[str] = Field(
         default_factory=list, max_length=ROUTINE_CHAT_MAX_MESSAGES
+    )
+    #: 최근 7일(KST)의 채팅 감지 메모, 최신 먼저. `"09.01 무릎 불편 감지"` 처럼
+    #: 날짜와 요약이 한 줄이다(#1655).
+    #:
+    #: 회원 발화 원문이 아니라 트레이너가 **메모로 남기기로 한** 감지 요약이다 —
+    #: 대화(`recent_messages`)가 14일 창의 원문을 그대로 싣는 것과 달리, 이쪽은
+    #: 트레이너가 한 번 걸러 둔 자료라 더 무겁게 볼 수 있다. 손으로 쓴 메모
+    #: (`source='trainer'`)는 넣지 않는다.
+    insight_memos: list[str] = Field(
+        default_factory=list, max_length=ROUTINE_INSIGHT_MEMO_MAX
     )
     #: 이 분석이 어느 추천 단계에 해당하는지(#776). 프론트가 화면 문구를
     #: 정하는 유일한 기준이다 — 프론트가 자체 기준으로 다시 판단하지 않는다.

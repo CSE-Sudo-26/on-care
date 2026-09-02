@@ -4,7 +4,7 @@ Description: Cost-safe bootstrap resources for the OnCare App Runner backend
 Parameters:
   GitHubOwner:
     Type: String
-    Default: CSE-Sudo-26
+    Default: CSE-Sudo
   GitHubRepository:
     Type: String
     Default: on-care

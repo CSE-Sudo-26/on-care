@@ -175,6 +175,7 @@ def rule_based_plans(
     frequent_exercises: list[str] | tuple[str, ...] = (),
     conditions: str = "",
     recent_messages: list[str] | tuple[str, ...] = (),
+    insight_memos: list[str] | tuple[str, ...] = (),
 ) -> tuple[dict, dict]:
     """결정적 규칙형 A/B. 회원 수치를 근거 문구에 인용한다.
 
@@ -186,8 +187,11 @@ def rule_based_plans(
     # 안전 주의사항은 LLM 이 죽은 주에도 지켜야 한다(#1440). 건강 프로필의
     # 주의사항과 최근 대화를 같은 기준으로 읽어, 부담이 큰 동작을 빼고 저충격
     # 대안으로 바꾼다. 진단은 하지 않는다 — 무엇을 빼야 안전한가만 본다.
-    cautions = cautions_in(conditions, recent_messages)
-    escalate = needs_professional_check(conditions, recent_messages)
+    # 채팅 감지 메모(`"09.01 무릎 불편 감지"`)도 대화와 같은 글로 읽는다(#1655).
+    # 트레이너가 남겨 둔 신호라 LLM 이 죽은 주에도 그 부위는 피해야 한다.
+    signals = [*recent_messages, *insight_memos]
+    cautions = cautions_in(conditions, signals)
+    escalate = needs_professional_check(conditions, signals)
     if frequent_exercises:
         return _pattern_based_plans(
             frequent_exercises=list(frequent_exercises),

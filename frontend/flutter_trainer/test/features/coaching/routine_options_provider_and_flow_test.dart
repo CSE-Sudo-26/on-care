@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
@@ -12,6 +15,8 @@ import 'package:oncare_trainer/features/coaching/domain/entities/routine_options
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 
 const _mockConfig = AppConfig(
   environment: Environment.dev,
@@ -249,6 +254,8 @@ void main() {
       WidgetTester tester, {
       AppConfig config = _mockConfig,
       RoutineOptions? response,
+      List<RoutineHistoryEntry> history = const <RoutineHistoryEntry>[],
+      List<TrainerMemo> memos = const <TrainerMemo>[],
     }) async {
       tester.view.physicalSize = const Size(1000, 2400);
       tester.view.devicePixelRatio = 1.0;
@@ -263,6 +270,14 @@ void main() {
           overrides: <Override>[
             appConfigProvider.overrideWithValue(config),
             trainerRoutineOptionsRepositoryProvider.overrideWithValue(repo),
+            // 분석 박스가 읽는 두 자리(#1655). 실제 저장소를 붙이면 이
+            // 위젯 테스트가 열지도 않는 드리프트 DB 의 타이머에 매인다.
+            clientHistoryProvider(
+              _client.id,
+            ).overrideWith((Ref ref) => Stream.value(history)),
+            trainerMemoRepositoryProvider.overrideWithValue(
+              _StaticMemoRepository(memos),
+            ),
           ],
           child: const MaterialApp(
             locale: Locale('ko'),
@@ -286,6 +301,98 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
       await tester.pumpAndSettle();
     }
+
+    // #1655 — 분석 박스는 왼쪽에 사실, 오른쪽에 최근 7일 AI 감지 메모를 둔다.
+    TrainerMemo memo(String id, String body, int daysAgo, TrainerMemoSource source) {
+      final DateTime today = nowKst();
+      final DateTime at = DateTime(
+        today.year,
+        today.month,
+        today.day - daysAgo,
+        9,
+      );
+      return TrainerMemo(
+        id: id,
+        body: body,
+        source: source,
+        createdAt: at,
+        updatedAt: at,
+      );
+    }
+
+    testWidgets('#1655 최근 운동은 날짜가 아니라 마친 운동 이름을 말한다', (tester) async {
+      await pumpFlow(
+        tester,
+        history: <RoutineHistoryEntry>[
+          const RoutineHistoryEntry(
+            id: 'h1',
+            dateLabel: '9/1 (오늘)',
+            label: 'PT 세션',
+            completionRate: 80,
+            exercises: <String>['런지 ✗', '스쿼트 ✓', '레그프레스 ✓'],
+            clientFeedback: '',
+            trainerNote: '',
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // 하지 않은 운동(✗)은 "최근 운동" 이 아니다.
+      expect(find.text('스쿼트 외 1개'), findsOneWidget);
+      expect(find.text('오늘'), findsNothing);
+    });
+
+    testWidgets('#1655 오른쪽 칸은 최근 7일 채팅 감지 메모만 최신순으로 보여 준다', (
+      tester,
+    ) async {
+      await pumpFlow(
+        tester,
+        memos: <TrainerMemo>[
+          memo('a', '무릎 불편 감지', 0, TrainerMemoSource.chatInsight),
+          memo('b', '어깨 불편 감지', 3, TrainerMemoSource.chatInsight),
+          // 8일 전은 창 밖이고, 손으로 쓴 메모는 이 칸의 대상이 아니다.
+          memo('c', '허리 불편 감지', 8, TrainerMemoSource.chatInsight),
+          memo('d', '수업 시간 조정 요청', 0, TrainerMemoSource.trainer),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('무릎 불편 감지'), findsOneWidget);
+      expect(find.text('어깨 불편 감지'), findsOneWidget);
+      expect(find.text('허리 불편 감지'), findsNothing);
+      expect(find.text('수업 시간 조정 요청'), findsNothing);
+    });
+
+    testWidgets('#1655 메모가 늘어도 감지 칸의 높이는 그대로다', (tester) async {
+      await pumpFlow(
+        tester,
+        memos: <TrainerMemo>[
+          memo('a', '무릎 불편 감지', 0, TrainerMemoSource.chatInsight),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final Size one = tester.getSize(
+        find.byKey(const ValueKey<String>('ai-chat-insight-memos')),
+      );
+
+      await pumpFlow(
+        tester,
+        memos: <TrainerMemo>[
+          for (int i = 0; i < 8; i++)
+            memo('m$i', '무릎 불편 감지 $i', i, TrainerMemoSource.chatInsight),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // 아래로 자라면 생성 버튼이 눌리던 자리에서 밀린다 — 넘치는 메모는
+      // 칸 안에서 스크롤한다.
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey<String>('ai-chat-insight-memos')))
+            .height,
+        one.height,
+      );
+    });
 
     testWidgets('세 단계는 조건 설정 → 프로그램 선택 → 최종 검토다', (tester) async {
       await pumpFlow(tester);
@@ -955,4 +1062,31 @@ void _rateLimitMessageTests() {
     expect(find.text('AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요'), findsOneWidget);
     expect(find.text('AI 생성을 너무 자주 요청했어요. 잠시 후 다시 시도해 주세요'), findsNothing);
   });
+}
+
+/// 분석 박스가 읽을 메모만 들고 있는 저장소 — 쓰기는 이 흐름에서 쓰지 않는다.
+class _StaticMemoRepository implements TrainerMemoRepository {
+  const _StaticMemoRepository(this._memos);
+
+  final List<TrainerMemo> _memos;
+
+  @override
+  Future<List<TrainerMemo>> fetch(String clientId) async => _memos;
+
+  @override
+  Future<TrainerMemo> create(
+    String clientId, {
+    required String body,
+    TrainerMemoSource source = TrainerMemoSource.trainer,
+    String? insightId,
+    String insightKind = '',
+  }) async => throw UnsupportedError('not used');
+
+  @override
+  Future<TrainerMemo> update(String clientId, String memoId, String body) =>
+      throw UnsupportedError('not used');
+
+  @override
+  Future<void> delete(String clientId, String memoId) async =>
+      throw UnsupportedError('not used');
 }

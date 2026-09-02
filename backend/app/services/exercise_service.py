@@ -23,25 +23,12 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.models.models import ExerciseSession
 from app.services import exercise_activity, exercise_types, period_window
+from app.services.exercise_catalog import energy, resolver
 
 #: 요일 라벨(월=0 … 일=6). 순서를 두 벌 두지 않으려고 논리 운동일 모듈의 정의를
 #: 그대로 쓴다 — 여기서 한 칸이라도 어긋나면 같은 기록이 화면과 AI 에서 다른
 #: 날짜가 된다. (#1264)
 WEEKDAY_LABELS = list(exercise_activity.WEEKDAY_LABELS)
-
-#: 운동 타입별 분당 소모 칼로리. 회원 앱의 `_estimateCalories`
-#: (`exercise_flows.dart`) 표를 그대로 옮긴 값이다 — 수기 입력은 앱이 계산해
-#: 보내고 PT 완료분은 서버가 계산하므로, 두 값이 다르면 같은 운동인데 회원
-#: 화면에서 칼로리가 갈린다.
-_KCAL_PER_MIN = {
-    exercise_types.CARDIO: 9.0,
-    exercise_types.STRENGTH: 6.0,
-    exercise_types.STRETCHING: 3.0,
-    exercise_types.OTHER: 5.0,
-}
-
-#: 강도 배수 — 회원 앱 `_intensityFactor` 와 같다.
-_INTENSITY_FACTOR = {"light": 0.85, "moderate": 1.0, "high": 1.2}
 
 #: 근력 1세트가 차지하는 벽시계 시간(세트 + 휴식). 회원 앱
 #: `kStrengthMinutesPerSetWithRest` 와 같은 값이다 — 세트를 모르는 옛 기록을
@@ -99,16 +86,61 @@ def weekday_label_of(day: str) -> str:
 
 
 def estimate_calories(type_: str, minutes: int, intensity: str) -> int:
-    """분·강도로 소모 칼로리 추정. 회원 앱과 같은 표를 쓴다.
+    """유형·분·강도만으로 추정하는 **폴백**. 운동 이름도 체중도 안 볼 때다.
+
+    이름이 있으면 [estimate] 를 쓴다 — 이 함수는 같은 `유산소 30분` 이면 달리기든
+    자전거든, 회원 체중이 몇이든 같은 값을 낸다(#1312). 그래도 남겨 둔 이유는
+    이름이 종목표에 붙지 않는 기록이 늘 있기 때문이고, 그때 화면마다 값이
+    갈리지 않으려면 폴백도 한 곳이어야 하기 때문이다(#1131).
 
     운동 유형은 정규화해서 본다 — 옛 값(`walking`·`yoga`)으로 저장된 기록도
     같은 표를 타야 회원 화면에서 칼로리가 갈리지 않는다.
     """
-    per_min = _KCAL_PER_MIN.get(
-        exercise_types.normalize(type_), _KCAL_PER_MIN[exercise_types.OTHER]
+    return energy.fallback(type_, minutes, intensity).calories
+
+
+def member_weight_kg(db: Session, user_id: str) -> float | None:
+    """소모 칼로리 계산에 쓸 회원 체중. 건강 프로필에 없으면 None.
+
+    없으면 지어내지 않는다 — 기준 체중으로 계산한 값은 이 회원의 값이 아니고,
+    그것을 참조표 근거(`db`)로 표시하면 실제보다 높은 신뢰 신호를 준다.
+    """
+    from app.models.models import HealthProfile
+
+    return db.scalar(
+        select(HealthProfile.weight_kg).where(HealthProfile.user_id == user_id)
     )
-    factor = _INTENSITY_FACTOR.get(intensity, 1.0)
-    return round(per_min * max(minutes, 0) * factor)
+
+
+def estimate(
+    db: Session,
+    *,
+    name: str,
+    type_: str,
+    minutes: int,
+    intensity: str,
+    weight_kg: float | None,
+    use_ai: bool = True,
+) -> energy.Estimate:
+    """운동 이름·체중까지 반영한 소모 칼로리와 그 근거. (#1312)
+
+    이름이 종목표에 붙고 체중을 알면 참조표 계수로, 아니면 유형 평균으로
+    떨어진다. 어느 쪽이든 값과 함께 `source` 가 나오므로 화면이 확정값과
+    어림값을 구분해 보여 줄 수 있다.
+
+    이름이 비어 있으면 부르지 않아도 된다 — 불러도 폴백이 나오지만, 이름이
+    없는 동안에는 화면이 숫자를 띄우지 않는 것이 이 이슈의 요구다.
+    """
+    resolution = resolver.resolve(db, name, use_ai=use_ai)
+    return energy.estimate(
+        resolution.row,
+        type_,
+        minutes,
+        intensity,
+        weight_kg,
+        resolver=resolution.resolver,
+        confidence=resolution.confidence,
+    )
 
 
 def _date_label_for_day(day_label: str) -> str:
@@ -216,6 +248,7 @@ def build_current_week(rows: list) -> dict:
             "reps": getattr(r, "reps", None),
             "weight": getattr(r, "weight", None),
             "calories": r.calories,
+            "calorie_source": getattr(r, "calorie_source", "") or "estimate",
             "intensity": getattr(r, "intensity", "moderate") or "moderate",
             "source": getattr(r, "source", "member") or "member",
             "assigned_routine_id": getattr(r, "assigned_routine_id", None),
