@@ -1850,6 +1850,18 @@ abstract class AppLocalizations {
   /// **'Added to memo'**
   String get chatInsightMemoAdded;
 
+  /// No description provided for @chatInsightMemoSummaryDiscomfort.
+  ///
+  /// In en, this message translates to:
+  /// **'{part} discomfort detected'**
+  String chatInsightMemoSummaryDiscomfort(String part);
+
+  /// No description provided for @chatInsightMemoSummaryNegative.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout strain detected'**
+  String get chatInsightMemoSummaryNegative;
+
   /// No description provided for @chatInsightMemoSaved.
   ///
   /// In en, this message translates to:
@@ -4459,6 +4471,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
+
+  /// No description provided for @aiInsightMemoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI insights (last 7 days)'**
+  String get aiInsightMemoTitle;
+
+  /// No description provided for @aiInsightMemoEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No insights detected in the last 7 days'**
+  String get aiInsightMemoEmpty;
+
+  /// No description provided for @aiInsightMemoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the detected memos'**
+  String get aiInsightMemoFailed;
+
+  /// No description provided for @aiRecentRoutineMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} and {count} more'**
+  String aiRecentRoutineMore(String name, int count);
+
+  /// No description provided for @aiNoRecentRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'No record'**
+  String get aiNoRecentRoutine;
 
   /// No description provided for @aiRecentRoutine.
   ///

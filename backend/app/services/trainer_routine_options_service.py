@@ -28,10 +28,13 @@ from app.models.models import (
     HealthProfile,
     RoutineHistory,
     TrainerClient,
+    TrainerClientMemo,
     TrainerRoutine,
 )
 from app.schemas.trainer_api import (
     ROUTINE_CHAT_MAX_MESSAGES,
+    ROUTINE_INSIGHT_MEMO_DAYS,
+    ROUTINE_INSIGHT_MEMO_MAX,
     RecommendationStatus,
     RoutineIntensityPreference,
     RoutineOptionAnalysisOut,
@@ -137,6 +140,10 @@ CHAT_MAX_MESSAGES = ROUTINE_CHAT_MAX_MESSAGES
 #: 발화 한 줄의 길이 상한. 긴 상담 메시지 하나가 프롬프트를 독차지하지 않게 자른다.
 CHAT_MAX_CHARS = 200
 
+#: 채팅 감지 메모를 읽는 창과 건수. 스키마가 단일 출처다(#1655).
+INSIGHT_MEMO_LOOKBACK_DAYS = ROUTINE_INSIGHT_MEMO_DAYS
+INSIGHT_MEMO_MAX = ROUTINE_INSIGHT_MEMO_MAX
+
 # JSON 예시의 중괄호가 본문에 그대로 들어가므로 f-string 을 쓰지 않고 이어 붙인다.
 _SYSTEM_PROMPT = (
     """\
@@ -147,7 +154,8 @@ _SYSTEM_PROMPT = (
 안전이 먼저입니다. 아래 순서로 반영하세요.
 1. member_analysis.conditions (질환·통증·부상 등 운동 시 주의사항)
 2. member_analysis.note (트레이너가 직접 적은 메모)
-3. member_analysis.recent_messages 의 통증·컨디션 언급
+3. member_analysis.insight_memos (트레이너가 채팅 감지에서 남긴 최근 7일 메모)
+4. member_analysis.recent_messages 의 통증·컨디션 언급
 conditions 나 note 에 특정 부위의 통증·부상·질환이 적혀 있으면 그 부위에 부담이
 가는 동작을 빼고 저충격 대안으로 바꾸세요. 판단이 어려운 상태(가슴 통증, 호흡
 곤란, 최근 수술 등)면 강도를 올리지 말고 rationale 에 전문가 확인이 필요하다고
@@ -157,6 +165,9 @@ gender·height_cm·weight_kg·주간 운동 목표는 **운동 강도·시간·�
 값을 쓰지 않은 채로 구성하세요.
 recent_messages 에 통증·불편 언급이 있으면 해당 부위에 부담이 가는 운동을 피하고,
 왜 그렇게 구성했는지 rationale 에 그 발화를 근거로 적으세요.
+insight_memos 는 트레이너가 채팅 감지에서 직접 남긴 메모입니다. 같은 부위가 여러
+날 반복되면 일회성 컨디션이 아니라 이어지는 신호로 보고, 그 부위의 부하를 낮춘
+구성을 우선하세요. 반영했다면 rationale 에 날짜와 함께 적으세요.
 rationale 에는 어떤 회원 데이터가 이 구성에 영향을 줬는지(주의사항·메모·발화·
 목표·이행률 중 실제로 쓴 것)를 적으세요. 다만 회원에게 보이는 reason 에는
 민감한 건강 정보를 그대로 옮기지 말고 운동 구성만 짧게 적으세요.
@@ -411,6 +422,9 @@ def build_member_analysis(
         latest_routine=latest.name if latest is not None else "-",
         note=request.trainer_note.strip(),
         recent_messages=_recent_chat_lines(db, trainer_id, member_id, today_date),
+        insight_memos=_recent_insight_memos(
+            db, trainer_id, member_id, today_date
+        ),
         recommendation_status=history.status,
         history_session_count=history.session_count,
         analysis_period_days=HISTORY_LOOKBACK_DAYS,
@@ -462,6 +476,52 @@ def _recent_chat_lines(
     return lines
 
 
+def _recent_insight_memos(
+    db: Session, trainer_id: str, member_id: str, today_date: date,
+) -> list[str]:
+    """최근 7일(KST)의 채팅 감지 메모를 `"MM.dd 요약"` 줄로 만든다(최신 먼저).
+
+    프로그램 탭 분석 박스가 보여 주는 것과 **같은 목록**이다(#1655) — 화면에
+    없는 메모가 생성에만 반영되면 트레이너는 왜 그렇게 나왔는지 알 수 없고,
+    반대면 보여 준 근거가 무시된다.
+
+    손으로 쓴 메모(`source='trainer'`)는 뺀다. 그쪽은 수업 시간 조정처럼 운동
+    구성과 무관한 기록이 섞이는 자리이고, 자동으로 프로그램에 반영하겠다고
+    약속한 적도 없다.
+
+    `created_at` 은 timestamptz 라 KST 자정을 실제 시각으로 환산해 비교한다 —
+    [_recent_chat_lines] 와 같은 이유다.
+    """
+    since = datetime.combine(
+        today_date - timedelta(days=INSIGHT_MEMO_LOOKBACK_DAYS - 1),
+        time_of_day.min,
+        tzinfo=clock.SEOUL,
+    )
+    rows = db.execute(
+        select(TrainerClientMemo.created_at, TrainerClientMemo.body)
+        .where(
+            TrainerClientMemo.trainer_id == trainer_id,
+            TrainerClientMemo.member_id == member_id,
+            TrainerClientMemo.source == "chat_insight",
+            TrainerClientMemo.created_at >= since,
+        )
+        # 목록 계약(`build_memos`)과 같은 정렬이라 화면과 순서가 어긋나지 않는다.
+        .order_by(TrainerClientMemo.created_at.desc(), TrainerClientMemo.id.desc())
+        .limit(INSIGHT_MEMO_MAX)
+    ).all()
+
+    lines: list[str] = []
+    for created_at, body in rows:
+        text = (body or "").strip()
+        if not text:
+            continue
+        if len(text) > CHAT_MAX_CHARS:
+            text = text[:CHAT_MAX_CHARS] + "…"
+        local = created_at.astimezone(clock.SEOUL)
+        lines.append(f"{local:%m.%d} {text}")
+    return lines
+
+
 def build_rule_options(
     analysis: RoutineOptionAnalysisOut,
     request: RoutineOptionsRequest,
@@ -480,6 +540,9 @@ def build_rule_options(
         # 적혀 있지 않아도 폴백이 그 부위를 피한다.
         conditions=analysis.conditions,
         recent_messages=analysis.recent_messages,
+        # 트레이너가 감지에서 남긴 메모도 같은 주의사항으로 읽는다(#1655) —
+        # LLM 이 죽은 주라고 해서 "무릎 불편 감지" 를 못 본 척할 수는 없다.
+        insight_memos=analysis.insight_memos,
     )
     return RoutineOptionsOut(
         analysis=analysis,
