@@ -248,7 +248,7 @@ On-Care의 **핵심 타깃**은 **PT를 이용하는 회원과 이들을 관리�
 
 본 프로젝트는 [MIT License](LICENSE) 하에 배포됩니다. 자세한 내용은 [`LICENSE`](LICENSE) 파일을 참고하세요.
 
-> Copyright © 2026 On-Care Team (CSE-Sudo-26: 최지수 · 박서연 · 신수빈)
+> Copyright © 2026 On-Care Team (CSE-Sudo: 최지수 · 박서연 · 신수빈)
 
 <br/>
 
