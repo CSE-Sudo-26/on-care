@@ -24,14 +24,27 @@ AWS CloudShell에서 브랜치를 받은 뒤 템플릿을 먼저 검증합니다
 gh api repos/CSE-Sudo/on-care/actions/oidc/customization/sub
 ```
 
-2026년 7월 15일 이전에 생성되어 이름 기반 subject를 계속 사용하는 저장소에서는
-`UseImmutableGitHubOidcSubject=false`를 전달할 수 있습니다. 와일드카드로 권한 범위를 넓히지 않고,
-저장소와 `main` 브랜치가 포함된 정확한 subject를 유지합니다.
+`use_immutable_subject=false`만으로 이름 기반 subject라고 판단하지 않습니다. GitHub는
+2026년 7월 15일 이후 저장소 이름 변경·이전 시에도 ID를 포함한 형식으로 전환합니다.
+`sub_claim_prefix`, 실제 AWS 신뢰 정책과 성공한 인증 기록을 함께 확인합니다.
+형식이 불명확하면 실행 토큰의 `sub`와 `aud`만 확인하며, 토큰 원문이나 자격 증명은 로그에 남기지 않습니다.
+
+OnCare에서 사용하는 `main` 브랜치 subject는 다음과 같습니다. ID가 포함되어도 조직명은
+문자열의 일부이므로 조직명 변경 후 AWS 신뢰 정책을 갱신해야 합니다.
+
+```text
+repo:CSE-Sudo@265976266/on-care@1174354664:ref:refs/heads/main
+```
+
+이 형식에는 `UseImmutableGitHubOidcSubject=true`를 사용합니다. 이름 기반 subject를 실제로
+사용하는 다른 저장소에서만 `false`를 선택합니다. 저장소와 `main` 브랜치의 정확한 일치를
+유지하고 와일드카드로 신뢰 범위를 넓히지 않습니다.
+근거: [GitHub OIDC subject 형식](https://docs.github.com/en/actions/reference/security/oidc#immutable-subject-claims).
 
 ```bash
 git clone https://github.com/CSE-Sudo/on-care.git
 cd on-care
-git switch feat/aws-frontend-deployment
+git switch main
 
 aws cloudformation validate-template \
   --template-body file://infra/frontend-hosting.yml \
@@ -70,7 +83,7 @@ aws cloudformation deploy \
   --region ap-northeast-2
 ```
 
-> **이미 생성된 스택을 갱신하는 경우 주의합니다.** `aws cloudformation deploy`는 `--parameter-overrides`에 없는 파라미터를 이전 값 그대로 유지합니다. 저장소 이름이 `sudo-capstone-project`에서 `on-care`로 바뀌었으므로, 이름 변경 이전에 만들어진 스택은 템플릿의 `GitHubRepository` 기본값을 갱신해도 이전 값을 계속 씁니다. 이 경우 OIDC 신뢰 조건의 `sub`가 옛 저장소를 가리켜 배포 워크플로가 자격 증명을 받지 못하므로, 아래처럼 값을 명시해 한 번 갱신해야 합니다.
+> **이미 생성된 스택을 갱신하는 경우 주의합니다.** `aws cloudformation deploy`는 `--parameter-overrides`에 없는 기존 파라미터 값을 유지합니다. 조직명은 `CSE-Sudo-26`에서 `CSE-Sudo`로, 저장소명은 `sudo-capstone-project`에서 `on-care`로 바뀌었습니다. 템플릿 기본값 변경만으로 이미 배포된 스택의 `GitHubOwner`와 `GitHubRepository`가 갱신되지는 않습니다. 최신 템플릿 전체를 적용할 때는 아래처럼 값을 명시하고 변경 세트를 먼저 검토합니다. 조직명만 복구할 때는 아래의 **기존 템플릿을 유지하는 복구 절차**를 사용합니다.
 >
 > ```bash
 > aws cloudformation deploy \
@@ -78,11 +91,39 @@ aws cloudformation deploy \
 >   --stack-name oncare-frontend \
 >   --capabilities CAPABILITY_IAM \
 >   --parameter-overrides \
+>     GitHubOwner=CSE-Sudo \
 >     GitHubRepository=on-care \
 >     GitHubOwnerId=265976266 \
 >     GitHubRepositoryId=1174354664 \
+>     UseImmutableGitHubOidcSubject=true \
+>   --no-execute-changeset \
 >   --region ap-northeast-2
 > ```
+
+### 조직명 변경으로 OIDC 인증이 실패할 때
+
+`Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity`가
+발생하면 `AWS_FRONTEND_DEPLOY_ROLE_ARN`이 가리키는 IAM 역할의 **신뢰 관계**를 확인합니다.
+`aud`는 `sts.amazonaws.com`, `sub`는 현재 저장소와 실행 브랜치에 맞아야 합니다.
+
+조직명만 변경된 기존 스택은 다음 순서로 복구합니다.
+
+1. 서울(`ap-northeast-2`) CloudFormation에서 `oncare-frontend`의 **파라미터**를 확인합니다.
+2. **스택 업데이트 → 변경 세트 생성 → 표준 변경 세트 → 기존 템플릿 사용**을 선택합니다.
+3. `GitHubOwner`만 `CSE-Sudo`로 변경합니다. 저장소명, 두 ID, 브랜치, OIDC 공급자 ARN,
+   `UseImmutableGitHubOidcSubject` 등 나머지는 기존 값을 유지합니다.
+4. 변경 세트에서 `GitHubFrontendDeployRole`의 `AssumeRolePolicyDocument`만 수정되는지 확인합니다.
+   리소스 교체·삭제, S3·CloudFront 변경 또는 배포 권한 추가가 포함되면 원인을 확인한 뒤 진행합니다.
+5. 변경 세트를 실행하고 스택이 `UPDATE_COMPLETE`가 될 때까지 확인합니다.
+6. IAM 역할의 `sub`에서 조직명만 갱신되고 ID와 `main` 제한이 유지되는지 확인합니다.
+7. GitHub Actions에서 최신 실패한 `main` 배포를 재실행합니다. OIDC 인증, 업로드, 릴리스 전환과
+   배포 검증까지 모두 성공해야 복구 완료입니다. CloudFront의 `/version.txt`가 실행 커밋 SHA와
+   일치하고 `/`, `/frontend/`, `/trainer/`가 응답하는지도 확인합니다.
+
+이 방법은 AWS에 적용된 템플릿을 재사용하므로 최신 코드의 다른 인프라 변경을 함께 적용하지 않습니다.
+IAM 콘솔에서 역할만 직접 수정하면 CloudFormation 파라미터에 옛 조직명이 남을 수 있으므로
+스택 파라미터를 통해 갱신합니다. AWS 인증 실패 상태에서는 GitHub 배포 역할이 스스로 신뢰 정책을
+고칠 수 없으므로, CloudFormation을 갱신할 수 있는 AWS 세션에서 작업합니다.
 
 CloudFront 배포가 포함되어 있어 스택 생성에는 몇 분이 걸릴 수 있습니다. 완료되면 출력값을 확인합니다.
 
