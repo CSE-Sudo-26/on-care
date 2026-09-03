@@ -45,21 +45,21 @@
 
     <!-- subtitle -->
     <text x="248" y="192" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif"
-          font-size="24" font-weight="500" fill="#CCFBF1">트레이너 연계 식단·운동 코칭 플랫폼</text>
+          font-size="24" font-weight="500" fill="#CCFBF1">HealthMate AI: 회원·트레이너 연동 식단·운동 관리 서비스</text>
 
     <!-- keyword pills -->
     <g font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Segoe UI',sans-serif" font-size="15" font-weight="600">
       <g transform="translate(248,214)">
-        <rect width="196" height="34" rx="17" fill="#ffffff" fill-opacity="0.16"/>
-        <text x="98" y="22" text-anchor="middle" fill="#ffffff">2030 고혈압·당뇨 위험군</text>
+        <rect width="172" height="34" rx="17" fill="#ffffff" fill-opacity="0.16"/>
+        <text x="86" y="22" text-anchor="middle" fill="#ffffff">회원·트레이너 연동</text>
       </g>
-      <g transform="translate(456,214)">
+      <g transform="translate(432,214)">
         <rect width="150" height="34" rx="17" fill="#ffffff" fill-opacity="0.16"/>
-        <text x="75" y="22" text-anchor="middle" fill="#ffffff">불규칙한 생활 관리</text>
+        <text x="75" y="22" text-anchor="middle" fill="#ffffff">자동 요약 리포트</text>
       </g>
-      <g transform="translate(618,214)">
-        <rect width="128" height="34" rx="17" fill="#ffffff" fill-opacity="0.16"/>
-        <text x="64" y="22" text-anchor="middle" fill="#ffffff">AI 식단 인식</text>
+      <g transform="translate(594,214)">
+        <rect width="146" height="34" rx="17" fill="#ffffff" fill-opacity="0.16"/>
+        <text x="73" y="22" text-anchor="middle" fill="#ffffff">데이터 기반 코칭</text>
       </g>
     </g>
   </g>
