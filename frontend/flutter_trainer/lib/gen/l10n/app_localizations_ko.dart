@@ -710,11 +710,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientInviteTitle => '신규 고객 등록';
 
   @override
-  String get clientInviteIntro =>
-      '회원 ID로 찾아 담당 요청을 보내요. 회원이 앱에서 수락하면 고객 목록에 나타나요.';
+  String get clientInviteIntro => '회원 앱 MY 탭의 6자리 동기화 코드를 입력하면 바로 연결돼요.';
 
   @override
-  String get clientInviteIntroImmediate => '회원 ID로 고객을 확인한 뒤 바로 등록해요.';
+  String get clientInviteIntroImmediate =>
+      '회원 앱 MY 탭의 6자리 동기화 코드를 입력하면 바로 연결돼요.';
+
+  @override
+  String get clientConnectCodeLabel => '회원 동기화 코드';
+
+  @override
+  String get clientConnectCodeRequired => '6자리를 모두 입력해 주세요';
+
+  @override
+  String get clientConnectCodeInvalid => '코드가 맞지 않거나 만료됐어요. 회원에게 새 코드를 받아 주세요';
 
   @override
   String get clientInviteMemberIdLabel => '회원 ID';
@@ -951,6 +960,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatInsightMemoAdded => '메모 추가됨';
+
+  @override
+  String chatInsightMemoSummaryDiscomfort(String part) {
+    return '$part 불편 감지';
+  }
+
+  @override
+  String get chatInsightMemoSummaryNegative => '운동 부담 감지';
 
   @override
   String get chatInsightMemoSaved => 'AI 감지 내용을 트레이너 메모에 추가했어요.';
@@ -2098,6 +2115,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineFieldCalories => '예상 소모 칼로리';
 
   @override
+  String get routineCaloriesNeedName => '운동 이름을 적어주세요';
+
+  @override
+  String get routineCaloriesRoughEstimate =>
+      '운동 종류 평균으로 낸 어림값 · 회원이 수행하면 체중까지 반영된 값이 기록됩니다';
+
+  @override
   String get routineUnitMinutes => '분';
 
   @override
@@ -2403,6 +2427,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count개 · $minutes분';
   }
+
+  @override
+  String get aiInsightMemoTitle => '최근 7일 AI 감지 메모';
+
+  @override
+  String get aiInsightMemoEmpty => '최근 7일간 감지된 메모가 없어요';
+
+  @override
+  String get aiInsightMemoFailed => '감지 메모를 불러오지 못했어요';
+
+  @override
+  String aiRecentRoutineMore(String name, int count) {
+    return '$name 외 $count개';
+  }
+
+  @override
+  String get aiNoRecentRoutine => '기록 없음';
 
   @override
   String get aiRecentRoutine => '최근 운동';

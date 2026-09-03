@@ -1526,6 +1526,30 @@ abstract class AppLocalizations {
   /// **'Estimated Calories'**
   String get exEstimatedCalories;
 
+  /// No description provided for @exCaloriesNeedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an exercise name'**
+  String get exCaloriesNeedName;
+
+  /// No description provided for @exCaloriesCalculating.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating…'**
+  String get exCaloriesCalculating;
+
+  /// No description provided for @exCaloriesFromCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on {activity} · uses your weight'**
+  String exCaloriesFromCatalog(String activity);
+
+  /// No description provided for @exCaloriesRoughEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'A rough average for this exercise type'**
+  String get exCaloriesRoughEstimate;
+
   /// No description provided for @exEnterDuration.
   ///
   /// In en, this message translates to:
@@ -1921,18 +1945,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User'**
   String get myDefaultUserName;
-
-  /// No description provided for @myMemberIdLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'My member ID'**
-  String get myMemberIdLabel;
-
-  /// No description provided for @myMemberIdCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Member ID copied'**
-  String get myMemberIdCopied;
 
   /// No description provided for @mySettingsTitle.
   ///
@@ -2599,6 +2611,203 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{weekday} — workout {exercise}, intake {intake}'**
   String coachReportPdfDay(String weekday, String exercise, String intake);
+
+  /// Section heading for the message the trainer sent with the report.
+  ///
+  /// In en, this message translates to:
+  /// **'From your trainer'**
+  String get coachReportPdfSectionTrainerNote;
+
+  /// Shown under the trainer-message heading when the report arrived without a note.
+  ///
+  /// In en, this message translates to:
+  /// **'No message came with this report.'**
+  String get coachReportPdfNoTrainerNote;
+
+  /// Section heading comparing this week with the previous one.
+  ///
+  /// In en, this message translates to:
+  /// **'Change from last week'**
+  String get coachReportPdfSectionChange;
+
+  /// Section heading for average carbs / protein / fat.
+  ///
+  /// In en, this message translates to:
+  /// **'Average macros'**
+  String get coachReportPdfSectionMacros;
+
+  /// Metric label: how many days of the week have diet records.
+  ///
+  /// In en, this message translates to:
+  /// **'Days with meals logged'**
+  String get coachReportPdfLabelLoggedDays;
+
+  /// Metric label: days whose sodium exceeded the member's daily goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Days over the sodium goal'**
+  String get coachReportPdfLabelSodiumOver;
+
+  /// Metric label used when only completed PT sessions are known.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions done'**
+  String get coachReportPdfLabelPtDone;
+
+  /// A count of PT sessions with its unit.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} sessions'**
+  String coachReportPdfValueSessions(String value);
+
+  /// Metric label for cardio minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardio'**
+  String get coachReportPdfLabelCardio;
+
+  /// Metric label for strength minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength'**
+  String get coachReportPdfLabelStrength;
+
+  /// Metric label for stretching minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Stretching'**
+  String get coachReportPdfLabelStretching;
+
+  /// Section heading breaking the week's minutes down by workout type.
+  ///
+  /// In en, this message translates to:
+  /// **'Minutes by workout type'**
+  String get coachReportPdfSectionTypes;
+
+  /// Shown for PT when nothing was booked and nothing was recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'None booked'**
+  String get coachReportPdfNoSessions;
+
+  /// Header band cell title for the reported week.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get coachReportPdfBandPeriod;
+
+  /// Section heading for the goal gauges.
+  ///
+  /// In en, this message translates to:
+  /// **'Against your goals'**
+  String get coachReportPdfSectionGoals;
+
+  /// Summary table column: the metric name.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric'**
+  String get coachReportPdfColumnMetric;
+
+  /// Summary table column: this week's value.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get coachReportPdfColumnThisWeek;
+
+  /// Summary table column: last week's value.
+  ///
+  /// In en, this message translates to:
+  /// **'Last week'**
+  String get coachReportPdfColumnLastWeek;
+
+  /// Summary table column: the difference between the two weeks.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get coachReportPdfColumnChange;
+
+  /// Daily table column: the weekday.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get coachReportPdfColumnWeekday;
+
+  /// Daily table column: what was done that day.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get coachReportPdfColumnWorkout;
+
+  /// Daily table column: calories eaten that day.
+  ///
+  /// In en, this message translates to:
+  /// **'Intake'**
+  String get coachReportPdfColumnIntake;
+
+  /// Daily table cell for a weekday that has not happened yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Still to come'**
+  String get coachReportPdfUpcoming;
+
+  /// Text form of a gauge: the value and the goal it is measured against.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} (goal {target})'**
+  String coachReportPdfGoalOf(String value, String target);
+
+  /// Label on a chart's dashed goal line.
+  ///
+  /// In en, this message translates to:
+  /// **'goal {value}'**
+  String coachReportPdfChartTarget(String value);
+
+  /// Daily line for a weekday that has not happened yet.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday} — still to come'**
+  String coachReportPdfDayUpcoming(String weekday);
+
+  /// One comparison line: this week's value, last week's, and the difference.
+  ///
+  /// In en, this message translates to:
+  /// **'· {label}: {current} (last week {previous}, {delta})'**
+  String coachReportPdfChange(
+    String label,
+    String current,
+    String previous,
+    String delta,
+  );
+
+  /// Difference when this week is higher.
+  ///
+  /// In en, this message translates to:
+  /// **'+{value}'**
+  String coachReportPdfDeltaUp(String value);
+
+  /// Difference when this week is lower.
+  ///
+  /// In en, this message translates to:
+  /// **'-{value}'**
+  String coachReportPdfDeltaDown(String value);
+
+  /// Difference when both weeks are equal.
+  ///
+  /// In en, this message translates to:
+  /// **'no change'**
+  String get coachReportPdfDeltaSame;
+
+  /// Shown under the comparison heading when the previous week has nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no records from last week to compare with.'**
+  String get coachReportPdfNoPreviousWeek;
+
+  /// Footnote naming the sodium goal the over-days count was measured against.
+  ///
+  /// In en, this message translates to:
+  /// **'The sodium goal is the {target}mg daily target you set on the MY screen.'**
+  String coachReportPdfSodiumTargetNote(String target);
 
   /// No description provided for @coachReportPdfPreviewNote.
   ///
@@ -3272,6 +3481,18 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get signUpNameHint;
 
+  /// No description provided for @signUpPhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get signUpPhoneHint;
+
+  /// No description provided for @signUpPhoneHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trainer uses this to confirm who you are.'**
+  String get signUpPhoneHelper;
+
   /// No description provided for @signUpPasswordHint.
   ///
   /// In en, this message translates to:
@@ -3307,6 +3528,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Passwords do not match'**
   String get signUpPasswordMismatch;
+
+  /// No description provided for @signUpPhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a phone number with at least 4 digits'**
+  String get signUpPhoneInvalid;
+
+  /// No description provided for @trainerSyncEntryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync data with a trainer'**
+  String get trainerSyncEntryLabel;
+
+  /// No description provided for @trainerSyncEntryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect with your trainer using a 6-digit code'**
+  String get trainerSyncEntryHint;
+
+  /// No description provided for @trainerSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync data with a trainer'**
+  String get trainerSyncTitle;
+
+  /// No description provided for @trainerSyncConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'The trainer who enters this code becomes your coach and can see your meals, workouts, and health records.'**
+  String get trainerSyncConsent;
+
+  /// No description provided for @trainerSyncHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Read these six digits out to your trainer.'**
+  String get trainerSyncHint;
+
+  /// No description provided for @trainerSyncCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires in {remaining}'**
+  String trainerSyncCountdown(String remaining);
+
+  /// No description provided for @trainerSyncExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This code has expired.'**
+  String get trainerSyncExpired;
+
+  /// No description provided for @trainerSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get a code.'**
+  String get trainerSyncFailed;
+
+  /// No description provided for @trainerSyncRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a new code'**
+  String get trainerSyncRetry;
+
+  /// No description provided for @trainerSyncCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync code copied'**
+  String get trainerSyncCopied;
 
   /// No description provided for @signUpEmailTaken.
   ///

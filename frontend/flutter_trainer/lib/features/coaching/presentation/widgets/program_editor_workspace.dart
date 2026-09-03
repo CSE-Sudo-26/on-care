@@ -1040,14 +1040,21 @@ class _SessionEditorState extends State<_SessionEditor> {
                     onChanged: widget.onExerciseIntensityChanged,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  RoutineCaloriesLine(
-                    calories: estimateRoutineCalories(
-                      type: widget.exerciseType,
-                      minutes: widget.exerciseType == '근력'
-                          ? minutesFromSets(widget.exerciseSets)
-                          : widget.exerciseMinutes,
-                      intensity: widget.exerciseIntensity,
-                    ),
+                  // 이름은 컨트롤러 안에서만 바뀐다 — 글자를 적는 동안 이 줄이
+                  // 따라 그려지려면 컨트롤러를 직접 들어야 한다(#1312).
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: widget.exerciseNameController,
+                    builder: (BuildContext context, TextEditingValue name, _) =>
+                        RoutineCaloriesLine(
+                          estimate: estimateRoutineCalories(
+                            name: name.text,
+                            type: widget.exerciseType,
+                            minutes: widget.exerciseType == '근력'
+                                ? minutesFromSets(widget.exerciseSets)
+                                : widget.exerciseMinutes,
+                            intensity: widget.exerciseIntensity,
+                          ),
+                        ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Row(
@@ -1380,7 +1387,7 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                         widget.onChanged(exercise.copyWith(intensity: value)),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  RoutineCaloriesLine(calories: exercise.calories),
+                  RoutineCaloriesLine(estimate: exercise.calories),
                   const SizedBox(height: AppSpacing.xs),
                   _DraftField(
                     fieldId: '${exercise.id}-memo',

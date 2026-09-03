@@ -1,3 +1,4 @@
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 /// A coaching signal found in a message sent by a client.
@@ -168,3 +169,17 @@ class ChatContextInsightDetector {
     RegExp(r'\bexhausted\b'),
   ];
 }
+
+/// 감지 결과를 메모 본문으로 옮길 때 쓰는 한 줄 요약 (#1655).
+///
+/// 회원이 쓴 문장(`evidence`)을 그대로 옮기지 않는다. 원문은 "무릎이 좀
+/// 시큰거려요" 처럼 그날의 말이라, 일주일 뒤 프로그램을 짜며 다시 읽을 때
+/// 트레이너가 무엇을 해야 하는지를 말해 주지 않는다. 감지 종류와 부위만으로
+/// 만드는 결정론적 문장이라 같은 감지는 늘 같은 요약이 되고, 회원 발화가
+/// 프로그램 생성 프롬프트에 지시문처럼 섞여 들어가지도 않는다.
+String chatInsightMemoSummary(AppLocalizations l, ChatContextInsight insight) =>
+    insight.kind == ChatInsightKind.discomfort
+    ? l.chatInsightMemoSummaryDiscomfort(
+        insight.bodyPart ?? l.chatInsightBodyPartGeneral,
+      )
+    : l.chatInsightMemoSummaryNegative;

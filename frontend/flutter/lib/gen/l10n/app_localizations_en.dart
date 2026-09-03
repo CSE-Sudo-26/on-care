@@ -802,6 +802,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exEstimatedCalories => 'Estimated Calories';
 
   @override
+  String get exCaloriesNeedName => 'Enter an exercise name';
+
+  @override
+  String get exCaloriesCalculating => 'Calculating…';
+
+  @override
+  String exCaloriesFromCatalog(String activity) {
+    return 'Based on $activity · uses your weight';
+  }
+
+  @override
+  String get exCaloriesRoughEstimate =>
+      'A rough average for this exercise type';
+
+  @override
   String get exEnterDuration => 'Please enter a duration';
 
   @override
@@ -1025,12 +1040,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myDefaultUserName => 'User';
-
-  @override
-  String get myMemberIdLabel => 'My member ID';
-
-  @override
-  String get myMemberIdCopied => 'Member ID copied';
 
   @override
   String get mySettingsTitle => 'Settings';
@@ -1409,6 +1418,124 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get coachReportPdfSectionTrainerNote => 'From your trainer';
+
+  @override
+  String get coachReportPdfNoTrainerNote => 'No message came with this report.';
+
+  @override
+  String get coachReportPdfSectionChange => 'Change from last week';
+
+  @override
+  String get coachReportPdfSectionMacros => 'Average macros';
+
+  @override
+  String get coachReportPdfLabelLoggedDays => 'Days with meals logged';
+
+  @override
+  String get coachReportPdfLabelSodiumOver => 'Days over the sodium goal';
+
+  @override
+  String get coachReportPdfLabelPtDone => 'PT sessions done';
+
+  @override
+  String coachReportPdfValueSessions(String value) {
+    return '$value sessions';
+  }
+
+  @override
+  String get coachReportPdfLabelCardio => 'Cardio';
+
+  @override
+  String get coachReportPdfLabelStrength => 'Strength';
+
+  @override
+  String get coachReportPdfLabelStretching => 'Stretching';
+
+  @override
+  String get coachReportPdfSectionTypes => 'Minutes by workout type';
+
+  @override
+  String get coachReportPdfNoSessions => 'None booked';
+
+  @override
+  String get coachReportPdfBandPeriod => 'Period';
+
+  @override
+  String get coachReportPdfSectionGoals => 'Against your goals';
+
+  @override
+  String get coachReportPdfColumnMetric => 'Metric';
+
+  @override
+  String get coachReportPdfColumnThisWeek => 'This week';
+
+  @override
+  String get coachReportPdfColumnLastWeek => 'Last week';
+
+  @override
+  String get coachReportPdfColumnChange => 'Change';
+
+  @override
+  String get coachReportPdfColumnWeekday => 'Day';
+
+  @override
+  String get coachReportPdfColumnWorkout => 'Workout';
+
+  @override
+  String get coachReportPdfColumnIntake => 'Intake';
+
+  @override
+  String get coachReportPdfUpcoming => 'Still to come';
+
+  @override
+  String coachReportPdfGoalOf(String value, String target) {
+    return '$value (goal $target)';
+  }
+
+  @override
+  String coachReportPdfChartTarget(String value) {
+    return 'goal $value';
+  }
+
+  @override
+  String coachReportPdfDayUpcoming(String weekday) {
+    return '$weekday — still to come';
+  }
+
+  @override
+  String coachReportPdfChange(
+    String label,
+    String current,
+    String previous,
+    String delta,
+  ) {
+    return '· $label: $current (last week $previous, $delta)';
+  }
+
+  @override
+  String coachReportPdfDeltaUp(String value) {
+    return '+$value';
+  }
+
+  @override
+  String coachReportPdfDeltaDown(String value) {
+    return '-$value';
+  }
+
+  @override
+  String get coachReportPdfDeltaSame => 'no change';
+
+  @override
+  String get coachReportPdfNoPreviousWeek =>
+      'There are no records from last week to compare with.';
+
+  @override
+  String coachReportPdfSodiumTargetNote(String target) {
+    return 'The sodium goal is the ${target}mg daily target you set on the MY screen.';
+  }
+
+  @override
   String get coachReportPdfPreviewNote =>
       'Built from your own records for the week the trainer\'s report covers.';
 
@@ -1775,6 +1902,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signUpNameHint => 'Name';
 
   @override
+  String get signUpPhoneHint => 'Phone number';
+
+  @override
+  String get signUpPhoneHelper =>
+      'Your trainer uses this to confirm who you are.';
+
+  @override
   String get signUpPasswordHint => 'Password (8+ characters)';
 
   @override
@@ -1791,6 +1925,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signUpPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get signUpPhoneInvalid =>
+      'Enter a phone number with at least 4 digits';
+
+  @override
+  String get trainerSyncEntryLabel => 'Sync data with a trainer';
+
+  @override
+  String get trainerSyncEntryHint =>
+      'Connect with your trainer using a 6-digit code';
+
+  @override
+  String get trainerSyncTitle => 'Sync data with a trainer';
+
+  @override
+  String get trainerSyncConsent =>
+      'The trainer who enters this code becomes your coach and can see your meals, workouts, and health records.';
+
+  @override
+  String get trainerSyncHint => 'Read these six digits out to your trainer.';
+
+  @override
+  String trainerSyncCountdown(String remaining) {
+    return 'Expires in $remaining';
+  }
+
+  @override
+  String get trainerSyncExpired => 'This code has expired.';
+
+  @override
+  String get trainerSyncFailed => 'Could not get a code.';
+
+  @override
+  String get trainerSyncRetry => 'Get a new code';
+
+  @override
+  String get trainerSyncCopied => 'Sync code copied';
 
   @override
   String get signUpEmailTaken =>

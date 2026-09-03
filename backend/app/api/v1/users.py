@@ -37,6 +37,7 @@ from app.schemas.user import (
     HealthGoalsUpdate,
     HealthProfileBrief,
     OnboardingRequest,
+    PairingCodeOut,
     ProfileUpdate,
     ProfileView,
     RefreshRequest,
@@ -48,7 +49,12 @@ from app.schemas.user import (
     UserMe,
     UserRegister,
 )
-from app.services import reservation_service, token_revocation, trainer_signup_service
+from app.services import (
+    member_pairing_service,
+    reservation_service,
+    token_revocation,
+    trainer_signup_service,
+)
 from app.services.health_service import DEMO_SETTINGS
 
 router = APIRouter(tags=["users"])
@@ -219,6 +225,54 @@ def update_me(
     return _profile_view(user)
 
 
+# ---- 트레이너와 데이터 동기화 (#1634) ----
+
+
+def _pairing_out(row) -> PairingCodeOut:
+    from app.core import clock
+
+    remaining = int((row.expires_at - clock.now()).total_seconds())
+    return PairingCodeOut(
+        code=row.code,
+        expires_at=row.expires_at,
+        expires_in_seconds=max(remaining, 0),
+    )
+
+
+@router.post(
+    "/users/me/pairing-code",
+    response_model=PairingCodeOut,
+    dependencies=[Depends(rate_limit("pairing-code"))],
+)
+def issue_pairing_code(
+    user: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> PairingCodeOut:
+    """트레이너에게 불러 줄 6자리 동기화 코드를 발급한다.
+
+    **이 호출이 데이터 공유 동의다** (#1022). 코드를 쓴 트레이너는 그 자리에서
+    담당이 되고 회원의 식단·운동·건강 기록을 읽는다. 화면이 그 범위를 말한 뒤
+    회원이 누르는 버튼이 여기로 온다.
+
+    유효한 코드가 남아 있으면 그대로 돌려준다 — 화면을 다시 열 때마다 새로
+    뽑으면 트레이너가 이미 받아 적은 값이 말없이 무효가 된다.
+    """
+    return _pairing_out(member_pairing_service.issue(db, user.id))
+
+
+@router.delete("/users/me/pairing-code", status_code=204)
+def revoke_pairing_code(
+    user: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """띄워 둔 코드를 버린다. 화면을 닫으면 호출한다.
+
+    만료를 기다리지 않는 것은 회원이 그만두겠다고 표시한 것이기 때문이다 —
+    발급이 동의였으니 취소도 즉시 반영돼야 한다.
+    """
+    member_pairing_service.revoke(db, user.id)
+
+
 @router.delete("/users/me")
 def delete_me(
     user: RequireMember,
@@ -263,6 +317,11 @@ def register(
         hashed_password=hash_password(payload.password),
     )
     db.add(user)
+    # 가입 화면에서 받은 전화번호를 프로필에 옮긴다 (#1634). 예전에는 MY 탭
+    # 프로필 편집에서만 넣을 수 있어, 가입 직후에는 트레이너가 연락할 방법도
+    # 회원을 알아볼 방법도 없었다.
+    if payload.phone:
+        db.add(HealthProfile(user_id=user.id, phone=payload.phone))
     try:
         db.commit()
     except IntegrityError:

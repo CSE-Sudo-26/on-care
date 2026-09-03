@@ -1379,14 +1379,32 @@ abstract class AppLocalizations {
   /// No description provided for @clientInviteIntro.
   ///
   /// In en, this message translates to:
-  /// **'Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.'**
+  /// **'Enter the 6-digit sync code from the member\'s MY tab to connect right away.'**
   String get clientInviteIntro;
 
   /// No description provided for @clientInviteIntroImmediate.
   ///
   /// In en, this message translates to:
-  /// **'Find a client by member ID and register them right away.'**
+  /// **'Enter the 6-digit sync code from the member\'s MY tab to connect right away.'**
   String get clientInviteIntroImmediate;
+
+  /// No description provided for @clientConnectCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Member sync code'**
+  String get clientConnectCodeLabel;
+
+  /// No description provided for @clientConnectCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter all six digits'**
+  String get clientConnectCodeRequired;
+
+  /// No description provided for @clientConnectCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That code is wrong or expired. Ask the member for a new one'**
+  String get clientConnectCodeInvalid;
 
   /// No description provided for @clientInviteMemberIdLabel.
   ///
@@ -1831,6 +1849,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Added to memo'**
   String get chatInsightMemoAdded;
+
+  /// No description provided for @chatInsightMemoSummaryDiscomfort.
+  ///
+  /// In en, this message translates to:
+  /// **'{part} discomfort detected'**
+  String chatInsightMemoSummaryDiscomfort(String part);
+
+  /// No description provided for @chatInsightMemoSummaryNegative.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout strain detected'**
+  String get chatInsightMemoSummaryNegative;
 
   /// No description provided for @chatInsightMemoSaved.
   ///
@@ -3896,6 +3926,18 @@ abstract class AppLocalizations {
   /// **'Estimated calories'**
   String get routineFieldCalories;
 
+  /// No description provided for @routineCaloriesNeedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an exercise name'**
+  String get routineCaloriesNeedName;
+
+  /// No description provided for @routineCaloriesRoughEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'A rough average for this exercise type · the saved record will also use the member\'s weight'**
+  String get routineCaloriesRoughEstimate;
+
   /// No description provided for @routineUnitMinutes.
   ///
   /// In en, this message translates to:
@@ -4429,6 +4471,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
+
+  /// No description provided for @aiInsightMemoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI insights (last 7 days)'**
+  String get aiInsightMemoTitle;
+
+  /// No description provided for @aiInsightMemoEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No insights detected in the last 7 days'**
+  String get aiInsightMemoEmpty;
+
+  /// No description provided for @aiInsightMemoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the detected memos'**
+  String get aiInsightMemoFailed;
+
+  /// No description provided for @aiRecentRoutineMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} and {count} more'**
+  String aiRecentRoutineMore(String name, int count);
+
+  /// No description provided for @aiNoRecentRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'No record'**
+  String get aiNoRecentRoutine;
 
   /// No description provided for @aiRecentRoutine.
   ///

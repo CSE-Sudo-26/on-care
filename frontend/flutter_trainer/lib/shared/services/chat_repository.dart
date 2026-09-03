@@ -7,6 +7,8 @@ import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart'
+    show demoUnregisteredClientIdsSnapshot;
 
 /// Reads and sends messages in a trainer↔member chat thread.
 ///
@@ -62,13 +64,11 @@ class DriftChatRepository implements ChatRepository {
   Future<Map<String, String>> _reportWeekStarts(
     Iterable<String> messageIds,
   ) async {
-    final keys = <String>[
-      for (final id in messageIds) '$_reportKeyPrefix$id',
-    ];
+    final keys = <String>[for (final id in messageIds) '$_reportKeyPrefix$id'];
     if (keys.isEmpty) return const <String, String>{};
-    final rows =
-        await (_db.select(_db.appKeyValues)..where((t) => t.key.isIn(keys)))
-            .get();
+    final rows = await (_db.select(
+      _db.appKeyValues,
+    )..where((t) => t.key.isIn(keys))).get();
     return <String, String>{
       for (final row in rows)
         row.key.substring(_reportKeyPrefix.length): row.value,
@@ -119,6 +119,10 @@ class DriftChatRepository implements ChatRepository {
   /// Per-client unread counts — client-sent messages after the trainer's
   /// last-read marker (an `AppKeyValues` row per client, so no schema
   /// migration). Clients with zero unread are absent.
+  ///
+  /// 담당을 종료한(미등록) 고객의 메시지는 원본을 지우지 않고 여기서만
+  /// 걸러낸다(#1623) — 지우면 사이드바 전체 안읽음 배지가 트레이너가 다시는
+  /// 열어 읽을 수 없는 수를 영영 안고 가게 된다.
   @override
   Stream<Map<String, int>> watchUnreadCounts() {
     // The marker is a monotonic `rowid`, not an epoch second: two client
@@ -138,11 +142,14 @@ class DriftChatRepository implements ChatRepository {
         _db.appKeyValues,
       },
     );
-    return query.watch().map(
-      (rows) => <String, int>{
-        for (final row in rows) row.read<String>('cid'): row.read<int>('cnt'),
-      },
-    );
+    return query.watch().map((rows) {
+      final unregistered = demoUnregisteredClientIdsSnapshot(_db);
+      return <String, int>{
+        for (final row in rows)
+          if (!unregistered.contains(row.read<String>('cid')))
+            row.read<String>('cid'): row.read<int>('cnt'),
+      };
+    });
   }
 
   /// Marks a client's thread read up to its newest client message.

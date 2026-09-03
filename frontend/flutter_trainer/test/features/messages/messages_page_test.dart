@@ -474,7 +474,9 @@ void main() {
           .read(trainerMemoRepositoryProvider)
           .fetch('seed-client-1');
       expect(memos, hasLength(1));
-      expect(memos.single.body, '무릎이 가볍게 당기긴 했는데 괜찮아요');
+      // 원문이 아니라 감지 요약이 남는다 — 프로그램 탭이 이 메모를 그대로
+      // 참고 자료로 읽으므로, 그날의 말투가 아니라 조치할 내용이어야 한다.
+      expect(memos.single.body, '무릎 불편 감지');
       expect(memos.single.source, TrainerMemoSource.chatInsight);
     });
   });

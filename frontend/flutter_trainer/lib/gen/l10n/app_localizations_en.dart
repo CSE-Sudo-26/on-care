@@ -734,11 +734,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientInviteIntro =>
-      'Find a member by their member ID and send a coaching request. They appear in your client list once they accept in the app.';
+      'Enter the 6-digit sync code from the member\'s MY tab to connect right away.';
 
   @override
   String get clientInviteIntroImmediate =>
-      'Find a client by member ID and register them right away.';
+      'Enter the 6-digit sync code from the member\'s MY tab to connect right away.';
+
+  @override
+  String get clientConnectCodeLabel => 'Member sync code';
+
+  @override
+  String get clientConnectCodeRequired => 'Enter all six digits';
+
+  @override
+  String get clientConnectCodeInvalid =>
+      'That code is wrong or expired. Ask the member for a new one';
 
   @override
   String get clientInviteMemberIdLabel => 'Member ID';
@@ -984,6 +994,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInsightMemoAdded => 'Added to memo';
+
+  @override
+  String chatInsightMemoSummaryDiscomfort(String part) {
+    return '$part discomfort detected';
+  }
+
+  @override
+  String get chatInsightMemoSummaryNegative => 'Workout strain detected';
 
   @override
   String get chatInsightMemoSaved =>
@@ -2189,6 +2207,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routineFieldCalories => 'Estimated calories';
 
   @override
+  String get routineCaloriesNeedName => 'Enter an exercise name';
+
+  @override
+  String get routineCaloriesRoughEstimate =>
+      'A rough average for this exercise type · the saved record will also use the member\'s weight';
+
+  @override
   String get routineUnitMinutes => 'min';
 
   @override
@@ -2506,6 +2531,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count exercises · $minutes min';
   }
+
+  @override
+  String get aiInsightMemoTitle => 'AI insights (last 7 days)';
+
+  @override
+  String get aiInsightMemoEmpty => 'No insights detected in the last 7 days';
+
+  @override
+  String get aiInsightMemoFailed => 'Couldn\'t load the detected memos';
+
+  @override
+  String aiRecentRoutineMore(String name, int count) {
+    return '$name and $count more';
+  }
+
+  @override
+  String get aiNoRecentRoutine => 'No record';
 
   @override
   String get aiRecentRoutine => 'Recent activity';

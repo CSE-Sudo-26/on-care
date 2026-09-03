@@ -18,6 +18,7 @@ import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../helpers/fake_diet_repository.dart';
+import '../../helpers/fixed_clock.dart';
 
 /// 날마다 다른 칼로리를 주는 저장소 — 고른 날의 숫자가 평균과 갈리는지 보려면
 /// 날마다 값이 달라야 한다.
@@ -76,6 +77,11 @@ Widget _app() => ProviderScope(
 
 void main() {
   Future<void> openAll(WidgetTester tester) async {
+    // 오늘을 고정한다. 대역이 날짜(`date.day`)로 칼로리를 만들어, 보이는 30일
+    // 창이 달의 어디에 걸리느냐로 평균이 달라진다 — 고정하지 않으면 이 테스트는
+    // 달력에 매인다. 실제로 8월 말에 두 구간의 평균이 같아져 깨졌다.
+    useFixedKstDate();
+
     tester.view.physicalSize = const Size(420, 1800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

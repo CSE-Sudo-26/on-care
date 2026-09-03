@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/demo_member_directory.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_invite_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_invite.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
@@ -16,6 +17,7 @@ import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -33,6 +35,14 @@ class _NoInviteClientInviteRepository implements ClientInviteRepository {
 
   @override
   Future<MemberLookup> lookup(String memberId) async =>
+      throw const NotFoundError();
+
+  @override
+  Future<PairedMember> previewPairingCode(String code) async =>
+      throw const NotFoundError();
+
+  @override
+  Future<PairedMember> redeemPairingCode(String code) async =>
       throw const NotFoundError();
 
   @override
@@ -222,6 +232,99 @@ void main() {
         );
       },
     );
+
+    test(
+      'removeClient keeps 운동 기록·채팅·스케줄 원본 — 트레이너 화면에서만 사라진다 (#1623)',
+      () async {
+        final repo = DriftClientRepository(db);
+        final schedule = DriftScheduleRepository(db);
+        final chat = DriftChatRepository(db);
+
+        final histBefore = await (db.select(
+          db.clientRoutineHistory,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get();
+        expect(histBefore, isNotEmpty); // seed fixture keeps this honest
+
+        await repo.removeClient('seed-client-1');
+
+        // 원본 행은 그대로다 — 지워지지 않는다.
+        final histAfter = await (db.select(
+          db.clientRoutineHistory,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get();
+        expect(histAfter.length, histBefore.length);
+
+        // 카드의 캐시된 주간 이행률도 그 원본과 여전히 맞아떨어진다 — 지워진
+        // 기록을 근거로 한 숫자를 보여주지 않는다.
+        final client = (await repo.watchClients().first).firstWhere(
+          (c) => c.id == 'seed-client-1',
+        );
+        expect(client.weekCompletion, isNotEmpty);
+
+        // 채팅 원본도 지워지지 않지만, 안읽음 배지·오늘 일정에는 더는
+        // 잡히지 않는다 — 트레이너 화면에서만 사라진다는 약속.
+        final thread = await chat.watchThread('seed-client-1').first;
+        expect(thread, isNotEmpty);
+        final counts = await chat.watchUnreadCounts().first;
+        expect(counts.containsKey('seed-client-1'), isFalse);
+
+        final range = await schedule
+            .watchRange('2000-01-01', '2099-12-31')
+            .first;
+        expect(range.any((s) => s.clientId == 'seed-client-1'), isFalse);
+        // 원본 슬롯은 지워지지 않았다 — 걸러졌을 뿐이다.
+        final rowsAfter = await (db.select(
+          db.trainerScheduleEntries,
+        )..where((t) => t.clientId.equals('seed-client-1'))).get();
+        expect(rowsAfter, isNotEmpty);
+      },
+    );
+
+    test('재등록하면 걸러졌던 채팅·일정 노출이 그대로 돌아온다 (#1623)', () async {
+      final repo = DriftClientRepository(db);
+      final invites = DemoClientInviteRepository(db);
+      final chat = DriftChatRepository(db);
+      final schedule = DriftScheduleRepository(db);
+
+      // 미읽은 회원 메시지를 하나 만들어 둔다 — 삭제 중 사라지지 않고,
+      // 재등록 후 다시 배지에 잡히는지까지 확인한다.
+      await db
+          .into(db.clientChatMessages)
+          .insert(
+            ClientChatMessagesCompanion.insert(
+              id: 'chat-1623-check',
+              clientId: 'seed-client-1',
+              sender: 'client',
+              body: '다음 세션 언제예요?',
+              timeLabel: '09:00',
+              createdAt: nowKst(),
+            ),
+          );
+
+      await repo.removeClient('seed-client-1');
+      expect(
+        (await chat.watchUnreadCounts().first).containsKey('seed-client-1'),
+        isFalse,
+      );
+      expect(
+        (await schedule.watchRange('2000-01-01', '2099-12-31').first).any(
+          (s) => s.clientId == 'seed-client-1',
+        ),
+        isFalse,
+      );
+
+      await invites.invite(demoAlreadyLinkedMemberId);
+
+      expect(
+        (await chat.watchUnreadCounts().first)['seed-client-1'],
+        greaterThan(0),
+      );
+      expect(
+        (await schedule.watchRange('2000-01-01', '2099-12-31').first).any(
+          (s) => s.clientId == 'seed-client-1',
+        ),
+        isTrue,
+      );
+    });
 
     test('미등록 고객은 새 회원 등록과 같은 lookup·invite 로 같은 행을 되살린다', () async {
       final repo = DriftClientRepository(db);
@@ -521,7 +624,16 @@ void main() {
       );
     });
 
-    testWidgets('신규 고객 등록 — 회원 ID로 아직 연결되지 않은 회원을 찾아 연결한다', (tester) async {
+    /// 회원이 자기 앱 MY 탭에 띄운 6자리를 트레이너가 입력한다. (#1634)
+    Future<void> enterSyncCode(WidgetTester tester, String code) async {
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('client-connect-code')),
+        code,
+      );
+      await settle(tester);
+    }
+
+    testWidgets('신규 고객 등록 — 6자리 동기화 코드로 회원과 연결한다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -531,23 +643,20 @@ void main() {
       await tester.tap(find.text('신규 고객 등록'));
       await settle(tester);
 
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('client-connect-member-id')),
-        'USER-8F2A41C9D6E3', // 대소문자는 같은 회원 ID다
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('client-connect-lookup')),
-      );
-      await settle(tester);
+      // 이수아가 자기 앱에 띄운 코드다. 여섯 자리가 다 차면 바로 연결된다 —
+      // 코드를 불러 준 것이 회원 본인이라 한 번 더 수락받지 않는다.
+      await enterSyncCode(tester, '308214');
 
-      // 확인 카드는 회원이 이미 등록해 둔 값을 보여준다 — 트레이너가
-      // 여기서 성별·나이를 입력하는 것이 아니다.
-      expect(find.text('이수아'), findsOneWidget);
+      // 결과 카드는 회원이 이미 등록해 둔 값을 보여준다 — 트레이너가 여기서
+      // 성별·나이를 입력하는 것이 아니다.
+      expect(find.text('이수아'), findsWidgets);
+      expect(find.textContaining('여성'), findsWidgets);
+
+      // 바로 잇지 않는다 — 이름·성별·나이를 확인하고 누른다.
       expect(find.text('이 고객이 맞나요?'), findsOneWidget);
-      expect(find.text('고객 등록'), findsOneWidget);
-
-      await tester.ensureVisible(find.text('고객 등록'));
-      await tester.tap(find.text('고객 등록'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-register')),
+      );
       await settle(tester);
 
       // 연결 성공 후 고객 리스트가 (재시작 없이) 즉시 반영된다 — 실제
@@ -568,14 +677,14 @@ void main() {
       );
     });
 
-    testWidgets('담당 종료한 고객도 신규 고객 등록에서 회원 ID로 다시 연결한다', (tester) async {
+    testWidgets('담당 종료한 고객도 동기화 코드로 같은 행을 되살린다', (tester) async {
       final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.clients,
       );
-      // 고객 관리에서 담당을 종료한 것과 같다 — 명단에서 사라지고,
-      // 다시 잡으려면 여기(고객 탭)에서 회원 ID로 새로 찾아야 한다.
+      // 고객 관리에서 담당을 종료한 것과 같다 — 명단에서 사라지고, 다시
+      // 잡으려면 여기(고객 탭)에서 회원의 코드를 받아 새로 연결해야 한다.
       await container
           .read(clientRepositoryProvider)
           .removeClient('seed-client-1');
@@ -585,25 +694,16 @@ void main() {
       await tester.tap(find.text('신규 고객 등록'));
       await settle(tester);
 
-      // 회원 앱 MY 탭이 보여주는 것과 같은 실 계정 id — 트레이너 화면의
-      // 행 id(seed-client-1)가 아니다.
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('client-connect-member-id')),
-        'user-7d4e9a2c5f18',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('client-connect-lookup')),
-      );
-      await settle(tester);
+      await enterSyncCode(tester, demoAlreadyLinkedPairingCode);
 
-      // 신규 등록과 같은 확인 절차를 거친다 — "이미 담당 중" 안내가
-      // 아니라 이름을 확인하고 누르는 등록 버튼이 뜬다.
       expect(find.text('김민수'), findsWidgets);
-      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
-      expect(find.text('이미 담당하고 있는 회원이에요'), findsNothing);
+      expect(find.text('이미 담당하고 있는 회원이에요.'), findsNothing);
 
-      await tester.ensureVisible(find.text('고객 등록'));
-      await tester.tap(find.text('고객 등록'));
+      // 바로 잇지 않는다 — 이름·성별·나이를 확인하고 누른다.
+      expect(find.text('이 고객이 맞나요?'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-connect-register')),
+      );
       await settle(tester);
 
       // 새 행이 아니라 같은 고객(seed-client-1)이 되살아난다 — 지난
@@ -621,7 +721,7 @@ void main() {
       expect(roster.length, 15);
     });
 
-    testWidgets('이미 연결된 회원 ID를 입력하면 중복 안내가 뜬다', (tester) async {
+    testWidgets('이미 담당 중인 회원의 코드는 중복 안내가 뜬다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -631,24 +731,18 @@ void main() {
       await tester.tap(find.text('신규 고객 등록'));
       await settle(tester);
 
-      // 이미 담당 중인 김민수(seed-client-1)의 회원 ID다 — 회원 앱 MY 탭이
-      // 데모 모드에서 보여주는 것과 같은 값이다.
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('client-connect-member-id')),
-        'user-7d4e9a2c5f18',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('client-connect-lookup')),
-      );
-      await settle(tester);
+      // 김민수(seed-client-1)는 이미 담당 중이다.
+      await enterSyncCode(tester, demoAlreadyLinkedPairingCode);
 
-      expect(find.text('김민수'), findsWidgets);
-      expect(find.text('이미 담당하고 있는 회원이에요'), findsOneWidget);
-      // 이유만 보여 주고 끝내지 않는다 — 연결 버튼 자체가 없다.
-      expect(find.text('고객 등록'), findsNothing);
+      expect(find.text('이미 담당하고 있는 회원이에요.'), findsOneWidget);
+      // 이유만 보여 주고 끝낸다 — 연결된 회원 카드가 뜨지 않는다.
+      expect(
+        find.byKey(const ValueKey<String>('client-connect-result')),
+        findsNothing,
+      );
     });
 
-    testWidgets('존재하지 않는 회원 ID는 찾을 수 없음으로 안내한다', (tester) async {
+    testWidgets('모르는 코드는 왜인지 갈라 말하지 않는다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
@@ -658,18 +752,13 @@ void main() {
       await tester.tap(find.text('신규 고객 등록'));
       await settle(tester);
 
-      await tester.enterText(
-        find.byKey(const ValueKey<String>('client-connect-member-id')),
-        'user-no-such-member',
-      );
-      await tester.tap(
-        find.byKey(const ValueKey<String>('client-connect-lookup')),
-      );
-      await settle(tester);
+      await enterSyncCode(tester, '000000');
 
-      expect(find.text('그 회원 ID를 쓰는 회원을 찾지 못했어요'), findsOneWidget);
-      expect(find.text('고객 등록'), findsNothing);
+      // 틀렸는지·만료됐는지·이미 쓰였는지를 갈라 주면 어떤 코드가 존재하기는
+      // 했는지를 알려 주는 셈이다.
+      expect(find.textContaining('새 코드를 받아'), findsOneWidget);
     });
+
 
     testWidgets('the detail header chip toggles 활성/휴면', (tester) async {
       await pumpTrainerApp(

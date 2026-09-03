@@ -785,6 +785,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exEstimatedCalories => '예상 소모 칼로리';
 
   @override
+  String get exCaloriesNeedName => '운동 이름을 적어주세요';
+
+  @override
+  String get exCaloriesCalculating => '계산 중…';
+
+  @override
+  String exCaloriesFromCatalog(String activity) {
+    return '$activity 기준 · 체중 반영';
+  }
+
+  @override
+  String get exCaloriesRoughEstimate => '운동 종류 평균으로 낸 어림값이에요';
+
+  @override
   String get exEnterDuration => '운동 시간을 입력해주세요';
 
   @override
@@ -1001,12 +1015,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myDefaultUserName => '사용자';
-
-  @override
-  String get myMemberIdLabel => '내 회원 ID';
-
-  @override
-  String get myMemberIdCopied => '회원 ID를 복사했어요';
 
   @override
   String get mySettingsTitle => '설정';
@@ -1382,6 +1390,123 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get coachReportPdfSectionTrainerNote => '트레이너 메시지';
+
+  @override
+  String get coachReportPdfNoTrainerNote => '함께 온 메시지가 없어요.';
+
+  @override
+  String get coachReportPdfSectionChange => '지난주 대비';
+
+  @override
+  String get coachReportPdfSectionMacros => '평균 탄단지';
+
+  @override
+  String get coachReportPdfLabelLoggedDays => '식단 기록한 날';
+
+  @override
+  String get coachReportPdfLabelSodiumOver => '나트륨 목표 초과';
+
+  @override
+  String get coachReportPdfLabelPtDone => '진행한 PT';
+
+  @override
+  String coachReportPdfValueSessions(String value) {
+    return '$value회';
+  }
+
+  @override
+  String get coachReportPdfLabelCardio => '유산소';
+
+  @override
+  String get coachReportPdfLabelStrength => '근력';
+
+  @override
+  String get coachReportPdfLabelStretching => '스트레칭';
+
+  @override
+  String get coachReportPdfSectionTypes => '운동 유형별 시간';
+
+  @override
+  String get coachReportPdfNoSessions => '잡힌 일정 없음';
+
+  @override
+  String get coachReportPdfBandPeriod => '기간';
+
+  @override
+  String get coachReportPdfSectionGoals => '목표 대비';
+
+  @override
+  String get coachReportPdfColumnMetric => '지표';
+
+  @override
+  String get coachReportPdfColumnThisWeek => '이번 주';
+
+  @override
+  String get coachReportPdfColumnLastWeek => '지난주';
+
+  @override
+  String get coachReportPdfColumnChange => '변화';
+
+  @override
+  String get coachReportPdfColumnWeekday => '요일';
+
+  @override
+  String get coachReportPdfColumnWorkout => '운동';
+
+  @override
+  String get coachReportPdfColumnIntake => '섭취';
+
+  @override
+  String get coachReportPdfUpcoming => '아직 지나지 않았어요';
+
+  @override
+  String coachReportPdfGoalOf(String value, String target) {
+    return '$value (목표 $target)';
+  }
+
+  @override
+  String coachReportPdfChartTarget(String value) {
+    return '목표 $value';
+  }
+
+  @override
+  String coachReportPdfDayUpcoming(String weekday) {
+    return '$weekday요일 — 아직 지나지 않았어요';
+  }
+
+  @override
+  String coachReportPdfChange(
+    String label,
+    String current,
+    String previous,
+    String delta,
+  ) {
+    return '· $label: $current (지난주 $previous, $delta)';
+  }
+
+  @override
+  String coachReportPdfDeltaUp(String value) {
+    return '+$value';
+  }
+
+  @override
+  String coachReportPdfDeltaDown(String value) {
+    return '-$value';
+  }
+
+  @override
+  String get coachReportPdfDeltaSame => '변화 없음';
+
+  @override
+  String get coachReportPdfNoPreviousWeek => '지난주 기록이 없어 견줄 값이 없어요.';
+
+  @override
+  String coachReportPdfSodiumTargetNote(String target) {
+    return '나트륨 목표는 회원님이 MY 화면에 적어 둔 하루 ${target}mg 기준이에요.';
+  }
+
+  @override
   String get coachReportPdfPreviewNote =>
       '트레이너 리포트가 보는 주를 회원님 기록으로 정리한 미리보기예요.';
 
@@ -1733,6 +1858,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get signUpNameHint => '이름';
 
   @override
+  String get signUpPhoneHint => '전화번호';
+
+  @override
+  String get signUpPhoneHelper => '트레이너가 회원님을 확인할 때 쓰는 연락처예요';
+
+  @override
   String get signUpPasswordHint => '비밀번호 (8자 이상)';
 
   @override
@@ -1749,6 +1880,41 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get signUpPasswordMismatch => '비밀번호가 일치하지 않아요';
+
+  @override
+  String get signUpPhoneInvalid => '전화번호를 4자리 이상 입력해 주세요';
+
+  @override
+  String get trainerSyncEntryLabel => '트레이너와 데이터 동기화';
+
+  @override
+  String get trainerSyncEntryHint => '6자리 코드로 담당 트레이너와 연결해요';
+
+  @override
+  String get trainerSyncTitle => '트레이너와 데이터 동기화';
+
+  @override
+  String get trainerSyncConsent => '이 코드를 입력한 트레이너가 담당이 되고, 식단·운동·건강 기록이 공유돼요.';
+
+  @override
+  String get trainerSyncHint => '트레이너에게 이 6자리를 불러 주세요.';
+
+  @override
+  String trainerSyncCountdown(String remaining) {
+    return '$remaining 뒤에 만료돼요';
+  }
+
+  @override
+  String get trainerSyncExpired => '코드가 만료됐어요.';
+
+  @override
+  String get trainerSyncFailed => '코드를 받지 못했어요.';
+
+  @override
+  String get trainerSyncRetry => '새 코드 받기';
+
+  @override
+  String get trainerSyncCopied => '동기화 코드를 복사했어요';
 
   @override
   String get signUpEmailTaken => '이미 가입된 이메일이에요. 로그인해 주세요.';

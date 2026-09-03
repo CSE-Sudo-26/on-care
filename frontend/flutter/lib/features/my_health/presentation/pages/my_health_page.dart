@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +14,7 @@ import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_h
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
+import 'package:oncare/features/my_health/presentation/widgets/trainer_sync_sheet.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
@@ -141,7 +141,6 @@ class _ProfileCard extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final String name = profile?.name ?? '';
     final String email = profile?.email ?? '';
-    final String memberId = profile?.id ?? '';
     final String initial = name.isNotEmpty ? name.substring(0, 1) : '·';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -208,70 +207,38 @@ class _ProfileCard extends StatelessWidget {
               ),
             ],
           ),
-          if (memberId.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: FigmaColors.hairline),
-            const SizedBox(height: 12),
-            _MemberIdRow(label: l.myMemberIdLabel, memberId: memberId),
-          ],
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: FigmaColors.hairline),
+          const SizedBox(height: 12),
+          const _TrainerSyncRow(),
         ],
       ),
     );
   }
 }
 
-/// 트레이너가 신규 고객 등록에서 입력하는 값과 같은 ID다 — 트레이너웹은
-/// 성별·나이를 직접 받지 않고 이 ID로 회원을 찾아 연결한다. 복사 버튼을
-/// 두는 이유는 트레이너에게 구두로 불러 주거나 옮겨 적기 쉬워야 해서다.
-class _MemberIdRow extends StatelessWidget {
-  const _MemberIdRow({required this.label, required this.memberId});
-
-  final String label;
-  final String memberId;
+/// 트레이너와 데이터 동기화 — 누르면 6자리 코드를 띄운다. (#1634)
+///
+/// 예전에는 이 자리가 "내 회원 ID"(`User.id`)를 보여 주고 복사 버튼을 뒀다.
+/// 트레이너가 그 값을 완전 일치로 입력해야 했는데, `user-<12자리 hex>` 는 마주
+/// 앉아 불러 주거나 받아 적을 수 있는 형태가 아니었다.
+///
+/// 코드를 여기서 바로 띄우지 않고 한 단계 두는 이유는, 코드를 띄우는 것이 곧
+/// 데이터 공유 동의라서다 — 스스로 누른 것이어야 한다.
+class _TrainerSyncRow extends StatelessWidget {
+  const _TrainerSyncRow();
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                memberId,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Semantics(
-          button: true,
-          label: label,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () async {
-              await Clipboard.setData(ClipboardData(text: memberId));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l.myMemberIdCopied)),
-              );
-            },
-            child: Container(
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => showTrainerSyncSheet(context),
+        child: Row(
+          children: <Widget>[
+            Container(
               width: 34,
               height: 34,
               alignment: Alignment.center,
@@ -280,14 +247,44 @@ class _MemberIdRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
-                Icons.copy_rounded,
-                size: 16,
+                Icons.sync_rounded,
+                size: 18,
                 color: FigmaColors.primary,
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    l.trainerSyncEntryLabel,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: FigmaColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l.trainerSyncEntryHint,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppColors.mutedForeground,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

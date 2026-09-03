@@ -232,6 +232,67 @@ class FoodNutrient(Base):
     )  # 데이터 출처(식약처=mfds)
 
 
+class ExerciseCatalogItem(Base):
+    """운동 종목 참조표 — 이름을 소모 칼로리로 바꾸는 유일한 근거. (#1312)
+
+    식단의 `food_nutrients` 와 같은 자리다. 인식(무엇을 했나)과 수치(얼마나
+    소모하나)를 나눠, 수치는 이 표에서만 나오게 한다. 이름 해석이 AI 를 타든
+    표 매칭으로 붙든 **숫자는 늘 여기서** 나오므로, 같은 기록을 다시 열어도 값이
+    흔들리지 않는다 — 회원 앱·트레이너 앱·주간 합계가 같은 값을 본다(#1131).
+
+    `met` 은 단위체중당 에너지 소비 계수(체중 1kg·1시간당 kcal)다. 화면에는
+    꺼내지 않는다 — 집계 축은 칼로리 하나다(#1276).
+    """
+
+    __tablename__ = "exercise_catalog"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    #: 대표 종목 이름("러닝머신"). 화면에 "무엇으로 계산했는지" 보여 줄 때 쓴다.
+    name: Mapped[str] = mapped_column(String(100), index=True)
+    #: 매칭용 정규화 이름. `exercise_catalog.matcher.normalize` 의 결과다.
+    name_norm: Mapped[str] = mapped_column(String(100), default="", index=True)
+    #: 같은 종목의 다른 표기를 정규화해 `|` 로 이어 붙인 것("사이클|싸이클").
+    #: 별칭 표를 따로 두지 않는 이유는 이 표가 시딩 후 읽기 전용이고 전체가
+    #: 수백 행이라, 조인보다 전건 로드 한 번이 싸기 때문이다.
+    aliases_norm: Mapped[str] = mapped_column(Text, default="", server_default="")
+    #: 집계 유형 — cardio|strength|stretching|other. 이름이 매칭되면 회원이 고른
+    #: 유형이 아니라 이 값이 맞다("줄넘기"를 근력으로 골라도 유산소다).
+    type: Mapped[str] = mapped_column(String(20), default="other")
+    met: Mapped[float] = mapped_column(Float, default=0)
+    #: 데이터 출처. khpi=한국건강증진개발원 공공데이터, compendium=국제 표준표.
+    source: Mapped[str] = mapped_column(String(20), default="khpi")
+
+
+class ExerciseNameMatch(Base):
+    """운동 이름 → 종목 해석 결과 캐시. (#1312)
+
+    표 매칭으로 붙지 않는 자유 입력("런닝머신 30분", "PT 하체날")은 AI 가 종목으로
+    접는다. 그 해석을 여기 적어 두는 이유는 둘이다.
+
+    1. **값이 흔들리지 않게.** 같은 이름을 두 번 물으면 두 번 다른 답이 올 수
+       있고, 그러면 주간 합계·트레이너 리포트·목표 달성률이 함께 흔들린다.
+    2. **두 번 묻지 않게.** 호출 비용과 지연이 이름 하나당 한 번으로 끝난다.
+
+    못 붙인 이름도 적는다(`catalog_id` 가 None). 안 그러면 해석되지 않는 이름을
+    적을 때마다 계속 묻게 된다 — 실패는 성공보다 자주 일어난다.
+    """
+
+    __tablename__ = "exercise_name_matches"
+
+    #: 정규화된 입력 이름이 곧 키다. 표기가 달라도 같은 이름이면 한 번만 묻는다.
+    name_norm: Mapped[str] = mapped_column(String(100), primary_key=True)
+    catalog_id: Mapped[int | None] = mapped_column(
+        ForeignKey("exercise_catalog.id", ondelete="CASCADE"), nullable=True
+    )
+    #: 해석 확신도 0.0~1.0. 낮으면 채택하지 않고 유형 표로 폴백한다.
+    confidence: Mapped[float] = mapped_column(Float, default=0)
+    #: 누가 붙였나 — catalog=표 매칭, ai=이름 해석 모델.
+    resolver: Mapped[str] = mapped_column(String(20), default="ai")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class ExerciseSession(Base):
     """운동 기록 — drift ExerciseSessions 대응."""
 
@@ -265,6 +326,14 @@ class ExerciseSession(Base):
     #: 같은 이유로 계산에 넣지 않는다.
     weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     calories: Mapped[int] = mapped_column(Integer, default=0)
+    #: 이 칼로리가 어디서 나왔나 — db=종목 참조표+체중, mixed=이름 해석은 AI 이고
+    #: 수치는 참조표, estimate=유형 평균 어림값. 식단(`RecognizedFood.source`)과
+    #: 같은 어휘다(#1312). 저장해 두는 이유는 참조표가 나중에 바뀌어도 그때 화면에
+    #: 보여 준 근거는 그대로여야 하기 때문이다. 이 컬럼이 생기기 전 기록은 전부
+    #: 어림값이라 기본값이 `estimate` 다.
+    calorie_source: Mapped[str] = mapped_column(
+        String(20), default="estimate", server_default="estimate"
+    )
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
     intensity: Mapped[str] = mapped_column(
         String(20), default="moderate", server_default="moderate"
@@ -808,6 +877,40 @@ class TrainerClientInvite(Base):
         Index(
             "ix_trainer_client_invites_member_status", "member_id", "status"
         ),
+    )
+
+
+class MemberPairingCode(Base):
+    """회원이 트레이너에게 불러 주는 6자리 일회용 동기화 코드. (#1634)
+
+    예전에는 회원 앱 MY 탭이 `User.id`(`user-<12자리 hex>`)를 "내 회원 ID"로
+    보여 주고 트레이너가 그것을 완전 일치로 입력했다. 마주 앉아 불러 주기에는
+    12자리 hex 가 옮겨 적을 수 있는 형태가 아니었다.
+
+    **코드를 발급하는 행위가 곧 데이터 공유 동의다** (#1022). 담당 관계는 상대의
+    식단·건강 기록을 여는 권한이라 동의 없이 열 수 없는데, 회원이 코드를 띄운
+    화면이 공유 범위를 말하고 그 코드를 직접 불러 준다. 그래서 [created_at] 이
+    동의 시각이 되고, 트레이너가 코드를 쓰는 순간 담당이 바로 성립한다.
+
+    **회원당 한 행이다.** 코드가 여러 개 살아 있으면 회원이 자기가 무엇을 줬는지
+    모른다. 시트를 다시 열어도 유효한 코드는 그대로 나와야, 트레이너가 이미
+    받아 적은 값이 말없이 무효가 되지 않는다.
+
+    쓰면 행을 지운다 — 1회용이다. 만료된 행은 다음 발급·사용 때 정리한다.
+    """
+
+    __tablename__ = "member_pairing_codes"
+
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: 사람이 불러 주고 받아 적는 값이라 숫자 6자리다. 만료된 뒤에도 행이 남아
+    #: 있는 동안은 같은 코드가 두 번 발급되지 않도록 유일하게 둔다.
+    code: Mapped[str] = mapped_column(String(6), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    #: 발급 시각 = 데이터 공유 동의 시각. 담당 링크의 `data_consent_at` 이 된다.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
 
 

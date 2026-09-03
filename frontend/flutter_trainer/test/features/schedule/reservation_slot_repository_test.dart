@@ -7,6 +7,9 @@ import 'package:oncare_trainer/features/schedule/data/repositories/reservation_s
 class _MockDio extends Mock implements Dio {}
 
 void main() {
+  // `watch()` 가 앱 생명주기(포그라운드 여부)를 보므로 바인딩이 필요하다.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _MockDio dio;
   late DioReservationSlotRepository repository;
 
@@ -59,6 +62,72 @@ void main() {
     );
 
     expect((await repository.list()).single.booked, isFalse);
+  });
+
+  test('watch 는 회원 앱이 잡아 간 자리를 주기적으로 다시 읽는다 (#1590)', () async {
+    var calls = 0;
+    when(() => dio.get<List<dynamic>>('/trainer/reservation-slots')).thenAnswer(
+      (_) async {
+        calls += 1;
+        return Response<List<dynamic>>(
+          requestOptions: RequestOptions(path: '/trainer/reservation-slots'),
+          statusCode: 200,
+          // 두 번째 읽기에서 회원이 그 자리를 잡았다.
+          data: <dynamic>[
+            <String, dynamic>{
+              ...slotJson(remaining: calls == 1 ? 1 : 0),
+              if (calls > 1) 'booked_by_name': '김하늘',
+            },
+          ],
+        );
+      },
+    );
+
+    final emissions = await DioReservationSlotRepository(
+      dio,
+      pollInterval: const Duration(milliseconds: 5),
+    ).watch().take(2).toList().timeout(const Duration(seconds: 1));
+
+    expect(emissions.first.single.booked, isFalse);
+    expect(emissions.last.single.booked, isTrue);
+    expect(emissions.last.single.bookedByName, '김하늘');
+  });
+
+  test('watch 는 이 콘솔이 만든 변경도 기다리지 않고 다시 읽는다 (#1590)', () async {
+    when(() => dio.get<List<dynamic>>('/trainer/reservation-slots')).thenAnswer(
+      (_) async => Response<List<dynamic>>(
+        requestOptions: RequestOptions(path: '/trainer/reservation-slots'),
+        statusCode: 200,
+        data: <dynamic>[slotJson()],
+      ),
+    );
+    when(
+      () =>
+          dio.delete<Map<String, dynamic>>('/trainer/reservation-slots/slot-1'),
+    ).thenAnswer(
+      (_) async => Response<Map<String, dynamic>>(
+        requestOptions: RequestOptions(
+          path: '/trainer/reservation-slots/slot-1',
+        ),
+        statusCode: 200,
+        data: <String, dynamic>{...slotJson(), 'is_closed': true},
+      ),
+    );
+
+    // 폴링 없이(주기를 길게) 변경 신호만으로 두 번째 값이 오는지 본다.
+    final repo = DioReservationSlotRepository(
+      dio,
+      pollInterval: const Duration(minutes: 5),
+    );
+    final emissions = repo
+        .watch()
+        .take(2)
+        .toList()
+        .timeout(const Duration(seconds: 1));
+    await Future<void>.delayed(Duration.zero);
+    await repo.close('slot-1');
+
+    expect(await emissions, hasLength(2));
   });
 
   test('create sends UTC time, duration, and session type', () async {
@@ -181,6 +250,26 @@ void main() {
       final unchanged = (await mockRepository.list()).single;
       expect(unchanged.sessionType, '1:1 PT');
       expect(unchanged.startsAt, slot.startsAt);
+    });
+
+    test('watch 는 자리를 열고 닫을 때마다 새 목록을 낸다 (#1590)', () async {
+      final mockRepository = MockReservationSlotRepository();
+      addTearDown(mockRepository.dispose);
+      final emissions = mockRepository
+          .watch()
+          .take(2)
+          .toList()
+          .timeout(const Duration(seconds: 1));
+      await Future<void>.delayed(Duration.zero);
+
+      await mockRepository.create(
+        startsAt: nowKst().add(const Duration(days: 1)),
+        sessionType: '상담',
+      );
+
+      final pages = await emissions;
+      expect(pages.first, isEmpty);
+      expect(pages.last.single.sessionType, '상담');
     });
 
     test('update can change the session type of an open slot', () async {

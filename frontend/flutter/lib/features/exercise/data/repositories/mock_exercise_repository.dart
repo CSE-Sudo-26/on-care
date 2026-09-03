@@ -1,6 +1,7 @@
 import 'package:demo_fixture/demo_fixture.dart';
 import 'package:oncare/core/demo/period_advice.dart';
 import 'package:oncare/core/utils/clock.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_estimate.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_load.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
@@ -257,6 +258,19 @@ class MockExerciseRepository implements ExerciseRepository {
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
+
+  /// 목업에는 종목 참조표가 없다 — 유형 평균의 어림값을 그렇다고 말하며
+  /// 돌려준다(#1312). 없는 근거를 있는 척하지 않는 것이 이 규약의 요점이라,
+  /// 여기서 이름을 아는 척 계산하면 화면의 `어림값` 표시만 사라진다.
+  @override
+  Future<ExerciseCalorieEstimate> previewCalories({
+    required ExerciseType type,
+    required String name,
+    required int minutes,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
+  }) async => ExerciseCalorieEstimate(
+    calories: estimateExerciseCalories(type, minutes, intensity: intensity),
+  );
 
   @override
   Future<ExerciseSession> addSession({

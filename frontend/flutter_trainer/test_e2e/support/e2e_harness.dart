@@ -49,6 +49,20 @@ const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 const String e2ePhase = String.fromEnvironment('E2E_PHASE');
 const String e2eStateFile = String.fromEnvironment('E2E_STATE_FILE');
 
+/// 회원 단계가 상담 신청에 넣는 희망 시각의 시작(`HH:mm`).
+///
+/// 승인이 이 시각에 상담 일정을 만든다. 회원 앱 하네스
+/// (`frontend/flutter/test_e2e/support/e2e_harness.dart`)의 같은 이름 상수와
+/// **값이 같아야 한다** — 두 앱은 서로 다른 패키지라 공유할 수 없다.
+const String consultStartTime = '21:00';
+
+/// [consultStartTime] 의 종료 시각.
+const String consultEndTime = '22:00';
+
+/// 회원이 신청에 남긴 `preferred_time_slot`. 희망 시각은 필수라(#1587)
+/// `시간 협의` 같은 값은 더 이상 오지 않는다.
+const String consultPreferredTimeSlot = '$consultStartTime-$consultEndTime';
+
 /// 단계 사이로 넘기는 값. **화면에서 읽을 수 없는 id 만** 여기 담는다.
 ///
 /// 잔여 좌석이나 일정 표시 여부처럼 검증 대상인 것은 절대 담지 않는다 — 그것을
@@ -87,7 +101,8 @@ class E2eState {
   }
 
   /// 이번 실행이 쓰는 슬롯의 시작 시각(로컬).
-  DateTime get slotStartsAt => DateTime.parse(require('slotStartsAt')).toLocal();
+  DateTime get slotStartsAt =>
+      DateTime.parse(require('slotStartsAt')).toLocal();
 
   /// 회원이 예약하기 **전에** 이미 그 시각에 있던 예약 일정 id 들.
   ///
@@ -180,6 +195,32 @@ class E2eApi {
       for (final Object? row in res.data ?? const <Object?>[])
         row! as Map<String, dynamic>,
     ];
+  }
+
+  /// [date] [time] 자리에 남아 있는 일정을 모두 지운다.
+  ///
+  /// 상담 승인은 그 자리에 이미 일정이 있으면 409 로 막힌다(겹침 판정이
+  /// (날짜, 시각)이 정확히 같은 자리를 본다). 앞선 실행이 승인까지 하고
+  /// 정리 전에 죽으면 그날 안에는 다시 승인할 수 없게 되므로, 승인 전에
+  /// 이 자리를 비워 둔다. 시드 타임라인과 다른 스위트가 쓰지 않는 시각
+  /// ([consultStartTime])에만 쓴다.
+  Future<void> clearSessionsAt({
+    required String date,
+    required String time,
+  }) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/trainer/schedule',
+      queryParameters: <String, String>{'date': date},
+      options: _auth,
+    );
+    for (final Object? row in res.data ?? const <Object?>[]) {
+      final Map<String, dynamic> session = row! as Map<String, dynamic>;
+      if (session['time'] != time) continue;
+      await _dio.delete<Object?>(
+        '/trainer/schedule/${session['id']}',
+        options: _auth,
+      );
+    }
   }
 
   Future<List<Map<String, dynamic>>> trainerSlots() async {
@@ -305,7 +346,8 @@ class E2eApi {
   Future<int> unreadFor(String clientId) async {
     final Response<Map<String, dynamic>> res = await _dio
         .get<Map<String, dynamic>>('/trainer/chat/unread', options: _auth);
-    return ((res.data ?? const <String, dynamic>{})[clientId] as num?)?.toInt() ??
+    return ((res.data ?? const <String, dynamic>{})[clientId] as num?)
+            ?.toInt() ??
         0;
   }
 
@@ -342,7 +384,11 @@ Future<void> pumpUntil(
   while (finder.evaluate().isEmpty && DateTime.now().isBefore(deadline)) {
     await tester.pump(const Duration(milliseconds: 100));
   }
-  expect(finder, findsWidgets, reason: '[$e2ePhase] $step 이(가) $timeout 안에 나타나지 않았습니다.');
+  expect(
+    finder,
+    findsWidgets,
+    reason: '[$e2ePhase] $step 이(가) $timeout 안에 나타나지 않았습니다.',
+  );
 }
 
 Future<void> pumpUntilAbsent(
@@ -355,7 +401,11 @@ Future<void> pumpUntilAbsent(
   while (finder.evaluate().isNotEmpty && DateTime.now().isBefore(deadline)) {
     await tester.pump(const Duration(milliseconds: 100));
   }
-  expect(finder, findsNothing, reason: '[$e2ePhase] $step 이(가) $timeout 안에 사라지지 않았습니다.');
+  expect(
+    finder,
+    findsNothing,
+    reason: '[$e2ePhase] $step 이(가) $timeout 안에 사라지지 않았습니다.',
+  );
 }
 
 /// 스크롤 목록 안에서 [target] 이 나올 때까지 끌어 내린다.
@@ -446,8 +496,7 @@ Future<void> loginAsTrainer(WidgetTester tester) async {
 /// 그 순간의 서울 벽시계. 한국은 1988년 이후 서머타임이 없어 고정 +9 로 충분하고,
 /// 서버가 쓰는 `app.core.clock.SEOUL` 과 같은 값이 된다. 돌려주는 값은 UTC 플래그가
 /// 붙어 있으니 **필드만** 읽어야 한다.
-DateTime _seoul(DateTime value) =>
-    value.toUtc().add(const Duration(hours: 9));
+DateTime _seoul(DateTime value) => value.toUtc().add(const Duration(hours: 9));
 
 String ymd(DateTime value) =>
     '${value.year.toString().padLeft(4, '0')}-'

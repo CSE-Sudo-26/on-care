@@ -4,7 +4,7 @@ Description: Private S3 and CloudFront hosting for the OnCare Flutter web apps
 Parameters:
   GitHubOwner:
     Type: String
-    Default: CSE-Sudo-26
+    Default: CSE-Sudo
   GitHubRepository:
     Type: String
     Default: on-care

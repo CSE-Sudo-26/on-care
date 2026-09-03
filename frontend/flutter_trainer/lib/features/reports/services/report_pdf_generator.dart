@@ -20,6 +20,13 @@ typedef _Unit = String Function(String value);
 /// 리포트 데이터로 문서 레이아웃을 새로 그린다.
 ///
 /// 문구는 전부 [AppLocalizations] 에서 온다. 이 PDF 는 회원이 실제로 받아 보는
+/// 문서에 쓰는 서체. 앱이 번들에 담고 있는 것을 **명시해서** 쓴다. (#1621)
+///
+/// 지정하지 않으면 `TextPainter` 가 플랫폼 기본 서체로 그리는데, 그 서체가 덮지
+/// 못하는 한글 음절이 네모(두부)로 나온다. 회원 앱의 같은 문서에서 `뒀`·`숄` 이
+/// 그랬다. 이 파일은 회원에게 보내는 파일을 만드는 자리라 같은 규칙을 지킨다.
+const String _kFont = 'Pretendard';
+
 /// 산출물이라, 화면은 영어인데 문서만 한국어로 나가면 안 된다(#964).
 class ReportPdfGenerator {
   const ReportPdfGenerator();
@@ -99,9 +106,10 @@ class ReportPdfGenerator {
       text: TextSpan(
         text: title,
         style: const TextStyle(
+          fontFamily: _kFont,
           color: Color(0xff173b36),
           fontSize: 38,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -315,9 +323,10 @@ class _PdfBlock {
   factory _PdfBlock.section(String text) => _PdfBlock(
     text,
     const TextStyle(
+      fontFamily: _kFont,
       color: Color(0xff173b36),
       fontSize: 25,
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w700,
       height: 1.35,
     ),
     16,
@@ -325,7 +334,12 @@ class _PdfBlock {
 
   factory _PdfBlock.body(String text, {double after = 9}) => _PdfBlock(
     text,
-    const TextStyle(color: Color(0xff263331), fontSize: 20, height: 1.5),
+    const TextStyle(
+      fontFamily: _kFont,
+      color: Color(0xff263331),
+      fontSize: 20,
+      height: 1.5,
+    ),
     after,
   );
 

@@ -1,3 +1,5 @@
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+
 /// 이메일 완전 일치로 찾은 회원 한 명.
 ///
 /// 요청을 보낼지 판단할 만큼만 담는다 — 이름, 이미 담당이 있는지, 내가 보낸
@@ -53,6 +55,55 @@ class MemberLookup {
     gender: json['gender'] as String?,
     age: (json['age'] as num?)?.toInt(),
     goal: json['goal'] as String?,
+  );
+}
+
+/// 6자리 동기화 코드로 방금 연결된 회원. (#1634)
+///
+/// 코드를 발급해 불러 준 것이 회원 본인이라 신원 확인은 이미 끝났다. 그래도
+/// 이름만 돌려받지 않는 것은, 트레이너가 여섯 자리를 잘못 눌렀을 때 **연결된
+/// 뒤에라도** 그 사실을 알아볼 수 있어야 하기 때문이다.
+///
+/// 키·몸무게·질환 같은 값은 여기 없다. 그것들은 고객 상세의 건강 프로필에서
+/// 조회한다.
+class PairedMember {
+  const PairedMember({
+    required this.memberId,
+    required this.name,
+    this.gender = '',
+    this.age,
+    this.goal = '',
+  });
+
+  /// 내부 식별자(`User.id`) — 고객 상세로 넘어갈 때 쓴다.
+  final String memberId;
+  final String name;
+
+  /// `male`/`female`/`other`. 회원이 자기 앱에 등록해 둔 값이고, 비어 있을 수 있다.
+  final String gender;
+
+  /// 생년월일로 계산한 만 나이. 회원이 넣지 않았으면 `null`.
+  final int? age;
+
+  /// 회원이 적어 둔 운동 목표. 비어 있을 수 있다.
+  final String goal;
+
+  /// 화면에 쓸 성별·나이 — 고객 목록과 **같은 규칙**이다 (#1634).
+  ///
+  /// 회원이 프로필에 성별·생년월일을 넣지 않았으면 목록과 마찬가지로 id 에서
+  /// 만든 고정 값이 선다. 목록은 `남성 · 23세` 라고 하는데 확인 카드만 아무
+  /// 말이 없으면, 트레이너가 지금 잇는 사람이 목록의 그 사람인지 견줄 수 없다.
+  String get rosterGender =>
+      rosterGenderFor(id: memberId, name: name, gender: gender);
+
+  int get rosterAge => rosterAgeFor(id: memberId, age: age);
+
+  factory PairedMember.fromJson(Map<String, Object?> json) => PairedMember(
+    memberId: (json['member_id'] as String?) ?? '',
+    name: (json['name'] as String?) ?? '',
+    gender: (json['gender'] as String?) ?? '',
+    age: (json['age'] as num?)?.toInt(),
+    goal: (json['goal'] as String?) ?? '',
   );
 }
 

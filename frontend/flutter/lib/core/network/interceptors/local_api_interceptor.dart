@@ -15,6 +15,7 @@ import 'package:drift/drift.dart'
         Value;
 import 'package:logger/logger.dart';
 import 'package:oncare/core/demo/demo_ai_advice.dart';
+import 'package:oncare/core/demo/exercise_catalog_demo.dart';
 import 'package:oncare/core/demo/period_advice.dart';
 import 'package:oncare/core/network/request_extras.dart';
 import 'package:oncare/core/storage/app_database.dart';
@@ -67,6 +68,7 @@ class LocalApiInterceptor extends Interceptor {
     'GET /exercise/weeks/current': _exerciseCurrentWeek,
     'GET /exercise/advice': _exerciseAdvice,
     'POST /exercise/sessions': _exerciseAddSession,
+    'POST /exercise/calories': _exerciseCalories,
     'GET /schedule/events': _scheduleEvents,
     'POST /schedule/events': _scheduleCreate,
     'GET /notifications': _notifications,
@@ -84,6 +86,8 @@ class LocalApiInterceptor extends Interceptor {
     'POST /users/me/onboarding': _usersMeOnboarding,
     'PUT /users/me/health-goals': _usersMeHealthGoals,
     'GET /users/me/health': _usersMeHealth,
+    'POST /users/me/pairing-code': _pairingCodeIssue,
+    'DELETE /users/me/pairing-code': _pairingCodeRevoke,
     'GET /places/nearby': _placesNearby,
   };
 
@@ -273,10 +277,17 @@ class LocalApiInterceptor extends Interceptor {
     final body = _jsonBody(options);
     final type = (body['type'] as String? ?? existing.type).trim();
     final minutes = (body['minutes'] as num?)?.toInt() ?? existing.minutes;
-    final calories = (body['calories'] as num?)?.toInt() ?? existing.calories;
     final intensity = (body['intensity'] as String? ?? existing.intensity)
         .trim();
     final name = ((body['name'] as String?) ?? existing.name).trim();
+    // 앱이 보낸 `calories` 는 쓰지 않는다 — 실 서버와 같은 규약이다(#1312).
+    // 계산이 한 곳이라야 미리보기와 저장된 기록의 숫자가 갈리지 않는다.
+    final estimated = await _demoEstimate(
+      name: name,
+      type: type,
+      minutes: minutes,
+      intensity: intensity,
+    );
     // 유형을 근력에서 바꾼 수정이면 세트·횟수·중량이 지워진다 — 남겨 두면
     // 유산소 기록이 세트를 들고 있게 된다.
     final sets = _strengthOnly(
@@ -309,7 +320,7 @@ class LocalApiInterceptor extends Interceptor {
         type: Value(type),
         name: Value(name),
         minutes: Value(minutes),
-        calories: Value(calories),
+        calories: Value(estimated.calories),
         intensity: Value(intensity),
         weekStart: Value(weekStart),
         dayLabel: Value(dayLabel),
@@ -330,8 +341,9 @@ class LocalApiInterceptor extends Interceptor {
         sets: sets,
         reps: reps,
         weight: weight,
-        calories: calories,
+        calories: estimated.calories,
         intensity: intensity,
+        calorieSource: estimated.source,
       ),
     );
   }
@@ -1164,6 +1176,10 @@ class LocalApiInterceptor extends Interceptor {
   }
 
   Future<Response<Object?>> _exerciseCurrentWeek(RequestOptions options) async {
+    // 저장된 기록의 칼로리 근거를 되짚을 때 쓴다 — 이름이 종목표에 붙어도
+    // 체중을 모르면 어림값으로 계산된 기록이다(`_demoEstimate` 와 같은 판단).
+    final double? weightKg =
+        ((await _mergedProfile())['weight_kg'] as num?)?.toDouble();
     // 파라미터가 **있으면** 그 값을 그대로 검사한다. 빈 문자열도 "잘못된 값"이다
     // — 서버(FastAPI)가 그렇게 답하므로 여기서 조용히 이번 주로 흘려보내면 두
     //   구현이 갈린다.
@@ -1257,6 +1273,15 @@ class LocalApiInterceptor extends Interceptor {
           weight: r.weight,
           calories: r.calories,
           intensity: r.intensity,
+          // 저장된 기록의 근거는 이름을 다시 붙여 되짚는다. 데모는 이름 해석
+          // AI 를 타지 않으므로 쓰기 때와 같은 답이 나온다 — drift 스키마에
+          // 컬럼을 더하지 않으려고 이 자리에서 되살린다.
+          calorieSource:
+              matchDemoExercise(r.name) != null &&
+                  weightKg != null &&
+                  weightKg > 0
+              ? 'db'
+              : 'estimate',
         ),
       );
     }
@@ -1385,26 +1410,118 @@ class LocalApiInterceptor extends Interceptor {
     return (_mondayOf(day), _weekdayLabels[day.weekday - 1]);
   }
 
-  Future<Response<Object?>> _exerciseAddSession(RequestOptions options) async {
-    final body = options.data;
-    Map<String, Object?> payload;
-    if (body is Map) {
-      payload = body.cast<String, Object?>();
-    } else if (body is String && body.isNotEmpty) {
-      payload = (jsonDecode(body) as Map<Object?, Object?>)
-          .cast<String, Object?>();
-    } else {
-      payload = <String, Object?>{};
+  /// 강도 배수 — 서버 `exercise_catalog.energy.INTENSITY_FACTOR` 와 같은 값이다.
+  static const Map<String, double> _intensityFactor = <String, double>{
+    'light': 0.85,
+    'moderate': 1.0,
+    'high': 1.2,
+  };
+
+  /// 유형별 분당 kcal 폴백 — 이름이 종목표에 붙지 않을 때다. 서버
+  /// `exercise_catalog.energy.FALLBACK_KCAL_PER_MIN` 과 같은 값이어야 한다.
+  static const Map<String, double> _fallbackKcalPerMin = <String, double>{
+    'cardio': 9.0,
+    'strength': 6.0,
+    'stretching': 3.0,
+    'other': 5.0,
+  };
+
+  /// POST /exercise/calories — 운동 이름·시간·강도로 예상 소모 칼로리. (#1312)
+  ///
+  /// 서버와 같은 순서다: 이름을 종목표에 붙이고, 붙었으면 계수 × 데모 회원 체중
+  /// 으로, 안 붙었으면 유형 평균으로 계산한다. 이름 해석 AI 는 데모에 없으므로
+  /// `mixed` 는 여기서 나오지 않는다 — 없는 근거를 있는 척하지 않는다.
+  Future<Response<Object?>> _exerciseCalories(RequestOptions options) async {
+    final Map<String, Object?> payload = _payloadOf(options.data);
+    final String name = ((payload['name'] as String?) ?? '').trim();
+    if (name.isEmpty) {
+      return _badRequest(options, '운동 이름을 입력해 주세요.');
     }
+    final int minutes = (payload['minutes'] as num?)?.toInt() ?? 0;
+    if (minutes <= 0) {
+      return _badRequest(options, 'minutes must be > 0');
+    }
+    final ({int calories, String source, String matchedName}) result =
+        await _demoEstimate(
+          name: name,
+          type: payload['type'] as String?,
+          minutes: minutes,
+          intensity: payload['intensity'] as String?,
+        );
+    return _ok(options, <String, Object?>{
+      'calories': result.calories,
+      'source': result.source,
+      'matched_name': result.matchedName,
+    });
+  }
+
+  /// 데모의 소모 칼로리 계산 — 미리보기와 저장이 **같은 자리**를 쓴다. 서버가
+  /// 저장할 때 다시 계산하는 것과 같은 규약이라, 데모에서도 화면의 숫자와
+  /// 기록의 숫자가 갈리지 않는다.
+  Future<({int calories, String source, String matchedName})> _demoEstimate({
+    required String name,
+    required String? type,
+    required int minutes,
+    required String? intensity,
+  }) async {
+    final String normalized = _normalizedExerciseType(type);
+    final double factor = _intensityFactor[intensity ?? 'moderate'] ?? 1.0;
+    final DemoExerciseActivity? matched = matchDemoExercise(name);
+    final double? weightKg =
+        ((await _mergedProfile())['weight_kg'] as num?)?.toDouble();
+    // 체중을 모르면 참조표로 계산하지 않는다 — 기준 체중으로 낸 값은 이 회원의
+    // 값이 아닌데 `db` 로 표시되면 실제보다 높은 신뢰 신호를 준다.
+    if (matched == null || weightKg == null || weightKg <= 0) {
+      final double perMin =
+          _fallbackKcalPerMin[normalized] ?? _fallbackKcalPerMin['other']!;
+      return (
+        calories: (perMin * minutes * factor).round(),
+        source: 'estimate',
+        matchedName: '',
+      );
+    }
+    return (
+      calories: demoCatalogCalories(matched, minutes, factor, weightKg),
+      source: 'db',
+      matchedName: matched.name,
+    );
+  }
+
+  /// 옛 어휘를 표준 유형으로 접는다 — 서버 `exercise_types.normalize` 와 같다.
+  static String _normalizedExerciseType(String? raw) =>
+      switch (raw?.trim()) {
+        'cardio' || 'walking' => 'cardio',
+        'strength' => 'strength',
+        'flexibility' || 'stretching' || 'yoga' => 'stretching',
+        _ => 'other',
+      };
+
+  /// 요청 몸통을 Map 으로. dio 는 Map 으로도 JSON 문자열로도 준다.
+  static Map<String, Object?> _payloadOf(Object? body) {
+    if (body is Map) return body.cast<String, Object?>();
+    if (body is String && body.isNotEmpty) {
+      return (jsonDecode(body) as Map<Object?, Object?>).cast<String, Object?>();
+    }
+    return <String, Object?>{};
+  }
+
+  Future<Response<Object?>> _exerciseAddSession(RequestOptions options) async {
+    final Map<String, Object?> payload = _payloadOf(options.data);
 
     final type = (payload['type'] as String?) ?? 'cardio';
     final minutes = (payload['minutes'] as num?)?.toInt() ?? 0;
     if (minutes <= 0) {
       return _badRequest(options, 'minutes must be > 0');
     }
-    final calories = (payload['calories'] as num?)?.toInt() ?? 0;
     final intensity = (payload['intensity'] as String?) ?? 'moderate';
     final name = ((payload['name'] as String?) ?? '').trim();
+    // 실 서버와 같이 여기서 다시 계산한다 — 앱이 보낸 값은 쓰지 않는다(#1312).
+    final estimated = await _demoEstimate(
+      name: name,
+      type: type,
+      minutes: minutes,
+      intensity: intensity,
+    );
     final sets = _strengthOnly(type, (payload['sets'] as num?)?.toInt());
     final reps = _strengthOnly(type, (payload['reps'] as num?)?.toInt());
     final weight = _strengthOnly(type, (payload['weight'] as num?)?.toDouble());
@@ -1421,7 +1538,7 @@ class LocalApiInterceptor extends Interceptor {
             type: type,
             name: Value(name),
             minutes: minutes,
-            calories: calories,
+            calories: estimated.calories,
             intensity: Value(intensity),
             sets: Value(sets),
             reps: Value(reps),
@@ -1441,8 +1558,9 @@ class LocalApiInterceptor extends Interceptor {
         sets: sets,
         reps: reps,
         weight: weight,
-        calories: calories,
+        calories: estimated.calories,
         intensity: intensity,
+        calorieSource: estimated.source,
       ),
     );
   }
@@ -1461,6 +1579,7 @@ class LocalApiInterceptor extends Interceptor {
     required double? weight,
     required int calories,
     required String intensity,
+    required String calorieSource,
   }) => <String, Object?>{
     'id': id,
     'day_label': dayLabel,
@@ -1472,6 +1591,7 @@ class LocalApiInterceptor extends Interceptor {
     'reps': reps,
     'weight': weight,
     'calories': calories,
+    'calorie_source': calorieSource,
     'intensity': intensity,
     'date_label': _dateLabelForDayLabel(dayLabel, weekStart),
     'time_label': _defaultTimeLabel(type),
@@ -2040,6 +2160,32 @@ class LocalApiInterceptor extends Interceptor {
     patch['onboarded'] = true;
     await _mergeProfileOverlay(patch);
     return _ok(options, await _mergedProfile());
+  }
+
+  /// 데모 모드의 동기화 코드 — 김민수(데모 회원)의 고정 값이다. (#1634)
+  ///
+  /// **트레이너 앱의 `demoAlreadyLinkedPairingCode` 와 같은 값이어야 한다.**
+  /// 두 앱은 서로 다른 패키지라 상수를 나눠 가질 수 없고, 데모에는 코드를
+  /// 발급·소비할 서버도 없다. 여기서 무작위로 뽑으면 회원 화면이 보여 준
+  /// 여섯 자리를 트레이너 데모가 영영 알아보지 못한다.
+  ///
+  /// 실서비스에서는 서버가 발급한 한 값을 두 화면이 함께 본다.
+  static const String _demoPairingCode = '567812';
+
+  Future<Response<Object?>> _pairingCodeIssue(RequestOptions options) async {
+    return _ok(options, <String, Object?>{
+      'code': _demoPairingCode,
+      'expires_at': nowKst()
+          .add(const Duration(minutes: 5))
+          .toIso8601String(),
+      'expires_in_seconds': 5 * 60,
+    });
+  }
+
+  Future<Response<Object?>> _pairingCodeRevoke(RequestOptions options) async {
+    // 데모의 코드는 고정이라 버릴 것이 없다. 그래도 받아 주지 않으면 시트를
+    // 닫을 때마다 실 네트워크로 새어 나간다.
+    return Response<Object?>(requestOptions: options, statusCode: 204);
   }
 
   Future<Response<Object?>> _usersMeHealth(RequestOptions options) async {
