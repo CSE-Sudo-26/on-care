@@ -29,3 +29,9 @@
 | [ai_transparency_report.md](capstone-start/ai_transparency_report.md) | 스타트 단계 AI 투명성 보고서 | 사용 도구·범위가 이후 달라짐 |
 | [prof_meeting_260605.md](capstone-start/prof_meeting_260605.md) | 2026-06-05 지도교수 면담 기록 | 당시 컨셉 기준의 논의 (기록용) |
 | [Team_Ground_Rule.md](capstone-start/Team_Ground_Rule.md) | 스타트 단계 팀 규약 | [docs/team_workflow.md](../team_workflow.md) |
+
+## 그 외
+
+| | 내용 |
+| --- | --- |
+| [unused-assets/](unused-assets/) | 저장소 어디에서도 참조하지 않는 이미지 에셋. 현재 쓰는 에셋은 `docs/assets/` |
