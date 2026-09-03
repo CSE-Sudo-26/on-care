@@ -54,6 +54,8 @@ reviews:
     - "!**/pubspec.lock"
     # Golden 테스트 스냅샷 (바이너리)
     - "!**/test/golden/**"
+    # 보존용 기록 (스타트 단계 산출물) — 현재 기준 아님, 리뷰·참조 대상에서 제외
+    - "!docs/archive/**"
     # 에디터 설정
     - "!**/.idea/**"
     - "!**/.vscode/**"

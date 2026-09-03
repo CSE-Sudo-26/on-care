@@ -155,6 +155,7 @@
 | [API 계약](backend/API_CONTRACT.md) | 엔드포인트·요청/응답 스키마 |
 | [프론트엔드 배포](docs/frontend_deployment.md) | GitHub Pages 배포 구조와 운영 절차 |
 | [백엔드 배포](backend/docs/DEPLOY.md) | 컨테이너 이미지·마이그레이션·환경변수 |
+| [보존용 기록](docs/archive/README.md) | 캡스톤 스타트 단계 산출물 — **현재 기준이 아님**, 인용 금지 |
 
 ---
 
