@@ -11,6 +11,7 @@ RAG 문서 관리 라우터.
 """
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -21,6 +22,8 @@ from app.api.deps import RequireAdmin
 from app.db.session import get_db
 from app.services.audit import client_ip, record as audit
 from app.services.coach.rag import ingest_document
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["coach-docs"])
 
@@ -46,11 +49,19 @@ def upload_public_doc(
             db, payload.content, user_id=None,
             domain=payload.domain, source=payload.source, title=payload.title,
         )
-    except RuntimeError as e:
-        # 임베딩 키 미설정 등
-        raise HTTPException(status_code=503, detail=f"임베딩 불가: {e}")
-    except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=502, detail=f"적재 실패: {e}")
+    except RuntimeError:
+        # 임베딩 키 미설정 등. 예외 문자열에는 provider·설정 값이 섞일 수 있어 응답에
+        # 싣지 않는다 — 원인은 서버 로그에만 남기고, 상관은 응답의 `X-Request-ID` 로
+        # 한다(로그 포맷이 같은 request id 를 찍는다). (#1556)
+        logger.exception("public doc ingest unavailable")
+        raise HTTPException(
+            status_code=503, detail="임베딩을 사용할 수 없어 문서를 적재하지 못했습니다."
+        )
+    except Exception:  # noqa: BLE001
+        # SDK·DB·파일 경로 오류의 문자열이 그대로 응답에 실리던 자리다. 관리자 전용
+        # 경로라 노출 범위는 좁지만, 내부 상세를 감추는 전역 500 처리와 형태를 맞춘다.
+        logger.exception("public doc ingest failed")
+        raise HTTPException(status_code=502, detail="문서 적재에 실패했습니다.")
     audit(
         db, event="admin.public_doc_upload", user_id=admin.id,
         ip=client_ip(request), success=True, detail=f"{payload.domain}:{payload.title}",

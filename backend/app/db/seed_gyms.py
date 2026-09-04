@@ -54,7 +54,8 @@ _PARTNER_GYMS: tuple[
 #:
 #: DB 에 넣는 이유: 상담 요청(`POST /consultations`)이 `gym_id` 를 places 에서
 #: 검증하고, 헬스장 상세의 상담 버튼은 제휴 여부를 가리지 않는다. 넣지 않으면 이
-#: 헬스장들에서 상담이 404 로 실패한다. `is_partner=False` 로 제휴와 구분한다.
+#: 헬스장들에서 상담이 404 로 실패한다. `is_partner=False` 는 표시상의 구분일 뿐이라
+#: 상담 가능 여부를 바꾸지 않는다 — 모델 주석과 같은 정의다(#1626).
 _DISCOVERED_GYMS: tuple[
     tuple[str, str, str, float, float, float | None, str, str, str, list[str]], ...
 ] = (

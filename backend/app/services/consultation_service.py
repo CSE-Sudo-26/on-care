@@ -183,6 +183,31 @@ def _notify_trainer_of_new_request(
     )
 
 
+def _notify_trainer_of_cancel(
+    db: Session, consultation: ConsultationRequest, member_id: str
+) -> None:
+    """회원이 취소한 요청을 지정된 트레이너에게 알린다. 커밋은 호출자가 한다. (#1625)
+
+    알림이 없으면 인박스와 배지에서 요청이 이유 없이 사라진다 — 트레이너는 자신이
+    이미 처리한 것인지 회원이 취소한 것인지 구분할 수 없다. 같은 성격의 다른 동작
+    (담당 요청 수락·거절, 예약 취소, 상담 승인·거절)은 모두 상대에게 알린다.
+
+    `trainer_id` 가 비어 있는 옛 `target_type='gym'` 행에는 받을 사람이 없으므로
+    만들지 않는다 — [_notify_trainer_of_new_request] 와 같은 이유다.
+    """
+    if consultation.trainer_id is None:
+        return
+
+    member_name = db.scalar(select(User.name).where(User.id == member_id)) or "회원"
+    notification_service.queue_for_trainer(
+        db,
+        trainer_id=consultation.trainer_id,
+        kind=notification_service.TRAINER_CONSULTATION_KIND,
+        title="상담 요청이 취소됐어요",
+        body=f"{member_name} 회원 · {consultation.preferred_date}",
+    )
+
+
 def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[ConsultationOut]:
     """상담 목록에 대상 트레이너 이름을 붙인다. (#327)
 
@@ -232,6 +257,7 @@ def cancel_my_consultation(
     row.status = "cancelled"
     row.decided_at = _now()
     row.decision_note = None
+    _notify_trainer_of_cancel(db, row, member_id)
     db.commit()
     db.refresh(row)
     return attach_target_names(db, [row])[0]
@@ -402,14 +428,23 @@ def list_for_trainer(
 
 
 def pending_count_for_trainer(db: Session, trainer_id: str) -> int:
-    """미처리 요청 수 — 인박스 배지용. 목록 전체를 만들지 않는다."""
-    rows = db.scalars(
-        select(ConsultationRequest.id).where(
-            _inbox_scope(trainer_id),
-            ConsultationRequest.status == "pending",
+    """미처리 요청 수 — 인박스 배지용. 목록 전체를 만들지 않는다.
+
+    배지는 페이지네이션과 무관하게 전체를 세므로 행을 가져와 파이썬에서 세면 곧
+    전체 행 로드가 된다. 화면이 주기적으로 다시 읽는 경로라 DB 집계로 받는다 —
+    트레이너 알림 미읽음 수(`app/api/v1/trainer.py`)와 같은 형태다. (#1629)
+    """
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(ConsultationRequest)
+            .where(
+                _inbox_scope(trainer_id),
+                ConsultationRequest.status == "pending",
+            )
         )
-    ).all()
-    return len(rows)
+        or 0
+    )
 
 
 def _require_inbox_row(
