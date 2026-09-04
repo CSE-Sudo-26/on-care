@@ -546,7 +546,15 @@ class GymProfile(Base):
     tags_json: Mapped[str] = mapped_column(
         Text, default="[]"
     )  # ["다이어트", "재활운동"]
-    #: 제휴 헬스장만 트레이너 연결·상담이 가능하다.
+    #: 제휴 헬스장 **표시** 값 — `GymOut` 으로 내려가고 `GET /gyms?partner_only=true`
+    #: 로 목록을 좁히는 데 쓴다. **접근 제어가 아니다.**
+    #:
+    #: 상담 대상 검증(`consultation_service._validate_target`)과 트레이너 노출 경로
+    #: (`/trainers`, `/trainers/recommended`, `/gyms/{id}/trainers`)는 이 값을 보지
+    #: 않는다 — 소속 장소가 `category='fitness'` 인 활성 트레이너인지로 판단한다.
+    #: 예전 주석은 "제휴 헬스장만 트레이너 연결·상담이 가능하다"고 적어 두었으나 그
+    #: 규칙을 강제하는 코드는 없었다. 제휴를 실제 조건으로 삼으려면 위 경로들을 함께
+    #: 고쳐야 한다. (#1626)
     is_partner: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=false(), default=False, index=True
     )

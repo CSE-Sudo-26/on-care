@@ -22,7 +22,8 @@ class GymOut(BaseModel):
     phone: str | None
     lat: float | None
     lng: float | None
-    #: 제휴 헬스장만 트레이너 연결·상담이 가능하다.
+    #: 제휴 표시 값. `GET /gyms?partner_only=true` 필터의 기준이고, 상담·트레이너 노출을
+    #: 막지 않는다([GymProfile.is_partner] 참고). 지금 두 앱은 이 값을 읽지 않는다. (#1626)
     is_partner: bool
 
 
