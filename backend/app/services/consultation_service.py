@@ -428,14 +428,23 @@ def list_for_trainer(
 
 
 def pending_count_for_trainer(db: Session, trainer_id: str) -> int:
-    """미처리 요청 수 — 인박스 배지용. 목록 전체를 만들지 않는다."""
-    rows = db.scalars(
-        select(ConsultationRequest.id).where(
-            _inbox_scope(trainer_id),
-            ConsultationRequest.status == "pending",
+    """미처리 요청 수 — 인박스 배지용. 목록 전체를 만들지 않는다.
+
+    배지는 페이지네이션과 무관하게 전체를 세므로 행을 가져와 파이썬에서 세면 곧
+    전체 행 로드가 된다. 화면이 주기적으로 다시 읽는 경로라 DB 집계로 받는다 —
+    트레이너 알림 미읽음 수(`app/api/v1/trainer.py`)와 같은 형태다. (#1629)
+    """
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(ConsultationRequest)
+            .where(
+                _inbox_scope(trainer_id),
+                ConsultationRequest.status == "pending",
+            )
         )
-    ).all()
-    return len(rows)
+        or 0
+    )
 
 
 def _require_inbox_row(
