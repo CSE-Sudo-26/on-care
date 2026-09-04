@@ -248,6 +248,71 @@ def test_pending_count_matches_inbox(client, db_session):
     assert count.json()["count"] == len(inbox.json()) == 1
 
 
+# --- 회원 취소 -------------------------------------------------------------
+
+
+def test_member_cancel_notifies_target_trainer(client, db_session):
+    """회원이 취소하면 대상 트레이너에게 알림이 남는다. (#1625)
+
+    알림이 없으면 인박스와 배지에서 요청이 이유 없이 사라져, 트레이너는 자신이
+    이미 처리한 것인지 회원이 취소한 것인지 구분할 수 없다.
+    """
+    trainer, trainer_token = _trainer(client, db_session)
+    _, member_token = _member(client)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
+
+    response = client.delete(
+        f"/v1/consultations/{consultation_id}", headers=_auth(member_token)
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "cancelled"
+
+    titles = [
+        item["title"]
+        for item in client.get(
+            "/v1/trainer/notifications", headers=_auth(trainer_token)
+        ).json()
+    ]
+    assert "상담 요청이 취소됐어요" in titles
+    # 요청이 사라진 것과 알림이 남은 것이 같은 트랜잭션이어야 한다.
+    count = client.get(
+        "/v1/trainer/consultations/pending-count", headers=_auth(trainer_token)
+    )
+    assert count.json()["count"] == 0
+
+
+def test_cancel_without_target_trainer_creates_no_notification(client, db_session):
+    """대상 트레이너가 지워진 요청은 알릴 곳이 없다 — 알림을 만들지 않는다."""
+    member_id, member_token = _member(client)
+    consultation_id = f"decide-orphan-{uuid4().hex[:10]}"
+    db_session.add(
+        ConsultationRequest(
+            id=consultation_id,
+            member_id=member_id,
+            target_type="gym",
+            trainer_id=None,
+            exercise_goal="weight_loss",
+            health_purpose_type="general",
+            preferred_date=(clock.today() + timedelta(days=1)).isoformat(),
+            preferred_time_slot="19:00",
+            status="pending",
+        )
+    )
+    db_session.commit()
+    before = db_session.query(Notification).count()
+
+    response = client.delete(
+        f"/v1/consultations/{consultation_id}", headers=_auth(member_token)
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "cancelled"
+    assert db_session.query(Notification).count() == before
+
+
 def test_member_cannot_read_trainer_inbox(client):
     _, member_token = _member(client)
     response = client.get("/v1/trainer/consultations", headers=_auth(member_token))

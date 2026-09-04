@@ -2,6 +2,7 @@
 
 - admin_email_set 파싱은 순수(로컬 실행).
 - 엔드포인트 보호(201/403/401)는 DB 필요(로컬 skip, CI 실행).
+- 적재 실패 응답이 내부 예외 문자열을 싣지 않는지도 여기서 본다(#1556).
 """
 from __future__ import annotations
 
@@ -61,3 +62,69 @@ def test_unauthenticated_is_rejected(client):
     # require_admin 은 데모 폴백을 쓰지 않으므로 토큰 없으면 401
     r = client.post("/v1/coach/documents/public", json={"content": "test", "title": "t"})
     assert r.status_code == 401
+
+
+def _promote_admin(client, db_session) -> str:
+    """관리자 토큰 하나. (승격은 운영에서 ADMIN_EMAILS 가 부팅 시 한다)"""
+    from sqlalchemy import select
+
+    from app.models.models import User
+
+    email = f"admin-{uuid4().hex[:8]}@oncare.com"
+    token = _register_login(client, email)
+    user = db_session.scalar(select(User).where(User.email == email))
+    user.is_admin = True
+    db_session.commit()
+    return token
+
+
+#: 예외 문자열에 섞일 수 있는 내부 정보를 대신하는 표식.
+SECRET = "postgresql://oncare:pw@db.internal:5432/oncare"
+
+
+def test_ingest_failure_hides_internal_exception_text(client, db_session, monkeypatch):
+    """적재 실패 응답에 예외 문자열이 실리지 않는다. (#1556)
+
+    SDK·DB·파일 경로 오류의 문자열이 그대로 detail 에 들어가던 자리다.
+    """
+    from app.api.v1 import coach_docs
+
+    def _boom(*args, **kwargs):
+        raise ValueError(SECRET)
+
+    monkeypatch.setattr(coach_docs, "ingest_document", _boom)
+    token = _promote_admin(client, db_session)
+
+    r = client.post(
+        "/v1/coach/documents/public",
+        json={"content": "문서 본문", "domain": "general", "title": "t"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert r.status_code == 502, r.text
+    assert SECRET not in r.text
+    assert r.json()["detail"] == "문서 적재에 실패했습니다."
+    # 서버 로그와 상관지을 수단은 남아 있어야 한다.
+    assert r.headers.get("X-Request-ID")
+
+
+def test_embedding_unavailable_hides_internal_exception_text(
+    client, db_session, monkeypatch
+):
+    """임베딩 불가(503)도 마찬가지 — 설정 값이 섞일 수 있다."""
+    from app.api.v1 import coach_docs
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError(SECRET)
+
+    monkeypatch.setattr(coach_docs, "ingest_document", _boom)
+    token = _promote_admin(client, db_session)
+
+    r = client.post(
+        "/v1/coach/documents/public",
+        json={"content": "문서 본문", "domain": "general", "title": "t"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert r.status_code == 503, r.text
+    assert SECRET not in r.text
