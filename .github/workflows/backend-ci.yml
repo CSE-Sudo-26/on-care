@@ -2,6 +2,10 @@ name: Backend CI
 
 on:
   push:
+    # PR 브랜치 푸시는 `pull_request` 가 이미 검증한다. 필터가 없으면 같은 커밋에
+    # 백엔드 잡이 둘 돌고, 한쪽이 러너 인프라로 멎으면 코드가 통과했는데도 PR
+    # 체크가 빨간 채로 남는다(#1638). 프런트 셋과 같은 형태로 맞춘다.
+    branches: [main]
     paths:
       - "backend/**"
       # 김민수 데모 픽스처는 세 곳이 함께 읽는다 — 이것만 바뀌어도 돌아야 한다(#757).
@@ -13,6 +17,15 @@ on:
       # 김민수 데모 픽스처는 세 곳이 함께 읽는다 — 이것만 바뀌어도 돌아야 한다(#757).
       - "shared/demo_fixture/**"
       - ".github/workflows/backend-ci.yml"
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  # PR 실행만 취소한다. 같은 브랜치에 새 커밋이 오면 옛 실행은 볼 값이 없다.
+  #
+  # main 은 다르다. `github.ref` 가 병합마다 똑같이 `refs/heads/main` 이라,
+  # 연달아 병합하면 앞선 검증이 취소된다 — 병합 뒤 검증이 안전망인데 빠르게
+  # 병합할수록 그 안전망이 꺼진다(#807).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
