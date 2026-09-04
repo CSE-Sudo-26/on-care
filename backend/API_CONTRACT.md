@@ -188,6 +188,24 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
   카테고리로 태깅한다(공급자 간 의미 일치, 빈 category 없음).
 - **검증**: `lat`(-90~90)·`lng`(-180~180)·`category`(허용값)는 위반 시 **422**.
 
+### 헬스장 (`fitness` 장소 + 프로필)
+
+| Method | Path | 응답 |
+|---|---|---|
+| GET | `/gyms?lat=&lng=&partner_only=` | `[GymOut]` — 좌표를 주면 거리순, 없으면 이름순 |
+| GET | `/gyms/{gym_id}` | 단건(없으면 404) |
+| GET | `/gyms/{gym_id}/trainers` | 그 헬스장 소속 트레이너 |
+| GET | `/me/gym` | 내 헬스장(`member_gyms`) |
+
+- **`is_partner` 는 표시 값이다.** `GymOut` 으로 내려가고 `partner_only=true` 로 목록을
+  좁히는 기준이 된다(현재 두 앱은 이 값을 읽지 않는다). **접근 제어가 아니다** — 상담 대상 검증과
+  트레이너 노출 경로(`/trainers`, `/trainers/recommended`, `/gyms/{id}/trainers`)는 이 값을
+  보지 않고, 소속 장소가 `category='fitness'` 인 활성 트레이너인지로 판단한다. 따라서
+  비제휴 헬스장의 트레이너에게도 상담을 걸 수 있다. (#1626)
+- **`partner_only` 기본값은 `false`** 다. 지정하지 않으면 카카오 검색으로 발견한 비제휴
+  헬스장(`app/db/seed_gyms.py`)도 함께 온다 — 회원이 다니는 헬스장이 목록에 없으면 상담
+  자체를 시작할 수 없기 때문이다.
+
 ### 트레이너 디렉터리 (회원앱 탐색)
 
 | Method | Path | 응답 |
